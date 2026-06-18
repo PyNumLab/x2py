@@ -5,6 +5,13 @@ which creates an interface exposing C code to Python.
 
 import warnings
 
+from x2py.ownership_policy import (
+    CodegenAction,
+    OwnershipActionDispatcher,
+    codegen_action_for_variable,
+    ownership_decision_for_codegen_variable,
+)
+
 from ..bind_c import (
     BindCArrayVariable,
     BindCArrayType,
@@ -205,6 +212,20 @@ class CPythonBindingGenerator(BindingGenerator):
 
     target_language = "Python"
     start_language = "C"
+    _RESULT_DETAIL_DISPATCHER = OwnershipActionDispatcher(
+        {
+            CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_detail_lines",
+        },
+        "_default_result_detail_lines",
+    )
+    _RESULT_NOTE_DISPATCHER = OwnershipActionDispatcher(
+        {
+            CodegenAction.COPY_RETURN_ARRAY: "_copy_return_result_notes",
+            CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_notes",
+            CodegenAction.BORROWED_VIEW: "_borrowed_view_result_notes",
+        },
+        "_empty_result_notes",
+    )
 
     def __init__(self, sharedlib_dirpath, verbose):
         # A map used to find the Python-compatible Variable equivalent to an object in the AST
@@ -300,57 +321,68 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _result_detail_lines(self, var):
         lines = self._value_detail_lines(var)
-        if self._is_pointer_snapshot_result(var):
-            lines.append("    Ownership: Python-owned")
-            lines.append("    Returns None when unassociated.")
-        elif var.rank and var.memory_handling == "heap":
-            lines.append("    Ownership: Python-owned")
-            lines.append("    Returns None when unallocated.")
-        elif var.rank and getattr(var, "intent", "in") == "out":
-            lines.append("    Ownership: Python-owned")
-        elif var.rank and var.memory_handling == "alias":
-            lines.append("    Ownership: Native-owned")
+        lines.extend(self._RESULT_DETAIL_DISPATCHER.dispatch(self, var))
         return lines
 
-    def _borrowed_detail_lines(self, var, description):
+    def _borrowed_detail_lines(self, var):
         lines = self._value_detail_lines(var)
-        if var.rank:
-            lines.append(f"    Ownership: {description}")
-            if self._may_return_none(var):
-                lines.append("    Returns None when unallocated.")
+        lines.extend(self._RESULT_DETAIL_DISPATCHER.dispatch(self, var))
         return lines
 
     def _result_notes(self, result_vars):
         notes = []
-        if any(
-            self._doc_original_var(var).rank and self._doc_original_var(var).memory_handling == "heap"
-            for var in result_vars
-        ):
-            notes.extend(
-                [
-                    "Allocatable array outputs and replacements are copied into Python-owned NumPy arrays.",
-                    "This copy adds overhead proportional to the returned array size.",
-                ]
-            )
-        if any(self._is_pointer_snapshot_result(self._doc_original_var(var)) for var in result_vars):
-            if notes:
+        seen_note_groups = set()
+        for result in result_vars:
+            var = self._doc_original_var(result)
+            action_notes = self._RESULT_NOTE_DISPATCHER.dispatch(self, var)
+            note_key = tuple(action_notes)
+            if not action_notes or note_key in seen_note_groups:
+                continue
+            seen_note_groups.add(note_key)
+            if notes and action_notes:
                 notes.append("")
-            notes.extend(
-                [
-                    "Pointer array results are copied into Python-owned NumPy arrays.",
-                    "Unassociated pointer results return None.",
-                ]
-            )
-        if any(
-            self._doc_original_var(var).rank
-            and self._doc_original_var(var).memory_handling == "alias"
-            and not self._is_pointer_snapshot_result(self._doc_original_var(var))
-            for var in result_vars
-        ):
-            if notes:
-                notes.append("")
-            notes.extend(self._borrowed_view_notes())
+            notes.extend(action_notes)
         return notes
+
+    def _default_result_detail_lines(self, var, decision):
+        if not var.rank:
+            return []
+        lines = [f"    Ownership: {decision.owner_label}"]
+        if decision.nullable:
+            lines.append("    Returns None when unallocated.")
+        return lines
+
+    def _snapshot_copy_result_detail_lines(self, var, decision):
+        if not var.rank:
+            return []
+        return [
+            f"    Ownership: {decision.owner_label}",
+            "    Returns None when unassociated.",
+        ]
+
+    def _copy_return_result_notes(self, var, decision):
+        if not self._is_allocatable_copy_return_result(var):
+            return []
+        return [
+            "Allocatable array outputs and replacements are copied into Python-owned NumPy arrays.",
+            "This copy adds overhead proportional to the returned array size.",
+        ]
+
+    def _snapshot_copy_result_notes(self, var, decision):
+        if not var.rank:
+            return []
+        return [
+            "Pointer array results are copied into Python-owned NumPy arrays.",
+            "Unassociated pointer results return None.",
+        ]
+
+    def _borrowed_view_result_notes(self, var, decision):
+        if not var.rank:
+            return []
+        return self._borrowed_view_notes()
+
+    def _empty_result_notes(self, var, decision):
+        return []
 
     @staticmethod
     def _borrowed_view_notes():
@@ -395,25 +427,28 @@ class CPythonBindingGenerator(BindingGenerator):
 
     @staticmethod
     def _may_return_none(var):
-        return bool(
-            var.rank and (var.memory_handling == "heap" or CPythonBindingGenerator._is_pointer_snapshot_result(var))
-        )
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(var.rank and decision.nullable)
 
     @staticmethod
     def _is_pointer_snapshot_result(var):
-        return bool(
-            getattr(var, "rank", 0)
-            and getattr(var, "memory_handling", None) == "alias"
-            and not isinstance(var, DottedVariable)
-            and getattr(var, "intent", "in") == "out"
-        )
+        return codegen_action_for_variable(var) is CodegenAction.SNAPSHOT_COPY_ARRAY
 
     @staticmethod
     def _is_allocatable_replacement_argument(var):
         return bool(
             getattr(var, "is_ndarray", False)
-            and getattr(var, "memory_handling", None) == "heap"
+            and codegen_action_for_variable(var) is CodegenAction.COPY_RETURN_ARRAY
             and getattr(var, "intent", "in") == "inout"
+        )
+
+    @staticmethod
+    def _is_allocatable_copy_return_result(var):
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(
+            getattr(var, "is_ndarray", False)
+            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
+            and decision.memory_handling == "heap"
         )
 
     @staticmethod
@@ -485,7 +520,7 @@ class CPythonBindingGenerator(BindingGenerator):
             for attribute in cls.attributes:
                 attr_name, var = self._class_attribute_doc_target(attribute)
                 lines.append(f"{attr_name} : {self._type_doc(var, include_none=self._may_return_none(var))}")
-                lines.extend(self._borrowed_detail_lines(var, "Native-owned"))
+                lines.extend(self._borrowed_detail_lines(var))
         else:
             lines.append("None")
         lines.extend(["", "Methods", "-------"])
@@ -523,7 +558,7 @@ class CPythonBindingGenerator(BindingGenerator):
         var = self._doc_original_var(var)
         lines = [
             f"{name} : {self._type_doc(var, include_none=self._may_return_none(var))}",
-            *self._borrowed_detail_lines(var, "Native-owned"),
+            *self._borrowed_detail_lines(var),
         ]
         if not var.rank:
             lines.append("    Assigning writes through the generated setter when available.")
@@ -539,7 +574,7 @@ class CPythonBindingGenerator(BindingGenerator):
             "Returns",
             "-------",
             f"{var.name} : {self._type_doc(var, include_none=True)}",
-            *self._borrowed_detail_lines(var, "Native-owned"),
+            *self._borrowed_detail_lines(var),
             "",
             "Notes",
             "-----",
@@ -2720,7 +2755,8 @@ class CPythonBindingGenerator(BindingGenerator):
         self._python_object_map[expr] = py_equiv
 
         release_memory = False
-        unallocated_guard = self._return_none_if_unallocated(data_var) if expr.memory_handling == "heap" else []
+        decision = ownership_decision_for_codegen_variable(expr)
+        unallocated_guard = self._return_none_if_unallocated(data_var) if decision.nullable else []
         # Save the ndarray to vars_to_wrap to be handled as if it came from C
         return [
             call,

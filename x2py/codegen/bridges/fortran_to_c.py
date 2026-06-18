@@ -8,6 +8,13 @@ import re
 import warnings
 from functools import reduce
 
+from x2py.ownership_policy import (
+    CodegenAction,
+    OwnershipActionDispatcher,
+    codegen_action_for_variable,
+    ownership_decision_for_codegen_variable,
+)
+
 from ..bind_c import (
     C_NULL_CHAR,
     BindCArrayType,
@@ -95,6 +102,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     target_language = "C"
     start_language = "Fortran"
+    _NDARRAY_RESULT_DISPATCHER = OwnershipActionDispatcher(
+        {
+            CodegenAction.SNAPSHOT_COPY_ARRAY: "_extract_snapshot_copy_array_result",
+            CodegenAction.BORROWED_VIEW: "_extract_borrowed_array_result",
+            CodegenAction.COPY_RETURN_ARRAY: "_extract_copy_return_array_result",
+        },
+        "_extract_default_array_result",
+    )
 
     def __init__(self, sharedlib_dirpath, verbose):
         self._additional_exprs = []
@@ -251,15 +266,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         ]
         return IndexedElement(rank_var, *indexes)
 
-    @staticmethod
-    def _uses_allocatable_function_result_helper(func, result):
+    @classmethod
+    def _uses_allocatable_function_result_helper(cls, func, result):
         func_result = getattr(getattr(func, "results", None), "var", NIL)
         return (
             result.is_ndarray
-            and result.memory_handling == "heap"
+            and cls._is_allocatable_copy_return_result(result)
             and func_result is not NIL
             and getattr(func_result, "is_ndarray", False)
-            and getattr(func_result, "memory_handling", None) == "heap"
+            and cls._is_allocatable_copy_return_result(func_result)
         )
 
     def _allocatable_function_result_helper(self, result):
@@ -532,15 +547,36 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     @staticmethod
     def _is_allocatable_copy_return_argument(var):
-        return var.is_ndarray and var.memory_handling == "heap" and getattr(var, "intent", "in") == "out"
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(
+            var.is_ndarray
+            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
+            and decision.memory_handling == "heap"
+            and getattr(var, "intent", "in") == "out"
+        )
 
     @staticmethod
     def _is_allocatable_replacement_argument(var):
-        return var.is_ndarray and var.memory_handling == "heap" and getattr(var, "intent", "in") == "inout"
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(
+            var.is_ndarray
+            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
+            and decision.memory_handling == "heap"
+            and getattr(var, "intent", "in") == "inout"
+        )
 
     @staticmethod
     def _is_pointer_snapshot_result(var):
-        return var.is_ndarray and var.memory_handling == "alias" and not isinstance(var, DottedVariable)
+        return codegen_action_for_variable(var) is CodegenAction.SNAPSHOT_COPY_ARRAY
+
+    @staticmethod
+    def _is_allocatable_copy_return_result(var):
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(
+            var.is_ndarray
+            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
+            and decision.memory_handling == "heap"
+        )
 
     @staticmethod
     def _is_assumed_rank_array(var):
@@ -1424,45 +1460,61 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
         scope.insert_variable(local_var, name)
 
-        if self._is_pointer_snapshot_result(orig_var):
-            result = self._get_pointer_snapshot_bind_c_array(name, orig_var, local_var)
-        elif orig_var.is_alias or isinstance(orig_var, DottedVariable):
-            result = self._get_bind_c_array(name, orig_var, local_var.shape, local_var)
-        else:
-            copy_shape = (
-                tuple(ArrayShapeElement(local_var, convert_to_literal(i)) for i in range(local_var.rank))
-                if memory_handling == "heap"
-                else local_var.shape
-            )
-            result = self._get_bind_c_array(name, orig_var, copy_shape)
-
-            result["body"].append(
-                If(
-                    IfSection(
-                        IsNot(result["bind_var"], NIL),
-                        [Assign(result["f_array"], local_var)],
-                    )
-                )
-            )
-            if memory_handling == "heap":
-                allocated_body = [*result["body"], Deallocate(local_var)]
-                unallocated_body = [
-                    Assign(result["bind_var"], NIL),
-                    *[
-                        Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
-                        for shape_var in result["shape_vars"]
-                    ],
-                ]
-                result["body"] = [
-                    If(
-                        IfSection(ArrayAllocated(local_var), allocated_body),
-                        IfSection(convert_to_literal(True), unallocated_body),
-                    )
-                ]
+        result = self._NDARRAY_RESULT_DISPATCHER.dispatch(
+            self,
+            orig_var,
+            name,
+            local_var,
+            memory_handling,
+        )
 
         result["f_result"] = local_var
 
         return result
+
+    def _extract_snapshot_copy_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        return self._get_pointer_snapshot_bind_c_array(name, orig_var, local_var)
+
+    def _extract_borrowed_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        return self._get_bind_c_array(name, orig_var, local_var.shape, local_var)
+
+    def _extract_copy_return_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        copy_shape = (
+            tuple(ArrayShapeElement(local_var, convert_to_literal(i)) for i in range(local_var.rank))
+            if memory_handling == "heap"
+            else local_var.shape
+        )
+        result = self._get_bind_c_array(name, orig_var, copy_shape)
+
+        result["body"].append(
+            If(
+                IfSection(
+                    IsNot(result["bind_var"], NIL),
+                    [Assign(result["f_array"], local_var)],
+                )
+            )
+        )
+        if memory_handling == "heap":
+            allocated_body = [*result["body"], Deallocate(local_var)]
+            unallocated_body = [
+                Assign(result["bind_var"], NIL),
+                *[
+                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
+                    for shape_var in result["shape_vars"]
+                ],
+            ]
+            result["body"] = [
+                If(
+                    IfSection(ArrayAllocated(local_var), allocated_body),
+                    IfSection(convert_to_literal(True), unallocated_body),
+                )
+            ]
+        return result
+
+    def _extract_default_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        if orig_var.is_alias or isinstance(orig_var, DottedVariable):
+            return self._extract_borrowed_array_result(orig_var, decision, name, local_var, memory_handling)
+        return self._extract_copy_return_array_result(orig_var, decision, name, local_var, memory_handling)
 
     def _extract_allocatable_replacement_result(self, orig_var, local_var):
         result = self._get_bind_c_array(

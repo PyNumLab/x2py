@@ -24,6 +24,51 @@ argument crosses the Python boundary as a replacement value, so it is copied
 into a Python-owned NumPy array. The field belongs to a containing native
 derived-type instance, so Python may borrow a view from that owner.
 
+## Central Policy Mechanism
+
+Ownership decisions must be resolved through `x2py.ownership_policy`, not
+re-derived separately in semantic conversion, bridge generation, binding
+docstrings, or tests. The resolver returns one decision for each value:
+
+- object kind, such as scalar, string, NumPy array, derived type, module
+  variable, or derived-type field;
+- owner, such as Python, caller, native code, or wrapper object;
+- transfer mode, such as by-value, in-place, copy-return, snapshot-copy,
+  borrowed-view, call-local, or wrapper-instance;
+- destruction policy, such as Python reference-count cleanup, wrapper
+  deallocation helper, native-owner release, caller cleanup, call-local cleanup,
+  or blocked; and
+- the existing low-level `memory_handling` hint used by code generation
+  (`stack`, `heap`, or `alias`).
+
+The resolver is intentionally table/handler driven. Each object kind has a
+dedicated handler so policy changes are made in one place and then consumed by
+IR lowering, C/Fortran bridge generation, CPython binding generation, docstrings,
+and tests.
+
+Code generation must then dispatch from the resolved policy action through
+explicit action maps, not by reinterpreting storage flags. Bridge and binding
+generators use `OwnershipActionDispatcher` tables keyed by `CodegenAction` and
+route each action to a dedicated method. Low-level printers should print the AST
+they are given; they should not invent ownership behavior.
+
+`.pyi` files may override policy using `Annotated` metadata:
+
+```python
+values: Annotated[
+    Float64[:],
+    Pointer,
+    Ownership("python"),
+    Transfer("snapshot_copy"),
+    Destruction("python_refcount"),
+]
+```
+
+Overrides are policy facts, not magic implementation support. A stub can choose
+the owner and transfer mode only when it also supplies the native facts needed
+by the backend path, such as shape, nullability, target owner, lifetime, and
+release behavior.
+
 ## Vocabulary
 
 ### Python-Owned

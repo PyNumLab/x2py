@@ -336,6 +336,8 @@ class BindCVariable(Variable):
             memory_handling=new_var.memory_handling,
             is_optional=new_var.is_optional,
             shape=new_var.shape,
+            ownership_decision=getattr(new_var, "ownership_decision", None)
+            or getattr(original_var, "ownership_decision", None),
         )
 
     @property

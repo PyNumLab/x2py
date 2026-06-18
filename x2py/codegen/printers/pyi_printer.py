@@ -7,6 +7,7 @@ import json
 import keyword
 import re
 
+from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
@@ -165,6 +166,17 @@ class PyiPrinter:
             metadata.append("FortranAllocatable")
         if semantic_type.metadata.get("fortran_target"):
             metadata.append("FortranTarget")
+        ownership_policy = semantic_type.metadata.get(OWNERSHIP_POLICY_METADATA)
+        if isinstance(ownership_policy, dict):
+            owner = ownership_policy.get("owner")
+            transfer = ownership_policy.get("transfer")
+            destruction = ownership_policy.get("destruction")
+            if owner is not None:
+                metadata.append(f"Ownership({json.dumps(str(owner))})")
+            if transfer is not None:
+                metadata.append(f"Transfer({json.dumps(str(transfer))})")
+            if destruction is not None:
+                metadata.append(f"Destruction({json.dumps(str(destruction))})")
         return metadata
 
     def _emit_callable_type(self, semantic_type: SemanticType) -> str:

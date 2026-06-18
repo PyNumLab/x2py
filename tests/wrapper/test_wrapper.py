@@ -1176,7 +1176,7 @@ def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(tmp_path:
     assert "zero-copy view of native Fortran memory" in module.get_module_values.__doc__
     assert "Fields" in module.buffer.__doc__
     assert "values : ndarray[float64] or None" in module.buffer.__doc__
-    assert "Ownership: Native-owned" in module.buffer.values.__doc__
+    assert "Ownership: Wrapper-owned" in module.buffer.values.__doc__
 
     assert module.get_module_values() is None
     module.allocate_module_values(np.int32(3))
@@ -1618,7 +1618,7 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert "fill_vector(n, values) -> ndarray[float64]" in module.fill_vector.__doc__
     assert "Intent: out" in module.fill_vector.__doc__
     assert "Initial contents are ignored." in module.fill_vector.__doc__
-    assert "Ownership: Python-owned" in module.fill_vector.__doc__
+    assert "Ownership: Caller-owned" in module.fill_vector.__doc__
     assert "Allocatable array outputs and replacements are copied into Python-owned NumPy arrays." in (
         module.build_alloc.__doc__
     )

@@ -8,6 +8,7 @@ from itertools import product
 import numpy as np
 
 from x2py import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+from x2py.ownership_policy import OwnershipContext, default_ownership_policy
 from x2py.codegen.models.core import (
     Add,
     ClassDef,
@@ -202,13 +203,18 @@ def _semantic_class_descendants(classes: list[models.SemanticClass]) -> dict[str
     return {base_name: collect(base_name) for base_name in direct}
 
 
-def _memory_handling(semantic_type: models.SemanticType) -> str:
-    if semantic_type.storage is not None and semantic_type.storage.array is not None:
-        if semantic_type.storage.array.pointer:
-            return "alias"
-        if semantic_type.storage.array.allocatable:
-            return "heap"
-    return "stack"
+def _ownership_decision(semantic_type: models.SemanticType, context: OwnershipContext):
+    return default_ownership_policy.decide_semantic_type(semantic_type, context)
+
+
+def _ownership_context_for_variable(node: models.SemanticVariable, scope) -> OwnershipContext:
+    if isinstance(node, models.SemanticField):
+        return OwnershipContext.field()
+    if isinstance(node, models.SemanticArgument):
+        return OwnershipContext.argument(node.intent)
+    if getattr(scope, "_scope_type", None) == "module":
+        return OwnershipContext.module_variable()
+    return OwnershipContext(location="value", intent=getattr(node, "intent", "in"))
 
 
 def _passes_by_value(node: models.SemanticVariable) -> bool:
@@ -549,12 +555,25 @@ def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticMod
 
 def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> None:
     for argument in node.arguments:
-        intent = str(argument.intent).lower()
-        if _is_pointer_array(argument.semantic_type) and intent in {"out", "inout"}:
+        context = OwnershipContext.argument(argument.intent)
+        decision = _ownership_decision(argument.semantic_type, context)
+        if _is_pointer_array(argument.semantic_type) and decision.is_blocked:
             raise ValueError(
-                f"Function {node.name!r} has pointer {intent} argument {argument.name!r}, "
-                "which needs explicit pointer ownership, lifetime, shape, contiguity, and deallocation policy"
+                f"Function {node.name!r} has pointer {argument.intent} argument {argument.name!r}, "
+                f"which cannot be wrapped safely: {decision.blocker or decision.reason}"
             )
+
+
+def _raise_for_blocked_ownership_policy(
+    owner: str,
+    semantic_type: models.SemanticType | None,
+    context: OwnershipContext,
+) -> None:
+    if semantic_type is None:
+        return
+    decision = _ownership_decision(semantic_type, context)
+    if decision.is_blocked:
+        raise ValueError(f"{owner} cannot be wrapped safely: {decision.blocker or decision.reason}")
 
 
 def _raise_for_unsupported_assumed_type_contracts(node: models.SemanticFunction) -> None:
@@ -628,6 +647,40 @@ def _raise_for_unsupported_bind_c_abi(node: models.SemanticFunction) -> None:
         raise ValueError(f"Function {node.name!r} has a bind(C) scalar result without a supported ISO C binding kind")
 
 
+def _raise_for_blocked_ownership_contracts_in_function(node: models.SemanticFunction) -> None:
+    for argument in node.arguments:
+        _raise_for_blocked_ownership_policy(
+            f"Function {node.name!r} argument {argument.name!r}",
+            argument.semantic_type,
+            OwnershipContext.argument(argument.intent),
+        )
+    _raise_for_blocked_ownership_policy(
+        f"Function {node.name!r} result",
+        node.return_type,
+        OwnershipContext.result(),
+    )
+
+
+def _raise_for_blocked_ownership_contracts_in_class(node: models.SemanticClass) -> None:
+    for field in node.fields:
+        _raise_for_blocked_ownership_policy(
+            f"Class {node.name!r} field {field.name!r}",
+            field.semantic_type,
+            OwnershipContext.field(),
+        )
+
+
+def _raise_for_blocked_ownership_contracts(node: models.SemanticModule) -> None:
+    for variable in node.variables:
+        _raise_for_blocked_ownership_policy(
+            f"Module variable {variable.name!r}",
+            variable.semantic_type,
+            OwnershipContext.module_variable(),
+        )
+    for semantic_class in node.classes:
+        _raise_for_blocked_ownership_contracts_in_class(semantic_class)
+
+
 def _has_known_iso_c_kind(semantic_type: models.SemanticType) -> bool:
     source_type = (semantic_type.origin.source_type or "").casefold()
     return any(token in source_type for token in _ISO_C_KIND_TOKENS)
@@ -651,6 +704,7 @@ def semantic_ir_to_codegen_ast(
         _raise_for_unresolved_generic_targets(node)
         _raise_for_unsupported_allocatable_module_variables(node)
         _raise_for_unsupported_array_contracts(node)
+        _raise_for_blocked_ownership_contracts(node)
         custom_types = dict(custom_types or {})
         class_lookup = _semantic_class_lookup(node.classes)
         class_descendants = _semantic_class_descendants(node.classes)
@@ -742,6 +796,7 @@ def semantic_ir_to_codegen_ast(
         _raise_for_unsupported_bind_c_abi(node)
         _raise_for_unsupported_allocatable_scalar_outputs(node)
         _raise_for_unsupported_pointer_outputs(node)
+        _raise_for_blocked_ownership_contracts_in_function(node)
         _raise_for_unsupported_assumed_type_contracts(node)
         _raise_for_unsupported_array_contracts_in_function(node)
         passed_object_position = _passed_object_position(node)
@@ -818,13 +873,15 @@ def semantic_ir_to_codegen_ast(
                 result_shape = _codegen_array_shape(node.return_type, func_scope)
             else:
                 result_shape = None
-            result_memory = _memory_handling(node.return_type)
+            result_ownership = _ownership_decision(node.return_type, OwnershipContext.result())
+            result_memory = result_ownership.memory_handling
             result_var = Variable(
                 return_dtype,
                 node.name,
                 shape=result_shape,
                 memory_handling=result_memory,
                 intent="out",
+                ownership_decision=result_ownership,
             )
             func_scope.insert_variable(result_var, name=node.name)
             result = FunctionDefResult(result_var)
@@ -855,6 +912,7 @@ def semantic_ir_to_codegen_ast(
 
     if isinstance(node, models.SemanticClass):
         _raise_for_unresolved_generic_targets(node)
+        _raise_for_blocked_ownership_contracts_in_class(node)
         class_type = (custom_types or {}).get(node.name)
         if class_type is None:
             class_type = _class_type(node)
@@ -934,16 +992,19 @@ def semantic_ir_to_codegen_ast(
             name = scope.get_expected_name(node.name)
         except RuntimeError:
             name = scope.get_new_name(node.name)
+        ownership_context = _ownership_context_for_variable(node, scope)
+        ownership_decision = _ownership_decision(semantic_type, ownership_context)
         var = Variable(
             dtype,
             name,
             shape=shape,
-            memory_handling=_memory_handling(semantic_type),
+            memory_handling=ownership_decision.memory_handling,
             is_private=node.visibility == "private",
             is_target=bool(semantic_type.metadata.get("fortran_target")),
             is_optional=getattr(node, "optional", False),
             intent=getattr(node, "intent", "in"),
             passes_by_value=_passes_by_value(node),
+            ownership_decision=ownership_decision,
             assumed_rank=_is_assumed_rank(semantic_type),
             cls_base=cls_base,
         )

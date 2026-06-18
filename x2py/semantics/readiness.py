@@ -4,6 +4,8 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
+from x2py.ownership_policy import OwnershipContext, default_ownership_policy
+
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     SemanticArgument,
@@ -204,6 +206,14 @@ class _SemanticReadinessChecker:
                     unit=f"{module.name}.{var.name}",
                     unit_kind="variable",
                 )
+            self._check_ownership_policy(
+                var.semantic_type,
+                context=OwnershipContext.module_variable(),
+                owner=f"{module.name}.{var.name}",
+                item=var.name,
+                unit=f"{module.name}.{var.name}",
+                unit_kind="variable",
+            )
             self._check_argument(
                 var,
                 owner=f"{module.name}.{var.name}",
@@ -319,6 +329,14 @@ class _SemanticReadinessChecker:
             )
 
         for field in cls.fields:
+            self._check_ownership_policy(
+                field.semantic_type,
+                context=OwnershipContext.field(),
+                owner=f"{module.name}.{cls.name}.{field.name}",
+                item=field.name,
+                unit=f"{module.name}.{cls.name}",
+                unit_kind="class",
+            )
             self._check_argument(
                 field,
                 owner=f"{module.name}.{cls.name}.{field.name}",
@@ -408,6 +426,15 @@ class _SemanticReadinessChecker:
                     unit=unit,
                     unit_kind=unit_kind,
                 )
+            else:
+                self._check_ownership_policy(
+                    arg.semantic_type,
+                    context=OwnershipContext.argument(arg.intent),
+                    owner=owner,
+                    item=arg.name,
+                    unit=unit,
+                    unit_kind=unit_kind,
+                )
             self._check_argument(
                 arg,
                 owner=f"{owner}.{arg.name}",
@@ -425,6 +452,14 @@ class _SemanticReadinessChecker:
                 unit=unit,
                 unit_kind=unit_kind,
             )
+        self._check_ownership_policy(
+            func.return_type,
+            context=OwnershipContext.result(),
+            owner=owner,
+            item="return",
+            unit=unit,
+            unit_kind=unit_kind,
+        )
         self._check_type(
             func.return_type,
             owner=f"{owner}.return",
@@ -575,6 +610,33 @@ class _SemanticReadinessChecker:
             unit_kind=unit_kind,
         )
 
+    def _check_ownership_policy(
+        self,
+        semantic_type: SemanticType | None,
+        *,
+        context: OwnershipContext,
+        owner: str,
+        item: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        if semantic_type is None:
+            return
+        decision = default_ownership_policy.decide_semantic_type(semantic_type, context)
+        if not decision.is_blocked:
+            return
+        self._add_blocker(
+            "fortran_ownership_policy_blocked",
+            "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
+            {
+                "owner": owner,
+                "item": item,
+                "policy": decision.blocker or decision.reason,
+            },
+            unit=unit,
+            unit_kind=unit_kind,
+        )
+
     def _check_array_contract(
         self,
         semantic_type: SemanticType,
@@ -635,7 +697,13 @@ class _SemanticReadinessChecker:
 
     @classmethod
     def _is_unsupported_pointer_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
-        return cls._is_pointer_array(semantic_type) and str(intent).lower() in {"out", "inout"}
+        if not cls._is_pointer_array(semantic_type):
+            return False
+        decision = default_ownership_policy.decide_semantic_type(
+            semantic_type,
+            OwnershipContext.argument(intent),
+        )
+        return decision.is_blocked
 
     @staticmethod
     def _is_allocatable_array(semantic_type: SemanticType | None) -> bool:

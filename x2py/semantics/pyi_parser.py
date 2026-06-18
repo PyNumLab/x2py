@@ -7,6 +7,8 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from x2py.ownership_policy import set_ownership_metadata
+
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
@@ -758,10 +760,21 @@ class _PyiAstParser:
     def _apply_annotation_metadata_call(self, semantic_type: SemanticType, node: ast.Call) -> None:
         helper = self.required_name(node.func)
         if helper in {"Intent", "FortranCharacterLength"}:
-            if len(node.args) != 1:
+            if len(node.args) != 1 or node.keywords:
                 raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
             metadata_key = "_pyi_intent" if helper == "Intent" else "fortran_character_length"
             semantic_type.metadata[metadata_key] = str(ast.literal_eval(node.args[0]))
+            return
+        if helper in {"Ownership", "Transfer", "Destruction"}:
+            if len(node.args) != 1 or node.keywords:
+                raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
+            value = str(ast.literal_eval(node.args[0]))
+            set_ownership_metadata(
+                semantic_type.metadata,
+                owner=value if helper == "Ownership" else None,
+                transfer=value if helper == "Transfer" else None,
+                destruction=value if helper == "Destruction" else None,
+            )
             return
         if helper == "ArrayCategory":
             self._require_array_storage(semantic_type).category = str(ast.literal_eval(node.args[0]))
@@ -924,12 +937,15 @@ class _PyiAstParser:
             "Constant",
             "Contiguous",
             "FortranTarget",
+            "Ownership",
             "Optional",
             "ORDER_ANY",
             "ORDER_C",
             "ORDER_F",
             "Pointer",
             "Shape",
+            "Transfer",
+            "Destruction",
         }
 
     def dimension_text(self, node: ast.expr) -> str:

@@ -374,6 +374,9 @@ class Variable:
     passes_by_value : bool, default: False
         True when a native scalar dummy has Fortran ``value`` ABI.
 
+    ownership_decision : object, default: None
+        Central ownership policy decision preserved from semantic lowering.
+
     shape : tuple, default: None
         The shape of the array. A tuple whose elements indicate the number of elements along
         each of the dimensions of an array. The elements of the tuple should be None or model objects.
@@ -414,6 +417,7 @@ class Variable:
         "_is_temp",
         "_memory_handling",
         "_name",
+        "_ownership_decision",
         "_passes_by_value",
         "_shape",
     )
@@ -430,6 +434,7 @@ class Variable:
         is_private=False,
         intent="in",
         passes_by_value=False,
+        ownership_decision=None,
         assumed_rank=False,
         shape=None,
         cls_base=None,
@@ -470,6 +475,7 @@ class Variable:
         if not isinstance(passes_by_value, bool):
             raise TypeError("passes_by_value must be a boolean.")
         self._passes_by_value = passes_by_value
+        self._ownership_decision = ownership_decision
         if not isinstance(assumed_rank, bool):
             raise TypeError("assumed_rank must be a boolean.")
         self._assumed_rank = assumed_rank
@@ -623,6 +629,11 @@ class Variable:
     def passes_by_value(self):
         """True when the native scalar dummy uses Fortran ``value`` ABI."""
         return self._passes_by_value
+
+    @property
+    def ownership_decision(self):
+        """Central ownership policy decision for this variable."""
+        return self._ownership_decision
 
     @property
     def assumed_rank(self):

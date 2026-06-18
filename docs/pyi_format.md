@@ -140,6 +140,9 @@ Generated canonical metadata:
 | `FortranCharacterLength("n")` | Fortran character storage length for `String` contracts |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
 | `FortranTarget` | native storage has the Fortran `target` attribute needed for module zero-copy views |
+| `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
+| `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
+| `Destruction("python_refcount" | "wrapper_dealloc" | "native_owner" | "caller" | "call_local" | "none" | "blocked")` | explicit destruction override for the wrapper ownership policy |
 
 Loaded compatibility metadata:
 
@@ -156,6 +159,12 @@ Other positional `Annotated` helpers are preserved as semantic constraints:
 ```python
 value: Annotated[Int32, Bounded(1, 8), Finite]
 ```
+
+Ownership metadata is consumed by the centralized wrapper ownership policy. Use
+it only when the native source facts are more precise than the generated default.
+For example, a pointer array can be made a Python-owned snapshot only when the
+stub also supplies enough shape, nullability, lifetime, and release facts for
+the backend path being enabled.
 
 `Final[T]` is the only public constant spelling. Do not use
 `Annotated[T, Constant]` or `T[Constant]`.
