@@ -1174,6 +1174,43 @@ def test_defined_operator_pyi_generates_wrapper_sources_without_fortran_source(t
     assert ".tp_richcompare =" in c_wrapper
 
 
+def test_bound_constructor_pyi_generates_single_initializer_without_keyword_default(tmp_path: Path):
+    loaded = parse_pyi_text(
+        """
+class state:
+    @private
+    def init_state(self, seed: Ptr(Const(Int32))) -> None: ...
+
+    @bind("init_state")
+    def __init__(self, seed: Ptr(Const(Int32))) -> None: ...
+
+    id: Int32
+""",
+        module_name="edited",
+    )
+    scope = Scope(name=loaded.name, scope_type="module")
+    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
+    pipeline = BindingPipeline(
+        Codegen(loaded.name, codegen_module, codegen_module.scope),
+        loaded.name,
+        "fortran",
+        verbose=0,
+    )
+
+    pipeline.generate(str(tmp_path))
+    generated = pipeline.write(tmp_path)
+
+    assert [path.name for path in generated] == [
+        "bind_c_edited_wrapper.f90",
+        "edited_wrapper.c",
+    ]
+    c_wrapper = generated[1].read_text()
+    assert "init_state" in generated[0].read_text()
+    assert "state__default_init_wrapper" not in c_wrapper
+    assert '(char*)"seed"' in c_wrapper
+    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &seed_obj)' in c_wrapper
+
+
 def test_emit_module_variables_with_visibility():
     source = """
 module state_mod
@@ -1190,11 +1227,47 @@ contains
 end module
 """
     code = generate_pyi(source)
-    assert "answer: private[Final[Int32]]" in code
+    assert "answer:" not in code
     assert "def get_counter() -> Int32: ..." in code
     assert "def set_counter(value: Int32) -> None: ..." in code
     assert "counter: Int32" not in code
-    assert "hidden_scale: private[Float64]" in code
+    assert "hidden_scale" not in code
+    assert "ping" not in code
+
+
+def test_emit_omits_fortran_source_private_methods_and_fields():
+    source = """
+module private_method_mod
+  implicit none
+  private
+  public :: box
+  type :: box
+    private
+    integer, public :: id
+    integer, private :: secret
+  contains
+    procedure, private :: hidden => hidden_impl
+    procedure, public :: visible => visible_impl
+  end type box
+contains
+  subroutine hidden_impl(self)
+    class(box) :: self
+  end subroutine hidden_impl
+  subroutine visible_impl(self)
+    class(box) :: self
+  end subroutine visible_impl
+end module
+"""
+
+    code = generate_pyi(source)
+
+    assert "class box:" in code
+    assert "    id: Int32" in code
+    assert "secret" not in code
+    assert "hidden" not in code
+    assert "hidden_impl" not in code
+    assert "visible_impl" not in code
+    assert "    def visible(self) -> None: ..." in code
 
 
 def test_emit_module_with_projection_helpers_and_private_function():

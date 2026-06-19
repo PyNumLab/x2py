@@ -232,6 +232,8 @@ def _passes_by_value(node: models.SemanticVariable) -> bool:
 
 
 def _passed_object_position(node: models.SemanticFunction) -> int | None:
+    if node.name == "__init__" and node.metadata.get(models.PYI_BIND_TARGET_METADATA):
+        return None
     overload_kind = node.metadata.get(OVERLOAD_KIND_METADATA)
     if overload_kind in {"generic", "assignment", "named_operator", "comparison"}:
         position = node.metadata.get(PYTHON_BOUND_POSITION_METADATA)
@@ -260,6 +262,18 @@ def _codegen_function_arguments(declarations: list[Variable], passed_object_posi
     ]
 
 
+def _pyi_bound_constructor_self(
+    node: models.SemanticFunction,
+    cls_base: ClassDef | None,
+    func_scope,
+) -> Variable | None:
+    if cls_base is None or node.name != "__init__" or not node.metadata.get(models.PYI_BIND_TARGET_METADATA):
+        return None
+    self_var = Variable(cls_base.class_type, func_scope.get_new_name("self"), cls_base=cls_base)
+    func_scope.insert_variable(self_var)
+    return self_var
+
+
 def _raise_for_unresolved_generic_targets(node: models.SemanticModule | models.SemanticClass) -> None:
     blockers = node.metadata.get("readiness_blockers", ())
     for blocker in blockers:
@@ -272,6 +286,14 @@ def _raise_for_unresolved_generic_targets(node: models.SemanticModule | models.S
             targets = ", ".join(str(target) for target in missing)
             raise ValueError(f"Generic interface {generic!r} references missing specific procedure(s): {targets}")
         raise ValueError(f"Generic interface {generic!r} does not declare any specific procedures")
+
+
+def _raise_for_unsupported_constructor_overloads(node: models.SemanticClass) -> None:
+    if any(overload_set.name == "__init__" for overload_set in node.overload_sets):
+        raise ValueError(
+            "Constructor overload dispatch is not mapped to Python tp_init yet; "
+            "use the generated field constructor until overloaded constructor lowering is implemented."
+        )
 
 
 def _raise_for_unsupported_fortran_module_features(node: models.SemanticModule) -> None:
@@ -996,19 +1018,23 @@ def semantic_ir_to_codegen_ast(
             scope_type="function",
             public_namespace=scope.child_public_namespace("function", node.name),
         )
-        declarations = [
+        constructor_self = _pyi_bound_constructor_self(node, cls_base, func_scope)
+        declarations = [constructor_self] if constructor_self is not None else []
+        declarations.extend(
             semantic_ir_to_codegen_ast(
                 item,
                 func_scope,
                 legacy,
                 custom_types=custom_types,
-                cls_base=cls_base if index == passed_object_position else None,
+                cls_base=cls_base if constructor_self is None and index == passed_object_position else None,
                 class_lookup=class_lookup,
                 class_descendants=class_descendants,
                 class_order=class_order,
             )
             for index, item in enumerate(node.arguments)
-        ]
+        )
+        if constructor_self is not None:
+            passed_object_position = 0
         if node.return_type:
             return_dtype = _codegen_type(node.return_type.dtype, custom_types)
             if node.return_type.rank > 0:
@@ -1070,6 +1096,7 @@ def semantic_ir_to_codegen_ast(
 
     if isinstance(node, models.SemanticClass):
         _raise_for_unresolved_generic_targets(node)
+        _raise_for_unsupported_constructor_overloads(node)
         _raise_for_blocked_ownership_contracts_in_class(node)
         class_type = (custom_types or {}).get(node.name)
         if class_type is None:
@@ -1099,6 +1126,9 @@ def semantic_ir_to_codegen_ast(
         superclasses = tuple(
             cls for base_name in node.base_classes if (cls := scope.find(base_name, "classes")) is not None
         )
+        decorators = {}
+        if node.origin.metadata.get(models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
+            decorators[models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
         cls = ClassDef(
             name,
             attributes=attributes,
@@ -1106,6 +1136,7 @@ def semantic_ir_to_codegen_ast(
             superclasses=superclasses,
             scope=class_scope,
             class_type=class_type,
+            decorators=decorators,
         )
         scope.insert_class(cls)
         for method in node.methods:

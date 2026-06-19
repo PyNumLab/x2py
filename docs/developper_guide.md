@@ -673,16 +673,16 @@ from `x2py/semantics/models.py`.
   enums, typedef chains, standard-type probe facts, macros, pointer/array
   storage, and C-specific readiness blockers.
 - C `int` keeps the semantic name `Int` while its compiler-probed concrete
-  precision is stored on the semantic type. C enums are open named semantic
-  declarations with unscoped module-level enumerator constants.
+  precision is stored on the semantic type. C and Fortran enums lower to
+  unscoped module-level integer constants; enum names are metadata, not
+  semantic datatypes.
 - Named data bindings share a common base but keep role-specific types:
   `SemanticVariable` for module/global variables and macro constants,
   `SemanticArgument` for callable parameters, `SemanticField` for struct,
-  union, and Fortran derived-type fields, and `SemanticEnumerator` for enum
-  values. `SemanticFunction.locals` is the reserved home for local variables
-  or local constants if a frontend later promotes them into semantic IR; local
-  bindings are not emitted into `.pyi` or treated as wrapper interface items by
-  default.
+  union, and Fortran derived-type fields. `SemanticFunction.locals` is the
+  reserved home for local variables or local constants if a frontend later
+  promotes them into semantic IR; local bindings are not emitted into `.pyi` or
+  treated as wrapper interface items by default.
 - `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
 - `x2py/semantics/pyi_parser.py` loads edited contracts back into semantic IR.
 - `x2py/semantics/readiness.py` decides whether that IR is complete enough for

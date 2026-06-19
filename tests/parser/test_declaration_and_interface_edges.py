@@ -376,15 +376,24 @@ def test_valid_enum_subunit_accepts_optional_separator_and_multiple_enumerators(
         """
 module enum_valid_mod
   enum, bind(c)
-    enumerator first
-    enumerator :: second = 2, third = selected_int_kind(4)
+    enumerator first = -1
+    enumerator :: second, third = 10, fourth
   end enum
 end module enum_valid_mod
 """,
         filename="valid_enum.f90",
     )
 
-    assert parsed.modules[0].name == "enum_valid_mod"
+    module = parsed.modules[0]
+    enum = module.enums[0]
+    assert module.name == "enum_valid_mod"
+    assert enum.bind_c is True
+    assert [(item.name, item.value, item.symbolic_value) for item in enum.enumerators] == [
+        ("first", "-1", "-1"),
+        ("second", "0", None),
+        ("third", "10", "10"),
+        ("fourth", "11", None),
+    ]
 
 
 @pytest.mark.parametrize(

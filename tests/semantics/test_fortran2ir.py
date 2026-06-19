@@ -37,6 +37,7 @@ from x2py.semantics.fortran2ir import (
 )
 from x2py.semantics import models as semantic_models
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
+from x2py.codegen.printers.pyi_printer import emit_module
 
 from x2py.semantics.models import (
     ProjectionMapping,
@@ -1061,28 +1062,21 @@ def test_resolve_semantic_compile_time_values_rewrites_shapes_and_constraints():
     assert resolved.variables[0].semantic_type.storage.array.shape == ["1:8"]
 
 
-def test_resolve_semantic_compile_time_values_handles_enum_declarations():
-    enumerator = SemanticArgument(
+def test_resolve_semantic_compile_time_values_handles_enum_like_constants():
+    enumerator = SemanticVariable(
         name="STATUS_LIMIT",
-        semantic_type=SemanticType("status"),
+        semantic_type=SemanticType("Int32", metadata={"enum_name": "status"}),
         default_value="n",
     )
     module = SemanticModule(
         name="status_mod",
-        classes=[
-            semantic_models.SemanticEnum(
-                name="status",
-                underlying_type=SemanticType("Int", metadata={"bits": "n"}),
-                enumerators=[enumerator],
-            )
-        ],
         variables=[enumerator],
     )
 
     resolved = resolve_semantic_compile_time_values(module, {"n": 16})
 
-    assert resolved.enums[0].underlying_type.metadata == {"bits": "16"}
-    assert resolved.enums[0].enumerators[0].default_value == "16"
+    assert resolved.variables[0].semantic_type.metadata == {"enum_name": "status"}
+    assert resolved.variables[0].default_value == "16"
 
 
 def test_resolve_semantic_compile_time_values_handles_nested_modules():
@@ -1199,6 +1193,40 @@ end module constants_mod
     assert has_constraint(variables["nmax"], "Constant")
     assert variables["origin"].name == "Float64"
     assert variables["origin"].shape == ["3"]
+
+
+def test_fortran_enum_bind_c_lowers_to_integer_constants():
+    source = """
+module colors_mod
+  enum, bind(C)
+    enumerator :: red = -1, blue, green = red + 11, yellow
+  end enum
+contains
+  integer(c_int) function get_color() bind(C)
+    use iso_c_binding, only: c_int
+    get_color = green
+  end function get_color
+end module colors_mod
+"""
+
+    parsed = parse_fortran_source(source)
+    module = fortran_module_to_semantic_module(parsed)
+    constants = {var.name: var for var in module.variables}
+
+    assert [(name, constants[name].default_value) for name in ("red", "blue", "green", "yellow")] == [
+        ("red", "-1"),
+        ("blue", "0"),
+        ("green", "10"),
+        ("yellow", "11"),
+    ]
+    assert constants["red"].semantic_type.name == "Int32"
+    assert constants["red"].semantic_type.constraints == [SemanticConstraint("Constant")]
+    assert constants["red"].semantic_type.metadata["fortran_bind_c"] is True
+    assert constants["green"].metadata["fortran_initializer"] == "red + 11"
+    emitted = emit_module(module)
+    assert "red: Final[Int32] = -1" in emitted
+    assert "yellow: Final[Int32] = 11" in emitted
+    assert "def get_color() -> Int32: ..." in emitted
 
 
 def test_derived_type_initializers_and_finalizers_reach_semantic_ir():

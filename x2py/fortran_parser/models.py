@@ -345,6 +345,23 @@ class FortranInterface:
 
 
 @dataclass
+class FortranEnumerator:
+    name: str
+    value: str | None = None
+    symbolic_value: str | None = None
+    visibility: str = "public"
+
+
+@dataclass
+class FortranEnum:
+    name: str | None = None
+    module: str | None = None
+    bind_c: bool = False
+    enumerators: list[FortranEnumerator] = field(default_factory=list)
+    visibility: str = "public"
+
+
+@dataclass
 class FortranModule:
     name: str
     filename: str | None = None
@@ -353,6 +370,7 @@ class FortranModule:
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
     interfaces: list[FortranInterface] = field(default_factory=list)
+    enums: list[FortranEnum] = field(default_factory=list)
     default_visibility: str = "public"
     public_symbols: list[str] = field(default_factory=list)
     private_symbols: list[str] = field(default_factory=list)
@@ -370,6 +388,7 @@ class FortranSubmodule:
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
     derived_types: list[FortranDerivedType] = field(default_factory=list)
     interfaces: list[FortranInterface] = field(default_factory=list)
+    enums: list[FortranEnum] = field(default_factory=list)
     common_variables: list[str] = field(default_factory=list)
 
 
@@ -380,6 +399,7 @@ class FortranProgram:
     uses: dict[str, list[FortranUseMapping]] = field(default_factory=dict)
     variables: list[FortranVariable] = field(default_factory=list)
     procedures: list[FortranProcedureSignature] = field(default_factory=list)
+    enums: list[FortranEnum] = field(default_factory=list)
     common_variables: list[str] = field(default_factory=list)
 
 

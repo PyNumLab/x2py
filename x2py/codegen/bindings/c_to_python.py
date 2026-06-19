@@ -12,6 +12,7 @@ from x2py.ownership_policy import (
     codegen_action_for_variable,
     ownership_decision_for_codegen_variable,
 )
+from x2py.semantics.models import PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA
 
 from ..bind_c import (
     BindCArrayVariable,
@@ -1825,6 +1826,19 @@ class CPythonBindingGenerator(BindingGenerator):
         self._error_exit_code = NIL
         return function
 
+    @staticmethod
+    def _suppresses_default_class_initialiser(cls):
+        current = cls
+        while current is not None:
+            decorators = getattr(current, "decorators", {})
+            if hasattr(decorators, "get") and decorators.get(PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
+                return True
+            next_class = getattr(current, "original_class", None)
+            if next_class is current:
+                return False
+            current = next_class
+        return False
+
     def _get_class_destructor(self, del_function, cls_dtype, wrapper_scope):
         """
         Create the destructor for the class.
@@ -3403,7 +3417,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 else:
                     wrapped_class.add_property(self._visit(a.clone(a.name, new_class=DottedVariable, lhs=pseudo_self)))
 
-        if not has_initialiser:
+        if not has_initialiser and not self._suppresses_default_class_initialiser(expr):
             wrapped_class.add_new_method(self._get_default_class_initialiser(wrapped_class, orig_cls_dtype))
 
         return wrapped_class

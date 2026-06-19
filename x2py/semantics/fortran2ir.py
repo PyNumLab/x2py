@@ -11,6 +11,8 @@ from x2py.fortran_parser.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
+    FortranEnum,
+    FortranEnumerator,
     FortranFile,
     FortranModule,
     FortranProject,
@@ -33,7 +35,6 @@ from .models import (
     SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
-    SemanticEnum,
     SemanticField,
     SemanticFunction,
     SemanticImport,
@@ -364,6 +365,38 @@ class FortranToIRConverter:
         binding.optional = getattr(var, "optional", False)
         return binding
 
+    @staticmethod
+    def visit_enumerator(enumerator: FortranEnumerator, enum: FortranEnum) -> SemanticVariable:
+        semantic_type = SemanticType(
+            "Int32",
+            dtype="Int32",
+            constraints=[SemanticConstraint("Constant")],
+            metadata={
+                "enum_name": enum.name,
+                "fortran_enum": True,
+                "fortran_bind_c": enum.bind_c,
+                "c_underlying_type": "Int32",
+            },
+        )
+        metadata = {"fortran_enum": True}
+        if enumerator.symbolic_value is not None:
+            metadata["fortran_initializer"] = enumerator.symbolic_value
+        return SemanticVariable(
+            name=enumerator.name,
+            semantic_type=semantic_type,
+            visibility=enumerator.visibility,
+            default_value=enumerator.value,
+            metadata=metadata,
+            origin=SemanticOrigin(
+                source_language="fortran",
+                native_name=enumerator.name,
+                native_scope=enum.module,
+                source_kind="enum_constant",
+                source_type="enum, bind(C)" if enum.bind_c else "enum",
+                metadata={"fortran_enum": True, "fortran_bind_c": enum.bind_c},
+            ),
+        )
+
     def visit_procedure(
         self,
         proc: FortranProcedureSignature,
@@ -500,6 +533,11 @@ class FortranToIRConverter:
         if overload_blockers:
             metadata["readiness_blockers"] = overload_blockers
         common_variables = {name.casefold() for name in module.common_variables}
+        enum_constants = [
+            self.visit_enumerator(enumerator, enum)
+            for enum in getattr(module, "enums", [])
+            for enumerator in enum.enumerators
+        ]
         return SemanticModule(
             name=module.name,
             functions=semantic_functions,
@@ -509,7 +547,8 @@ class FortranToIRConverter:
                 self.visit_data_member(var, intent="in", derived_type_context=context)
                 for var in getattr(module, "variables", [])
                 if var.name.casefold() not in common_variables
-            ],
+            ]
+            + enum_constants,
             imports=self._module_imports(module),
             metadata=metadata,
             origin=SemanticOrigin(
@@ -2118,12 +2157,6 @@ def _resolve_semantic_module_compile_time_values(
     for func in module.functions:
         _resolve_semantic_function_compile_time_values(func, compile_time_values)
     for declaration in module.classes:
-        if isinstance(declaration, SemanticEnum):
-            _resolve_semantic_type_compile_time_values(declaration.underlying_type, compile_time_values)
-            for enumerator in declaration.enumerators:
-                _resolve_semantic_argument_compile_time_values(enumerator, compile_time_values)
-            declaration.metadata = _resolve_semantic_value(declaration.metadata, compile_time_values)
-            continue
         for field in declaration.fields:
             _resolve_semantic_argument_compile_time_values(field, compile_time_values)
         for method in declaration.methods:

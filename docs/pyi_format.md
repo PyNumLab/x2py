@@ -57,7 +57,7 @@ The public annotations use semantic names, not raw C or Fortran spellings:
 | Reals | `Float32`, `Float64`, `Float128` |
 | Complex | `Complex64`, `Complex128`, `Complex256` |
 | Text | `String` |
-| User types | class names, enum names and imported type names |
+| User types | class names and imported type names |
 | Callables | `Callable`, `Callable[..., T]`, `Callable[[A, B], T]` |
 
 `Unknown` is intentionally rejected in `.pyi` annotations. Generated stubs must
@@ -197,26 +197,24 @@ the backend path being enabled.
 ## Constants And Enums
 
 Constants use `Final[T]`. Literal values are optional unless the value is needed
-as a compile-time expression or enum initializer:
+as a compile-time expression or enumerator initializer:
 
 ```python
 nmax: Final[Int32]
 answer: Final[Int32] = 42
 ```
 
-C enums are open semantic enums. The enum class records the underlying storage
-type, and enumerators remain module-level constants:
+C and Fortran enumerators are plain integer constants. Do not declare or expect
+Python `Enum`/`IntEnum` classes or semantic enum datatypes:
 
 ```python
-class status(Enum[Int]):
-    pass
-
-STATUS_OK: Final[status] = 0
-STATUS_RETRY: Final[status] = STATUS_OK + 1
+STATUS_OK: Final[Int] = 0
+STATUS_RETRY: Final[Int] = STATUS_OK + 1
 ```
 
-Open means the listed names are known constants, not the only possible native
-values.
+The listed names are documentation and convenience constants. Procedure
+arguments and returns that use native enum types are emitted as the underlying
+integer type.
 
 ## Classes And Native Type Markers
 
@@ -344,10 +342,14 @@ class accumulator:
     def add(self, value: Ptr(Const(Float64))) -> None: ...
 ```
 
-Concrete specifics remain ordinary functions with their native names and
-source visibility. Public specifics remain public; private specifics use
-`@private`. `@native_call` is not emitted merely to restate an unchanged native
-function name.
+Concrete specifics that remain in a stub are ordinary functions with their
+native names. Ordinary source-private Fortran declarations are not emitted as
+standalone generated `.pyi` items. A private overload specific may remain only
+when it is needed to resolve a public overload declaration from the standalone
+`.pyi`. `@private` is reserved for a user-imposed contract on a declaration
+that is otherwise part of the wrapper input.
+`@native_call` is not emitted merely to restate an unchanged native function
+name.
 
 The loader resolves only the decorator string. It never guesses a target by
 signature. The target must exist exactly once, each target may occur only once
@@ -506,9 +508,9 @@ to the field raises `AttributeError`; explicit wrapped Fortran procedures must
 perform allocation, reallocation, and deallocation.
 
 Fortran classes with public rank-0 numeric, logical, or complex components
-emit a generated keyword-only constructor. Every constructor keyword is
-optional: omitted components keep the native allocation state, including any
-Fortran default component initializer.
+emit a generated keyword-only constructor in generated stubs. Every constructor
+keyword is optional: omitted components keep the native allocation state,
+including any Fortran default component initializer.
 
 ```python
 class state:
@@ -522,6 +524,51 @@ class state:
     id: Int32 = 7
     scale: Float64 = 2.5
 ```
+
+An edited stub controls whether that generated constructor remains part of the
+Python surface. If the generated `__init__(self, *, ...)` declaration is
+removed, wrapper generation must not recreate the keyword constructor. A class
+left without any `__init__` keeps only native allocation and has no Python
+initializer arguments.
+
+An edited stub may instead replace the generated field-keyword constructor by
+binding `__init__` to one concrete class method with
+`@bind("specific_name")`. The target string must name another method declared in
+the same class, with the same Python-call signature and return type. The target
+method may be public, exposing both `state.init_state(...)` and `state(...)`, or
+marked `@private`, exposing only construction. A private target is still emitted
+in the `.pyi` because the `.pyi` must be sufficient to generate a wrapper
+without the original Fortran source. The target method represents the native
+initializer that keeps the native class argument; the Python `__init__`
+declaration omits that argument because Python supplies the newly allocated
+instance.
+
+```python
+class state:
+    @private
+    def init_state(
+        self,
+        seed: Ptr(Const(Int32)),
+        scale: Ptr(Const(Float64)) = ...
+    ) -> None: ...
+
+    @bind("init_state")
+    def __init__(
+        self,
+        seed: Ptr(Const(Int32)),
+        scale: Ptr(Const(Float64)) = ...
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+```
+
+The generated keyword-only shape remains reserved: if undecorated `__init__`
+keeps the `self, *, ...` form and every keyword has a default, the loader treats
+it as the generated field constructor metadata. Constructor overload
+declarations may still be used only when the generated field constructor is
+present; overloaded `tp_init` runtime lowering is not implemented yet and code
+generation reports an explicit blocker for that form.
 
 Module allocatable arrays are emitted as explicit getter functions so
 unallocated storage can be represented as `None`:
@@ -609,6 +656,11 @@ hidden_value: private[Float64]
 def consume(value: private[Int32]) -> None: ...
 ```
 
+Generated `.pyi` files omit ordinary declarations that are private in the
+original Fortran source. Privacy written in an edited `.pyi` is different: it
+is a user contract applied to a declaration that was otherwise available to the
+wrapper, so the declaration remains printed and loadable as wrapper input.
+
 Names that are not valid Python identifiers are represented with `var[...]` for
 data declarations, or with `Annotated[..., Name("native-name")]` for callable
 arguments:
@@ -659,7 +711,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
 | Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
-| C enums | open `Enum[T]` class plus module-level enumerators |
+| C and Fortran enums | module-level `Final[...]` integer constants |
 | Fortran derived types | classes with fields and methods when resolvable |
 | Fortran generic interfaces | explicit `@overload("specific")` links with C-extension dtype/rank dispatch |
 | Fortran defined operators | Python data-model methods plus explicit named-operator methods |

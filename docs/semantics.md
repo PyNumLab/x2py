@@ -262,19 +262,19 @@ policy is documented in the datatype mapping section above.
   `Int*`, `UInt*`, or `Float*` semantic names.
 - Opaque standard-type probe facts such as `FILE` create named opaque semantic
   classes when referenced by converted declarations.
-- Enum definitions become open `SemanticEnum` declarations. Named enum
-  arguments and returns keep the enum datatype instead of flattening to an
-  integer.
-- C enumerators are `SemanticEnumerator` entries on the open enum and also
-  remain unscoped module-level `Final[enum_name]` variables with their known
-  values. An open enum may still carry any value representable by its
-  underlying integer type; the listed enumerators are named constants, not
-  closed validation choices.
+- C and Fortran enum definitions become unscoped integer constants. The
+  semantic model does not create enum datatypes; named enum arguments, returns,
+  fields, and variables keep the enum's underlying integer type.
+- C enumerators and Fortran `enum, bind(C)` enumerators are ordinary
+  `SemanticVariable` entries with `Final[...]` constant metadata. Enum tag names
+  and `bind(C)` facts are preserved only as metadata for documentation and
+  diagnostics.
 - Native enumerator expressions remain stored in semantic IR. The `.pyi`
   initializer is emitted only when it can be represented as valid Python
   expression syntax.
 - Enum underlying storage currently assumes C `int` and records that
-  assumption unless an enum-specific compiler fact is supplied.
+  assumption unless an enum-specific compiler fact is supplied. Fortran
+  `enum, bind(C)` enumerators use `integer(c_int)`/`Int32`.
 - Object-like numeric macros become `Final`-style `SemanticVariable` entries through
   the `Constant` constraint.
 - Struct definitions become `SemanticClass` entries. Incomplete structs become
@@ -300,13 +300,10 @@ void set_status(enum status value);
 becomes:
 
 ```python
-class status(Enum[Int]):
-    pass
+STATUS_OK: Final[Int] = 0
+STATUS_ERROR: Final[Int] = 10
 
-STATUS_OK: Final[status] = 0
-STATUS_ERROR: Final[status] = 10
-
-def set_status(value: status) -> None: ...
+def set_status(value: Int) -> None: ...
 ```
 
 ### Conservative Blockers
@@ -1492,7 +1489,7 @@ The proposed Phase 1 implementation would need to:
    count or stride parameters.
 8. Preserve direct native scalar, pointer and native `void` returns.
 9. Parse and apply `@bind("symbol")` for identity symbol renaming.
-10. Parse complete by-value `Structure`, `Enum[T]` and opaque pointer leaf
+10. Parse complete by-value `Structure`, integer enum constants, and opaque pointer leaf
    declarations if those existing declaration features are already runnable;
    otherwise report them as not yet supported without approximating them.
 11. Reject `@native_call`, `Arg`, `Return`, `Returns`, `Status`, `Check`,

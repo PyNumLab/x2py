@@ -664,6 +664,31 @@ includes Fortran default component initialization where present. Private
 components, arrays, allocatables, pointers, character components, and derived
 components are not constructor keywords yet.
 
+Edited `.pyi` stubs control whether the generated keyword constructor remains
+part of the Python surface. Removing the generated `__init__(self, *, ...)`
+declaration suppresses the keyword constructor instead of recreating it during
+wrapper generation. A class left without any `__init__` keeps only native
+allocation and has no Python initializer arguments. To choose one concrete
+native initializer, bind `__init__` directly with `@bind("specific_name")`. The
+target must be another method declared in the same class with the same
+Python-call signature and return type. Public targets expose both the target
+method and construction; `@private` targets expose only construction. Private
+targets remain in the `.pyi` because the `.pyi` is a standalone wrapper input
+and must carry the native initializer signature even when Python users cannot
+call that initializer directly. The target keeps the native class argument,
+while the Python constructor declaration omits that argument because Python
+supplies the newly allocated instance. Constructor overload declarations still
+load and round-trip only beside the generated field constructor, but overloaded
+`tp_init` runtime lowering is not implemented yet and code generation reports an
+explicit blocker.
+
+Private visibility has two sources in this contract. Ordinary declarations that
+are private in the Fortran source are omitted from generated `.pyi` files;
+private overload specifics may remain only when required to resolve a public
+overload from the standalone `.pyi`. A `@private` decorator or `private[...]`
+annotation in an edited `.pyi` is a user-imposed wrapper contract on an
+otherwise public declaration, so it remains printed and loadable.
+
 Example: a type with default field values and `final :: cleanup` should produce
 a Python object whose native storage is initialized exactly once and finalized
 exactly once. Failed `tp_init` calls still deallocate the native instance that
@@ -695,32 +720,7 @@ the process; Python exception recovery is not attempted from `tp_dealloc`.
 - [x] Test default initialization, custom construction, partial construction,
   garbage collection, and repeated deletion.
 
-## 13. Dummy Procedures, Procedure Pointers, And Callbacks
-
-Current state: procedure declarations and interfaces can be parsed, but callback
-signature, lifetime, threading, and exception behavior are incomplete.
-
-Example: `subroutine integrate(f)` where `f` is a dummy procedure can call a
-Python function immediately, while storing `f` for later needs a persistent
-callback handle. Possible paths are immediate-call callbacks only, registered
-callbacks with explicit unregister, or full procedure-pointer support. Stored
-callbacks require GIL, exception, and lifetime policy.
-
-- [ ] Resolve dummy procedures through explicit or abstract interfaces.
-- [ ] Represent callback argument and result types as a complete semantic
-  callable contract.
-- [ ] Distinguish immediate-call callbacks from stored callbacks.
-- [ ] Define Python callback lifetime and native registration ownership.
-- [ ] Define callback invocation from non-Python native threads.
-- [ ] Acquire and release the GIL correctly around callbacks.
-- [ ] Define Python exception propagation through Fortran and C boundaries.
-- [ ] Support procedure-pointer association and null procedure pointers.
-- [ ] Support callback context/state without relying on global mutable state.
-- [ ] Test scalar, array, and derived-type callback arguments.
-- [ ] Test stored callbacks, unregistering, exceptions, threads, and object
-  destruction.
-
-## 14. Module Variables And Constants
+## 13. Module Variables And Constants
 
 Current state: module variables reach semantic IR. Public scalar numeric,
 logical, and complex module variables are exposed through explicit typed
@@ -776,27 +776,34 @@ common-block storage.
   rejected.
 - [x] Test mutation visibility across Python calls and multiple module objects.
 
-## 15. Fortran Enums
+## 14. Fortran Enums
 
-Current state: `enum, bind(C)` syntax is validated, but enumerator metadata is
-not exported to semantic IR or Python.
+Current state: `enum, bind(C)` syntax is validated and enumerator metadata is
+preserved as ordinary integer constants. Enums are not exposed as semantic
+datatypes and do not generate Python `Enum` or `IntEnum` classes.
 
 Example: `enum, bind(C); enumerator :: red = 1, blue; end enum` should preserve
-explicit and implicit integer values. The main design choice is whether Python
-gets `enum.IntEnum`, plain integer constants, or both; argument conversion and
-return values must then consistently preserve or coerce enum identity.
+explicit and implicit integer values and emit:
 
-- [ ] Add parser models for enum blocks and enumerators.
-- [ ] Preserve explicit and implicit enumerator values.
-- [ ] Convert Fortran enums to semantic enums.
-- [ ] Emit `.pyi` enum declarations.
-- [ ] Generate Python `IntEnum` or document another stable representation.
-- [ ] Accept enum members and documented integer coercions as arguments.
-- [ ] Return enum members from functions and fields.
-- [ ] Preserve `bind(C)` underlying representation.
-- [ ] Test explicit values, implicit increments, invalid values, and round trips.
+```python
+red: Final[Int32] = 1
+blue: Final[Int32] = 2
+```
 
-## 16. Character Edge Cases
+The same integer-constant policy applies to C enums. C enum tags may be kept as
+metadata for documentation, but arguments, returns, fields, and variables use
+the underlying integer type.
+
+- [x] Add parser models for enum blocks and enumerators.
+- [x] Preserve explicit and implicit enumerator values.
+- [x] Convert Fortran enums to ordinary semantic integer constants.
+- [x] Emit `.pyi` `Final[...]` integer constants for enumerators.
+- [x] Document that Python `Enum` and `IntEnum` classes are not generated.
+- [x] Keep enum arguments, returns, and fields as ordinary integer types.
+- [x] Preserve `bind(C)` underlying representation as integer metadata.
+- [x] Test explicit values, implicit increments, negative values, and round trips.
+
+## 15. Character Edge Cases
 
 Current state: common scalar character arguments and results work. Scalar
 `intent(out)` characters are hidden outputs, and scalar `intent(inout)`
@@ -833,7 +840,7 @@ character dummy arguments are not silently exposed.
 - [x] Test empty strings, exact length, truncation, padding, Unicode, embedded
   NUL, and mutable outputs.
 
-## 17. Scalar Types And Kind Coverage
+## 16. Scalar Types And Kind Coverage
 
 Current state: runtime wrapper coverage includes signed integer storage
 corresponding to 8, 16, 32, and 64 bits; default logical results and one-byte
@@ -874,7 +881,7 @@ because they do not have a portable Python/NumPy bool round-trip contract.
 - [x] Test scalar and array round trips at min/max, NaN, infinity, and complex
   edge values.
 
-## 18. Derived-Type Layout And Interoperability
+## 17. Derived-Type Layout And Interoperability
 
 Current state: all wrapped Fortran derived types, including `bind(C)` and
 `sequence` types, use the same opaque native-instance representation. Python
@@ -909,7 +916,7 @@ accessor path whenever validation is unavailable.
 - [x] Test nested interoperable types and mixed scalar fields.
 - [x] Test layout behavior through the configured compiler/platform test path.
 
-## 19. Multiple Files, Modules, And Submodules
+## 18. Multiple Files, Modules, And Submodules
 
 Current state: runtime wrapper builds accept one or more user-supplied Fortran
 source paths and produce one Python extension module/shared library. x2py does
@@ -972,7 +979,7 @@ direct build and prints each exact shell-escaped command as it runs.
 - [ ] Wrap submodule and separate-module procedures as additional public API.
 - [ ] Accept prebuilt module and library search paths in wrapper compilation.
 
-## 20. Visibility, Naming, And Python Surface
+## 19. Visibility, Naming, And Python Surface
 
 Current state: public wrapper names follow the policy in
 `docs/fortran_wrapper_naming_policy.md`. Public Fortran identifiers are
@@ -1001,6 +1008,31 @@ the native ABI symbol but never changes the Python API name by itself.
   unintentionally.
 - [x] Define and document any name-mangling policy.
 - [x] Test collisions, private symbols, renamed imports, and error messages.
+
+## 20. Dummy Procedures, Procedure Pointers, And Callbacks
+
+Current state: procedure declarations and interfaces can be parsed, but callback
+signature, lifetime, threading, and exception behavior are incomplete.
+
+Example: `subroutine integrate(f)` where `f` is a dummy procedure can call a
+Python function immediately, while storing `f` for later needs a persistent
+callback handle. Possible paths are immediate-call callbacks only, registered
+callbacks with explicit unregister, or full procedure-pointer support. Stored
+callbacks require GIL, exception, and lifetime policy.
+
+- [ ] Resolve dummy procedures through explicit or abstract interfaces.
+- [ ] Represent callback argument and result types as a complete semantic
+  callable contract.
+- [ ] Distinguish immediate-call callbacks from stored callbacks.
+- [ ] Define Python callback lifetime and native registration ownership.
+- [ ] Define callback invocation from non-Python native threads.
+- [ ] Acquire and release the GIL correctly around callbacks.
+- [ ] Define Python exception propagation through Fortran and C boundaries.
+- [ ] Support procedure-pointer association and null procedure pointers.
+- [ ] Support callback context/state without relying on global mutable state.
+- [ ] Test scalar, array, and derived-type callback arguments.
+- [ ] Test stored callbacks, unregistering, exceptions, threads, and object
+  destruction.
 
 ## 21. Runtime Errors, Concurrency, And Portability
 
@@ -1031,30 +1063,9 @@ platform after the core behavior is stable.
 - [ ] Add leak, use-after-free, and double-free checks for ownership-heavy
   features.
 
-## Recommended Execution Order
+## Remaining sections
 
-Use this order to minimize rework:
-
-1. Generic procedure interfaces.
-2. Defined operators and assignment.
-3. Output arguments and multiple results.
-4. Optional arguments.
-5. `value` and existing `bind(C)` calls.
-6. Allocatable dummy arguments and results.
-7. Pointer arguments, results, and association.
-8. Array-valued function results.
-9. Remaining array contracts.
-10. Derived types across procedure boundaries.
-11. Inheritance and polymorphism.
-12. Constructors, initialization, and finalizers.
-13. Dummy procedures, procedure pointers, and callbacks.
-14. Module variables and constants.
-15. Fortran enums.
-16. Character edge cases.
-17. Scalar types and kind coverage.
-18. Derived-type layout and interoperability.
-19. Multiple files, modules, and submodules.
-20. Visibility, naming, and Python surface.
+20. Dummy procedures, procedure pointers, and callbacks.
 21. Runtime errors, concurrency, and portability.
 
 When a section is completed, replace only its verified boxes with `[x]` and

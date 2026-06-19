@@ -19,6 +19,8 @@ from .models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
+    FortranEnum,
+    FortranEnumerator,
     FortranFile,
     FortranInterface,
     FortranModule,
@@ -625,8 +627,7 @@ class FortranParser:
         if unit.kind == "procedure":
             return self.visit_procedure_unit(unit, parent_scope=parent_scope, filename=filename)
         if unit.kind == "enum":
-            self._helper_validate_enum_unit(unit, filename=filename)
-            return None
+            return self.visit_enum_unit(unit, parent_scope=parent_scope, filename=filename)
         return None
 
     def visit_module_unit(
@@ -670,11 +671,11 @@ class FortranParser:
             for child in child_units
             if child.kind == "interface"
         ]
-        self._helper_validate_ignored_child_units(
-            [child for child in child_units if child.kind == "enum"],
-            parent_scope=scope,
-            filename=filename,
-        )
+        enums = [
+            self.visit_enum_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "enum"
+        ]
         module.procedures.extend(
             sig
             for sig in signatures
@@ -686,6 +687,7 @@ class FortranParser:
         module.interfaces.extend(
             iface for iface in interfaces if iface.module and iface.module.lower() == module.name.lower()
         )
+        module.enums.extend(enum for enum in enums if enum.module and enum.module.lower() == module.name.lower())
         self._validate_module_variables(module, filename)
         self._apply_module_visibility(module, filename)
         return module
@@ -731,11 +733,11 @@ class FortranParser:
             for child in child_units
             if child.kind == "interface"
         ]
-        self._helper_validate_ignored_child_units(
-            [child for child in child_units if child.kind == "enum"],
-            parent_scope=scope,
-            filename=filename,
-        )
+        enums = [
+            self.visit_enum_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "enum"
+        ]
         submodule.procedures.extend(
             sig
             for sig in signatures
@@ -747,6 +749,7 @@ class FortranParser:
         submodule.interfaces.extend(
             iface for iface in interfaces if iface.module and iface.module.lower() == submodule.name.lower()
         )
+        submodule.enums.extend(enum for enum in enums if enum.module and enum.module.lower() == submodule.name.lower())
         self._validate_module_variables(submodule, filename)
         return submodule
 
@@ -775,11 +778,16 @@ class FortranParser:
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
         self._helper_validate_contains_lines(scope, parts.contains, filename=filename)
         self._helper_validate_ignored_child_units(
-            child_units,
+            [child for child in child_units if child.kind != "enum"],
             parent_scope=scope,
             filename=filename,
             unit=unit,
             parts=parts,
+        )
+        program.enums.extend(
+            self.visit_enum_unit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if child.kind == "enum"
         )
         self._validate_variable_declarations(
             program.variables,
@@ -856,6 +864,16 @@ class FortranParser:
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
         self._validate_derived_type_fields(dtype, filename)
         return dtype
+
+    def visit_enum_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        parent_scope: _ParserScope,
+        filename: str | None,
+    ) -> FortranEnum:
+        """Visit an `enum, bind(C)` unit and preserve enumerator constants."""
+        return self._helper_parse_enum_unit(unit, filename=filename, module_owner=parent_scope.module_owner)
 
     def visit_interface_unit(
         self,
@@ -1836,16 +1854,40 @@ class FortranParser:
             )
 
     def _helper_validate_enum_unit(self, unit: _SourceUnit, *, filename: str | None) -> None:
-        """Validate an interoperability enum block without exporting metadata."""
+        """Validate an interoperability enum block."""
+        self._helper_parse_enum_unit(unit, filename=filename, module_owner=None)
+
+    def _helper_parse_enum_unit(
+        self,
+        unit: _SourceUnit,
+        *,
+        filename: str | None,
+        module_owner: str | None,
+    ) -> FortranEnum:
+        """Parse an interoperability enum block into enumerator constants."""
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("enum"), filename=filename)
+        bind_c = bool(unit.lines and _REGEX["bind_c"].search(unit.lines[0][0]))
+        enum = FortranEnum(name=unit.name, module=module_owner, bind_c=bind_c)
+        symbols: dict[str, str] = {}
+        next_value: int | None = 0
         for line, lineno, source_line in parts.specification:
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
             match = re.match(r"^enumerator\s*(?:::)?\s*(?P<items>.+)$", stripped, re.IGNORECASE)
-            if match and all(
-                re.match(r"^[A-Za-z_]\w*(?:\s*=\s*.+)?$", item.strip()) for item in split_csv(match.group("items"))
-            ):
+            if match:
+                try:
+                    for item in split_csv(match.group("items")):
+                        enumerator, next_value = self._parse_enum_item(item, symbols, next_value)
+                        enum.enumerators.append(enumerator)
+                except FortranParseError:
+                    self._raise_invalid_fortran_syntax_line(
+                        stripped,
+                        context="enum specification part",
+                        filename=filename,
+                        lineno=lineno,
+                        source_line=source_line,
+                    )
                 continue
             self._raise_invalid_fortran_syntax_line(
                 stripped,
@@ -1858,6 +1900,34 @@ class FortranParser:
             unit.lines[1:-1], parent_scope=_ParserScope(kind="enum", name=unit.name), filename=filename
         )
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
+        return enum
+
+    @staticmethod
+    def _parse_enum_item(
+        item: str,
+        symbols: dict[str, str],
+        next_value: int | None,
+    ) -> tuple[FortranEnumerator, int | None]:
+        stripped = item.strip()
+        match = re.fullmatch(r"(?P<name>[A-Za-z_]\w*)(?:\s*=\s*(?P<value>.+))?", stripped)
+        if match is None:
+            raise FortranParseError(f"Invalid Fortran syntax in enum specification part: {stripped}")
+
+        name = match.group("name")
+        source_value = match.group("value")
+        if source_value is None:
+            value = str(next_value) if next_value is not None else None
+            symbolic_value = None
+        else:
+            symbolic_value = source_value.strip()
+            resolved = _CompileTimeResolver(symbols).resolve(symbolic_value, prefer_symbolic=False)
+            value = FortranParser._normalize_parameter_value(resolved)
+
+        literal = FortranParser._safe_eval_int_expr(value or "") if value is not None else None
+        next_value = literal + 1 if literal is not None else None
+        if value is not None:
+            symbols[name.lower()] = value
+        return FortranEnumerator(name=name, value=value, symbolic_value=symbolic_value), next_value
 
     def _helper_validate_ignored_child_units(
         self,
@@ -3868,6 +3938,16 @@ class FortranParser:
                     filename=filename,
                     code="PARSE_UNKNOWN_VARIABLE_TYPE",
                 )
+        for enum in module.enums:
+            enum.visibility = module.default_visibility
+            for enumerator in enum.enumerators:
+                name = enumerator.name.lower()
+                if name in private_set:
+                    enumerator.visibility = "private"
+                elif name in public_set:
+                    enumerator.visibility = "public"
+                else:
+                    enumerator.visibility = module.default_visibility
 
     @staticmethod
     def _validate_derived_type_fields(dtype: FortranDerivedType, filename: str | None) -> None:

@@ -514,9 +514,13 @@ module fmodule_vars_f90
   use iso_c_binding
   implicit none
   private
-  public :: nmax, counter, scale, saved_counter, summarize, scaled_counter, next_local
+  public :: nmax, counter, scale, saved_counter
+  public :: red, blue, green, yellow, summarize, scaled_counter, next_local
 
   integer(c_int), parameter :: nmax = 12
+  enum, bind(C)
+    enumerator :: red = -1, blue, green = 10, yellow
+  end enum
   integer(c_int) :: counter = 3
   real(c_double) :: scale = 1.5d0
   integer(c_int), save :: saved_counter = 6
@@ -1907,9 +1911,14 @@ def test_scalar_module_variables_use_accessors_and_parameters_have_no_setter(tmp
     )
 
     assert module.nmax == np.int32(12)
+    assert module.red == np.int32(-1)
+    assert module.blue == np.int32(0)
+    assert module.green == np.int32(10)
+    assert module.yellow == np.int32(11)
     assert not hasattr(module, "counter")
     assert not hasattr(module, "scale")
     assert not hasattr(module, "set_nmax")
+    assert not hasattr(module, "set_red")
     assert not hasattr(module, "hidden_counter")
     assert not hasattr(module, "get_hidden_counter")
 

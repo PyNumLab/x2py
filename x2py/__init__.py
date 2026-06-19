@@ -27,7 +27,6 @@ from x2py.semantics.fortran2ir import (
 )
 from x2py.semantics.c2ir import (
     CToIRConverter,
-    c_enum_to_semantic_enum,
     c_file_to_semantic_module,
     c_file_to_semantic_modules,
     c_function_to_semantic_function,
@@ -101,7 +100,6 @@ __all__ = (
     "assess_semantic_wrap_readiness",
     "build_fortran_extension",
     "build_fortran_type_probe_source",
-    "c_enum_to_semantic_enum",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

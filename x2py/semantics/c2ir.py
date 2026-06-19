@@ -55,10 +55,7 @@ from .models import (
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
-    SemanticCoercion,
     SemanticConstraint,
-    SemanticEnum,
-    SemanticEnumerator,
     SemanticField,
     SemanticFunction,
     SemanticModule,
@@ -267,9 +264,12 @@ class CToIRConverter:
         self.opaque_standard_types = set()
         try:
             semantic_functions = [self.visit_function(function) for function in project.functions.values()]
-            semantic_enums = [self.visit_enum(enum) for enum in self._project_enum_declarations(project)]
             semantic_variables = [
-                *[enumerator for enum in semantic_enums for enumerator in enum.enumerators],
+                *[
+                    enumerator
+                    for enum in self._project_enum_declarations(project)
+                    for enumerator in self._enum_constants_for_enum(enum)
+                ],
                 *self._macro_constants_from_macros(list(project.macros.values())),
                 *[self.visit_variable(variable) for variable in project.variables.values()],
             ]
@@ -281,7 +281,7 @@ class CToIRConverter:
             return SemanticModule(
                 name=self._identifier(name),
                 functions=semantic_functions,
-                classes=[*semantic_enums, *semantic_classes],
+                classes=semantic_classes,
                 variables=semantic_variables,
                 metadata=self._project_metadata(project),
                 origin=SemanticOrigin(
@@ -312,9 +312,8 @@ class CToIRConverter:
         try:
             self.opaque_standard_types = set()
             semantic_functions = [self.visit_function(function) for function in c_file.functions]
-            semantic_enums = [self.visit_enum(enum) for enum in c_file.enums]
             semantic_variables = [
-                *[enumerator for enum in semantic_enums for enumerator in enum.enumerators],
+                *[enumerator for enum in c_file.enums for enumerator in self._enum_constants_for_enum(enum)],
                 *self._macro_constants(c_file),
                 *[self.visit_variable(variable) for variable in c_file.variables],
             ]
@@ -326,7 +325,7 @@ class CToIRConverter:
             module = SemanticModule(
                 name=self._module_name(c_file),
                 functions=semantic_functions,
-                classes=[*semantic_enums, *semantic_classes],
+                classes=semantic_classes,
                 variables=semantic_variables,
                 metadata=self._file_metadata(c_file),
                 origin=SemanticOrigin(
@@ -680,34 +679,6 @@ class CToIRConverter:
         binding.intent = self._inferred_intent(semantic_type)
         return binding
 
-    def visit_enum(self, enum: CEnum) -> SemanticEnum:
-        enum = self._resolved_enum(enum)
-        name = self._enum_name(enum)
-        underlying_type = self._enum_underlying_type(enum)
-        metadata: dict[str, Any] = {
-            "c_kind": "enum",
-            "c_open": True,
-        }
-        if underlying_type.metadata.get("c_enum_type_fact_source") == "compiler_probe":
-            metadata["c_underlying_type_fact_source"] = "compiler_probe"
-        else:
-            metadata["c_underlying_type_assumption"] = "int"
-        return SemanticEnum(
-            name=name,
-            native_name=enum.reference_name,
-            underlying_type=underlying_type,
-            enumerators=self._enum_constants_for_enum(enum),
-            open=True,
-            metadata=metadata,
-            origin=SemanticOrigin(
-                source_language="c",
-                native_name=enum.reference_name,
-                source_kind="enum",
-                source_type=enum.reference_name,
-                source_location=self._location_dict(enum.source_location),
-            ),
-        )
-
     def visit_type(self, type_: CType, *, owner: str | None = None) -> SemanticType:
         structural_type = self._structural_type(type_, owner=owner)
         if structural_type is not None:
@@ -930,19 +901,17 @@ class CToIRConverter:
     def _enum_type(self, enum: CEnum) -> SemanticType:
         enum = self._resolved_enum(enum)
         underlying_type = self._enum_underlying_type(enum)
-        return SemanticType(
-            name=self._enum_name(enum),
-            dtype=underlying_type.dtype,
-            coercions=[SemanticCoercion(source_type="Int")],
-            metadata={
+        underlying_type.metadata.update(
+            {
                 "c_kind": "enum",
                 "c_enum": enum.reference_name,
-                "c_enum_open": True,
+                "c_enum_name": self._enum_name(enum),
                 "c_underlying_type": underlying_type.name,
                 "c_underlying_dtype": underlying_type.dtype,
-            },
-            origin=self._type_origin(enum, native_name=enum.reference_name),
+            }
         )
+        underlying_type.origin = self._type_origin(enum, native_name=enum.reference_name)
+        return underlying_type
 
     def _enum_underlying_type(self, enum: CEnum) -> SemanticType:
         fact = self.standard_type_facts.get(enum.reference_name)
@@ -1038,8 +1007,8 @@ class CToIRConverter:
             )
         return element
 
-    def _enum_constants_for_enum(self, enum: CEnum) -> list[SemanticEnumerator]:
-        variables: list[SemanticEnumerator] = []
+    def _enum_constants_for_enum(self, enum: CEnum) -> list[SemanticVariable]:
+        variables: list[SemanticVariable] = []
         enum = self._resolved_enum(enum)
         next_value: int | None = 0
         for enumerator in enum.constants:
@@ -1050,7 +1019,7 @@ class CToIRConverter:
             next_value = literal + 1 if literal is not None else None
             semantic_type = self._enum_type(enum)
             semantic_type.constraints.append(SemanticConstraint("Constant"))
-            semantic_type.metadata["semantic_enum"] = self._enum_name(enum)
+            semantic_type.metadata["enum_name"] = self._enum_name(enum)
             semantic_type.origin = SemanticOrigin(
                 source_language="c",
                 native_name=enumerator.name,
@@ -1066,7 +1035,7 @@ class CToIRConverter:
             if pyi_value is not None:
                 metadata["pyi_default_value"] = pyi_value
             variables.append(
-                SemanticEnumerator(
+                SemanticVariable(
                     name=enumerator.name,
                     semantic_type=semantic_type,
                     default_value=value,
@@ -1238,11 +1207,6 @@ class CToIRConverter:
         for variable in module.variables:
             if is_private_origin(variable.origin):
                 variable.visibility = "private"
-        for enum in module.enums:
-            if is_private_origin(enum.origin):
-                enum.visibility = "private"
-                for enumerator in enum.enumerators:
-                    enumerator.visibility = "private"
         for cls in module.classes:
             if not isinstance(cls, SemanticClass):
                 continue
@@ -1296,14 +1260,6 @@ class CToIRConverter:
             if owner is None:
                 continue
             owners[self._identifier(struct.name)] = (owner.name, not struct.is_incomplete)
-        for enum in self._project_enum_declarations(project):
-            if enum.source_location is None:
-                continue
-            owner = modules_by_filename.get(enum.source_location.filename)
-            if owner is None:
-                continue
-            owners[self._enum_name(enum)] = (owner.name, True)
-
         for module in modules:
             external_names = {
                 name for name, (origin_module, _wrapped) in owners.items() if origin_module != module.name
@@ -1797,14 +1753,6 @@ def c_struct_to_semantic_class(
     return CToIRConverter(standard_type_report=standard_type_report).visit_struct(struct)
 
 
-def c_enum_to_semantic_enum(
-    enum: CEnum,
-    *,
-    standard_type_report: Any | None = None,
-) -> SemanticEnum:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_enum(enum)
-
-
 def c_file_to_semantic_module(
     parsed_file: CFile,
     *,
@@ -1843,7 +1791,6 @@ def c_project_to_semantic_module(
 
 __all__ = (
     "CToIRConverter",
-    "c_enum_to_semantic_enum",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

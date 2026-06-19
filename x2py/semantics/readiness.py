@@ -10,7 +10,6 @@ from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     SemanticArgument,
     SemanticClass,
-    SemanticEnum,
     SemanticFunction,
     SemanticImport,
     SemanticMethod,
@@ -224,16 +223,6 @@ class _SemanticReadinessChecker:
                 unit_kind="variable",
             )
 
-        for enum in module.enums:
-            if not _is_public(enum):
-                continue
-            self._check_enum(
-                enum,
-                module=module,
-                known_shape_symbols=set(module_constants),
-                constant_names=module_constant_names,
-            )
-
         for cls in module.classes:
             if not isinstance(cls, SemanticClass):
                 continue
@@ -271,33 +260,6 @@ class _SemanticReadinessChecker:
                     unit=f"{module.name}.{overload_set.name}",
                     unit_kind="overload_set",
                 )
-
-    def _check_enum(
-        self,
-        enum: SemanticEnum,
-        *,
-        module: SemanticModule,
-        known_shape_symbols: set[str],
-        constant_names: set[str],
-    ) -> None:
-        owner = f"{module.name}.{enum.name}"
-        self._check_metadata_blockers(
-            enum.metadata,
-            owner=owner,
-            item=enum.name,
-            unit=owner,
-            unit_kind="enum",
-        )
-        self._check_type(
-            enum.underlying_type,
-            owner=owner,
-            item=enum.name,
-            module=module,
-            known_shape_symbols=known_shape_symbols,
-            constant_names=constant_names,
-            unit=owner,
-            unit_kind="enum",
-        )
 
     def _check_class(
         self,

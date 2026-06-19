@@ -15,17 +15,18 @@ from .models import (
     MODULE_VARIABLE_GETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    PYI_BIND_TARGET_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
+    PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
+    PYI_USER_PRIVATE_METADATA,
     ProjectionMapping,
     ProcedureOverloadSet,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
-    SemanticEnum,
-    SemanticEnumerator,
     SemanticField,
     SemanticFunction,
     SemanticImport,
@@ -100,6 +101,7 @@ class _Decorators:
     has_native_call: bool = False
     overload_target: str | None = None
     overload_generic: str | None = None
+    bind_target: str | None = None
     module_variable: str | None = None
     is_static: bool = False
 
@@ -120,7 +122,6 @@ class _PyiAstParser:
     def parse(self, tree: ast.Module) -> SemanticModule:
         _ModuleVisitor(self).visit(tree)
         self._resolve_overloads()
-        self._link_enum_constants()
         return self.module
 
     def import_from(self, node: ast.ImportFrom) -> SemanticImport:
@@ -136,7 +137,15 @@ class _PyiAstParser:
     def class_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticClass:
         body = _ClassBodyVisitor(self)
         body.visit_body(node.body)
+        if body.constructor_from_fields and body.has_bound_constructor:
+            raise ValueError("Direct constructor bindings replace the generated field constructor; remove one __init__")
         base_classes = [ast.unparse(base) for base in node.bases]
+        origin = self._origin(
+            source_language="fortran" if body.constructor_from_fields else None,
+            user_private=visibility == "private",
+        )
+        if not body.constructor_from_fields:
+            origin.metadata[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
 
         semantic_class = SemanticClass(
             name=node.name,
@@ -147,13 +156,32 @@ class _PyiAstParser:
             base_classes=base_classes,
             metadata=self._class_metadata(base_classes),
             visibility=visibility,
-            origin=SemanticOrigin(source_language="fortran") if body.constructor_from_fields else SemanticOrigin(),
+            origin=origin,
         )
+        self._validate_bound_constructor_targets(semantic_class)
         self._pending_overloads.extend(
             _PendingOverload(semantic_class, declaration, target, generic_name)
             for declaration, target, generic_name in body.pending_overloads
         )
         return semantic_class
+
+    @staticmethod
+    def _validate_bound_constructor_targets(semantic_class: SemanticClass) -> None:
+        for constructor in semantic_class.methods:
+            target_name = constructor.metadata.get(PYI_BIND_TARGET_METADATA)
+            if constructor.name != "__init__" or not isinstance(target_name, str):
+                continue
+            candidates = [
+                method for method in semantic_class.methods if method is not constructor and method.name == target_name
+            ]
+            if not candidates:
+                raise ValueError(f"Bound constructor references missing class method {target_name!r}")
+            if len(candidates) > 1:
+                raise ValueError(f"Bound constructor target {target_name!r} is ambiguous")
+            target = candidates[0]
+            if constructor.arguments != target.arguments or constructor.return_type != target.return_type:
+                raise ValueError(f"Bound constructor declaration is incompatible with class method {target_name!r}")
+            constructor.native_name = target.native_name or target.name
 
     @staticmethod
     def _class_metadata(base_classes: list[str]) -> dict[str, object]:
@@ -168,45 +196,12 @@ class _PyiAstParser:
             metadata["representation"] = "opaque"
         return metadata
 
-    def enum_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticEnum:
-        if len(node.bases) != 1 or not self.is_subscript_of(node.bases[0], "Enum"):
-            raise ValueError(f"Enum declaration expects exactly one underlying type: {_node_text(node)!r}")
-        if len(node.body) != 1 or not isinstance(node.body[0], ast.Pass):
-            raise ValueError(f"Enum declarations keep enumerators at module scope: {_node_text(node)!r}")
-        items = self.subscript_items(node.bases[0])
-        if len(items) != 1:
-            raise ValueError(f"Enum declaration expects exactly one underlying type: {_node_text(node)!r}")
-        return SemanticEnum(
-            name=node.name,
-            native_name=node.name,
-            underlying_type=self.semantic_type(items[0]),
-            open=True,
-            visibility=visibility,
-        )
-
-    def _link_enum_constants(self) -> None:
-        by_name = {enum.name: enum for enum in self.module.enums}
-        for index, variable in enumerate(list(self.module.variables)):
-            enum = by_name.get(variable.semantic_type.name)
-            if enum is None or not any(
-                constraint.name == "Constant" for constraint in variable.semantic_type.constraints
-            ):
-                continue
-            variable.semantic_type.metadata["semantic_enum"] = enum.name
-            enumerator = (
-                variable
-                if isinstance(variable, SemanticEnumerator)
-                else SemanticEnumerator(
-                    name=variable.name,
-                    semantic_type=variable.semantic_type,
-                    visibility=variable.visibility,
-                    default_value=variable.default_value,
-                    metadata=variable.metadata,
-                    origin=variable.origin,
-                )
-            )
-            enum.enumerators.append(enumerator)
-            self.module.variables[index] = enumerator
+    @staticmethod
+    def _origin(*, source_language: str | None = None, user_private: bool = False) -> SemanticOrigin:
+        origin = SemanticOrigin(source_language=source_language)
+        if user_private:
+            origin.metadata[PYI_USER_PRIVATE_METADATA] = True
+        return origin
 
     def function_def(
         self,
@@ -214,15 +209,23 @@ class _PyiAstParser:
         *,
         visibility: str,
         projection: list[ProjectionMapping] | None = None,
+        native_name: str | None = None,
     ) -> SemanticFunction:
         semantic_args, return_type = self._callable_parts(node, projection=projection or [])
+        metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        origin = self._origin(
+            source_language="fortran" if native_name is not None else None,
+            user_private=visibility == "private",
+        )
         return SemanticFunction(
             name=node.name,
-            native_name=node.name,
+            native_name=native_name or node.name,
             arguments=semantic_args,
             return_type=return_type,
             projection=projection or [],
+            metadata=metadata,
             visibility=visibility,
+            origin=origin,
         )
 
     def method_def(
@@ -232,19 +235,27 @@ class _PyiAstParser:
         visibility: str,
         projection: list[ProjectionMapping] | None = None,
         is_static: bool = False,
+        native_name: str | None = None,
     ) -> SemanticMethod:
         semantic_args, return_type = self._callable_parts(
             node,
             projection=projection or [],
             drop_untyped_self=True,
         )
+        metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        origin = self._origin(
+            source_language="fortran" if native_name is not None else None,
+            user_private=visibility == "private",
+        )
         return SemanticMethod(
             name=node.name,
-            native_name=node.name,
+            native_name=native_name or node.name,
             arguments=semantic_args,
             return_type=return_type,
             projection=projection or [],
+            metadata=metadata,
             visibility=visibility,
+            origin=origin,
             is_static=is_static,
         )
 
@@ -269,6 +280,8 @@ class _PyiAstParser:
             visibility=visibility,
             default_value=self.assignment_default_value(node.value, semantic_type),
         )
+        if visibility == "private":
+            binding.origin.metadata[PYI_USER_PRIVATE_METADATA] = True
         binding.intent = intent
         binding.optional = self.default_marks_optional(node.value)
         return binding
@@ -300,6 +313,18 @@ class _PyiAstParser:
                 continue
             if self.matches_name(node, "overload"):
                 raise ValueError("overload expects one specific procedure name")
+            if isinstance(node, ast.Call) and self.matches_name(node.func, "bind"):
+                if parsed.bind_target is not None:
+                    raise ValueError(f"Duplicate {context} bind decorator")
+                if len(node.args) != 1 or node.keywords:
+                    raise ValueError("bind expects one native symbol name")
+                target = ast.literal_eval(node.args[0])
+                if not isinstance(target, str) or not target:
+                    raise ValueError("bind expects a non-empty native symbol name")
+                parsed.bind_target = target
+                continue
+            if self.matches_name(node, "bind"):
+                raise ValueError("bind expects one native symbol name")
             if self.matches_name(node, "staticmethod"):
                 parsed.is_static = True
                 continue
@@ -320,6 +345,8 @@ class _PyiAstParser:
                 parsed.projection = self.native_call(node)
                 continue
             raise ValueError(f"Unsupported {context} decorator: {ast.unparse(node)!r}")
+        if parsed.overload_target is not None and parsed.bind_target is not None:
+            raise ValueError("bind cannot be combined with overload")
         return parsed
 
     def native_call(self, node: ast.Call) -> list[ProjectionMapping]:
@@ -517,6 +544,10 @@ class _PyiAstParser:
         if method_name == "assign":
             identity = ("assignment", "assignment(=)")
             return _PyiAstParser._validated_generic_override(method_name, identity, generic_name)
+        if method_name == "__init__":
+            if generic_name is not None:
+                raise ValueError("overload generic is not valid for constructor declarations")
+            return "constructor", method_name
         reflected_named = method_name.startswith("r_operator_")
         if reflected_named or method_name.startswith("operator_"):
             prefix = "r_operator_" if reflected_named else "operator_"
@@ -1091,6 +1122,7 @@ class _PyiAstParser:
             semantic_type=semantic_type,
             visibility=decorators.visibility,
             metadata={MODULE_VARIABLE_GETTER_METADATA: node.name},
+            origin=self._origin(user_private=decorators.visibility == "private"),
         )
 
     def _module_variable_return_type(self, node: ast.expr) -> SemanticType:
@@ -1253,6 +1285,7 @@ class _PyiAstParser:
             intent=intent,
             optional=self.default_marks_optional(default),
             visibility=visibility,
+            origin=self._origin(user_private=visibility == "private"),
         )
 
     @staticmethod
@@ -1367,6 +1400,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         self.pending_overloads: list[tuple[SemanticMethod, str, str | None]] = []
         self.classes: list[SemanticClass] = []
         self.constructor_from_fields = False
+        self.has_bound_constructor = False
 
     def visit_body(self, nodes: list[ast.stmt]) -> None:
         for node in nodes:
@@ -1385,12 +1419,25 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         if not node.decorator_list and self._is_generated_constructor(node):
             self.constructor_from_fields = True
             return
+        if node.name == "__init__" and decorators.bind_target is None and decorators.overload_target is None:
+            raise ValueError('Non-generated __init__ declarations must use @bind("specific_name")')
+        if (
+            node.name == "__init__"
+            and decorators.bind_target is not None
+            and node.args.args
+            and node.args.args[0].arg == "self"
+            and node.args.args[0].annotation is not None
+        ):
+            raise ValueError("Bound constructor declarations omit the native self argument")
         method = self.parser.method_def(
             node,
             visibility=decorators.visibility,
             projection=decorators.projection,
             is_static=decorators.is_static,
+            native_name=decorators.bind_target,
         )
+        if node.name == "__init__" and decorators.bind_target is not None:
+            self.has_bound_constructor = True
         if decorators.overload_target is not None:
             self.pending_overloads.append((method, decorators.overload_target, decorators.overload_generic))
         else:
@@ -1414,10 +1461,12 @@ class _ClassBodyVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")
-        if decorators.has_native_call:
+        if decorators.has_native_call or decorators.bind_target is not None:
             raise ValueError(f"Unsupported class body decorator: {ast.unparse(node.decorator_list[-1])!r}")
         if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
-            raise ValueError(f"Nested enum declarations are not supported: {_node_text(node)!r}")
+            raise ValueError(
+                f"Enum declarations are not supported; use Final[...] integer constants: {_node_text(node)!r}"
+            )
         self.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
 
     def generic_visit(self, node: ast.AST) -> None:
@@ -1446,26 +1495,32 @@ class _ModuleVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class")
-        if decorators.has_native_call:
+        if decorators.has_native_call or decorators.bind_target is not None:
             raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
         if decorators.module_variable is not None:
             raise ValueError("module_variable is only valid for module-level getter functions")
         if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
-            self.parser.module.classes.append(self.parser.enum_def(node, visibility=decorators.visibility))
-        else:
-            self.parser.module.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
+            raise ValueError(
+                f"Enum declarations are not supported; use Final[...] integer constants: {_node_text(node)!r}"
+            )
+        self.parser.module.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context=".pyi")
         if decorators.module_variable is not None:
-            if decorators.overload_target is not None or decorators.has_native_call:
-                raise ValueError("module_variable cannot be combined with overload or native_call")
+            if (
+                decorators.overload_target is not None
+                or decorators.has_native_call
+                or decorators.bind_target is not None
+            ):
+                raise ValueError("module_variable cannot be combined with overload, bind, or native_call")
             self.parser.module.variables.append(self.parser.module_variable_getter(node, decorators))
             return
         function = self.parser.function_def(
             node,
             visibility=decorators.visibility,
             projection=decorators.projection,
+            native_name=decorators.bind_target,
         )
         if decorators.overload_target is not None:
             self.parser._pending_overloads.append(

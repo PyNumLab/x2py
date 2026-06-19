@@ -52,7 +52,6 @@ from x2py.c_parser.models import (
 )
 from x2py.semantics.c2ir import (
     CToIRConverter,
-    c_enum_to_semantic_enum,
     c_file_to_semantic_module,
     c_file_to_semantic_modules,
     c_function_to_semantic_function,
@@ -65,8 +64,6 @@ from x2py.semantics.c2ir import (
 from x2py.semantics.models import (
     SemanticArgument,
     SemanticClass,
-    SemanticEnum,
-    SemanticEnumerator,
     SemanticField,
     SemanticModule,
     SemanticOrigin,
@@ -639,24 +636,14 @@ enum status { STATUS_OK = 0, STATUS_WARN, STATUS_ERROR = 10 };
         source_kind="macro",
     )
     status_ok = constants["STATUS_OK"]
-    enum = module.enums[0]
-    assert isinstance(enum, SemanticEnum)
-    assert all(isinstance(enumerator, SemanticEnumerator) for enumerator in enum.enumerators)
-    assert enum.name == "status"
-    assert enum.open is True
-    assert enum.metadata == {
-        "c_kind": "enum",
-        "c_open": True,
-        "c_underlying_type_assumption": "int",
-    }
-    assert enum.underlying_type.name == "Int"
-    assert enum.underlying_type.dtype == "Int32"
-    assert [enumerator.name for enumerator in enum.enumerators] == ["STATUS_OK", "STATUS_WARN", "STATUS_ERROR"]
-    assert status_ok.semantic_type.name == "status"
+    assert module.classes == []
+    assert status_ok.semantic_type.name == "Int"
     assert status_ok.semantic_type.dtype == "Int32"
-    assert status_ok.semantic_type.metadata["semantic_enum"] == "status"
+    assert status_ok.semantic_type.metadata["enum_name"] == "status"
+    assert status_ok.semantic_type.metadata["c_kind"] == "enum"
+    assert status_ok.semantic_type.metadata["c_enum"] == "enum status"
     assert status_ok.semantic_type.metadata["c_underlying_type"] == "Int"
-    assert status_ok.semantic_type.coercions[0].source_type == "Int"
+    assert status_ok.semantic_type.coercions == []
     assert asdict(status_ok.origin) == _c_origin(
         native_name="STATUS_OK",
         native_scope="enum status",
@@ -677,13 +664,14 @@ def test_c2ir_names_anonymous_typedef_enums_and_keeps_enumerators_unscoped():
     module = c_file_to_semantic_module(parsed)
     project_module = c_project_to_semantic_module(parse_c_project({"flags.h": source}), name="flags")
 
-    assert [enum.name for enum in module.enums] == ["flag_t"]
-    assert [enum.name for enum in project_module.enums] == ["flag_t"]
+    assert module.classes == []
+    assert project_module.classes == []
     assert [variable.name for variable in module.variables] == ["FLAG_NONE", "FLAG_READ"]
     assert [variable.name for variable in project_module.variables] == ["FLAG_NONE", "FLAG_READ"]
-    assert [variable.semantic_type.name for variable in module.variables] == ["flag_t", "flag_t"]
-    assert _function(module, "get_flags").return_type.name == "flag_t"
-    assert _function(project_module, "get_flags").return_type.name == "flag_t"
+    assert [variable.semantic_type.name for variable in module.variables] == ["Int", "Int"]
+    assert module.variables[0].semantic_type.metadata["enum_name"] == "flag_t"
+    assert _function(module, "get_flags").return_type.name == "Int"
+    assert _function(project_module, "get_flags").return_type.name == "Int"
 
 
 def test_c2ir_enum_values_emit_only_python_compatible_expressions():
@@ -695,17 +683,22 @@ def test_c2ir_enum_values_emit_only_python_compatible_expressions():
 
     code = emit_module(module)
 
-    assert "FLAG_ONE: Final[flags] = 1" in code
-    assert "FLAG_OCTAL: Final[flags] = 8" in code
-    assert "FLAG_SHIFT: Final[flags] = FLAG_ONE << 1" in code
-    assert "FLAG_CHAR: Final[flags]\n" in code
+    assert "FLAG_ONE: Final[Int] = 1" in code
+    assert "FLAG_OCTAL: Final[Int] = 8" in code
+    assert "FLAG_SHIFT: Final[Int] = FLAG_ONE << 1" in code
+    assert "FLAG_CHAR: Final[Int]\n" in code
     assert {variable.name: variable.default_value for variable in module.variables} == {
         "FLAG_ONE": "1U",
         "FLAG_OCTAL": "010",
         "FLAG_SHIFT": "FLAG_ONE << 1",
         "FLAG_CHAR": "'A'",
     }
-    assert parse_pyi_text(code, module_name="flags").enums[0].name == "flags"
+    assert [variable.name for variable in parse_pyi_text(code, module_name="flags").variables] == [
+        "FLAG_ONE",
+        "FLAG_OCTAL",
+        "FLAG_SHIFT",
+        "FLAG_CHAR",
+    ]
 
 
 def test_c2ir_cross_header_enum_references_import_the_owner_enum():
@@ -718,15 +711,10 @@ def test_c2ir_cross_header_enum_references_import_the_owner_enum():
 
     modules = {module.name: module for module in c_project_to_semantic_modules(project)}
 
-    assert modules["api"].enums == []
-    assert [enum.name for enum in modules["types"].enums] == ["status"]
-    assert _function(modules["api"], "get_status").return_type.metadata["external_type_ref"] == {
-        "name": "status",
-        "local_name": "status",
-        "origin_module": "types",
-        "wrapped": True,
-        "representation": "wrapped",
-    }
+    assert modules["api"].classes == []
+    assert modules["types"].classes == []
+    assert _function(modules["api"], "get_status").return_type.name == "Int"
+    assert _function(modules["api"], "get_status").return_type.metadata["c_enum"] == "enum status"
 
     anonymous_project = parse_c_project(
         {
@@ -735,10 +723,7 @@ def test_c2ir_cross_header_enum_references_import_the_owner_enum():
         }
     )
     anonymous_modules = {module.name: module for module in c_project_to_semantic_modules(anonymous_project)}
-    assert (
-        _function(anonymous_modules["api"], "get_flags").return_type.metadata["external_type_ref"]["origin_module"]
-        == "types"
-    )
+    assert _function(anonymous_modules["api"], "get_flags").return_type.name == "Int"
 
 
 def test_c2ir_converts_integer_expression_macro_constants_when_resolvable():
@@ -967,18 +952,12 @@ def test_c2ir_uses_enum_specific_underlying_type_facts_when_supplied():
         }
     ).visit_file(parsed)
 
-    enum = module.enums[0]
     return_type = _function(module, "get_status").return_type
-    assert enum.underlying_type.name == "UInt8"
-    assert enum.underlying_type.dtype == "UInt8"
-    assert enum.underlying_type.metadata["c_enum_type_fact_source"] == "compiler_probe"
-    assert enum.metadata == {
-        "c_kind": "enum",
-        "c_open": True,
-        "c_underlying_type_fact_source": "compiler_probe",
-    }
-    assert return_type.name == "status"
+    assert module.classes == []
+    assert return_type.name == "UInt8"
     assert return_type.dtype == "UInt8"
+    assert return_type.metadata["c_kind"] == "enum"
+    assert return_type.metadata["c_enum_type_fact_source"] == "compiler_probe"
 
 
 def test_c2ir_uses_standard_type_probe_opaque_handle_facts():
@@ -1059,13 +1038,10 @@ def test_c_compatibility_helpers_forward_standard_type_reports():
         CStruct(name="measurement", members=[CVariable(name="value", type=measured_type)]),
         standard_type_report=report,
     )
-    enum = c_enum_to_semantic_enum(CEnum(name="measurement_status"), standard_type_report=report)
-
     assert argument.semantic_type.name == "UInt32"
     assert converted_type.name == "UInt32"
     assert converted_function.return_type.name == "UInt32"
     assert cls.fields[0].semantic_type.name == "UInt32"
-    assert enum.name == "measurement_status"
     assert _function(
         c_file_to_semantic_module(parsed_file, standard_type_report=report), "measure"
     ).return_type.name == ("UInt32")
@@ -1151,10 +1127,11 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
     assert converter.visit(first.variables[0]).name == "value"
     assert converter.visit(CInt()).name == "Int"
     enum_type = converter.visit(CEnum(name="status"))
-    assert enum_type.name == "status"
+    assert enum_type.name == "Int"
     assert enum_type.dtype == "Int32"
     assert enum_type.metadata["c_kind"] == "enum"
     assert enum_type.metadata["c_enum"] == "enum status"
+    assert enum_type.metadata["c_enum_name"] == "status"
     assert enum_type.metadata["c_underlying_type"] == "Int"
     assert enum_type.origin.native_name == "enum status"
     assert enum_type.origin.metadata["c_type"] == "CEnum"

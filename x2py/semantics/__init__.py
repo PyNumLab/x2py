@@ -7,7 +7,6 @@ from .fortran2ir import (
 )
 from .c2ir import (
     CToIRConverter,
-    c_enum_to_semantic_enum,
     c_file_to_semantic_module,
     c_file_to_semantic_modules,
     c_function_to_semantic_function,
@@ -24,7 +23,6 @@ __all__ = (
     "CToIRConverter",
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",
-    "c_enum_to_semantic_enum",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

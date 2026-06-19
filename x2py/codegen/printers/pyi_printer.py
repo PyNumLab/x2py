@@ -15,6 +15,8 @@ from x2py.semantics.models import (
     MODULE_VARIABLE_GETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    PYI_BIND_TARGET_METADATA,
+    PYI_USER_PRIVATE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -24,7 +26,6 @@ from x2py.semantics.models import (
     SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
-    SemanticEnum,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
@@ -50,8 +51,6 @@ class PyiPrinter:
             return self.emit_overload_set(node)
         if isinstance(node, SemanticClass):
             return self.emit_class(node)
-        if isinstance(node, SemanticEnum):
-            return self.emit_enum(node)
         if isinstance(node, SemanticMethod):
             return self.emit_method(node)
         if isinstance(node, SemanticFunction):
@@ -449,17 +448,17 @@ class PyiPrinter:
 {body}
 """.strip()
 
-    def emit_enum(self, enum: SemanticEnum) -> str:
-        decorator = "@private\n" if self._is_private(enum) else ""
-        underlying = self.emit_semantic_type(enum.underlying_type)
-        return f"{decorator}class {enum.name}(Enum[{underlying}]):\n    pass"
-
     def emit_module(self, module: SemanticModule) -> str:
         sections: list[str] = []
         self._append_imports(sections, module)
-        self._append_items(sections, module.classes, self.emit)
-        self._append_items(sections, module.variables, self.emit_module_variable)
-        self._append_items(sections, module.functions, self.emit_function)
+        self._append_items(sections, self._contract_items(module.classes), self.emit)
+        self._append_items(sections, self._contract_items(module.variables), self.emit_module_variable)
+        overload_targets = self._module_overload_target_names(module)
+        self._append_items(
+            sections,
+            self._contract_items(module.functions, keep_names=overload_targets),
+            self.emit_function,
+        )
         self._append_items(sections, module.overload_sets, self.emit_overload_set)
         return "\n".join(sections)
 
@@ -484,7 +483,9 @@ class PyiPrinter:
     def _class_body(self, cls: SemanticClass) -> str:
         body_parts = []
 
-        nested_classes = "\n\n".join(self._indent_block(self.emit_class(nested), "    ") for nested in cls.classes)
+        nested_classes = "\n\n".join(
+            self._indent_block(self.emit_class(nested), "    ") for nested in self._contract_items(cls.classes)
+        )
         if nested_classes:
             body_parts.append(nested_classes)
 
@@ -492,11 +493,14 @@ class PyiPrinter:
         if constructor:
             body_parts.append(constructor)
 
-        fields = "\n".join(f"    {self.emit_data_member(field)}" for field in cls.fields)
+        fields = "\n".join(f"    {self.emit_data_member(field)}" for field in self._contract_items(cls.fields))
         if fields:
             body_parts.append(fields)
 
-        methods = "\n\n".join(self.emit_method(method) for method in cls.methods)
+        overload_targets = self._overload_target_names(cls.overload_sets)
+        methods = "\n\n".join(
+            self.emit_method(method) for method in self._contract_items(cls.methods, keep_names=overload_targets)
+        )
         if methods:
             body_parts.append(methods)
 
@@ -627,6 +631,65 @@ class PyiPrinter:
             sections.append(emit_item(item))
             sections.append("")
 
+    @classmethod
+    def _contract_items(cls, items: Iterable, *, keep_names: set[str] | None = None) -> list:
+        keep_names = set() if keep_names is None else keep_names
+        return [item for item in items if cls._should_emit_contract_item(item, keep_names=keep_names)]
+
+    @staticmethod
+    def _should_emit_contract_item(item, *, keep_names: set[str]) -> bool:
+        if PyiPrinter._item_names(item) & keep_names:
+            return True
+        if not PyiPrinter._is_source_private(item):
+            return True
+        return PyiPrinter._is_user_private(item)
+
+    @staticmethod
+    def _item_names(item) -> set[str]:
+        names = {value for value in (getattr(item, "name", None), getattr(item, "native_name", None)) if value}
+        return {str(name) for name in names}
+
+    @staticmethod
+    def _overload_target_names(overload_sets: Iterable[ProcedureOverloadSet]) -> set[str]:
+        targets: set[str] = set()
+        for overload_set in overload_sets:
+            for procedure in overload_set.procedures:
+                target = procedure.metadata.get(OVERLOAD_TARGET_METADATA) or procedure.native_name or procedure.name
+                if target:
+                    targets.add(str(target))
+                targets.update(PyiPrinter._item_names(procedure))
+        return targets
+
+    @classmethod
+    def _module_overload_target_names(cls, module: SemanticModule) -> set[str]:
+        targets = cls._overload_target_names(module.overload_sets)
+        for semantic_class in module.classes:
+            targets.update(cls._class_overload_target_names(semantic_class))
+        return targets
+
+    @classmethod
+    def _class_overload_target_names(cls, semantic_class: SemanticClass) -> set[str]:
+        targets = cls._overload_target_names(semantic_class.overload_sets)
+        for nested in semantic_class.classes:
+            targets.update(cls._class_overload_target_names(nested))
+        return targets
+
+    @staticmethod
+    def _is_source_private(node) -> bool:
+        if isinstance(node, SemanticMethod):
+            attributes = {str(attr).casefold() for attr in getattr(node, "binding_attributes", ())}
+            return "private" in attributes
+        origin = getattr(node, "origin", None)
+        return (
+            getattr(node, "visibility", "public") == "private" and getattr(origin, "source_language", None) == "fortran"
+        )
+
+    @staticmethod
+    def _is_user_private(node) -> bool:
+        origin = getattr(node, "origin", None)
+        metadata = getattr(origin, "metadata", {})
+        return isinstance(metadata, dict) and bool(metadata.get(PYI_USER_PRIVATE_METADATA))
+
     def _projected_return_annotation(self, func: SemanticFunction) -> str:
         parts = []
         if func.return_type:
@@ -680,6 +743,8 @@ class PyiPrinter:
             decorators.append(f"{indent}@private")
         if isinstance(func, SemanticMethod) and func.is_static:
             decorators.append(f"{indent}@staticmethod")
+        if bind_target := func.metadata.get(PYI_BIND_TARGET_METADATA):
+            decorators.append(f"{indent}@bind({json.dumps(str(bind_target))})")
         if self._requires_native_call(func):
             decorators.append(f"{indent}{self._native_call(func.projection)}")
         if not decorators:

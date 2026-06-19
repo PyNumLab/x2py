@@ -7,6 +7,9 @@ from typing import Any
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
 MODULE_VARIABLE_GETTER_METADATA = "module_variable_getter"
+PYI_BIND_TARGET_METADATA = "pyi_bind_target"
+PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA = "pyi_suppress_default_constructor"
+PYI_USER_PRIVATE_METADATA = "pyi_user_private"
 
 
 # ============================================================
@@ -198,11 +201,6 @@ class SemanticArgument(SemanticVariable):
 
 @dataclass
 class SemanticField(SemanticVariable):
-    pass
-
-
-@dataclass
-class SemanticEnumerator(SemanticVariable):
     pass
 
 
@@ -519,7 +517,7 @@ def _canonical_expression_text(text: str, name_map: dict[str, str]) -> str:
 
 
 # ============================================================
-# Semantic Classes And Enums
+# Semantic Classes
 # ============================================================
 
 
@@ -540,23 +538,6 @@ class SemanticClass:
     base_classes: list[str] = field(default_factory=list)
 
     contracts: list[SemanticContract] = field(default_factory=list)
-
-    metadata: dict[str, Any] = field(default_factory=dict)
-    visibility: str = "public"
-    origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
-
-
-@dataclass
-class SemanticEnum:
-    name: str
-
-    native_name: str | None = None
-
-    underlying_type: SemanticType = field(default_factory=lambda: SemanticType("Int"))
-
-    enumerators: list[SemanticEnumerator] = field(default_factory=list)
-
-    open: bool = True
 
     metadata: dict[str, Any] = field(default_factory=dict)
     visibility: str = "public"
@@ -588,7 +569,7 @@ class SemanticModule:
 
     overload_sets: list[ProcedureOverloadSet] = field(default_factory=list)
 
-    classes: list[SemanticClass | SemanticEnum] = field(default_factory=list)
+    classes: list[SemanticClass] = field(default_factory=list)
     variables: list[SemanticVariable] = field(default_factory=list)
 
     imports: list[str | SemanticImport] = field(default_factory=list)
@@ -596,10 +577,6 @@ class SemanticModule:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
-
-    @property
-    def enums(self) -> list[SemanticEnum]:
-        return [declaration for declaration in self.classes if isinstance(declaration, SemanticEnum)]
 
 
 def _iter_semantic_type_tree(semantic_type: SemanticType | None):
@@ -633,11 +610,6 @@ def _iter_module_semantic_types(module: SemanticModule):
     for variable in module.variables:
         yield from _iter_semantic_type_tree(variable.semantic_type)
     for declaration in module.classes:
-        if isinstance(declaration, SemanticEnum):
-            yield from _iter_semantic_type_tree(declaration.underlying_type)
-            for enumerator in declaration.enumerators:
-                yield from _iter_semantic_type_tree(enumerator.semantic_type)
-            continue
         yield from iter_class(declaration)
     for function in module.functions:
         for argument in function.arguments:

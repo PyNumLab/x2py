@@ -1,4 +1,5 @@
 import ast
+import re
 from dataclasses import asdict
 from pathlib import Path
 
@@ -7,15 +8,16 @@ import pytest
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 from x2py.semantics.models import (
     ProjectionMapping,
+    PYI_BIND_TARGET_METADATA,
+    PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
+    PYI_USER_PRIVATE_METADATA,
     SemanticArgument,
     SemanticConstraint,
-    SemanticEnumerator,
     SemanticField,
     SemanticFunction,
     SemanticImport,
     SemanticImportItem,
     SemanticModule,
-    SemanticEnum,
     SemanticType,
     SemanticVariable,
 )
@@ -27,7 +29,10 @@ from x2py.semantics.pyi_parser import (
     load_pyi_modules,
     parse_pyi_text,
 )
+from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
+from x2py.codegen.bindings.c_to_python import CPythonBindingGenerator
 from x2py.codegen.printers.pyi_printer import emit_module
+from x2py.codegen.scope import Scope
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 from x2py import parse_fortran_file
 
@@ -135,34 +140,33 @@ def touch(
     assert module.functions[0].arguments[0].intent == "inout"
 
 
-def test_parse_pyi_text_round_trips_open_enum_with_unscoped_enumerators():
-    source = """class status(Enum[Int]):
-    pass
-
-STATUS_OK: Final[status] = 0
-STATUS_NEXT: Final[status] = STATUS_OK + 1
+def test_parse_pyi_text_round_trips_enum_like_integer_constants():
+    source = """STATUS_OK: Final[Int] = 0
+STATUS_NEXT: Final[Int] = STATUS_OK + 1
 
 def set_status(
-    value: status
+    value: Int
 ) -> None: ...
 """
 
     module = parse_pyi_text(source, module_name="status_api")
 
-    assert len(module.enums) == 1
-    enum = module.enums[0]
-    assert isinstance(enum, SemanticEnum)
-    assert enum.name == "status"
-    assert enum.open is True
-    assert enum.underlying_type.name == "Int"
-    assert all(isinstance(item, SemanticEnumerator) for item in enum.enumerators)
-    assert [item.name for item in enum.enumerators] == ["STATUS_OK", "STATUS_NEXT"]
+    assert module.classes == []
+    assert [item.name for item in module.variables] == ["STATUS_OK", "STATUS_NEXT"]
     assert module.variables[1].default_value == "STATUS_OK + 1"
-    assert module.functions[0].arguments[0].semantic_type.name == "status"
+    assert module.functions[0].arguments[0].semantic_type.name == "Int"
     emitted = emit_module(module)
-    assert "class status(Enum[Int]):" in emitted
-    assert "STATUS_NEXT: Final[status] = STATUS_OK + 1" in emitted
+    assert "STATUS_NEXT: Final[Int] = STATUS_OK + 1" in emitted
     assert parse_pyi_text(emitted, module_name="status_api") == module
+
+
+def test_parse_pyi_text_rejects_enum_classes():
+    source = """class status(Enum[Int]):
+    pass
+"""
+
+    with pytest.raises(ValueError, match=r"Enum declarations are not supported"):
+        parse_pyi_text(source, module_name="status_api")
 
 
 def test_parse_pyi_text_preserves_callable_signature_metadata():
@@ -413,6 +417,7 @@ class particle:
     assert particle_cls.methods[0].name == "reset"
     assert particle_cls.methods[0].native_name == "reset"
     assert particle_cls.methods[0].visibility == "private"
+    assert particle_cls.methods[0].origin.metadata[PYI_USER_PRIVATE_METADATA] is True
     assert [arg.name for arg in particle_cls.methods[0].arguments] == ["self"]
     assert particle_cls.methods[0].return_type.name == "Int32"
     assert asdict(particle_cls.methods[0].projection[0]) == {
@@ -425,6 +430,235 @@ class particle:
         "value": None,
         "intent": "in",
     }
+    emitted = emit_module(module)
+    assert "    @private\n    def reset(self) -> Int32: ..." in emitted
+    reparsed = parse_pyi_text(emitted, module_name="edited")
+    assert reparsed.classes[1].methods[0].visibility == "private"
+    assert reparsed.classes[1].methods[0].origin.metadata[PYI_USER_PRIVATE_METADATA] is True
+    assert emit_module(reparsed) == emitted
+
+
+def test_parse_pyi_text_distinguishes_generated_and_linked_constructors():
+    generated = parse_pyi_text(
+        """
+class state:
+    def __init__(
+        self,
+        *,
+        id: Int32 = 7,
+        scale: Float64 = 2.5
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="generated",
+    )
+
+    generated_cls = generated.classes[0]
+    assert generated_cls.origin.source_language == "fortran"
+    assert generated_cls.methods == []
+
+    linked = parse_pyi_text(
+        """
+@private
+def init_state(
+    self: Ptr(state),
+    seed: Ptr(Const(Int32)),
+    scale: Ptr(Const(Float64)) = ...
+) -> None: ...
+
+class state:
+    def __init__(
+        self,
+        *,
+        id: Int32 = 7,
+        scale: Float64 = 2.5
+    ) -> None: ...
+
+    @overload("init_state")
+    def __init__(
+        self,
+        seed: Ptr(Const(Int32)),
+        scale: Ptr(Const(Float64)) = ...
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="edited",
+    )
+
+    linked_cls = linked.classes[0]
+    assert linked_cls.origin.source_language == "fortran"
+    assert linked_cls.methods == []
+    assert [overload.name for overload in linked_cls.overload_sets] == ["__init__"]
+    init = linked_cls.overload_sets[0].procedures[0]
+    assert init.name == "init_state"
+    assert init.metadata["overload_target"] == "init_state"
+    assert init.metadata["overload_kind"] == "constructor"
+    assert init.metadata["python_method_name"] == "__init__"
+    assert init.metadata["python_bound_position"] == 0
+    assert [arg.name for arg in init.arguments] == ["self", "seed", "scale"]
+    assert [arg.optional for arg in init.arguments] == [False, False, True]
+
+    emitted = emit_module(linked)
+    assert "def __init__(\n        self,\n        *,\n        id: Int32 = 7," in emitted
+    assert '    @overload("init_state")\n    def __init__(' in emitted
+    assert parse_pyi_text(emitted, module_name="edited") == linked
+
+    with pytest.raises(ValueError, match="Constructor overload dispatch is not mapped"):
+        semantic_ir_to_codegen_ast(
+            linked,
+            Scope(name=linked.name, scope_type="module"),
+        )
+
+
+def test_parse_pyi_text_removed_constructor_suppresses_keyword_initializer():
+    module = parse_pyi_text(
+        """
+class state:
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert cls.origin.source_language is None
+    assert cls.origin.metadata[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert "def __init__" not in emit_module(module)
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+    codegen_cls = codegen_module.classes[0]
+    assert codegen_cls.decorators[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
+
+
+def test_parse_pyi_text_bound_constructor_replaces_generated_keyword_initializer():
+    module = parse_pyi_text(
+        """
+class state:
+    @private
+    def init_state(
+        self,
+        seed: Ptr(Const(Int32)),
+        scale: Ptr(Const(Float64)) = ...
+    ) -> None: ...
+
+    @bind("init_state")
+    def __init__(
+        self,
+        seed: Ptr(Const(Int32)),
+        scale: Ptr(Const(Float64)) = ...
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert cls.origin.metadata[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert [method.name for method in cls.methods] == ["init_state", "__init__"]
+    target = cls.methods[0]
+    assert target.visibility == "private"
+    init = cls.methods[1]
+    assert init.native_name == "init_state"
+    assert init.metadata[PYI_BIND_TARGET_METADATA] == "init_state"
+    assert [arg.name for arg in init.arguments] == ["seed", "scale"]
+
+    emitted = emit_module(module)
+    assert "    @private\n    def init_state(" in emitted
+    assert '    @bind("init_state")\n    def __init__(' in emitted
+    assert "def __init__(\n        self,\n        *," not in emitted
+    assert parse_pyi_text(emitted, module_name="edited") == module
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+    codegen_cls = codegen_module.classes[0]
+    assert codegen_cls.decorators[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
+    codegen_init = next(
+        method for method in codegen_cls.methods if codegen_cls.scope.get_python_name(method.name) == "__init__"
+    )
+    assert codegen_cls.scope.get_python_name(codegen_init.name) == "__init__"
+    assert codegen_init.arguments[0].bound_argument is True
+    assert codegen_init.arguments[0].bound_argument_position == 0
+    assert [str(arg.name) for arg in codegen_init.arguments[1:]] == ["seed", "scale"]
+
+
+def test_parse_pyi_text_bound_constructor_allows_public_target_method():
+    module = parse_pyi_text(
+        """
+class state:
+    def init_state(self, seed: Int32) -> None: ...
+
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert [(method.name, method.visibility) for method in cls.methods] == [
+        ("init_state", "public"),
+        ("__init__", "public"),
+    ]
+    emitted = emit_module(module)
+    assert "    def init_state(" in emitted
+    assert '    @bind("init_state")\n    def __init__(' in emitted
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        (
+            """
+class state:
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            'Non-generated __init__ declarations must use @bind("specific_name")',
+        ),
+        (
+            """
+class state:
+    def __init__(self, *, id: Int32 = 7) -> None: ...
+
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            "Direct constructor bindings replace the generated field constructor",
+        ),
+        (
+            """
+class state:
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            "Bound constructor references missing class method 'init_state'",
+        ),
+        (
+            """
+class state:
+    def init_state(self, seed: Int32, scale: Float64) -> None: ...
+
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            "Bound constructor declaration is incompatible with class method 'init_state'",
+        ),
+    ],
+)
+def test_parse_pyi_text_rejects_ambiguous_constructor_declarations(source: str, message: str):
+    with pytest.raises(ValueError, match=re.escape(message)):
+        parse_pyi_text(source, module_name="edited")
 
 
 def test_parse_pyi_text_applies_decorators_after_native_call():
@@ -1236,6 +1470,27 @@ def consume(value: private[Int32]) -> None: ...
     assert module.functions[0].arguments[0].visibility == "private"
 
 
+def test_parse_pyi_text_preserves_user_private_bound_function_contract():
+    module = parse_pyi_text(
+        """
+@private
+@bind("native_helper")
+def helper(value: Int32) -> None: ...
+""",
+        module_name="edited",
+    )
+
+    helper = module.functions[0]
+    assert helper.visibility == "private"
+    assert helper.origin.source_language == "fortran"
+    assert helper.origin.metadata[PYI_USER_PRIVATE_METADATA] is True
+
+    emitted = emit_module(module)
+    assert '@private\n@bind("native_helper")\ndef helper(' in emitted
+    assert "    value: Int32" in emitted
+    assert parse_pyi_text(emitted, module_name="edited") == module
+
+
 @pytest.mark.parametrize(
     "source, message",
     [
@@ -1325,7 +1580,7 @@ def test_node_text_falls_back_to_node_type_for_empty_unparse():
     assert _node_text(ast.Module(body=[], type_ignores=[])) == "Module"
 
 
-def test_generated_pyi_compares_equal_to_original_ir_for_all_fortran_fixtures(tmp_path: Path):
+def test_generated_pyi_loads_and_reemits_for_all_fortran_fixtures(tmp_path: Path):
     assert FORTRAN_PYI_COMPARE_FIXTURES
 
     checked_modules = 0
@@ -1341,10 +1596,12 @@ def test_generated_pyi_compares_equal_to_original_ir_for_all_fortran_fixtures(tm
 
         for module in modules:
             pyi_path = tmp_path / f"{module.name}.pyi"
-            pyi_path.write_text(emit_module(module) + "\n", encoding="utf-8")
+            generated_pyi = emit_module(module)
+            pyi_path.write_text(generated_pyi + "\n", encoding="utf-8")
 
             try:
-                assert load_pyi_file(pyi_path) == module
+                loaded = load_pyi_file(pyi_path)
+                assert parse_pyi_text(emit_module(loaded), module_name=loaded.name) == loaded
             finally:
                 pyi_path.unlink(missing_ok=True)
 
