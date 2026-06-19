@@ -724,7 +724,7 @@ class _SemanticReadinessChecker:
 
     @classmethod
     def _is_unsupported_pointer_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
-        if not cls._is_pointer_array(semantic_type):
+        if not cls._is_pointer(semantic_type):
             return False
         decision = default_ownership_policy.decide_semantic_type(
             semantic_type,
@@ -743,6 +743,16 @@ class _SemanticReadinessChecker:
         if semantic_type is None or semantic_type.storage is None or semantic_type.storage.array is None:
             return False
         return semantic_type.storage.array.pointer
+
+    @staticmethod
+    def _is_pointer(semantic_type: SemanticType | None) -> bool:
+        if semantic_type is None:
+            return False
+        storage = semantic_type.storage
+        return bool(
+            semantic_type.metadata.get("fortran_pointer")
+            or (storage is not None and storage.array is not None and storage.array.pointer)
+        )
 
     @staticmethod
     def _is_assumed_type(semantic_type: SemanticType | None) -> bool:

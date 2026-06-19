@@ -15,6 +15,19 @@ from typing import Any
 
 
 OWNERSHIP_POLICY_METADATA = "ownership_policy"
+POINTER_POLICY_METADATA = "pointer_policy"
+POINTER_POLICY_FIELDS = (
+    "nullable",
+    "transfer",
+    "target_owner",
+    "lifetime",
+    "deallocation",
+    "shape_source",
+    "contiguity",
+    "reassociation",
+    "aliasing",
+    "mutability",
+)
 
 
 class ObjectKind(str, Enum):
@@ -62,6 +75,7 @@ class CodegenAction(str, Enum):
     IN_PLACE_ARGUMENT = "in_place_argument"
     COPY_RETURN_ARRAY = "copy_return_array"
     SNAPSHOT_COPY_ARRAY = "snapshot_copy_array"
+    SNAPSHOT_COPY_SCALAR = "snapshot_copy_scalar"
     BORROWED_VIEW = "borrowed_view"
     WRAPPER_INSTANCE = "wrapper_instance"
     BLOCKED = "blocked"
@@ -182,6 +196,8 @@ class OwnershipDecision:
 
     @property
     def codegen_action(self) -> CodegenAction:
+        if self.transfer is TransferMode.SNAPSHOT_COPY and self.kind is ObjectKind.SCALAR:
+            return CodegenAction.SNAPSHOT_COPY_SCALAR
         return _CODEGEN_ACTION_BY_TRANSFER[self.transfer]
 
 
@@ -220,7 +236,8 @@ class OwnershipPolicyResolver:
 
     def decide_semantic_type(self, semantic_type: Any, context: OwnershipContext) -> OwnershipDecision:
         facts = self._semantic_facts(semantic_type)
-        return self._apply_overrides(self._decide(facts, context), facts)
+        decision = self._apply_overrides(self._decide(facts, context), facts)
+        return self._validate_pointer_decision(decision, facts, context)
 
     def decide_semantic_variable(
         self,
@@ -285,7 +302,8 @@ class OwnershipPolicyResolver:
             return explicit
         facts = self._codegen_facts(var)
         actual_context = context or self._codegen_context(var)
-        return self._apply_overrides(self._decide(facts, actual_context), facts)
+        decision = self._apply_overrides(self._decide(facts, actual_context), facts)
+        return self._validate_pointer_decision(decision, facts, actual_context)
 
     def memory_handling_for_semantic_type(self, semantic_type: Any, context: OwnershipContext) -> str:
         return self.decide_semantic_type(semantic_type, context).memory_handling
@@ -308,6 +326,8 @@ class OwnershipPolicyResolver:
         return ObjectKind.SCALAR
 
     def _scalar_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.pointer:
+            return self._pointer_scalar_decision(facts, context)
         if context.is_result or context.intent == "out":
             return OwnershipDecision(
                 ObjectKind.SCALAR,
@@ -331,6 +351,38 @@ class OwnershipPolicyResolver:
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
             reason="scalar input is converted for the call only",
+        )
+
+    @staticmethod
+    def _pointer_scalar_decision(facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_result:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.SNAPSHOT_COPY,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                memory_handling="alias",
+                nullable=True,
+                reason="pointer scalar result is copied into a detached Python value",
+            )
+        if context.is_field or context.is_module_variable or context.intent in {"out", "inout"}:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.UNKNOWN,
+                TransferMode.BLOCKED,
+                DestructionPolicy.BLOCKED,
+                memory_handling="alias",
+                nullable=True,
+                blocker=f"pointer scalar {context.location} owner, lifetime, and reassociation policy are unknown",
+                reason="pointer scalar output needs explicit policy metadata",
+            )
+        return OwnershipDecision(
+            ObjectKind.SCALAR,
+            OwnershipOwner.CALLER,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.CALL_LOCAL,
+            memory_handling="alias",
+            reason="pointer scalar input is associated with a wrapper temporary only for the call",
         )
 
     def _string_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
@@ -494,6 +546,8 @@ class OwnershipPolicyResolver:
         )
 
     def _module_variable_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.pointer and facts.rank == 0:
+            return self._pointer_scalar_decision(facts, context)
         if facts.rank > 0 or facts.is_ndarray:
             if facts.pointer:
                 return self._pointer_array_decision(facts, context)
@@ -510,6 +564,8 @@ class OwnershipPolicyResolver:
         )
 
     def _derived_field_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.pointer and facts.rank == 0:
+            return self._pointer_scalar_decision(facts, context)
         if facts.rank > 0 or facts.is_ndarray:
             if facts.pointer:
                 return self._pointer_array_decision(facts, context)
@@ -535,10 +591,25 @@ class OwnershipPolicyResolver:
     def _apply_overrides(self, decision: OwnershipDecision, facts: _StorageFacts) -> OwnershipDecision:
         metadata = facts.metadata or {}
         raw = metadata.get(OWNERSHIP_POLICY_METADATA)
+        pointer_policy = metadata.get(POINTER_POLICY_METADATA)
+        if facts.pointer and isinstance(pointer_policy, Mapping):
+            raw = {**(raw if isinstance(raw, Mapping) else {}), **pointer_policy}
         if not isinstance(raw, Mapping):
             return decision
         owner = self._enum_value(OwnershipOwner, raw.get("owner"), decision.owner)
         transfer = self._enum_value(TransferMode, raw.get("transfer"), decision.transfer)
+        if facts.pointer and transfer is TransferMode.BORROWED_VIEW:
+            return replace(
+                decision,
+                owner=OwnershipOwner.UNKNOWN,
+                transfer=TransferMode.BLOCKED,
+                destruction=DestructionPolicy.BLOCKED,
+                memory_handling="alias",
+                nullable=bool(raw.get("nullable", True)),
+                borrowed=False,
+                blocker="borrowed pointer views need native-owner retention and stale-view invalidation",
+                reason="borrowed pointer views are not implemented",
+            )
         destruction = self._enum_value(DestructionPolicy, raw.get("destruction"), decision.destruction)
         memory_handling = self._memory_for_override(facts, transfer, decision.memory_handling)
         nullable = bool(raw.get("nullable", decision.nullable))
@@ -554,6 +625,35 @@ class OwnershipPolicyResolver:
             borrowed=borrowed,
             blocker=blocker,
             reason=str(raw.get("reason", "explicit ownership policy metadata")),
+        )
+
+    @staticmethod
+    def _validate_pointer_decision(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
+        if not facts.pointer or decision.is_blocked:
+            return decision
+        blocker = None
+        if context.is_argument and context.intent in {"out", "inout"}:
+            blocker = "pointer output and reassociation code generation is not implemented"
+        elif facts.rank == 0 and (context.is_field or context.is_module_variable):
+            blocker = "scalar pointer field and module accessors are not implemented"
+        elif context.is_result and decision.transfer is not TransferMode.SNAPSHOT_COPY:
+            blocker = "pointer results currently require snapshot_copy transfer"
+        elif context.is_argument and context.intent == "in" and decision.transfer is not TransferMode.CALL_LOCAL:
+            blocker = "pointer input arguments currently require call_local transfer"
+        if blocker is None:
+            return decision
+        return replace(
+            decision,
+            owner=OwnershipOwner.UNKNOWN,
+            transfer=TransferMode.BLOCKED,
+            destruction=DestructionPolicy.BLOCKED,
+            borrowed=False,
+            blocker=blocker,
+            reason="requested pointer policy is not implemented by code generation",
         )
 
     @staticmethod
@@ -589,7 +689,7 @@ class OwnershipPolicyResolver:
             rank=rank,
             name=name,
             allocatable=bool(getattr(array, "allocatable", False)),
-            pointer=bool(getattr(array, "pointer", False)),
+            pointer=bool(getattr(array, "pointer", False) or metadata.get("fortran_pointer")),
             fortran_target=bool(metadata.get("fortran_target")),
             fortran_allocatable=bool(metadata.get("fortran_allocatable")),
             is_string=is_string,
@@ -655,6 +755,27 @@ def set_ownership_metadata(
         policy["transfer"] = TransferMode(transfer).value
     if destruction is not None:
         policy["destruction"] = DestructionPolicy(destruction).value
+
+
+def set_pointer_policy_metadata(metadata: dict[str, Any], **policy_values: Any) -> None:
+    """Store a complete semantic pointer policy after validating its shape."""
+    missing = [name for name in POINTER_POLICY_FIELDS if name not in policy_values]
+    extra = [name for name in policy_values if name not in POINTER_POLICY_FIELDS]
+    if missing or extra:
+        details = []
+        if missing:
+            details.append(f"missing: {', '.join(missing)}")
+        if extra:
+            details.append(f"unexpected: {', '.join(extra)}")
+        raise ValueError(f"PointerPolicy requires exactly {', '.join(POINTER_POLICY_FIELDS)} ({'; '.join(details)})")
+    if not isinstance(policy_values["nullable"], bool):
+        raise ValueError("PointerPolicy nullable must be a boolean")
+    for name in POINTER_POLICY_FIELDS[1:]:
+        if not isinstance(policy_values[name], str) or not policy_values[name]:
+            raise ValueError(f"PointerPolicy {name} must be a non-empty string")
+    TransferMode(policy_values["transfer"])
+    metadata[POINTER_POLICY_METADATA] = dict(policy_values)
+    metadata["fortran_pointer"] = True
 
 
 default_ownership_policy = OwnershipPolicyResolver()

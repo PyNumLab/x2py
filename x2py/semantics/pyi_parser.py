@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from x2py.ownership_policy import set_ownership_metadata
+from x2py.ownership_policy import set_ownership_metadata, set_pointer_policy_metadata
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -767,6 +767,24 @@ class _PyiAstParser:
             metadata_key = "_pyi_intent" if helper == "Intent" else "fortran_character_length"
             semantic_type.metadata[metadata_key] = str(ast.literal_eval(node.args[0]))
             return
+        if helper == "PointerAssociation":
+            if len(node.args) != 1 or node.keywords:
+                raise ValueError(f"PointerAssociation metadata expects one argument: {ast.unparse(node)!r}")
+            semantic_type.metadata["fortran_pointer_association"] = str(ast.literal_eval(node.args[0]))
+            semantic_type.metadata["fortran_pointer"] = True
+            return
+        if helper == "PointerPolicy":
+            if node.args:
+                raise ValueError(f"PointerPolicy metadata accepts keyword arguments only: {ast.unparse(node)!r}")
+            values = {}
+            for keyword in node.keywords:
+                if keyword.arg is None:
+                    raise ValueError("PointerPolicy metadata does not accept ** expansion")
+                if keyword.arg in values:
+                    raise ValueError(f"PointerPolicy metadata repeats {keyword.arg!r}")
+                values[keyword.arg] = ast.literal_eval(keyword.value)
+            set_pointer_policy_metadata(semantic_type.metadata, **values)
+            return
         if helper in {"Ownership", "Transfer", "Destruction"}:
             if len(node.args) != 1 or node.keywords:
                 raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
@@ -945,6 +963,8 @@ class _PyiAstParser:
             "ORDER_C",
             "ORDER_F",
             "Pointer",
+            "PointerAssociation",
+            "PointerPolicy",
             "Shape",
             "Transfer",
             "Destruction",

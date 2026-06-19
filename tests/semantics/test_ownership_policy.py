@@ -1,3 +1,5 @@
+import pytest
+
 from x2py.codegen.bindings.c_to_python import CPythonBindingGenerator
 from x2py.codegen.bridges.fortran_to_c import FortranToCBridgeGenerator
 from x2py.codegen.printers.pyi_printer import PyiPrinter
@@ -183,10 +185,12 @@ def test_codegen_action_dispatcher_routes_policy_actions_to_named_methods():
 def test_bridge_and_binding_generators_expose_ownership_action_maps():
     assert CPythonBindingGenerator._RESULT_DETAIL_DISPATCHER.handlers == {
         CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_detail_lines",
+        CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_detail_lines",
     }
     assert CPythonBindingGenerator._RESULT_NOTE_DISPATCHER.handlers == {
         CodegenAction.COPY_RETURN_ARRAY: "_copy_return_result_notes",
         CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_notes",
+        CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_notes",
         CodegenAction.BORROWED_VIEW: "_borrowed_view_result_notes",
     }
     assert FortranToCBridgeGenerator._NDARRAY_RESULT_DISPATCHER.handlers == {
@@ -239,6 +243,79 @@ class box:
     assert 'Ownership("python")' in emitted
     assert 'Transfer("snapshot_copy")' in emitted
     assert 'Destruction("python_refcount")' in emitted
+
+
+def test_complete_pointer_policy_metadata_round_trips_and_blocks_borrowed_views():
+    module = parse_pyi_text(
+        """
+value: Annotated[
+    Float64[:],
+    Pointer,
+    PointerAssociation("runtime"),
+    PointerPolicy(
+        nullable=True,
+        transfer="snapshot_copy",
+        target_owner="module",
+        lifetime="module",
+        deallocation="never",
+        shape_source="pointer_bounds",
+        contiguity="contiguous",
+        reassociation="snapshot_final",
+        aliasing="independent_copy",
+        mutability="copy",
+    ),
+]
+""",
+        module_name="pointer_policy",
+    )
+    semantic_type = module.variables[0].semantic_type
+    policy = semantic_type.metadata["pointer_policy"]
+    assert policy == {
+        "nullable": True,
+        "transfer": "snapshot_copy",
+        "target_owner": "module",
+        "lifetime": "module",
+        "deallocation": "never",
+        "shape_source": "pointer_bounds",
+        "contiguity": "contiguous",
+        "reassociation": "snapshot_final",
+        "aliasing": "independent_copy",
+        "mutability": "copy",
+    }
+    assert semantic_type.metadata["fortran_pointer_association"] == "runtime"
+    emitted = PyiPrinter().emit_semantic_type(semantic_type)
+    assert 'PointerAssociation("runtime")' in emitted
+    assert "PointerPolicy(nullable=True" in emitted
+    assert 'mutability="copy")' in emitted
+
+    policy["transfer"] = "borrowed_view"
+    decision = default_ownership_policy.decide_semantic_type(semantic_type, OwnershipContext.module_variable())
+    assert decision.is_blocked
+    assert "owner retention" in decision.blocker
+
+
+def test_pointer_policy_metadata_requires_every_fact():
+    with pytest.raises(ValueError, match="missing: lifetime"):
+        parse_pyi_text(
+            """
+value: Annotated[
+    Float64[:],
+    Pointer,
+    PointerPolicy(
+        nullable=True,
+        transfer="snapshot_copy",
+        target_owner="module",
+        deallocation="never",
+        shape_source="pointer_bounds",
+        contiguity="contiguous",
+        reassociation="snapshot_final",
+        aliasing="independent_copy",
+        mutability="copy",
+    ),
+]
+""",
+            module_name="incomplete_pointer_policy",
+        )
 
 
 def test_recursive_module_policy_map_includes_nested_fields_and_functions():

@@ -355,10 +355,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         funcs.extend(variable_accessor_funcs)
         variable_getters = [v for v in variables if isinstance(v, BindCArrayVariable)]
         # Import the module and its dependencies (in case they are used for argument types)
-        if any(f.is_external for f in funcs_to_generate):
+        if expr.imports:
+            imports = list(expr.imports)
+        elif any(f.is_external for f in funcs_to_generate):
             imports = []
         else:
-            imports = [Import(expr.name, target=expr, mod=expr), *expr.imports]
+            imports = [Import(expr.name, target=expr, mod=expr)]
 
         # Ensure renamed datatypes are mapped to their new name
         self.scope.imports["cls_constructs"].update(expr.scope.imports["cls_constructs"])
@@ -717,7 +719,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         name = var.name
         self.scope.insert_symbol(name)
         collisionless_name = self.scope.get_expected_name(name)
-        if var.is_optional:
+        needs_pointer_bridge = var.is_optional or (
+            codegen_action_for_variable(var) is CodegenAction.CALL_LOCAL_INPUT and var.memory_handling == "alias"
+        )
+        if needs_pointer_bridge:
             f_arg = var.clone(
                 collisionless_name,
                 new_class=Variable,
@@ -1142,7 +1147,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             func_scope = scope.new_child_scope(func_name, "function")
             mod = get_enclosing_module(expr)
             assert mod is not None
-            import_mod = Import(mod.name, AsName(expr, expr.name), mod=mod)
             func_scope.imports["variables"][expr.name] = expr
 
             # Create the data pointer
@@ -1171,7 +1175,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 body=result["body"],
                 arguments=[],
                 results=FunctionDefResult(result["c_result"]),
-                imports=[import_mod],
+                imports=self._module_variable_imports(expr),
                 scope=func_scope,
                 original_function=expr,
             )
@@ -1183,10 +1187,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
         raise NotImplementedError(f"Objects of type {expr.class_type} cannot be wrapped yet")
 
-    def _module_variable_import(self, expr):
+    @staticmethod
+    def _module_variable_imports(expr):
         mod = get_enclosing_module(expr)
         assert mod is not None
-        return Import(mod.name, AsName(expr, expr.name), mod=mod)
+        if mod.imports:
+            return []
+        return [Import(mod.name, AsName(expr, expr.name), mod=mod)]
 
     def _generated_module_function_name(self, public_name: str):
         return self.scope.get_new_public_name(
@@ -1242,7 +1249,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             [],
             body,
             FunctionDefResult(result),
-            imports=[self._module_variable_import(expr)],
+            imports=self._module_variable_imports(expr),
             scope=func_scope,
             original_function=original_function,
         )
@@ -1284,7 +1291,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             [FunctionDefArgument(value)],
             body,
             FunctionDefResult(NIL),
-            imports=[self._module_variable_import(expr)],
+            imports=self._module_variable_imports(expr),
             scope=func_scope,
             original_function=original_function,
         )
@@ -1554,6 +1561,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         raise NotImplementedError(f"Wrapping function results is not implemented for type {class_type}.")
 
     def _extract_FixedSizeType_FunctionDefResult(self, orig_var, orig_func_scope):
+        if codegen_action_for_variable(orig_var) is CodegenAction.SNAPSHOT_COPY_SCALAR:
+            return self._extract_snapshot_copy_scalar_result(orig_var)
         name = orig_var.name
         self.scope.insert_symbol(name)
         local_var = orig_var.clone(self.scope.get_expected_name(name), new_class=Variable, is_argument=False)
@@ -1561,6 +1570,52 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "body": [],
             "c_result": BindCVariable(local_var, orig_var),
             "f_result": local_var,
+        }
+
+    def _extract_snapshot_copy_scalar_result(self, orig_var):
+        name = orig_var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        pointer_var = orig_var.clone(
+            scope.get_expected_name(name),
+            new_class=Variable,
+            is_argument=False,
+            memory_handling="alias",
+        )
+        bind_var = Variable(BindCPointer(), scope.get_new_name(f"bound_{name}"), memory_handling="alias")
+        copy_var = orig_var.clone(
+            scope.get_new_name(f"{name}_copy"),
+            new_class=Variable,
+            is_argument=False,
+            memory_handling="alias",
+        )
+        size_var = orig_var.clone(
+            scope.get_new_name(f"{name}_element"),
+            new_class=Variable,
+            is_argument=False,
+            memory_handling="stack",
+        )
+        for variable in (pointer_var, copy_var, size_var):
+            scope.insert_variable(variable)
+        copy_body = [
+            Assign(bind_var, c_malloc(BindCSizeOf(size_var))),
+            If(
+                IfSection(
+                    IsNot(bind_var, NIL),
+                    [C_F_Pointer(bind_var, copy_var), Assign(copy_var, pointer_var)],
+                )
+            ),
+        ]
+        body = [
+            If(
+                IfSection(ArrayAssociated(pointer_var), copy_body),
+                IfSection(convert_to_literal(True), [Assign(bind_var, NIL)]),
+            )
+        ]
+        return {
+            "body": body,
+            "c_result": BindCVariable(bind_var, orig_var),
+            "f_result": pointer_var,
         }
 
     def _extract_CustomDataType_FunctionDefResult(self, orig_var, orig_func_scope):

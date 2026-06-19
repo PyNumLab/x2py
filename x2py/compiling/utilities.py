@@ -141,6 +141,15 @@ def recompile_object(compile_obj, compiler, language, verbose=False):
         Indicates the level of verbosity.
     """
 
+    if not compiler.executes_commands:
+        compiler.compile_module(
+            compile_obj=compile_obj,
+            output_folder=compile_obj.source_folder,
+            language=language,
+            verbose=verbose,
+        )
+        return
+
     # compile library source files
     with compile_obj:
         if os.path.exists(compile_obj.module_target):

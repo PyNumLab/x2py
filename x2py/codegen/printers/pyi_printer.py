@@ -7,7 +7,7 @@ import json
 import keyword
 import re
 
-from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA
+from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_FIELDS, POINTER_POLICY_METADATA
 from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -167,6 +167,18 @@ class PyiPrinter:
             metadata.append("FortranAllocatable")
         if semantic_type.metadata.get("fortran_target"):
             metadata.append("FortranTarget")
+        pointer_association = semantic_type.metadata.get("fortran_pointer_association")
+        if pointer_association is not None:
+            metadata.append(f"PointerAssociation({json.dumps(str(pointer_association))})")
+        pointer_policy = semantic_type.metadata.get(POINTER_POLICY_METADATA)
+        if isinstance(pointer_policy, dict):
+            arguments = []
+            for name in POINTER_POLICY_FIELDS:
+                value = pointer_policy.get(name)
+                if value is not None:
+                    rendered = repr(value) if isinstance(value, bool) else json.dumps(str(value))
+                    arguments.append(f"{name}={rendered}")
+            metadata.append(f"PointerPolicy({', '.join(arguments)})")
         ownership_policy = semantic_type.metadata.get(OWNERSHIP_POLICY_METADATA)
         if isinstance(ownership_policy, dict):
             owner = ownership_policy.get("owner")

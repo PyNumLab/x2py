@@ -275,8 +275,16 @@ class FortranToIRConverter:
             metadata["fortran_polymorphic"] = True
         if getattr(var, "target", False):
             metadata["fortran_target"] = True
+        if getattr(var, "pointer", False):
+            metadata["fortran_pointer"] = True
+            metadata["fortran_pointer_association"] = "runtime"
         shape = [self._resolve_compile_time_text(dim) for dim in var.shape]
-        storage = self._array_storage_contract(var, shape) if var.rank > 0 else None
+        if var.rank > 0:
+            storage = self._array_storage_contract(var, shape)
+        elif getattr(var, "pointer", False):
+            storage = SemanticStorageContract(kind="reference", pointer_depth=1)
+        else:
+            storage = None
         semantic_type = SemanticType(
             name=semantic_name,
             rank=var.rank,
@@ -315,6 +323,8 @@ class FortranToIRConverter:
             self._apply_array_argument_contract(semantic_type, arg, resolved_intent)
         elif not getattr(arg, "pass_by_value", False):
             semantic_type.storage = self._reference_storage_contract(resolved_intent)
+            if getattr(arg, "pointer", False):
+                semantic_type.storage.pointer_depth = 1
         self._apply_argument_ownership(semantic_type, resolved_intent)
 
         return SemanticArgument(
@@ -862,6 +872,10 @@ class FortranToIRConverter:
             "shape": list(var.shape),
             "lower_bounds": list(getattr(var, "lbound", []) or []),
             "upper_bounds": list(getattr(var, "ubound", []) or []),
+            "allocatable": bool(getattr(var, "allocatable", False)),
+            "pointer": bool(getattr(var, "pointer", False)),
+            "target": bool(getattr(var, "target", False)),
+            "contiguous": bool(getattr(var, "contiguous", False)),
         }
         if isinstance(var, FortranArgument):
             metadata.update(
@@ -869,11 +883,10 @@ class FortranToIRConverter:
                     "intent": var.intent,
                     "optional": var.optional,
                     "value": var.pass_by_value,
-                    "allocatable": var.allocatable,
-                    "pointer": var.pointer,
-                    "contiguous": getattr(var, "contiguous", False),
                 }
             )
+        if getattr(var, "pointer", False):
+            metadata["association"] = "runtime"
         if getattr(var, "polymorphic", False):
             metadata["polymorphic"] = True
         if getattr(var, "is_parameter", False):
@@ -1757,6 +1770,11 @@ def _iter_fortran_variable_contexts(
         parameters, procedure arguments/results/locals, and type fields with
         the unit that owns each symbol.
     """
+    if isinstance(node, FortranProject):
+        for parsed_file in node.files:
+            yield from _iter_fortran_variable_contexts(parsed_file)
+        return
+
     if isinstance(node, FortranFile):
         file_unit = node.filename or "<source>"
         for var in getattr(node, "variables", []):

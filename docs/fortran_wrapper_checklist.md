@@ -358,12 +358,13 @@ replacement, and destruction of the wrapped scalar object.
 ## 7. Pointer Arguments, Results, And Association
 
 Current state: pointer facts are preserved in semantic storage contracts.
-Procedure-level pointer array support exists for the conservative snapshot
-subset: pointer `intent(in)` arrays are call-local associations to Python-owned
-NumPy storage, and pointer array function results are copied into Python-owned
-NumPy arrays with `None` for unassociated results. General pointer ownership,
-borrowed pointer views, scalar pointer results, and pointer reassociation are
-not supported runtime contracts. Pointer module variables and pointer
+Procedure-level pointer support exists for the conservative snapshot subset:
+pointer `intent(in)` scalars and arrays are call-local associations to
+Python-owned values, pointer scalar function results are copied into ordinary
+Python scalar values, and pointer array function results are copied into
+Python-owned NumPy arrays. Unassociated results become `None`. General pointer
+ownership, borrowed pointer views, and pointer reassociation are not supported
+runtime contracts. Pointer module variables and pointer
 derived-type fields follow the same ownership rule as pointer results: they may
 be exposed only as Python-owned snapshot copies when association state, shape,
 dtype, nullability, contiguity, target owner, and deallocation obligations are
@@ -381,6 +382,12 @@ The procedure-level subset is narrower than general Fortran pointer support:
 - A pointer `intent(in)` array dummy may be associated with Python-owned NumPy
   array storage only for the duration of the native call. If Fortran saves or
   re-associates that pointer, the behavior is outside the supported contract.
+- A pointer `intent(in)` scalar dummy is associated with a wrapper temporary
+  containing the converted Python scalar only for the duration of the native
+  call. Python does not observe writes or reassociation through that pointer.
+- A pointer scalar function result is copied through wrapper-owned temporary
+  storage before control returns to Python. Associated results become ordinary
+  Python scalar values; unassociated results become `None`.
 - A pointer array function result is returned as a snapshot copy when the wrapper
   can prove association state, shape, dtype, contiguity, target owner, and
   deallocation obligations. Associated results become Python-owned values;
@@ -400,42 +407,53 @@ The procedure-level subset is narrower than general Fortran pointer support:
   explicit future work that needs owner tracking and
   stale-view/reassociation rules.
 
-Future `.pyi` policy must provide the missing pointer facts explicitly before
-blocked pointer outputs can be enabled. The required facts are described in
+Semantic `.pyi` files represent the complete pointer policy with
+`PointerPolicy(...)`. The metadata records `nullable`, `transfer`,
+`target_owner`, `lifetime`, `deallocation`, `shape_source`, `contiguity`,
+`reassociation`, `aliasing`, and `mutability`. Supplying metadata does not
+enable a transfer mode that the backend does not implement: borrowed views and
+general pointer output/reassociation remain blocked. The required facts are
+described in
 `docs/wrapper_design_notes.md#fortran-allocatable-and-pointer-reassociation`;
 they include nullability, transfer mode, owner/lifetime, shape source,
 contiguity or stride rules, deallocation policy, reassociation behavior,
 aliasing, and mutability.
 
 - [x] Define temporary association for pointer `intent(in)` array arguments.
-- [ ] Define temporary association for pointer `intent(in)` scalar arguments.
+- [x] Define temporary association for pointer `intent(in)` scalar arguments.
 - [x] Define snapshot-copy behavior for associated pointer array function
   results and `None` for unassociated results.
-- [ ] Define snapshot-copy behavior for associated scalar pointer function
+- [x] Define snapshot-copy behavior for associated scalar pointer function
   results and `None` for unassociated results.
-- [x] Block pointer `intent(out)` and `intent(inout)` dummy arguments unless
-  explicit pointer policy metadata supplies ownership, lifetime, shape,
-  contiguity, and deallocation behavior.
-- [ ] Preserve target, pointer, rank, bounds, contiguity, and association facts
+- [x] Block pointer `intent(out)` and `intent(inout)` dummy arguments; preserve
+  explicit pointer policy metadata without enabling unsupported reassociation
+  lowering.
+- [x] Preserve target, pointer, rank, bounds, contiguity, and association facts
   needed by pointer wrappers.
-- [ ] Add semantic `.pyi` policy metadata for nullable pointers, transfer mode,
+- [x] Add semantic `.pyi` policy metadata for nullable pointers, transfer mode,
   target owner, lifetime, deallocation, shape source, contiguity, reassociation,
   aliasing, and mutability.
 - [x] Report precise readiness blockers when pointer policy metadata is missing
   or contradicts the native declaration.
-- [ ] Support associated and unassociated scalar pointer results.
+- [x] Support associated and unassociated scalar pointer results.
 - [x] Support associated and unassociated array pointer results.
 - [ ] Keep native pointer targets alive while Python borrowed views reference
   them.
 - [ ] Prevent Python from freeing borrowed native storage.
-- [ ] Detect or block dangling pointer results when lifetime cannot be proven.
+- [x] Detect or block dangling borrowed pointer results when lifetime cannot be
+  proven; supported scalar and array pointer results are detached snapshots.
 - [x] Test pointer `intent(in)` call-local association.
+- [x] Test pointer scalar `intent(in)` call-local association.
+- [x] Test pointer scalar result snapshot copies and unassociated `None`.
 - [x] Test pointer array result snapshot copies and unassociated `None`.
 - [x] Test blocked pointer `intent(out)` and `intent(inout)` arguments without
   explicit policy metadata.
-- [ ] Test aliasing between two Python-visible pointers to the same target.
-- [ ] Test null association, reassociation, owner destruction, and target
-  reallocation.
+- [x] Test the snapshot aliasing rule: two Python-visible pointer results for
+  the same target are independent copies.
+- [x] Test null association and snapshot survival after Python input-owner
+  destruction.
+- [ ] Test native pointer reassociation, native owner destruction, and target
+  reallocation once borrowed views or reassociated outputs are supported.
 
 ## 8. Array-Valued Function Results
 
@@ -893,23 +911,66 @@ accessor path whenever validation is unavailable.
 
 ## 19. Multiple Files, Modules, And Submodules
 
-Current state: runtime wrapper builds require one generated semantic module from
-one source path.
+Current state: runtime wrapper builds accept one or more user-supplied Fortran
+source paths and produce one Python extension module/shared library. x2py does
+not discover missing source files, infer a dependency graph, or reorder the
+project: callers must pass every source needed by the wrapped API in a compiler
+valid order. The build compiles each supplied source to an object, links all
+objects into the generated extension, and emits one generated Fortran
+`bind(C)` bridge that imports each wrapped Fortran module and contains the C ABI
+procedures for the merged Python surface. The first generated semantic module
+sets the Python extension name; later modules and standalone procedures are
+merged into that extension.
 
 Example: module `solver` may `use mesh, only: grid`, and a submodule may
-implement procedures declared in the parent module. The likely path is a module
-one generated extension; open
-issues are renamed imports, prebuilt module files, and
-incremental rebuild invalidation across all sources.
+implement procedures declared in the parent module. The user passes the mesh
+source, parent module source, and submodule source in the same invocation. If
+the compiler can compile those files in that order, x2py builds a single
+importable extension from them. Standalone external procedures from multiple
+files are merged into the same extension surface, which supports BLAS-style
+source sets where routines are spread across many files but should be imported
+from one generated Python module.
 
-- [ ] Accept multiple source files in one wrapper build.
-- [ ] Support renamed and `only` imports across wrapped modules.
-- [ ] Define one-extension versus multiple-extension packaging.
-- [ ] Support standalone external procedures alongside modules.
-- [ ] Support submodules and separate module procedures.
-- [ ] Accept prebuilt module/include/library search paths.
-- [ ] Include all source and module dependencies in incremental rebuild logic.
-- [ ] Test a multi-file project with derived types, generics, and submodules.
+Generated semantic `.pyi` files remain module-based, not file-based. A source
+file that defines two Fortran modules writes two `.pyi` files when `--pyi --out`
+is used without an explicit filename. An explicit `--out api.pyi` remains an
+aggregate override for callers that intentionally want a single stub file.
+
+Passing `--makefile` writes `Makefile.x2py` beside the generated wrapper sources
+without compiling native objects or the extension. Its rules cover every source
+compile, generated-wrapper compile, runtime-support compile, and shared-library
+link command prepared by x2py. The Makefile records the resolved compiler
+executables and working directory, and exposes `FC`, `CC`, `X2PY_LD`,
+`X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS` so users can edit or override
+compilers and performance flags. Extra compile flags are placed after x2py's
+defaults, so a later option such as `-O3` overrides the default optimization
+level. User Fortran sources are conservatively chained in supplied order because
+x2py does not infer their dependency graph; generated C/runtime work remains
+available to `make -j`. This output targets GNU Make and a POSIX shell and is not
+the portable native-Windows build path. Separately, `--verbose` performs the
+direct build and prints each exact shell-escaped command as it runs.
+`--makefile` and `--verbose` are mutually exclusive.
+
+- [x] Accept multiple source files in one wrapper build.
+- [x] Define one-extension packaging for a multi-source wrapper invocation.
+- [x] Support standalone external procedures alongside modules.
+- [x] Compile supplied sources in caller-provided order and link all source
+  objects into the extension.
+- [x] Generate one Fortran `bind(C)` bridge module that imports wrapped modules
+  and merges their C ABI wrappers.
+- [x] Generate one `.pyi` file per Fortran module for implicit `--pyi --out`
+  writes, including multiple modules from one source file.
+- [x] Document that source discovery, dependency ordering, and incremental
+  dependency graph construction are caller/build-system responsibilities.
+- [x] Test multi-file wrapper builds for module procedures and standalone
+  external procedures.
+- [x] Emit an editable Makefile that reproduces the complete native build and
+  exposes compiler and extra-flag overrides.
+- [x] Keep exact-command verbose compilation and Makefile generation as
+  separate, mutually exclusive modes.
+- [ ] Resolve renamed/`only` import collisions across wrapped modules.
+- [ ] Wrap submodule and separate-module procedures as additional public API.
+- [ ] Accept prebuilt module and library search paths in wrapper compilation.
 
 ## 20. Visibility, Naming, And Python Surface
 

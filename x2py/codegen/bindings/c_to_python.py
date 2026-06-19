@@ -221,6 +221,7 @@ class CPythonBindingGenerator(BindingGenerator):
     _RESULT_DETAIL_DISPATCHER = OwnershipActionDispatcher(
         {
             CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_detail_lines",
+            CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_detail_lines",
         },
         "_default_result_detail_lines",
     )
@@ -228,6 +229,7 @@ class CPythonBindingGenerator(BindingGenerator):
         {
             CodegenAction.COPY_RETURN_ARRAY: "_copy_return_result_notes",
             CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_notes",
+            CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_notes",
             CodegenAction.BORROWED_VIEW: "_borrowed_view_result_notes",
         },
         "_empty_result_notes",
@@ -359,8 +361,6 @@ class CPythonBindingGenerator(BindingGenerator):
         return lines
 
     def _snapshot_copy_result_detail_lines(self, var, decision):
-        if not var.rank:
-            return []
         return [
             f"    Ownership: {decision.owner_label}",
             "    Returns None when unassociated.",
@@ -376,7 +376,10 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _snapshot_copy_result_notes(self, var, decision):
         if not var.rank:
-            return []
+            return [
+                "Pointer scalar results are copied into detached Python values.",
+                "Unassociated pointer results return None.",
+            ]
         return [
             "Pointer array results are copied into Python-owned NumPy arrays.",
             "Unassociated pointer results return None.",
@@ -434,7 +437,7 @@ class CPythonBindingGenerator(BindingGenerator):
     @staticmethod
     def _may_return_none(var):
         decision = ownership_decision_for_codegen_variable(var)
-        return bool(var.rank and decision.nullable)
+        return decision.nullable
 
     @staticmethod
     def _is_pointer_snapshot_result(var):
@@ -3580,7 +3583,13 @@ class CPythonBindingGenerator(BindingGenerator):
                 "is_argument": False,
                 "class_type": class_type,
             }
-            if getattr(orig_var, "is_optional", False):
+            if (
+                is_bind_c_argument
+                and codegen_action_for_variable(orig_var) is CodegenAction.CALL_LOCAL_INPUT
+                and orig_var.memory_handling == "alias"
+            ):
+                kwargs["memory_handling"] = "stack"
+            elif getattr(orig_var, "is_optional", False):
                 kwargs["memory_handling"] = "alias"
             arg_var = orig_var.clone(
                 self.scope.get_expected_name(orig_var.name),
@@ -4208,6 +4217,8 @@ class CPythonBindingGenerator(BindingGenerator):
         dict
             A dictionary describing the objects necessary to collect the result.
         """
+        if codegen_action_for_variable(orig_var) is CodegenAction.SNAPSHOT_COPY_SCALAR:
+            return self._extract_snapshot_copy_scalar_result(orig_var)
         name = getattr(orig_var, "name", "tmp")
         py_res = self.get_new_PyObject(f"{name}_obj", orig_var.dtype)
         c_res = Variable(orig_var.class_type, self.scope.get_new_name(name))
@@ -4215,6 +4226,35 @@ class CPythonBindingGenerator(BindingGenerator):
 
         body = [AliasAssign(py_res, FunctionCall(C_to_Python(c_res), [c_res]))]
         return {"c_results": [c_res], "py_result": py_res, "body": body}
+
+    def _extract_snapshot_copy_scalar_result(self, wrapped_var):
+        orig_var = getattr(wrapped_var, "original_var", wrapped_var)
+        name = getattr(orig_var, "name", "tmp")
+        py_res = self.get_new_PyObject(f"{name}_obj", orig_var.dtype)
+        data_var = Variable(VoidType(), self.scope.get_new_name(f"{name}_data"), memory_handling="alias")
+        value_var = orig_var.clone(
+            self.scope.get_new_name(f"{name}_value"),
+            new_class=Variable,
+            is_argument=False,
+            memory_handling="stack",
+        )
+        pointer_type = orig_var.clone(
+            self.scope.get_new_name(f"{name}_pointer_type"),
+            new_class=Variable,
+            is_argument=False,
+            memory_handling="alias",
+        )
+        self.scope.insert_variable(data_var)
+        self.scope.insert_variable(value_var)
+        copy_value = Assign(value_var, PointerCast(data_var, pointer_type))
+        convert_value = AliasAssign(py_res, FunctionCall(C_to_Python(value_var), [value_var]))
+        body = [
+            If(
+                IfSection(Is(data_var, NIL), [AliasAssign(py_res, Py_None), Py_INCREF(Py_None)]),
+                IfSection(convert_to_literal(True), [copy_value, convert_value, Deallocate(data_var)]),
+            )
+        ]
+        return {"c_results": [data_var], "py_result": py_res, "body": body}
 
     def _extract_NumpyNDArrayType_FunctionDefResult(self, orig_var, is_bind_c, funcdef):
         """

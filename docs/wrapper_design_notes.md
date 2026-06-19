@@ -309,8 +309,13 @@ The narrow first contract for procedure pointer arrays is implemented as:
   views require owner tracking and stale-view rules, so they are not the
   default field or module-variable behavior.
 
-Scalar pointer dummies and scalar pointer results still need their own runtime
-contract.
+Scalar pointer `intent(in)` dummies use a call-local wrapper temporary. The
+generated bridge associates the native pointer with that temporary only for the
+call, so Python never receives a native address and does not observe writes or
+reassociation. Scalar pointer function results use the same detached snapshot
+rule as arrays: the bridge copies an associated value into wrapper-owned
+temporary storage and returns an ordinary Python scalar, while an unassociated
+result returns `None`.
 
 Future `.pyi` pointer policy should make each missing fact explicit:
 
@@ -332,6 +337,33 @@ preserve the native pointer, target, rank, bounds, intent, and contiguity
 information they can observe, but wrapper readiness should keep reporting a
 blocker when the user-supplied policy is not strong enough for the requested
 Python behavior.
+
+Semantic `.pyi` expresses these facts in one keyword-only annotation:
+
+```python
+value: Annotated[
+    Float64[:],
+    Pointer,
+    PointerPolicy(
+        nullable=True,
+        transfer="snapshot_copy",
+        target_owner="module",
+        lifetime="module",
+        deallocation="never",
+        shape_source="pointer_bounds",
+        contiguity="contiguous",
+        reassociation="snapshot_final",
+        aliasing="independent_copy",
+        mutability="copy",
+    ),
+]
+```
+
+All ten keys round-trip through semantic IR. Metadata is descriptive policy,
+not permission to bypass backend safety checks. In particular,
+`transfer="borrowed_view"` remains blocked until the generated Python object
+can retain the native owner and stale views can be invalidated after
+reassociation or reallocation.
 
 ### Fortran Assumed-Rank Wrappers
 

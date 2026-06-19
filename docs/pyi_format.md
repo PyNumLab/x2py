@@ -136,6 +136,7 @@ Generated canonical metadata:
 | `ORDER_ANY` | edited contract accepts either C or Fortran orientation |
 | `Allocatable` | Fortran allocatable array storage |
 | `Pointer` | Fortran pointer array storage |
+| `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
 | `Intent("out")` | exact native argument is an output argument |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `FortranCharacterLength("n")` | Fortran character storage length for `String` contracts |
@@ -144,6 +145,7 @@ Generated canonical metadata:
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
 | `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
 | `Destruction("python_refcount" | "wrapper_dealloc" | "native_owner" | "caller" | "call_local" | "none" | "blocked")` | explicit destruction override for the wrapper ownership policy |
+| `PointerPolicy(...)` | complete pointer policy: `nullable`, `transfer`, `target_owner`, `lifetime`, `deallocation`, `shape_source`, `contiguity`, `reassociation`, `aliasing`, and `mutability` |
 
 Loaded compatibility metadata:
 
@@ -163,6 +165,28 @@ value: Annotated[Int32, Bounded(1, 8), Finite]
 
 Ownership metadata is consumed by the centralized wrapper ownership policy. Use
 it only when the native source facts are more precise than the generated default.
+`PointerPolicy` is keyword-only and requires all ten keys. Its string values are
+preserved verbatim so project-specific owner and release names can be expressed;
+the backend still validates whether the requested transfer is implemented.
+
+```python
+value: Annotated[
+    Float64[:],
+    Pointer,
+    PointerPolicy(
+        nullable=True,
+        transfer="snapshot_copy",
+        target_owner="module",
+        lifetime="module",
+        deallocation="never",
+        shape_source="pointer_bounds",
+        contiguity="contiguous",
+        reassociation="snapshot_final",
+        aliasing="independent_copy",
+        mutability="copy",
+    ),
+]
+```
 For example, a pointer array can be made a Python-owned snapshot only when the
 stub also supplies enough shape, nullability, lifetime, and release facts for
 the backend path being enabled.

@@ -1666,7 +1666,7 @@ def test_fortran_native_storage_contracts_cover_array_categories_and_scalars():
     source = """
 module contract_mod
 contains
-subroutine contracts(n, m, explicit, legacy, assumed, contig, alloc, ptr, scalar_value, scalar_ref, scalar_out)
+subroutine contracts(n, m, explicit, legacy, assumed, contig, alloc, ptr, scalar_ptr, scalar_value, scalar_ref, scalar_out)
   integer, intent(in) :: n
   integer, intent(in) :: m
   real(8), intent(in) :: explicit(n, m)
@@ -1675,6 +1675,7 @@ subroutine contracts(n, m, explicit, legacy, assumed, contig, alloc, ptr, scalar
   real(8), contiguous, intent(inout) :: contig(:, :)
   real(8), allocatable, intent(out) :: alloc(:)
   real(8), pointer, intent(inout) :: ptr(:)
+  real(8), pointer, intent(in) :: scalar_ptr
   real(8), value, intent(in) :: scalar_value
   real(8), intent(in) :: scalar_ref
   real(8), intent(out) :: scalar_out
@@ -1710,6 +1711,24 @@ end module contract_mod
 
     assert array_contract(args["alloc"].semantic_type).allocatable is True
     assert array_contract(args["ptr"].semantic_type).pointer is True
+    scalar_ptr = args["scalar_ptr"].semantic_type
+    assert scalar_ptr.metadata["fortran_pointer"] is True
+    assert scalar_ptr.metadata["fortran_pointer_association"] == "runtime"
+    assert scalar_ptr.storage.pointer_depth == 1
+    assert args["scalar_ptr"].origin.metadata == {
+        "rank": 0,
+        "shape": [],
+        "lower_bounds": [],
+        "upper_bounds": [],
+        "allocatable": False,
+        "pointer": True,
+        "target": False,
+        "contiguous": False,
+        "intent": "in",
+        "optional": False,
+        "value": False,
+        "association": "runtime",
+    }
     assert args["scalar_value"].semantic_type.storage is None
     assert args["scalar_ref"].semantic_type.storage.read_only is True
     assert args["scalar_out"].semantic_type.storage.mutable is True

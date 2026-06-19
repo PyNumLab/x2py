@@ -17,6 +17,7 @@ from x2py.codegen.models.core import (
     FunctionDefArgument,
     FunctionDefResult,
     FunctionOverloadSet,
+    Import,
     Minus,
     Module,
     Mul,
@@ -306,6 +307,16 @@ def _is_pointer_array(semantic_type: models.SemanticType | None) -> bool:
     )
 
 
+def _is_pointer(semantic_type: models.SemanticType | None) -> bool:
+    if semantic_type is None:
+        return False
+    storage = semantic_type.storage
+    return bool(
+        semantic_type.metadata.get("fortran_pointer")
+        or (storage is not None and storage.array is not None and storage.array.pointer)
+    )
+
+
 def _array_contract_category(semantic_type: models.SemanticType | None) -> str | None:
     contract = _array_contract(semantic_type) if semantic_type is not None else None
     return None if contract is None else contract.category
@@ -571,7 +582,7 @@ def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> Non
     for argument in node.arguments:
         context = OwnershipContext.argument(argument.intent)
         decision = _ownership_decision(argument.semantic_type, context)
-        if _is_pointer_array(argument.semantic_type) and decision.is_blocked:
+        if _is_pointer(argument.semantic_type) and decision.is_blocked:
             raise ValueError(
                 f"Function {node.name!r} has pointer {argument.intent} argument {argument.name!r}, "
                 f"which cannot be wrapped safely: {decision.blocker or decision.reason}"
@@ -890,7 +901,17 @@ def semantic_ir_to_codegen_ast(
             for item in node.variables
         ]
         name = scope.get_new_public_name(node.name, object_type="module", owner=node.name)
-        return Module(name, declarations, funcs, overload_sets=overload_sets, classes=classes, scope=scope)
+        wrapper_native_modules = node.metadata.get("wrapper_native_modules", ())
+        imports = [Import(module_name, target=()) for module_name in wrapper_native_modules]
+        return Module(
+            name,
+            declarations,
+            funcs,
+            overload_sets=overload_sets,
+            classes=classes,
+            imports=imports,
+            scope=scope,
+        )
 
     if isinstance(node, models.ProcedureOverloadSet):
         functions = []
@@ -1035,7 +1056,7 @@ def semantic_ir_to_codegen_ast(
             [],
             result,
             scope=func_scope,
-            is_external=legacy,
+            is_external=legacy or (node.origin.source_language == "fortran" and node.origin.native_scope is None),
             is_private=node.visibility == "private",
             bind_c_external_name=(
                 str(node.metadata.get("fortran_bind_c_name") or native_name)

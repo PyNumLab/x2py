@@ -392,12 +392,14 @@ def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
 
     out: dict[str, dict] = {}
     available_modules = [module for _p, modules in converted_files for module in modules]
+    primary_names = {module.name for module in available_modules}
     for p, modules in converted_files:
         stubs = emit_module_stubs(modules, available_modules=available_modules)
-        primary_names = {module.name for module in modules}
+        module_stubs = {module.name: stubs[module.name] for module in modules}
         out[str(p)] = {
             "semantic_modules": [asdict(m) for m in modules],
-            "pyi": "\n\n".join(stubs[module.name] for module in modules).strip(),
+            "pyi": "\n\n".join(module_stubs.values()).strip(),
+            "pyi_modules": module_stubs,
         }
         dependencies = {module_name: text for module_name, text in stubs.items() if module_name not in primary_names}
         if dependencies:
@@ -710,7 +712,14 @@ def _validate_fortran_type_probe_options(
 
 
 def _has_stage(args: argparse.Namespace) -> bool:
-    return bool(args.parse or args.semantics or args.pyi or args.wrap_readiness or getattr(args, "wrap", False))
+    return bool(
+        args.parse
+        or args.semantics
+        or args.pyi
+        or args.wrap_readiness
+        or getattr(args, "wrap", False)
+        or getattr(args, "makefile", False)
+    )
 
 
 def _path_is_fortran_source(path: str) -> bool:
@@ -726,7 +735,7 @@ def _stage_defaults_to_wrap(args: argparse.Namespace) -> bool:
 
 
 def _should_run_wrap(args: argparse.Namespace) -> bool:
-    return bool(getattr(args, "wrap", False) or _stage_defaults_to_wrap(args))
+    return bool(getattr(args, "wrap", False) or getattr(args, "makefile", False) or _stage_defaults_to_wrap(args))
 
 
 def _has_semantic_stage(args: argparse.Namespace) -> bool:
@@ -776,14 +785,14 @@ def _validate_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentPa
         return
     if args.language != "fortran":
         parser.error("--wrap currently requires --language fortran")
-    if len(args.paths) != 1:
-        parser.error("--wrap expects exactly one Fortran source file")
-    if Path(args.paths[0]).is_dir():
-        parser.error("--wrap expects a Fortran source file, not a directory")
+    if any(Path(path).is_dir() for path in args.paths):
+        parser.error("--wrap expects Fortran source files, not directories")
     if args.parse or args.semantics or args.pyi or args.wrap_readiness:
         parser.error("--wrap cannot be combined with --parse, --semantics, --pyi, or --wrap-readiness")
     if args.out is not None:
         parser.error("--wrap writes build artifacts; use --out-dir instead of --out")
+    if getattr(args, "makefile", False) and getattr(args, "verbose", False):
+        parser.error("--makefile cannot be combined with --verbose")
 
 
 def _validate_c_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -931,7 +940,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
     from x2py.wrapping import build_fortran_extension
 
     return build_fortran_extension(
-        args.paths[0],
+        args.paths,
         output_dir=getattr(args, "out_dir", None),
         preprocessing=preprocessing,
         strict_wrapper_names=getattr(args, "strict_wrapper_names", False),
@@ -939,6 +948,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
         fortran_type_probe_runner=getattr(args, "fortran_type_probe_runner", None),
         fortran_type_probe_cache_dir=getattr(args, "fortran_type_probe_cache_dir", None),
         refresh_fortran_type_probe=getattr(args, "refresh_fortran_type_probe", False),
+        makefile=getattr(args, "makefile", False),
         verbose=1 if getattr(args, "verbose", False) else 0,
     )
 
@@ -990,7 +1000,8 @@ def _write_pyi_output(args: argparse.Namespace, semantic_payload: dict[str, dict
         _write_pyi_dependencies(semantic_payload, output_dir=Path(args.out).parent)
         return
     for fname, report in semantic_payload.items():
-        Path(fname).with_suffix(".pyi").write_text((report.get("pyi") or "") + "\n", encoding="utf-8")
+        for module_name, text in report.get("pyi_modules", {}).items():
+            Path(fname).parent.joinpath(module_name).with_suffix(".pyi").write_text(text + "\n", encoding="utf-8")
     _write_pyi_dependencies(semantic_payload)
 
 
@@ -1089,7 +1100,12 @@ def _print_wrap_build_output(args: argparse.Namespace, result) -> None:
         print(json.dumps(payload, indent=2))
         return
 
-    print(f"Built extension: {payload['shared_library']}")
+    if payload.get("compiled", True):
+        print(f"Built extension: {payload['shared_library']}")
+    else:
+        print(f"Generated Makefile: {payload['build_makefile']}")
+        print(f"Shared library target: {payload['shared_library']}")
+        print(f"Build with: make -f {payload['build_makefile']} -j")
     generated_sources = payload.get("generated_sources") or []
     if generated_sources:
         print("Generated sources:")
@@ -1178,6 +1194,8 @@ def main() -> int:
             "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
             "  Build a Python extension from a Fortran source:\n"
             "    python -m x2py path/to/file.f\n"
+            "  Generate a parallel GNU Make build without compiling:\n"
+            "    python -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
             "\nOptional:\n"
             "  Install 'rich' for colored terminal syntax highlighting:\n"
             "      pip install rich"
@@ -1342,7 +1360,12 @@ def main() -> int:
     parser.add_argument(
         "--wrap",
         action="store_true",
-        help="Explicitly build a Python extension module from one Fortran source file",
+        help="Explicitly build one Python extension module from the supplied Fortran source files",
+    )
+    parser.add_argument(
+        "--makefile",
+        action="store_true",
+        help="Generate wrapper sources and a GNU Make build without compiling",
     )
     parser.add_argument(
         "--strict-wrapper-names",

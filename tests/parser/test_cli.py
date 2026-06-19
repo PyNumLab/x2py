@@ -53,6 +53,7 @@ def _main_args(**overrides):
         "vars_limit": None,
         "wrap_readiness": False,
         "wrap": False,
+        "makefile": False,
         "semantics": False,
         "pyi": False,
         "json": False,
@@ -437,9 +438,35 @@ end module m
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert res.stdout == ""
-    out = tmp_path / "mini.pyi"
+    out = tmp_path / "m.pyi"
     assert out.exists()
     assert "def add1" in out.read_text(encoding="utf-8")
+
+
+def test_cli_pyi_out_writes_one_file_per_fortran_module(tmp_path: Path):
+    source = tmp_path / "combined.f90"
+    source.write_text(
+        """module first_mod
+contains
+  subroutine first()
+  end subroutine first
+end module first_mod
+
+module second_mod
+contains
+  subroutine second()
+  end subroutine second
+end module second_mod
+""",
+        encoding="utf-8",
+    )
+
+    cmd = [sys.executable, "-m", "x2py", str(source), "--pyi", "--out"]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert result.stdout == ""
+    assert "def first(" in (tmp_path / "first_mod.pyi").read_text(encoding="utf-8")
+    assert "def second(" in (tmp_path / "second_mod.pyi").read_text(encoding="utf-8")
 
 
 def test_cli_pyi_out_writes_explicit_file_from_inline_code(tmp_path: Path):
@@ -1019,6 +1046,10 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
             {"out": ""},
             "--wrap writes build artifacts; use --out-dir instead of --out",
         ),
+        (
+            {"makefile": True, "verbose": True},
+            "--makefile cannot be combined with --verbose",
+        ),
         ({"show_vars": True}, "--show-vars/--print-limit require --parse"),
         ({"print_limit": 1}, "--show-vars/--print-limit require --parse"),
         ({"vars_limit": 1}, "--show-vars/--print-limit require --parse"),
@@ -1038,7 +1069,7 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
         ),
         (
             {"parse": True, "refresh_fortran_type_probe": True},
-            "Fortran type probe options require --semantics, --pyi, or --wrap-readiness",
+            "Fortran type probe options require --semantics, --pyi, --wrap-readiness, or --wrap",
         ),
         (
             {"semantics": True, "fortran_type_report": "types.json", "refresh_fortran_type_probe": True},
@@ -1281,8 +1312,11 @@ def test_x2py_main_preserves_explicit_pyi_write_contract(monkeypatch):
 
 def test_x2py_main_preserves_adjacent_pyi_write_contract(monkeypatch):
     semantic_payload = {
-        "/tmp/first.f90": {"pyi": "def first() -> None: ..."},
-        "/tmp/empty.f90": {},
+        "/tmp/first.f90": {
+            "pyi": "def first() -> None: ...",
+            "pyi_modules": {"first_mod": "def first() -> None: ..."},
+        },
+        "/tmp/empty.f90": {"pyi_modules": {}},
     }
     args = _main_args(pyi=True, out="")
     _install_main_parser(monkeypatch, args)
@@ -1303,8 +1337,7 @@ def test_x2py_main_preserves_adjacent_pyi_write_contract(monkeypatch):
 
     assert x2py_cli.main() == 0
     assert writes == [
-        (Path("/tmp/first.pyi"), "def first() -> None: ...\n", {"encoding": "utf-8"}),
-        (Path("/tmp/empty.pyi"), "\n", {"encoding": "utf-8"}),
+        (Path("/tmp/first_mod.pyi"), "def first() -> None: ...\n", {"encoding": "utf-8"}),
     ]
     assert dependencies == [(semantic_payload, {})]
 
@@ -1900,6 +1933,8 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
                 "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
                 "  Build a Python extension from a Fortran source:\n"
                 "    python -m x2py path/to/file.f\n"
+                "  Generate a parallel GNU Make build without compiling:\n"
+                "    python -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
                 "\nOptional:\n"
                 "  Install 'rich' for colored terminal syntax highlighting:\n"
                 "      pip install rich"
@@ -2110,7 +2145,21 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
             ("--wrap",),
             {
                 "action": "store_true",
-                "help": "Explicitly build a Python extension module from one Fortran source file",
+                "help": "Explicitly build one Python extension module from the supplied Fortran source files",
+            },
+        ),
+        (
+            ("--makefile",),
+            {
+                "action": "store_true",
+                "help": "Generate wrapper sources and a GNU Make build without compiling",
+            },
+        ),
+        (
+            ("--strict-wrapper-names",),
+            {
+                "action": "store_true",
+                "help": "Reject Python wrapper names that require escaping or collision suffixes",
             },
         ),
         (
@@ -2888,6 +2937,7 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
         str(path): {
             "semantic_modules": [{"name": "api"}],
             "pyi": "def api() -> None: ...",
+            "pyi_modules": {"api": "def api() -> None: ..."},
             "pyi_dependencies": {"shared": "class Shared:\n    pass"},
         }
     }
@@ -2992,6 +3042,10 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
         str(path): {
             "semantic_modules": [{"name": "left"}, {"name": "right"}],
             "pyi": "class Left:\n    pass\n\nclass Right:\n    pass",
+            "pyi_modules": {
+                "left": "class Left:\n    pass",
+                "right": "class Right:\n    pass",
+            },
             "pyi_dependencies": {"shared": "class Shared:\n    pass"},
         }
     }

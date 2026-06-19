@@ -78,12 +78,22 @@ class Compiler:
                Name of the family of compilers.
     debug : bool
                Indicates whether we are compiling in debug mode.
+    execute_commands : bool
+               Execute prepared commands immediately. If false, retain them in
+               ``command_log`` for an external build system.
     """
 
-    __slots__ = ("_compiler_family", "_compiler_info", "_debug", "_language_info")
+    __slots__ = (
+        "_command_log",
+        "_compiler_family",
+        "_compiler_info",
+        "_debug",
+        "_execute_commands",
+        "_language_info",
+    )
     acceptable_bin_paths = None
 
-    def __init__(self, vendor: str, debug=False):
+    def __init__(self, vendor: str, debug=False, *, execute_commands=True):
         if vendor.endswith(".json") and os.path.exists(vendor):
             self._compiler_family = pathlib.Path(vendor).stem
             with open(vendor, encoding="utf-8") as vendor_file:
@@ -106,7 +116,26 @@ class Compiler:
                     raise NotImplementedError(f"Unrecognised compiler vendor : {vendor}")
 
         self._debug = debug
+        self._execute_commands = execute_commands
+        self._command_log = []
         self._language_info = None
+
+    @property
+    def command_log(self):
+        """Exact expanded compiler commands prepared by this instance."""
+        return tuple(tuple(command) for command in self._command_log)
+
+    @property
+    def executes_commands(self):
+        """Whether prepared compiler commands are executed immediately."""
+        return self._execute_commands
+
+    def _run_or_record_command(self, cmd, verbose):
+        expanded = [os.path.expandvars(str(part)) for part in cmd]
+        self._command_log.append(expanded)
+        if self._execute_commands:
+            return self.run_command(expanded, verbose)
+        return expanded
 
     def get_exec(self, extra_compilation_tools, language=None):
         """
@@ -444,7 +473,7 @@ class Compiler:
         ]
 
         with compile_obj:
-            self.run_command(cmd, verbose)
+            self._run_or_record_command(cmd, verbose)
 
         self._language_info = None
 
@@ -505,7 +534,7 @@ class Compiler:
         ]
 
         with compile_obj:
-            self.run_command(cmd, verbose)
+            self._run_or_record_command(cmd, verbose)
 
         self._language_info = None
 
@@ -582,7 +611,7 @@ class Compiler:
         ]
 
         with compile_obj:
-            self.run_command(cmd, verbose)
+            self._run_or_record_command(cmd, verbose)
 
         self._language_info = None
 

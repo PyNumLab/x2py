@@ -316,12 +316,13 @@ end module bad_bind_mod
 
 
 @pytest.mark.parametrize("intent", ["out", "inout"])
-def test_pointer_output_arguments_raise_before_codegen_without_policy(intent):
+@pytest.mark.parametrize("shape", ["", "(:)"])
+def test_pointer_output_arguments_raise_before_codegen_without_policy(intent, shape):
     source = f"""
 module pointer_mod
 contains
   subroutine attach(values)
-    real(8), pointer, intent({intent}) :: values(:)
+    real(8), pointer, intent({intent}) :: values{shape}
   end subroutine attach
 end module pointer_mod
 """
@@ -343,6 +344,21 @@ end module pointer_module_mod
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
     with pytest.raises(ValueError, match="pointer array owner, lifetime, shape, and release policy are unknown"):
+        semantic_ir_to_codegen_ast(
+            semantic_module,
+            Scope(name=semantic_module.name, scope_type="module"),
+        )
+
+
+def test_pointer_scalar_module_variable_raises_before_codegen_without_policy():
+    source = """
+module pointer_scalar_module_mod
+  real(8), pointer :: value
+end module pointer_scalar_module_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    with pytest.raises(ValueError, match="pointer scalar module_variable owner, lifetime, and reassociation policy"):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),

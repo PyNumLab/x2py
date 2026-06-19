@@ -211,6 +211,24 @@ end module fnaming_f90
 POINTERS_F90_TEXT = """
 module fpointers_f90
 contains
+  real(8) function read_pointer(value)
+    real(8), pointer, intent(in) :: value
+
+    read_pointer = value
+  end function read_pointer
+
+  function pointer_to_scalar(value, use_value) result(selected)
+    real(8), target, intent(in) :: value
+    integer, intent(in) :: use_value
+    real(8), pointer :: selected
+
+    if (use_value /= 0) then
+      selected => value
+    else
+      nullify(selected)
+    end if
+  end function pointer_to_scalar
+
   real(8) function sum_pointer(values)
     real(8), pointer, intent(in) :: values(:)
     integer :: i
@@ -1053,6 +1071,231 @@ def _build_text_and_import(source_text: str, filename: str, workdir: Path, expec
         return importlib.import_module(module_name)
     finally:
         sys.path.remove(str(workdir))
+
+
+def _build_sources_and_import(source_texts: list[tuple[str, str]], workdir: Path):
+    sources = []
+    for filename, source_text in source_texts:
+        source = workdir / filename
+        source.write_text(source_text, encoding="utf-8")
+        sources.append(source)
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        *(str(source) for source in sources),
+        "--wrap",
+        "--out-dir",
+        str(workdir),
+        "--json",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    payload = json.loads(result.stdout)
+    module_name = payload["module_name"]
+
+    assert payload["sources"] == [str(source) for source in sources]
+    assert payload["compiled"] is True
+    assert payload["build_makefile"] is None
+    assert Path(payload["shared_library"]).exists()
+    for source in sources:
+        assert any(Path(path).name == f"{source.stem}.o" for path in payload["generated_files"])
+
+    sys.modules.pop(module_name, None)
+    sys.path.insert(0, str(workdir))
+    try:
+        return importlib.import_module(module_name), payload
+    finally:
+        sys.path.remove(str(workdir))
+
+
+def test_multi_file_modules_build_one_merged_extension(tmp_path: Path):
+    module, payload = _build_sources_and_import(
+        [
+            (
+                "first_api.f90",
+                """module first_api
+contains
+  integer function add_one(value) result(output)
+    integer, intent(in) :: value
+    output = value + 1
+  end function add_one
+end module first_api
+""",
+            ),
+            (
+                "second_api.f90",
+                """module second_api
+  use first_api, only: add_one
+  integer :: counter = 3
+contains
+  integer function double_value(value) result(output)
+    integer, intent(in) :: value
+    output = add_one(value) * 2
+  end function double_value
+end module second_api
+""",
+            ),
+        ],
+        tmp_path,
+    )
+
+    assert payload["module_name"] == "first_api"
+    assert module.add_one(np.int32(4)) == 5
+    assert module.double_value(np.int32(4)) == 10
+    assert module.get_counter() == 3
+    module.set_counter(np.int32(7))
+    assert module.get_counter() == 7
+    bridge = (tmp_path / "bind_c_first_api_wrapper.f90").read_text(encoding="utf-8").lower()
+    assert "use first_api" in bridge
+    assert "use second_api" in bridge
+
+
+def test_multi_file_standalone_procedures_build_one_merged_extension(tmp_path: Path):
+    module, payload = _build_sources_and_import(
+        [
+            (
+                "standalone_api.f",
+                """      integer function add_one(value)
+      integer value
+      add_one = value + 1
+      end
+""",
+            ),
+            (
+                "double_value.f",
+                """      integer function double_value(value)
+      integer value
+      double_value = value * 2
+      end
+""",
+            ),
+        ],
+        tmp_path,
+    )
+
+    assert payload["module_name"] == "standalone_api"
+    assert module.add_one(np.int32(4)) == 5
+    assert module.double_value(np.int32(4)) == 8
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" or shutil.which("make") is None,
+    reason="generated Makefile requires GNU Make and a POSIX shell",
+)
+def test_makefile_mode_generates_parallel_build_without_compiling(tmp_path: Path):
+    first = tmp_path / "first_api.f90"
+    second = tmp_path / "second_api.f90"
+    first.write_text(
+        """module first_api
+contains
+  integer function add_one(value) result(output)
+    integer, intent(in) :: value
+    output = value + 1
+  end function add_one
+end module first_api
+""",
+        encoding="utf-8",
+    )
+    second.write_text(
+        """module second_api
+  use first_api, only: add_one
+contains
+  integer function double_value(value) result(output)
+    integer, intent(in) :: value
+    output = add_one(value) * 2
+  end function double_value
+end module second_api
+""",
+        encoding="utf-8",
+    )
+
+    command = [
+        sys.executable,
+        "-m",
+        "x2py",
+        str(first),
+        str(second),
+        "--makefile",
+        "--out-dir",
+        str(tmp_path),
+        "--json",
+    ]
+    generated = subprocess.run(command, capture_output=True, text=True, check=True)
+    payload = json.loads(generated.stdout)
+    makefile = Path(payload["build_makefile"])
+
+    assert payload["compiled"] is False
+    assert makefile.is_file()
+    assert not Path(payload["shared_library"]).exists()
+    text = makefile.read_text(encoding="utf-8")
+    assert "FC := " in text
+    assert "CC := " in text
+    assert "X2PY_FFLAGS ?=" in text
+    assert f"{tmp_path / 'second_api.o'}: {second} {tmp_path / 'first_api.o'}" in text
+    assert f"{tmp_path / 'bind_c_first_api_wrapper.o'}:" in text
+    assert str(tmp_path / "first_api.o") in text
+    assert str(tmp_path / "second_api.o") in text
+
+    built = subprocess.run(
+        [
+            "make",
+            "-j4",
+            "-f",
+            str(makefile),
+            "all",
+            "X2PY_FFLAGS=-O3",
+            "X2PY_CFLAGS=-O3",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "-O3" in built.stdout
+    assert Path(payload["shared_library"]).is_file()
+
+    sys.modules.pop("first_api", None)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        module = importlib.import_module("first_api")
+        assert module.double_value(np.int32(4)) == 10
+    finally:
+        sys.path.remove(str(tmp_path))
+
+
+def test_verbose_mode_prints_full_direct_build_commands(tmp_path: Path):
+    source = tmp_path / "verbose_api.f90"
+    source.write_text(
+        """module verbose_api
+contains
+  subroutine ping()
+  end subroutine ping
+end module verbose_api
+""",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--verbose",
+            "--out-dir",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    command_lines = result.stdout.splitlines()
+
+    assert any(str(source) in line and "-c" in line for line in command_lines)
+    assert any("bind_c_verbose_api_wrapper.f90" in line and "-c" in line for line in command_lines)
+    assert any("verbose_api_wrapper.c" in line and "-c" in line for line in command_lines)
+    assert any("-shared" in line and "verbose_api" in line for line in command_lines)
+    assert "Built extension:" in result.stdout
 
 
 def _normalized_fortran_source(source: Path):
@@ -1970,14 +2213,25 @@ def test_pointer_arrays_use_call_local_inputs_and_snapshot_results(tmp_path: Pat
     )
 
     values = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    assert module.read_pointer(np.float64(4.5)) == np.float64(4.5)
+    assert module.pointer_to_scalar(np.float64(7.25), np.int32(1)) == np.float64(7.25)
+    assert module.pointer_to_scalar(np.float64(7.25), np.int32(0)) is None
+    assert "pointer_to_scalar(value, use_value) -> float64 | None" in module.pointer_to_scalar.__doc__
+    assert "Pointer scalar results are copied into detached Python values." in module.pointer_to_scalar.__doc__
+    assert "Unassociated pointer results return None." in module.pointer_to_scalar.__doc__
+
     assert module.sum_pointer(values) == np.float64(6.0)
 
     selected = module.pointer_to_values(values, np.int32(1))
     np.testing.assert_allclose(selected, values)
     assert selected.base is not None
 
+    second_snapshot = module.pointer_to_values(values, np.int32(1))
+    assert not np.shares_memory(selected, second_snapshot)
+
     selected[0] = np.float64(99.0)
     np.testing.assert_allclose(values, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+    np.testing.assert_allclose(second_snapshot, values)
 
     assert module.pointer_to_values(values, np.int32(0)) is None
     assert "pointer_to_values(values, use_values) -> ndarray[float64] | None" in module.pointer_to_values.__doc__
