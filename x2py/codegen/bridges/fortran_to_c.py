@@ -6,6 +6,7 @@ THIS CREATES BIND(C) FORTRAN FILE
 
 import re
 from functools import reduce
+from typing import ClassVar
 
 from x2py.ownership_policy import (
     CodegenAction,
@@ -86,12 +87,18 @@ _MAX_SUPPORTED_ASSUMED_RANK = 15
 
 
 class FortranToCBridgeGenerator(BridgeGenerator):
-    """
-    Class for creating a wrapper exposing Fortran code to C.
+    """Create a C-compatible bridge AST for a Fortran module.
 
-    A class which provides all necessary functions for wrapping different AST
-    objects such that the resulting AST is C-compatible. This new AST is
-    printed as an intermediary layer.
+    The class follows the same reading order as ``FortranParser``:
+
+    - public generation entrypoint inherited from ``BridgeGenerator``;
+    - module, function, variable, and class visitors;
+    - argument conversion helpers;
+    - result conversion helpers;
+    - shared predicates and low-level builders.
+
+    Datatype conversion is an explicit second dispatch dimension. Model-node
+    dispatch remains exclusively owned by ``_visit``.
 
     Parameters
     ----------
@@ -103,202 +110,43 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     target_language = "C"
     start_language = "Fortran"
+    _ARGUMENT_CONVERTERS: ClassVar[dict[type, str]] = {
+        FixedSizeNumericType: "_convert_numeric_argument",
+        CustomDataType: "_convert_custom_type_argument",
+        NumpyNDArrayType: "_convert_array_argument",
+        TupleType: "_convert_tuple_argument",
+        StringType: "_convert_string_argument",
+    }
+    _RESULT_CONVERTERS: ClassVar[dict[type, str]] = {
+        FixedSizeNumericType: "_convert_scalar_result",
+        CustomDataType: "_convert_custom_type_result",
+        NumpyNDArrayType: "_convert_array_result",
+        TupleType: "_convert_tuple_result",
+        StringType: "_convert_string_result",
+    }
     _NDARRAY_RESULT_DISPATCHER = OwnershipActionDispatcher(
         {
-            CodegenAction.SNAPSHOT_COPY_ARRAY: "_extract_snapshot_copy_array_result",
-            CodegenAction.BORROWED_VIEW: "_extract_borrowed_array_result",
-            CodegenAction.COPY_RETURN_ARRAY: "_extract_copy_return_array_result",
+            CodegenAction.SNAPSHOT_COPY_ARRAY: "_build_snapshot_copy_array_result",
+            CodegenAction.BORROWED_VIEW: "_build_borrowed_array_result",
+            CodegenAction.COPY_RETURN_ARRAY: "_build_copy_return_array_result",
         },
-        "_extract_default_array_result",
+        "_build_default_array_result",
     )
 
+    # ------------------------------------------------------------------
+    # Public entrypoints and state
+    # ------------------------------------------------------------------
+
     def __init__(self, sharedlib_dirpath, verbose):
+        """Initialize state collected while building one bridge module."""
         self._additional_exprs = []
         self._additional_functions = []
         self._generator_names_dict = {}
         super().__init__(verbose)
 
-    @staticmethod
-    def _has_optional_arguments(func: FunctionDef) -> bool:
-        return any(getattr(argument.var, "is_optional", False) for argument in func.arguments)
-
-    def _get_function_def_body(self, func, generated_args, results, handled=()):
-        """
-        Get the body of the bind c function definition.
-
-        Get the body of the bind c function definition by inserting if blocks
-        to check the presence of optional variables. Once we have ascertained
-        the presence of the variables the original function is called. This
-        code slices array variables to ensure the correct step.
-
-        Parameters
-        ----------
-        func : FunctionDef
-            The function which should be called.
-
-        generated_args : list[dict]
-            A list containing the dictionaries returned by _extract_FunctionDefArgument.
-
-        results : list of Variables
-            The Variables where the result of the function call will be saved.
-
-        handled : tuple
-            A list of all variables which have been handled (checked to see if they
-            are present).
-
-        Returns
-        -------
-        list
-            A list of codegen nodes describing the body of the function.
-        """
-        next_optional_arg = next(
-            (
-                a
-                for a in generated_args
-                if a["c_arg"] is not None
-                and getattr(getattr(a["c_arg"].var, "original_var", a["c_arg"].var), "is_optional", False)
-                and a not in handled
-            ),
-            None,
-        )
-        if next_optional_arg:
-            args = generated_args.copy()
-            optional_var = next_optional_arg["c_arg"].var
-            optional_var = getattr(optional_var, "new_var", optional_var)
-            class_type = optional_var.class_type
-            if isinstance(class_type, BindCArrayType):
-                optional_var = self.scope.collect_tuple_element(IndexedElement(optional_var, convert_to_literal(0)))
-
-            handled += (next_optional_arg,)
-            true_section = IfSection(
-                IsNot(optional_var, NIL),
-                self._get_function_def_body(func, args, results, handled),
-            )
-            args.remove(next_optional_arg)
-            false_section = IfSection(
-                convert_to_literal(True),
-                [
-                    *next_optional_arg.get("absent_body", ()),
-                    *self._get_function_def_body(func, args, results, handled),
-                ],
-            )
-            return [If(true_section, false_section)]
-        args = [a["f_arg"] for a in generated_args]
-        body = [line for a in generated_args for line in a["body"]]
-        post_body = [line for a in generated_args for line in a.get("post_body", ())]
-
-        if isinstance(func, FunctionOverloadSet):
-            selected = func.point(args)
-            native_name = func.native_name_for(selected)
-        else:
-            selected = None
-            native_name = ""
-        if re.sub(r"\s+", "", native_name).casefold() == "assignment(=)":
-            lhs, rhs = func.native_arguments(selected, args)
-            return [*body, Assign(lhs.value, rhs.value), *post_body]
-
-        selected_func = selected or func
-        if len(results) == 1 and self._uses_allocatable_function_result_helper(selected_func, results[0]):
-            helper = self._allocatable_function_result_helper(results[0])
-            self._additional_functions.append(helper)
-            return [*body, helper(func(*args), results[0]), *post_body]
-
-        if any(arg.get("assumed_rank") for arg in generated_args):
-            return [*body, *self._assumed_rank_dispatch(func, generated_args, results), *post_body]
-
-        return [*body, *self._native_call_body(func, args, results), *post_body]
-
-    @staticmethod
-    def _native_call_body(func, args, results):
-        if len(results) == 1:
-            res = results[0]
-            func_call = AliasAssign(res, func(*args)) if res.is_alias else Assign(res, func(*args))
-        else:
-            func_call = Assign(results, func(*args))
-        return [func_call]
-
-    def _assumed_rank_dispatch(self, func, generated_args, results):
-        dispatch_args = [arg for arg in generated_args if arg.get("assumed_rank")]
-        return self._assumed_rank_dispatch_level(func, generated_args, results, dispatch_args, {}, 0)
-
-    def _assumed_rank_dispatch_level(self, func, generated_args, results, dispatch_args, replacements, index):
-        if index == len(dispatch_args):
-            args = [
-                self._replacement_function_argument(arg["f_arg"], replacements[arg["f_arg"].value])
-                if arg.get("assumed_rank")
-                else arg["f_arg"]
-                for arg in generated_args
-            ]
-            return self._native_call_body(func, args, results)
-
-        dispatch_arg = dispatch_args[index]
-        info = dispatch_arg["assumed_rank"]
-        sections = []
-        for rank in range(1, _MAX_SUPPORTED_ASSUMED_RANK + 1):
-            rank_var = info["rank_vars"][rank]
-            f_arg = self._assumed_rank_argument_view(info, rank_var, rank)
-            replacements[dispatch_arg["f_arg"].value] = f_arg
-            nested_body = self._assumed_rank_dispatch_level(
-                func,
-                generated_args,
-                results,
-                dispatch_args,
-                replacements,
-                index + 1,
-            )
-            del replacements[dispatch_arg["f_arg"].value]
-            sections.append(
-                CaseSection(
-                    convert_to_literal(rank, dtype=NumpyInt64Type()),
-                    [
-                        C_F_Pointer(info["bind_var"], rank_var, info["shape_vars"][:rank]),
-                        *nested_body,
-                    ],
-                )
-            )
-        sections.append(CaseSection(None, [Return(None)]))
-        return [SelectCase(info["rank_var"], *sections)]
-
-    @staticmethod
-    def _replacement_function_argument(original, value):
-        return FunctionCallArgument(value, keyword=original.keyword)
-
-    @staticmethod
-    def _assumed_rank_argument_view(info, rank_var, rank):
-        if not info["allows_strides"]:
-            return rank_var
-        start = convert_to_literal(1)
-        indexes = [
-            Slice(start, Add(stop, convert_to_literal(1)), step)
-            for step, stop in zip(info["stride_vars"][:rank], info["ubound_vars"][:rank], strict=False)
-        ]
-        return IndexedElement(rank_var, *indexes)
-
-    @classmethod
-    def _uses_allocatable_function_result_helper(cls, func, result):
-        func_result = getattr(getattr(func, "results", None), "var", NIL)
-        return (
-            result.is_ndarray
-            and cls._is_allocatable_copy_return_result(result)
-            and func_result is not NIL
-            and getattr(func_result, "is_ndarray", False)
-            and cls._is_allocatable_copy_return_result(func_result)
-        )
-
-    def _allocatable_function_result_helper(self, result):
-        helper_name = self.scope.get_new_name(f"x2py_collect_{result.name}")
-        helper_scope = self.scope.new_child_scope(helper_name, "function")
-        value = result.clone(helper_scope.get_new_name(f"{result.name}_value"), new_class=Variable, is_argument=False)
-        target = result.clone(helper_scope.get_new_name(f"{result.name}_target"), new_class=Variable, is_argument=False)
-        value_arg = FunctionDefArgument(value)
-        value_arg.make_const()
-        target_arg = FunctionDefArgument(target)
-        return FunctionDef(
-            helper_name,
-            [value_arg, target_arg],
-            [If(IfSection(ArrayAllocated(value), [Assign(target, value)]))],
-            scope=helper_scope,
-        )
+    # ------------------------------------------------------------------
+    # Model visitors
+    # ------------------------------------------------------------------
 
     def _visit_Module(self, expr):
         """
@@ -430,9 +278,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         projected_argument_results = []
         for argument in expr.arguments:
             if isinstance(argument.var, FunctionAddress):
-                generated_args.append(self._extract_FunctionDefArgument(argument, expr))
+                generated_args.append(self._convert_argument(argument, expr))
             elif not argument.bound_argument and self._is_hidden_output_argument(argument.var):
-                result = self._extract_FunctionDefResult(argument.var, expr.scope)
+                result = self._convert_result(argument.var, expr.scope)
                 self._additional_exprs.extend(result["body"])
                 projected_argument_results.append(result)
                 generated_args.append(
@@ -443,17 +291,17 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                     }
                 )
             elif not argument.bound_argument and self._is_allocatable_replacement_argument(argument.var):
-                generated_arg = self._extract_FunctionDefArgument(argument, expr)
+                generated_arg = self._convert_argument(argument, expr)
                 generated_args.append(generated_arg)
-                result = self._extract_allocatable_replacement_result(argument.var, generated_arg["f_arg"].value)
+                result = self._build_allocatable_replacement_result(argument.var, generated_arg["f_arg"].value)
                 self._additional_exprs.extend(result["body"])
                 projected_argument_results.append(result)
             else:
-                generated_arg = self._extract_FunctionDefArgument(argument, expr)
+                generated_arg = self._convert_argument(argument, expr)
                 generated_args.append(generated_arg)
                 if not argument.bound_argument and self._is_string_replacement_argument(argument.var):
                     projected_argument_results.append(
-                        self._extract_string_replacement_result(argument.var, generated_arg)
+                        self._build_string_replacement_result(argument.var, generated_arg)
                     )
 
         func_arguments = [a["c_arg"] for a in generated_args if a["c_arg"] is not None]
@@ -463,7 +311,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         if expr.results.var is NIL:
             func_call_results = []
         else:
-            result = self._extract_FunctionDefResult(expr.results.var, expr.scope)
+            result = self._convert_result(expr.results.var, expr.scope)
             self._additional_exprs.extend(result["body"])
             result_infos.append(result)
             func_call_results = self.scope.collect_all_tuple_elements(result["f_result"])
@@ -521,115 +369,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         return func
 
-    def _direct_bind_c_function(self, expr):
-        external_name = expr.bind_c_external_name
-        func = BindCFunctionDef(
-            external_name,
-            expr.arguments,
-            [],
-            expr.results,
-            is_header=True,
-            scope=expr.scope,
-            original_function=expr,
-            docstring=expr.docstring,
-            result_pointer_map=expr.result_pointer_map,
-            bind_c_external_name=external_name,
-        )
-        self.scope.insert_symbol(external_name, object_type="function")
-        self.scope.insert_function(func, external_name)
-        return func
-
-    @classmethod
-    def _can_call_existing_bind_c_directly(cls, expr):
-        if not expr.bind_c_external_name or expr.is_private or not expr.is_semantic:
-            return False
-        if expr.is_external or cls._has_optional_arguments(expr):
-            return False
-        if any(argument.bound_argument for argument in expr.arguments):
-            return False
-        if not cls._is_direct_bind_c_result(expr.results.var):
-            return False
-        return all(cls._is_direct_bind_c_argument(argument.var) for argument in expr.arguments)
-
-    @staticmethod
-    def _is_direct_bind_c_result(var):
-        if var is NIL:
-            return True
-        return var.rank == 0 and isinstance(var.class_type, FixedSizeNumericType)
-
-    @staticmethod
-    def _is_direct_bind_c_argument(var):
-        return (
-            var.rank == 0
-            and var.memory_handling == "stack"
-            and getattr(var, "intent", "in") == "in"
-            and getattr(var, "passes_by_value", False)
-            and isinstance(var.class_type, FixedSizeNumericType)
-        )
-
-    @staticmethod
-    def _is_allocatable_copy_return_argument(var):
-        decision = ownership_decision_for_codegen_variable(var)
-        return bool(
-            var.is_ndarray
-            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
-            and decision.memory_handling == "heap"
-            and getattr(var, "intent", "in") == "out"
-        )
-
-    @staticmethod
-    def _is_allocatable_replacement_argument(var):
-        decision = ownership_decision_for_codegen_variable(var)
-        return bool(
-            var.is_ndarray
-            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
-            and decision.memory_handling == "heap"
-            and getattr(var, "intent", "in") == "inout"
-        )
-
-    @staticmethod
-    def _is_string_replacement_argument(var):
-        return bool(isinstance(var.class_type, StringType) and getattr(var, "intent", "in") == "inout")
-
-    @staticmethod
-    def _is_pointer_snapshot_result(var):
-        return codegen_action_for_variable(var) is CodegenAction.SNAPSHOT_COPY_ARRAY
-
-    @staticmethod
-    def _is_allocatable_copy_return_result(var):
-        decision = ownership_decision_for_codegen_variable(var)
-        return bool(
-            var.is_ndarray
-            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
-            and decision.memory_handling == "heap"
-        )
-
-    @staticmethod
-    def _is_assumed_rank_array(var):
-        return bool(getattr(var, "assumed_rank", False) and var.is_ndarray)
-
-    @classmethod
-    def _is_hidden_output_argument(cls, var):
-        if getattr(var, "intent", "in") != "out":
-            return False
-        return (
-            (var.rank == 0 and isinstance(var.class_type, FixedSizeNumericType | CustomDataType))
-            or (isinstance(var.class_type, StringType) and var.memory_handling == "stack")
-            or cls._is_allocatable_copy_return_argument(var)
-        )
-
-    def _pack_function_results(self, result_infos):
-        result_type = BindCResultTupleType.get_new(tuple(info["c_result"].class_type for info in result_infos))
-        result_var = Variable(
-            result_type,
-            self.scope.get_new_name("results"),
-            shape=(convert_to_literal(len(result_infos)),),
-            is_temp=True,
-        )
-        for index, info in enumerate(result_infos):
-            self.scope.insert_symbolic_alias(IndexedElement(result_var, convert_to_literal(index)), info["c_result"])
-        return result_var
-
     def _visit_FunctionOverloadSet(self, expr):
         """
         Create an interface containing only C-compatible functions.
@@ -656,17 +395,312 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             native_names=expr.native_names,
         )
 
-    def _extract_FunctionDefArgument(self, expr, func):
+    def _visit_Variable(self, expr):
+        """
+        Create all objects necessary to expose a module variable to C.
+
+        Create and return the objects which must be printed in the wrapping
+        module in order to expose the variable to C. In the case of scalar
+        numerical values nothing needs to be done so an EmptyNode is returned.
+        In the case of numerical arrays a C-compatible function must be created
+        which returns the array. This is necessary because built-in Fortran
+        arrays are not C-compatible. In the case of classes a C-compatible
+        function is also created which returns a pointer to the class object.
+
+        Parameters
+        ----------
+        expr : x2py.ast.variables.Variable
+            The module variable.
+
+        Returns
+        -------
+        codegen model object
+            The AST object describing the code which must be printed in
+            the wrapping module to expose the variable.
+        """
+        if isinstance(expr.class_type, FinalType):
+            return expr.clone(expr.name, new_class=BindCModuleConstant)
+        if isinstance(expr.class_type, FixedSizeNumericType):
+            return self._scalar_module_variable(expr)
+        if isinstance(expr.class_type, NumpyNDArrayType):
+            scope = self.scope
+            func_name = scope.get_new_name("bind_c_" + expr.name.lower())
+            func_scope = scope.new_child_scope(func_name, "function")
+            mod = get_enclosing_module(expr)
+            assert mod is not None
+            func_scope.imports["variables"][expr.name] = expr
+
+            # Create the data pointer
+            self.scope = func_scope
+            result = self._get_bind_c_array(expr.name, expr, expr.shape, pointer_target=True)
+            if expr.memory_handling == "heap":
+                unallocated_body = [
+                    Assign(result["bind_var"], NIL),
+                    *[
+                        Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
+                        for shape_var in result["shape_vars"]
+                    ],
+                ]
+                result["body"] = [
+                    If(
+                        IfSection(
+                            ArrayAllocated(expr),
+                            result["body"],
+                        ),
+                        IfSection(convert_to_literal(True), unallocated_body),
+                    )
+                ]
+            self.exit_scope()
+            func = BindCFunctionDef(
+                name=func_name,
+                body=result["body"],
+                arguments=[],
+                results=FunctionDefResult(result["c_result"]),
+                imports=self._module_variable_imports(expr),
+                scope=func_scope,
+                original_function=expr,
+            )
+            return expr.clone(
+                expr.name,
+                new_class=BindCArrayVariable,
+                wrapper_function=func,
+                original_variable=expr,
+            )
+        raise NotImplementedError(f"Objects of type {expr.class_type} cannot be wrapped yet")
+
+    def _visit_DottedVariable(self, expr):
+        """
+        Create all objects necessary to expose a class attribute to C.
+
+        Create the getter and setter functions which expose the class attribute
+        to C. Return these objects in a BindCClassProperty.
+
+        Parameters
+        ----------
+        expr : DottedVariable
+            The class attribute.
+
+        Returns
+        -------
+        BindCClassProperty
+            An object containing the getter and setter functions which expose
+            the class attribute to C.
+        """
+        lhs = expr.lhs
+        class_dtype = lhs.dtype
+        # ----------------------------------------------------------------------------------
+        #                        Create getter
+        # ----------------------------------------------------------------------------------
+        getter_name = self.scope.get_new_name(f"{class_dtype.name}_{expr.name}_getter".lower())
+        getter_scope = self.scope.new_child_scope(getter_name, "function")
+        self.scope = getter_scope
+        self.scope.insert_symbol(expr.name)
+        getter_result_info = self._convert_result(expr, lhs.cls_base.scope)
+        getter_result = getter_result_info["c_result"]
+
+        getter_arg_generator = self._convert_argument(FunctionDefArgument(lhs, bound_argument=True), expr)
+        self_obj = getter_arg_generator["f_arg"].value
+        getter_arg = getter_arg_generator["c_arg"]
+
+        getter_body = getter_arg_generator["body"]
+
+        attrib = expr.clone(expr.name, lhs=self_obj)
+        obj = self.scope.find(expr.name)
+        # Cast the C variable into a Python variable
+        if expr.rank > 0 and expr.memory_handling == "heap":
+            unallocated_body = [
+                Assign(getter_result_info["bind_var"], NIL),
+                *[
+                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
+                    for shape_var in getter_result_info["shape_vars"]
+                ],
+            ]
+            getter_body.append(
+                If(
+                    IfSection(
+                        ArrayAllocated(attrib),
+                        [AliasAssign(obj, attrib), *getter_result_info["body"]],
+                    ),
+                    IfSection(convert_to_literal(True), unallocated_body),
+                )
+            )
+        elif expr.rank > 0 or isinstance(expr.dtype, CustomDataType):
+            getter_body.append(AliasAssign(obj, attrib))
+            getter_body.extend(getter_result_info["body"])
+        else:
+            getter_body.append(Assign(getter_result_info["f_result"], attrib))
+            getter_body.extend(getter_result_info["body"])
+        self._additional_exprs.clear()
+        self.exit_scope()
+
+        getter = BindCFunctionDef(
+            getter_name,
+            (getter_arg,),
+            getter_body,
+            FunctionDefResult(getter_result),
+            original_function=expr,
+            scope=getter_scope,
+        )
+
+        # ----------------------------------------------------------------------------------
+        #                        Create setter
+        # ----------------------------------------------------------------------------------
+        setter_name = self.scope.get_new_name(f"{class_dtype.name}_{expr.name}_setter".lower())
+        setter_scope = self.scope.new_child_scope(setter_name, "function")
+        self.scope = setter_scope
+        self.scope.insert_symbol(expr.name)
+
+        setter_arg_generators = (
+            self._convert_argument(FunctionDefArgument(lhs, bound_argument=True), expr),
+            self._convert_argument(FunctionDefArgument(expr), expr),
+        )
+        setter_args = (setter_arg_generators[0]["c_arg"], setter_arg_generators[1]["c_arg"])
+        if expr.is_alias:
+            setter_args[1].persistent_target = True
+
+        self_obj = setter_arg_generators[0]["f_arg"].value
+        set_val = setter_arg_generators[1]["f_arg"].value
+
+        setter_body = setter_arg_generators[0]["body"] + setter_arg_generators[1]["body"]
+
+        attrib = expr.clone(expr.name, lhs=self_obj)
+        # Cast the C variable into a Python variable
+        if expr.memory_handling == "alias":
+            setter_body.append(AliasAssign(attrib, set_val))
+        else:
+            setter_body.append(Assign(attrib, set_val))
+        self.exit_scope()
+
+        setter = BindCFunctionDef(
+            setter_name,
+            setter_args,
+            setter_body,
+            original_function=expr,
+            scope=setter_scope,
+        )
+        return BindCClassProperty(lhs.cls_base.scope.get_python_name(expr.name), getter, setter, lhs.dtype)
+
+    def _visit_ClassDef(self, expr):
+        """
+        Create all objects necessary to expose a class definition to C.
+
+        Create all objects necessary to expose a class definition to C.
+
+        Parameters
+        ----------
+        expr : ClassDef
+            The class to be wrapped.
+
+        Returns
+        -------
+        BindCClassDef
+            The wrapped class.
+        """
+        name = expr.name
+        func_name = self.scope.get_new_name(f"{name}_bind_c_alloc".lower())
+        func_scope = self.scope.new_child_scope(func_name, "function")
+
+        # Allocatable is not returned so it must appear in local scope
+        local_var = Variable(
+            expr.class_type,
+            func_scope.get_new_name(f"{name}_obj"),
+            cls_base=expr,
+            memory_handling="alias",
+        )
+        func_scope.insert_variable(local_var)
+
+        # Create the C-compatible data pointer
+        bind_var = Variable(
+            BindCPointer(),
+            func_scope.get_new_name("bound_" + name),
+            memory_handling="alias",
+        )
+        result = BindCVariable(bind_var, local_var)
+
+        # Define the additional steps necessary to define and fill ptr_var
+        alloc = Allocate(local_var, shape=None, status="unallocated")
+        c_loc = CLocFunc(local_var, bind_var)
+        body = [alloc, c_loc]
+
+        new_method = BindCFunctionDef(
+            func_name,
+            [],
+            body,
+            FunctionDefResult(result),
+            original_function=None,
+            scope=func_scope,
+        )
+
+        methods = [self._visit(m) for m in expr.methods]
+        methods = [m for m in methods if not isinstance(m, EmptyNode)]
+        for i in expr.overload_sets:
+            for f in i.functions:
+                self._visit(f)
+        interfaces = [self._visit(i) for i in expr.overload_sets]
+
+        del_method = expr.methods_as_dict.get("__del__", None)
+        if del_method is None:
+            del_name = expr.scope.get_new_name("__del__")
+            scope = expr.scope.new_child_scope("__del__", scope_type="function")
+            scope.local_used_symbols["__del__"] = del_name
+            scope.python_names[del_name] = "__del__"
+            argument = FunctionDefArgument(
+                Variable(expr.class_type, scope.get_new_name("self"), cls_base=expr),
+                bound_argument=True,
+            )
+            scope.insert_variable(argument.var)
+            del_method = FunctionDef(del_name, [argument], [Pass()], scope=scope, is_external=True)
+            methods.append(self._visit(del_method))
+
+        if any(isinstance(v.class_type, TupleType) for v in expr.attributes):
+            raise NotImplementedError("Tuples cannot yet be exposed to Python.")
+
+        properties_getters = [
+            BindCClassProperty(
+                expr.scope.get_python_name(m.original_function.name),
+                m,
+                None,
+                expr.class_type,
+                m.original_function.docstring,
+            )
+            for m in methods
+            if "property" in m.original_function.decorators
+        ]
+        methods = [
+            m for m in methods if m not in properties_getters if "property" not in m.original_function.decorators
+        ]
+
+        # Pseudo-self variable is useful for pre-defined attributes which are not DottedVariables
+        pseudo_self = Variable(expr.class_type, "self", cls_base=expr)
+        properties = [
+            self._visit(
+                v if isinstance(v, DottedVariable) else v.clone(v.name, new_class=DottedVariable, lhs=pseudo_self)
+            )
+            for v in expr.attributes
+            if not v.is_private and not isinstance(v.class_type, TupleType)
+        ]
+        return BindCClassDef(
+            expr,
+            new_func=new_method,
+            methods=methods,
+            overload_sets=interfaces,
+            attributes=properties_getters + properties,
+            docstring=expr.docstring,
+            class_type=expr.class_type,
+            superclasses=expr.superclasses,
+        )
+
+    # ------------------------------------------------------------------
+    # Datatype conversion
+    # ------------------------------------------------------------------
+
+    def _convert_argument(self, expr, func):
         """
         Extract the C-compatible FunctionDefArgument from the Fortran FunctionDefArgument.
 
         Extract the C-compatible FunctionDefArgument from the Fortran FunctionDefArgument.
 
-        The extraction is done by finding the appropriate function
-        _extract_X_FunctionDefArgument for the object expr. X is the class type of the
-        variable stored in the object expr. If this function does not exist then the
-        method resolution order is used to search for other compatible
-        _extract_X_FunctionDefArgument functions. If none are found then an error is raised.
+        The explicit datatype dispatch table selects the conversion helper.
 
         Parameters
         ----------
@@ -684,14 +718,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """
         var = expr.var
         if isinstance(var, FunctionAddress):
-            return self._extract_callback_FunctionDefArgument(expr, func)
+            return self._convert_callback_argument(expr, func)
         class_type = var.class_type
 
-        classes = type(class_type).__mro__
-        for cls in classes:
-            annotation_method = f"_extract_{cls.__name__}_FunctionDefArgument"
-            if hasattr(self, annotation_method):
-                func_def_argument_dict = getattr(self, annotation_method)(var, func)
+        for cls in type(class_type).__mro__:
+            converter_name = self._ARGUMENT_CONVERTERS.get(cls)
+            if converter_name is not None:
+                func_def_argument_dict = getattr(self, converter_name)(var, func)
                 new_var = func_def_argument_dict["c_arg"]
                 func_def_argument_dict["c_arg"] = FunctionDefArgument(
                     new_var,
@@ -717,7 +750,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         # Unknown object, we raise an error.
         raise NotImplementedError(f"Wrapping function arguments is not implemented for type {class_type}.")
 
-    def _extract_callback_FunctionDefArgument(self, expr, func):
+    def _convert_callback_argument(self, expr, func):
         """Lower one immediate-call dummy procedure to a C callback plus a Fortran adapter."""
         callback = expr.var
         if callback.is_optional:
@@ -948,7 +981,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "body": [],
         }
 
-    def _extract_FixedSizeNumericType_FunctionDefArgument(self, var, func):
+    def _convert_numeric_argument(self, var, func):
+        """Convert numeric argument for the current wrapper."""
         name = var.name
         self.scope.insert_symbol(name)
         collisionless_name = self.scope.get_expected_name(name)
@@ -978,7 +1012,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope.insert_variable(f_arg)
         return {"c_arg": BindCVariable(new_var, var), "f_arg": f_arg, "body": body}
 
-    def _extract_CustomDataType_FunctionDefArgument(self, var, func):
+    def _convert_custom_type_argument(self, var, func):
+        """Convert custom type argument for the current wrapper."""
         name = var.name
         self.scope.insert_symbol(name)
         collisionless_name = self.scope.get_expected_name(name)
@@ -1000,7 +1035,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope.insert_variable(f_arg)
         return {"c_arg": BindCVariable(new_var, var), "f_arg": f_arg, "body": body}
 
-    def _extract_NumpyNDArrayType_FunctionDefArgument(self, var, func):
+    def _convert_array_argument(self, var, func):
+        """Convert array argument for the current wrapper."""
         name = var.name
         scope = self.scope
         scope.insert_symbol(name)
@@ -1017,7 +1053,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
 
         if self._is_assumed_rank_array(var):
-            return self._extract_assumed_rank_array_argument(var, collisionless_name, bind_var)
+            return self._convert_assumed_rank_array_argument(var, collisionless_name, bind_var)
 
         if self._is_allocatable_replacement_argument(var):
             arg_var = var.clone(
@@ -1124,7 +1160,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": f_arg, "body": body}
 
-    def _extract_assumed_rank_array_argument(self, var, collisionless_name, bind_var):
+    def _convert_assumed_rank_array_argument(self, var, collisionless_name, bind_var):
+        """Convert assumed rank array argument for the current wrapper."""
         name = var.name
         scope = self.scope
         rank = _MAX_SUPPORTED_ASSUMED_RANK
@@ -1203,7 +1240,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             },
         }
 
-    def _extract_HomogeneousTupleType_FunctionDefArgument(self, var, func):
+    def _convert_tuple_argument(self, var, func):
+        """Convert tuple argument for the current wrapper."""
         name = var.name
         scope = self.scope
         scope.insert_symbol(name)
@@ -1242,7 +1280,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": arg_var, "body": body}
 
-    def _extract_StringType_FunctionDefArgument(self, var, func):
+    def _convert_string_argument(self, var, func):
+        """Convert string argument for the current wrapper."""
         name = var.name
         scope = self.scope
         scope.insert_symbol(name)
@@ -1347,413 +1386,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "result_bind_var": result_bind_var,
         }
 
-    def _visit_Variable(self, expr):
-        """
-        Create all objects necessary to expose a module variable to C.
-
-        Create and return the objects which must be printed in the wrapping
-        module in order to expose the variable to C. In the case of scalar
-        numerical values nothing needs to be done so an EmptyNode is returned.
-        In the case of numerical arrays a C-compatible function must be created
-        which returns the array. This is necessary because built-in Fortran
-        arrays are not C-compatible. In the case of classes a C-compatible
-        function is also created which returns a pointer to the class object.
-
-        Parameters
-        ----------
-        expr : x2py.ast.variables.Variable
-            The module variable.
-
-        Returns
-        -------
-        codegen model object
-            The AST object describing the code which must be printed in
-            the wrapping module to expose the variable.
-        """
-        if isinstance(expr.class_type, FinalType):
-            return expr.clone(expr.name, new_class=BindCModuleConstant)
-        if isinstance(expr.class_type, FixedSizeNumericType):
-            return self._scalar_module_variable(expr)
-        if isinstance(expr.class_type, NumpyNDArrayType):
-            scope = self.scope
-            func_name = scope.get_new_name("bind_c_" + expr.name.lower())
-            func_scope = scope.new_child_scope(func_name, "function")
-            mod = get_enclosing_module(expr)
-            assert mod is not None
-            func_scope.imports["variables"][expr.name] = expr
-
-            # Create the data pointer
-            self.scope = func_scope
-            result = self._get_bind_c_array(expr.name, expr, expr.shape, pointer_target=True)
-            if expr.memory_handling == "heap":
-                unallocated_body = [
-                    Assign(result["bind_var"], NIL),
-                    *[
-                        Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
-                        for shape_var in result["shape_vars"]
-                    ],
-                ]
-                result["body"] = [
-                    If(
-                        IfSection(
-                            ArrayAllocated(expr),
-                            result["body"],
-                        ),
-                        IfSection(convert_to_literal(True), unallocated_body),
-                    )
-                ]
-            self.exit_scope()
-            func = BindCFunctionDef(
-                name=func_name,
-                body=result["body"],
-                arguments=[],
-                results=FunctionDefResult(result["c_result"]),
-                imports=self._module_variable_imports(expr),
-                scope=func_scope,
-                original_function=expr,
-            )
-            return expr.clone(
-                expr.name,
-                new_class=BindCArrayVariable,
-                wrapper_function=func,
-                original_variable=expr,
-            )
-        raise NotImplementedError(f"Objects of type {expr.class_type} cannot be wrapped yet")
-
-    @staticmethod
-    def _module_variable_imports(expr):
-        mod = get_enclosing_module(expr)
-        assert mod is not None
-        if mod.imports:
-            return []
-        return [Import(mod.name, AsName(expr, expr.name), mod=mod)]
-
-    def _generated_module_function_name(self, public_name: str):
-        return self.scope.get_new_public_name(
-            public_name,
-            object_type="function",
-            owner=f"module variable accessor {public_name}",
-        )
-
-    def _scalar_module_variable(self, expr):
-        getter = self._scalar_module_getter(expr)
-        setter = self._scalar_module_setter(expr)
-        return expr.clone(
-            expr.name,
-            new_class=BindCScalarModuleVariable,
-            getter_function=getter,
-            setter_function=setter,
-        )
-
-    def _scalar_module_getter(self, expr):
-        scope = self.scope
-        public_name = f"get_{expr.name}"
-        original_name = self._generated_module_function_name(public_name)
-        func_name = scope.get_new_name("bind_c_" + public_name.lower())
-        func_scope = scope.new_child_scope(func_name, "function")
-        self.scope = func_scope
-        result = expr.clone(
-            func_scope.get_new_name(f"{expr.name}_value"),
-            is_argument=False,
-            is_optional=False,
-            memory_handling="stack",
-            new_class=Variable,
-        )
-        func_scope.insert_variable(result)
-        func_scope.imports["variables"][expr.name] = expr
-        body = [Assign(result, expr)]
-        self.exit_scope()
-        original_result = expr.clone(
-            f"{expr.name}_value",
-            is_argument=False,
-            is_optional=False,
-            memory_handling="stack",
-            new_class=Variable,
-        )
-        original_function = FunctionDef(
-            original_name,
-            [],
-            [],
-            FunctionDefResult(original_result),
-            scope=scope,
-            decorators={RUNTIME_HOLD_GIL_METADATA: True},
-        )
-        return BindCFunctionDef(
-            func_name,
-            [],
-            body,
-            FunctionDefResult(result),
-            imports=self._module_variable_imports(expr),
-            scope=func_scope,
-            original_function=original_function,
-        )
-
-    def _scalar_module_setter(self, expr):
-        scope = self.scope
-        public_name = f"set_{expr.name}"
-        original_name = self._generated_module_function_name(public_name)
-        func_name = scope.get_new_name("bind_c_" + public_name.lower())
-        func_scope = scope.new_child_scope(func_name, "function")
-        self.scope = func_scope
-        value = expr.clone(
-            func_scope.get_new_name("value"),
-            is_argument=True,
-            is_optional=False,
-            memory_handling="stack",
-            new_class=Variable,
-        )
-        func_scope.insert_variable(value)
-        func_scope.imports["variables"][expr.name] = expr
-        body = [Assign(expr, value)]
-        self.exit_scope()
-        original_value = expr.clone(
-            "value",
-            is_argument=True,
-            is_optional=False,
-            memory_handling="stack",
-            new_class=Variable,
-        )
-        original_function = FunctionDef(
-            original_name,
-            [FunctionDefArgument(original_value)],
-            [],
-            FunctionDefResult(NIL),
-            scope=scope,
-            decorators={RUNTIME_HOLD_GIL_METADATA: True},
-        )
-        return BindCFunctionDef(
-            func_name,
-            [FunctionDefArgument(value)],
-            body,
-            FunctionDefResult(NIL),
-            imports=self._module_variable_imports(expr),
-            scope=func_scope,
-            original_function=original_function,
-        )
-
-    def _visit_DottedVariable(self, expr):
-        """
-        Create all objects necessary to expose a class attribute to C.
-
-        Create the getter and setter functions which expose the class attribute
-        to C. Return these objects in a BindCClassProperty.
-
-        Parameters
-        ----------
-        expr : DottedVariable
-            The class attribute.
-
-        Returns
-        -------
-        BindCClassProperty
-            An object containing the getter and setter functions which expose
-            the class attribute to C.
-        """
-        lhs = expr.lhs
-        class_dtype = lhs.dtype
-        # ----------------------------------------------------------------------------------
-        #                        Create getter
-        # ----------------------------------------------------------------------------------
-        getter_name = self.scope.get_new_name(f"{class_dtype.name}_{expr.name}_getter".lower())
-        getter_scope = self.scope.new_child_scope(getter_name, "function")
-        self.scope = getter_scope
-        self.scope.insert_symbol(expr.name)
-        getter_result_info = self._extract_FunctionDefResult(expr, lhs.cls_base.scope)
-        getter_result = getter_result_info["c_result"]
-
-        getter_arg_generator = self._extract_FunctionDefArgument(FunctionDefArgument(lhs, bound_argument=True), expr)
-        self_obj = getter_arg_generator["f_arg"].value
-        getter_arg = getter_arg_generator["c_arg"]
-
-        getter_body = getter_arg_generator["body"]
-
-        attrib = expr.clone(expr.name, lhs=self_obj)
-        obj = self.scope.find(expr.name)
-        # Cast the C variable into a Python variable
-        if expr.rank > 0 and expr.memory_handling == "heap":
-            unallocated_body = [
-                Assign(getter_result_info["bind_var"], NIL),
-                *[
-                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
-                    for shape_var in getter_result_info["shape_vars"]
-                ],
-            ]
-            getter_body.append(
-                If(
-                    IfSection(
-                        ArrayAllocated(attrib),
-                        [AliasAssign(obj, attrib), *getter_result_info["body"]],
-                    ),
-                    IfSection(convert_to_literal(True), unallocated_body),
-                )
-            )
-        elif expr.rank > 0 or isinstance(expr.dtype, CustomDataType):
-            getter_body.append(AliasAssign(obj, attrib))
-            getter_body.extend(getter_result_info["body"])
-        else:
-            getter_body.append(Assign(getter_result_info["f_result"], attrib))
-            getter_body.extend(getter_result_info["body"])
-        self._additional_exprs.clear()
-        self.exit_scope()
-
-        getter = BindCFunctionDef(
-            getter_name,
-            (getter_arg,),
-            getter_body,
-            FunctionDefResult(getter_result),
-            original_function=expr,
-            scope=getter_scope,
-        )
-
-        # ----------------------------------------------------------------------------------
-        #                        Create setter
-        # ----------------------------------------------------------------------------------
-        setter_name = self.scope.get_new_name(f"{class_dtype.name}_{expr.name}_setter".lower())
-        setter_scope = self.scope.new_child_scope(setter_name, "function")
-        self.scope = setter_scope
-        self.scope.insert_symbol(expr.name)
-
-        setter_arg_generators = (
-            self._extract_FunctionDefArgument(FunctionDefArgument(lhs, bound_argument=True), expr),
-            self._extract_FunctionDefArgument(FunctionDefArgument(expr), expr),
-        )
-        setter_args = (setter_arg_generators[0]["c_arg"], setter_arg_generators[1]["c_arg"])
-        if expr.is_alias:
-            setter_args[1].persistent_target = True
-
-        self_obj = setter_arg_generators[0]["f_arg"].value
-        set_val = setter_arg_generators[1]["f_arg"].value
-
-        setter_body = setter_arg_generators[0]["body"] + setter_arg_generators[1]["body"]
-
-        attrib = expr.clone(expr.name, lhs=self_obj)
-        # Cast the C variable into a Python variable
-        if expr.memory_handling == "alias":
-            setter_body.append(AliasAssign(attrib, set_val))
-        else:
-            setter_body.append(Assign(attrib, set_val))
-        self.exit_scope()
-
-        setter = BindCFunctionDef(
-            setter_name,
-            setter_args,
-            setter_body,
-            original_function=expr,
-            scope=setter_scope,
-        )
-        return BindCClassProperty(lhs.cls_base.scope.get_python_name(expr.name), getter, setter, lhs.dtype)
-
-    def _visit_ClassDef(self, expr):
-        """
-        Create all objects necessary to expose a class definition to C.
-
-        Create all objects necessary to expose a class definition to C.
-
-        Parameters
-        ----------
-        expr : ClassDef
-            The class to be wrapped.
-
-        Returns
-        -------
-        BindCClassDef
-            The wrapped class.
-        """
-        name = expr.name
-        func_name = self.scope.get_new_name(f"{name}_bind_c_alloc".lower())
-        func_scope = self.scope.new_child_scope(func_name, "function")
-
-        # Allocatable is not returned so it must appear in local scope
-        local_var = Variable(
-            expr.class_type,
-            func_scope.get_new_name(f"{name}_obj"),
-            cls_base=expr,
-            memory_handling="alias",
-        )
-        func_scope.insert_variable(local_var)
-
-        # Create the C-compatible data pointer
-        bind_var = Variable(
-            BindCPointer(),
-            func_scope.get_new_name("bound_" + name),
-            memory_handling="alias",
-        )
-        result = BindCVariable(bind_var, local_var)
-
-        # Define the additional steps necessary to define and fill ptr_var
-        alloc = Allocate(local_var, shape=None, status="unallocated")
-        c_loc = CLocFunc(local_var, bind_var)
-        body = [alloc, c_loc]
-
-        new_method = BindCFunctionDef(
-            func_name,
-            [],
-            body,
-            FunctionDefResult(result),
-            original_function=None,
-            scope=func_scope,
-        )
-
-        methods = [self._visit(m) for m in expr.methods]
-        methods = [m for m in methods if not isinstance(m, EmptyNode)]
-        for i in expr.overload_sets:
-            for f in i.functions:
-                self._visit(f)
-        interfaces = [self._visit(i) for i in expr.overload_sets]
-
-        del_method = expr.methods_as_dict.get("__del__", None)
-        if del_method is None:
-            del_name = expr.scope.get_new_name("__del__")
-            scope = expr.scope.new_child_scope("__del__", scope_type="function")
-            scope.local_used_symbols["__del__"] = del_name
-            scope.python_names[del_name] = "__del__"
-            argument = FunctionDefArgument(
-                Variable(expr.class_type, scope.get_new_name("self"), cls_base=expr),
-                bound_argument=True,
-            )
-            scope.insert_variable(argument.var)
-            del_method = FunctionDef(del_name, [argument], [Pass()], scope=scope, is_external=True)
-            methods.append(self._visit(del_method))
-
-        if any(isinstance(v.class_type, TupleType) for v in expr.attributes):
-            raise NotImplementedError("Tuples cannot yet be exposed to Python.")
-
-        properties_getters = [
-            BindCClassProperty(
-                expr.scope.get_python_name(m.original_function.name),
-                m,
-                None,
-                expr.class_type,
-                m.original_function.docstring,
-            )
-            for m in methods
-            if "property" in m.original_function.decorators
-        ]
-        methods = [
-            m for m in methods if m not in properties_getters if "property" not in m.original_function.decorators
-        ]
-
-        # Pseudo-self variable is useful for pre-defined attributes which are not DottedVariables
-        pseudo_self = Variable(expr.class_type, "self", cls_base=expr)
-        properties = [
-            self._visit(
-                v if isinstance(v, DottedVariable) else v.clone(v.name, new_class=DottedVariable, lhs=pseudo_self)
-            )
-            for v in expr.attributes
-            if not v.is_private and not isinstance(v.class_type, TupleType)
-        ]
-        return BindCClassDef(
-            expr,
-            new_func=new_method,
-            methods=methods,
-            overload_sets=interfaces,
-            attributes=properties_getters + properties,
-            docstring=expr.docstring,
-            class_type=expr.class_type,
-            superclasses=expr.superclasses,
-        )
-
-    def _extract_FunctionDefResult(self, orig_var, orig_func_scope):
+    def _convert_result(self, orig_var, orig_func_scope):
         """
         Get the code and variables necessary to translate a `Variable` to a C-compatible Variable.
 
@@ -1786,18 +1419,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """
         class_type = orig_var.class_type
 
-        classes = type(class_type).__mro__
-        for cls in classes:
-            annotation_method = f"_extract_{cls.__name__}_FunctionDefResult"
-            if hasattr(self, annotation_method):
-                return getattr(self, annotation_method)(orig_var, orig_func_scope)
+        for cls in type(class_type).__mro__:
+            converter_name = self._RESULT_CONVERTERS.get(cls)
+            if converter_name is not None:
+                return getattr(self, converter_name)(orig_var, orig_func_scope)
 
         # Unknown object, we raise an error.
         raise NotImplementedError(f"Wrapping function results is not implemented for type {class_type}.")
 
-    def _extract_FixedSizeType_FunctionDefResult(self, orig_var, orig_func_scope):
+    def _convert_scalar_result(self, orig_var, orig_func_scope):
+        """Convert scalar result for the current wrapper."""
         if codegen_action_for_variable(orig_var) is CodegenAction.SNAPSHOT_COPY_SCALAR:
-            return self._extract_snapshot_copy_scalar_result(orig_var)
+            return self._build_snapshot_copy_scalar_result(orig_var)
         name = orig_var.name
         self.scope.insert_symbol(name)
         local_var = orig_var.clone(self.scope.get_expected_name(name), new_class=Variable, is_argument=False)
@@ -1807,7 +1440,142 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_result": local_var,
         }
 
-    def _extract_snapshot_copy_scalar_result(self, orig_var):
+    def _convert_custom_type_result(self, orig_var, orig_func_scope):
+        """Convert custom type result for the current wrapper."""
+        name = orig_var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
+        local_var = orig_var.clone(
+            scope.get_expected_name(name),
+            new_class=Variable,
+            memory_handling=memory_handling,
+            is_argument=False,
+        )
+        # Allocatable is not returned so it must appear in local scope
+        scope.insert_variable(local_var, name)
+
+        # Create the C-compatible data pointer
+        bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
+
+        if isinstance(orig_var, DottedVariable) or orig_var.is_alias:
+            ptr_var = orig_var
+            body = [CLocFunc(ptr_var, bind_var)]
+        else:
+            # Create an array variable which can be passed to CLocFunc
+            ptr_var = Variable(
+                orig_var.class_type,
+                scope.get_new_name(name + "_ptr"),
+                memory_handling="alias",
+            )
+            scope.insert_variable(ptr_var)
+            alloc = Allocate(ptr_var, shape=None, status="unallocated")
+            copy = Assign(ptr_var, local_var)
+            cloc = CLocFunc(ptr_var, bind_var)
+            body = [alloc, copy, cloc]
+
+        return {
+            "body": body,
+            "c_result": BindCVariable(bind_var, orig_var),
+            "f_result": local_var,
+        }
+
+    def _convert_array_result(self, orig_var, orig_func_scope):
+        """Convert array result for the current wrapper."""
+        name = orig_var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
+
+        shape = orig_var.shape if memory_handling == "stack" else None
+
+        # Allocatable is not returned so it must appear in local scope
+        local_var = orig_var.clone(
+            scope.get_expected_name(name),
+            new_class=Variable,
+            memory_handling=memory_handling,
+            shape=shape,
+            is_argument=False,
+        )
+        scope.insert_variable(local_var, name)
+
+        result = self._NDARRAY_RESULT_DISPATCHER.dispatch(
+            self,
+            orig_var,
+            name,
+            local_var,
+            memory_handling,
+        )
+
+        result["f_result"] = local_var
+
+        return result
+
+    def _convert_tuple_result(self, orig_var, orig_func_scope):
+        """Convert tuple result for the current wrapper."""
+        return self._convert_array_result(orig_var, orig_func_scope)
+
+    def _convert_string_result(self, orig_var, orig_func_scope):
+        """Convert string result for the current wrapper."""
+        name = orig_var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
+
+        # Allocatable is not returned so it must appear in local scope
+        local_var = orig_var.clone(
+            scope.get_expected_name(name),
+            new_class=Variable,
+            memory_handling=memory_handling,
+            is_argument=False,
+        )
+        scope.insert_variable(local_var, name)
+
+        # Create the C-compatible data pointer
+        bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
+
+        shape_var = Variable(NumpyInt32Type(), scope.get_new_name(f"{name}_len"))
+        scope.insert_variable(shape_var)
+
+        # Create an array variable which can be passed to CLocFunc
+        ptr_var = Variable(
+            NumpyNDArrayType.get_new(CharType(), 1, None),
+            scope.get_new_name(name + "_ptr"),
+            memory_handling="alias",
+        )
+        elem_var = Variable(CharType(), scope.get_new_name(name + "_elem"))
+        scope.insert_variable(ptr_var)
+        scope.insert_variable(elem_var)
+
+        # Define the additional steps necessary to define and fill ptr_var
+        body = [
+            Assign(shape_var, Add(ArraySize(local_var), convert_to_literal(1))),
+            Assign(bind_var, c_malloc(Mul(BindCSizeOf(elem_var), shape_var))),
+            If(
+                IfSection(
+                    IsNot(bind_var, NIL),
+                    [
+                        C_F_Pointer(bind_var, ptr_var, [shape_var]),
+                        Assign(ptr_var, FortranTransfer(local_var, ptr_var, shape_var)),
+                        Assign(IndexedElement(ptr_var, shape_var), C_NULL_CHAR()),
+                    ],
+                )
+            ),
+        ]
+
+        return {
+            "c_result": BindCVariable(bind_var, orig_var),
+            "body": body,
+            "f_array": ptr_var,
+            "f_result": local_var,
+        }
+
+    # ------------------------------------------------------------------
+    # Node builders
+    # ------------------------------------------------------------------
+
+    def _build_snapshot_copy_scalar_result(self, orig_var):
+        """Build snapshot copy scalar result nodes."""
         name = orig_var.name
         scope = self.scope
         scope.insert_symbol(name)
@@ -1853,82 +1621,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_result": pointer_var,
         }
 
-    def _extract_CustomDataType_FunctionDefResult(self, orig_var, orig_func_scope):
-        name = orig_var.name
-        scope = self.scope
-        scope.insert_symbol(name)
-        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
-        local_var = orig_var.clone(
-            scope.get_expected_name(name),
-            new_class=Variable,
-            memory_handling=memory_handling,
-            is_argument=False,
-        )
-        # Allocatable is not returned so it must appear in local scope
-        scope.insert_variable(local_var, name)
-
-        # Create the C-compatible data pointer
-        bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
-
-        if isinstance(orig_var, DottedVariable) or orig_var.is_alias:
-            ptr_var = orig_var
-            body = [CLocFunc(ptr_var, bind_var)]
-        else:
-            # Create an array variable which can be passed to CLocFunc
-            ptr_var = Variable(
-                orig_var.class_type,
-                scope.get_new_name(name + "_ptr"),
-                memory_handling="alias",
-            )
-            scope.insert_variable(ptr_var)
-            alloc = Allocate(ptr_var, shape=None, status="unallocated")
-            copy = Assign(ptr_var, local_var)
-            cloc = CLocFunc(ptr_var, bind_var)
-            body = [alloc, copy, cloc]
-
-        return {
-            "body": body,
-            "c_result": BindCVariable(bind_var, orig_var),
-            "f_result": local_var,
-        }
-
-    def _extract_NumpyNDArrayType_FunctionDefResult(self, orig_var, orig_func_scope):
-        name = orig_var.name
-        scope = self.scope
-        scope.insert_symbol(name)
-        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
-
-        shape = orig_var.shape if memory_handling == "stack" else None
-
-        # Allocatable is not returned so it must appear in local scope
-        local_var = orig_var.clone(
-            scope.get_expected_name(name),
-            new_class=Variable,
-            memory_handling=memory_handling,
-            shape=shape,
-            is_argument=False,
-        )
-        scope.insert_variable(local_var, name)
-
-        result = self._NDARRAY_RESULT_DISPATCHER.dispatch(
-            self,
-            orig_var,
-            name,
-            local_var,
-            memory_handling,
-        )
-
-        result["f_result"] = local_var
-
-        return result
-
-    def _extract_snapshot_copy_array_result(self, orig_var, decision, name, local_var, memory_handling):
+    def _build_snapshot_copy_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        """Build snapshot copy array result nodes."""
         return self._get_pointer_snapshot_bind_c_array(name, orig_var, local_var)
 
-    def _extract_borrowed_array_result(self, orig_var, decision, name, local_var, memory_handling):
+    def _build_borrowed_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        """Build borrowed array result nodes."""
         return self._get_bind_c_array(name, orig_var, local_var.shape, local_var)
 
-    def _extract_copy_return_array_result(self, orig_var, decision, name, local_var, memory_handling):
+    def _build_copy_return_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        """Build copy return array result nodes."""
         copy_shape = (
             tuple(ArrayShapeElement(local_var, convert_to_literal(i)) for i in range(local_var.rank))
             if memory_handling == "heap"
@@ -1961,12 +1663,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             ]
         return result
 
-    def _extract_default_array_result(self, orig_var, decision, name, local_var, memory_handling):
+    def _build_default_array_result(self, orig_var, decision, name, local_var, memory_handling):
+        """Build default array result nodes."""
         if orig_var.is_alias or isinstance(orig_var, DottedVariable):
-            return self._extract_borrowed_array_result(orig_var, decision, name, local_var, memory_handling)
-        return self._extract_copy_return_array_result(orig_var, decision, name, local_var, memory_handling)
+            return self._build_borrowed_array_result(orig_var, decision, name, local_var, memory_handling)
+        return self._build_copy_return_array_result(orig_var, decision, name, local_var, memory_handling)
 
-    def _extract_allocatable_replacement_result(self, orig_var, local_var):
+    def _build_allocatable_replacement_result(self, orig_var, local_var):
+        """Build allocatable replacement result nodes."""
         result = self._get_bind_c_array(
             orig_var.name,
             orig_var,
@@ -1995,17 +1699,447 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         return result
 
     @staticmethod
-    def _extract_string_replacement_result(orig_var, generated_arg):
+    def _build_string_replacement_result(orig_var, generated_arg):
+        """Build string replacement result nodes."""
         return {
             "c_result": BindCVariable(generated_arg["result_bind_var"], orig_var),
             "body": [],
             "f_result": generated_arg["f_arg"].value,
         }
 
-    def _extract_HomogeneousTupleType_FunctionDefResult(self, orig_var, orig_func_scope):
-        return self._extract_NumpyNDArrayType_FunctionDefResult(orig_var, orig_func_scope)
+    # ------------------------------------------------------------------
+    # Shared helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _has_optional_arguments(func: FunctionDef) -> bool:
+        """Return whether has optional arguments."""
+        return any(getattr(argument.var, "is_optional", False) for argument in func.arguments)
+
+    def _get_function_def_body(self, func, generated_args, results, handled=()):
+        """
+        Get the body of the bind c function definition.
+
+        Get the body of the bind c function definition by inserting if blocks
+        to check the presence of optional variables. Once we have ascertained
+        the presence of the variables the original function is called. This
+        code slices array variables to ensure the correct step.
+
+        Parameters
+        ----------
+        func : FunctionDef
+            The function which should be called.
+
+        generated_args : list[dict]
+            A list containing the dictionaries returned by _convert_argument.
+
+        results : list of Variables
+            The Variables where the result of the function call will be saved.
+
+        handled : tuple
+            A list of all variables which have been handled (checked to see if they
+            are present).
+
+        Returns
+        -------
+        list
+            A list of codegen nodes describing the body of the function.
+        """
+        next_optional_arg = next(
+            (
+                a
+                for a in generated_args
+                if a["c_arg"] is not None
+                and getattr(getattr(a["c_arg"].var, "original_var", a["c_arg"].var), "is_optional", False)
+                and a not in handled
+            ),
+            None,
+        )
+        if next_optional_arg:
+            args = generated_args.copy()
+            optional_var = next_optional_arg["c_arg"].var
+            optional_var = getattr(optional_var, "new_var", optional_var)
+            class_type = optional_var.class_type
+            if isinstance(class_type, BindCArrayType):
+                optional_var = self.scope.collect_tuple_element(IndexedElement(optional_var, convert_to_literal(0)))
+
+            handled += (next_optional_arg,)
+            true_section = IfSection(
+                IsNot(optional_var, NIL),
+                self._get_function_def_body(func, args, results, handled),
+            )
+            args.remove(next_optional_arg)
+            false_section = IfSection(
+                convert_to_literal(True),
+                [
+                    *next_optional_arg.get("absent_body", ()),
+                    *self._get_function_def_body(func, args, results, handled),
+                ],
+            )
+            return [If(true_section, false_section)]
+        args = [a["f_arg"] for a in generated_args]
+        body = [line for a in generated_args for line in a["body"]]
+        post_body = [line for a in generated_args for line in a.get("post_body", ())]
+
+        if isinstance(func, FunctionOverloadSet):
+            selected = func.point(args)
+            native_name = func.native_name_for(selected)
+        else:
+            selected = None
+            native_name = ""
+        if re.sub(r"\s+", "", native_name).casefold() == "assignment(=)":
+            lhs, rhs = func.native_arguments(selected, args)
+            return [*body, Assign(lhs.value, rhs.value), *post_body]
+
+        selected_func = selected or func
+        if len(results) == 1 and self._uses_allocatable_function_result_helper(selected_func, results[0]):
+            helper = self._allocatable_function_result_helper(results[0])
+            self._additional_functions.append(helper)
+            return [*body, helper(func(*args), results[0]), *post_body]
+
+        if any(arg.get("assumed_rank") for arg in generated_args):
+            return [*body, *self._assumed_rank_dispatch(func, generated_args, results), *post_body]
+
+        return [*body, *self._native_call_body(func, args, results), *post_body]
+
+    @staticmethod
+    def _native_call_body(func, args, results):
+        """Handle native call body for the current generation context."""
+        if len(results) == 1:
+            res = results[0]
+            func_call = AliasAssign(res, func(*args)) if res.is_alias else Assign(res, func(*args))
+        else:
+            func_call = Assign(results, func(*args))
+        return [func_call]
+
+    def _assumed_rank_dispatch(self, func, generated_args, results):
+        """Handle assumed rank dispatch for the current generation context."""
+        dispatch_args = [arg for arg in generated_args if arg.get("assumed_rank")]
+        return self._assumed_rank_dispatch_level(func, generated_args, results, dispatch_args, {}, 0)
+
+    def _assumed_rank_dispatch_level(self, func, generated_args, results, dispatch_args, replacements, index):
+        """Handle assumed rank dispatch level for the current generation context."""
+        if index == len(dispatch_args):
+            args = [
+                self._replacement_function_argument(arg["f_arg"], replacements[arg["f_arg"].value])
+                if arg.get("assumed_rank")
+                else arg["f_arg"]
+                for arg in generated_args
+            ]
+            return self._native_call_body(func, args, results)
+
+        dispatch_arg = dispatch_args[index]
+        info = dispatch_arg["assumed_rank"]
+        sections = []
+        for rank in range(1, _MAX_SUPPORTED_ASSUMED_RANK + 1):
+            rank_var = info["rank_vars"][rank]
+            f_arg = self._assumed_rank_argument_view(info, rank_var, rank)
+            replacements[dispatch_arg["f_arg"].value] = f_arg
+            nested_body = self._assumed_rank_dispatch_level(
+                func,
+                generated_args,
+                results,
+                dispatch_args,
+                replacements,
+                index + 1,
+            )
+            del replacements[dispatch_arg["f_arg"].value]
+            sections.append(
+                CaseSection(
+                    convert_to_literal(rank, dtype=NumpyInt64Type()),
+                    [
+                        C_F_Pointer(info["bind_var"], rank_var, info["shape_vars"][:rank]),
+                        *nested_body,
+                    ],
+                )
+            )
+        sections.append(CaseSection(None, [Return(None)]))
+        return [SelectCase(info["rank_var"], *sections)]
+
+    @staticmethod
+    def _replacement_function_argument(original, value):
+        """Handle replacement function argument for the current generation context."""
+        return FunctionCallArgument(value, keyword=original.keyword)
+
+    @staticmethod
+    def _assumed_rank_argument_view(info, rank_var, rank):
+        """Handle assumed rank argument view for the current generation context."""
+        if not info["allows_strides"]:
+            return rank_var
+        start = convert_to_literal(1)
+        indexes = [
+            Slice(start, Add(stop, convert_to_literal(1)), step)
+            for step, stop in zip(info["stride_vars"][:rank], info["ubound_vars"][:rank], strict=False)
+        ]
+        return IndexedElement(rank_var, *indexes)
+
+    @classmethod
+    def _uses_allocatable_function_result_helper(cls, func, result):
+        """Return whether uses allocatable function result helper."""
+        func_result = getattr(getattr(func, "results", None), "var", NIL)
+        return (
+            result.is_ndarray
+            and cls._is_allocatable_copy_return_result(result)
+            and func_result is not NIL
+            and getattr(func_result, "is_ndarray", False)
+            and cls._is_allocatable_copy_return_result(func_result)
+        )
+
+    def _allocatable_function_result_helper(self, result):
+        """Handle allocatable function result helper for the current generation context."""
+        helper_name = self.scope.get_new_name(f"x2py_collect_{result.name}")
+        helper_scope = self.scope.new_child_scope(helper_name, "function")
+        value = result.clone(helper_scope.get_new_name(f"{result.name}_value"), new_class=Variable, is_argument=False)
+        target = result.clone(helper_scope.get_new_name(f"{result.name}_target"), new_class=Variable, is_argument=False)
+        value_arg = FunctionDefArgument(value)
+        value_arg.make_const()
+        target_arg = FunctionDefArgument(target)
+        return FunctionDef(
+            helper_name,
+            [value_arg, target_arg],
+            [If(IfSection(ArrayAllocated(value), [Assign(target, value)]))],
+            scope=helper_scope,
+        )
+
+    def _direct_bind_c_function(self, expr):
+        """Handle direct bind c function for the current generation context."""
+        external_name = expr.bind_c_external_name
+        func = BindCFunctionDef(
+            external_name,
+            expr.arguments,
+            [],
+            expr.results,
+            is_header=True,
+            scope=expr.scope,
+            original_function=expr,
+            docstring=expr.docstring,
+            result_pointer_map=expr.result_pointer_map,
+            bind_c_external_name=external_name,
+        )
+        self.scope.insert_symbol(external_name, object_type="function")
+        self.scope.insert_function(func, external_name)
+        return func
+
+    @classmethod
+    def _can_call_existing_bind_c_directly(cls, expr):
+        """Return whether can call existing bind c directly."""
+        if not expr.bind_c_external_name or expr.is_private or not expr.is_semantic:
+            return False
+        if expr.is_external or cls._has_optional_arguments(expr):
+            return False
+        if any(argument.bound_argument for argument in expr.arguments):
+            return False
+        if not cls._is_direct_bind_c_result(expr.results.var):
+            return False
+        return all(cls._is_direct_bind_c_argument(argument.var) for argument in expr.arguments)
+
+    @staticmethod
+    def _is_direct_bind_c_result(var):
+        """Return whether is direct bind c result."""
+        if var is NIL:
+            return True
+        return var.rank == 0 and isinstance(var.class_type, FixedSizeNumericType)
+
+    @staticmethod
+    def _is_direct_bind_c_argument(var):
+        """Return whether is direct bind c argument."""
+        return (
+            var.rank == 0
+            and var.memory_handling == "stack"
+            and getattr(var, "intent", "in") == "in"
+            and getattr(var, "passes_by_value", False)
+            and isinstance(var.class_type, FixedSizeNumericType)
+        )
+
+    @staticmethod
+    def _is_allocatable_copy_return_argument(var):
+        """Return whether is allocatable copy return argument."""
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(
+            var.is_ndarray
+            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
+            and decision.memory_handling == "heap"
+            and getattr(var, "intent", "in") == "out"
+        )
+
+    @staticmethod
+    def _is_allocatable_replacement_argument(var):
+        """Return whether is allocatable replacement argument."""
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(
+            var.is_ndarray
+            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
+            and decision.memory_handling == "heap"
+            and getattr(var, "intent", "in") == "inout"
+        )
+
+    @staticmethod
+    def _is_string_replacement_argument(var):
+        """Return whether is string replacement argument."""
+        return bool(isinstance(var.class_type, StringType) and getattr(var, "intent", "in") == "inout")
+
+    @staticmethod
+    def _is_pointer_snapshot_result(var):
+        """Return whether is pointer snapshot result."""
+        return codegen_action_for_variable(var) is CodegenAction.SNAPSHOT_COPY_ARRAY
+
+    @staticmethod
+    def _is_allocatable_copy_return_result(var):
+        """Return whether is allocatable copy return result."""
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(
+            var.is_ndarray
+            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
+            and decision.memory_handling == "heap"
+        )
+
+    @staticmethod
+    def _is_assumed_rank_array(var):
+        """Return whether is assumed rank array."""
+        return bool(getattr(var, "assumed_rank", False) and var.is_ndarray)
+
+    @classmethod
+    def _is_hidden_output_argument(cls, var):
+        """Return whether is hidden output argument."""
+        if getattr(var, "intent", "in") != "out":
+            return False
+        return (
+            (var.rank == 0 and isinstance(var.class_type, FixedSizeNumericType | CustomDataType))
+            or (isinstance(var.class_type, StringType) and var.memory_handling == "stack")
+            or cls._is_allocatable_copy_return_argument(var)
+        )
+
+    def _pack_function_results(self, result_infos):
+        """Handle pack function results for the current generation context."""
+        result_type = BindCResultTupleType.get_new(tuple(info["c_result"].class_type for info in result_infos))
+        result_var = Variable(
+            result_type,
+            self.scope.get_new_name("results"),
+            shape=(convert_to_literal(len(result_infos)),),
+            is_temp=True,
+        )
+        for index, info in enumerate(result_infos):
+            self.scope.insert_symbolic_alias(IndexedElement(result_var, convert_to_literal(index)), info["c_result"])
+        return result_var
+
+    @staticmethod
+    def _module_variable_imports(expr):
+        """Handle module variable imports for the current generation context."""
+        mod = get_enclosing_module(expr)
+        assert mod is not None
+        if mod.imports:
+            return []
+        return [Import(mod.name, AsName(expr, expr.name), mod=mod)]
+
+    def _generated_module_function_name(self, public_name: str):
+        """Handle generated module function name for the current generation context."""
+        return self.scope.get_new_public_name(
+            public_name,
+            object_type="function",
+            owner=f"module variable accessor {public_name}",
+        )
+
+    def _scalar_module_variable(self, expr):
+        """Handle scalar module variable for the current generation context."""
+        getter = self._scalar_module_getter(expr)
+        setter = self._scalar_module_setter(expr)
+        return expr.clone(
+            expr.name,
+            new_class=BindCScalarModuleVariable,
+            getter_function=getter,
+            setter_function=setter,
+        )
+
+    def _scalar_module_getter(self, expr):
+        """Handle scalar module getter for the current generation context."""
+        scope = self.scope
+        public_name = f"get_{expr.name}"
+        original_name = self._generated_module_function_name(public_name)
+        func_name = scope.get_new_name("bind_c_" + public_name.lower())
+        func_scope = scope.new_child_scope(func_name, "function")
+        self.scope = func_scope
+        result = expr.clone(
+            func_scope.get_new_name(f"{expr.name}_value"),
+            is_argument=False,
+            is_optional=False,
+            memory_handling="stack",
+            new_class=Variable,
+        )
+        func_scope.insert_variable(result)
+        func_scope.imports["variables"][expr.name] = expr
+        body = [Assign(result, expr)]
+        self.exit_scope()
+        original_result = expr.clone(
+            f"{expr.name}_value",
+            is_argument=False,
+            is_optional=False,
+            memory_handling="stack",
+            new_class=Variable,
+        )
+        original_function = FunctionDef(
+            original_name,
+            [],
+            [],
+            FunctionDefResult(original_result),
+            scope=scope,
+            decorators={RUNTIME_HOLD_GIL_METADATA: True},
+        )
+        return BindCFunctionDef(
+            func_name,
+            [],
+            body,
+            FunctionDefResult(result),
+            imports=self._module_variable_imports(expr),
+            scope=func_scope,
+            original_function=original_function,
+        )
+
+    def _scalar_module_setter(self, expr):
+        """Handle scalar module setter for the current generation context."""
+        scope = self.scope
+        public_name = f"set_{expr.name}"
+        original_name = self._generated_module_function_name(public_name)
+        func_name = scope.get_new_name("bind_c_" + public_name.lower())
+        func_scope = scope.new_child_scope(func_name, "function")
+        self.scope = func_scope
+        value = expr.clone(
+            func_scope.get_new_name("value"),
+            is_argument=True,
+            is_optional=False,
+            memory_handling="stack",
+            new_class=Variable,
+        )
+        func_scope.insert_variable(value)
+        func_scope.imports["variables"][expr.name] = expr
+        body = [Assign(expr, value)]
+        self.exit_scope()
+        original_value = expr.clone(
+            "value",
+            is_argument=True,
+            is_optional=False,
+            memory_handling="stack",
+            new_class=Variable,
+        )
+        original_function = FunctionDef(
+            original_name,
+            [FunctionDefArgument(original_value)],
+            [],
+            FunctionDefResult(NIL),
+            scope=scope,
+            decorators={RUNTIME_HOLD_GIL_METADATA: True},
+        )
+        return BindCFunctionDef(
+            func_name,
+            [FunctionDefArgument(value)],
+            body,
+            FunctionDefResult(NIL),
+            imports=self._module_variable_imports(expr),
+            scope=func_scope,
+            original_function=original_function,
+        )
 
     def _get_pointer_snapshot_bind_c_array(self, name, orig_var, pointer_var):
+        """Return pointer snapshot bind c array."""
         dtype = orig_var.dtype
         rank = orig_var.rank
         order = orig_var.order
@@ -2073,60 +2207,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_array": ptr_var,
             "bind_var": bind_var,
             "shape_vars": shape_vars,
-        }
-
-    def _extract_StringType_FunctionDefResult(self, orig_var, orig_func_scope):
-        name = orig_var.name
-        scope = self.scope
-        scope.insert_symbol(name)
-        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
-
-        # Allocatable is not returned so it must appear in local scope
-        local_var = orig_var.clone(
-            scope.get_expected_name(name),
-            new_class=Variable,
-            memory_handling=memory_handling,
-            is_argument=False,
-        )
-        scope.insert_variable(local_var, name)
-
-        # Create the C-compatible data pointer
-        bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
-
-        shape_var = Variable(NumpyInt32Type(), scope.get_new_name(f"{name}_len"))
-        scope.insert_variable(shape_var)
-
-        # Create an array variable which can be passed to CLocFunc
-        ptr_var = Variable(
-            NumpyNDArrayType.get_new(CharType(), 1, None),
-            scope.get_new_name(name + "_ptr"),
-            memory_handling="alias",
-        )
-        elem_var = Variable(CharType(), scope.get_new_name(name + "_elem"))
-        scope.insert_variable(ptr_var)
-        scope.insert_variable(elem_var)
-
-        # Define the additional steps necessary to define and fill ptr_var
-        body = [
-            Assign(shape_var, Add(ArraySize(local_var), convert_to_literal(1))),
-            Assign(bind_var, c_malloc(Mul(BindCSizeOf(elem_var), shape_var))),
-            If(
-                IfSection(
-                    IsNot(bind_var, NIL),
-                    [
-                        C_F_Pointer(bind_var, ptr_var, [shape_var]),
-                        Assign(ptr_var, FortranTransfer(local_var, ptr_var, shape_var)),
-                        Assign(IndexedElement(ptr_var, shape_var), C_NULL_CHAR()),
-                    ],
-                )
-            ),
-        ]
-
-        return {
-            "c_result": BindCVariable(bind_var, orig_var),
-            "body": body,
-            "f_array": ptr_var,
-            "f_result": local_var,
         }
 
     def _get_bind_c_array(self, name, orig_var, shape, pointer_target=False):

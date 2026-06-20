@@ -194,6 +194,40 @@ implementation files.
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/tools/test_documentation_examples.py` |
 
+### Codegen Class Organization
+
+Organize generators and printers using `FortranParser` in
+`x2py/fortran_parser/parser.py` as the structural reference. A maintainer
+should be able to read each class from top to bottom in the same order that
+data moves through it:
+
+1. The class docstring states the class's responsibility and lists its method
+   sections.
+2. Construction and public entrypoints come first.
+3. Dispatched model handlers follow, grouped by feature and pipeline order.
+   Their names are `_visit_<ModelType>` in bridges, bindings, and printers.
+4. Helpers immediately follow the visitor group that owns them, or appear in
+   a final low-level helper section when several visitor groups share them.
+5. Every method has a short contract docstring. The docstring explains the
+   method's purpose or invariant; it does not restate its name.
+
+Use the same visible section banners as `FortranParser`, for example
+`Public entrypoints`, `Module visitors`, `Function visitors`, and `Shared
+helpers`. Keep related visitors adjacent instead of sorting methods merely by
+name.
+
+All model-type dispatch goes through the class's `_visit` entrypoint. Use an
+explicit dispatch table for a second dispatch dimension such as datatype or
+ownership action. Do not add parallel `_print_*`, `_extract_*`, dynamic method
+name, or scattered `isinstance` dispatch schemes. A method that performs
+ordinary work but is not a dispatch target must have a descriptive helper
+name rather than a visitor-shaped name.
+
+Keep functionality on the class that owns its state and policy. A module-level
+function is justified only when it is a deliberate public functional API or a
+genuinely stateless utility shared by unrelated classes. Do not retain a
+module-level function only to preserve an old internal call path.
+
 ### `.pyi` Contract Internals
 
 User-visible `.pyi` syntax is parsed by `x2py/semantics/pyi_parser.py` and printed

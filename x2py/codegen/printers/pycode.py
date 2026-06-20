@@ -6,7 +6,7 @@ class PythonCodePrinter(CodePrinter):
     A printer for printing code in Python.
 
     A printer to convert X2py's AST to strings of Python code.
-    As for all printers the navigation of this file is done via _print_X
+    As for all printers the navigation of this file is done via _visit_X
     functions.
 
     Parameters

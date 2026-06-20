@@ -24,7 +24,12 @@ class BridgeGenerator:
     start_language = None
     target_language = None
 
+    # ------------------------------------------------------------------
+    # Public entrypoints and state
+    # ------------------------------------------------------------------
+
     def __init__(self, verbose):
+        """Initialize the state used for one generation run."""
         self._scope = None
         self._verbose = verbose
 
@@ -44,6 +49,7 @@ class BridgeGenerator:
 
     @scope.setter
     def scope(self, scope):
+        """Handle scope for the current generation context."""
         assert isinstance(scope, Scope)
         self._scope = scope
 
@@ -76,6 +82,10 @@ class BridgeGenerator:
         """
         return self._visit(expr)
 
+    # ------------------------------------------------------------------
+    # Model dispatch
+    # ------------------------------------------------------------------
+
     def _visit(self, expr):
         """
         Get the wrapped version of the AST object.
@@ -101,16 +111,15 @@ class BridgeGenerator:
             if hasattr(self, visit_method):
                 if self._verbose > 2:
                     print(f">>>> Calling {type(self).__name__}.{visit_method}")
-                try:
-                    obj = getattr(self, visit_method)(expr)
-                except Exception as error:
-                    raise NotImplementedError(visit_method) from error
-                return obj
+                return getattr(self, visit_method)(expr)
 
         return self._visit_not_supported(expr)
 
+    # ------------------------------------------------------------------
+    # Model visitors
+    # ------------------------------------------------------------------
+
     def _visit_not_supported(self, expr):
-        """Print an error message if the generate function for the type
-        is not implemented"""
+        """Raise an error when no bridge visitor supports the model type."""
         msg = f"_visit_{type(expr).__name__} is not yet implemented for generator : {type(self)}\n"
-        raise ValueError(msg)
+        raise NotImplementedError(msg)

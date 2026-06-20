@@ -154,6 +154,7 @@ class PyCallbackValidate:
     _attribute_nodes = ("callback", "error_exit", "python_object")
 
     def __init__(self, callback, python_object, error_exit):
+        """Initialize one ``PyCallbackValidate`` model instance."""
         self.callback = callback
         self.python_object = python_object
         self.error_exit = error_exit
@@ -167,6 +168,7 @@ class PyCallbackContextPush:
     _attribute_nodes = ("callback", "python_object")
 
     def __init__(self, callback, python_object):
+        """Initialize one ``PyCallbackContextPush`` model instance."""
         self.callback = callback
         self.python_object = python_object
         init_model_object(self)
@@ -179,6 +181,7 @@ class PyCallbackContextPop:
     _attribute_nodes = ("callback",)
 
     def __init__(self, callback):
+        """Initialize one ``PyCallbackContextPop`` model instance."""
         self.callback = callback
         init_model_object(self)
 
@@ -189,6 +192,7 @@ class PyAllowThreadsBegin:
     __slots__ = ()
 
     def __init__(self):
+        """Initialize one ``PyAllowThreadsBegin`` model instance."""
         init_model_object(self)
 
 
@@ -198,6 +202,7 @@ class PyAllowThreadsEnd:
     __slots__ = ()
 
     def __init__(self):
+        """Initialize one ``PyAllowThreadsEnd`` model instance."""
         init_model_object(self)
 
 
@@ -248,6 +253,7 @@ class PyArgKeywords:
     _attribute_nodes = ()
 
     def __init__(self, name, arg_names):
+        """Initialize one ``PyArgKeywords`` model instance."""
         self._name = name
         self._arg_names = arg_names
         init_model_object(self)
@@ -294,6 +300,7 @@ class PyArg_ParseTupleNode:
     _attribute_nodes = ("_pyarg", "_pykwarg", "_parse_args", "_arg_names")
 
     def __init__(self, python_func_args, python_func_kwargs, c_func_args, parse_args, arg_names):
+        """Initialize one ``PyArg_ParseTupleNode`` model instance."""
         if not isinstance(python_func_args, Variable):
             raise TypeError("Python func args should be a Variable")
         if not isinstance(python_func_kwargs, Variable):
@@ -387,6 +394,7 @@ class PyBuildValueNode(Function):
     _class_type = PythonObjectType()
 
     def __init__(self, result_args=()):
+        """Initialize one ``PyBuildValueNode`` model instance."""
         self._flags = ""
         self._result_args = result_args
         for i in result_args:
@@ -398,10 +406,12 @@ class PyBuildValueNode(Function):
 
     @property
     def flags(self):
+        """Handle flags on ``PyBuildValueNode``."""
         return self._flags
 
     @property
     def args(self):
+        """Handle args on ``PyBuildValueNode``."""
         return self._result_args
 
 
@@ -430,6 +440,7 @@ class PyModule_AddObject(Function):
     _class_type = NumpyInt64Type()
 
     def __init__(self, mod_name, name, variable):
+        """Initialize one ``PyModule_AddObject`` model instance."""
         assert isinstance(name.dtype, CharType)
         if not isinstance(variable, Variable) or variable.dtype not in (
             PythonObjectType(),
@@ -479,6 +490,7 @@ class PyModule_Create(Function):
     _class_type = PythonObjectType()
 
     def __init__(self, module_def_name):
+        """Initialize one ``PyModule_Create`` model instance."""
         self._module_def_name = module_def_name
         super().__init__()
 
@@ -521,6 +533,7 @@ class PyCapsule_New(Function):
     _class_type = PythonObjectType()
 
     def __init__(self, API_var, module_name):
+        """Initialize one ``PyCapsule_New`` model instance."""
         self._capsule_name = f"{module_name}._C_API"
         self._API_var = API_var
         super().__init__()
@@ -571,6 +584,7 @@ class PyCapsule_Import(Function):
     _class_type = BindCPointer()
 
     def __init__(self, module_name):
+        """Initialize one ``PyCapsule_Import`` model instance."""
         self._capsule_name = f"{module_name}._C_API"
         super().__init__()
 
@@ -643,6 +657,7 @@ class PyModule(Module):
         module_def_name,
         **kwargs,
     ):
+        """Initialize one ``PyModule`` model instance."""
         self._external_funcs = external_funcs
         self._declarations = declarations
         self._module_def_name = module_def_name
@@ -662,6 +677,7 @@ class PyModule(Module):
 
     @external_funcs.setter
     def external_funcs(self, funcs):
+        """Handle external funcs on ``PyModule``."""
         for f in self._external_funcs:
             detach_model_child(self, f)
         self._external_funcs = funcs
@@ -681,6 +697,7 @@ class PyModule(Module):
 
     @declarations.setter
     def declarations(self, decs):
+        """Handle declarations on ``PyModule``."""
         for d in self._declarations:
             detach_model_child(self, d)
         self._declarations = decs
@@ -742,6 +759,7 @@ class PyFunctionDef(FunctionDef):
     _attribute_nodes = (*FunctionDef._attribute_nodes, "_original_function")
 
     def __init__(self, *args, original_function, **kwargs):
+        """Initialize one ``PyFunctionDef`` model instance."""
         self._original_function = original_function
         super().__init__(*args, **kwargs, is_static=True)
 
@@ -807,6 +825,7 @@ class PyFunctionOverloadSet(FunctionOverloadSet):
         original_overload_set,
         **kwargs,
     ):
+        """Initialize one ``PyFunctionOverloadSet`` model instance."""
         self._dispatcher_func = dispatcher_func
         self._type_check_func = type_check_func
         self._original_overload_set = original_overload_set
@@ -890,6 +909,7 @@ class PyClassDef(ClassDef):
     _attribute_nodes = (*ClassDef._attribute_nodes, "_magic_methods")
 
     def __init__(self, original_class, struct_name, type_name, scope, **kwargs):
+        """Initialize one ``PyClassDef`` model instance."""
         assert isinstance(original_class, ClassDef)
         self._original_class = original_class
         self._struct_name = struct_name
@@ -1050,6 +1070,7 @@ class PyGetSetDefElement:
     __slots__ = ("_docstring", "_getter", "_python_name", "_setter")
 
     def __init__(self, python_name, getter, setter, docstring):
+        """Initialize one ``PyGetSetDefElement`` model instance."""
         assert isinstance(getter, PyFunctionDef)
         assert isinstance(setter, PyFunctionDef) or setter is None
         self._python_name = python_name
@@ -1123,6 +1144,7 @@ class PyModInitFunc(FunctionDef):
     __slots__ = ("_static_vars",)
 
     def __init__(self, name, body, static_vars, scope):
+        """Initialize one ``PyModInitFunc`` model instance."""
         self._static_vars = static_vars
         super().__init__(name, (), body, scope=scope)
 
@@ -1184,6 +1206,7 @@ class PyArgumentError:
     _attribute_nodes = ("_args",)
 
     def __init__(self, error_type, error_msg: str, **kwargs):
+        """Initialize one ``PyArgumentError`` model instance."""
         assert isinstance(error_type, Variable)
         assert isinstance(error_msg, str)
         args = []
@@ -1485,6 +1508,7 @@ class PyList_Clear:
     _shape = ()
 
     def __init__(self, list_obj):
+        """Initialize one ``PyList_Clear`` model instance."""
         self._list_obj = list_obj
         init_model_object(self)
 

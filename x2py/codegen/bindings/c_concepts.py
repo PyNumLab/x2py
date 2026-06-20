@@ -49,7 +49,7 @@ class ObjectAddress:
     Class representing the address of an object. In most situations it will not be
     necessary to use this object explicitly. E.g. if you assign a pointer to a
     target then the pointer will be printed using `AliasAssign`. However for the
-    `_print_AliasAssign` function to print neatly, this class will be used.
+    `_visit_AliasAssign` function to print neatly, this class will be used.
 
     Parameters
     ----------
@@ -58,9 +58,9 @@ class ObjectAddress:
 
     Examples
     --------
-    >>> CCodePrinter._print(ObjectAddress(Variable(NumpyInt64Type(),'a')))
+    >>> CCodePrinter._visit(ObjectAddress(Variable(NumpyInt64Type(),'a')))
     '&a'
-    >>> CCodePrinter._print(ObjectAddress(Variable(NumpyInt64Type(),'a', memory_handling='alias')))
+    >>> CCodePrinter._visit(ObjectAddress(Variable(NumpyInt64Type(),'a', memory_handling='alias')))
     'a'
     """
 
@@ -68,6 +68,7 @@ class ObjectAddress:
     _attribute_nodes = ("_obj",)
 
     def __init__(self, obj):
+        """Initialize one ``ObjectAddress`` model instance."""
         if not is_model_object(obj):
             raise TypeError("object must be a model object")
         self._obj = obj
@@ -112,6 +113,7 @@ class PointerCast:
     _attribute_nodes = ("_obj",)
 
     def __init__(self, obj, cast_type):
+        """Initialize one ``PointerCast`` model instance."""
         if not is_model_object(obj):
             raise TypeError("object must be a model object")
         assert getattr(obj, "is_alias", False)
@@ -150,6 +152,7 @@ class PointerCast:
 
 
 def _is_string_literal(value):
+    """Return whether is string literal."""
     return isinstance(value, Literal) and isinstance(value.dtype, StringType)
 
 
@@ -180,15 +183,18 @@ class CStringExpression:
     _attribute_nodes = ("_expression",)
 
     def __init__(self, *args):
+        """Initialize one ``CStringExpression`` model instance."""
         self._expression = []
         init_model_object(self)
         for arg in args:
             self.append(arg)
 
     def __repr__(self):
+        """Return the developer representation on ``CStringExpression``."""
         return "".join(repr(e) for e in self._expression)
 
     def __str__(self):
+        """Return the generated text representation on ``CStringExpression``."""
         return "".join(str(e) for e in self._expression)
 
     def __add__(self, o):
@@ -207,11 +213,13 @@ class CStringExpression:
         return CStringExpression(*self._expression, o)
 
     def __radd__(self, o):
+        """Implement ``__radd__`` on ``CStringExpression``."""
         if _is_string_literal(o):
             return CStringExpression(o, self)
         return NotImplemented
 
     def __iadd__(self, o):
+        """Implement ``__iadd__`` on ``CStringExpression``."""
         self.append(o)
         return self
 
@@ -303,20 +311,24 @@ class CMacro:
     _attribute_nodes = ()
 
     def __init__(self, arg):
+        """Initialize one ``CMacro`` model instance."""
         init_model_object(self)
         if not isinstance(arg, str):
             raise TypeError("arg must be of type str")
         self._macro = arg
 
     def __repr__(self):
+        """Return the developer representation on ``CMacro``."""
         return str(self._macro)
 
     def __add__(self, o):
+        """Implement ``__add__`` on ``CMacro``."""
         if _is_string_literal(o) or isinstance(o, CStringExpression):
             return CStringExpression(self, o)
         return NotImplemented
 
     def __radd__(self, o):
+        """Implement ``__radd__`` on ``CMacro``."""
         if _is_string_literal(o):
             return CStringExpression(o, self)
         return NotImplemented
@@ -349,11 +361,13 @@ class CStrStr(Function):
     _shape = (None,)
 
     def __new__(cls, arg):
+        """Create one normalized ``CStrStr`` model instance."""
         if isinstance(arg, CMacro):
             return arg
         return super().__new__(cls)
 
     def __init__(self, arg):
+        """Initialize one ``CStrStr`` model instance."""
         super().__init__(arg)
 
 

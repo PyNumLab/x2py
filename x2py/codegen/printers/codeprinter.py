@@ -1,6 +1,6 @@
 """
 Module containing the base class `CodePrinter` from which all code printers
-inherit. The sub-classes should define a language and `_print_X` functions.
+inherit. The sub-classes should define a language and `_visit_X` functions.
 The `CodePrinter` class also contains some general functionality which may be
 used by all code printers, such as the management of imports and the current
 scope.
@@ -18,7 +18,7 @@ class CodePrinter:
     The base class for code-printing subclasses.
 
     The base class from which code printers inherit. The sub-classes should define a language
-    and `_print_X` functions.
+    and `_visit_X` functions.
 
     Parameters
     ----------
@@ -28,7 +28,12 @@ class CodePrinter:
 
     language = None
 
+    # ------------------------------------------------------------------
+    # Public entrypoints and state
+    # ------------------------------------------------------------------
+
     def __init__(self, verbose):
+        """Initialize the state used for one generation run."""
         self._scope = None
         self._additional_imports = {}
         self._verbose = verbose
@@ -52,7 +57,7 @@ class CodePrinter:
         assert isinstance(expr, Module | ModuleHeader | Program)
 
         # Do the actual printing
-        lines = self._print(expr).splitlines(True)
+        lines = self._visit(expr).splitlines(True)
 
         # Format the output
         return "".join(self._format_code(lines))
@@ -104,14 +109,18 @@ class CodePrinter:
         """Exit the current scope and return to the enclosing scope"""
         self._scope = self._scope.parent_scope
 
-    def _print(self, expr):
+    # ------------------------------------------------------------------
+    # Model dispatch
+    # ------------------------------------------------------------------
+
+    def _visit(self, expr):
         """
         Print the AST node in the printer language.
 
-        The printing is done by finding the appropriate function _print_X
+        The printing is done by finding the appropriate function _visit_X
         for the object expr. X is the type of the object expr. If this function
         does not exist then the method resolution order is used to search for
-        other compatible _print_X functions. If none are found then an error is
+        other compatible _visit_X functions. If none are found then an error is
         raised.
 
         Parameters
@@ -128,16 +137,33 @@ class CodePrinter:
 
         classes = type(expr).__mro__
         for cls in classes:
-            print_method = "_print_" + cls.__name__
-            if hasattr(self, print_method):
+            visitor_method = "_visit_" + cls.__name__
+            if hasattr(self, visitor_method):
                 if self._verbose > 2:
-                    print(f">>>> Calling {type(self).__name__}.{print_method}")
-                try:
-                    obj = getattr(self, print_method)(expr)
-                except Exception as error:
-                    raise NotImplementedError(print_method) from error
-                return obj
-        return self._print_not_supported(expr)
+                    print(f">>>> Calling {type(self).__name__}.{visitor_method}")
+                return getattr(self, visitor_method)(expr)
+        return self._visit_not_supported(expr)
+
+    # ------------------------------------------------------------------
+    # Model visitors
+    # ------------------------------------------------------------------
+
+    def _visit_NumberSymbol(self, expr):
+        """Print sympy symbols used for constants"""
+        return str(expr)
+
+    def _visit_str(self, expr):
+        """Basic print functionality for strings"""
+        return expr
+
+    def _visit_not_supported(self, expr):
+        """Raise an error when no visitor supports the model type."""
+        msg = f"_visit_{type(expr).__name__} is not yet implemented for language : {self.language}\n"
+        raise NotImplementedError(msg)
+
+    # ------------------------------------------------------------------
+    # Shared helpers
+    # ------------------------------------------------------------------
 
     def _declare_number_const(self, name, value):
         """Declare a numeric constant at the top of a function"""
@@ -149,22 +175,9 @@ class CodePrinter:
         This may include indenting, wrapping long lines, etc..."""
         raise NotImplementedError("This function must be implemented by subclass of CodePrinter.")
 
-    def _print_NumberSymbol(self, expr):
-        """Print sympy symbols used for constants"""
-        return str(expr)
-
-    def _print_str(self, expr):
-        """Basic print functionality for strings"""
-        return expr
-
-    def _print_not_supported(self, expr):
-        """Print an error message if the print function for the type
-        is not implemented"""
-        f"_print_{type(expr).__name__} is not yet implemented for language : {self.language}\n"
-
     # Number constants
-    _print_Catalan = _print_NumberSymbol
-    _print_EulerGamma = _print_NumberSymbol
-    _print_GoldenRatio = _print_NumberSymbol
-    _print_Exp1 = _print_NumberSymbol
-    _print_Pi = _print_NumberSymbol
+    _visit_Catalan = _visit_NumberSymbol
+    _visit_EulerGamma = _visit_NumberSymbol
+    _visit_GoldenRatio = _visit_NumberSymbol
+    _visit_Exp1 = _visit_NumberSymbol
+    _visit_Pi = _visit_NumberSymbol

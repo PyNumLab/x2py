@@ -19,7 +19,6 @@ from x2py.codegen.printers.pyi_printer import (
     emit_module_stubs,
     opaque_dependency_modules,
     PyiPrinter,
-    _module_list,
 )
 from x2py.semantics.models import (
     ProjectionMapping,
@@ -112,11 +111,10 @@ def test_printer_validation_and_opaque_dependency_edge_cases():
     printer = PyiPrinter()
 
     with pytest.raises(ValueError, match="Shape constraints are not canonical"):
-        printer.emit_constraint(SemanticConstraint("Shape"))
+        printer.emit(SemanticConstraint("Shape"))
 
     plain_type = SemanticType("Float64", dtype="Float64")
     assert printer._emit_storage_type(plain_type) == "Float64"
-    assert _module_list(None) == []
 
     malformed_import = SemanticType(
         "external_type",
@@ -644,7 +642,7 @@ def test_parameter_target_sanitizes_non_identifier_names():
 
 
 def test_emit_argument_escapes_original_name_metadata():
-    emitted = PyiPrinter().emit_argument(SemanticArgument('quote"name', SemanticType("Int32")))
+    emitted = PyiPrinter().emit(SemanticArgument('quote"name', SemanticType("Int32")))
     reparsed = parse_pyi_text(f"def consume({emitted}) -> None: ...\n", module_name="quoted")
 
     assert emitted == 'quote_name: Annotated[Int32, Name("quote\\"name")]'
@@ -811,7 +809,7 @@ end module
     fmod = parse_fortran_source(source)
     smod = fortran_module_to_semantic_module(fmod)
 
-    code = PyiPrinter().emit_module(smod)
+    code = PyiPrinter().emit(smod)
 
     assert "c: Annotated[Ptr(Float64), Intent('out')]" not in code
     assert 'Returns["c"' not in code
@@ -880,7 +878,7 @@ end module
 
     smod = fortran_module_to_semantic_module(fmod)
 
-    code = PyiPrinter().emit_module(smod)
+    code = PyiPrinter().emit(smod)
 
     assert "def touch(" in code
     assert "x: Ptr(Int32)" in code
@@ -1556,25 +1554,23 @@ def test_printer_emits_extended_storage_and_callable_forms():
         "answer",
         SemanticType("Int32", constraints=[SemanticConstraint("Constant")]),
     )
-    assert printer.emit_argument(canonical_constant) == "answer: Final[Int32]"
+    assert printer.emit(canonical_constant) == "answer: Final[Int32]"
     with pytest.raises(ValueError, match=r"Final\[\.\.\.\]"):
-        printer.emit_semantic_type(canonical_constant.semantic_type)
-    assert printer.emit_semantic_type(readonly_value) == "Const(Int32)"
-    assert printer.emit_semantic_type(mutable_value) == "Int32"
-    assert printer.emit_semantic_type(deep_pointer) == "Ptr[3](Const(Float64))"
-    assert printer.emit_semantic_type(double_pointer) == "Ptr[2](Float64)"
-    assert printer.emit_semantic_type(unspecified_storage) == "Int32"
-    assert printer.emit_semantic_type(inferred_array) == "Float64[:, :]"
-    assert printer.emit_semantic_type(annotated_array) == (
+        printer.emit(canonical_constant.semantic_type)
+    assert printer.emit(readonly_value) == "Const(Int32)"
+    assert printer.emit(mutable_value) == "Int32"
+    assert printer.emit(deep_pointer) == "Ptr[3](Const(Float64))"
+    assert printer.emit(double_pointer) == "Ptr[2](Float64)"
+    assert printer.emit(unspecified_storage) == "Int32"
+    assert printer.emit(inferred_array) == "Float64[:, :]"
+    assert printer.emit(annotated_array) == (
         "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
     )
-    assert printer.emit_semantic_type(character) == ('Annotated[Ptr(String), FortranCharacterLength("16")]')
-    assert printer.emit_semantic_type(allocatable_character) == (
-        'Annotated[String, FortranCharacterLength(":"), FortranAllocatable]'
-    )
-    assert printer.emit_semantic_type(full_callback) == "Callable[[Int32, Float64], Float64]"
-    assert printer.emit_semantic_type(any_callback) == "Callable[..., Float64]"
-    assert printer.emit_semantic_type(SemanticType("Callable")) == "Callable"
+    assert printer.emit(character) == ('Annotated[Ptr(String), FortranCharacterLength("16")]')
+    assert printer.emit(allocatable_character) == ('Annotated[String, FortranCharacterLength(":"), FortranAllocatable]')
+    assert printer.emit(full_callback) == "Callable[[Int32, Float64], Float64]"
+    assert printer.emit(any_callback) == "Callable[..., Float64]"
+    assert printer.emit(SemanticType("Callable")) == "Callable"
 
 
 def test_printer_projection_return_helpers_and_keyword_data_members():
@@ -1613,9 +1609,9 @@ def test_printer_rejects_each_unresolved_semantic_type_field():
     message = "Cannot emit .pyi with unresolved semantic type 'Unknown'"
 
     with pytest.raises(ValueError) as unknown_name:
-        printer.emit_semantic_type(SemanticType("Unknown", dtype="Int32"))
+        printer.emit(SemanticType("Unknown", dtype="Int32"))
     with pytest.raises(ValueError) as unknown_dtype:
-        printer.emit_semantic_type(SemanticType("Int32", dtype="Unknown"))
+        printer.emit(SemanticType("Int32", dtype="Unknown"))
 
     assert str(unknown_name.value) == message
     assert str(unknown_dtype.value) == message
@@ -1642,7 +1638,7 @@ def test_printer_preserves_structured_class_and_decorator_layout():
     )
 
     assert (
-        printer.emit_class(cls)
+        printer.emit(cls)
         == """class thing(Opaque, Protocol):
     value: Int32
 
@@ -1653,7 +1649,7 @@ def test_printer_preserves_structured_class_and_decorator_layout():
     def reset(self) -> None: ..."""
     )
     assert (
-        printer.emit_function(decorated_function)
+        printer.emit(decorated_function)
         == """@private
 @native_call([Return(0)])
 def wrapper() -> None: ..."""

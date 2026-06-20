@@ -194,9 +194,9 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         CodegenAction.BORROWED_VIEW: "_borrowed_view_result_notes",
     }
     assert FortranToCBridgeGenerator._NDARRAY_RESULT_DISPATCHER.handlers == {
-        CodegenAction.SNAPSHOT_COPY_ARRAY: "_extract_snapshot_copy_array_result",
-        CodegenAction.BORROWED_VIEW: "_extract_borrowed_array_result",
-        CodegenAction.COPY_RETURN_ARRAY: "_extract_copy_return_array_result",
+        CodegenAction.SNAPSHOT_COPY_ARRAY: "_build_snapshot_copy_array_result",
+        CodegenAction.BORROWED_VIEW: "_build_borrowed_array_result",
+        CodegenAction.COPY_RETURN_ARRAY: "_build_copy_return_array_result",
     }
 
 
@@ -239,7 +239,7 @@ class box:
     assert parsed.transfer is TransferMode.SNAPSHOT_COPY
     assert parsed.codegen_action is CodegenAction.SNAPSHOT_COPY_ARRAY
 
-    emitted = PyiPrinter().emit_semantic_type(field_type)
+    emitted = PyiPrinter().emit(field_type)
     assert 'Ownership("python")' in emitted
     assert 'Transfer("snapshot_copy")' in emitted
     assert 'Destruction("python_refcount")' in emitted
@@ -283,7 +283,7 @@ value: Annotated[
         "mutability": "copy",
     }
     assert semantic_type.metadata["fortran_pointer_association"] == "runtime"
-    emitted = PyiPrinter().emit_semantic_type(semantic_type)
+    emitted = PyiPrinter().emit(semantic_type)
     assert 'PointerAssociation("runtime")' in emitted
     assert "PointerPolicy(nullable=True" in emitted
     assert 'mutability="copy")' in emitted

@@ -40,7 +40,7 @@ def test_raw_array_uses_array_attributes_and_variable_storage():
     assert array_type.raw is True
     assert variable.is_raw_array
     assert variable.on_stack
-    assert CCodePrinter("test.c", verbose=0)._print(Declare(variable)) == ("int64_t shape[4];\n")
+    assert CCodePrinter("test.c", verbose=0)._visit(Declare(variable)) == ("int64_t shape[4];\n")
 
 
 def test_cast_to_uses_shared_cast_concept_with_requested_datatype():
@@ -107,7 +107,7 @@ def test_scope_expands_bind_c_array_to_registered_fields():
     assert scope.collect_all_tuple_elements(packed) == fields
 
 
-def test_fortran_printer_prints_array_slice_with_inclusive_stop():
+def test_fortran_visiter_visits_array_slice_with_inclusive_stop():
     array_type = NumpyNDArrayType.get_new(NumpyFloat32Type(), 1, None)
     array = Variable(array_type, "values", shape=(convert_to_literal(8),))
     stop = Variable(NumpyInt64Type(), "upper")
@@ -123,5 +123,5 @@ def test_fortran_printer_prints_array_slice_with_inclusive_stop():
 
     printer = FCodePrinter("test.f90", verbose=0)
     printer.set_scope(Scope(name="f", scope_type="function"))
-    printer.print_kind = lambda expr: "i32"
-    assert printer._print(element) == ("values(1_i32:upper + 1_i32 - 1_i32:stride)")
+    printer._kind = lambda expr: "i32"
+    assert printer._visit(element) == ("values(1_i32:upper + 1_i32 - 1_i32:stride)")
