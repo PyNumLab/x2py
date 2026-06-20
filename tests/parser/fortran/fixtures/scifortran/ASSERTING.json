@@ -144,6 +144,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -161,7 +162,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d0",
@@ -259,6 +261,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -276,7 +279,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z0",
@@ -374,6 +378,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -391,7 +396,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch0",
@@ -467,6 +473,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -484,7 +491,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b0",
@@ -560,6 +568,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -577,7 +586,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i1",
@@ -665,6 +675,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -682,7 +693,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d1",
@@ -792,6 +804,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -809,7 +822,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z1",
@@ -919,6 +933,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -936,7 +951,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch1",
@@ -1024,6 +1040,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1041,7 +1058,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b1",
@@ -1129,6 +1147,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1146,7 +1165,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i2",
@@ -1240,6 +1260,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1257,7 +1278,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d2",
@@ -1373,6 +1395,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1390,7 +1413,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z2",
@@ -1506,6 +1530,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1523,7 +1548,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch2",
@@ -1617,6 +1643,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1634,7 +1661,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b2",
@@ -1728,6 +1756,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1745,7 +1774,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i3",
@@ -1845,6 +1875,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -1862,7 +1893,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d3",
@@ -1984,6 +2016,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2001,7 +2034,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z3",
@@ -2123,6 +2157,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2140,7 +2175,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch3",
@@ -2240,6 +2276,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2257,7 +2294,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b3",
@@ -2357,6 +2395,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2374,7 +2413,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i4",
@@ -2480,6 +2520,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2497,7 +2538,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d4",
@@ -2625,6 +2667,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2642,7 +2685,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z4",
@@ -2770,6 +2814,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2787,7 +2832,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch4",
@@ -2893,6 +2939,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -2910,7 +2957,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b4",
@@ -3016,6 +3064,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -3033,7 +3082,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i5",
@@ -3145,6 +3195,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -3162,7 +3213,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d5",
@@ -3296,6 +3348,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -3313,7 +3366,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z5",
@@ -3447,6 +3501,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -3464,7 +3519,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch5",
@@ -3576,6 +3632,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -3593,7 +3650,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b5",
@@ -3705,6 +3763,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -3722,7 +3781,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i6",
@@ -3840,6 +3900,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -3857,7 +3918,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d6",
@@ -3997,6 +4059,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -4014,7 +4077,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z6",
@@ -4154,6 +4218,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -4171,7 +4236,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch6",
@@ -4289,6 +4355,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -4306,7 +4373,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b6",
@@ -4424,6 +4492,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -4441,7 +4510,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i7",
@@ -4565,6 +4635,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -4582,7 +4653,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d7",
@@ -4728,6 +4800,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -4745,7 +4818,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z7",
@@ -4891,6 +4965,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -4908,7 +4983,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch7",
@@ -5032,6 +5108,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5049,7 +5126,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b7",
@@ -5173,6 +5251,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5190,7 +5269,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_msg",
@@ -5244,6 +5324,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5261,7 +5342,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -5315,11 +5397,13 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "assert"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -5472,6 +5556,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5489,7 +5574,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d0",
@@ -5587,6 +5673,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5604,7 +5691,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z0",
@@ -5702,6 +5790,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5719,7 +5808,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch0",
@@ -5795,6 +5885,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5812,7 +5903,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b0",
@@ -5888,6 +5980,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -5905,7 +5998,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i1",
@@ -5993,6 +6087,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6010,7 +6105,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d1",
@@ -6120,6 +6216,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6137,7 +6234,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z1",
@@ -6247,6 +6345,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6264,7 +6363,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch1",
@@ -6352,6 +6452,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6369,7 +6470,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b1",
@@ -6457,6 +6559,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6474,7 +6577,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i2",
@@ -6568,6 +6672,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6585,7 +6690,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d2",
@@ -6701,6 +6807,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6718,7 +6825,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z2",
@@ -6834,6 +6942,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6851,7 +6960,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch2",
@@ -6945,6 +7055,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -6962,7 +7073,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b2",
@@ -7056,6 +7168,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7073,7 +7186,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i3",
@@ -7173,6 +7287,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7190,7 +7305,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d3",
@@ -7312,6 +7428,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7329,7 +7446,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z3",
@@ -7451,6 +7569,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7468,7 +7587,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch3",
@@ -7568,6 +7688,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7585,7 +7706,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b3",
@@ -7685,6 +7807,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7702,7 +7825,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i4",
@@ -7808,6 +7932,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7825,7 +7950,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d4",
@@ -7953,6 +8079,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -7970,7 +8097,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z4",
@@ -8098,6 +8226,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -8115,7 +8244,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch4",
@@ -8221,6 +8351,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -8238,7 +8369,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b4",
@@ -8344,6 +8476,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -8361,7 +8494,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i5",
@@ -8473,6 +8607,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -8490,7 +8625,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d5",
@@ -8624,6 +8760,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -8641,7 +8778,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z5",
@@ -8775,6 +8913,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -8792,7 +8931,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch5",
@@ -8904,6 +9044,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -8921,7 +9062,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b5",
@@ -9033,6 +9175,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -9050,7 +9193,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i6",
@@ -9168,6 +9312,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -9185,7 +9330,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d6",
@@ -9325,6 +9471,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -9342,7 +9489,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z6",
@@ -9482,6 +9630,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -9499,7 +9648,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch6",
@@ -9617,6 +9767,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -9634,7 +9785,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b6",
@@ -9752,6 +9904,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -9769,7 +9922,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_i7",
@@ -9893,6 +10047,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -9910,7 +10065,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_d7",
@@ -10056,6 +10212,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -10073,7 +10230,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_z7",
@@ -10219,6 +10377,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -10236,7 +10395,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_ch7",
@@ -10360,6 +10520,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -10377,7 +10538,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_b7",
@@ -10501,6 +10663,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -10518,7 +10681,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_msg",
@@ -10572,6 +10736,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SCIFOR": [
               {
@@ -10589,7 +10754,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -10643,11 +10809,13 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "assert"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

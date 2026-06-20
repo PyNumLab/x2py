@@ -242,9 +242,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "mpi_lanczos_tridiag_c",
@@ -404,9 +406,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "mpi_lanczos_iteration_c",
@@ -582,9 +586,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [
@@ -678,9 +684,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -776,9 +784,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -874,9 +884,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -1122,9 +1134,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "mpi_lanczos_tridiag_c": {
       "name": "mpi_lanczos_tridiag_c",
@@ -1284,9 +1298,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "mpi_lanczos_iteration_c": {
       "name": "mpi_lanczos_iteration_c",
@@ -1462,9 +1478,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

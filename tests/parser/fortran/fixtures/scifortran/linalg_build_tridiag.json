@@ -130,9 +130,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "c_build_tridiag",
@@ -256,9 +258,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "d_build_tridiag_block",
@@ -444,9 +448,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "c_build_tridiag_block",
@@ -632,9 +638,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -765,9 +773,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "c_build_tridiag": {
       "name": "c_build_tridiag",
@@ -891,9 +901,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "d_build_tridiag_block": {
       "name": "d_build_tridiag_block",
@@ -1079,9 +1091,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "c_build_tridiag_block": {
       "name": "c_build_tridiag_block",
@@ -1267,9 +1281,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

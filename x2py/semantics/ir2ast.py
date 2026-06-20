@@ -14,6 +14,7 @@ from x2py.codegen.models.core import (
     ClassDef,
     Div,
     FunctionDef,
+    FunctionAddress,
     FunctionDefArgument,
     FunctionDefResult,
     FunctionOverloadSet,
@@ -260,6 +261,99 @@ def _codegen_function_arguments(declarations: list[Variable], passed_object_posi
         *native_args[:passed_object_position],
         *native_args[passed_object_position + 1 :],
     ]
+
+
+def _callback_result_variable(
+    semantic_type: models.SemanticType,
+    name: str,
+    scope,
+    custom_types: dict[str, object] | None,
+) -> Variable:
+    dtype = _codegen_type(semantic_type.dtype, custom_types)
+    if semantic_type.rank > 0:
+        dtype = NumpyNDArrayType.get_new(
+            dtype,
+            semantic_type.rank,
+            order=_numpy_array_order(semantic_type, semantic_type.rank),
+            allows_strides=_array_allows_strides(semantic_type),
+        )
+    shape = _codegen_array_shape(semantic_type, scope) if semantic_type.rank > 0 else None
+    result = Variable(
+        dtype,
+        name,
+        shape=shape,
+        memory_handling=_ownership_decision(semantic_type, OwnershipContext.result()).memory_handling,
+        intent="out",
+    )
+    scope.insert_variable(result, name=name)
+    return result
+
+
+def _codegen_callback_argument(
+    node: models.SemanticArgument,
+    scope,
+    legacy: bool,
+    *,
+    custom_types: dict[str, object] | None,
+    class_lookup: dict[str, models.SemanticClass] | None,
+    class_descendants: dict[str, tuple[str, ...]] | None,
+    class_order: dict[str, int] | None,
+) -> FunctionAddress:
+    metadata = node.semantic_type.metadata
+    callback_arguments = metadata.get("callback_arguments")
+    if callback_arguments is None:
+        argument_types = metadata.get("arguments")
+        if isinstance(argument_types, list):
+            callback_arguments = [
+                models.SemanticArgument(f"arg_{index}", semantic_type)
+                for index, semantic_type in enumerate(argument_types)
+            ]
+    if not isinstance(callback_arguments, list):
+        raise ValueError(f"Callback argument {node.name!r} is missing a complete callable argument contract")
+
+    try:
+        name = scope.get_expected_name(node.name)
+    except RuntimeError:
+        name = scope.get_new_public_name(
+            node.name,
+            object_type="argument",
+            owner=f"callback argument {node.name}",
+        )
+    callback_scope = scope.new_child_scope(f"{name}_callback", "function")
+    declarations = [
+        semantic_ir_to_codegen_ast(
+            item,
+            callback_scope,
+            legacy,
+            custom_types=custom_types,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+        for item in callback_arguments
+    ]
+    result_type = metadata.get("return")
+    result = (
+        FunctionDefResult(
+            _callback_result_variable(
+                result_type,
+                f"{name}_result",
+                callback_scope,
+                custom_types,
+            )
+        )
+        if isinstance(result_type, models.SemanticType) and result_type.name != "None"
+        else FunctionDefResult(NIL)
+    )
+    return FunctionAddress(
+        name,
+        [FunctionDefArgument(item) for item in declarations],
+        result,
+        is_optional=node.optional,
+        is_argument=True,
+        decorators={"x2py_callback": dict(metadata)},
+        scope=callback_scope,
+    )
 
 
 def _pyi_bound_constructor_self(
@@ -1168,6 +1262,17 @@ def semantic_ir_to_codegen_ast(
                 )
             )
         return cls
+
+    if isinstance(node, models.SemanticArgument) and node.semantic_type.name == "Callable":
+        return _codegen_callback_argument(
+            node,
+            scope,
+            legacy,
+            custom_types=custom_types,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
 
     if isinstance(node, models.SemanticVariable):
         semantic_type = node.semantic_type

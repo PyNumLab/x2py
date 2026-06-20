@@ -220,9 +220,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "lanczos_tridiag_d",
@@ -360,9 +362,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "lanczos_iteration_d",
@@ -516,9 +520,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [
@@ -612,9 +618,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -710,9 +718,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -808,9 +818,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -1034,9 +1046,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "lanczos_tridiag_d": {
       "name": "lanczos_tridiag_d",
@@ -1174,9 +1188,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "lanczos_iteration_d": {
       "name": "lanczos_iteration_d",
@@ -1330,9 +1346,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

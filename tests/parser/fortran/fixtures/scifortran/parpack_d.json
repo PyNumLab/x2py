@@ -323,9 +323,36 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": [
+        "logfil",
+        "ndigit",
+        "mgetv0",
+        "msaupd",
+        "msaup2",
+        "msaitr",
+        "mseigt",
+        "msapps",
+        "msgets",
+        "mseupd",
+        "mnaupd",
+        "mnaup2",
+        "mnaitr",
+        "mneigh",
+        "mnapps",
+        "mngets",
+        "mneupd",
+        "mcaupd",
+        "mcaup2",
+        "mcaitr",
+        "mceigh",
+        "mcapps",
+        "mcgets",
+        "mceupd"
+      ]
     }
   ],
   "interfaces": [
@@ -419,9 +446,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -748,9 +777,36 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": [
+        "logfil",
+        "ndigit",
+        "mgetv0",
+        "msaupd",
+        "msaup2",
+        "msaitr",
+        "mseigt",
+        "msapps",
+        "msgets",
+        "mseupd",
+        "mnaupd",
+        "mnaup2",
+        "mnaitr",
+        "mneigh",
+        "mnapps",
+        "mngets",
+        "mneupd",
+        "mcaupd",
+        "mcaup2",
+        "mcaitr",
+        "mceigh",
+        "mcapps",
+        "mcgets",
+        "mceupd"
+      ]
     }
   }
 }

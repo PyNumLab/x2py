@@ -2176,9 +2176,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_isinfty",
@@ -2233,9 +2235,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "z_isinfty",
@@ -2290,9 +2294,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_isnan",
@@ -2347,9 +2353,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_isnan",
@@ -2404,9 +2412,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "z_isnan",
@@ -2461,9 +2471,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "timestamp",
@@ -2495,9 +2507,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "print_date",
@@ -2557,9 +2571,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "stop_error",
@@ -2591,9 +2607,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_wait",
@@ -2625,9 +2643,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "r_wait",
@@ -2659,9 +2679,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_wait",
@@ -2693,9 +2715,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -2734,6 +2758,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [
         "timestamp",
@@ -2742,7 +2767,8 @@
         "isnan",
         "wait"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -4927,9 +4953,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_isinfty",
@@ -4984,9 +5012,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "z_isinfty",
@@ -5041,9 +5071,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_isnan",
@@ -5098,9 +5130,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_isnan",
@@ -5155,9 +5189,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "z_isnan",
@@ -5212,9 +5248,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "timestamp",
@@ -5246,9 +5284,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "print_date",
@@ -5308,9 +5348,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "stop_error",
@@ -5342,9 +5384,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_wait",
@@ -5376,9 +5420,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "r_wait",
@@ -5410,9 +5456,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_wait",
@@ -5444,9 +5492,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -5485,6 +5535,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [
         "timestamp",
@@ -5493,7 +5544,8 @@
         "isnan",
         "wait"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

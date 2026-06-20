@@ -116,9 +116,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA1_RC",
@@ -228,9 +230,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA2_RR",
@@ -343,9 +347,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA2_RC",
@@ -458,9 +464,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA3_RR",
@@ -576,9 +584,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA3_RC",
@@ -694,9 +704,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA4_RR",
@@ -815,9 +827,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA4_RC",
@@ -936,9 +950,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA5_RR",
@@ -1060,9 +1076,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA5_RC",
@@ -1184,9 +1202,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA6_RR",
@@ -1311,9 +1331,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA6_RC",
@@ -1438,9 +1460,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA7_RR",
@@ -1568,9 +1592,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "splotA7_RC",
@@ -1698,9 +1724,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -1817,9 +1845,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota1_rc": {
       "name": "splotA1_RC",
@@ -1929,9 +1959,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota2_rr": {
       "name": "splotA2_RR",
@@ -2044,9 +2076,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota2_rc": {
       "name": "splotA2_RC",
@@ -2159,9 +2193,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota3_rr": {
       "name": "splotA3_RR",
@@ -2277,9 +2313,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota3_rc": {
       "name": "splotA3_RC",
@@ -2395,9 +2433,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota4_rr": {
       "name": "splotA4_RR",
@@ -2516,9 +2556,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota4_rc": {
       "name": "splotA4_RC",
@@ -2637,9 +2679,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota5_rr": {
       "name": "splotA5_RR",
@@ -2761,9 +2805,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota5_rc": {
       "name": "splotA5_RC",
@@ -2885,9 +2931,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota6_rr": {
       "name": "splotA6_RR",
@@ -3012,9 +3060,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota6_rc": {
       "name": "splotA6_RC",
@@ -3139,9 +3189,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota7_rr": {
       "name": "splotA7_RR",
@@ -3269,9 +3321,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "splota7_rc": {
       "name": "splotA7_RC",
@@ -3399,9 +3453,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

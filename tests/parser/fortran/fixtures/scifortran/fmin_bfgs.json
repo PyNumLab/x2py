@@ -260,9 +260,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "bfgs_no_grad",
@@ -494,9 +496,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [
@@ -561,9 +565,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -636,9 +642,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -705,9 +713,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": true,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "specific_procedures": [],
@@ -971,9 +981,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "bfgs_no_grad": {
       "name": "bfgs_no_grad",
@@ -1205,9 +1217,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

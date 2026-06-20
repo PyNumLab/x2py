@@ -61,9 +61,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "wpop",
@@ -118,9 +120,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -182,9 +186,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "wpop": {
       "name": "wpop",
@@ -239,9 +245,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

@@ -116,9 +116,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "dens_bethe",
@@ -195,9 +197,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "gfbethe",
@@ -296,9 +300,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "gfbether",
@@ -395,9 +401,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "bethe_guess_g0",
@@ -501,9 +509,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -620,9 +630,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "dens_bethe": {
       "name": "dens_bethe",
@@ -699,9 +711,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "gfbethe": {
       "name": "gfbethe",
@@ -800,9 +814,11 @@
       "attributes": [
         "elemental"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "gfbether": {
       "name": "gfbether",
@@ -899,9 +915,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "bethe_guess_g0": {
       "name": "bethe_guess_g0",
@@ -1005,9 +1023,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

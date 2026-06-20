@@ -118,8 +118,8 @@ FORTRAN_TYPE_MAP = {
 _FORTRAN_INTRINSIC_TYPES = frozenset({"integer", "real", "complex", "logical", "character"})
 _FORTRAN_STORAGE_TYPE_MAP = {
     "integer": {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"},
-    "real": {32: "Float32", 64: "Float64"},
-    "complex": {64: "Complex64", 128: "Complex128"},
+    "real": {32: "Float32", 64: "Float64", 80: "Float128", 96: "Float128", 128: "Float128"},
+    "complex": {64: "Complex64", 128: "Complex128", 160: "Complex256", 192: "Complex256", 256: "Complex256"},
 }
 
 
@@ -250,7 +250,25 @@ class FortranToIRConverter:
 
     def visit_project(self, project: FortranProject) -> list[SemanticModule]:
         converter = self._with_additional_wrapped_types(self._wrapped_types_from_project(project))
-        return [module for parsed_file in project.files for module in converter.visit_file_modules(parsed_file)]
+        semantic_modules = []
+        for parsed_file in project.files:
+            file_converter = converter._with_additional_wrapped_types(converter._wrapped_types_from_file(parsed_file))
+            semantic_modules.extend(
+                file_converter.visit_module(
+                    module,
+                    callback_interfaces=self._project_callback_interface_lookup(project, module),
+                )
+                for module in parsed_file.modules
+            )
+            if parsed_file.procedures:
+                semantic_modules.append(
+                    file_converter.procedures_to_semantic_module(
+                        parsed_file.procedures,
+                        name=self._standalone_module_name(parsed_file),
+                        callback_interfaces=self._callback_interface_lookup(parsed_file),
+                    )
+                )
+        return semantic_modules
 
     def visit_variable(
         self,
@@ -313,14 +331,24 @@ class FortranToIRConverter:
         *,
         intent: str | None = None,
         derived_type_context: _DerivedTypeContext | None = None,
+        callback_interfaces: dict[str, FortranProcedureSignature] | None = None,
     ) -> SemanticArgument:
-        semantic_type = self.visit_variable(arg, derived_type_context=derived_type_context)
+        if arg.base_type.lower() == "procedure":
+            semantic_type = self._callback_semantic_type(
+                arg,
+                callback_interfaces or {},
+                derived_type_context=derived_type_context,
+            )
+        else:
+            semantic_type = self.visit_variable(arg, derived_type_context=derived_type_context)
         raw_intent = getattr(arg, "intent", "in")
         resolved_intent = intent if intent is not None else raw_intent
         resolved_intent = str(resolved_intent).lower().replace(" ", "")
         if resolved_intent == "unknown":
             resolved_intent = "in" if semantic_type.name == "String" and semantic_type.rank == 0 else "inout"
-        if semantic_type.rank > 0:
+        if semantic_type.name == "Callable":
+            pass
+        elif semantic_type.rank > 0:
             self._apply_array_argument_contract(semantic_type, arg, resolved_intent)
         elif not getattr(arg, "pass_by_value", False):
             semantic_type.storage = self._reference_storage_contract(resolved_intent)
@@ -366,6 +394,95 @@ class FortranToIRConverter:
         return binding
 
     @staticmethod
+    def _callback_interface_lookup(
+        module: FortranModule | FortranFile,
+    ) -> dict[str, FortranProcedureSignature]:
+        """Index explicit and abstract interface procedures usable by dummy procedures."""
+        lookup: dict[str, FortranProcedureSignature] = {}
+        for interface in module.interfaces:
+            for signature in interface.procedures:
+                lookup.setdefault(signature.name.casefold(), signature)
+            if interface.name and len(interface.procedures) == 1:
+                lookup.setdefault(interface.name.casefold(), interface.procedures[0])
+        return lookup
+
+    @classmethod
+    def _project_callback_interface_lookup(
+        cls,
+        project: FortranProject,
+        module: FortranModule,
+    ) -> dict[str, FortranProcedureSignature]:
+        """Resolve abstract interfaces imported from another parsed module."""
+        modules = {name.casefold(): item for name, item in project.modules.items()}
+        modules.update({item.name.casefold(): item for parsed_file in project.files for item in parsed_file.modules})
+        imported: dict[str, FortranProcedureSignature] = {}
+        for module_name, mappings in module.uses.items():
+            source_module = modules.get(module_name.casefold())
+            if source_module is None:
+                continue
+            source_lookup = cls._callback_interface_lookup(source_module)
+            if not mappings:
+                imported.update(source_lookup)
+                continue
+            for mapping in mappings:
+                signature = source_lookup.get(mapping.source.casefold())
+                if signature is not None:
+                    imported[mapping.local_name.casefold()] = signature
+        return imported
+
+    def _callback_semantic_type(
+        self,
+        arg: FortranArgument | FortranVariable,
+        callback_interfaces: dict[str, FortranProcedureSignature],
+        *,
+        derived_type_context: _DerivedTypeContext | None,
+    ) -> SemanticType:
+        if getattr(arg, "pointer", False):
+            return self.visit_variable(arg, derived_type_context=derived_type_context)
+        interface_name = str(arg.kind or arg.name).casefold()
+        signature = callback_interfaces.get(interface_name)
+        if signature is None:
+            return self.visit_variable(arg, derived_type_context=derived_type_context)
+
+        context = self._procedure_derived_type_context(signature, derived_type_context)
+        callback_arguments = [
+            self.visit_argument(item, derived_type_context=context)
+            for item in self._projected_procedure_arguments(signature)
+        ]
+        callback_return = (
+            self.visit_variable(signature.result, derived_type_context=context)
+            if signature.result
+            else SemanticType("None", dtype="None")
+        )
+        return SemanticType(
+            "Callable",
+            dtype="Callable",
+            metadata={
+                "arguments": [item.semantic_type for item in callback_arguments],
+                "callback_arguments": callback_arguments,
+                "return": callback_return,
+                "fortran_callback_interface": signature.name,
+                "fortran_callback_kind": signature.kind,
+                "callback_lifetime": "call",
+                "callback_thread": "entering_thread",
+                "callback_exception": "print_traceback_and_abort",
+            },
+            storage=SemanticStorageContract(
+                kind="callback",
+                ownership="borrowed",
+                calling_convention="fortran_dummy_procedure",
+            ),
+            origin=SemanticOrigin(
+                source_language="fortran",
+                native_name=arg.name,
+                native_scope=getattr(arg, "procedure", None),
+                source_kind="dummy_procedure",
+                source_type=self._fortran_source_type(arg),
+                metadata={"interface": signature.name},
+            ),
+        )
+
+    @staticmethod
     def visit_enumerator(enumerator: FortranEnumerator, enum: FortranEnum) -> SemanticVariable:
         semantic_type = SemanticType(
             "Int32",
@@ -403,10 +520,16 @@ class FortranToIRConverter:
         visibility: str = "public",
         *,
         derived_type_context: _DerivedTypeContext | None = None,
+        callback_interfaces: dict[str, FortranProcedureSignature] | None = None,
     ) -> SemanticFunction:
         context = self._procedure_derived_type_context(proc, derived_type_context)
         arguments = [
-            self.visit_argument(arg, derived_type_context=context) for arg in self._projected_procedure_arguments(proc)
+            self.visit_argument(
+                arg,
+                derived_type_context=context,
+                callback_interfaces=callback_interfaces,
+            )
+            for arg in self._projected_procedure_arguments(proc)
         ]
         metadata = self._procedure_metadata(proc)
         return SemanticFunction(
@@ -500,13 +623,23 @@ class FortranToIRConverter:
             "target": field.target,
         }
 
-    def visit_module(self, module: FortranModule) -> SemanticModule:
+    def visit_module(
+        self,
+        module: FortranModule,
+        *,
+        callback_interfaces: dict[str, FortranProcedureSignature] | None = None,
+    ) -> SemanticModule:
         context = self._module_derived_type_context(module)
+        callback_interfaces = {
+            **(callback_interfaces or {}),
+            **self._callback_interface_lookup(module),
+        }
         semantic_functions = [
             self.visit_procedure(
                 proc,
                 visibility=self._symbol_visibility(module, proc.name),
                 derived_type_context=context,
+                callback_interfaces=callback_interfaces,
             )
             for proc in module.procedures
         ]
@@ -572,6 +705,7 @@ class FortranToIRConverter:
                 converter.procedures_to_semantic_module(
                     parsed_file.procedures,
                     name=standalone_module_name or self._standalone_module_name(parsed_file),
+                    callback_interfaces=self._callback_interface_lookup(parsed_file),
                 )
             )
         return modules
@@ -581,10 +715,11 @@ class FortranToIRConverter:
         procedures: list[FortranProcedureSignature],
         *,
         name: str,
+        callback_interfaces: dict[str, FortranProcedureSignature] | None = None,
     ) -> SemanticModule:
         return SemanticModule(
             name=name,
-            functions=[self.visit_procedure(proc) for proc in procedures],
+            functions=[self.visit_procedure(proc, callback_interfaces=callback_interfaces) for proc in procedures],
         )
 
     def variable_to_semantic_type(self, var) -> SemanticType:
@@ -834,13 +969,9 @@ class FortranToIRConverter:
     @staticmethod
     def _semantic_type_from_target_fact(fact: dict[str, object]) -> str | None:
         base_type = str(fact.get("base_type") or "").lower()
-        kind = fact.get("kind")
-        kind_key = None if kind is None else str(kind).lower()
         bits = int(fact.get("bits") or 0)
         if base_type == "logical":
-            if kind_key in {None, "c_bool"} or bits == 8:
-                return "Bool"
-            return None
+            return "Bool"
         if base_type == "character":
             return "String"
         return _FORTRAN_STORAGE_TYPE_MAP.get(base_type, {}).get(bits)

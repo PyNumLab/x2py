@@ -89,9 +89,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polint",
@@ -223,9 +225,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polin2",
@@ -410,9 +414,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iminloc",
@@ -471,9 +477,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq",
@@ -570,20 +578,24 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "locate",
         "polint",
         "polin2"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -681,9 +693,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polint",
@@ -815,9 +829,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polin2",
@@ -1002,9 +1018,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iminloc",
@@ -1063,9 +1081,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq",
@@ -1162,20 +1182,24 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "locate",
         "polint",
         "polin2"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

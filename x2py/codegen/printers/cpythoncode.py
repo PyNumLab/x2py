@@ -13,6 +13,7 @@ from ..bindings.cpython_api import (
     Py_None,
     Py_ssize_t,
     PyBuildValueNode,
+    PyCallbackContextPush,
     PyCapsule_Import,
     PyCapsule_New,
     PyFunctionOverloadSet,
@@ -28,6 +29,10 @@ from ..models.datatypes import (
     Literal,
     NIL,
     NumpyNDArrayType,
+    PrimitiveBooleanType,
+    PrimitiveComplexType,
+    PrimitiveFloatingPointType,
+    PrimitiveIntegerType,
     convert_to_literal,
 )
 from ..bindings.numpy_cpython_api import NumpyArrayObjectType
@@ -99,6 +104,8 @@ class CPythonCodePrinter(CCodePrinter):
         --------
         CCodePrinter.is_c_pointer : The extended function.
         """
+        if isinstance(a, FunctionAddress):
+            return False
         if (
             isinstance(a.class_type, WrapperCustomDataType | BindCPointer | PyTuple_Pack)
             or (isinstance(a.class_type, NumpyNDArrayType) and a.class_type.raw)
@@ -135,9 +142,7 @@ class CPythonCodePrinter(CCodePrinter):
 
     def function_signature(self, expr, print_arg_names=True):
         args = list(expr.arguments)
-        if any(isinstance(a.var, FunctionAddress) for a in args):
-            # Functions with function addresses as arguments cannot be
-            # exposed to python so there is no need to print their signature
+        if any(isinstance(a.var, FunctionAddress) and not a.var.decorators.get("x2py_callback_abi") for a in args):
             return ""
         return CCodePrinter.function_signature(self, expr, print_arg_names)
 
@@ -177,6 +182,261 @@ class CPythonCodePrinter(CCodePrinter):
                 return f"const {dtype}"
             return dtype
         return CCodePrinter.get_declare_type(self, expr)
+
+    @staticmethod
+    def _callback_identifier(callback):
+        return str(callback.name).replace("-", "_")
+
+    def _callback_context_names(self, callback):
+        identifier = self._callback_identifier(callback)
+        return (
+            f"x2py_callback_context_{identifier}",
+            f"x2py_callback_current_{identifier}",
+            f"x2py_callback_abort_{identifier}",
+        )
+
+    def _print_PyCallbackValidate(self, expr):
+        metadata = expr.callback.decorators.get("x2py_callback_abi", {})
+        callback_name = str(getattr(metadata.get("native"), "name", expr.callback.name))
+        python_object = self._print(ObjectAddress(expr.python_object))
+        return (
+            f"if (!PyCallable_Check({python_object})) {{\n"
+            f'    PyErr_SetString(PyExc_TypeError, "callback {callback_name} must be callable");\n'
+            f"    return {self._print(expr.error_exit)};\n"
+            "}\n"
+        )
+
+    def _print_PyCallbackContextPush(self, expr):
+        context_type, current_name, _ = self._callback_context_names(expr.callback)
+        context_name = f"{self._callback_identifier(expr.callback)}_context"
+        python_object = self._print(ObjectAddress(expr.python_object))
+        return (
+            f"{context_type} {context_name} = "
+            f"{{{python_object}, PyThread_get_thread_ident(), {current_name}, NULL}};\n"
+            f"Py_INCREF({python_object});\n"
+            f"{current_name} = &{context_name};\n"
+        )
+
+    def _print_PyCallbackContextPop(self, expr):
+        _, current_name, _ = self._callback_context_names(expr.callback)
+        context_name = f"{self._callback_identifier(expr.callback)}_context"
+        return (
+            f"{current_name} = {context_name}.previous;\n"
+            f"Py_XDECREF({context_name}.last_result);\n"
+            f"Py_DECREF({context_name}.callable);\n"
+        )
+
+    @staticmethod
+    def _callback_numpy_typenum(dtype):
+        primitive = dtype.primitive_type
+        precision = dtype.precision
+        mapping = {
+            (PrimitiveBooleanType(), -1): "NPY_BOOL",
+            (PrimitiveIntegerType(), 1): "NPY_INT8",
+            (PrimitiveIntegerType(), 2): "NPY_INT16",
+            (PrimitiveIntegerType(), 4): "NPY_INT32",
+            (PrimitiveIntegerType(), 8): "NPY_INT64",
+            (PrimitiveFloatingPointType(), 4): "NPY_FLOAT32",
+            (PrimitiveFloatingPointType(), 8): "NPY_FLOAT64",
+            (PrimitiveComplexType(), 4): "NPY_COMPLEX64",
+            (PrimitiveComplexType(), 8): "NPY_COMPLEX128",
+        }
+        try:
+            return mapping[(primitive, precision)]
+        except KeyError:
+            raise TypeError(f"Unsupported callback NumPy dtype {dtype}") from None
+
+    def _callback_scalar_to_python(self, var, value):
+        primitive = var.dtype.primitive_type
+        if isinstance(primitive, PrimitiveBooleanType):
+            return f"PyBool_FromLong(({value}) ? 1 : 0)"
+        if isinstance(primitive, PrimitiveIntegerType):
+            return f"PyLong_FromLongLong((long long)({value}))"
+        if isinstance(primitive, PrimitiveFloatingPointType):
+            return f"PyFloat_FromDouble((double)({value}))"
+        if isinstance(primitive, PrimitiveComplexType):
+            return f"PyComplex_FromDoubles((double)creal({value}), (double)cimag({value}))"
+        raise TypeError(f"Unsupported callback scalar type {var.class_type}")
+
+    def _callback_scalar_from_python(self, var, value):
+        primitive = var.dtype.primitive_type
+        c_type = self.get_declare_type(var)
+        if isinstance(primitive, PrimitiveBooleanType):
+            return f"({c_type})PyObject_IsTrue({value})"
+        if isinstance(primitive, PrimitiveIntegerType):
+            return f"({c_type})PyLong_AsLongLong({value})"
+        if isinstance(primitive, PrimitiveFloatingPointType):
+            return f"({c_type})PyFloat_AsDouble({value})"
+        if isinstance(primitive, PrimitiveComplexType):
+            return f"({c_type})(PyComplex_RealAsDouble({value}) + PyComplex_ImagAsDouble({value}) * I)"
+        raise TypeError(f"Unsupported callback scalar type {var.class_type}")
+
+    def _callback_wrapped_class(self, native_var, callback):
+        wrapped = self.scope.find(native_var.dtype.name, "classes")
+        if wrapped is None:
+            raise TypeError(f"Callback derived type {native_var.dtype.name} has no generated Python wrapper")
+        return wrapped
+
+    def _callback_argument_code(self, callback, mapping, index, abort_name):
+        native = mapping["native"]
+        abi = mapping["abi"]
+        py_name = f"callback_arg_{index}"
+        if mapping["kind"] == "scalar":
+            expression = self._callback_scalar_to_python(native, str(abi[0].name))
+            setup = f"PyObject *{py_name} = {expression};\n"
+        elif mapping["kind"] == "array":
+            data, *shape = abi
+            dims_name = f"callback_dims_{index}"
+            strides_name = f"callback_strides_{index}"
+            dimensions = ", ".join(f"(npy_intp){item.name}" for item in shape)
+            stride_lines = [f"{strides_name}[0] = (npy_intp)sizeof({self.get_c_type(native.dtype)});"]
+            stride_lines.extend(
+                f"{strides_name}[{i}] = {strides_name}[{i - 1}] * {dims_name}[{i - 1}];" for i in range(1, native.rank)
+            )
+            flags = "NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_ALIGNED"
+            if getattr(native, "intent", "in") != "in":
+                flags += " | NPY_ARRAY_WRITEABLE"
+            setup = (
+                f"npy_intp {dims_name}[{native.rank}] = {{{dimensions}}};\n"
+                f"npy_intp {strides_name}[{native.rank}];\n" + "\n".join(stride_lines) + "\n"
+                f"PyObject *{py_name} = PyArray_New(&PyArray_Type, {native.rank}, {dims_name}, "
+                f"{self._callback_numpy_typenum(native.dtype)}, {strides_name}, {data.name}, 0, {flags}, NULL);\n"
+            )
+        elif mapping["kind"] == "derived":
+            wrapped = self._callback_wrapped_class(native, callback)
+            setup = (
+                f"struct {wrapped.struct_name} *{py_name}_value = "
+                f"(struct {wrapped.struct_name} *){wrapped.type_name}.tp_alloc(&{wrapped.type_name}, 0);\n"
+                f"PyObject *{py_name} = (PyObject *){py_name}_value;\n"
+                f"if ({py_name} != NULL) {{\n"
+                f"    {py_name}_value->instance = {abi[0].name};\n"
+                f"    {py_name}_value->referenced_objects = PyList_New(0);\n"
+                f"    {py_name}_value->is_alias = 1;\n"
+                "}\n"
+            )
+        else:
+            raise TypeError(f"Unsupported callback ABI argument kind {mapping['kind']}")
+        return (
+            setup
+            + f'if ({py_name} == NULL) {abort_name}("failed to convert callback argument");\n'
+            + f"PyTuple_SET_ITEM(callback_args, {index}, {py_name});\n"
+        )
+
+    def _callback_result_code(self, callback, result, context_name, abort_name):
+        kind = result["kind"]
+        native = result["native"]
+        if kind == "none":
+            return (
+                "if (callback_result != Py_None) {\n"
+                '    PyErr_SetString(PyExc_TypeError, "callback subroutine must return None");\n'
+                f'    {abort_name}("invalid callback return value");\n'
+                "}\n"
+                "Py_DECREF(callback_result);\n"
+                "PyGILState_Release(callback_gil);\n"
+                "return;\n"
+            )
+        if kind == "scalar":
+            c_type = self.get_declare_type(native)
+            conversion = self._callback_scalar_from_python(native, "callback_result")
+            return (
+                f"{c_type} callback_value = {conversion};\n"
+                f'if (PyErr_Occurred()) {abort_name}("invalid callback return value");\n'
+                "Py_DECREF(callback_result);\n"
+                "PyGILState_Release(callback_gil);\n"
+                "return callback_value;\n"
+            )
+        if kind == "array":
+            shape_checks = []
+            for index, item in enumerate(native.alloc_shape):
+                if item is not None:
+                    shape_checks.append(
+                        f"PyArray_DIM((PyArrayObject *)callback_result, {index}) != {self._print(item)}"
+                    )
+            conditions = [
+                "!PyArray_Check(callback_result)",
+                f"PyArray_TYPE((PyArrayObject *)callback_result) != {self._callback_numpy_typenum(native.dtype)}",
+                f"PyArray_NDIM((PyArrayObject *)callback_result) != {native.rank}",
+                "!PyArray_CHKFLAGS((PyArrayObject *)callback_result, NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_ALIGNED)",
+                *shape_checks,
+            ]
+            condition = " ||\n    ".join(conditions)
+            validation = (
+                f"if ({condition}) {{\n"
+                '    PyErr_SetString(PyExc_TypeError, "callback returned an incompatible array");\n'
+                f'    {abort_name}("invalid callback return value");\n'
+                "}\n"
+            )
+        elif kind == "derived":
+            wrapped = self._callback_wrapped_class(native, callback)
+            validation = (
+                f"if (!PyObject_TypeCheck(callback_result, &{wrapped.type_name})) {{\n"
+                f'    PyErr_SetString(PyExc_TypeError, "callback must return {native.dtype.name}");\n'
+                f'    {abort_name}("invalid callback return value");\n'
+                "}\n"
+            )
+        else:
+            raise TypeError(f"Unsupported callback ABI result kind {kind}")
+
+        pointer = (
+            "PyArray_DATA((PyArrayObject *)callback_result)"
+            if kind == "array"
+            else f"((struct {self._callback_wrapped_class(native, callback).struct_name} *)callback_result)->instance"
+        )
+        return (
+            validation
+            + f"Py_XDECREF({context_name}->last_result);\n"
+            + f"{context_name}->last_result = callback_result;\n"
+            + f"void *callback_value = {pointer};\n"
+            + "PyGILState_Release(callback_gil);\n"
+            + "return callback_value;\n"
+        )
+
+    def _callback_support_code(self, callback):
+        metadata = callback.decorators["x2py_callback_abi"]
+        context_type, current_name, abort_name = self._callback_context_names(callback)
+        signature = self.function_signature(callback)
+        signature = signature.replace(f"(*{callback.name})", str(callback.name))
+        argument_code = "".join(
+            self._callback_argument_code(callback, mapping, index, abort_name)
+            for index, mapping in enumerate(metadata["arguments"])
+        )
+        result_code = self._callback_result_code(callback, metadata["result"], "callback_context", abort_name)
+        return (
+            f"typedef struct {context_type} {{\n"
+            "    PyObject *callable;\n"
+            "    unsigned long thread_id;\n"
+            f"    struct {context_type} *previous;\n"
+            "    PyObject *last_result;\n"
+            f"}} {context_type};\n"
+            f"static _Thread_local {context_type} *{current_name} = NULL;\n"
+            f"static void {abort_name}(const char *message)\n{{\n"
+            "    if (!PyErr_Occurred()) PyErr_SetString(PyExc_RuntimeError, message);\n"
+            "    PyErr_PrintEx(0);\n"
+            "    abort();\n"
+            "}\n"
+            f"static {signature}\n{{\n"
+            f"    {context_type} *callback_context = {current_name};\n"
+            "    if (callback_context == NULL || callback_context->thread_id != PyThread_get_thread_ident()) {\n"
+            "        PyGILState_STATE callback_thread_gil = PyGILState_Ensure();\n"
+            '        PyErr_SetString(PyExc_RuntimeError, "callback invoked outside its entering Python thread");\n'
+            f'        {abort_name}("callback thread violation");\n'
+            "        PyGILState_Release(callback_thread_gil);\n"
+            "    }\n"
+            "    PyGILState_STATE callback_gil = PyGILState_Ensure();\n"
+            f"    PyObject *callback_args = PyTuple_New({len(metadata['arguments'])});\n"
+            f'    if (callback_args == NULL) {abort_name}("failed to allocate callback arguments");\n'
+            + "".join(f"    {line}\n" for line in argument_code.splitlines())
+            + "    PyObject *callback_result = PyObject_CallObject(callback_context->callable, callback_args);\n"
+            "    Py_DECREF(callback_args);\n"
+            f'    if (callback_result == NULL) {abort_name}("Python callback raised an exception");\n'
+            + "".join(f"    {line}\n" for line in result_code.splitlines())
+            + "}\n"
+        )
+
+    def _print_PyFunctionDef(self, expr):
+        callbacks = [item.callback for item in expr.body.body if isinstance(item, PyCallbackContextPush)]
+        support = "".join(self._callback_support_code(callback) for callback in callbacks)
+        return support + CCodePrinter._print_FunctionDef(self, expr)
 
     def _handle_is_operator(self, Op, expr):
         """

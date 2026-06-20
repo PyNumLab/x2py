@@ -71,12 +71,13 @@
                     "upper_bounds": [
                       null
                     ],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -101,12 +102,13 @@
                   "upper_bounds": [
                     null
                   ],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -139,12 +141,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -215,12 +218,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -239,12 +243,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -314,12 +319,13 @@
                     "upper_bounds": [
                       null
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -344,12 +350,13 @@
                   "upper_bounds": [
                     null
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",

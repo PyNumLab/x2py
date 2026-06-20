@@ -1064,7 +1064,8 @@ class FCodePrinter(CodePrinter):
         func_end = ""
         rec = "recursive " if expr.is_recursive else ""
         string_result = isinstance(expr.results.var.class_type, StringType)
-        if len(out_args) != 1 or (expr.results.var.rank > 0 and not string_result):
+        callback_adapter = bool(expr.decorators.get("x2py_callback_adapter"))
+        if len(out_args) != 1 or (expr.results.var.rank > 0 and not string_result and not callback_adapter):
             func_type = "subroutine"
             for result in out_args:
                 args_decs[result] = Declare(result, intent="out")
@@ -1079,13 +1080,25 @@ class FCodePrinter(CodePrinter):
             out_args = []
         # ...
 
+        callback_result_declaration = None
+        if callback_adapter and func_type == "function":
+            callback_result_declaration = args_decs.pop(result)
+
+        callback_interfaces = []
         for arg in arguments:
             arg_var = arg.var
             if isinstance(arg_var, Variable):
+                if callback_adapter:
+                    args_decs[arg_var] = self._callback_native_argument_declaration(arg_var)
+                    continue
                 inout = arg.inout and not isinstance(arg_var, BindCVariable)
                 for v in self.scope.collect_all_tuple_elements(arg_var):
                     dec = Declare(v, intent="inout") if inout else Declare(v, intent="in")
                     args_decs[v] = dec
+            elif isinstance(arg_var, FunctionAddress) and arg_var.decorators.get("x2py_callback_abi"):
+                callback_interfaces.append(self._callback_c_interface(arg_var))
+        if callback_result_declaration is not None:
+            args_decs[result] = callback_result_declaration
 
         # treat case of pure function
         sig = f"{rec}{func_type} {name}"
@@ -1099,7 +1112,8 @@ class FCodePrinter(CodePrinter):
         arg_iter = chain((class_arg,), out_args, arguments[1:]) if class_arg else chain(out_args, arguments)
         arg_code = ", ".join(self._print(i) for i in arg_iter)
 
-        arg_decs = "".join(self._print(i) for i in args_decs.values())
+        arg_decs = "".join(self._print(i) if isinstance(i, Declare) else i for i in args_decs.values())
+        arg_decs = "".join(callback_interfaces) + arg_decs
 
         return {
             "sig": sig,
@@ -1109,13 +1123,49 @@ class FCodePrinter(CodePrinter):
             "func_type": func_type,
         }
 
+    def _callback_native_argument_declaration(self, var):
+        """Declare an internal callback adapter argument with its native Fortran ABI."""
+        if isinstance(var.class_type, CustomDataType):
+            type_code = f"type({self._print(var.class_type)})"
+        elif isinstance(var.class_type, NumpyNDArrayType | FixedSizeType):
+            type_code = self._print(var.dtype.primitive_type)
+            if isinstance(var.dtype, FixedSizeNumericType):
+                type_code += f"({self.print_kind(var)})"
+        else:
+            raise TypeError(f"Unsupported native callback argument type {var.class_type}")
+
+        shape_code = ""
+        if var.rank:
+            dimensions = [":" if item is None else self._print(item) for item in var.alloc_shape]
+            shape_code = f"({', '.join(dimensions)})"
+        intent = getattr(var, "intent", "in")
+        return f"{type_code}, intent({intent}) :: {var.name}{shape_code}\n"
+
+    def _callback_c_interface(self, callback):
+        """Emit the interoperable interface for a C callback dummy procedure."""
+        parts = self.function_signature(callback, callback.name)
+        signature = f"{parts['sig']}({parts['arg_code']}) bind(c) {parts['func_end']}".rstrip()
+        return (
+            "interface\n"
+            f"{signature}\n"
+            "import\n"
+            f"{parts['arg_decs']}"
+            f"end {parts['func_type']} {callback.name}\n"
+            "end interface\n"
+        )
+
     def _print_FunctionDef(self, expr):
         if not expr.is_semantic:
             return ""
         self.set_scope(expr.scope)
 
         for r in expr.scope.collect_all_tuple_elements(expr.results.var):
-            if r.rank and r.memory_handling == "stack" and any(not isinstance(s, Literal) for s in r.alloc_shape):
+            if (
+                not expr.decorators.get("x2py_callback_adapter")
+                and r.rank
+                and r.memory_handling == "stack"
+                and any(not isinstance(s, Literal) for s in r.alloc_shape)
+            ):
                 raise ValueError("Can't return a stack array of unknown size")
 
         name = expr.cls_name or expr.name

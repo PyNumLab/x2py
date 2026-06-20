@@ -4,7 +4,6 @@ which creates an interface exposing C code to Python.
 """
 
 import ast
-import warnings
 
 from x2py.ownership_policy import (
     CodegenAction,
@@ -66,6 +65,9 @@ from .cpython_api import (
     PyArgumentError,
     PyAttributeError,
     PyBuildValueNode,
+    PyCallbackContextPop,
+    PyCallbackContextPush,
+    PyCallbackValidate,
     PyCapsule_Import,
     PyCapsule_New,
     PythonObjectType,
@@ -292,6 +294,14 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _argument_doc_lines(self, arg):
         var = self._doc_original_var(arg.var)
+        if isinstance(var, FunctionAddress):
+            argument_types = ", ".join(self._type_doc(item.var) for item in var.arguments)
+            result_type = "None" if var.results.var is NIL else self._type_doc(var.results.var)
+            return [
+                f"{self._doc_argument_name(arg)} : Callable[[{argument_types}], {result_type}]",
+                "    Immediate-call callback retained only for the duration of this call.",
+                "    Callback exceptions print their traceback and abort the host process.",
+            ]
         can_be_none = (
             getattr(arg.var, "is_optional", False)
             or getattr(var, "is_optional", False)
@@ -1673,17 +1683,6 @@ class CPythonBindingGenerator(BindingGenerator):
 
         isinstance(init_function, BindCFunctionDef)
 
-        # Handle un-wrappable functions
-        if any(isinstance(a.var, FunctionAddress) for a in init_function.arguments):
-            self.exit_scope()
-            warnings.warn("Functions with functions as arguments will not be callable from Python", stacklevel=2)
-            return self._get_untranslatable_function(
-                func_name,
-                func_scope,
-                init_function,
-                "Cannot pass a function as an argument",
-            )
-
         # Add the variables to the expected symbols in the scope
         for a in init_function.arguments:
             a_var = a.var
@@ -1702,6 +1701,8 @@ class CPythonBindingGenerator(BindingGenerator):
         # Get the code required to extract the C-compatible arguments from the Python arguments
         wrapped_args = [self._visit(a) for a in python_args]
         body += [line for arg in wrapped_args for line in arg["body"]]
+        callback_setup = [line for arg in wrapped_args for line in arg.get("callback_setup", ())]
+        callback_cleanup = [line for arg in reversed(wrapped_args) for line in arg.get("callback_cleanup", ())]
 
         # Get the arguments and results which should be used to call the c-compatible function
         func_call_args = [ca for a in wrapped_args for ca in a["args"]]
@@ -1709,7 +1710,9 @@ class CPythonBindingGenerator(BindingGenerator):
         body.extend(self._save_referenced_objects(init_function, func_args))
 
         # Call the C-compatible function
+        body.extend(callback_setup)
         body.append(init_function(*func_call_args))
+        body.extend(callback_cleanup)
 
         # Pack the Python compatible results of the function into one argument.
         func_results = FunctionDefResult(python_result_variable)
@@ -2045,6 +2048,8 @@ class CPythonBindingGenerator(BindingGenerator):
         visible_outputs = self._visible_output_argument_objects(func)
         for argument in original_func.arguments:
             orig_var = argument.var
+            if isinstance(orig_var, FunctionAddress):
+                continue
             if argument.bound_argument:
                 continue
             if self._is_allocatable_replacement_argument(orig_var):
@@ -2547,14 +2552,6 @@ class CPythonBindingGenerator(BindingGenerator):
                 "Private functions are not accessible from python",
             )
 
-        # Handle un-wrappable functions
-        if any(isinstance(a.var, FunctionAddress) for a in expr.arguments):
-            self.exit_scope()
-            warnings.warn("Functions with functions as arguments will not be callable from Python", stacklevel=2)
-            return self._get_untranslatable_function(
-                func_name, func_scope, expr, "Cannot pass a function as an argument"
-            )
-
         # Add the variables to the expected symbols in the scope
         for a in expr.arguments:
             a_var = a.var
@@ -2591,6 +2588,8 @@ class CPythonBindingGenerator(BindingGenerator):
         # Get the code required to extract the C-compatible arguments from the Python arguments
         wrapped_args = [self._visit(a) for a in python_args]
         body += [line for arg in wrapped_args for line in arg["body"]]
+        callback_setup = [line for arg in wrapped_args for line in arg.get("callback_setup", ())]
+        callback_cleanup = [line for arg in reversed(wrapped_args) for line in arg.get("callback_cleanup", ())]
 
         # Get the code required to wrap the C-compatible results into Python objects
         # This function creates variables so it must be called before extracting them from the scope.
@@ -2614,13 +2613,17 @@ class CPythonBindingGenerator(BindingGenerator):
             body.extend(self._save_referenced_objects(expr, func_args))
 
         # Call the C-compatible function
+        body.extend(callback_setup)
         body.append(self._call_wrapped_function(expr, func_call_args, c_results))
+        body.extend(callback_cleanup)
 
         # Deallocate the C equivalent of any array arguments
         # The C equivalent is the same variable that is passed to the function unless the target language is Fortran.
         # In this case known-size stack arrays are used which are automatically deallocated when they go out of scope.
         for a in python_args:
             orig_var = a.var
+            if isinstance(orig_var, FunctionAddress):
+                continue
             if orig_var.is_ndarray:
                 v = self.scope.find(orig_var.name, category="variables", raise_if_missing=True)
                 if v.is_optional:
@@ -2724,6 +2727,25 @@ class CPythonBindingGenerator(BindingGenerator):
 
         orig_var = getattr(expr.var, "original_var", expr.var)
         bound_argument = expr.bound_argument
+
+        if isinstance(orig_var, FunctionAddress):
+            trampoline = FunctionAddress(
+                self.scope.get_new_name(f"{self.scope.name}_{orig_var.name}_trampoline"),
+                orig_var.arguments,
+                orig_var.results,
+                decorators={
+                    **orig_var.decorators,
+                    "x2py_callback_trampoline": True,
+                },
+                scope=orig_var.scope,
+            )
+            return {
+                "body": [PyCallbackValidate(trampoline, collect_arg, self._error_exit_code)],
+                "args": [trampoline],
+                "callback_setup": [PyCallbackContextPush(trampoline, collect_arg)],
+                "callback_cleanup": [PyCallbackContextPop(trampoline)],
+                "clean_up": [],
+            }
 
         # Collect the function which casts from a Python object to a C object
         arg_extraction = self._extract_FunctionDefArgument(orig_var, collect_arg, bound_argument, is_bind_c_argument)

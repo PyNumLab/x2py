@@ -44,12 +44,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -68,12 +69,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -143,12 +145,13 @@
                     "upper_bounds": [
                       "n"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -173,12 +176,13 @@
                   "upper_bounds": [
                     "n"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",

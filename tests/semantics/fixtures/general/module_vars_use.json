@@ -39,19 +39,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "100",
+          "metadata": {
+            "fortran_initializer": "100"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "nmax",
@@ -64,12 +67,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -138,12 +142,13 @@
                 "upper_bounds": [
                   "3"
                 ],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -168,12 +173,13 @@
               "upper_bounds": [
                 "3"
               ],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         }

@@ -999,6 +999,115 @@ end module finheritance_f90
 """
 
 
+CALLBACK_SCALAR_F90_TEXT = """
+module fcallback_scalar_f90
+  implicit none
+
+  abstract interface
+    real(8) function scalar_callback(value) result(output)
+      real(8), intent(in) :: value
+    end function scalar_callback
+    subroutine notify_callback(value)
+      real(8), intent(in) :: value
+    end subroutine notify_callback
+  end interface
+
+contains
+  real(8) function apply_scalar(callback, value) result(output)
+    procedure(scalar_callback) :: callback
+    real(8), intent(in) :: value
+
+    output = callback(value)
+  end function apply_scalar
+
+  real(8) function apply_explicit(callback, value) result(output)
+    interface
+      real(8) function callback(value) result(callback_output)
+        real(8), intent(in) :: value
+      end function callback
+    end interface
+    real(8), intent(in) :: value
+
+    output = callback(value)
+  end function apply_explicit
+
+  subroutine call_notify(callback, value)
+    procedure(notify_callback) :: callback
+    real(8), intent(in) :: value
+
+    call callback(value)
+  end subroutine call_notify
+end module fcallback_scalar_f90
+"""
+
+
+CALLBACK_ARRAY_F90_TEXT = """
+module fcallback_array_f90
+  implicit none
+
+  abstract interface
+    real(8) function reduce_callback(count, values) result(output)
+      integer, intent(in) :: count
+      real(8), intent(in) :: values(count)
+    end function reduce_callback
+
+    function transform_callback(count, values) result(output)
+      integer, intent(in) :: count
+      real(8), intent(in) :: values(count)
+      real(8) :: output(count)
+    end function transform_callback
+  end interface
+
+contains
+  real(8) function apply_reduce(callback, count, values) result(output)
+    procedure(reduce_callback) :: callback
+    integer, intent(in) :: count
+    real(8), intent(in) :: values(count)
+
+    output = callback(count, values)
+  end function apply_reduce
+
+  subroutine apply_transform(callback, count, values, output)
+    procedure(transform_callback) :: callback
+    integer, intent(in) :: count
+    real(8), intent(in) :: values(count)
+    real(8), intent(out) :: output(count)
+
+    output = callback(count, values)
+  end subroutine apply_transform
+end module fcallback_array_f90
+"""
+
+
+CALLBACK_DERIVED_F90_TEXT = """
+module fcallback_derived_f90
+  implicit none
+
+  type :: point_t
+    real(8) :: x
+    real(8) :: y
+  end type point_t
+
+  abstract interface
+    function point_callback(value) result(output)
+      import :: point_t
+      type(point_t), intent(in) :: value
+      type(point_t) :: output
+    end function point_callback
+  end interface
+
+contains
+  subroutine apply_point(callback, value, output)
+    procedure(point_callback) :: callback
+    type(point_t), intent(in) :: value
+    type(point_t), intent(out) :: output
+
+    output = callback(value)
+  end subroutine apply_point
+end module fcallback_derived_f90
+"""
+
+
 def _assert_fmath_examples(module):
     cases = fmath_cases()
     missing = sorted(name.lower() for name, _, _ in cases if not hasattr(module, name.lower()))
@@ -1640,6 +1749,164 @@ def test_fortran_extension_types_generate_python_inheritance(tmp_path: Path):
     box.width = np.float64(3.0)
     assert box.area() == np.float64(32.0)
     assert module.describe_shape(box) == np.float64(32.0)
+
+
+def test_immediate_scalar_dummy_procedure_calls_python_callback(tmp_path: Path):
+    module = _build_text_and_import(
+        CALLBACK_SCALAR_F90_TEXT,
+        "fcallback_scalar_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fcallback_scalar_f90_wrapper.f90",
+            "fcallback_scalar_f90_wrapper.c",
+            "fcallback_scalar_f90_wrapper.h",
+        },
+    )
+
+    assert module.apply_scalar(lambda value: value * 3.0, np.float64(2.5)) == np.float64(7.5)
+    assert module.apply_explicit(lambda value: value - 1.0, np.float64(2.5)) == np.float64(1.5)
+    notified = []
+    assert module.call_notify(lambda value: notified.append(value), np.float64(6.0)) is None
+    assert notified == [6.0]
+    assert module.apply_scalar(
+        lambda value: module.apply_scalar(lambda nested: nested + 1.0, np.float64(value)) * 2.0,
+        np.float64(3.0),
+    ) == np.float64(8.0)
+
+    class Callback:
+        def __call__(self, value):
+            return value
+
+    callback = Callback()
+    references_before = sys.getrefcount(callback)
+    assert module.apply_scalar(callback, np.float64(3.0)) == np.float64(3.0)
+    assert sys.getrefcount(callback) == references_before
+    with pytest.raises(TypeError, match="must be callable"):
+        module.apply_scalar(42, np.float64(1.0))
+
+    wrapper_source = (tmp_path / "fcallback_scalar_f90_wrapper.c").read_text(encoding="utf-8")
+    assert "static _Thread_local" in wrapper_source
+    assert "PyThread_get_thread_ident()" in wrapper_source
+    assert "PyGILState_Ensure()" in wrapper_source
+    assert "PyGILState_Release(" in wrapper_source
+    assert "PyErr_PrintEx(0);" in wrapper_source
+    assert "abort();" in wrapper_source
+    assert "Py_INCREF(bound_callback_obj);" in wrapper_source
+    assert "Py_DECREF(" in wrapper_source
+
+
+def test_callback_exception_prints_traceback_and_aborts_host_process(tmp_path: Path):
+    _build_text_and_import(
+        CALLBACK_SCALAR_F90_TEXT,
+        "fcallback_scalar_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fcallback_scalar_f90_wrapper.f90",
+            "fcallback_scalar_f90_wrapper.c",
+            "fcallback_scalar_f90_wrapper.h",
+        },
+    )
+    script = """
+import numpy as np
+import fcallback_scalar_f90 as module
+
+def fail(value):
+    raise ValueError(f"callback exploded at {value}")
+
+module.apply_scalar(fail, np.float64(4.0))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "Traceback (most recent call last)" in result.stderr
+    assert "ValueError: callback exploded at 4.0" in result.stderr
+
+    invalid_return = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import numpy as np; import fcallback_scalar_f90 as module; "
+                "module.apply_scalar(lambda value: 'wrong', np.float64(4.0))"
+            ),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert invalid_return.returncode != 0
+    assert "TypeError" in invalid_return.stderr
+
+    invalid_signature = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import numpy as np; import fcallback_scalar_f90 as module; "
+                "module.apply_scalar(lambda: np.float64(1.0), np.float64(4.0))"
+            ),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert invalid_signature.returncode != 0
+    assert "TypeError" in invalid_signature.stderr
+
+
+def test_immediate_dummy_procedure_converts_array_arguments_and_results(tmp_path: Path):
+    module = _build_text_and_import(
+        CALLBACK_ARRAY_F90_TEXT,
+        "fcallback_array_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fcallback_array_f90_wrapper.f90",
+            "fcallback_array_f90_wrapper.c",
+            "fcallback_array_f90_wrapper.h",
+        },
+    )
+    values = np.asfortranarray(np.array([1.0, 2.0, 3.0], dtype=np.float64))
+
+    assert module.apply_reduce(lambda count, data: data[:count].sum(), np.int32(3), values) == np.float64(6.0)
+    transformed = np.empty_like(values)
+    result = module.apply_transform(
+        lambda count, data: np.asfortranarray(data[:count] * 2.0),
+        np.int32(3),
+        values,
+        transformed,
+    )
+    assert result is transformed
+    np.testing.assert_array_equal(transformed, np.array([2.0, 4.0, 6.0], dtype=np.float64))
+
+
+def test_immediate_dummy_procedure_converts_derived_arguments_and_results(tmp_path: Path):
+    module = _build_text_and_import(
+        CALLBACK_DERIVED_F90_TEXT,
+        "fcallback_derived_f90.f90",
+        tmp_path,
+        {
+            "bind_c_fcallback_derived_f90_wrapper.f90",
+            "fcallback_derived_f90_wrapper.c",
+            "fcallback_derived_f90_wrapper.h",
+        },
+    )
+    point = module.point_t(x=np.float64(2.0), y=np.float64(5.0))
+
+    result = module.apply_point(
+        lambda value: module.point_t(x=value.x + 1.0, y=value.y * 2.0),
+        point,
+    )
+    assert isinstance(result, module.point_t)
+    assert result.x == np.float64(3.0)
+    assert result.y == np.float64(10.0)
 
 
 def test_fortran_wrapper_pipeline_builds_importable_extension(tmp_path: Path):

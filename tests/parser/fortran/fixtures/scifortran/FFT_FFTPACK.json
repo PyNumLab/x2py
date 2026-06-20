@@ -74,9 +74,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_tfft",
@@ -142,9 +144,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_itfft",
@@ -210,9 +214,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_itfft",
@@ -278,9 +284,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_forward",
@@ -318,9 +326,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_forward",
@@ -358,9 +368,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_forward",
@@ -401,9 +413,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_forward",
@@ -444,9 +458,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_forward",
@@ -528,9 +544,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_forward",
@@ -612,9 +630,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_forward",
@@ -652,9 +672,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_forward",
@@ -692,9 +714,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_forward",
@@ -776,9 +800,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_forward",
@@ -860,9 +886,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_backward",
@@ -900,9 +928,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_backward",
@@ -940,9 +970,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_backward",
@@ -983,9 +1015,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_backward",
@@ -1026,9 +1060,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_backward",
@@ -1110,9 +1146,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_backward",
@@ -1194,9 +1232,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_backward",
@@ -1234,9 +1274,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_backward",
@@ -1274,9 +1316,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_backward",
@@ -1358,9 +1402,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_backward",
@@ -1442,9 +1488,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_shift",
@@ -1509,9 +1557,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_shift",
@@ -1576,9 +1626,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ishift",
@@ -1643,9 +1695,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ishift",
@@ -1710,9 +1764,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ex",
@@ -1750,9 +1806,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ex",
@@ -1790,9 +1848,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1980,6 +2040,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "tfft",
@@ -2032,7 +2093,8 @@
         "rfft_1d_ex",
         "cfft_1d_ex"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -2115,9 +2177,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_tfft",
@@ -2183,9 +2247,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_itfft",
@@ -2251,9 +2317,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_itfft",
@@ -2319,9 +2387,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_forward",
@@ -2359,9 +2429,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_forward",
@@ -2399,9 +2471,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_forward",
@@ -2442,9 +2516,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_forward",
@@ -2485,9 +2561,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_forward",
@@ -2569,9 +2647,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_forward",
@@ -2653,9 +2733,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_forward",
@@ -2693,9 +2775,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_forward",
@@ -2733,9 +2817,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_forward",
@@ -2817,9 +2903,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_forward",
@@ -2901,9 +2989,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_backward",
@@ -2941,9 +3031,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_backward",
@@ -2981,9 +3073,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_backward",
@@ -3024,9 +3118,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_backward",
@@ -3067,9 +3163,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_backward",
@@ -3151,9 +3249,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_backward",
@@ -3235,9 +3335,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_backward",
@@ -3275,9 +3377,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_backward",
@@ -3315,9 +3419,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_backward",
@@ -3399,9 +3505,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_backward",
@@ -3483,9 +3591,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_shift",
@@ -3550,9 +3660,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_shift",
@@ -3617,9 +3729,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ishift",
@@ -3684,9 +3798,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ishift",
@@ -3751,9 +3867,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ex",
@@ -3791,9 +3909,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ex",
@@ -3831,9 +3951,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -4021,6 +4143,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "tfft",
@@ -4073,7 +4196,8 @@
         "rfft_1d_ex",
         "cfft_1d_ex"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

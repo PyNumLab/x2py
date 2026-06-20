@@ -14516,9 +14516,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "equal_colors",
@@ -14574,9 +14576,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "add_colors",
@@ -14653,9 +14657,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "subtract_colors",
@@ -14732,9 +14738,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scalar_left_color",
@@ -14811,9 +14819,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scalar_right_color",
@@ -14890,9 +14900,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dot_scalar_colors",
@@ -14979,9 +14991,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "pick_color",
@@ -15034,9 +15048,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -15112,6 +15128,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -15165,9 +15182,11 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -29692,9 +29711,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "equal_colors",
@@ -29750,9 +29771,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "add_colors",
@@ -29829,9 +29852,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "subtract_colors",
@@ -29908,9 +29933,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scalar_left_color",
@@ -29987,9 +30014,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scalar_right_color",
@@ -30066,9 +30095,11 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dot_scalar_colors",
@@ -30155,9 +30186,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "pick_color",
@@ -30210,9 +30243,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -30288,6 +30323,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -30341,9 +30377,11 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

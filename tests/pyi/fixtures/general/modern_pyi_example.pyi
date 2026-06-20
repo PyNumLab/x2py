@@ -1,4 +1,11 @@
 class particle:
+    def __init__(
+        self,
+        *,
+        id: Int32 = ...,
+        mass: Float64 = ...
+    ) -> None: ...
+
     id: Int32
     mass: Float64
     position: Float64[3]
@@ -6,13 +13,9 @@ class particle:
 class vector3:
     values: Float64[3]
 
-@private
-class hidden_state:
-    code: Int32
+def get_counter() -> Int32: ...
 
-counter: Int32
-
-hidden_scale: private[Float64]
+def set_counter(value: Int32) -> None: ...
 
 @native_call([Return('p', 0), Arg(0), Arg(1), Arg(2), Arg(3), Arg(4)])
 def init_particle(
@@ -47,9 +50,4 @@ def fill_identity3(
 
 def normalize_particle(
     p: Ptr(particle)
-) -> None: ...
-
-@private
-def hidden_proc(
-    x: Ptr(Const(Int32))
 ) -> None: ...

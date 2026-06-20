@@ -44,12 +44,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -68,12 +69,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -148,12 +150,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -172,12 +175,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -252,12 +256,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -276,12 +281,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -356,12 +362,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -380,12 +387,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -460,12 +468,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -484,12 +493,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -564,12 +574,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -588,12 +599,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -626,12 +638,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -702,12 +715,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -726,12 +740,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -766,12 +781,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -844,12 +860,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -868,12 +885,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "in",
@@ -906,12 +924,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -987,12 +1006,13 @@
                         "shape": [],
                         "lower_bounds": [],
                         "upper_bounds": [],
-                        "intent": "inout",
-                        "optional": false,
-                        "value": false,
                         "allocatable": false,
                         "pointer": false,
-                        "contiguous": false
+                        "target": false,
+                        "contiguous": false,
+                        "intent": "inout",
+                        "optional": false,
+                        "value": false
                       }
                     }
                   },
@@ -1011,12 +1031,13 @@
                       "shape": [],
                       "lower_bounds": [],
                       "upper_bounds": [],
-                      "intent": "inout",
-                      "optional": false,
-                      "value": false,
                       "allocatable": false,
                       "pointer": false,
-                      "contiguous": false
+                      "target": false,
+                      "contiguous": false,
+                      "intent": "inout",
+                      "optional": false,
+                      "value": false
                     }
                   },
                   "intent": "inout",
@@ -1095,12 +1116,13 @@
                         "shape": [],
                         "lower_bounds": [],
                         "upper_bounds": [],
-                        "intent": "in",
-                        "optional": false,
-                        "value": false,
                         "allocatable": false,
                         "pointer": false,
-                        "contiguous": false
+                        "target": false,
+                        "contiguous": false,
+                        "intent": "in",
+                        "optional": false,
+                        "value": false
                       }
                     }
                   },
@@ -1119,12 +1141,13 @@
                       "shape": [],
                       "lower_bounds": [],
                       "upper_bounds": [],
-                      "intent": "in",
-                      "optional": false,
-                      "value": false,
                       "allocatable": false,
                       "pointer": false,
-                      "contiguous": false
+                      "target": false,
+                      "contiguous": false,
+                      "intent": "in",
+                      "optional": false,
+                      "value": false
                     }
                   },
                   "intent": "in",
@@ -1203,12 +1226,13 @@
                         "shape": [],
                         "lower_bounds": [],
                         "upper_bounds": [],
-                        "intent": "in",
-                        "optional": false,
-                        "value": false,
                         "allocatable": false,
                         "pointer": false,
-                        "contiguous": false
+                        "target": false,
+                        "contiguous": false,
+                        "intent": "in",
+                        "optional": false,
+                        "value": false
                       }
                     }
                   },
@@ -1227,12 +1251,13 @@
                       "shape": [],
                       "lower_bounds": [],
                       "upper_bounds": [],
-                      "intent": "in",
-                      "optional": false,
-                      "value": false,
                       "allocatable": false,
                       "pointer": false,
-                      "contiguous": false
+                      "target": false,
+                      "contiguous": false,
+                      "intent": "in",
+                      "optional": false,
+                      "value": false
                     }
                   },
                   "intent": "in",
@@ -1306,12 +1331,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -1330,12 +1356,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             }
@@ -1344,7 +1371,26 @@
           "overload_sets": [],
           "base_classes": [],
           "contracts": [],
-          "metadata": {},
+          "metadata": {
+            "fortran_type_attributes": [],
+            "fortran_component_order": [
+              "payload"
+            ],
+            "fortran_component_facts": [
+              {
+                "name": "payload",
+                "source_type": "integer",
+                "kind": "",
+                "rank": 0,
+                "shape": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false
+              }
+            ],
+            "fortran_layout_policy": "accessors",
+            "fortran_direct_layout": false
+          },
           "visibility": "public",
           "origin": {
             "source_language": "fortran",
@@ -1386,12 +1432,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -1410,12 +1457,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1447,12 +1495,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -1471,12 +1520,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1508,12 +1558,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -1532,12 +1583,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1569,12 +1621,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -1593,12 +1646,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1632,12 +1686,13 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
@@ -1656,12 +1711,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         }

@@ -189,6 +189,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -224,7 +225,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_mean",
@@ -283,6 +285,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -318,7 +321,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_sd",
@@ -377,6 +381,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -412,7 +417,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_var",
@@ -471,6 +477,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -506,7 +513,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_skew",
@@ -565,6 +573,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -600,7 +609,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_curt",
@@ -659,6 +669,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -694,7 +705,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_covariance",
@@ -793,6 +805,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -828,7 +841,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -844,9 +858,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -916,6 +930,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -935,9 +950,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1023,9 +1038,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1123,9 +1138,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1145,9 +1160,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1167,9 +1182,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1183,6 +1198,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -1314,9 +1330,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1454,9 +1470,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1476,9 +1492,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1498,9 +1514,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -1514,6 +1530,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -1710,6 +1727,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "get_moments",
@@ -1745,7 +1763,8 @@
         "histogram_print",
         "histogram_reset"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -1943,6 +1962,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -1978,7 +1998,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_mean",
@@ -2037,6 +2058,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2072,7 +2094,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_sd",
@@ -2131,6 +2154,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2166,7 +2190,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_var",
@@ -2225,6 +2250,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2260,7 +2286,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_skew",
@@ -2319,6 +2346,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2354,7 +2382,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_curt",
@@ -2413,6 +2442,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2448,7 +2478,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_covariance",
@@ -2547,6 +2578,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2582,7 +2614,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -2598,9 +2631,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -2670,6 +2703,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -2689,9 +2723,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -2777,9 +2811,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -2877,9 +2911,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -2899,9 +2933,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -2921,9 +2955,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -2937,6 +2971,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -3068,9 +3103,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3208,9 +3243,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3230,9 +3265,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3252,9 +3287,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3268,6 +3303,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -3464,6 +3500,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "get_moments",
@@ -3499,7 +3536,8 @@
         "histogram_print",
         "histogram_reset"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

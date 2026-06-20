@@ -79,18 +79,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": true
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     },
     {
       "name": "BROYDEN_ROUTINES",
@@ -262,11 +266,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lnsrch",
@@ -498,11 +504,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrdcmp",
@@ -621,11 +629,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrupdt",
@@ -753,11 +763,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rsolv",
@@ -854,11 +866,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_diag",
@@ -926,11 +940,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq2",
@@ -1027,11 +1043,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq4",
@@ -1172,11 +1190,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eqn",
@@ -1257,11 +1277,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lower_triangle",
@@ -1367,11 +1389,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerdiff",
@@ -1467,11 +1491,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerprod",
@@ -1567,11 +1593,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "put_diag",
@@ -1640,11 +1668,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "unit_matrix",
@@ -1685,11 +1715,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "vabs",
@@ -1748,11 +1780,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ifirstloc",
@@ -1811,11 +1845,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1881,18 +1917,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -1980,18 +2020,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": true
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     },
     "broyden_routines": {
       "name": "BROYDEN_ROUTINES",
@@ -2163,11 +2207,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lnsrch",
@@ -2399,11 +2445,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrdcmp",
@@ -2522,11 +2570,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrupdt",
@@ -2654,11 +2704,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rsolv",
@@ -2755,11 +2807,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_diag",
@@ -2827,11 +2881,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq2",
@@ -2928,11 +2984,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq4",
@@ -3073,11 +3131,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eqn",
@@ -3158,11 +3218,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lower_triangle",
@@ -3268,11 +3330,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerdiff",
@@ -3368,11 +3432,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerprod",
@@ -3468,11 +3534,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "put_diag",
@@ -3541,11 +3609,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "unit_matrix",
@@ -3586,11 +3656,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "vabs",
@@ -3649,11 +3721,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ifirstloc",
@@ -3712,11 +3786,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -3782,18 +3858,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

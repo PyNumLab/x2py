@@ -40,9 +40,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -105,6 +107,7 @@
             "move",
             "reset"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -121,9 +124,11 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -172,9 +177,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -237,6 +244,7 @@
             "move",
             "reset"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -253,9 +261,11 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

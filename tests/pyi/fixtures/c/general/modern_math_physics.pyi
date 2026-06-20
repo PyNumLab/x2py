@@ -8,7 +8,7 @@ class vector3(CStruct):
 
 modern_counter: Int
 
-hidden_scale: private[Float64]
+hidden_scale: private[Float64] = 1.0
 
 def init_particle(
     p: Ptr(modern_particle),

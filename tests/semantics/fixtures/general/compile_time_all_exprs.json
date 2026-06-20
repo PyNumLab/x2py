@@ -73,12 +73,13 @@
                     "upper_bounds": [
                       "p_add"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -103,12 +104,13 @@
                   "upper_bounds": [
                     "p_add"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -180,12 +182,13 @@
                     "upper_bounds": [
                       "p_sub"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -210,12 +213,13 @@
                   "upper_bounds": [
                     "p_sub"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -287,12 +291,13 @@
                     "upper_bounds": [
                       "p_mul"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -317,12 +322,13 @@
                   "upper_bounds": [
                     "p_mul"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -394,12 +400,13 @@
                     "upper_bounds": [
                       "p_div"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -424,12 +431,13 @@
                   "upper_bounds": [
                     "p_div"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -501,12 +509,13 @@
                     "upper_bounds": [
                       "p_pow"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -531,12 +540,13 @@
                   "upper_bounds": [
                     "p_pow"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -610,12 +620,13 @@
                     "upper_bounds": [
                       "p_mix"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -640,12 +651,13 @@
                   "upper_bounds": [
                     "p_mix"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -717,12 +729,13 @@
                     "upper_bounds": [
                       "-(-a + b)"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -747,12 +760,13 @@
                   "upper_bounds": [
                     "-(-a + b)"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -824,12 +838,13 @@
                     "upper_bounds": [
                       "(a+b)*(c+1)-1"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -854,12 +869,13 @@
                   "upper_bounds": [
                     "(a+b)*(c+1)-1"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -931,12 +947,13 @@
                     "upper_bounds": [
                       "(a-b)*(a-c)"
                     ],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -961,12 +978,13 @@
                   "upper_bounds": [
                     "(a-b)*(a-c)"
                   ],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
               },
               "intent": "inout",
@@ -1117,19 +1135,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "8",
+          "metadata": {
+            "fortran_initializer": "8"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "a",
@@ -1142,12 +1163,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1185,19 +1207,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "3",
+          "metadata": {
+            "fortran_initializer": "3"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "b",
@@ -1210,12 +1235,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1253,19 +1279,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "2",
+          "metadata": {
+            "fortran_initializer": "2"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "c",
@@ -1278,12 +1307,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1321,19 +1351,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "11",
+          "metadata": {
+            "fortran_initializer": "a + b"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "p_add",
@@ -1346,12 +1379,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1389,19 +1423,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "5",
+          "metadata": {
+            "fortran_initializer": "a - b"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "p_sub",
@@ -1414,12 +1451,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1457,19 +1495,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "6",
+          "metadata": {
+            "fortran_initializer": "b * c"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "p_mul",
@@ -1482,12 +1523,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1525,19 +1567,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "4",
+          "metadata": {
+            "fortran_initializer": "a / c"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "p_div",
@@ -1550,12 +1595,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1593,19 +1639,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "8",
+          "metadata": {
+            "fortran_initializer": "c ** b"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "p_pow",
@@ -1618,12 +1667,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -1661,19 +1711,22 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "21",
+          "metadata": {
+            "fortran_initializer": "(a + b) * c - 1"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "p_mix",
@@ -1686,12 +1739,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }

@@ -1011,26 +1011,76 @@ the native ABI symbol but never changes the Python API name by itself.
 
 ## 20. Dummy Procedures, Procedure Pointers, And Callbacks
 
-Current state: procedure declarations and interfaces can be parsed, but callback
-signature, lifetime, threading, and exception behavior are incomplete.
+Phase 1 covers only dummy procedures invoked during the wrapped call. Dummy
+procedures are resolved through a local explicit interface or a named abstract
+interface and represented as a complete semantic `Callable` contract, including
+argument order, argument types and intents, array shape/rank information,
+derived-type references, and the optional result type. The generated Python API
+accepts a callable and keeps a strong reference to it only until the wrapped
+routine returns.
 
 Example: `subroutine integrate(f)` where `f` is a dummy procedure can call a
 Python function immediately, while storing `f` for later needs a persistent
-callback handle. Possible paths are immediate-call callbacks only, registered
-callbacks with explicit unregister, or full procedure-pointer support. Stored
-callbacks require GIL, exception, and lifetime policy.
+callback handle. Phase 1 supports the first case only. A generated callback
+trampoline converts supported scalar, array, and derived-type arguments and
+results. Scalars use the corresponding Python numeric conversion, arrays
+require the exact dtype, rank, Fortran contiguity, alignment, and declared
+shape, and derived values require the generated wrapper type. Scalar dummy
+arguments currently require `intent(in)`; writable scalar values must be
+expressed as a callback function result. Array and derived-type callback
+arguments use call-local target storage; `intent(inout)` and `intent(out)`
+values are copied back before the callback adapter returns. The temporary NumPy
+views and borrowed derived-type wrappers passed to Python are valid only during
+that callback invocation and must not be retained. Passing a non-callable or
+returning an incompatible value is rejected by the generated binding. Callable
+arity is checked when the trampoline invokes it; an arity mismatch is a Python
+callback exception and therefore follows the fatal exception policy below.
 
-- [ ] Resolve dummy procedures through explicit or abstract interfaces.
-- [ ] Represent callback argument and result types as a complete semantic
+Callbacks execute only on the Python thread that entered the wrapped routine.
+The trampoline acquires the GIL for the Python invocation and releases the
+matching GIL state afterward. Callback references and invocation context are
+call-scoped and support nested calls on that thread; they are not registrations
+and are not retained after the native call.
+
+A Python exception raised by a callback, including a conversion error for its
+return value, is fatal at the native callback boundary. The trampoline prints
+the complete active Python traceback through CPython's exception machinery and
+immediately calls `abort()`. It does not synthesize a fallback value, continue
+native execution, or attempt to unwind through Fortran or C frames. Invocation
+from a different native thread is also fatal because Phase 1 has no cross-thread
+callback ownership contract.
+
+Stored callbacks, procedure-pointer components or variables, pointer
+association/nullability, registration/unregistration, and callback execution
+after the wrapped call remain unsupported. Optional dummy procedures are also
+not part of Phase 1. These cases require a persistent or nullable handle and an
+explicit lifetime, ownership, destruction, and native-thread policy.
+
+- [x] Resolve dummy procedures through explicit interfaces.
+- [x] Resolve dummy procedures through abstract interfaces.
+- [x] Represent callback argument and result types as a complete semantic
   callable contract.
-- [ ] Distinguish immediate-call callbacks from stored callbacks.
-- [ ] Define Python callback lifetime and native registration ownership.
-- [ ] Define callback invocation from non-Python native threads.
-- [ ] Acquire and release the GIL correctly around callbacks.
-- [ ] Define Python exception propagation through Fortran and C boundaries.
+- [x] Generate callback trampolines for immediate-call dummy procedures.
+- [x] Validate Python callback signatures against the semantic callable
+  contract.
+- [x] Support scalar callback arguments and return values.
+- [x] Support array callback arguments and return values.
+- [x] Support derived-type callback arguments where supported by the wrapper
+  infrastructure.
+- [x] Maintain callback references for the duration of the wrapped call only.
+- [x] Acquire and release the GIL around callback invocation.
+- [x] Restrict callback execution to the thread that entered the wrapped
+  routine.
+- [x] Detect callback exceptions, print the complete Python traceback, and
+  immediately terminate with `abort()` without a fallback value or native stack
+  unwinding.
+- [x] Test scalar callback arguments and return values.
+- [x] Test array callback arguments and return values.
+- [x] Test derived-type callback arguments.
+- [x] Test callback type validation and fatal exception behavior.
+- [ ] Support stored callbacks with explicit registration, unregistration, and
+  persistent Python-reference ownership.
 - [ ] Support procedure-pointer association and null procedure pointers.
-- [ ] Support callback context/state without relying on global mutable state.
-- [ ] Test scalar, array, and derived-type callback arguments.
 - [ ] Test stored callbacks, unregistering, exceptions, threads, and object
   destruction.
 
@@ -1039,26 +1089,65 @@ callbacks require GIL, exception, and lifetime policy.
 Current state: the tested build path uses GNU Fortran on the local/CI platform.
 Production runtime behavior and compiler portability remain broader work.
 
-Example: `error stop` inside wrapped Fortran can terminate the process unless
-the runtime path intercepts it, and a long OpenMP region may need GIL release
+Example: a long OpenMP region may need GIL release
 without allowing unsafe Python callbacks. Possible paths are GNU-only documented
 support first, then compiler-specific verification for each additional ABI and
 platform after the core behavior is stable.
+The wrapper does not infer Fortran-level error conventions.
+It only raises Python exceptions for wrapper/runtime errors, such as wrong type,
+wrong rank, wrong shape, allocation failure, unsupported argument mode, or failed
+conversion.
 
-- [ ] Define behavior for `stop` and `error stop` without terminating the Python
-  process where technically possible.
+Fortran procedure errors remain the responsibility of the Fortran API. If the
+procedure uses stop/error stop, the Python process may terminate. If the
+procedure returns status/info/message arguments, those are exposed as normal
+outputs unless a future explicit annotation system says otherwise.
+
+Example:
+Case 1: Fortran has no error-reporting argument
+subroutine f(x)
+  real, intent(inout) :: x(:)
+
+  if (bad_condition) error stop "bad"
+end subroutine
+
+Wrapper cannot do much.
+
+Python behavior:
+
+f(x)   # may terminate Python
+
+Document it.
+
+Case 2: Fortran already has status/message arguments
+subroutine f(x, status, message)
+  real, intent(inout) :: x(:)
+  integer, intent(out) :: status
+  character(len=*), intent(out) :: message
+end subroutine
+
+Then wrapper can optionally map that to:
+
+f(x)
+# raises RuntimeError if status != 0
+
+But only if the wrapper recognizes that convention.
+so maybe we should allow the user to enrich the pyi format to specify these things when the function is called where we  raise an error depending on the status and message
+but for that we need to think carefully.
+
+
+- [ ] Define error policy: Python exceptions are generated only for wrapper-level
+      failures. Fortran-level failures are not interpreted automatically. stop and
+      error stop may terminate the Python process, and status/info/message
+      arguments are exposed as ordinary Fortran outputs unless explicitly
+      annotated in a future extension.
 - [ ] Define status-code and error-message projection to Python exceptions.
 - [ ] Release the GIL around long-running native calls where safe.
 - [ ] Preserve the GIL around calls that can invoke Python callbacks.
 - [ ] Define thread safety for module variables and wrapped object state.
 - [ ] Test recursive and reentrant calls.
 - [ ] Test OpenMP-enabled procedures and document supported host-memory rules.
-- [ ] Decide policy for coarrays, teams, events, and device/offload memory.
 - [ ] Verify supported behavior with GNU Fortran.
-- [ ] Add compiler-specific verification for LLVM Flang, Intel, and NVHPC only
-  when those compilers become supported targets.
-- [ ] Add platform verification for Linux, macOS, and Windows only when their
-  compiler toolchains are supported.
 - [ ] Test debug and optimized builds for ABI-sensitive behavior.
 - [ ] Add leak, use-after-free, and double-free checks for ownership-heavy
   features.

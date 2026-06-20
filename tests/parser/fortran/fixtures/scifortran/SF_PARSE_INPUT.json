@@ -158,6 +158,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -167,7 +168,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_parse_input",
@@ -287,6 +289,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -296,7 +299,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "l_parse_input",
@@ -416,6 +420,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -425,7 +430,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iv_parse_input",
@@ -557,6 +563,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -566,7 +573,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dv_parse_input",
@@ -698,6 +706,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -707,7 +716,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lv_parse_input",
@@ -839,6 +849,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -848,7 +859,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_parse_input",
@@ -968,6 +980,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -977,7 +990,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_parse_cmd_variable",
@@ -1053,6 +1067,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1062,7 +1077,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_parse_cmd_variable",
@@ -1138,6 +1154,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1147,7 +1164,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "l_parse_cmd_variable",
@@ -1223,6 +1241,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1232,7 +1251,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iv_parse_cmd_variable",
@@ -1320,6 +1340,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1329,7 +1350,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dv_parse_cmd_variable",
@@ -1417,6 +1439,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1426,7 +1449,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lv_parse_cmd_variable",
@@ -1514,6 +1538,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1523,7 +1548,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_parse_cmd_variable",
@@ -1599,6 +1625,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1608,7 +1635,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "save_input_file",
@@ -1640,6 +1668,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1649,7 +1678,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scan_comment",
@@ -1702,6 +1732,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1711,7 +1742,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scan_cmd_variable",
@@ -1764,6 +1796,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1773,7 +1806,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scan_input_variable",
@@ -1826,6 +1860,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1835,7 +1870,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "check_cmd_vector_size",
@@ -1910,6 +1946,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1919,7 +1956,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "upper_case",
@@ -1951,6 +1989,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -1960,7 +1999,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lower_case",
@@ -1992,6 +2032,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2001,7 +2042,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_cap",
@@ -2033,6 +2075,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2042,7 +2085,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_low",
@@ -2074,6 +2118,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2083,7 +2128,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "s_blank_delete",
@@ -2115,6 +2161,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2124,7 +2171,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "free_unit",
@@ -2154,6 +2202,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2163,7 +2212,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -2245,6 +2295,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -2301,6 +2352,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "parse_cmd_variable",
@@ -2310,7 +2362,8 @@
         "print_input",
         "delete_input"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -2477,6 +2530,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2486,7 +2540,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_parse_input",
@@ -2606,6 +2661,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2615,7 +2671,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "l_parse_input",
@@ -2735,6 +2792,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2744,7 +2802,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iv_parse_input",
@@ -2876,6 +2935,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -2885,7 +2945,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dv_parse_input",
@@ -3017,6 +3078,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3026,7 +3088,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lv_parse_input",
@@ -3158,6 +3221,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3167,7 +3231,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_parse_input",
@@ -3287,6 +3352,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3296,7 +3362,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_parse_cmd_variable",
@@ -3372,6 +3439,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3381,7 +3449,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_parse_cmd_variable",
@@ -3457,6 +3526,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3466,7 +3536,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "l_parse_cmd_variable",
@@ -3542,6 +3613,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3551,7 +3623,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iv_parse_cmd_variable",
@@ -3639,6 +3712,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3648,7 +3722,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dv_parse_cmd_variable",
@@ -3736,6 +3811,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3745,7 +3821,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lv_parse_cmd_variable",
@@ -3833,6 +3910,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3842,7 +3920,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_parse_cmd_variable",
@@ -3918,6 +3997,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3927,7 +4007,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "save_input_file",
@@ -3959,6 +4040,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -3968,7 +4050,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scan_comment",
@@ -4021,6 +4104,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4030,7 +4114,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scan_cmd_variable",
@@ -4083,6 +4168,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4092,7 +4178,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scan_input_variable",
@@ -4145,6 +4232,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4154,7 +4242,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "check_cmd_vector_size",
@@ -4229,6 +4318,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4238,7 +4328,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "upper_case",
@@ -4270,6 +4361,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4279,7 +4371,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lower_case",
@@ -4311,6 +4404,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4320,7 +4414,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_cap",
@@ -4352,6 +4447,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4361,7 +4457,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ch_low",
@@ -4393,6 +4490,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4402,7 +4500,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "s_blank_delete",
@@ -4434,6 +4533,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4443,7 +4543,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "free_unit",
@@ -4473,6 +4574,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "LIST_INPUT": [
               {
@@ -4482,7 +4584,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -4564,6 +4667,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -4620,6 +4724,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "parse_cmd_variable",
@@ -4629,7 +4734,8 @@
         "print_input",
         "delete_input"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

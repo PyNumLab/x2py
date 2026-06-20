@@ -241,9 +241,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dlinmin",
@@ -375,9 +377,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "f1dim",
@@ -430,9 +434,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "df1dim",
@@ -485,9 +491,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "mnbrak",
@@ -651,9 +659,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "brent_",
@@ -816,9 +826,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dbrent_",
@@ -1025,9 +1037,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isinfty",
@@ -1080,9 +1094,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isnan",
@@ -1135,9 +1151,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1203,9 +1221,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "cgfit_fjac",
@@ -1270,9 +1290,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -1333,9 +1355,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -1396,9 +1420,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -1459,9 +1485,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "fjac",
@@ -1514,18 +1542,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -1775,9 +1807,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dlinmin",
@@ -1909,9 +1943,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "f1dim",
@@ -1964,9 +2000,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "df1dim",
@@ -2019,9 +2057,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "mnbrak",
@@ -2185,9 +2225,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "brent_",
@@ -2350,9 +2392,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dbrent_",
@@ -2559,9 +2603,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isinfty",
@@ -2614,9 +2660,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isnan",
@@ -2669,9 +2717,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -2737,9 +2787,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "cgfit_fjac",
@@ -2804,9 +2856,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -2867,9 +2921,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -2930,9 +2986,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -2993,9 +3051,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "fjac",
@@ -3048,18 +3108,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

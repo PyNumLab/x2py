@@ -69,6 +69,7 @@
           "methods": [
             "move"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -138,6 +139,7 @@
             "init",
             "clear"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -154,9 +156,11 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -234,6 +238,7 @@
           "methods": [
             "move"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -303,6 +308,7 @@
             "init",
             "clear"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -319,9 +325,11 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

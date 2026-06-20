@@ -48,6 +48,6 @@ end module visibility_mod
 
     assert "a: Int32" in pyi
     assert "b: Int32" in pyi
-    assert "@private\nclass hidden_t:" in pyi
+    assert "class hidden_t:" not in pyi
     assert "def pub_proc(" in pyi
-    assert "@private\ndef hidden_proc(" in pyi
+    assert "def hidden_proc(" not in pyi

@@ -37,12 +37,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -61,12 +62,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             },
@@ -134,12 +136,13 @@
                     "upper_bounds": [
                       "3"
                     ],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -164,12 +167,13 @@
                   "upper_bounds": [
                     "3"
                   ],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             }
@@ -178,7 +182,39 @@
           "overload_sets": [],
           "base_classes": [],
           "contracts": [],
-          "metadata": {},
+          "metadata": {
+            "fortran_type_attributes": [],
+            "fortran_component_order": [
+              "id",
+              "xyz"
+            ],
+            "fortran_component_facts": [
+              {
+                "name": "id",
+                "source_type": "integer",
+                "kind": "",
+                "rank": 0,
+                "shape": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false
+              },
+              {
+                "name": "xyz",
+                "source_type": "real(kind=8)",
+                "kind": "8",
+                "rank": 1,
+                "shape": [
+                  "3"
+                ],
+                "allocatable": false,
+                "pointer": false,
+                "target": false
+              }
+            ],
+            "fortran_layout_policy": "accessors",
+            "fortran_direct_layout": false
+          },
           "visibility": "public",
           "origin": {
             "source_language": "fortran",
@@ -222,12 +258,13 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -246,12 +283,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             },
@@ -306,7 +344,7 @@
                   "native_name": "nodes",
                   "native_scope": null,
                   "source_kind": "variable",
-                  "source_type": "derived(kind=node)",
+                  "source_type": "type(node)",
                   "source_location": {},
                   "metadata": {
                     "rank": 1,
@@ -319,12 +357,13 @@
                     "upper_bounds": [
                       null
                     ],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": true,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
@@ -336,7 +375,7 @@
                 "native_name": "nodes",
                 "native_scope": null,
                 "source_kind": "field",
-                "source_type": "derived(kind=node)",
+                "source_type": "type(node)",
                 "source_location": {},
                 "metadata": {
                   "rank": 1,
@@ -349,12 +388,13 @@
                   "upper_bounds": [
                     null
                   ],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": true,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             }
@@ -363,7 +403,39 @@
           "overload_sets": [],
           "base_classes": [],
           "contracts": [],
-          "metadata": {},
+          "metadata": {
+            "fortran_type_attributes": [],
+            "fortran_component_order": [
+              "nnodes",
+              "nodes"
+            ],
+            "fortran_component_facts": [
+              {
+                "name": "nnodes",
+                "source_type": "integer",
+                "kind": "",
+                "rank": 0,
+                "shape": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false
+              },
+              {
+                "name": "nodes",
+                "source_type": "type(node)",
+                "kind": "node",
+                "rank": 1,
+                "shape": [
+                  ":"
+                ],
+                "allocatable": true,
+                "pointer": false,
+                "target": false
+              }
+            ],
+            "fortran_layout_policy": "accessors",
+            "fortran_direct_layout": false
+          },
           "visibility": "public",
           "origin": {
             "source_language": "fortran",

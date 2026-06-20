@@ -50,6 +50,9 @@ __all__ = (
     # --------- CONSTANTS ----------
     "PyAttributeError",
     "PyBuildValueNode",
+    "PyCallbackContextPop",
+    "PyCallbackContextPush",
+    "PyCallbackValidate",
     "PyCapsule_Import",
     "PyCapsule_New",
     "PyClassDef",
@@ -138,6 +141,42 @@ class PythonTypeObjectType(FixedSizeType):
 
     __slots__ = ()
     _name = "pytypeobject"
+
+
+class PyCallbackValidate:
+    """Validate that a Python argument is callable before entering native code."""
+
+    __slots__ = ("callback", "error_exit", "python_object")
+    _attribute_nodes = ("callback", "error_exit", "python_object")
+
+    def __init__(self, callback, python_object, error_exit):
+        self.callback = callback
+        self.python_object = python_object
+        self.error_exit = error_exit
+        init_model_object(self)
+
+
+class PyCallbackContextPush:
+    """Install one call-scoped callback context immediately before a native call."""
+
+    __slots__ = ("callback", "python_object")
+    _attribute_nodes = ("callback", "python_object")
+
+    def __init__(self, callback, python_object):
+        self.callback = callback
+        self.python_object = python_object
+        init_model_object(self)
+
+
+class PyCallbackContextPop:
+    """Restore the prior callback context after a native call returns."""
+
+    __slots__ = ("callback",)
+    _attribute_nodes = ("callback",)
+
+    def __init__(self, callback):
+        self.callback = callback
+        init_model_object(self)
 
 
 class WrapperCustomDataType(CustomDataType):

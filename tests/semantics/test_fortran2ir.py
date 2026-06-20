@@ -1477,12 +1477,12 @@ def test_fortran2ir_rejects_compiler_storage_without_semantic_dtype():
 @pytest.mark.parametrize(
     "fact",
     [
-        {"base_type": "real", "kind": "16", "bits": 128},
-        {"base_type": "complex", "kind": "16", "bits": 256},
-        {"base_type": "logical", "kind": "8", "bits": 64},
+        {"base_type": "real", "kind": "3", "bits": 24},
+        {"base_type": "complex", "kind": "3", "bits": 96},
+        {"base_type": "integer", "kind": "6", "bits": 48},
     ],
 )
-def test_fortran2ir_rejects_compiler_probed_unsupported_wrapper_storage(fact):
+def test_fortran2ir_rejects_compiler_probed_unknown_storage_widths(fact):
     with pytest.raises(ValueError, match="Unsupported Fortran target storage"):
         FortranToIRConverter(type_facts={(fact["base_type"], fact["kind"]): fact}).visit_variable(
             FortranVariable(name="value", base_type=fact["base_type"], kind=fact["kind"])
@@ -2454,3 +2454,120 @@ def test_semantic_function_projection_equality_and_placeholders():
     )
 
     assert left == right
+
+
+def test_dummy_procedure_interfaces_become_complete_callable_contracts():
+    source = """
+module callbacks
+  type :: point_t
+    real(8) :: x
+  end type point_t
+  abstract interface
+    function transform_iface(count, values, point) result(output)
+      import :: point_t
+      integer, intent(in) :: count
+      real(8), intent(in) :: values(count)
+      type(point_t), intent(in) :: point
+      real(8) :: output(count)
+    end function transform_iface
+    subroutine notify_iface(value)
+      integer, intent(in) :: value
+    end subroutine notify_iface
+  end interface
+contains
+  subroutine abstract_case(callback)
+    procedure(transform_iface) :: callback
+  end subroutine abstract_case
+  subroutine explicit_case(callback)
+    interface
+      integer function callback(value) result(output)
+        integer, intent(in) :: value
+      end function callback
+    end interface
+  end subroutine explicit_case
+  subroutine notify_case(callback)
+    procedure(notify_iface) :: callback
+  end subroutine notify_case
+end module callbacks
+"""
+    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+
+    abstract_callback = get_function(module, "abstract_case").arguments[0].semantic_type
+    assert abstract_callback.name == "Callable"
+    assert [argument.name for argument in abstract_callback.metadata["callback_arguments"]] == [
+        "count",
+        "values",
+        "point",
+    ]
+    assert [argument.name for argument in abstract_callback.metadata["arguments"]] == [
+        "Int32",
+        "Float64",
+        "point_t",
+    ]
+    assert abstract_callback.metadata["arguments"][1].shape == ["count"]
+    assert abstract_callback.metadata["return"].name == "Float64"
+    assert abstract_callback.metadata["return"].shape == ["count"]
+    assert abstract_callback.metadata["callback_lifetime"] == "call"
+    assert abstract_callback.metadata["callback_thread"] == "entering_thread"
+    assert abstract_callback.metadata["callback_exception"] == "print_traceback_and_abort"
+
+    explicit_callback = get_function(module, "explicit_case").arguments[0].semantic_type
+    assert explicit_callback.name == "Callable"
+    assert [argument.name for argument in explicit_callback.metadata["arguments"]] == ["Int32"]
+    assert explicit_callback.metadata["return"].name == "Int32"
+
+    notify_callback = get_function(module, "notify_case").arguments[0].semantic_type
+    assert notify_callback.metadata["return"].name == "None"
+
+    emitted = emit_module(module)
+    assert (
+        "callback: Callable[[Ptr(Const(Int32)), Const(Float64[count]), Ptr(Const(point_t))], Float64[count]]" in emitted
+    )
+    assert "callback: Callable[[Ptr(Const(Int32))], None]" in emitted
+
+    project = parse_fortran_project(
+        {
+            "callback_types.f90": """
+module callback_types
+  abstract interface
+    integer function unary(value) result(output)
+      integer, intent(in) :: value
+    end function unary
+  end interface
+end module callback_types
+""",
+            "callback_user.f90": """
+module callback_user
+  use callback_types, only: renamed => unary
+contains
+  integer function apply(callback, value) result(output)
+    procedure(renamed) :: callback
+    integer, intent(in) :: value
+    output = callback(value)
+  end function apply
+end module callback_user
+""",
+        }
+    )
+    modules = {item.name: item for item in FortranToIRConverter().visit_project(project)}
+    imported_callback = get_function(modules["callback_user"], "apply").arguments[0].semantic_type
+    assert imported_callback.name == "Callable"
+    assert [argument.name for argument in imported_callback.metadata["arguments"]] == ["Int32"]
+    assert imported_callback.metadata["return"].name == "Int32"
+
+    standalone = parse_fortran_source(
+        """
+subroutine standalone_case(callback)
+  interface
+    integer function callback(value) result(output)
+      integer, intent(in) :: value
+    end function callback
+  end interface
+end subroutine standalone_case
+"""
+    )
+    standalone_module = FortranToIRConverter().visit_file_modules(standalone)[0]
+    standalone_callback = get_function(standalone_module, "standalone_case").arguments[0].semantic_type
+    assert standalone_callback.name == "Callable"
+    assert [argument.name for argument in standalone_callback.metadata["arguments"]] == ["Int32"]
+    assert standalone_callback.metadata["return"].name == "Int32"

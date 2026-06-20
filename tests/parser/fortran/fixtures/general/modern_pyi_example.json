@@ -195,9 +195,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "kinetic_energy",
@@ -316,9 +318,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scale_vector",
@@ -378,9 +382,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dot3",
@@ -467,9 +473,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fill_identity3",
@@ -510,9 +518,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "normalize_particle",
@@ -544,9 +554,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "hidden_proc",
@@ -578,9 +590,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -662,6 +676,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -701,6 +716,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -734,6 +750,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -741,6 +758,7 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "particle",
@@ -753,7 +771,8 @@
         "fill_identity3",
         "normalize_particle"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -957,9 +976,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "kinetic_energy",
@@ -1078,9 +1099,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "scale_vector",
@@ -1140,9 +1163,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dot3",
@@ -1229,9 +1254,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fill_identity3",
@@ -1272,9 +1299,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "normalize_particle",
@@ -1306,9 +1335,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "hidden_proc",
@@ -1340,9 +1371,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -1424,6 +1457,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -1463,6 +1497,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -1496,6 +1531,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -1503,6 +1539,7 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "particle",
@@ -1515,7 +1552,8 @@
         "fill_identity3",
         "normalize_particle"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

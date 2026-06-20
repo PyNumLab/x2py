@@ -5,7 +5,6 @@ THIS CREATES BIND(C) FORTRAN FILE
 """
 
 import re
-import warnings
 from functools import reduce
 
 from x2py.ownership_policy import (
@@ -155,7 +154,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (
                 a
                 for a in generated_args
-                if a["c_arg"] is not None and a["c_arg"].var.original_var.is_optional and a not in handled
+                if a["c_arg"] is not None
+                and getattr(getattr(a["c_arg"].var, "original_var", a["c_arg"].var), "is_optional", False)
+                and a not in handled
             ),
             None,
         )
@@ -419,10 +420,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self._additional_exprs = []
         self._additional_functions = []
 
-        if any(isinstance(a.var, FunctionAddress) for a in expr.arguments):
-            warnings.warn("Functions with functions as arguments cannot be wrapped by x2py", stacklevel=2)
-            return EmptyNode()
-
         # Create the scope
         func_scope = self.scope.new_child_scope(name, "function")
         self.scope = func_scope
@@ -431,7 +428,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         generated_args = []
         projected_argument_results = []
         for argument in expr.arguments:
-            if not argument.bound_argument and self._is_hidden_output_argument(argument.var):
+            if isinstance(argument.var, FunctionAddress):
+                generated_args.append(self._extract_FunctionDefArgument(argument, expr))
+            elif not argument.bound_argument and self._is_hidden_output_argument(argument.var):
                 result = self._extract_FunctionDefResult(argument.var, expr.scope)
                 self._additional_exprs.extend(result["body"])
                 projected_argument_results.append(result)
@@ -683,6 +682,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             A dictionary describing the objects necessary to access the argument.
         """
         var = expr.var
+        if isinstance(var, FunctionAddress):
+            return self._extract_callback_FunctionDefArgument(expr, func)
         class_type = var.class_type
 
         classes = type(class_type).__mro__
@@ -714,6 +715,237 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         # Unknown object, we raise an error.
         raise NotImplementedError(f"Wrapping function arguments is not implemented for type {class_type}.")
+
+    def _extract_callback_FunctionDefArgument(self, expr, func):
+        """Lower one immediate-call dummy procedure to a C callback plus a Fortran adapter."""
+        callback = expr.var
+        if callback.is_optional:
+            raise ValueError(f"Optional callback argument {callback.name!s} is not supported")
+
+        callback_name = str(callback.name)
+        c_name = self.scope.get_new_name(f"bound_{callback_name}")
+        adapter_name = self.scope.get_new_name(f"adapt_{callback_name}")
+        c_scope = self.scope.new_child_scope(f"{c_name}_interface", "function")
+        adapter_scope = self.scope.new_child_scope(adapter_name, "function")
+
+        c_arguments = []
+        adapter_arguments = []
+        adapter_call_arguments = []
+        adapter_body = []
+        adapter_post_body = []
+        abi_arguments = []
+
+        for argument in callback.arguments:
+            native_var = argument.var
+            adapter_var = native_var.clone(
+                str(native_var.name),
+                new_class=Variable,
+                is_argument=True,
+                is_target=False,
+                memory_handling="stack",
+            )
+            adapter_scope.insert_variable(adapter_var, name=str(native_var.name))
+            adapter_arguments.append(FunctionDefArgument(adapter_var))
+
+            if isinstance(native_var.class_type, FixedSizeNumericType):
+                if getattr(native_var, "intent", "in") != "in":
+                    raise ValueError(
+                        f"Callback {callback_name!r} scalar argument {native_var.name!s} must have intent(in)"
+                    )
+                c_var = native_var.clone(
+                    str(native_var.name),
+                    new_class=Variable,
+                    is_argument=True,
+                    memory_handling="stack",
+                    passes_by_value=True,
+                )
+                c_scope.insert_variable(c_var, name=str(native_var.name))
+                c_arguments.append(FunctionDefArgument(c_var))
+                adapter_call_arguments.append(cast_to(adapter_var, c_var.dtype))
+                abi_arguments.append({"kind": "scalar", "native": native_var, "abi": (c_var,)})
+                continue
+
+            if isinstance(native_var.class_type, NumpyNDArrayType):
+                data = Variable(
+                    BindCPointer(),
+                    c_scope.get_new_name(f"{native_var.name}_data"),
+                    is_argument=True,
+                    memory_handling="stack",
+                )
+                c_scope.insert_variable(data)
+                dimensions = [
+                    Variable(
+                        NumpyInt64Type(),
+                        c_scope.get_new_name(f"{native_var.name}_shape_{index + 1}"),
+                        is_argument=True,
+                        passes_by_value=True,
+                    )
+                    for index in range(native_var.rank)
+                ]
+                for dimension in dimensions:
+                    c_scope.insert_variable(dimension)
+                c_arguments.extend(FunctionDefArgument(item) for item in (data, *dimensions))
+
+                data_value = Variable(
+                    BindCPointer(),
+                    adapter_scope.get_new_name(f"{native_var.name}_data"),
+                    memory_handling="stack",
+                )
+                adapter_scope.insert_variable(data_value)
+                callback_storage = adapter_var.clone(
+                    adapter_scope.get_new_name(f"{native_var.name}_callback_storage"),
+                    new_class=Variable,
+                    is_argument=False,
+                    is_target=True,
+                    memory_handling="stack",
+                )
+                adapter_scope.insert_variable(callback_storage)
+                if getattr(native_var, "intent", "in") != "out":
+                    adapter_body.append(Assign(callback_storage, adapter_var))
+                adapter_body.append(CLocFunc(callback_storage, data_value))
+                adapter_call_arguments.extend(
+                    [
+                        data_value,
+                        *(ArrayShapeElement(callback_storage, convert_to_literal(i)) for i in range(native_var.rank)),
+                    ]
+                )
+                if getattr(native_var, "intent", "in") != "in":
+                    adapter_post_body.append(Assign(adapter_var, callback_storage))
+                abi_arguments.append({"kind": "array", "native": native_var, "abi": (data, *dimensions)})
+                continue
+
+            if isinstance(native_var.class_type, CustomDataType):
+                data = Variable(
+                    BindCPointer(),
+                    c_scope.get_new_name(f"{native_var.name}_data"),
+                    is_argument=True,
+                    memory_handling="stack",
+                )
+                c_scope.insert_variable(data)
+                c_arguments.append(FunctionDefArgument(data))
+                data_value = Variable(
+                    BindCPointer(),
+                    adapter_scope.get_new_name(f"{native_var.name}_data"),
+                    memory_handling="stack",
+                )
+                adapter_scope.insert_variable(data_value)
+                callback_storage = adapter_var.clone(
+                    adapter_scope.get_new_name(f"{native_var.name}_callback_storage"),
+                    new_class=Variable,
+                    is_argument=False,
+                    is_target=True,
+                    memory_handling="stack",
+                )
+                adapter_scope.insert_variable(callback_storage)
+                if getattr(native_var, "intent", "in") != "out":
+                    adapter_body.append(Assign(callback_storage, adapter_var))
+                adapter_body.append(CLocFunc(callback_storage, data_value))
+                adapter_call_arguments.append(data_value)
+                if getattr(native_var, "intent", "in") != "in":
+                    adapter_post_body.append(Assign(adapter_var, callback_storage))
+                abi_arguments.append({"kind": "derived", "native": native_var, "abi": (data,)})
+                continue
+
+            raise ValueError(
+                f"Callback {callback_name!r} argument {native_var.name!s} uses unsupported type {native_var.class_type}"
+            )
+
+        native_result = callback.results.var
+        abi_result = {"kind": "none", "native": NIL}
+        if native_result is NIL:
+            c_result = FunctionDefResult(NIL)
+            adapter_result = FunctionDefResult(NIL)
+        else:
+            adapter_result_var = native_result.clone(
+                adapter_scope.get_new_name(f"{callback_name}_result"),
+                new_class=Variable,
+                is_argument=False,
+                is_target=native_result.rank > 0 or isinstance(native_result.class_type, CustomDataType),
+            )
+            adapter_scope.insert_variable(adapter_result_var)
+            adapter_result = FunctionDefResult(adapter_result_var)
+            if isinstance(native_result.class_type, FixedSizeNumericType):
+                c_result_var = native_result.clone(
+                    c_scope.get_new_name(f"{callback_name}_result"),
+                    new_class=Variable,
+                    is_argument=False,
+                    memory_handling="stack",
+                )
+                c_scope.insert_variable(c_result_var)
+                c_result = FunctionDefResult(c_result_var)
+                abi_result = {"kind": "scalar", "native": native_result, "abi": c_result_var}
+            elif isinstance(native_result.class_type, NumpyNDArrayType | CustomDataType):
+                if native_result.rank > 0 and any(item is None for item in native_result.alloc_shape):
+                    raise ValueError(f"Callback {callback_name!r} array result must have an explicit shape")
+                c_result_var = Variable(
+                    BindCPointer(),
+                    c_scope.get_new_name(f"{callback_name}_result_data"),
+                    memory_handling="stack",
+                )
+                c_scope.insert_variable(c_result_var)
+                c_result = FunctionDefResult(c_result_var)
+                kind = "array" if native_result.rank > 0 else "derived"
+                abi_result = {"kind": kind, "native": native_result, "abi": c_result_var}
+            else:
+                raise ValueError(f"Callback {callback_name!r} result uses unsupported type {native_result.class_type}")
+
+        c_callback = FunctionAddress(
+            c_name,
+            c_arguments,
+            c_result,
+            is_argument=True,
+            decorators={
+                "x2py_callback_abi": {
+                    "native": callback,
+                    "arguments": abi_arguments,
+                    "result": abi_result,
+                }
+            },
+            scope=c_scope,
+        )
+
+        callback_call = c_callback(*adapter_call_arguments)
+        if native_result is NIL:
+            adapter_body.append(callback_call)
+            adapter_body.extend(adapter_post_body)
+        elif abi_result["kind"] == "scalar":
+            adapter_body.append(Assign(adapter_result.var, callback_call))
+            adapter_body.extend(adapter_post_body)
+        else:
+            result_pointer = Variable(
+                BindCPointer(),
+                adapter_scope.get_new_name(f"{callback_name}_result_data"),
+                memory_handling="stack",
+            )
+            adapter_scope.insert_variable(result_pointer)
+            adapter_body.append(Assign(result_pointer, callback_call))
+            adapter_body.extend(adapter_post_body)
+            result_view = adapter_result.var.clone(
+                adapter_scope.get_new_name(f"{callback_name}_result_view"),
+                new_class=Variable,
+                is_argument=False,
+                memory_handling="alias",
+                is_target=False,
+            )
+            adapter_scope.insert_variable(result_view)
+            shape = adapter_result.var.alloc_shape if adapter_result.var.rank > 0 else None
+            adapter_body.append(C_F_Pointer(result_pointer, result_view, shape))
+            adapter_body.append(Assign(adapter_result.var, result_view))
+
+        adapter = FunctionDef(
+            adapter_name,
+            adapter_arguments,
+            adapter_body,
+            adapter_result,
+            decorators={"x2py_callback_adapter": callback},
+            scope=adapter_scope,
+        )
+        self._additional_functions.append(adapter)
+        return {
+            "c_arg": FunctionDefArgument(c_callback),
+            "f_arg": FunctionCallArgument(adapter, keyword=expr.name),
+            "body": [],
+        }
 
     def _extract_FixedSizeNumericType_FunctionDefArgument(self, var, func):
         name = var.name

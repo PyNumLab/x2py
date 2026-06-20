@@ -335,6 +335,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -344,7 +345,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_x",
@@ -421,6 +423,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -430,7 +433,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_ij",
@@ -529,6 +533,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -538,7 +543,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fermi",
@@ -637,6 +643,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -646,7 +653,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dfermi",
@@ -745,6 +753,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -754,7 +763,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_sgn",
@@ -809,6 +819,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -818,7 +829,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_sgn",
@@ -873,6 +885,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -882,7 +895,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "wfun",
@@ -935,6 +949,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -944,7 +959,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_hyperc",
@@ -1021,6 +1037,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1030,7 +1047,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_2dsquare",
@@ -1105,6 +1123,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1114,7 +1133,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_3dcubic",
@@ -1189,6 +1209,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1198,7 +1219,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "EllipticK",
@@ -1251,6 +1273,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1260,7 +1283,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ellf",
@@ -1335,6 +1359,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1344,7 +1369,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rf",
@@ -1441,6 +1467,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1450,7 +1477,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1476,6 +1504,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "heaviside",
@@ -1657,7 +1686,8 @@
         "msta2",
         "envj"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -2001,6 +2031,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2010,7 +2041,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_x",
@@ -2087,6 +2119,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2096,7 +2129,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_ij",
@@ -2195,6 +2229,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2204,7 +2239,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fermi",
@@ -2303,6 +2339,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2312,7 +2349,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dfermi",
@@ -2411,6 +2449,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2420,7 +2459,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_sgn",
@@ -2475,6 +2515,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2484,7 +2525,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_sgn",
@@ -2539,6 +2581,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2548,7 +2591,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "wfun",
@@ -2601,6 +2645,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2610,7 +2655,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_hyperc",
@@ -2687,6 +2733,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2696,7 +2743,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_2dsquare",
@@ -2771,6 +2819,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2780,7 +2829,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_3dcubic",
@@ -2855,6 +2905,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2864,7 +2915,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "EllipticK",
@@ -2917,6 +2969,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2926,7 +2979,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ellf",
@@ -3001,6 +3055,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3010,7 +3065,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rf",
@@ -3107,6 +3163,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3116,7 +3173,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -3142,6 +3200,7 @@
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "heaviside",
@@ -3323,7 +3382,8 @@
         "msta2",
         "envj"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

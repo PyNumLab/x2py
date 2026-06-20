@@ -1187,14 +1187,22 @@
       "blockers": []
     },
     "blas/xerbla_array.f": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Fortran arrays of character values are not supported by wrapper generation."
+      ],
+      "blockers": [
+        {
+          "code": "fortran_character_array_unsupported",
+          "message": "Fortran arrays of character values are not supported by wrapper generation.",
+          "n_items": 1
+        }
+      ]
     },
     "blas/zaxpy.f": {
       "wrappable": true,
@@ -1591,40 +1599,24 @@
       "blockers": []
     },
     "general/compile_time_all_exprs.f90": {
-      "wrappable": false,
+      "wrappable": true,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 9,
-      "messages": [
-        "Some compile-time constants are declared but do not have literal .pyi values."
-      ],
-      "blockers": [
-        {
-          "code": "missing_compile_time_values",
-          "message": "Some compile-time constants are declared but do not have literal .pyi values.",
-          "n_items": 28
-        }
-      ]
+      "messages": [],
+      "blockers": []
     },
     "general/compile_time_shape_exprs.f90": {
-      "wrappable": false,
+      "wrappable": true,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 2,
-      "messages": [
-        "Some compile-time constants are declared but do not have literal .pyi values."
-      ],
-      "blockers": [
-        {
-          "code": "missing_compile_time_values",
-          "message": "Some compile-time constants are declared but do not have literal .pyi values.",
-          "n_items": 4
-        }
-      ]
+      "messages": [],
+      "blockers": []
     },
     "general/derived_type.f90": {
       "wrappable": true,
@@ -1637,14 +1629,22 @@
       "blockers": []
     },
     "general/derived_types_and_methods.f90": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 0,
       "n_classes": 2,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Fortran arrays of derived type values need explicit layout and ownership policy."
+      ],
+      "blockers": [
+        {
+          "code": "fortran_derived_type_array_policy_missing",
+          "message": "Fortran arrays of derived type values need explicit layout and ownership policy.",
+          "n_items": 1
+        }
+      ]
     },
     "general/f77_subroutine.f": {
       "wrappable": true,
@@ -12059,14 +12059,22 @@
       "blockers": []
     },
     "lapack/iparmq.f": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Fortran arrays of character values are not supported by wrapper generation."
+      ],
+      "blockers": [
+        {
+          "code": "fortran_character_array_unsupported",
+          "message": "Fortran arrays of character values are not supported by wrapper generation.",
+          "n_items": 2
+        }
+      ]
     },
     "lapack/izmax1.f": {
       "wrappable": true,
@@ -17177,14 +17185,22 @@
       "blockers": []
     },
     "lapack/xerbla_array.f": {
-      "wrappable": true,
+      "wrappable": false,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [],
-      "blockers": []
+      "messages": [
+        "Fortran arrays of character values are not supported by wrapper generation."
+      ],
+      "blockers": [
+        {
+          "code": "fortran_character_array_unsupported",
+          "message": "Fortran arrays of character values are not supported by wrapper generation.",
+          "n_items": 1
+        }
+      ]
     },
     "lapack/zbbcsd.f": {
       "wrappable": true,
@@ -22644,13 +22660,19 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some shape expressions refer to symbols not supplied by the semantic interface."
+        "Some shape expressions refer to symbols not supplied by the semantic interface.",
+        "Fortran arrays of character values are not supported by wrapper generation."
       ],
       "blockers": [
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
           "n_items": 560
+        },
+        {
+          "code": "fortran_character_array_unsupported",
+          "message": "Fortran arrays of character values are not supported by wrapper generation.",
+          "n_items": 14
         }
       ]
     },
@@ -22680,19 +22702,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 8
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 60
+          "n_items": 64
         }
       ]
     },
@@ -22770,9 +22786,15 @@
       "n_classes": 1,
       "n_variables": 0,
       "messages": [
+        "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
+        {
+          "code": "fortran_ownership_policy_blocked",
+          "message": "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
+          "n_items": 1
+        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
@@ -22842,13 +22864,19 @@
       "n_classes": 1,
       "n_variables": 657,
       "messages": [
-        "Some shape expressions refer to symbols not supplied by the semantic interface."
+        "Some shape expressions refer to symbols not supplied by the semantic interface.",
+        "Fortran arrays of derived type values need explicit layout and ownership policy."
       ],
       "blockers": [
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
           "n_items": 8
+        },
+        {
+          "code": "fortran_derived_type_array_policy_missing",
+          "message": "Fortran arrays of derived type values need explicit layout and ownership policy.",
+          "n_items": 2
         }
       ]
     },
@@ -23090,18 +23118,12 @@
       "n_classes": 1,
       "n_variables": 0,
       "messages": [
-        "Some shape expressions refer to symbols not supplied by the semantic interface.",
-        "Allocatable inout arrays need a replacement policy before they can be wrapped safely."
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 6
-        },
-        {
-          "code": "allocatable_replacement_policy_missing",
-          "message": "Allocatable inout arrays need a replacement policy before they can be wrapped safely.",
           "n_items": 6
         }
       ]
@@ -23184,19 +23206,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 1
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 12
         }
       ]
     },
@@ -23208,19 +23224,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 1
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 12
         }
       ]
     },
@@ -23232,15 +23242,9 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
-        {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 8
-        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
@@ -23798,19 +23802,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 6
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 24
+          "n_items": 76
         }
       ]
     },
@@ -23822,19 +23820,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 12
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 56
+          "n_items": 104
         }
       ]
     },
@@ -23846,19 +23838,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 12
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 56
+          "n_items": 104
         }
       ]
     },
@@ -23880,19 +23866,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 1
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 6
+          "n_items": 10
         }
       ]
     },
@@ -23960,19 +23940,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 1
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 6
         }
       ]
     },
@@ -23984,18 +23958,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-        "Allocatable inout arrays need a replacement policy before they can be wrapped safely."
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 3
-        },
-        {
-          "code": "allocatable_replacement_policy_missing",
-          "message": "Allocatable inout arrays need a replacement policy before they can be wrapped safely.",
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
           "n_items": 8
         }
       ]
@@ -24039,12 +24007,12 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 16
         },
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 3
+          "n_items": 1
         }
       ]
     },
@@ -24063,32 +24031,24 @@
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 4
+          "n_items": 6
         },
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 2
+          "n_items": 1
         }
       ]
     },
     "scifortran/froot_scalar.f90": {
-      "wrappable": false,
+      "wrappable": true,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 5,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
-      ],
-      "blockers": [
-        {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 5
-        }
-      ]
+      "messages": [],
+      "blockers": []
     },
     "scifortran/fsolve.f90": {
       "wrappable": false,
@@ -24098,19 +24058,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 6
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 36
         }
       ]
     },
@@ -24250,15 +24204,9 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
-        {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 8
-        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
@@ -24274,13 +24222,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 8
+          "code": "unresolved_shape_symbols",
+          "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
+          "n_items": 16
         }
       ]
     },
@@ -24292,15 +24240,9 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
-        {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 1
-        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
@@ -24758,19 +24700,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 3
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 24
         }
       ]
     },
@@ -24782,19 +24718,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 3
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 24
         }
       ]
     },
@@ -24806,19 +24736,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 6
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 24
         }
       ]
     },
@@ -25474,19 +25398,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 3
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 24
         }
       ]
     },
@@ -25498,19 +25416,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 3
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 12
+          "n_items": 24
         }
       ]
     },
@@ -25672,19 +25584,25 @@
       "n_classes": 0,
       "n_variables": 3,
       "messages": [
+        "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
         "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
+          "code": "fortran_ownership_policy_blocked",
+          "message": "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
+          "n_items": 1
+        },
+        {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 2
+          "n_items": 1
         },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 82
+          "n_items": 84
         }
       ]
     },
@@ -25696,14 +25614,20 @@
       "n_classes": 0,
       "n_variables": 5,
       "messages": [
+        "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
         "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
+          "code": "fortran_ownership_policy_blocked",
+          "message": "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
+          "n_items": 4
+        },
+        {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 6
+          "n_items": 2
         },
         {
           "code": "unresolved_shape_symbols",
@@ -25720,19 +25644,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 1
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 12
         }
       ]
     },
@@ -25744,19 +25662,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
-          "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
-          "n_items": 1
-        },
-        {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
-          "n_items": 8
+          "n_items": 12
         }
       ]
     },
@@ -26370,9 +26282,15 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
+        "Fortran arrays of character values are not supported by wrapper generation.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
+        {
+          "code": "fortran_character_array_unsupported",
+          "message": "Fortran arrays of character values are not supported by wrapper generation.",
+          "n_items": 1
+        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",

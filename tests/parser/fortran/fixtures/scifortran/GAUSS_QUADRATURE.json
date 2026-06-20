@@ -261,9 +261,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_1d_func_main",
@@ -477,9 +479,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_1d_func_1",
@@ -665,9 +669,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_nd_func_main",
@@ -949,9 +955,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_nd_func_1",
@@ -1205,9 +1213,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_1d_sample",
@@ -1399,9 +1409,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_2d_sample",
@@ -1664,9 +1676,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dgauss_generic",
@@ -1794,9 +1808,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g6",
@@ -1923,9 +1939,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g8",
@@ -2052,9 +2070,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g10",
@@ -2181,9 +2201,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g12",
@@ -2310,9 +2332,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g14",
@@ -2439,9 +2463,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "init_finter_1d",
@@ -2551,9 +2577,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "init_finter_2d",
@@ -2694,9 +2722,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "delete_finter_1d",
@@ -2728,9 +2758,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "delete_finter_2d",
@@ -2762,9 +2794,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "locate",
@@ -2845,9 +2879,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polint",
@@ -2979,9 +3015,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polin2",
@@ -3166,9 +3204,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iminloc",
@@ -3227,9 +3267,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq",
@@ -3326,9 +3368,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "gauss_quad_linspace",
@@ -3497,9 +3541,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -3603,9 +3649,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "1",
+              "symbolic_value": "1",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3626,8 +3672,8 @@
               "lbound": [],
               "ubound": [],
               "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "symbolic_value": "> null()",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3648,8 +3694,8 @@
               "lbound": [],
               "ubound": [],
               "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "symbolic_value": "> null()",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3670,8 +3716,8 @@
               "lbound": [],
               "ubound": [],
               "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "symbolic_value": "> null()",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3713,6 +3759,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -3814,9 +3861,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3836,9 +3883,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3858,9 +3905,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3880,9 +3927,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -3896,6 +3943,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -4000,9 +4048,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -4022,9 +4070,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -4044,9 +4092,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -4066,9 +4114,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -4088,9 +4136,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -4110,9 +4158,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -4126,6 +4174,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -4216,9 +4265,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "f_xvec",
@@ -4305,9 +4356,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "gauss_func_method",
@@ -4434,9 +4487,11 @@
               "attributes": [
                 "import(integration_type)"
               ],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -4525,9 +4580,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -4594,21 +4651,25 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "gauss_quad",
         "integrate"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -4878,9 +4939,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_1d_func_main",
@@ -5094,9 +5157,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_1d_func_1",
@@ -5282,9 +5347,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_nd_func_main",
@@ -5566,9 +5633,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_nd_func_1",
@@ -5822,9 +5891,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_1d_sample",
@@ -6016,9 +6087,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "integrate_2d_sample",
@@ -6281,9 +6354,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dgauss_generic",
@@ -6411,9 +6486,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g6",
@@ -6540,9 +6617,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g8",
@@ -6669,9 +6748,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g10",
@@ -6798,9 +6879,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g12",
@@ -6927,9 +7010,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "g14",
@@ -7056,9 +7141,11 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "init_finter_1d",
@@ -7168,9 +7255,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "init_finter_2d",
@@ -7311,9 +7400,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "delete_finter_1d",
@@ -7345,9 +7436,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "delete_finter_2d",
@@ -7379,9 +7472,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "locate",
@@ -7462,9 +7557,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polint",
@@ -7596,9 +7693,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polin2",
@@ -7783,9 +7882,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iminloc",
@@ -7844,9 +7945,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq",
@@ -7943,9 +8046,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "gauss_quad_linspace",
@@ -8114,9 +8219,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -8220,9 +8327,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "1",
+              "symbolic_value": "1",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8243,8 +8350,8 @@
               "lbound": [],
               "ubound": [],
               "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "symbolic_value": "> null()",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8265,8 +8372,8 @@
               "lbound": [],
               "ubound": [],
               "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "symbolic_value": "> null()",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8287,8 +8394,8 @@
               "lbound": [],
               "ubound": [],
               "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "symbolic_value": "> null()",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8330,6 +8437,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -8431,9 +8539,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8453,9 +8561,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8475,9 +8583,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8497,9 +8605,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8513,6 +8621,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -8617,9 +8726,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8639,9 +8748,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8661,9 +8770,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8683,9 +8792,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8705,9 +8814,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8727,9 +8836,9 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
               "target": false,
               "dimensions": [],
@@ -8743,6 +8852,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [],
@@ -8833,9 +8943,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "f_xvec",
@@ -8922,9 +9034,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "gauss_func_method",
@@ -9051,9 +9165,11 @@
               "attributes": [
                 "import(integration_type)"
               ],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -9142,9 +9258,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -9211,21 +9329,25 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "gauss_quad",
         "integrate"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

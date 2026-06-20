@@ -179,6 +179,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -191,7 +192,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "func_func_jacobian",
@@ -300,6 +302,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -312,7 +315,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -506,9 +510,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -575,15 +581,18 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "brent",
@@ -606,7 +615,8 @@
         "adaptive_mix",
         "broyden_mix"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -794,6 +804,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -806,7 +817,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "func_func_jacobian",
@@ -915,6 +927,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -927,7 +940,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1121,9 +1135,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
@@ -1190,15 +1206,18 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
           ],
           "specific_procedures": [],
           "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "brent",
@@ -1221,7 +1240,8 @@
         "adaptive_mix",
         "broyden_mix"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

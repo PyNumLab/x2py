@@ -3802,7 +3802,7 @@ class FortranParser:
             if attr not in sig.attributes:
                 sig.attributes.append(attr)
         sig.uses = dict(state["uses"])
-        sig.common_variables = list(state["common_variables"])
+        sig.common_variables = list(state.get("common_variables", ()))
         return replace(sig)
 
     @staticmethod
