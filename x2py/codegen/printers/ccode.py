@@ -248,23 +248,7 @@ class CCodePrinter(CodePrinter):
         name = expr.module.name
         if isinstance(name, AsName):
             name = name.name
-        classes = ""
-        func_blocks = []
-        for classDef in expr.module.classes:
-            if classDef.docstring is not None:
-                classes += self._visit(classDef.docstring)
-            classes += f"struct {classDef.name} {{\n"
-            # Is external is required to avoid the default initialisation of containers
-            attrib_decl = [self._visit(Declare(var, external=True)) for var in classDef.attributes]
-            classes += "".join(d.removeprefix("extern ") for d in attrib_decl)
-            func_blocks.append("")
-            for method in classDef.methods:
-                if method.is_semantic:
-                    func_blocks[-1] += f"{self._function_signature(method)};\n"
-            for interface in classDef.overload_sets:
-                for func in interface.functions:
-                    func_blocks[-1] += f"{self._function_signature(func)};\n"
-            classes += "};\n"
+        classes, func_blocks = self._class_header_blocks(expr.module.classes)
         func_blocks.append("".join(f"{self._function_signature(f)};\n" for f in expr.module.funcs if f.is_semantic))
 
         func_blocks.extend(
@@ -289,6 +273,28 @@ class CCodePrinter(CodePrinter):
                 #define {name.upper()}_H\n\n \
                 {body}\n \
                 #endif // {name}_H\n"
+
+    def _class_header_blocks(self, classes):
+        """Render class declarations and their function prototype blocks."""
+        definitions = []
+        function_blocks = []
+        for class_def in classes:
+            class_parts = []
+            if class_def.docstring is not None:
+                class_parts.append(self._visit(class_def.docstring))
+            class_parts.append(f"struct {class_def.name} {{\n")
+            declarations = [self._visit(Declare(var, external=True)) for var in class_def.attributes]
+            class_parts.extend(declaration.removeprefix("extern ") for declaration in declarations)
+            class_parts.append("};\n")
+            definitions.extend(class_parts)
+            function_blocks.append(self._class_function_prototypes(class_def))
+        return "".join(definitions), function_blocks
+
+    def _class_function_prototypes(self, class_def):
+        """Render method and overload prototypes for one class."""
+        functions = [method for method in class_def.methods if method.is_semantic]
+        functions.extend(function for interface in class_def.overload_sets for function in interface.functions)
+        return "".join(f"{self._function_signature(function)};\n" for function in functions)
 
     def _visit_Module(self, expr):
         """Render the ``Module`` model node."""
@@ -733,9 +739,7 @@ class CCodePrinter(CodePrinter):
         if not expr.is_semantic:
             return ""
 
-        for r in expr.scope.collect_all_tuple_elements(expr.results.var):
-            if r.rank and r.memory_handling == "stack":
-                raise ValueError("Can't return a stack array from C code")
+        self._validate_c_function_results(expr)
 
         sep = self._visit(SeparatorComment(40))
 
@@ -746,30 +750,10 @@ class CCodePrinter(CodePrinter):
         # Collect results filtering out NIL
         results = [r for r in self.scope.collect_all_tuple_elements(expr.results.var) if isinstance(r, Variable)]
         returning_tuple = False
-        if len(results) > 1 or returning_tuple:
-            self._additional_args.append(results)
-        else:
-            self._additional_args.append([])
-        for v in expr.global_vars:
-            if get_direct_module(v) is None:
-                self._additional_args[-1].append(v)
+        self._push_additional_function_args(expr, results, returning_tuple)
 
         body = self._visit(expr.body)
-        decs = [
-            Declare(
-                i,
-                value=(NIL if i.is_alias and isinstance(i.class_type, VoidType | BindCPointer) else None),
-            )
-            for i in expr.local_vars
-        ]
-
-        if len(results) == 1 and not returning_tuple:
-            res = results[0]
-            if isinstance(res, Variable) and (not res.is_temp or res.rank):
-                decs += [Declare(res)]
-            elif not isinstance(res, Variable):
-                raise NotImplementedError(f"Can't return {type(res)} from a function")
-        decs = "".join(self._visit(i) for i in decs)
+        decs = self._function_declarations(expr, results, returning_tuple)
 
         self._additional_args.pop()
         for i in expr.imports:
@@ -791,6 +775,35 @@ class CCodePrinter(CodePrinter):
 
         return "".join(p for p in parts if p)
 
+    @staticmethod
+    def _validate_c_function_results(function) -> None:
+        """Reject stack arrays that cannot be returned from C."""
+        for result in function.scope.collect_all_tuple_elements(function.results.var):
+            if result.rank and result.memory_handling == "stack":
+                raise ValueError("Can't return a stack array from C code")
+
+    def _push_additional_function_args(self, function, results, returning_tuple) -> None:
+        """Track output and global variables passed as hidden arguments."""
+        self._additional_args.append(results if len(results) > 1 or returning_tuple else [])
+        self._additional_args[-1].extend(
+            variable for variable in function.global_vars if get_direct_module(variable) is None
+        )
+
+    def _function_declarations(self, function, results, returning_tuple):
+        """Render local and result declarations for a C function."""
+        declarations = [
+            Declare(
+                variable,
+                value=(NIL if variable.is_alias and isinstance(variable.class_type, VoidType | BindCPointer) else None),
+            )
+            for variable in function.local_vars
+        ]
+        if len(results) == 1 and not returning_tuple:
+            result = results[0]
+            if not result.is_temp or result.rank:
+                declarations.append(Declare(result))
+        return "".join(self._visit(declaration) for declaration in declarations)
+
     def _visit_FunctionCall(self, expr):
         """Render the ``FunctionCall`` model node."""
         func = expr.funcdef
@@ -799,49 +812,19 @@ class CCodePrinter(CodePrinter):
         parent_assign = get_direct_assignment(expr)
         returns_via_output_args = self._returns_via_output_args(func)
         # Ensure the correct syntax is used for pointers
-        args = []
-        for a, f in zip(expr.args, func.arguments, strict=False):
-            arg_val = a.value
-            f = f.var
-            if self._is_c_pointer(f):
-                if isinstance(arg_val, Variable):
-                    args.append(ObjectAddress(arg_val))
-                elif not self._is_c_pointer(arg_val):
-                    tmp_var = self.scope.get_temporary_variable(f.dtype)
-                    assign = Assign(tmp_var, arg_val)
-                    code = self._visit(assign)
-                    self._additional_code += code
-                    args.append(ObjectAddress(tmp_var))
-                else:
-                    args.append(arg_val)
-            else:
-                args.append(arg_val)
-
-        if func.arguments and func.arguments[0].bound_argument:
-            # Place the first arg_var (the bound class object) first
-            args = args[:1] + self._temporary_args + args[1:]
-        else:
-            args = self._temporary_args + args
+        args = [
+            self._prepare_call_argument(argument.value, formal.var)
+            for argument, formal in zip(expr.args, func.arguments, strict=False)
+        ]
+        args = self._insert_after_bound_argument(func, args, self._temporary_args)
 
         for v in func.global_vars:
             if get_direct_module(v) is None:
                 args.append(ObjectAddress(v))
 
-        output_args = []
         if parent_assign is not None and returns_via_output_args:
-            if isinstance(parent_assign.lhs, PythonTuple):
-                result_args = parent_assign.lhs.args
-            else:
-                result_args = self.scope.collect_all_tuple_elements(parent_assign.lhs)
-            for arg in result_args:
-                output_arg = ObjectAddress(arg)
-                if not isinstance(arg, ObjectAddress) and self._is_c_pointer(arg):
-                    output_arg = ObjectAddress(output_arg)
-                output_args.append(output_arg)
-            if func.arguments and func.arguments[0].bound_argument:
-                args = args[:1] + output_args + args[1:]
-            else:
-                args = output_args + args
+            output_args = self._output_call_arguments(parent_assign)
+            args = self._insert_after_bound_argument(func, args, output_args)
 
         self._temporary_args = []
         args = ", ".join(self._visit(ai) for a in args for ai in self.scope.collect_all_tuple_elements(a))
@@ -852,6 +835,39 @@ class CCodePrinter(CodePrinter):
         if func.results.var is not NIL:
             return call_code
         return f"{call_code};\n"
+
+    def _prepare_call_argument(self, argument, formal):
+        """Adapt one call argument to the formal C pointer contract."""
+        if not self._is_c_pointer(formal):
+            return argument
+        if isinstance(argument, Variable):
+            return ObjectAddress(argument)
+        if self._is_c_pointer(argument):
+            return argument
+        temporary = self.scope.get_temporary_variable(formal.dtype)
+        self._additional_code += self._visit(Assign(temporary, argument))
+        return ObjectAddress(temporary)
+
+    @staticmethod
+    def _insert_after_bound_argument(function, arguments, inserted):
+        """Insert hidden arguments after a bound receiver when present."""
+        if function.arguments and function.arguments[0].bound_argument:
+            return arguments[:1] + inserted + arguments[1:]
+        return inserted + arguments
+
+    def _output_call_arguments(self, parent_assign):
+        """Build address arguments for results returned through outputs."""
+        if isinstance(parent_assign.lhs, PythonTuple):
+            result_args = parent_assign.lhs.args
+        else:
+            result_args = self.scope.collect_all_tuple_elements(parent_assign.lhs)
+        output_args = []
+        for argument in result_args:
+            output_arg = ObjectAddress(argument)
+            if not isinstance(argument, ObjectAddress) and self._is_c_pointer(argument):
+                output_arg = ObjectAddress(output_arg)
+            output_args.append(output_arg)
+        return output_args
 
     def _visit_Return(self, expr):
         """Render the ``Return`` model node."""
@@ -1226,23 +1242,28 @@ class CCodePrinter(CodePrinter):
         if isinstance(a, FunctionCall):
             a = a.funcdef.results.var
         # STC _at and _at_mut functions return pointers
-        if (
-            isinstance(a, IndexedElement)
-            and not (isinstance(a.base.class_type, NumpyNDArrayType) and a.base.class_type.raw)
-            and a.rank == 0
-        ):
-            return True
+        if isinstance(a, IndexedElement):
+            return self._indexed_element_is_c_pointer(a)
         if not isinstance(a, Variable):
             return False
+        additional_argument = self._is_additional_c_argument(a)
         if isinstance(a.class_type, NumpyNDArrayType):
-            if a.class_type.raw:
-                return a.is_alias or a.is_optional or any(a is bi for b in self._additional_args for bi in b)
-            return a.is_optional or any(a is bi for b in self._additional_args for bi in b)
+            return a.is_optional or additional_argument or (a.class_type.raw and a.is_alias)
 
         if isinstance(a.class_type, CustomDataType) and a.is_argument and not isinstance(a.class_type, FinalType):
             return True
 
-        return a.is_alias or a.is_optional or any(a is bi for b in self._additional_args for bi in b)
+        return a.is_alias or a.is_optional or additional_argument
+
+    @staticmethod
+    def _indexed_element_is_c_pointer(element):
+        """Return whether an indexed element is represented as a C pointer."""
+        raw_array = isinstance(element.base.class_type, NumpyNDArrayType) and element.base.class_type.raw
+        return not raw_array and element.rank == 0
+
+    def _is_additional_c_argument(self, variable):
+        """Return whether a variable is tracked as a hidden C argument."""
+        return any(variable is item for arguments in self._additional_args for item in arguments)
 
     # ============ Elements ============ #
 

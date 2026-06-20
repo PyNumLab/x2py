@@ -979,6 +979,436 @@ def _has_known_iso_c_kind(semantic_type: models.SemanticType) -> bool:
     return any(token in source_type for token in _ISO_C_KIND_TOKENS)
 
 
+def _convert_semantic_module(node, scope, legacy, custom_types):
+    _raise_for_unresolved_generic_targets(node)
+    _raise_for_unsupported_fortran_module_features(node)
+    _raise_for_unsupported_allocatable_module_variables(node)
+    _raise_for_unsupported_array_contracts(node)
+    _raise_for_blocked_ownership_contracts(node)
+    _raise_for_private_type_exposure(node)
+    custom_types = dict(custom_types or {})
+    class_lookup = _semantic_class_lookup(node.classes)
+    class_descendants = _semantic_class_descendants(node.classes)
+    class_order = _semantic_class_order(node.classes)
+    for semantic_class in node.classes:
+        custom_types.setdefault(semantic_class.name, _class_type(semantic_class))
+        scope.insert_cls_construct(custom_types[semantic_class.name])
+
+    classes = [
+        semantic_ir_to_codegen_ast(
+            item,
+            scope,
+            legacy,
+            custom_types=custom_types,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+        for item in node.classes
+        if _is_public(item)
+    ]
+    funcs = []
+    generated_overload_sets = []
+    for item in node.functions:
+        converted = semantic_ir_to_codegen_ast(
+            item,
+            scope,
+            legacy,
+            custom_types=custom_types,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+        if isinstance(converted, FunctionOverloadSet):
+            generated_overload_sets.append(converted)
+        else:
+            funcs.append(converted)
+    overload_sets = [
+        semantic_ir_to_codegen_ast(
+            item,
+            scope,
+            legacy,
+            custom_types=custom_types,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+        for item in node.overload_sets
+    ]
+    declarations = [
+        semantic_ir_to_codegen_ast(item, scope, legacy, custom_types=custom_types) for item in node.variables
+    ]
+    name = scope.get_new_public_name(node.name, object_type="module", owner=node.name)
+    imports = [Import(module_name, target=()) for module_name in node.metadata.get("wrapper_native_modules", ())]
+    return Module(
+        name,
+        declarations,
+        funcs,
+        overload_sets=[*generated_overload_sets, *overload_sets],
+        classes=classes,
+        imports=imports,
+        scope=scope,
+    )
+
+
+def _convert_procedure_overload_set(
+    node, scope, legacy, custom_types, cls_base, class_lookup, class_descendants, class_order
+):
+    functions = []
+    native_names = []
+    for procedure in node.procedures:
+        native_name = str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, node.name))
+        converted = semantic_ir_to_codegen_ast(
+            procedure,
+            scope,
+            legacy,
+            custom_types=custom_types,
+            cls_base=cls_base,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+        if isinstance(converted, FunctionOverloadSet):
+            functions.extend(converted.functions)
+            native_names.extend([native_name] * len(converted.functions))
+        else:
+            functions.append(converted)
+            native_names.append(native_name)
+    name = scope.get_new_public_name(node.name, object_type="function", owner=f"generic {node.name}")
+    overload_set = FunctionOverloadSet(str(name), functions, native_names=native_names)
+    scope.insert_function(overload_set, name)
+    return overload_set
+
+
+def _convert_polymorphic_function(
+    node,
+    scope,
+    legacy,
+    dispatch_options,
+    custom_types,
+    cls_base,
+    class_lookup,
+    class_descendants,
+    class_order,
+):
+    name = scope.get_new_name(node.name)
+    variants = _polymorphic_dispatch_variants(node, dispatch_options)
+    functions = [
+        semantic_ir_to_codegen_ast(
+            variant,
+            scope,
+            legacy,
+            custom_types=custom_types,
+            cls_base=cls_base,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+            enable_polymorphic_dispatch=False,
+        )
+        for variant in variants
+    ]
+    native_name = node.native_name or node.name
+    overload_set = FunctionOverloadSet(
+        str(name),
+        functions,
+        native_name=native_name,
+        native_names=(native_name,) * len(functions),
+    )
+    scope.insert_function(overload_set, name)
+    return overload_set
+
+
+def _semantic_function_result(node, func_scope, custom_types):
+    if not node.return_type:
+        return FunctionDefResult(NIL)
+    return_dtype = _codegen_type(node.return_type.dtype, custom_types)
+    if node.return_type.rank > 0:
+        return_dtype = NumpyNDArrayType.get_new(
+            return_dtype,
+            node.return_type.rank,
+            order=_numpy_array_order(node.return_type, node.return_type.rank),
+            allows_strides=_array_allows_strides(node.return_type),
+        )
+    if isinstance(return_dtype, StringType):
+        result_shape = _string_shape(node.return_type)
+    elif node.return_type.rank > 0:
+        result_shape = _codegen_array_shape(node.return_type, func_scope)
+    else:
+        result_shape = None
+    result_ownership = _ownership_decision(node.return_type, OwnershipContext.result())
+    result_var = Variable(
+        return_dtype,
+        node.name,
+        shape=result_shape,
+        memory_handling=result_ownership.memory_handling,
+        intent="out",
+        ownership_decision=result_ownership,
+    )
+    func_scope.insert_variable(result_var, name=node.name)
+    return FunctionDefResult(result_var)
+
+
+def _semantic_function_name(node, scope, native_name):
+    if _is_public(node):
+        return scope.get_new_public_name(
+            native_name,
+            python_name=node.name,
+            object_type="function",
+            owner=f"function {node.name}",
+        )
+    return scope.get_new_name(native_name, object_type="function")
+
+
+def _semantic_function_decorators(node):
+    decorators = {}
+    if node.metadata.get(models.RUNTIME_HOLD_GIL_METADATA):
+        decorators[models.RUNTIME_HOLD_GIL_METADATA] = True
+    if isinstance(status_policy := node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA), dict):
+        decorators[models.RUNTIME_STATUS_ERROR_METADATA] = dict(status_policy)
+    return decorators
+
+
+def _convert_semantic_function(
+    node,
+    scope,
+    legacy,
+    custom_types,
+    cls_base,
+    class_lookup,
+    class_descendants,
+    class_order,
+    enable_polymorphic_dispatch,
+):
+    _raise_for_invalid_runtime_policy(node)
+    _raise_for_unsupported_bind_c_abi(node, class_lookup or {})
+    _raise_for_unsupported_allocatable_scalar_outputs(node)
+    _raise_for_unsupported_pointer_outputs(node)
+    _raise_for_blocked_ownership_contracts_in_function(node)
+    _raise_for_unsupported_assumed_type_contracts(node)
+    _raise_for_unsupported_array_contracts_in_function(node)
+    passed_object_position = _passed_object_position(node)
+    dispatch_options = (
+        _polymorphic_dispatch_options(
+            node,
+            cls_base=cls_base,
+            passed_object_position=passed_object_position,
+            class_lookup=class_lookup or {},
+            class_descendants=class_descendants or {},
+            class_order=class_order or {},
+        )
+        if enable_polymorphic_dispatch
+        else ()
+    )
+    _raise_for_unsupported_polymorphic_contracts(
+        node,
+        cls_base=cls_base,
+        passed_object_position=passed_object_position,
+        dispatch_positions={position for position, _ in dispatch_options},
+    )
+    if dispatch_options:
+        return _convert_polymorphic_function(
+            node,
+            scope,
+            legacy,
+            dispatch_options,
+            custom_types,
+            cls_base,
+            class_lookup,
+            class_descendants,
+            class_order,
+        )
+    func_scope = scope.new_child_scope(
+        name=node.name,
+        scope_type="function",
+        public_namespace=scope.child_public_namespace("function", node.name),
+    )
+    constructor_self = _pyi_bound_constructor_self(node, cls_base, func_scope)
+    declarations = [constructor_self] if constructor_self is not None else []
+    declarations.extend(
+        semantic_ir_to_codegen_ast(
+            item,
+            func_scope,
+            legacy,
+            custom_types=custom_types,
+            cls_base=cls_base if constructor_self is None and index == passed_object_position else None,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+        for index, item in enumerate(node.arguments)
+    )
+    if constructor_self is not None:
+        passed_object_position = 0
+    result = _semantic_function_result(node, func_scope, custom_types)
+    native_name = node.native_name or node.name
+    name = _semantic_function_name(node, scope, native_name)
+    func = FunctionDef(
+        name,
+        _codegen_function_arguments(declarations, passed_object_position),
+        [],
+        result,
+        scope=func_scope,
+        decorators=_semantic_function_decorators(node),
+        is_external=legacy or (node.origin.source_language == "fortran" and node.origin.native_scope is None),
+        is_private=node.visibility == "private",
+        bind_c_external_name=(
+            str(node.metadata.get("fortran_bind_c_name") or native_name)
+            if node.metadata.get("fortran_bind_c")
+            else None
+        ),
+        type_bound_name=node.name if cls_base is not None else None,
+    )
+    scope._locals["functions"][name] = func
+    return func
+
+
+def _convert_semantic_class(node, scope, legacy, custom_types, class_lookup, class_descendants, class_order):
+    _raise_for_unresolved_generic_targets(node)
+    _raise_for_unsupported_constructor_overloads(node)
+    _raise_for_blocked_ownership_contracts_in_class(node)
+    class_type = (custom_types or {}).get(node.name)
+    if class_type is None:
+        class_type = _class_type(node)
+        if custom_types is not None:
+            custom_types[node.name] = class_type
+        scope.insert_cls_construct(class_type)
+
+    if _is_public(node):
+        name = scope.get_new_public_name(node.name, object_type="class", owner=f"type {node.name}")
+    else:
+        name = scope.get_new_name(node.name, object_type="class")
+    class_scope = scope.new_child_scope(
+        name=str(name),
+        scope_type="class",
+        public_namespace=scope.child_public_namespace("class", scope.get_python_name(name)),
+    )
+    attributes = [
+        semantic_ir_to_codegen_ast(item, class_scope, legacy, custom_types=custom_types) for item in node.fields
+    ]
+    superclasses = tuple(
+        cls for base_name in node.base_classes if (cls := scope.find(base_name, "classes")) is not None
+    )
+    decorators = {}
+    if node.origin.metadata.get(models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
+        decorators[models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
+    cls = ClassDef(
+        name,
+        attributes=attributes,
+        methods=(),
+        superclasses=superclasses,
+        scope=class_scope,
+        class_type=class_type,
+        decorators=decorators,
+    )
+    scope.insert_class(cls)
+    _populate_codegen_class_methods(
+        cls,
+        node,
+        class_scope,
+        legacy,
+        custom_types,
+        class_lookup,
+        class_descendants,
+        class_order,
+    )
+    return cls
+
+
+def _populate_codegen_class_methods(
+    cls, node, class_scope, legacy, custom_types, class_lookup, class_descendants, class_order
+):
+    for method in node.methods:
+        converted_method = semantic_ir_to_codegen_ast(
+            method,
+            class_scope,
+            legacy,
+            custom_types=custom_types,
+            cls_base=cls,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+        if isinstance(converted_method, FunctionOverloadSet):
+            cls.add_new_overload_set(converted_method)
+        else:
+            cls.add_new_method(converted_method)
+    for overload_set in node.overload_sets:
+        cls.add_new_overload_set(
+            semantic_ir_to_codegen_ast(
+                overload_set,
+                class_scope,
+                legacy,
+                custom_types=custom_types,
+                cls_base=cls,
+                class_lookup=class_lookup,
+                class_descendants=class_descendants,
+                class_order=class_order,
+            )
+        )
+
+
+def _semantic_variable_type_and_shape(semantic_type, scope, custom_types):
+    rank = semantic_type.rank
+    dtype = _codegen_type(semantic_type.dtype, custom_types)
+    if _is_constant(semantic_type):
+        dtype = FinalType.get_new(dtype)
+    if rank > 0:
+        dtype = NumpyNDArrayType.get_new(
+            dtype,
+            rank,
+            order=_numpy_array_order(semantic_type, rank),
+            allows_strides=_array_allows_strides(semantic_type),
+        )
+    shape = (
+        _string_shape(semantic_type) if isinstance(dtype, StringType) else _codegen_array_shape(semantic_type, scope)
+    )
+    return dtype, shape
+
+
+def _semantic_variable_name(node, scope):
+    try:
+        return scope.get_expected_name(node.name)
+    except RuntimeError:
+        is_module_mutable = getattr(scope, "_scope_type", None) == "module" and not _is_constant(node.semantic_type)
+        if isinstance(node, models.SemanticArgument):
+            object_type = "argument"
+        elif isinstance(node, models.SemanticField):
+            object_type = "field"
+        else:
+            object_type = "variable"
+        if _is_public(node) and not is_module_mutable:
+            return scope.get_new_public_name(
+                node.name,
+                object_type=object_type,
+                owner=f"{object_type} {node.name}",
+            )
+        return scope.get_new_name(node.name)
+
+
+def _convert_semantic_variable(node, scope, custom_types, cls_base):
+    semantic_type = node.semantic_type
+    dtype, shape = _semantic_variable_type_and_shape(semantic_type, scope, custom_types)
+    name = _semantic_variable_name(node, scope)
+    ownership_decision = _ownership_decision(semantic_type, _ownership_context_for_variable(node, scope))
+    var = Variable(
+        dtype,
+        name,
+        shape=shape,
+        memory_handling=ownership_decision.memory_handling,
+        is_private=node.visibility == "private",
+        is_target=bool(semantic_type.metadata.get("fortran_target")),
+        is_optional=getattr(node, "optional", False),
+        intent=getattr(node, "intent", "in"),
+        passes_by_value=_passes_by_value(node),
+        ownership_decision=ownership_decision,
+        assumed_rank=_is_assumed_rank(semantic_type),
+        cls_base=cls_base,
+        default_value=node.default_value,
+    )
+    scope.insert_variable(var, name=node.name)
+    return var
+
+
 def semantic_ir_to_codegen_ast(
     node,
     scope,
@@ -994,324 +1424,43 @@ def semantic_ir_to_codegen_ast(
     """Convert one semantic IR node into the current codegen AST representation."""
 
     if isinstance(node, models.SemanticModule):
-        _raise_for_unresolved_generic_targets(node)
-        _raise_for_unsupported_fortran_module_features(node)
-        _raise_for_unsupported_allocatable_module_variables(node)
-        _raise_for_unsupported_array_contracts(node)
-        _raise_for_blocked_ownership_contracts(node)
-        _raise_for_private_type_exposure(node)
-        custom_types = dict(custom_types or {})
-        class_lookup = _semantic_class_lookup(node.classes)
-        class_descendants = _semantic_class_descendants(node.classes)
-        class_order = _semantic_class_order(node.classes)
-        for semantic_class in node.classes:
-            custom_types.setdefault(semantic_class.name, _class_type(semantic_class))
-            scope.insert_cls_construct(custom_types[semantic_class.name])
-
-        classes = [
-            semantic_ir_to_codegen_ast(
-                item,
-                scope,
-                legacy,
-                custom_types=custom_types,
-                class_lookup=class_lookup,
-                class_descendants=class_descendants,
-                class_order=class_order,
-            )
-            for item in node.classes
-            if _is_public(item)
-        ]
-        funcs = []
-        generated_overload_sets = []
-        for item in node.functions:
-            converted = semantic_ir_to_codegen_ast(
-                item,
-                scope,
-                legacy,
-                custom_types=custom_types,
-                class_lookup=class_lookup,
-                class_descendants=class_descendants,
-                class_order=class_order,
-            )
-            if isinstance(converted, FunctionOverloadSet):
-                generated_overload_sets.append(converted)
-            else:
-                funcs.append(converted)
-        overload_sets = [
-            semantic_ir_to_codegen_ast(
-                item,
-                scope,
-                legacy,
-                custom_types=custom_types,
-                class_lookup=class_lookup,
-                class_descendants=class_descendants,
-                class_order=class_order,
-            )
-            for item in node.overload_sets
-        ]
-        overload_sets = [*generated_overload_sets, *overload_sets]
-        declarations = [
-            semantic_ir_to_codegen_ast(
-                item,
-                scope,
-                legacy,
-                custom_types=custom_types,
-            )
-            for item in node.variables
-        ]
-        name = scope.get_new_public_name(node.name, object_type="module", owner=node.name)
-        wrapper_native_modules = node.metadata.get("wrapper_native_modules", ())
-        imports = [Import(module_name, target=()) for module_name in wrapper_native_modules]
-        return Module(
-            name,
-            declarations,
-            funcs,
-            overload_sets=overload_sets,
-            classes=classes,
-            imports=imports,
-            scope=scope,
-        )
+        return _convert_semantic_module(node, scope, legacy, custom_types)
 
     if isinstance(node, models.ProcedureOverloadSet):
-        functions = []
-        native_names = []
-        for procedure in node.procedures:
-            native_name = str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, node.name))
-            converted = semantic_ir_to_codegen_ast(
-                procedure,
-                scope,
-                legacy,
-                custom_types=custom_types,
-                cls_base=cls_base,
-                class_lookup=class_lookup,
-                class_descendants=class_descendants,
-                class_order=class_order,
-            )
-            if isinstance(converted, FunctionOverloadSet):
-                functions.extend(converted.functions)
-                native_names.extend([native_name] * len(converted.functions))
-            else:
-                functions.append(converted)
-                native_names.append(native_name)
-        name = scope.get_new_public_name(node.name, object_type="function", owner=f"generic {node.name}")
-        overload_set = FunctionOverloadSet(str(name), functions, native_names=native_names)
-        scope.insert_function(overload_set, name)
-        return overload_set
+        return _convert_procedure_overload_set(
+            node,
+            scope,
+            legacy,
+            custom_types,
+            cls_base,
+            class_lookup,
+            class_descendants,
+            class_order,
+        )
 
     if isinstance(node, models.SemanticFunction):
-        _raise_for_invalid_runtime_policy(node)
-        _raise_for_unsupported_bind_c_abi(node, class_lookup or {})
-        _raise_for_unsupported_allocatable_scalar_outputs(node)
-        _raise_for_unsupported_pointer_outputs(node)
-        _raise_for_blocked_ownership_contracts_in_function(node)
-        _raise_for_unsupported_assumed_type_contracts(node)
-        _raise_for_unsupported_array_contracts_in_function(node)
-        passed_object_position = _passed_object_position(node)
-        dispatch_options = (
-            _polymorphic_dispatch_options(
-                node,
-                cls_base=cls_base,
-                passed_object_position=passed_object_position,
-                class_lookup=class_lookup or {},
-                class_descendants=class_descendants or {},
-                class_order=class_order or {},
-            )
-            if enable_polymorphic_dispatch
-            else ()
-        )
-        _raise_for_unsupported_polymorphic_contracts(
+        return _convert_semantic_function(
             node,
-            cls_base=cls_base,
-            passed_object_position=passed_object_position,
-            dispatch_positions={position for position, _ in dispatch_options},
+            scope,
+            legacy,
+            custom_types,
+            cls_base,
+            class_lookup,
+            class_descendants,
+            class_order,
+            enable_polymorphic_dispatch,
         )
-        if dispatch_options:
-            name = scope.get_new_name(node.name)
-            variants = _polymorphic_dispatch_variants(node, dispatch_options)
-            functions = [
-                semantic_ir_to_codegen_ast(
-                    variant,
-                    scope,
-                    legacy,
-                    custom_types=custom_types,
-                    cls_base=cls_base,
-                    class_lookup=class_lookup,
-                    class_descendants=class_descendants,
-                    class_order=class_order,
-                    enable_polymorphic_dispatch=False,
-                )
-                for variant in variants
-            ]
-            native_name = node.native_name or node.name
-            overload_set = FunctionOverloadSet(
-                str(name),
-                functions,
-                native_name=native_name,
-                native_names=(native_name,) * len(functions),
-            )
-            scope.insert_function(overload_set, name)
-            return overload_set
-        func_scope = scope.new_child_scope(
-            name=node.name,
-            scope_type="function",
-            public_namespace=scope.child_public_namespace("function", node.name),
-        )
-        constructor_self = _pyi_bound_constructor_self(node, cls_base, func_scope)
-        declarations = [constructor_self] if constructor_self is not None else []
-        declarations.extend(
-            semantic_ir_to_codegen_ast(
-                item,
-                func_scope,
-                legacy,
-                custom_types=custom_types,
-                cls_base=cls_base if constructor_self is None and index == passed_object_position else None,
-                class_lookup=class_lookup,
-                class_descendants=class_descendants,
-                class_order=class_order,
-            )
-            for index, item in enumerate(node.arguments)
-        )
-        if constructor_self is not None:
-            passed_object_position = 0
-        if node.return_type:
-            return_dtype = _codegen_type(node.return_type.dtype, custom_types)
-            if node.return_type.rank > 0:
-                return_dtype = NumpyNDArrayType.get_new(
-                    return_dtype,
-                    node.return_type.rank,
-                    order=_numpy_array_order(node.return_type, node.return_type.rank),
-                    allows_strides=_array_allows_strides(node.return_type),
-                )
-            if isinstance(return_dtype, StringType):
-                result_shape = _string_shape(node.return_type)
-            elif node.return_type.rank > 0:
-                result_shape = _codegen_array_shape(node.return_type, func_scope)
-            else:
-                result_shape = None
-            result_ownership = _ownership_decision(node.return_type, OwnershipContext.result())
-            result_memory = result_ownership.memory_handling
-            result_var = Variable(
-                return_dtype,
-                node.name,
-                shape=result_shape,
-                memory_handling=result_memory,
-                intent="out",
-                ownership_decision=result_ownership,
-            )
-            func_scope.insert_variable(result_var, name=node.name)
-            result = FunctionDefResult(result_var)
-        else:
-            result = FunctionDefResult(NIL)
-
-        args = _codegen_function_arguments(declarations, passed_object_position)
-        native_name = node.native_name or node.name
-        if _is_public(node):
-            name = scope.get_new_public_name(
-                native_name,
-                python_name=node.name,
-                object_type="function",
-                owner=f"function {node.name}",
-            )
-        else:
-            name = scope.get_new_name(native_name, object_type="function")
-        decorators = {}
-        if node.metadata.get(models.RUNTIME_HOLD_GIL_METADATA):
-            decorators[models.RUNTIME_HOLD_GIL_METADATA] = True
-        if isinstance(status_policy := node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA), dict):
-            decorators[models.RUNTIME_STATUS_ERROR_METADATA] = dict(status_policy)
-        func = FunctionDef(
-            name,
-            args,
-            [],
-            result,
-            scope=func_scope,
-            decorators=decorators,
-            is_external=legacy or (node.origin.source_language == "fortran" and node.origin.native_scope is None),
-            is_private=node.visibility == "private",
-            bind_c_external_name=(
-                str(node.metadata.get("fortran_bind_c_name") or native_name)
-                if node.metadata.get("fortran_bind_c")
-                else None
-            ),
-            type_bound_name=node.name if cls_base is not None else None,
-        )
-        scope._locals["functions"][name] = func
-        return func
 
     if isinstance(node, models.SemanticClass):
-        _raise_for_unresolved_generic_targets(node)
-        _raise_for_unsupported_constructor_overloads(node)
-        _raise_for_blocked_ownership_contracts_in_class(node)
-        class_type = (custom_types or {}).get(node.name)
-        if class_type is None:
-            class_type = _class_type(node)
-            if custom_types is not None:
-                custom_types[node.name] = class_type
-            scope.insert_cls_construct(class_type)
-
-        if _is_public(node):
-            name = scope.get_new_public_name(node.name, object_type="class", owner=f"type {node.name}")
-        else:
-            name = scope.get_new_name(node.name, object_type="class")
-        class_scope = scope.new_child_scope(
-            name=str(name),
-            scope_type="class",
-            public_namespace=scope.child_public_namespace("class", scope.get_python_name(name)),
+        return _convert_semantic_class(
+            node,
+            scope,
+            legacy,
+            custom_types,
+            class_lookup,
+            class_descendants,
+            class_order,
         )
-        attributes = [
-            semantic_ir_to_codegen_ast(
-                item,
-                class_scope,
-                legacy,
-                custom_types=custom_types,
-            )
-            for item in node.fields
-        ]
-        superclasses = tuple(
-            cls for base_name in node.base_classes if (cls := scope.find(base_name, "classes")) is not None
-        )
-        decorators = {}
-        if node.origin.metadata.get(models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
-            decorators[models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
-        cls = ClassDef(
-            name,
-            attributes=attributes,
-            methods=(),
-            superclasses=superclasses,
-            scope=class_scope,
-            class_type=class_type,
-            decorators=decorators,
-        )
-        scope.insert_class(cls)
-        for method in node.methods:
-            converted_method = semantic_ir_to_codegen_ast(
-                method,
-                class_scope,
-                legacy,
-                custom_types=custom_types,
-                cls_base=cls,
-                class_lookup=class_lookup,
-                class_descendants=class_descendants,
-                class_order=class_order,
-            )
-            if isinstance(converted_method, FunctionOverloadSet):
-                cls.add_new_overload_set(converted_method)
-            else:
-                cls.add_new_method(converted_method)
-        for overload_set in node.overload_sets:
-            cls.add_new_overload_set(
-                semantic_ir_to_codegen_ast(
-                    overload_set,
-                    class_scope,
-                    legacy,
-                    custom_types=custom_types,
-                    cls_base=cls,
-                    class_lookup=class_lookup,
-                    class_descendants=class_descendants,
-                    class_order=class_order,
-                )
-            )
-        return cls
 
     if isinstance(node, models.SemanticArgument) and node.semantic_type.name == "Callable":
         return _codegen_callback_argument(
@@ -1325,55 +1474,7 @@ def semantic_ir_to_codegen_ast(
         )
 
     if isinstance(node, models.SemanticVariable):
-        semantic_type = node.semantic_type
-        rank = semantic_type.rank
-        dtype = _codegen_type(semantic_type.dtype, custom_types)
-        if _is_constant(semantic_type):
-            dtype = FinalType.get_new(dtype)
-        if rank > 0:
-            dtype = NumpyNDArrayType.get_new(
-                dtype,
-                rank,
-                order=_numpy_array_order(semantic_type, rank),
-                allows_strides=_array_allows_strides(semantic_type),
-            )
-        if isinstance(dtype, StringType):
-            shape = _string_shape(semantic_type)
-        else:
-            shape = _codegen_array_shape(semantic_type, scope)
-        try:
-            name = scope.get_expected_name(node.name)
-        except RuntimeError:
-            is_module_mutable = getattr(scope, "_scope_type", None) == "module" and not _is_constant(semantic_type)
-            if isinstance(node, models.SemanticArgument):
-                object_type = "argument"
-            elif isinstance(node, models.SemanticField):
-                object_type = "field"
-            else:
-                object_type = "variable"
-            if _is_public(node) and not is_module_mutable:
-                name = scope.get_new_public_name(node.name, object_type=object_type, owner=f"{object_type} {node.name}")
-            else:
-                name = scope.get_new_name(node.name)
-        ownership_context = _ownership_context_for_variable(node, scope)
-        ownership_decision = _ownership_decision(semantic_type, ownership_context)
-        var = Variable(
-            dtype,
-            name,
-            shape=shape,
-            memory_handling=ownership_decision.memory_handling,
-            is_private=node.visibility == "private",
-            is_target=bool(semantic_type.metadata.get("fortran_target")),
-            is_optional=getattr(node, "optional", False),
-            intent=getattr(node, "intent", "in"),
-            passes_by_value=_passes_by_value(node),
-            ownership_decision=ownership_decision,
-            assumed_rank=_is_assumed_rank(semantic_type),
-            cls_base=cls_base,
-            default_value=node.default_value,
-        )
-        scope.insert_variable(var, name=node.name)
-        return var
+        return _convert_semantic_variable(node, scope, custom_types, cls_base)
 
     raise NotImplementedError(type(node))
 

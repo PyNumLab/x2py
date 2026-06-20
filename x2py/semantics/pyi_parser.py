@@ -305,79 +305,93 @@ class _PyiAstParser:
     def decorators(self, nodes: list[ast.expr], *, context: str) -> _Decorators:
         parsed = _Decorators()
         for node in nodes:
-            if self.matches_name(node, "private"):
-                parsed.visibility = "private"
-                continue
-            if isinstance(node, ast.Call) and self.matches_name(node.func, "overload"):
-                if parsed.overload_target is not None:
-                    raise ValueError(f"Duplicate {context} overload decorator")
-                if self.qualified_name(node.func) == ("typing", "overload"):
-                    raise ValueError('typing.overload is not supported; use x2py @overload("specific")')
-                if len(node.args) != 1:
-                    raise ValueError("overload expects one specific procedure name")
-                target = ast.literal_eval(node.args[0])
-                if not isinstance(target, str) or not target:
-                    raise ValueError("overload expects a non-empty specific procedure name")
-                if len(node.keywords) > 1 or any(keyword.arg != "generic" for keyword in node.keywords):
-                    raise ValueError("overload accepts only the optional generic keyword")
-                if node.keywords:
-                    generic_name = ast.literal_eval(node.keywords[0].value)
-                    if not isinstance(generic_name, str) or not generic_name:
-                        raise ValueError("overload generic expects a non-empty Fortran generic name")
-                    parsed.overload_generic = generic_name
-                parsed.overload_target = target
-                continue
-            if self.matches_name(node, "overload"):
-                raise ValueError("overload expects one specific procedure name")
-            if isinstance(node, ast.Call) and self.matches_name(node.func, "bind"):
-                if parsed.bind_target is not None:
-                    raise ValueError(f"Duplicate {context} bind decorator")
-                if len(node.args) != 1 or node.keywords:
-                    raise ValueError("bind expects one native symbol name")
-                target = ast.literal_eval(node.args[0])
-                if not isinstance(target, str) or not target:
-                    raise ValueError("bind expects a non-empty native symbol name")
-                parsed.bind_target = target
-                continue
-            if self.matches_name(node, "bind"):
-                raise ValueError("bind expects one native symbol name")
-            if self.matches_name(node, "staticmethod"):
-                parsed.is_static = True
-                continue
-            if isinstance(node, ast.Call) and self.matches_name(node.func, "hold_gil"):
-                raise ValueError("hold_gil does not accept arguments")
-            if self.matches_name(node, "hold_gil"):
-                if parsed.hold_gil:
-                    raise ValueError(f"Duplicate {context} hold_gil decorator")
-                parsed.hold_gil = True
-                continue
-            if isinstance(node, ast.Call) and self.matches_name(node.func, "module_variable"):
-                if parsed.module_variable is not None:
-                    raise ValueError(f"Duplicate {context} module_variable decorator")
-                if len(node.args) != 1 or node.keywords:
-                    raise ValueError("module_variable expects one native variable name")
-                target = ast.literal_eval(node.args[0])
-                if not isinstance(target, str) or not target:
-                    raise ValueError("module_variable expects a non-empty native variable name")
-                parsed.module_variable = target
-                continue
-            if self.matches_name(node, "module_variable"):
-                raise ValueError("module_variable expects one native variable name")
-            if isinstance(node, ast.Call) and self.matches_name(node.func, "native_call"):
-                parsed.has_native_call = True
-                parsed.projection = self.native_call(node)
-                continue
-            if isinstance(node, ast.Call) and self.matches_name(node.func, "raises"):
-                if parsed.error_status_policy is not None:
-                    raise ValueError(f"Duplicate {context} raises decorator")
-                parsed.error_status_policy = self.error_status_policy(node)
-                continue
-            if self.matches_name(node, "raises"):
-                raise ValueError("raises expects keyword arguments")
-            raise ValueError(f"Unsupported {context} decorator: {ast.unparse(node)!r}")
+            self._apply_decorator(parsed, node, context=context)
         if parsed.overload_target is not None and parsed.bind_target is not None:
             raise ValueError("bind cannot be combined with overload")
         return parsed
+
+    def _apply_decorator(self, parsed: _Decorators, node: ast.expr, *, context: str) -> None:
+        if self.matches_name(node, "private"):
+            parsed.visibility = "private"
+            return
+        if self.matches_name(node, "staticmethod"):
+            parsed.is_static = True
+            return
+        target = node.func if isinstance(node, ast.Call) else node
+        handlers = {
+            "overload": self._apply_overload_decorator,
+            "bind": self._apply_bind_decorator,
+            "hold_gil": self._apply_hold_gil_decorator,
+            "module_variable": self._apply_module_variable_decorator,
+            "native_call": self._apply_native_call_decorator,
+            "raises": self._apply_raises_decorator,
+        }
+        handler = next((value for name, value in handlers.items() if self.matches_name(target, name)), None)
+        if handler is None:
+            raise ValueError(f"Unsupported {context} decorator: {ast.unparse(node)!r}")
+        handler(parsed, node, context)
+
+    def _apply_overload_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
+        if not isinstance(node, ast.Call):
+            raise ValueError("overload expects one specific procedure name")
+        if parsed.overload_target is not None:
+            raise ValueError(f"Duplicate {context} overload decorator")
+        if self.qualified_name(node.func) == ("typing", "overload"):
+            raise ValueError('typing.overload is not supported; use x2py @overload("specific")')
+        if len(node.args) != 1:
+            raise ValueError("overload expects one specific procedure name")
+        target = ast.literal_eval(node.args[0])
+        if not isinstance(target, str) or not target:
+            raise ValueError("overload expects a non-empty specific procedure name")
+        if len(node.keywords) > 1 or any(keyword.arg != "generic" for keyword in node.keywords):
+            raise ValueError("overload accepts only the optional generic keyword")
+        if node.keywords:
+            generic_name = ast.literal_eval(node.keywords[0].value)
+            if not isinstance(generic_name, str) or not generic_name:
+                raise ValueError("overload generic expects a non-empty Fortran generic name")
+            parsed.overload_generic = generic_name
+        parsed.overload_target = target
+
+    @staticmethod
+    def _required_string_decorator_argument(node: ast.expr, name: str) -> str:
+        if not isinstance(node, ast.Call) or len(node.args) != 1 or node.keywords:
+            raise ValueError(f"{name} expects one native symbol name")
+        target = ast.literal_eval(node.args[0])
+        if not isinstance(target, str) or not target:
+            raise ValueError(f"{name} expects a non-empty native symbol name")
+        return target
+
+    def _apply_bind_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
+        if parsed.bind_target is not None:
+            raise ValueError(f"Duplicate {context} bind decorator")
+        parsed.bind_target = self._required_string_decorator_argument(node, "bind")
+
+    @staticmethod
+    def _apply_hold_gil_decorator(parsed: _Decorators, node: ast.expr, context: str) -> None:
+        if isinstance(node, ast.Call):
+            raise ValueError("hold_gil does not accept arguments")
+        if parsed.hold_gil:
+            raise ValueError(f"Duplicate {context} hold_gil decorator")
+        parsed.hold_gil = True
+
+    def _apply_module_variable_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
+        if parsed.module_variable is not None:
+            raise ValueError(f"Duplicate {context} module_variable decorator")
+        parsed.module_variable = self._required_string_decorator_argument(node, "module_variable")
+
+    def _apply_native_call_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
+        del context
+        if not isinstance(node, ast.Call):
+            raise ValueError("native_call expects a single list argument")
+        parsed.has_native_call = True
+        parsed.projection = self.native_call(node)
+
+    def _apply_raises_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
+        if not isinstance(node, ast.Call):
+            raise ValueError("raises expects keyword arguments")
+        if parsed.error_status_policy is not None:
+            raise ValueError(f"Duplicate {context} raises decorator")
+        parsed.error_status_policy = self.error_status_policy(node)
 
     def native_call(self, node: ast.Call) -> list[ProjectionMapping]:
         if len(node.args) != 1 or node.keywords:
@@ -858,39 +872,16 @@ class _PyiAstParser:
     def _apply_annotation_metadata_call(self, semantic_type: SemanticType, node: ast.Call) -> None:
         helper = self.required_name(node.func)
         if helper in {"Intent", "FortranCharacterLength"}:
-            if len(node.args) != 1 or node.keywords:
-                raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
-            metadata_key = "_pyi_intent" if helper == "Intent" else "fortran_character_length"
-            semantic_type.metadata[metadata_key] = str(ast.literal_eval(node.args[0]))
+            self._apply_scalar_annotation_metadata(semantic_type, node, helper)
             return
         if helper == "PointerAssociation":
-            if len(node.args) != 1 or node.keywords:
-                raise ValueError(f"PointerAssociation metadata expects one argument: {ast.unparse(node)!r}")
-            semantic_type.metadata["fortran_pointer_association"] = str(ast.literal_eval(node.args[0]))
-            semantic_type.metadata["fortran_pointer"] = True
+            self._apply_pointer_association_metadata(semantic_type, node)
             return
         if helper == "PointerPolicy":
-            if node.args:
-                raise ValueError(f"PointerPolicy metadata accepts keyword arguments only: {ast.unparse(node)!r}")
-            values = {}
-            for keyword in node.keywords:
-                if keyword.arg is None:
-                    raise ValueError("PointerPolicy metadata does not accept ** expansion")
-                if keyword.arg in values:
-                    raise ValueError(f"PointerPolicy metadata repeats {keyword.arg!r}")
-                values[keyword.arg] = ast.literal_eval(keyword.value)
-            set_pointer_policy_metadata(semantic_type.metadata, **values)
+            self._apply_pointer_policy_metadata(semantic_type, node)
             return
         if helper in {"Ownership", "Transfer", "Destruction"}:
-            if len(node.args) != 1 or node.keywords:
-                raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
-            value = str(ast.literal_eval(node.args[0]))
-            set_ownership_metadata(
-                semantic_type.metadata,
-                owner=value if helper == "Ownership" else None,
-                transfer=value if helper == "Transfer" else None,
-                destruction=value if helper == "Destruction" else None,
-            )
+            self._apply_ownership_annotation_metadata(semantic_type, node, helper)
             return
         if helper == "ArrayCategory":
             self._require_array_storage(semantic_type).category = str(ast.literal_eval(node.args[0]))
@@ -920,6 +911,43 @@ class _PyiAstParser:
             semantic_type,
             helper,
             [ast.literal_eval(arg) for arg in node.args],
+        )
+
+    @staticmethod
+    def _require_single_metadata_argument(node: ast.Call, helper: str):
+        if len(node.args) != 1 or node.keywords:
+            raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
+        return ast.literal_eval(node.args[0])
+
+    def _apply_scalar_annotation_metadata(self, semantic_type: SemanticType, node: ast.Call, helper: str) -> None:
+        metadata_key = "_pyi_intent" if helper == "Intent" else "fortran_character_length"
+        semantic_type.metadata[metadata_key] = str(self._require_single_metadata_argument(node, helper))
+
+    def _apply_pointer_association_metadata(self, semantic_type: SemanticType, node: ast.Call) -> None:
+        value = self._require_single_metadata_argument(node, "PointerAssociation")
+        semantic_type.metadata["fortran_pointer_association"] = str(value)
+        semantic_type.metadata["fortran_pointer"] = True
+
+    @staticmethod
+    def _apply_pointer_policy_metadata(semantic_type: SemanticType, node: ast.Call) -> None:
+        if node.args:
+            raise ValueError(f"PointerPolicy metadata accepts keyword arguments only: {ast.unparse(node)!r}")
+        values = {}
+        for keyword in node.keywords:
+            if keyword.arg is None:
+                raise ValueError("PointerPolicy metadata does not accept ** expansion")
+            if keyword.arg in values:
+                raise ValueError(f"PointerPolicy metadata repeats {keyword.arg!r}")
+            values[keyword.arg] = ast.literal_eval(keyword.value)
+        set_pointer_policy_metadata(semantic_type.metadata, **values)
+
+    def _apply_ownership_annotation_metadata(self, semantic_type: SemanticType, node: ast.Call, helper: str) -> None:
+        value = str(self._require_single_metadata_argument(node, helper))
+        set_ownership_metadata(
+            semantic_type.metadata,
+            owner=value if helper == "Ownership" else None,
+            transfer=value if helper == "Transfer" else None,
+            destruction=value if helper == "Destruction" else None,
         )
 
     def _apply_metadata_name(self, semantic_type: SemanticType, name: str) -> bool:

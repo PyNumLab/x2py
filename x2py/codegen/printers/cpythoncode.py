@@ -383,47 +383,8 @@ class CPythonCodePrinter(CCodePrinter):
         setters = tuple(p.setter for p in expr.properties if p.setter)
         print_methods = (*expr.methods, expr.new_func, *expr.overload_sets, *expr.magic_methods, *getters, *setters)
         functions = "\n".join(self._visit(f) for f in print_methods)
-        init_string = ""
-        del_string = ""
-        funcs = {}
-        for f in expr.methods:
-            py_name = self._get_python_name(original_scope, f.original_function)
-            if py_name == "__init__":
-                init_string = f"    .tp_init = (initproc) {f.name},\n"
-            elif py_name == "__del__":
-                del_string = f"    .tp_dealloc = (destructor) {f.name},\n"
-            else:
-                method_docstring = (
-                    self._visit(CStrStr(convert_to_literal("\n".join(f.docstring.comments)))) if f.docstring else '""'
-                )
-                original_args = f.original_function.arguments
-                flags = "METH_VARARGS | METH_KEYWORDS"
-                if not original_args or not original_args[0].bound_argument:
-                    flags += " | METH_STATIC"
-                funcs[py_name] = (f.name, method_docstring, flags)
-
-        for f in expr.overload_sets:
-            py_name = self._get_python_name(original_scope, f.original_function)
-            method_docstring = (
-                self._visit(CStrStr(convert_to_literal("\n".join(f.docstring.comments)))) if f.docstring else '""'
-            )
-            funcs[py_name] = (f.name, method_docstring, "METH_VARARGS | METH_KEYWORDS")
-
-        property_definitions = "".join(
-            "".join(
-                (
-                    "{\n",
-                    f'"{p.python_name}",\n',
-                    f"(getter) {p.getter.name},\n",
-                    f"(setter) {p.setter.name},\n" if p.setter else "(setter) NULL,\n",
-                    f"{self._visit(p.docstring)},\n",
-                    "NULL\n",
-                    "},\n",
-                )
-            )
-            for p in expr.properties
-        )
-        property_definitions += "{ NULL }\n"
+        init_string, del_string, funcs = self._class_method_metadata(expr, original_scope)
+        property_definitions = self._property_definitions(expr.properties)
 
         method_def_funcs = "".join(
             (f'{{\n"{name}",\n(PyCFunction){wrapper_name},\n{flags},\n{doc_string}\n}},\n')
@@ -431,112 +392,17 @@ class CPythonCodePrinter(CCodePrinter):
         )
 
         magic_methods = {self._get_python_name(original_scope, f.original_function): f for f in expr.magic_methods}
-
-        number_magic_method_name = self.scope.get_new_name(f"{expr.name}_number_methods", object_type="wrapper")
-
-        number_magic_methods_def = f"static PyNumberMethods {number_magic_method_name} = {{\n"
-        if "__add__" in magic_methods:
-            number_magic_methods_def += f"     .nb_add = (binaryfunc){magic_methods['__add__'].name},\n"
-        if "__sub__" in magic_methods:
-            number_magic_methods_def += f"     .nb_subtract = (binaryfunc){magic_methods['__sub__'].name},\n"
-        if "__mul__" in magic_methods:
-            number_magic_methods_def += f"     .nb_multiply = (binaryfunc){magic_methods['__mul__'].name},\n"
-        if "__truediv__" in magic_methods:
-            number_magic_methods_def += f"     .nb_true_divide = (binaryfunc){magic_methods['__truediv__'].name},\n"
-        if "__pow__" in magic_methods:
-            number_magic_methods_def += f"     .nb_power = (ternaryfunc){magic_methods['__pow__'].name},\n"
-        if "__neg__" in magic_methods:
-            number_magic_methods_def += f"     .nb_negative = (unaryfunc){magic_methods['__neg__'].name},\n"
-        if "__pos__" in magic_methods:
-            number_magic_methods_def += f"     .nb_positive = (unaryfunc){magic_methods['__pos__'].name},\n"
-        if "__invert__" in magic_methods:
-            number_magic_methods_def += f"     .nb_invert = (unaryfunc){magic_methods['__invert__'].name},\n"
-        if "__lshift__" in magic_methods:
-            number_magic_methods_def += f"     .nb_lshift = (binaryfunc){magic_methods['__lshift__'].name},\n"
-        if "__rshift__" in magic_methods:
-            number_magic_methods_def += f"     .nb_rshift = (binaryfunc){magic_methods['__rshift__'].name},\n"
-        if "__and__" in magic_methods:
-            number_magic_methods_def += f"     .nb_and = (binaryfunc){magic_methods['__and__'].name},\n"
-        if "__or__" in magic_methods:
-            number_magic_methods_def += f"     .nb_or = (binaryfunc){magic_methods['__or__'].name},\n"
-        if "__iadd__" in magic_methods:
-            number_magic_methods_def += f"     .nb_inplace_add = (binaryfunc){magic_methods['__iadd__'].name},\n"
-        if "__isub__" in magic_methods:
-            number_magic_methods_def += f"     .nb_inplace_subtract = (binaryfunc){magic_methods['__isub__'].name},\n"
-        if "__imul__" in magic_methods:
-            number_magic_methods_def += f"     .nb_inplace_multiply = (binaryfunc){magic_methods['__imul__'].name},\n"
-        if "__itruediv__" in magic_methods:
-            number_magic_methods_def += (
-                f"     .nb_inplace_true_divide = (binaryfunc){magic_methods['__itruediv__'].name},\n"
-            )
-        if "__ilshift__" in magic_methods:
-            number_magic_methods_def += f"     .nb_inplace_lshift = (binaryfunc){magic_methods['__ilshift__'].name},\n"
-        if "__irshift__" in magic_methods:
-            number_magic_methods_def += f"     .nb_inplace_rshift = (binaryfunc){magic_methods['__irshift__'].name},\n"
-        if "__iand__" in magic_methods:
-            number_magic_methods_def += f"     .nb_inplace_and = (binaryfunc){magic_methods['__iand__'].name},\n"
-        if "__ior__" in magic_methods:
-            number_magic_methods_def += f"     .nb_inplace_or = (binaryfunc){magic_methods['__ior__'].name},\n"
-        number_magic_methods_def += "};\n"
-
-        seq_magic_method_name = self.scope.get_new_name(f"{expr.name}_sequence_methods", object_type="wrapper")
-
-        seq_magic_methods_def = f"static PySequenceMethods {seq_magic_method_name} = {{\n"
-        if "__len__" in magic_methods:
-            seq_magic_methods_def += f"    .sq_length = (lenfunc){magic_methods['__len__'].name},\n"
-        seq_magic_methods_def += "};\n"
-
-        map_magic_method_name = self.scope.get_new_name(f"{expr.name}_mapping_methods", object_type="wrapper")
-        map_magic_methods_def = f"static PyMappingMethods {map_magic_method_name} = {{\n"
-        if "__len__" in magic_methods:
-            map_magic_methods_def += f"    .mp_length = (lenfunc){magic_methods['__len__'].name},\n"
-        if "__getitem__" in magic_methods:
-            map_magic_methods_def += f"     .mp_subscript = (binaryfunc){magic_methods['__getitem__'].name},\n"
-        map_magic_methods_def += "};\n"
+        magic_names, magic_definitions = self._magic_method_definitions(expr, magic_methods)
+        number_magic_method_name, seq_magic_method_name, map_magic_method_name = magic_names
+        number_magic_methods_def, seq_magic_methods_def, map_magic_methods_def = magic_definitions
         method_def_name = self.scope.get_new_name(f"{expr.name}_methods", object_type="wrapper")
         method_def = f"static PyMethodDef {method_def_name}[] = {{\n{method_def_funcs}{{ NULL, NULL, 0, NULL}}\n}};\n"
 
         property_def_name = self.scope.get_new_name(f"{expr.name}_properties", object_type="wrapper")
         property_def = f"static PyGetSetDef {property_def_name}[] = {{\n{property_definitions}}};\n"
 
-        comparison_ops = {
-            "__eq__": "Py_EQ",
-            "__ne__": "Py_NE",
-            "__lt__": "Py_LT",
-            "__le__": "Py_LE",
-            "__gt__": "Py_GT",
-            "__ge__": "Py_GE",
-        }
-        richcompare_methods = {
-            method_name: magic_methods[method_name] for method_name in comparison_ops if method_name in magic_methods
-        }
-        richcompare_def = ""
-        richcompare_slot = ""
-        if richcompare_methods:
-            richcompare_name = self.scope.get_new_name(f"{expr.name}_richcompare", object_type="wrapper")
-            cases = "".join(
-                f"    case {comparison_ops[method_name]}:\n        return {method.name}(lhs, rhs);\n"
-                for method_name, method in richcompare_methods.items()
-            )
-            richcompare_def = (
-                f"static PyObject *{richcompare_name}(PyObject *lhs, PyObject *rhs, int op)\n"
-                "{\n"
-                "    switch (op) {\n"
-                f"{cases}"
-                "    default:\n"
-                "        Py_INCREF(Py_NotImplemented);\n"
-                "        return Py_NotImplemented;\n"
-                "    }\n"
-                "}\n"
-            )
-            richcompare_slot = f"    .tp_richcompare = {richcompare_name},\n"
-
-        base_slot = ""
-        if expr.original_class.superclasses:
-            base_class = expr.original_class.superclasses[0]
-            base_python_name = base_class.scope.get_python_name(base_class.name)
-            wrapped_base = self.scope.find(base_python_name, "classes", raise_if_missing=True)
-            base_slot = f"    .tp_base = &{wrapped_base.type_name},\n"
+        richcompare_def, richcompare_slot = self._richcompare_definition(expr, magic_methods)
+        base_slot = self._base_type_slot(expr)
 
         type_code = (
             f"static PyTypeObject {type_name} = {{\n"
@@ -570,6 +436,147 @@ class CPythonCodePrinter(CCodePrinter):
                 functions,
             )
         )
+
+    def _method_docstring(self, function):
+        """Render a method docstring as a C string."""
+        if not function.docstring:
+            return '""'
+        return self._visit(CStrStr(convert_to_literal("\n".join(function.docstring.comments))))
+
+    def _class_method_metadata(self, expr, original_scope):
+        """Collect class slots and Python method-table metadata."""
+        init_string = ""
+        del_string = ""
+        functions = {}
+        for function in expr.methods:
+            python_name = self._get_python_name(original_scope, function.original_function)
+            if python_name == "__init__":
+                init_string = f"    .tp_init = (initproc) {function.name},\n"
+                continue
+            if python_name == "__del__":
+                del_string = f"    .tp_dealloc = (destructor) {function.name},\n"
+                continue
+            original_args = function.original_function.arguments
+            flags = "METH_VARARGS | METH_KEYWORDS"
+            if not original_args or not original_args[0].bound_argument:
+                flags += " | METH_STATIC"
+            functions[python_name] = (function.name, self._method_docstring(function), flags)
+        for function in expr.overload_sets:
+            python_name = self._get_python_name(original_scope, function.original_function)
+            functions[python_name] = (
+                function.name,
+                self._method_docstring(function),
+                "METH_VARARGS | METH_KEYWORDS",
+            )
+        return init_string, del_string, functions
+
+    def _property_definitions(self, properties):
+        """Render property entries for a CPython get-set table."""
+        definitions = "".join(
+            "".join(
+                (
+                    "{\n",
+                    f'"{prop.python_name}",\n',
+                    f"(getter) {prop.getter.name},\n",
+                    f"(setter) {prop.setter.name},\n" if prop.setter else "(setter) NULL,\n",
+                    f"{self._visit(prop.docstring)},\n",
+                    "NULL\n",
+                    "},\n",
+                )
+            )
+            for prop in properties
+        )
+        return definitions + "{ NULL }\n"
+
+    def _magic_method_definitions(self, expr, magic_methods):
+        """Render CPython number, sequence, and mapping slot tables."""
+        number_name = self.scope.get_new_name(f"{expr.name}_number_methods", object_type="wrapper")
+        number_slots = (
+            ("__add__", "nb_add", "binaryfunc"),
+            ("__sub__", "nb_subtract", "binaryfunc"),
+            ("__mul__", "nb_multiply", "binaryfunc"),
+            ("__truediv__", "nb_true_divide", "binaryfunc"),
+            ("__pow__", "nb_power", "ternaryfunc"),
+            ("__neg__", "nb_negative", "unaryfunc"),
+            ("__pos__", "nb_positive", "unaryfunc"),
+            ("__invert__", "nb_invert", "unaryfunc"),
+            ("__lshift__", "nb_lshift", "binaryfunc"),
+            ("__rshift__", "nb_rshift", "binaryfunc"),
+            ("__and__", "nb_and", "binaryfunc"),
+            ("__or__", "nb_or", "binaryfunc"),
+            ("__iadd__", "nb_inplace_add", "binaryfunc"),
+            ("__isub__", "nb_inplace_subtract", "binaryfunc"),
+            ("__imul__", "nb_inplace_multiply", "binaryfunc"),
+            ("__itruediv__", "nb_inplace_true_divide", "binaryfunc"),
+            ("__ilshift__", "nb_inplace_lshift", "binaryfunc"),
+            ("__irshift__", "nb_inplace_rshift", "binaryfunc"),
+            ("__iand__", "nb_inplace_and", "binaryfunc"),
+            ("__ior__", "nb_inplace_or", "binaryfunc"),
+        )
+        number_body = "".join(
+            f"     .{slot} = ({cast}){magic_methods[python_name].name},\n"
+            for python_name, slot, cast in number_slots
+            if python_name in magic_methods
+        )
+        number_def = f"static PyNumberMethods {number_name} = {{\n{number_body}}};\n"
+
+        sequence_name = self.scope.get_new_name(f"{expr.name}_sequence_methods", object_type="wrapper")
+        sequence_body = self._optional_magic_slot(magic_methods, "__len__", "sq_length", "lenfunc", spaces=4)
+        sequence_def = f"static PySequenceMethods {sequence_name} = {{\n{sequence_body}}};\n"
+
+        mapping_name = self.scope.get_new_name(f"{expr.name}_mapping_methods", object_type="wrapper")
+        mapping_body = self._optional_magic_slot(magic_methods, "__len__", "mp_length", "lenfunc", spaces=4)
+        mapping_body += self._optional_magic_slot(magic_methods, "__getitem__", "mp_subscript", "binaryfunc", spaces=5)
+        mapping_def = f"static PyMappingMethods {mapping_name} = {{\n{mapping_body}}};\n"
+        return (number_name, sequence_name, mapping_name), (number_def, sequence_def, mapping_def)
+
+    @staticmethod
+    def _optional_magic_slot(magic_methods, python_name, slot, cast, *, spaces):
+        """Render one optional CPython magic-method slot."""
+        method = magic_methods.get(python_name)
+        if method is None:
+            return ""
+        return f"{' ' * spaces}.{slot} = ({cast}){method.name},\n"
+
+    def _richcompare_definition(self, expr, magic_methods):
+        """Render rich-comparison dispatch and its type slot."""
+        comparison_ops = {
+            "__eq__": "Py_EQ",
+            "__ne__": "Py_NE",
+            "__lt__": "Py_LT",
+            "__le__": "Py_LE",
+            "__gt__": "Py_GT",
+            "__ge__": "Py_GE",
+        }
+        richcompare_methods = {name: magic_methods[name] for name in comparison_ops if name in magic_methods}
+        if not richcompare_methods:
+            return "", ""
+        richcompare_name = self.scope.get_new_name(f"{expr.name}_richcompare", object_type="wrapper")
+        cases = "".join(
+            f"    case {comparison_ops[name]}:\n        return {method.name}(lhs, rhs);\n"
+            for name, method in richcompare_methods.items()
+        )
+        definition = (
+            f"static PyObject *{richcompare_name}(PyObject *lhs, PyObject *rhs, int op)\n"
+            "{\n"
+            "    switch (op) {\n"
+            f"{cases}"
+            "    default:\n"
+            "        Py_INCREF(Py_NotImplemented);\n"
+            "        return Py_NotImplemented;\n"
+            "    }\n"
+            "}\n"
+        )
+        return definition, f"    .tp_richcompare = {richcompare_name},\n"
+
+    def _base_type_slot(self, expr):
+        """Render the CPython base-type slot for derived classes."""
+        if not expr.original_class.superclasses:
+            return ""
+        base_class = expr.original_class.superclasses[0]
+        base_python_name = base_class.scope.get_python_name(base_class.name)
+        wrapped_base = self.scope.find(base_python_name, "classes", raise_if_missing=True)
+        return f"    .tp_base = &{wrapped_base.type_name},\n"
 
     def _visit_PyModInitFunc(self, expr):
         """Render the ``PyModInitFunc`` model node."""

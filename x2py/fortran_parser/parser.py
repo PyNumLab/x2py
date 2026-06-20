@@ -656,38 +656,7 @@ class FortranParser:
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
         self._helper_validate_contains_lines(scope, parts.contains, filename=filename)
         self._helper_validate_sibling_units(child_units, parent_scope=scope, filename=filename)
-        signatures = [
-            self.visit_procedure_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "procedure"
-        ]
-        types = [
-            self.visit_derived_type_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "derived_type"
-        ]
-        interfaces = [
-            self.visit_interface_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "interface"
-        ]
-        enums = [
-            self.visit_enum_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "enum"
-        ]
-        module.procedures.extend(
-            sig
-            for sig in signatures
-            if sig.module and sig.module.lower() == module.name.lower() and not sig.in_interface
-        )
-        module.derived_types.extend(
-            dtype for dtype in types if dtype.module and dtype.module.lower() == module.name.lower()
-        )
-        module.interfaces.extend(
-            iface for iface in interfaces if iface.module and iface.module.lower() == module.name.lower()
-        )
-        module.enums.extend(enum for enum in enums if enum.module and enum.module.lower() == module.name.lower())
+        self._populate_module_like_children(module, child_units, scope=scope, filename=filename)
         self._validate_module_variables(module, filename)
         self._apply_module_visibility(module, filename)
         return module
@@ -718,40 +687,35 @@ class FortranParser:
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
         self._helper_validate_contains_lines(scope, parts.contains, filename=filename)
         self._helper_validate_sibling_units(child_units, parent_scope=scope, filename=filename)
-        signatures = [
-            self.visit_procedure_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "procedure"
-        ]
-        types = [
-            self.visit_derived_type_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "derived_type"
-        ]
-        interfaces = [
-            self.visit_interface_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "interface"
-        ]
-        enums = [
-            self.visit_enum_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "enum"
-        ]
-        submodule.procedures.extend(
-            sig
-            for sig in signatures
-            if sig.module and sig.module.lower() == submodule.name.lower() and not sig.in_interface
-        )
-        submodule.derived_types.extend(
-            dtype for dtype in types if dtype.module and dtype.module.lower() == submodule.name.lower()
-        )
-        submodule.interfaces.extend(
-            iface for iface in interfaces if iface.module and iface.module.lower() == submodule.name.lower()
-        )
-        submodule.enums.extend(enum for enum in enums if enum.module and enum.module.lower() == submodule.name.lower())
+        self._populate_module_like_children(submodule, child_units, scope=scope, filename=filename)
         self._validate_module_variables(submodule, filename)
         return submodule
+
+    def _visit_children_of_kind(self, child_units, kind, visitor, *, scope, filename):
+        return [visitor(child, parent_scope=scope, filename=filename) for child in child_units if child.kind == kind]
+
+    @staticmethod
+    def _belongs_to_module_like(item, target, *, exclude_interface: bool = False) -> bool:
+        belongs = bool(item.module and item.module.lower() == target.name.lower())
+        return belongs and not (exclude_interface and item.in_interface)
+
+    def _populate_module_like_children(self, target, child_units, *, scope, filename) -> None:
+        signatures = self._visit_children_of_kind(
+            child_units, "procedure", self.visit_procedure_unit, scope=scope, filename=filename
+        )
+        types = self._visit_children_of_kind(
+            child_units, "derived_type", self.visit_derived_type_unit, scope=scope, filename=filename
+        )
+        interfaces = self._visit_children_of_kind(
+            child_units, "interface", self.visit_interface_unit, scope=scope, filename=filename
+        )
+        enums = self._visit_children_of_kind(child_units, "enum", self.visit_enum_unit, scope=scope, filename=filename)
+        target.procedures.extend(
+            item for item in signatures if self._belongs_to_module_like(item, target, exclude_interface=True)
+        )
+        target.derived_types.extend(item for item in types if self._belongs_to_module_like(item, target))
+        target.interfaces.extend(item for item in interfaces if self._belongs_to_module_like(item, target))
+        target.enums.extend(item for item in enums if self._belongs_to_module_like(item, target))
 
     def visit_program_unit(
         self,
@@ -2304,42 +2268,67 @@ class FortranParser:
         """Build procedure scope state from a subroutine or function header."""
         module_proc = _REGEX["module_procedure_impl"].match(line)
         if module_proc and not in_interface:
-            name = module_proc.group("name")
-            sig = FortranProcedureSignature(
-                name=name,
-                kind="module procedure",
-                module=module,
-                attributes=["module procedure"],
-                in_interface=in_interface,
-            )
-            return self._new_procedure_scope_state(sig, symbols={})
+            return self._module_procedure_scope(module_proc, module, in_interface)
 
-        m = _REGEX["procedure"].match(line)
-        if m:
-            attributes = self._attrs(m.group("prefix"), m.group("tail"))
-            args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args") or "")]
-            sig = FortranProcedureSignature(
-                name=m.group("name"),
-                kind="subroutine",
-                module=module,
-                arguments=args,
-                attributes=attributes,
-                bind_name=self._bind_c_name(m.group("tail")) if "bind(c)" in attributes else None,
-                in_interface=in_interface,
-            )
-            return self._new_procedure_scope_state(
-                sig,
-                symbols={a.name.lower(): a for a in args},
-            )
-        m = _REGEX["function"].match(line)
-        if not m:
+        procedure_match = _REGEX["procedure"].match(line)
+        if procedure_match:
+            return self._subroutine_scope(procedure_match, module, in_interface)
+        function_match = _REGEX["function"].match(line)
+        if not function_match:
             return None
-        prefix = (m.group("prefix") or "").strip()
-        args = [FortranArgument(name=a, procedure=m.group("name")) for a in split_csv(m.group("args") or "")]
-        result_match = _REGEX["result"].search(m.group("tail"))
+        return self._function_scope(
+            function_match,
+            module,
+            in_interface,
+            filename=filename,
+            lineno=lineno,
+            source_line=source_line,
+        )
+
+    def _module_procedure_scope(self, match, module: str | None, in_interface: bool):
+        sig = FortranProcedureSignature(
+            name=match.group("name"),
+            kind="module procedure",
+            module=module,
+            attributes=["module procedure"],
+            in_interface=in_interface,
+        )
+        return self._new_procedure_scope_state(sig, symbols={})
+
+    def _subroutine_scope(self, match, module: str | None, in_interface: bool):
+        attributes = self._attrs(match.group("prefix"), match.group("tail"))
+        args = [
+            FortranArgument(name=name, procedure=match.group("name")) for name in split_csv(match.group("args") or "")
+        ]
+        sig = FortranProcedureSignature(
+            name=match.group("name"),
+            kind="subroutine",
+            module=module,
+            arguments=args,
+            attributes=attributes,
+            bind_name=self._bind_c_name(match.group("tail")) if "bind(c)" in attributes else None,
+            in_interface=in_interface,
+        )
+        return self._new_procedure_scope_state(sig, symbols={arg.name.lower(): arg for arg in args})
+
+    def _function_scope(
+        self,
+        match,
+        module: str | None,
+        in_interface: bool,
+        *,
+        filename: str | None,
+        lineno: int | None,
+        source_line: str | None,
+    ):
+        prefix = (match.group("prefix") or "").strip()
+        args = [
+            FortranArgument(name=name, procedure=match.group("name")) for name in split_csv(match.group("args") or "")
+        ]
+        result_match = _REGEX["result"].search(match.group("tail"))
         explicit_result = result_match is not None
-        result_name = result_match.group("name") if result_match else m.group("name")
-        result = FortranArgument(name=result_name, procedure=m.group("name"))
+        result_name = result_match.group("name") if result_match else match.group("name")
+        result = FortranArgument(name=result_name, procedure=match.group("name"))
 
         type_tokens = [t for t in prefix.split() if t.lower() not in _ATTR_PREFIX_WORDS]
         type_prefix = " ".join(type_tokens)
@@ -2358,15 +2347,15 @@ class FortranParser:
             if re.match(r"^class\s*\(", type_prefix, re.IGNORECASE):
                 result._fortran_polymorphic = True
 
-        attributes = self._attrs(m.group("prefix"), m.group("tail"))
+        attributes = self._attrs(match.group("prefix"), match.group("tail"))
         sig = FortranProcedureSignature(
-            name=m.group("name"),
+            name=match.group("name"),
             kind="function",
             module=module,
             arguments=args,
             result=result,
             attributes=attributes,
-            bind_name=self._bind_c_name(m.group("tail")) if "bind(c)" in attributes else None,
+            bind_name=self._bind_c_name(match.group("tail")) if "bind(c)" in attributes else None,
             in_interface=in_interface,
         )
         return self._new_procedure_scope_state(
@@ -2713,22 +2702,10 @@ class FortranParser:
             return
 
         if self._is_openmp_declarative_directive(stripped):
-            owner_kind, owner_name = self._variable_scope_label(target)
-            raise FortranParseError(
-                f"Unsupported OpenMP declarative directive in {owner_kind} '{owner_name or '<unnamed>'}': {stripped}",
-                filename=filename,
-                line_number=lineno,
-                source_line=source_line,
-                code="PARSE_UNSUPPORTED_OPENMP_DIRECTIVE",
-            )
+            self._raise_unsupported_openmp_declaration(target, stripped, filename, lineno, source_line)
 
-        if scope.kind == "module":
-            if lower == "private":
-                target.default_visibility = "private"
-                return
-            if lower == "public":
-                target.default_visibility = "public"
-                return
+        if self._apply_default_module_visibility(scope, target, lower):
+            return
 
         parsed_use = self._parse_use_statement(stripped)
         if parsed_use and hasattr(target, "uses"):
@@ -2748,33 +2725,9 @@ class FortranParser:
 
         if "::" in stripped:
             left, right = [x.strip() for x in stripped.split("::", 1)]
-            lower_left = left.lower()
-            if scope.kind == "module" and lower_left == "public":
-                names = [n.strip() for n in split_csv(right) if n.strip()]
-                if names:
-                    target.public_symbols.extend(names)
-                else:
-                    target.default_visibility = "public"
+            if self._apply_module_attribute_statement(scope, target, left.lower(), right):
                 return
-            if scope.kind == "module" and lower_left == "private":
-                names = [n.strip() for n in split_csv(right) if n.strip()]
-                if names:
-                    target.private_symbols.extend(names)
-                else:
-                    target.default_visibility = "private"
-                return
-            if lower_left in {"module procedure", "import"}:
-                return
-        elif self._is_executable_statement_start(stripped) or self._is_ignored_spec_statement(stripped):
-            if self._is_executable_statement_start(stripped) and scope.kind != "program":
-                owner_kind, owner_name = self._variable_scope_label(target)
-                raise FortranParseError(
-                    f"Executable statement is not allowed in {owner_kind} specification part '{owner_name or '<unnamed>'}': {stripped}",
-                    filename=filename,
-                    line_number=lineno,
-                    source_line=source_line,
-                    code="PARSE_EXECUTABLE_IN_SPECIFICATION",
-                )
+        elif self._handle_non_declaration_spec_line(scope, target, stripped, filename, lineno, source_line):
             return
 
         parsed = self._helper_parse_declaration_line(
@@ -2788,17 +2741,66 @@ class FortranParser:
         )
         if parsed:
             return
+        self._raise_unsupported_module_like_declaration(target, stripped, filename, lineno, source_line)
+
+    def _raise_unsupported_openmp_declaration(self, target, line, filename, lineno, source_line) -> None:
         owner_kind, owner_name = self._variable_scope_label(target)
-        if "::" not in stripped and not self._looks_like_declaration_or_spec(stripped):
+        raise FortranParseError(
+            f"Unsupported OpenMP declarative directive in {owner_kind} '{owner_name or '<unnamed>'}': {line}",
+            filename=filename,
+            line_number=lineno,
+            source_line=source_line,
+            code="PARSE_UNSUPPORTED_OPENMP_DIRECTIVE",
+        )
+
+    @staticmethod
+    def _apply_default_module_visibility(scope: _ParserScope, target, line: str) -> bool:
+        if scope.kind != "module" or line not in {"private", "public"}:
+            return False
+        target.default_visibility = line
+        return True
+
+    @staticmethod
+    def _apply_module_attribute_statement(scope: _ParserScope, target, attribute: str, value: str) -> bool:
+        if attribute in {"module procedure", "import"}:
+            return True
+        if scope.kind != "module" or attribute not in {"public", "private"}:
+            return False
+        names = [name.strip() for name in split_csv(value) if name.strip()]
+        if names:
+            getattr(target, f"{attribute}_symbols").extend(names)
+        else:
+            target.default_visibility = attribute
+        return True
+
+    def _handle_non_declaration_spec_line(self, scope, target, line, filename, lineno, source_line) -> bool:
+        executable = self._is_executable_statement_start(line)
+        if not executable and not self._is_ignored_spec_statement(line):
+            return False
+        if executable and scope.kind != "program":
+            owner_kind, owner_name = self._variable_scope_label(target)
+            raise FortranParseError(
+                f"Executable statement is not allowed in {owner_kind} specification part "
+                f"'{owner_name or '<unnamed>'}': {line}",
+                filename=filename,
+                line_number=lineno,
+                source_line=source_line,
+                code="PARSE_EXECUTABLE_IN_SPECIFICATION",
+            )
+        return True
+
+    def _raise_unsupported_module_like_declaration(self, target, line, filename, lineno, source_line) -> None:
+        owner_kind, owner_name = self._variable_scope_label(target)
+        if "::" not in line and not self._looks_like_declaration_or_spec(line):
             self._raise_invalid_fortran_syntax_line(
-                stripped,
+                line,
                 context=f"{owner_kind} '{owner_name or '<unnamed>'}' specification part",
                 filename=filename,
                 lineno=lineno,
                 source_line=source_line,
             )
         raise FortranParseError(
-            f"Unknown or unsupported datatype declaration in {owner_kind} '{owner_name or '<unnamed>'}': {stripped}",
+            f"Unknown or unsupported datatype declaration in {owner_kind} '{owner_name or '<unnamed>'}': {line}",
             filename=filename,
             line_number=lineno,
             source_line=source_line,

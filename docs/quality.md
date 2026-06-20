@@ -1,6 +1,6 @@
 # Quality Assurance
 
-Last reviewed: 2026-06-16
+Last reviewed: 2026-06-20
 
 This project uses a staged Python QA stack. Fast bug-focused checks run on pull
 requests, while the separate `Fuzz` workflow runs deeper Hypothesis discovery
@@ -80,15 +80,17 @@ Run dead-code and complexity checks:
 
 ```bash
 vulture
-python tools/check_radon_policy.py
+python3 tools/check_radon_policy.py --base-ref "$(git merge-base origin/main HEAD)"
 radon cc x2py -n C -s --total-average
 radon mi x2py -s
 ```
 
 The Radon policy check is blocking. It prevents the reviewed C-or-worse hotspot
-average from rising above `19.01` and, when a Git base ref is supplied, rejects
-new or worsened changed production blocks above complexity `20`. Full Radon
-reports remain advisory for refactor planning.
+average from rising above `19.01` and rejects new or worsened changed production
+blocks above complexity `20`. Local runs must supply the pull-request merge base
+explicitly as shown above. CI may use `--base-ref auto`, which reads the event's
+base SHA from the environment and fails if no usable SHA is available. Full
+Radon reports remain advisory for refactor planning.
 
 ## Tool Decisions
 

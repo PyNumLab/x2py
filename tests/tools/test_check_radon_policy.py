@@ -12,6 +12,7 @@ from tools.check_radon_policy import (
     complexity_blocks_for_file,
     is_under_source_roots,
     legacy_baseline_complexity,
+    main,
     parse_changed_python_files,
     resolve_base_ref,
 )
@@ -108,6 +109,15 @@ def test_resolve_base_ref_auto_ignores_empty_and_zero_values(monkeypatch):
     monkeypatch.delenv("GITHUB_BASE_SHA", raising=False)
 
     assert resolve_base_ref("auto") is None
+
+
+def test_main_rejects_auto_without_a_usable_base(monkeypatch, capsys):
+    monkeypatch.delenv("PR_BASE_SHA", raising=False)
+    monkeypatch.setenv("PUSH_BEFORE_SHA", ZERO_SHA)
+    monkeypatch.delenv("GITHUB_BASE_SHA", raising=False)
+
+    assert main(["--base-ref", "auto"]) == 2
+    assert "could not resolve --base-ref auto" in capsys.readouterr().err
 
 
 def test_resolve_base_ref_auto_prefers_pull_request_base(monkeypatch):

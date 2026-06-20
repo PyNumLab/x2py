@@ -703,26 +703,14 @@ class CPythonBindingGenerator(BindingGenerator):
         python_results = expr.results
 
         # Get the arguments of the PyFunctionDef
-        if "property" in original_func.decorators:
-            func_args = [
-                self._new_python_object("self_obj", dtype=class_dtype),
-                func_scope.get_temporary_variable(VoidType(), memory_handling="alias"),
-            ]
-            self._python_object_map[python_args[0]] = func_args[0]
-            func_args = [FunctionDefArgument(a) for a in func_args]
-            body = []
-        else:
-            if in_overload_set or original_func_name in magic_binary_funcs or original_func_name == "__len__":
-                func_args = [FunctionDefArgument(a) for a in self._get_python_argument_variables(python_args)]
-                body = []
-            else:
-                python_arg_names = [self._function_argument_python_name(original_func, arg) for arg in python_args]
-                func_args, body = self._unpack_python_args(
-                    python_args,
-                    class_dtype,
-                    python_arg_names=python_arg_names,
-                )
-                func_args = [FunctionDefArgument(a) for a in func_args]
+        func_args, body = self._python_wrapper_arguments(
+            original_func,
+            original_func_name,
+            python_args,
+            class_dtype,
+            in_overload_set,
+            func_scope,
+        )
 
         # Get the code required to extract the C-compatible arguments from the Python arguments
         wrapped_args = [self._visit(a) for a in python_args]
@@ -732,13 +720,14 @@ class CPythonBindingGenerator(BindingGenerator):
 
         # Get the code required to wrap the C-compatible results into Python objects
         # This function creates variables so it must be called before extracting them from the scope.
-        if original_func_name in magic_binary_funcs and original_func_name.startswith("__i"):
-            res = func_args[0].var.clone(self.scope.get_new_name(func_args[0].var.name), is_argument=False)
-            wrapped_results = {"c_results": [], "py_result": res, "body": []}
-            body.append(AliasAssign(res, func_args[0].var))
-            body.append(Py_INCREF(res))
-        else:
-            wrapped_results = self._convert_result(python_results.var, is_bind_c_function_def, expr)
+        wrapped_results = self._wrapped_python_results(
+            original_func_name,
+            func_args,
+            python_results,
+            is_bind_c_function_def,
+            expr,
+            body,
+        )
 
         # Get the arguments and results which should be used to call the c-compatible function
         func_call_args = [ca for a in wrapped_args for ca in a["args"]]
@@ -759,69 +748,25 @@ class CPythonBindingGenerator(BindingGenerator):
         # Deallocate the C equivalent of any array arguments
         # The C equivalent is the same variable that is passed to the function unless the target language is Fortran.
         # In this case known-size stack arrays are used which are automatically deallocated when they go out of scope.
-        for a in python_args:
-            orig_var = a.var
-            if isinstance(orig_var, FunctionAddress):
-                continue
-            if orig_var.is_ndarray:
-                v = self.scope.find(orig_var.name, category="variables", raise_if_missing=True)
-                if v.is_optional:
-                    body.append(If(IfSection(IsNot(v, NIL), [Deallocate(v)])))
-                else:
-                    body.append(Deallocate(v))
-
-        if original_func_name == "__len__":
-            self.scope.remove_variable(python_result_variable)
-            python_result_variable = c_results[0]
-        elif original_func_name in magic_binary_funcs and original_func_name.startswith("__i"):
-            body.extend(wrapped_results["body"])
-        else:
-            body.extend(wrapped_results["body"])
-            native_py_results = wrapped_results.get(
-                "py_results",
-                [] if python_result_variable is Py_None else [python_result_variable],
-            )
-            native_owned_results = wrapped_results.get(
-                "owned_py_results",
-                [True] * len(native_py_results),
-            )
-            wrapped_arg_cleanup = [ai for arg in wrapped_args for ai in arg["clean_up"]]
-            body.extend(
-                self._status_error_check(
-                    original_func,
-                    wrapped_results,
-                    native_py_results,
-                    native_owned_results,
-                    wrapped_arg_cleanup,
-                )
-            )
-            projected_return = self._project_python_return(
-                expr,
-                original_func,
-                native_py_results,
-                native_owned_results,
-                excluded_output_names=self._status_error_output_names(original_func),
-            )
-            body.extend(projected_return["body"])
-            python_result_variable = projected_return["result"]
+        self._append_array_argument_cleanup(python_args, body)
+        python_result_variable = self._project_wrapper_result(
+            expr,
+            original_func,
+            original_func_name,
+            python_result_variable,
+            c_results,
+            wrapped_results,
+            wrapped_args,
+            body,
+        )
         body.extend(ai for arg in wrapped_args for ai in arg["clean_up"])
 
         # Pack the Python compatible results of the function into one argument.
-        if original_func_name == "__len__":
-            res = cast_to(python_result_variable, Py_ssize_t())
-            func_results = FunctionDefResult(Variable(Py_ssize_t(), self.scope.get_new_name(), is_temp=True))
-        elif python_result_variable is Py_None:
-            res = Py_None
-            func_results = FunctionDefResult(self._new_python_object("result", is_temp=True))
-        else:
-            res = python_result_variable
-            func_results = FunctionDefResult(res)
+        res, func_results = self._python_wrapper_function_result(original_func_name, python_result_variable)
         body.append(Return(res))
 
         self.exit_scope()
-        for a in python_args:
-            if not a.bound_argument:
-                self._python_object_map.pop(a)
+        self._drop_python_argument_mappings(python_args)
 
         function = PyFunctionDef(
             func_name,
@@ -836,11 +781,130 @@ class CPythonBindingGenerator(BindingGenerator):
         self.scope.insert_function(function, func_scope.get_python_name(func_name))
         self._python_object_map[expr] = function
 
+        return self._property_or_function(original_func, function)
+
+    def _python_wrapper_arguments(
+        self,
+        original_func,
+        original_func_name,
+        python_args,
+        class_dtype,
+        in_overload_set,
+        func_scope,
+    ):
+        """Build Python-visible wrapper arguments and their unpacking body."""
         if "property" in original_func.decorators:
-            python_name = original_func.scope.get_python_name(original_func.name)
-            docstring = convert_to_literal(self._property_docstring(python_name, original_func))
-            return PyGetSetDefElement(python_name, function, None, CStrStr(docstring))
-        return function
+            raw_args = [
+                self._new_python_object("self_obj", dtype=class_dtype),
+                func_scope.get_temporary_variable(VoidType(), memory_handling="alias"),
+            ]
+            self._python_object_map[python_args[0]] = raw_args[0]
+            return [FunctionDefArgument(argument) for argument in raw_args], []
+        if in_overload_set or original_func_name in magic_binary_funcs or original_func_name == "__len__":
+            raw_args = self._get_python_argument_variables(python_args)
+            return [FunctionDefArgument(argument) for argument in raw_args], []
+        python_arg_names = [self._function_argument_python_name(original_func, arg) for arg in python_args]
+        raw_args, body = self._unpack_python_args(
+            python_args,
+            class_dtype,
+            python_arg_names=python_arg_names,
+        )
+        return [FunctionDefArgument(argument) for argument in raw_args], body
+
+    def _wrapped_python_results(
+        self,
+        original_func_name,
+        func_args,
+        python_results,
+        is_bind_c_function_def,
+        expr,
+        body,
+    ):
+        """Build result conversion metadata for a Python wrapper."""
+        if original_func_name not in magic_binary_funcs or not original_func_name.startswith("__i"):
+            return self._convert_result(python_results.var, is_bind_c_function_def, expr)
+        result = func_args[0].var.clone(self.scope.get_new_name(func_args[0].var.name), is_argument=False)
+        body.extend((AliasAssign(result, func_args[0].var), Py_INCREF(result)))
+        return {"c_results": [], "py_result": result, "body": []}
+
+    def _append_array_argument_cleanup(self, python_args, body) -> None:
+        """Append cleanup for temporary C array arguments."""
+        for argument in python_args:
+            orig_var = argument.var
+            if isinstance(orig_var, FunctionAddress) or not orig_var.is_ndarray:
+                continue
+            variable = self.scope.find(orig_var.name, category="variables", raise_if_missing=True)
+            if variable.is_optional:
+                body.append(If(IfSection(IsNot(variable, NIL), [Deallocate(variable)])))
+            else:
+                body.append(Deallocate(variable))
+
+    def _project_wrapper_result(
+        self,
+        expr,
+        original_func,
+        original_func_name,
+        python_result_variable,
+        c_results,
+        wrapped_results,
+        wrapped_args,
+        body,
+    ):
+        """Project native results onto the public Python return contract."""
+        if original_func_name == "__len__":
+            self.scope.remove_variable(python_result_variable)
+            return c_results[0]
+        body.extend(wrapped_results["body"])
+        if original_func_name in magic_binary_funcs and original_func_name.startswith("__i"):
+            return python_result_variable
+        native_py_results = wrapped_results.get(
+            "py_results",
+            [] if python_result_variable is Py_None else [python_result_variable],
+        )
+        native_owned_results = wrapped_results.get("owned_py_results", [True] * len(native_py_results))
+        wrapped_arg_cleanup = [item for arg in wrapped_args for item in arg["clean_up"]]
+        body.extend(
+            self._status_error_check(
+                original_func,
+                wrapped_results,
+                native_py_results,
+                native_owned_results,
+                wrapped_arg_cleanup,
+            )
+        )
+        projected_return = self._project_python_return(
+            expr,
+            original_func,
+            native_py_results,
+            native_owned_results,
+            excluded_output_names=self._status_error_output_names(original_func),
+        )
+        body.extend(projected_return["body"])
+        return projected_return["result"]
+
+    def _python_wrapper_function_result(self, original_func_name, python_result_variable):
+        """Build the wrapper return expression and result declaration."""
+        if original_func_name == "__len__":
+            result = cast_to(python_result_variable, Py_ssize_t())
+            definition = FunctionDefResult(Variable(Py_ssize_t(), self.scope.get_new_name(), is_temp=True))
+            return result, definition
+        if python_result_variable is Py_None:
+            return Py_None, FunctionDefResult(self._new_python_object("result", is_temp=True))
+        return python_result_variable, FunctionDefResult(python_result_variable)
+
+    def _drop_python_argument_mappings(self, python_args) -> None:
+        """Remove temporary Python-object mappings for unbound arguments."""
+        for argument in python_args:
+            if not argument.bound_argument:
+                self._python_object_map.pop(argument)
+
+    def _property_or_function(self, original_func, function):
+        """Wrap a generated function as a property entry when required."""
+        if "property" not in original_func.decorators:
+            return function
+        python_name = original_func.scope.get_python_name(original_func.name)
+        docstring = convert_to_literal(self._property_docstring(python_name, original_func))
+        return PyGetSetDefElement(python_name, function, None, CStrStr(docstring))
 
     def _visit_FunctionDefArgument(self, expr):
         """
@@ -4408,82 +4472,139 @@ class CPythonBindingGenerator(BindingGenerator):
         output_items = []
         output_owned = []
         discarded_owned_items = []
-        native_index = 0
         excluded = set(excluded_output_names)
-
-        if original_func.results.var is not NIL:
-            result_name = getattr(original_func.results.var, "name", None)
-            if result_name not in excluded:
-                output_items.append(native_py_results[native_index])
-                output_owned.append(native_owned_results[native_index])
-            elif native_owned_results[native_index]:
-                discarded_owned_items.append(native_py_results[native_index])
-            native_index += 1
+        native_index = self._project_native_function_result(
+            original_func,
+            native_py_results,
+            native_owned_results,
+            excluded,
+            output_items,
+            output_owned,
+            discarded_owned_items,
+        )
 
         visible_outputs = self._visible_output_argument_objects(func)
         for argument in original_func.arguments:
-            orig_var = argument.var
-            if isinstance(orig_var, FunctionAddress):
-                continue
-            if argument.bound_argument:
-                continue
-            output_name = getattr(orig_var, "name", None)
-            if self._is_allocatable_replacement_argument(orig_var):
-                if output_name not in excluded:
-                    output_items.append(native_py_results[native_index])
-                    output_owned.append(native_owned_results[native_index])
-                elif native_owned_results[native_index]:
-                    discarded_owned_items.append(native_py_results[native_index])
-                native_index += 1
-                continue
-            if self._is_string_replacement_argument(orig_var) and native_index < len(native_py_results):
-                if output_name not in excluded:
-                    output_items.append(native_py_results[native_index])
-                    output_owned.append(native_owned_results[native_index])
-                elif native_owned_results[native_index]:
-                    discarded_owned_items.append(native_py_results[native_index])
-                native_index += 1
-                continue
-            if getattr(orig_var, "intent", "in") == "out":
-                visible_object = visible_outputs.get(orig_var) or visible_outputs.get(getattr(orig_var, "name", None))
-                if output_name in excluded:
-                    if visible_object is None:
-                        if native_owned_results[native_index]:
-                            discarded_owned_items.append(native_py_results[native_index])
-                        native_index += 1
-                    continue
-                if visible_object is not None:
-                    output_items.append(visible_object)
-                    output_owned.append(False)
-                else:
-                    output_items.append(native_py_results[native_index])
-                    output_owned.append(native_owned_results[native_index])
-                    native_index += 1
+            native_index = self._project_argument_return(
+                argument,
+                native_index,
+                native_py_results,
+                native_owned_results,
+                excluded,
+                visible_outputs,
+                output_items,
+                output_owned,
+                discarded_owned_items,
+            )
+        return self._pack_projected_python_return(output_items, output_owned, discarded_owned_items)
 
+    @staticmethod
+    def _append_projected_native_result(
+        index,
+        name,
+        native_py_results,
+        native_owned_results,
+        excluded,
+        output_items,
+        output_owned,
+        discarded_owned_items,
+    ) -> None:
+        """Append or discard one native result according to exclusions."""
+        if name not in excluded:
+            output_items.append(native_py_results[index])
+            output_owned.append(native_owned_results[index])
+        elif native_owned_results[index]:
+            discarded_owned_items.append(native_py_results[index])
+
+    def _project_native_function_result(
+        self,
+        original_func,
+        native_py_results,
+        native_owned_results,
+        excluded,
+        output_items,
+        output_owned,
+        discarded_owned_items,
+    ):
+        """Project the explicit native function result when one exists."""
+        if original_func.results.var is NIL:
+            return 0
+        result_name = getattr(original_func.results.var, "name", None)
+        self._append_projected_native_result(
+            0,
+            result_name,
+            native_py_results,
+            native_owned_results,
+            excluded,
+            output_items,
+            output_owned,
+            discarded_owned_items,
+        )
+        return 1
+
+    def _project_argument_return(
+        self,
+        argument,
+        native_index,
+        native_py_results,
+        native_owned_results,
+        excluded,
+        visible_outputs,
+        output_items,
+        output_owned,
+        discarded_owned_items,
+    ):
+        """Project one output argument into the Python return sequence."""
+        orig_var = argument.var
+        if isinstance(orig_var, FunctionAddress) or argument.bound_argument:
+            return native_index
+        output_name = getattr(orig_var, "name", None)
+        replacement = self._is_allocatable_replacement_argument(orig_var)
+        replacement |= self._is_string_replacement_argument(orig_var) and native_index < len(native_py_results)
+        if replacement:
+            self._append_projected_native_result(
+                native_index,
+                output_name,
+                native_py_results,
+                native_owned_results,
+                excluded,
+                output_items,
+                output_owned,
+                discarded_owned_items,
+            )
+            return native_index + 1
+        if getattr(orig_var, "intent", "in") != "out":
+            return native_index
+        visible_object = visible_outputs.get(orig_var) or visible_outputs.get(output_name)
+        if output_name in excluded:
+            if visible_object is None:
+                if native_owned_results[native_index]:
+                    discarded_owned_items.append(native_py_results[native_index])
+                return native_index + 1
+            return native_index
+        if visible_object is not None:
+            output_items.append(visible_object)
+            output_owned.append(False)
+            return native_index
+        output_items.append(native_py_results[native_index])
+        output_owned.append(native_owned_results[native_index])
+        return native_index + 1
+
+    def _pack_projected_python_return(self, output_items, output_owned, discarded_owned_items):
+        """Pack projected Python outputs and apply ownership cleanup."""
+        decrefs = [Py_DECREF(item) for item in discarded_owned_items]
         if not output_items:
-            return {
-                "body": [*(Py_DECREF(item) for item in discarded_owned_items), Py_INCREF(Py_None)],
-                "result": Py_None,
-                "owned_result": False,
-            }
+            return {"body": [*decrefs, Py_INCREF(Py_None)], "result": Py_None, "owned_result": False}
         if len(output_items) == 1:
             if not output_owned[0]:
                 return {
-                    "body": [*(Py_DECREF(item) for item in discarded_owned_items), Py_INCREF(output_items[0])],
+                    "body": [*decrefs, Py_INCREF(output_items[0])],
                     "result": output_items[0],
                     "owned_result": False,
                 }
-            return {
-                "body": [Py_DECREF(item) for item in discarded_owned_items],
-                "result": output_items[0],
-                "owned_result": True,
-            }
-
+            return {"body": decrefs, "result": output_items[0], "owned_result": True}
         tuple_result = self._new_python_object("result_obj")
-        body = [
-            *(Py_DECREF(item) for item in discarded_owned_items),
-            AliasAssign(tuple_result, PyTuple_Pack(*(ObjectAddress(item) for item in output_items))),
-        ]
+        body = [*decrefs, AliasAssign(tuple_result, PyTuple_Pack(*(ObjectAddress(item) for item in output_items)))]
         body.append(If(IfSection(Is(tuple_result, NIL), [Return(self._error_exit_code)])))
         body.extend(Py_DECREF(item) for item, owned in zip(output_items, output_owned, strict=False) if owned)
         return {"body": body, "result": tuple_result, "owned_result": True}

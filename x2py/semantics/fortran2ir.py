@@ -1941,143 +1941,108 @@ def _iter_fortran_variable_contexts(
         the unit that owns each symbol.
     """
     if isinstance(node, FortranProject):
-        for parsed_file in node.files:
-            yield from _iter_fortran_variable_contexts(parsed_file)
-        return
+        yield from _iter_project_variable_contexts(node)
+    elif isinstance(node, FortranFile):
+        yield from _iter_file_variable_contexts(node)
+    elif isinstance(node, FortranModule | FortranSubmodule):
+        yield from _iter_module_variable_contexts(node)
+    elif isinstance(node, FortranProgram):
+        yield from _iter_program_variable_contexts(node)
+    elif isinstance(node, FortranBlockData):
+        yield from _iter_block_data_variable_contexts(node)
+    elif isinstance(node, FortranProcedureSignature):
+        yield from _iter_procedure_variable_contexts(node, module_name)
+    elif isinstance(node, FortranDerivedType):
+        yield from _iter_derived_type_variable_contexts(node, module_name)
 
-    if isinstance(node, FortranFile):
-        file_unit = node.filename or "<source>"
-        for var in getattr(node, "variables", []):
-            yield (
-                var,
-                {
-                    "unit_kind": "file",
-                    "unit": file_unit,
-                    "module": None,
-                    "symbol": var.name,
-                    "role": "variable",
-                },
-            )
-        for module in node.modules:
-            yield from _iter_fortran_variable_contexts(module)
-        for submodule in node.submodules:
-            yield from _iter_fortran_variable_contexts(submodule)
-        for program in node.programs:
-            yield from _iter_fortran_variable_contexts(program)
-        for block_data in node.block_data_units:
-            yield from _iter_fortran_variable_contexts(block_data)
-        for proc in node.procedures:
-            yield from _iter_fortran_variable_contexts(proc)
-        for dtype in node.derived_types:
-            yield from _iter_fortran_variable_contexts(dtype)
-        return
 
-    if isinstance(node, FortranModule | FortranSubmodule):
-        owner = node.name
-        for var in node.variables:
-            yield (
-                var,
-                {
-                    "unit_kind": "module" if isinstance(node, FortranModule) else "submodule",
-                    "unit": owner,
-                    "module": owner,
-                    "symbol": var.name,
-                    "role": "variable",
-                },
-            )
-        for proc in node.procedures:
-            yield from _iter_fortran_variable_contexts(proc, module_name=owner)
-        for dtype in node.derived_types:
-            yield from _iter_fortran_variable_contexts(dtype, module_name=owner)
-        return
+def _variable_context(variable, *, unit_kind, unit, module, role, **extra):
+    return variable, {
+        "unit_kind": unit_kind,
+        "unit": unit,
+        "module": module,
+        **extra,
+        "symbol": variable.name,
+        "role": role,
+    }
 
-    if isinstance(node, FortranProgram):
-        owner = node.name or "<program>"
-        for var in node.variables:
-            yield (
-                var,
-                {
-                    "unit_kind": "program",
-                    "unit": owner,
-                    "module": None,
-                    "symbol": var.name,
-                    "role": "variable",
-                },
-            )
-        for proc in node.procedures:
-            yield from _iter_fortran_variable_contexts(proc, unit_kind="program", unit_name=owner)
-        return
 
-    if isinstance(node, FortranBlockData):
-        owner = node.name or "<block_data>"
-        for var in node.variables:
-            yield (
-                var,
-                {
-                    "unit_kind": "block_data",
-                    "unit": owner,
-                    "module": None,
-                    "symbol": var.name,
-                    "role": "variable",
-                },
-            )
-        return
+def _iter_project_variable_contexts(project: FortranProject):
+    for parsed_file in project.files:
+        yield from _iter_fortran_variable_contexts(parsed_file)
 
-    if isinstance(node, FortranProcedureSignature):
-        proc_module = module_name or node.module
-        owner = _requirement_unit_name(module=proc_module, unit_name=node.name)
-        for arg in node.arguments:
-            yield (
-                arg,
-                {
-                    "unit_kind": "procedure",
-                    "unit": owner,
-                    "module": proc_module,
-                    "procedure": node.name,
-                    "symbol": arg.name,
-                    "role": "argument",
-                },
-            )
-        if node.result is not None:
-            yield (
-                node.result,
-                {
-                    "unit_kind": "procedure",
-                    "unit": owner,
-                    "module": proc_module,
-                    "procedure": node.name,
-                    "symbol": node.result.name,
-                    "role": "result",
-                },
-            )
-        for var in node.variables.values():
-            yield (
-                var,
-                {
-                    "unit_kind": "procedure",
-                    "unit": owner,
-                    "module": proc_module,
-                    "procedure": node.name,
-                    "symbol": var.name,
-                    "role": "variable",
-                },
-            )
-        return
 
-    if isinstance(node, FortranDerivedType):
-        owner = _requirement_unit_name(module=module_name or node.module, unit_name=node.name)
-        for field in node.fields:
-            yield (
-                field,
-                {
-                    "unit_kind": "derived_type",
-                    "unit": owner,
-                    "module": module_name or node.module,
-                    "type_owner": node.name,
-                    "symbol": field.name,
-                    "role": "field",
-                },
-            )
+def _iter_file_variable_contexts(parsed_file: FortranFile):
+    file_unit = parsed_file.filename or "<source>"
+    for variable in getattr(parsed_file, "variables", []):
+        yield _variable_context(variable, unit_kind="file", unit=file_unit, module=None, role="variable")
+    collections = (
+        parsed_file.modules,
+        parsed_file.submodules,
+        parsed_file.programs,
+        parsed_file.block_data_units,
+        parsed_file.procedures,
+        parsed_file.derived_types,
+    )
+    for collection in collections:
+        for child in collection:
+            yield from _iter_fortran_variable_contexts(child)
+
+
+def _iter_module_variable_contexts(node: FortranModule | FortranSubmodule):
+    owner = node.name
+    unit_kind = "module" if isinstance(node, FortranModule) else "submodule"
+    for variable in node.variables:
+        yield _variable_context(variable, unit_kind=unit_kind, unit=owner, module=owner, role="variable")
+    for procedure in node.procedures:
+        yield from _iter_fortran_variable_contexts(procedure, module_name=owner)
+    for derived_type in node.derived_types:
+        yield from _iter_fortran_variable_contexts(derived_type, module_name=owner)
+
+
+def _iter_program_variable_contexts(program: FortranProgram):
+    owner = program.name or "<program>"
+    for variable in program.variables:
+        yield _variable_context(variable, unit_kind="program", unit=owner, module=None, role="variable")
+    for procedure in program.procedures:
+        yield from _iter_fortran_variable_contexts(procedure, unit_kind="program", unit_name=owner)
+
+
+def _iter_block_data_variable_contexts(block_data: FortranBlockData):
+    owner = block_data.name or "<block_data>"
+    for variable in block_data.variables:
+        yield _variable_context(variable, unit_kind="block_data", unit=owner, module=None, role="variable")
+
+
+def _iter_procedure_variable_contexts(procedure: FortranProcedureSignature, module_name: str | None):
+    procedure_module = module_name or procedure.module
+    owner = _requirement_unit_name(module=procedure_module, unit_name=procedure.name)
+    context = {
+        "unit_kind": "procedure",
+        "unit": owner,
+        "module": procedure_module,
+        "procedure": procedure.name,
+    }
+    for argument in procedure.arguments:
+        yield _variable_context(argument, **context, role="argument")
+    if procedure.result is not None:
+        yield _variable_context(procedure.result, **context, role="result")
+    for variable in procedure.variables.values():
+        yield _variable_context(variable, **context, role="variable")
+
+
+def _iter_derived_type_variable_contexts(derived_type: FortranDerivedType, module_name: str | None):
+    owner_module = module_name or derived_type.module
+    owner = _requirement_unit_name(module=owner_module, unit_name=derived_type.name)
+    for field in derived_type.fields:
+        yield _variable_context(
+            field,
+            unit_kind="derived_type",
+            unit=owner,
+            module=owner_module,
+            type_owner=derived_type.name,
+            role="field",
+        )
 
 
 def _compile_time_requirement_message(code: str, symbol: str, expression: str) -> str:

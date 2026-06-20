@@ -188,79 +188,28 @@ class FCodePrinter(CodePrinter):
         """Render the ``Module`` model node."""
         self.set_scope(expr.scope)
         self._constantImports.append({})
-        name = self._visit(expr.name)
-        name = name.replace(".", "_")
-        if not name.startswith("mod_") and self.prefix_module:
-            name = f"{self.prefix_module}_{name}"
+        name = self._fortran_module_name(expr.name)
 
         imports = "".join(self._visit(i) for i in expr.imports)
 
         # Define declarations
-        decs = ""
-        # ...
-        for c in expr.classes:
-            if not isinstance(c, BindCClassDef):
-                self._calculate_class_names(c)
-
-        class_decs_and_methods = [self._visit(i) for i in expr.classes]
-        decs += "\n".join(c[0] for c in class_decs_and_methods)
-        # ...
-
-        declarations = [
-            declaration
-            for declaration in expr.declarations
-            if not isinstance(declaration.variable, BindCModuleConstant)
-        ]
-        # look for external functions and declare their result type
-        self._get_external_declarations(declarations)
-        decs += "".join(self._visit(d) for d in declarations)
-
-        funcs_to_visit = [
-            f for f in list(expr.funcs) + [f for i in expr.overload_sets for f in i.functions] if not f.is_header
-        ]
+        decs, class_decs_and_methods = self._module_declarations(expr)
+        funcs_to_visit = self._module_functions(expr)
 
         # ...
-        public_decs = "".join(
-            f"public :: {n}\n"
-            for n in chain(
-                (c.name for c in expr.classes),
-                (f.name for f in funcs_to_visit if not f.is_private and f.is_semantic),
-                (v.name for v in expr.variables if not v.is_private and not isinstance(v, BindCModuleConstant)),
-            )
-        )
+        public_decs = self._module_public_declarations(expr, funcs_to_visit)
 
         # ...
         sep = self._visit(SeparatorComment(40))
-        if isinstance(expr, BindCModule):
-            external_optional_interfaces = self._bind_c_external_optional_interfaces(expr)
-            interfaces = (
-                "interface\n"
-                'function c_malloc(size) bind(C,name="x2py_malloc") result(ptr)\n'
-                "use iso_c_binding\n"
-                "integer(c_size_t), value, intent(in) :: size\n"
-                "type(c_ptr) :: ptr\n"
-                "end function c_malloc\n"
-                f"{external_optional_interfaces}"
-                "end interface\n"
-            )
-        else:
-            interfaces = "\n".join(self._visit(i) for i in expr.overload_sets)
-            public_decs += "".join(
-                f"public :: {i.name}\n" for i in expr.overload_sets if i.is_semantic and not i.is_private
-            )
+        interfaces, interface_public_decs = self._module_interfaces(expr)
+        public_decs += interface_public_decs
 
-        func_strings = []
-        # Get class functions
-        func_strings += [c[1] for c in class_decs_and_methods]
-        if funcs_to_visit:
-            func_strings += ["".join([sep, self._visit(i), sep]) for i in funcs_to_visit]
-        if isinstance(expr, BindCModule):
-            func_strings += ["".join([sep, self._visit(i), sep]) for i in expr.variable_wrappers]
-        body = "\n".join(func_strings)
+        body = self._module_body(expr, class_decs_and_methods, funcs_to_visit, sep)
         # ...
 
-        private = "private\n" if (funcs_to_visit or expr.classes or expr.overload_sets) else ""
-        contains = "contains\n" if (funcs_to_visit or expr.classes or expr.overload_sets) else ""
+        has_routines = bool(funcs_to_visit or expr.classes or expr.overload_sets)
+        private = "private\n" if has_routines else ""
+        contains = "contains\n" if has_routines else ""
         imports += "".join(self._visit(i) for i in self._additional_imports.values())
         imports = self._constant_imports() + imports
         implicit_none = "" if expr.is_external else "implicit none\n"
@@ -282,6 +231,83 @@ class FCodePrinter(CodePrinter):
         self._constantImports.pop()
 
         return "\n".join([a for a in parts if a])
+
+    def _fortran_module_name(self, name):
+        """Return the emitted Fortran module name."""
+        name = self._visit(name).replace(".", "_")
+        if not name.startswith("mod_") and self.prefix_module:
+            return f"{self.prefix_module}_{name}"
+        return name
+
+    def _module_declarations(self, module):
+        """Render module declarations and collect class method bodies."""
+        for class_def in module.classes:
+            if not isinstance(class_def, BindCClassDef):
+                self._calculate_class_names(class_def)
+        class_parts = [self._visit(class_def) for class_def in module.classes]
+        declarations = [
+            declaration
+            for declaration in module.declarations
+            if not isinstance(declaration.variable, BindCModuleConstant)
+        ]
+        self._get_external_declarations(declarations)
+        code = "\n".join(part[0] for part in class_parts)
+        code += "".join(self._visit(declaration) for declaration in declarations)
+        return code, class_parts
+
+    @staticmethod
+    def _module_functions(module):
+        """Collect non-header procedures emitted in a module body."""
+        candidates = [
+            *module.funcs,
+            *(function for interface in module.overload_sets for function in interface.functions),
+        ]
+        return [function for function in candidates if not function.is_header]
+
+    @staticmethod
+    def _module_public_declarations(module, functions):
+        """Render public declarations for module-visible symbols."""
+        names = chain(
+            (class_def.name for class_def in module.classes),
+            (function.name for function in functions if not function.is_private and function.is_semantic),
+            (
+                variable.name
+                for variable in module.variables
+                if not variable.is_private and not isinstance(variable, BindCModuleConstant)
+            ),
+        )
+        return "".join(f"public :: {name}\n" for name in names)
+
+    def _module_interfaces(self, module):
+        """Render module interfaces and their public declarations."""
+        if isinstance(module, BindCModule):
+            external_interfaces = self._bind_c_external_optional_interfaces(module)
+            code = (
+                "interface\n"
+                'function c_malloc(size) bind(C,name="x2py_malloc") result(ptr)\n'
+                "use iso_c_binding\n"
+                "integer(c_size_t), value, intent(in) :: size\n"
+                "type(c_ptr) :: ptr\n"
+                "end function c_malloc\n"
+                f"{external_interfaces}"
+                "end interface\n"
+            )
+            return code, ""
+        code = "\n".join(self._visit(interface) for interface in module.overload_sets)
+        public = "".join(
+            f"public :: {interface.name}\n"
+            for interface in module.overload_sets
+            if interface.is_semantic and not interface.is_private
+        )
+        return code, public
+
+    def _module_body(self, module, class_parts, functions, separator):
+        """Render class, procedure, and variable-wrapper bodies."""
+        blocks = [part[1] for part in class_parts]
+        blocks.extend("".join((separator, self._visit(function), separator)) for function in functions)
+        if isinstance(module, BindCModule):
+            blocks.extend("".join((separator, self._visit(wrapper), separator)) for wrapper in module.variable_wrappers)
+        return "\n".join(blocks)
 
     def _visit_Import(self, expr):
         """Render the ``Import`` model node."""
@@ -502,56 +528,18 @@ class FCodePrinter(CodePrinter):
         deferred_string = isinstance(dtype, StringType) and not intent_in and (not shape or shape[0] is None)
         # ...
 
-        dtype_str = ""
-        rankstr = ""
-
-        # ... print datatype
-        if isinstance(expr_type, CustomDataType):
-            name = self._visit(expr_type)
-
-            sig = "type"
-            if var.is_argument:
-                # When inheritance is supported we must also check if inheritance is possible
-                arg = get_direct_function_argument(var)
-                assert arg is not None
-                if arg.bound_argument:
-                    sig = "class"
-            dtype_str = f"{sig}({name})"
-        elif isinstance(dtype, BindCPointer):
-            dtype_str = "type(c_ptr)"
-            self._constantImports[-1].setdefault("ISO_C_Binding", set()).add("c_ptr")
-        elif isinstance(dtype, FixedSizeType) and isinstance(expr_type, NumpyNDArrayType | FixedSizeType):
-            dtype_str = self._visit(dtype.primitive_type)
-            if isinstance(dtype, FixedSizeNumericType):
-                dtype_str += f"({self._kind(var)})"
-
-            if rank > 0:
-                # arrays are 0-based in x2py, to avoid ambiguity with range
-                start_val = self._visit(convert_to_literal(0))
-
-                if is_alias or on_heap:
-                    rankstr = ", ".join(":" * rank)
-                elif intent_in:
-                    rankstr = ", ".join([f"{start_val}:"] * rank)
-                elif is_static or on_stack:
-                    ordered_shape = shape[::-1] if var.order == "C" else shape
-                    ubounds = [Minus(s, convert_to_literal(1)) for s in ordered_shape]
-                    rankstr = ", ".join(f"{start_val}:{self._visit(u)}" for u in ubounds)
-                else:
-                    raise NotImplementedError("Fortran rank string undetermined")
-                rankstr = f"({rankstr})"
-
-        elif isinstance(dtype, StringType):
-            dtype_str = self._visit(dtype)
-
-            if shape and shape[0] is not None:
-                dtype_str += f"(len = {self._visit(shape[0])})"
-            elif intent_in:
-                dtype_str += "(len = *)"
-            else:
-                dtype_str += "(len = :)"
-        else:
-            raise TypeError(f"Don't know how to print type {expr_type} in Fortran")
+        dtype_str, rankstr = self._fortran_declaration_type(
+            var,
+            expr_type,
+            dtype,
+            rank,
+            shape,
+            is_alias=is_alias,
+            on_heap=on_heap,
+            on_stack=on_stack,
+            is_static=is_static,
+            intent_in=intent_in,
+        )
 
         code_value = ""
         if expr.value:
@@ -560,32 +548,18 @@ class FCodePrinter(CodePrinter):
         vstr = self._visit(expr.variable.name)
 
         # Default empty strings
-        intentstr = ""
-        allocatablestr = ""
+        intentstr = self._fortran_intent_attribute(intent, rank, is_optional, expr_type, is_const)
+        allocatablestr = self._fortran_allocation_attributes(
+            is_static,
+            is_alias,
+            on_heap,
+            expr_type,
+            deferred_string,
+            is_target,
+        )
         optionalstr = ""
         privatestr = ""
         externalstr = ""
-
-        # Compute intent string
-        if intent:
-            if intent == "in" and rank == 0 and not is_optional and not isinstance(expr_type, CustomDataType):
-                intentstr = ", value"
-                if is_const:
-                    intentstr += ", intent(in)"
-            else:
-                intentstr = f", intent({intent})"
-
-        # Compute allocatable string
-        if not is_static:
-            if is_alias:
-                allocatablestr = ", pointer"
-
-            elif (on_heap and isinstance(expr_type, NumpyNDArrayType)) or deferred_string:
-                allocatablestr = ", allocatable"
-
-            # ISSUES #177: var is allocatable and target
-            if is_target:
-                allocatablestr = f"{allocatablestr}, target"
 
         # Compute optional string
         if is_optional:
@@ -607,6 +581,114 @@ class FCodePrinter(CodePrinter):
         left = dtype_str + allocatablestr + optionalstr + privatestr + externalstr + mod_str + intentstr
         right = vstr + rankstr + code_value
         return f"{left} :: {right}\n"
+
+    def _fortran_declaration_type(
+        self,
+        var,
+        expr_type,
+        dtype,
+        rank,
+        shape,
+        *,
+        is_alias,
+        on_heap,
+        on_stack,
+        is_static,
+        intent_in,
+    ):
+        """Render a variable datatype and rank declaration."""
+        if isinstance(expr_type, CustomDataType):
+            return self._custom_declaration_type(var, expr_type), ""
+        if isinstance(dtype, BindCPointer):
+            self._constantImports[-1].setdefault("ISO_C_Binding", set()).add("c_ptr")
+            return "type(c_ptr)", ""
+        if isinstance(dtype, FixedSizeType) and isinstance(expr_type, NumpyNDArrayType | FixedSizeType):
+            type_code = self._visit(dtype.primitive_type)
+            if isinstance(dtype, FixedSizeNumericType):
+                type_code += f"({self._kind(var)})"
+            rank_code = self._fortran_rank_code(
+                var,
+                rank,
+                shape,
+                is_alias=is_alias,
+                on_heap=on_heap,
+                on_stack=on_stack,
+                is_static=is_static,
+                intent_in=intent_in,
+            )
+            return type_code, rank_code
+        if isinstance(dtype, StringType):
+            return self._fortran_string_type(dtype, shape, intent_in), ""
+        raise TypeError(f"Don't know how to print type {expr_type} in Fortran")
+
+    def _custom_declaration_type(self, var, expr_type):
+        """Render a derived-type declaration, including bound receivers."""
+        signature = "type"
+        if var.is_argument:
+            argument = get_direct_function_argument(var)
+            assert argument is not None
+            if argument.bound_argument:
+                signature = "class"
+        return f"{signature}({self._visit(expr_type)})"
+
+    def _fortran_rank_code(
+        self,
+        var,
+        rank,
+        shape,
+        *,
+        is_alias,
+        on_heap,
+        on_stack,
+        is_static,
+        intent_in,
+    ):
+        """Render Fortran bounds for an array declaration."""
+        if rank == 0:
+            return ""
+        start = self._visit(convert_to_literal(0))
+        if is_alias or on_heap:
+            dimensions = [":"] * rank
+        elif intent_in:
+            dimensions = [f"{start}:"] * rank
+        elif is_static or on_stack:
+            ordered_shape = shape[::-1] if var.order == "C" else shape
+            upper_bounds = [Minus(item, convert_to_literal(1)) for item in ordered_shape]
+            dimensions = [f"{start}:{self._visit(bound)}" for bound in upper_bounds]
+        else:
+            raise NotImplementedError("Fortran rank string undetermined")
+        return f"({', '.join(dimensions)})"
+
+    def _fortran_string_type(self, dtype, shape, intent_in):
+        """Render a Fortran character type and length contract."""
+        type_code = self._visit(dtype)
+        if shape and shape[0] is not None:
+            return f"{type_code}(len = {self._visit(shape[0])})"
+        if intent_in:
+            return f"{type_code}(len = *)"
+        return f"{type_code}(len = :)"
+
+    @staticmethod
+    def _fortran_intent_attribute(intent, rank, is_optional, expr_type, is_const):
+        """Render intent and value attributes for a declaration."""
+        if not intent:
+            return ""
+        if intent == "in" and rank == 0 and not is_optional and not isinstance(expr_type, CustomDataType):
+            return ", value, intent(in)" if is_const else ", value"
+        return f", intent({intent})"
+
+    @staticmethod
+    def _fortran_allocation_attributes(is_static, is_alias, on_heap, expr_type, deferred_string, is_target):
+        """Render pointer, allocatable, and target attributes."""
+        if is_static:
+            return ""
+        if is_alias:
+            attributes = ", pointer"
+        elif (on_heap and isinstance(expr_type, NumpyNDArrayType)) or deferred_string:
+            attributes = ", allocatable"
+        else:
+            attributes = ""
+        return f"{attributes}, target" if is_target else attributes
 
     def _visit_AliasAssign(self, expr):
         """Render the ``AliasAssign`` model node."""
@@ -844,14 +926,7 @@ class FCodePrinter(CodePrinter):
             return ""
         self.set_scope(expr.scope)
 
-        for r in expr.scope.collect_all_tuple_elements(expr.results.var):
-            if (
-                not expr.decorators.get("x2py_callback_adapter")
-                and r.rank
-                and r.memory_handling == "stack"
-                and any(not isinstance(s, Literal) for s in r.alloc_shape)
-            ):
-                raise ValueError("Can't return a stack array of unknown size")
+        self._validate_fortran_function_results(expr)
 
         name = expr.cls_name or expr.name
 
@@ -867,16 +942,8 @@ class FCodePrinter(CodePrinter):
         self._get_external_declarations(decs)
 
         prelude += "".join(self._visit(i) for i in decs)
-        if len(functions) > 0:
-            functions_code = "\n".join(self._visit(i) for i in functions)
-            body_code = body_code + "\ncontains\n" + functions_code
-
-        external_imports = [
-            i for i in expr.imports if isinstance(i.source_module, FunctionDef) and i.source_module.is_external
-        ]
-        imports = [i for i in expr.imports if i not in external_imports]
-        imports = "".join(self._visit(i) for i in imports)
-        external_imports = "".join(self._visit(i) for i in external_imports)
+        body_code = self._function_body_with_nested(body_code, functions)
+        imports, external_imports = self._split_function_imports(expr.imports)
 
         parts = [
             docstring,
@@ -893,6 +960,35 @@ class FCodePrinter(CodePrinter):
         self.exit_scope()
 
         return "\n".join(a for a in parts if a)
+
+    @staticmethod
+    def _validate_fortran_function_results(function) -> None:
+        """Reject unknown-size stack arrays returned from Fortran."""
+        if function.decorators.get("x2py_callback_adapter"):
+            return
+        for result in function.scope.collect_all_tuple_elements(function.results.var):
+            unknown_stack_array = (
+                result.rank
+                and result.memory_handling == "stack"
+                and any(not isinstance(shape, Literal) for shape in result.alloc_shape)
+            )
+            if unknown_stack_array:
+                raise ValueError("Can't return a stack array of unknown size")
+
+    def _function_body_with_nested(self, body_code, functions):
+        """Append nested procedures to a function body."""
+        if not functions:
+            return body_code
+        functions_code = "\n".join(self._visit(function) for function in functions)
+        return body_code + "\ncontains\n" + functions_code
+
+    def _split_function_imports(self, imports):
+        """Render regular and external procedure imports separately."""
+        external = [
+            item for item in imports if isinstance(item.source_module, FunctionDef) and item.source_module.is_external
+        ]
+        regular = [item for item in imports if item not in external]
+        return "".join(self._visit(item) for item in regular), "".join(self._visit(item) for item in external)
 
     def _visit_Return(self, expr):
         """Render the ``Return`` model node."""
@@ -1275,25 +1371,9 @@ class FCodePrinter(CodePrinter):
 
         native_name = expr.overload_set.native_name_for(func) if expr.overload_set else ""
         if expr.overload_set and self._is_defined_operator(native_name):
-            args = expr.overload_set.native_arguments(func, expr.args)
-            values = [self._visit(argument.value) for argument in args]
-            token = self._defined_operator_token(native_name)
-            if len(values) == 1:
-                code = f".not. {values[0]}" if token == ".not." else f"{token}{values[0]}"
-            else:
-                code = f"{values[0]} {token} {values[1]}"
-            parent_assign = get_direct_assignment(expr)
-            if parent_assign:
-                assignment = "=>" if isinstance(parent_assign, AliasAssign) else "="
-                return f"{self._visit(parent_assign.lhs)} {assignment} {code}\n"
-            return code
+            return self._defined_operator_call(expr, func, native_name)
 
-        f_name = self._visit(expr.func_name if not expr.overload_set else expr.overload_set_name)
-
-        if func.is_imported:
-            f_name = self.scope.get_import_alias(func, "functions")
-        elif expr.overload_set and expr.overload_set.is_imported:
-            f_name = self.scope.get_import_alias(expr.overload_set, "functions")
+        f_name = self._fortran_call_name(expr, func)
 
         args = expr.args
         func_result_variables = (
@@ -1301,48 +1381,15 @@ class FCodePrinter(CodePrinter):
         )
         out_results = [v for v in func_result_variables if v and not v.is_argument]
         parent_assign = get_direct_assignment(expr)
-        is_function = len(out_results) == 1 and (
-            func.results.var.rank == 0 or isinstance(func.results.var.class_type, StringType)
-        )
-        if len(out_results) == 1 and isinstance(func.results.var.class_type, NumpyNDArrayType):
-            is_function = parent_assign is not None or func.results.var.memory_handling in {"alias", "heap"}
+        is_function = self._call_is_fortran_function(func, out_results, parent_assign)
 
         if func.arguments and func.arguments[0].bound_argument:
-            bound_name = (
-                expr.overload_set_name
-                if expr.overload_set
-                else (func.type_bound_name or func.scope.get_python_name(func.name))
-            )
-            f_name = self._visit(bound_name)
-            class_variable = args[0].value
-            args = args[1:]
-            if isinstance(class_variable, FunctionCall):
-                base = class_variable.funcdef.results.var
-                var = self.scope.get_temporary_variable(base)
-
-                self._additional_code += self._visit(Assign(var, class_variable)) + "\n"
-                f_name = f"{self._visit(var)} % {f_name}"
-            else:
-                f_name = f"{self._visit(class_variable)} % {f_name}"
+            f_name, args = self._bound_fortran_call(expr, func, args)
 
         if parent_assign:
-            lhs = parent_assign.lhs
-            lhs_vars = {out_results[0]: lhs} if len(out_results) == 1 else dict(zip(out_results, lhs, strict=False))
-            assign_args = []
-            for a in args:
-                key = a.keyword
-                arg = a.value
-                if arg in lhs_vars.values():
-                    var = arg.clone(self.scope.get_new_name())
-                    self.scope.insert_variable(var)
-                    self._additional_code += self._visit(Assign(var, arg))
-                    newarg = var
-                else:
-                    newarg = arg
-                assign_args.append(FunctionCallArgument(newarg, key))
-            args = assign_args
-            results = list(lhs_vars.values())
-            results_strs = [] if is_function else [self._visit(r) for r in lhs_vars.values()]
+            args, results, results_strs = self._assigned_fortran_call_arguments(
+                args, out_results, parent_assign, is_function
+            )
 
         else:
             results_strs = []
@@ -1354,19 +1401,90 @@ class FCodePrinter(CodePrinter):
         if not is_function:
             code = f"call {code}\n"
 
+        return self._finalize_fortran_call(code, parent_assign, is_function, out_results, results)
+
+    def _defined_operator_call(self, expr, function, native_name):
+        """Render a defined operator call or its assignment."""
+        arguments = expr.overload_set.native_arguments(function, expr.args)
+        values = [self._visit(argument.value) for argument in arguments]
+        token = self._defined_operator_token(native_name)
+        if len(values) == 1:
+            code = f".not. {values[0]}" if token == ".not." else f"{token}{values[0]}"
+        else:
+            code = f"{values[0]} {token} {values[1]}"
+        parent_assign = get_direct_assignment(expr)
         if not parent_assign:
-            if is_function or len(out_results) == 0:
+            return code
+        assignment = "=>" if isinstance(parent_assign, AliasAssign) else "="
+        return f"{self._visit(parent_assign.lhs)} {assignment} {code}\n"
+
+    def _fortran_call_name(self, expr, function):
+        """Resolve the emitted name for a Fortran call."""
+        name = self._visit(expr.func_name if not expr.overload_set else expr.overload_set_name)
+        if function.is_imported:
+            return self.scope.get_import_alias(function, "functions")
+        if expr.overload_set and expr.overload_set.is_imported:
+            return self.scope.get_import_alias(expr.overload_set, "functions")
+        return name
+
+    @staticmethod
+    def _call_is_fortran_function(function, out_results, parent_assign):
+        """Return whether a call is emitted as a function expression."""
+        is_function = len(out_results) == 1 and (
+            function.results.var.rank == 0 or isinstance(function.results.var.class_type, StringType)
+        )
+        if len(out_results) == 1 and isinstance(function.results.var.class_type, NumpyNDArrayType):
+            return parent_assign is not None or function.results.var.memory_handling in {"alias", "heap"}
+        return is_function
+
+    def _bound_fortran_call(self, expr, function, arguments):
+        """Render a type-bound call receiver and remaining arguments."""
+        bound_name = (
+            expr.overload_set_name
+            if expr.overload_set
+            else (function.type_bound_name or function.scope.get_python_name(function.name))
+        )
+        function_name = self._visit(bound_name)
+        class_variable = arguments[0].value
+        remaining_arguments = arguments[1:]
+        if not isinstance(class_variable, FunctionCall):
+            return f"{self._visit(class_variable)} % {function_name}", remaining_arguments
+        base = class_variable.funcdef.results.var
+        variable = self.scope.get_temporary_variable(base)
+        self._additional_code += self._visit(Assign(variable, class_variable)) + "\n"
+        return f"{self._visit(variable)} % {function_name}", remaining_arguments
+
+    def _assigned_fortran_call_arguments(self, arguments, out_results, parent_assign, is_function):
+        """Prepare call arguments and result targets under assignment."""
+        lhs = parent_assign.lhs
+        lhs_vars = {out_results[0]: lhs} if len(out_results) == 1 else dict(zip(out_results, lhs, strict=False))
+        assigned_arguments = []
+        for argument in arguments:
+            value = argument.value
+            if value in lhs_vars.values():
+                replacement = value.clone(self.scope.get_new_name())
+                self.scope.insert_variable(replacement)
+                self._additional_code += self._visit(Assign(replacement, value))
+                value = replacement
+            assigned_arguments.append(FunctionCallArgument(value, argument.keyword))
+        results = list(lhs_vars.values())
+        result_strings = [] if is_function else [self._visit(result) for result in results]
+        return assigned_arguments, results, result_strings
+
+    def _finalize_fortran_call(self, code, parent_assign, is_function, out_results, results):
+        """Render final call or assignment syntax for a Fortran procedure."""
+        if not parent_assign:
+            if is_function or not out_results:
                 return code
             self._additional_code += code
             if len(out_results) == 1:
                 return self._visit(results[0])
             return self._visit(tuple(results))
-        if is_function:
-            result_code = self._visit(results[0])
-            if isinstance(parent_assign, AliasAssign):
-                return f"{result_code} => {code}\n"
-            return f"{result_code} = {code}\n"
-        return code
+        if not is_function:
+            return code
+        result_code = self._visit(results[0])
+        assignment = "=>" if isinstance(parent_assign, AliasAssign) else "="
+        return f"{result_code} {assignment} {code}\n"
 
     def _visit_CLocFunc(self, expr):
         """Render the ``CLocFunc`` model node."""
@@ -1624,60 +1742,19 @@ class FCodePrinter(CodePrinter):
                 arg_decs - The code necessary to declare the arguments of the function/subroutine.
                 func_type - Subroutine or function.
         """
-        is_pure = expr.is_pure
-        is_elemental = expr.is_elemental
         out_args = [v for v in expr.scope.collect_all_tuple_elements(expr.results.var) if v and not v.is_argument]
-        args_decs = OrderedDict()
         arguments = expr.arguments
         class_arg = next((a for a in arguments if a.bound_argument), None)
-
-        func_end = ""
-        rec = "recursive " if expr.is_recursive else ""
-        string_result = isinstance(expr.results.var.class_type, StringType)
         callback_adapter = bool(expr.decorators.get("x2py_callback_adapter"))
-        if len(out_args) != 1 or (expr.results.var.rank > 0 and not string_result and not callback_adapter):
-            func_type = "subroutine"
-            for result in out_args:
-                args_decs[result] = Declare(result, intent="out")
+        out_args, args_decs, func_type, func_end, callback_result = self._fortran_result_signature(
+            expr, out_args, callback_adapter
+        )
+        callback_interfaces = self._fortran_argument_declarations(arguments, callback_adapter, args_decs)
+        if callback_result is not None:
+            result, declaration = callback_result
+            args_decs[result] = declaration
 
-        else:
-            # todo: if return is a function
-            func_type = "function"
-            result = out_args[0]
-            func_end = f"result({result.name})"
-
-            args_decs[result] = Declare(result)
-            out_args = []
-        # ...
-
-        callback_result_declaration = None
-        if callback_adapter and func_type == "function":
-            callback_result_declaration = args_decs.pop(result)
-
-        callback_interfaces = []
-        for arg in arguments:
-            arg_var = arg.var
-            if isinstance(arg_var, Variable):
-                if callback_adapter:
-                    args_decs[arg_var] = self._callback_native_argument_declaration(arg_var)
-                    continue
-                inout = arg.inout and not isinstance(arg_var, BindCVariable)
-                for v in self.scope.collect_all_tuple_elements(arg_var):
-                    dec = Declare(v, intent="inout") if inout else Declare(v, intent="in")
-                    args_decs[v] = dec
-            elif isinstance(arg_var, FunctionAddress) and arg_var.decorators.get("x2py_callback_abi"):
-                callback_interfaces.append(self._callback_c_interface(arg_var))
-        if callback_result_declaration is not None:
-            args_decs[result] = callback_result_declaration
-
-        # treat case of pure function
-        sig = f"{rec}{func_type} {name}"
-        if is_pure:
-            sig = f"pure {sig}"
-
-        # treat case of elemental function
-        if is_elemental:
-            sig = f"elemental {sig}"
+        sig = self._fortran_signature_prefix(expr, func_type, name)
 
         arg_iter = chain((class_arg,), out_args, arguments[1:]) if class_arg else chain(out_args, arguments)
         arg_code = ", ".join(self._visit(i) for i in arg_iter)
@@ -1692,6 +1769,51 @@ class FCodePrinter(CodePrinter):
             "arg_decs": arg_decs,
             "func_type": func_type,
         }
+
+    @staticmethod
+    def _fortran_result_signature(function, out_args, callback_adapter):
+        """Classify results and build their signature declarations."""
+        declarations = OrderedDict()
+        string_result = isinstance(function.results.var.class_type, StringType)
+        uses_output_arguments = len(out_args) != 1 or (
+            function.results.var.rank > 0 and not string_result and not callback_adapter
+        )
+        if uses_output_arguments:
+            for result in out_args:
+                declarations[result] = Declare(result, intent="out")
+            return out_args, declarations, "subroutine", "", None
+        result = out_args[0]
+        declaration = Declare(result)
+        callback_result = (result, declaration) if callback_adapter else None
+        if callback_result is None:
+            declarations[result] = declaration
+        return [], declarations, "function", f"result({result.name})", callback_result
+
+    def _fortran_argument_declarations(self, arguments, callback_adapter, declarations):
+        """Populate argument declarations and callback interfaces."""
+        callback_interfaces = []
+        for argument in arguments:
+            variable = argument.var
+            if isinstance(variable, Variable):
+                if callback_adapter:
+                    declarations[variable] = self._callback_native_argument_declaration(variable)
+                    continue
+                intent = "inout" if argument.inout and not isinstance(variable, BindCVariable) else "in"
+                for element in self.scope.collect_all_tuple_elements(variable):
+                    declarations[element] = Declare(element, intent=intent)
+            elif isinstance(variable, FunctionAddress) and variable.decorators.get("x2py_callback_abi"):
+                callback_interfaces.append(self._callback_c_interface(variable))
+        return callback_interfaces
+
+    @staticmethod
+    def _fortran_signature_prefix(function, func_type, name):
+        """Render recursive, pure, and elemental signature prefixes."""
+        signature = f"{'recursive ' if function.is_recursive else ''}{func_type} {name}"
+        if function.is_pure:
+            signature = f"pure {signature}"
+        if function.is_elemental:
+            signature = f"elemental {signature}"
+        return signature
 
     def _callback_native_argument_declaration(self, var):
         """Declare an internal callback adapter argument with its native Fortran ABI."""

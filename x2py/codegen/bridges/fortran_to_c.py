@@ -183,34 +183,17 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         funcs_to_generate = [f for f in expr.funcs if f.is_semantic and not f.is_private]
 
         funcs = [self._visit(f) for f in funcs_to_generate]
-        if expr.init_func:
-            init_func = funcs[next(i for i, f in enumerate(funcs_to_generate) if f == expr.init_func)]
-        else:
-            init_func = None
-        if expr.free_func:
-            free_func = funcs[next(i for i, f in enumerate(funcs_to_generate) if f == expr.free_func)]
-        else:
-            free_func = None
+        init_func = self._wrapped_special_function(expr.init_func, funcs_to_generate, funcs)
+        free_func = self._wrapped_special_function(expr.free_func, funcs_to_generate, funcs)
         removed_functions = [f for f, w in zip(funcs_to_generate, funcs, strict=False) if isinstance(w, EmptyNode)]
         funcs = [f for f in funcs if not isinstance(f, EmptyNode)]
         interfaces = [self._visit(f) for f in expr.overload_sets]
         classes = [self._visit(f) for f in expr.classes]
-        variables = []
-        variable_accessor_funcs = []
-        for variable in (self._visit(v) for v in expr.variables if not v.is_private):
-            if isinstance(variable, BindCScalarModuleVariable):
-                variable_accessor_funcs.extend((variable.getter_function, variable.setter_function))
-            else:
-                variables.append(variable)
+        variables, variable_accessor_funcs = self._wrapped_module_variables(expr.variables)
         funcs.extend(variable_accessor_funcs)
         variable_getters = [v for v in variables if isinstance(v, BindCArrayVariable)]
         # Import the module and its dependencies (in case they are used for argument types)
-        if expr.imports:
-            imports = list(expr.imports)
-        elif any(f.is_external for f in funcs_to_generate):
-            imports = []
-        else:
-            imports = [Import(expr.name, target=expr, mod=expr)]
+        imports = self._module_imports(expr, funcs_to_generate)
 
         # Ensure renamed datatypes are mapped to their new name
         self.scope.imports["cls_constructs"].update(expr.scope.imports["cls_constructs"])
@@ -233,6 +216,34 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             scope=mod_scope,
             removed_functions=removed_functions,
         )
+
+    @staticmethod
+    def _wrapped_special_function(original, source_functions, wrapped_functions):
+        """Return the wrapper corresponding to an optional special function."""
+        if original is None:
+            return None
+        index = next(index for index, function in enumerate(source_functions) if function == original)
+        return wrapped_functions[index]
+
+    def _wrapped_module_variables(self, module_variables):
+        """Split wrapped module variables into storage and accessor functions."""
+        variables = []
+        accessors = []
+        for variable in (self._visit(item) for item in module_variables if not item.is_private):
+            if isinstance(variable, BindCScalarModuleVariable):
+                accessors.extend((variable.getter_function, variable.setter_function))
+            else:
+                variables.append(variable)
+        return variables, accessors
+
+    @staticmethod
+    def _module_imports(module, wrapped_functions):
+        """Select imports required by a generated bridge module."""
+        if module.imports:
+            return list(module.imports)
+        if any(function.is_external for function in wrapped_functions):
+            return []
+        return [Import(module.name, target=module, mod=module)]
 
     def _visit_FunctionDef(self, expr):
         """
@@ -274,83 +285,30 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope = func_scope
 
         # Wrap the arguments and collect the expressions passed as the call argument.
-        generated_args = []
-        projected_argument_results = []
-        for argument in expr.arguments:
-            if isinstance(argument.var, FunctionAddress):
-                generated_args.append(self._convert_argument(argument, expr))
-            elif not argument.bound_argument and self._is_hidden_output_argument(argument.var):
-                result = self._convert_result(argument.var, expr.scope)
-                self._additional_exprs.extend(result["body"])
-                projected_argument_results.append(result)
-                generated_args.append(
-                    {
-                        "c_arg": None,
-                        "f_arg": FunctionCallArgument(result["f_result"], keyword=argument.var.name),
-                        "body": [],
-                    }
-                )
-            elif not argument.bound_argument and self._is_allocatable_replacement_argument(argument.var):
-                generated_arg = self._convert_argument(argument, expr)
-                generated_args.append(generated_arg)
-                result = self._build_allocatable_replacement_result(argument.var, generated_arg["f_arg"].value)
-                self._additional_exprs.extend(result["body"])
-                projected_argument_results.append(result)
-            else:
-                generated_arg = self._convert_argument(argument, expr)
-                generated_args.append(generated_arg)
-                if not argument.bound_argument and self._is_string_replacement_argument(argument.var):
-                    projected_argument_results.append(
-                        self._build_string_replacement_result(argument.var, generated_arg)
-                    )
+        generated_args, projected_argument_results = self._convert_function_arguments(expr)
 
         func_arguments = [a["c_arg"] for a in generated_args if a["c_arg"] is not None]
         call_arguments = [a["f_arg"] for a in generated_args]
 
-        result_infos = []
-        if expr.results.var is NIL:
-            func_call_results = []
-        else:
-            result = self._convert_result(expr.results.var, expr.scope)
-            self._additional_exprs.extend(result["body"])
-            result_infos.append(result)
-            func_call_results = self.scope.collect_all_tuple_elements(result["f_result"])
+        result_infos, func_call_results = self._convert_function_result(expr)
         result_infos.extend(projected_argument_results)
-
-        if not result_infos:
-            func_results = NIL
-        elif len(result_infos) == 1:
-            func_results = result_infos[0]["c_result"]
-        else:
-            func_results = self._pack_function_results(result_infos)
+        func_results = self._function_result_value(result_infos)
 
         overload_set = get_direct_overload_set(expr)
 
-        if overload_set:
-            body = self._get_function_def_body(overload_set, generated_args, func_call_results)
-        else:
-            body = self._get_function_def_body(expr, generated_args, func_call_results)
+        call_target = overload_set or expr
+        body = self._get_function_def_body(call_target, generated_args, func_call_results)
 
         body.extend(self._additional_exprs)
         self._additional_exprs.clear()
         additional_functions = self._additional_functions
         self._additional_functions = []
 
-        if expr.scope.get_python_name(expr.name) == "__del__" and call_arguments:
-            if expr.is_external:
-                # If __del__ is not defined in the module then the del call is unnecessary
-                body.pop()
-            body.append(DeallocatePointer(call_arguments[0].value))
+        self._append_destructor_cleanup(expr, call_arguments, body)
 
         self.exit_scope()
 
-        imports = []
-        if (
-            expr.is_external
-            and expr.scope.get_python_name(expr.name) != "__del__"
-            and not self._has_optional_arguments(expr)
-        ):
-            imports.append(Import(expr.name, target=(), mod=expr))
+        imports = self._function_imports(expr)
 
         func = BindCFunctionDef(
             name,
@@ -368,6 +326,76 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope.insert_function(func, name)
 
         return func
+
+    def _convert_function_arguments(self, function):
+        """Convert every function argument and collect projected results."""
+        generated_args = []
+        projected_results = []
+        for argument in function.arguments:
+            generated_arg, projected_result = self._convert_function_argument(argument, function)
+            generated_args.append(generated_arg)
+            if projected_result is not None:
+                projected_results.append(projected_result)
+        return generated_args, projected_results
+
+    def _convert_function_argument(self, argument, function):
+        """Convert one function argument and its optional projected result."""
+        if isinstance(argument.var, FunctionAddress):
+            return self._convert_argument(argument, function), None
+        if not argument.bound_argument and self._is_hidden_output_argument(argument.var):
+            result = self._convert_result(argument.var, function.scope)
+            self._additional_exprs.extend(result["body"])
+            generated = {
+                "c_arg": None,
+                "f_arg": FunctionCallArgument(result["f_result"], keyword=argument.var.name),
+                "body": [],
+            }
+            return generated, result
+        generated = self._convert_argument(argument, function)
+        if argument.bound_argument:
+            return generated, None
+        if self._is_allocatable_replacement_argument(argument.var):
+            result = self._build_allocatable_replacement_result(argument.var, generated["f_arg"].value)
+            self._additional_exprs.extend(result["body"])
+            return generated, result
+        if self._is_string_replacement_argument(argument.var):
+            return generated, self._build_string_replacement_result(argument.var, generated)
+        return generated, None
+
+    def _convert_function_result(self, function):
+        """Convert the explicit function result into bridge result metadata."""
+        if function.results.var is NIL:
+            return [], []
+        result = self._convert_result(function.results.var, function.scope)
+        self._additional_exprs.extend(result["body"])
+        call_results = self.scope.collect_all_tuple_elements(result["f_result"])
+        return [result], call_results
+
+    def _function_result_value(self, result_infos):
+        """Build the C-visible result value for converted result metadata."""
+        if not result_infos:
+            return NIL
+        if len(result_infos) == 1:
+            return result_infos[0]["c_result"]
+        return self._pack_function_results(result_infos)
+
+    @staticmethod
+    def _append_destructor_cleanup(function, call_arguments, body) -> None:
+        """Append pointer cleanup required by a wrapped destructor."""
+        if function.scope.get_python_name(function.name) != "__del__" or not call_arguments:
+            return
+        if function.is_external:
+            body.pop()
+        body.append(DeallocatePointer(call_arguments[0].value))
+
+    def _function_imports(self, function):
+        """Return direct imports required to call an external function."""
+        needs_import = (
+            function.is_external
+            and function.scope.get_python_name(function.name) != "__del__"
+            and not self._has_optional_arguments(function)
+        )
+        return [Import(function.name, target=(), mod=function)] if needs_import else []
 
     def _visit_FunctionOverloadSet(self, expr):
         """
@@ -780,109 +808,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
             adapter_scope.insert_variable(adapter_var, name=str(native_var.name))
             adapter_arguments.append(FunctionDefArgument(adapter_var))
-
-            if isinstance(native_var.class_type, FixedSizeNumericType):
-                if getattr(native_var, "intent", "in") != "in":
-                    raise ValueError(
-                        f"Callback {callback_name!r} scalar argument {native_var.name!s} must have intent(in)"
-                    )
-                c_var = native_var.clone(
-                    str(native_var.name),
-                    new_class=Variable,
-                    is_argument=True,
-                    memory_handling="stack",
-                    passes_by_value=True,
-                )
-                c_scope.insert_variable(c_var, name=str(native_var.name))
-                c_arguments.append(FunctionDefArgument(c_var))
-                adapter_call_arguments.append(cast_to(adapter_var, c_var.dtype))
-                abi_arguments.append({"kind": "scalar", "native": native_var, "abi": (c_var,)})
-                continue
-
-            if isinstance(native_var.class_type, NumpyNDArrayType):
-                data = Variable(
-                    BindCPointer(),
-                    c_scope.get_new_name(f"{native_var.name}_data"),
-                    is_argument=True,
-                    memory_handling="stack",
-                )
-                c_scope.insert_variable(data)
-                dimensions = [
-                    Variable(
-                        NumpyInt64Type(),
-                        c_scope.get_new_name(f"{native_var.name}_shape_{index + 1}"),
-                        is_argument=True,
-                        passes_by_value=True,
-                    )
-                    for index in range(native_var.rank)
-                ]
-                for dimension in dimensions:
-                    c_scope.insert_variable(dimension)
-                c_arguments.extend(FunctionDefArgument(item) for item in (data, *dimensions))
-
-                data_value = Variable(
-                    BindCPointer(),
-                    adapter_scope.get_new_name(f"{native_var.name}_data"),
-                    memory_handling="stack",
-                )
-                adapter_scope.insert_variable(data_value)
-                callback_storage = adapter_var.clone(
-                    adapter_scope.get_new_name(f"{native_var.name}_callback_storage"),
-                    new_class=Variable,
-                    is_argument=False,
-                    is_target=True,
-                    memory_handling="stack",
-                )
-                adapter_scope.insert_variable(callback_storage)
-                if getattr(native_var, "intent", "in") != "out":
-                    adapter_body.append(Assign(callback_storage, adapter_var))
-                adapter_body.append(CLocFunc(callback_storage, data_value))
-                adapter_call_arguments.extend(
-                    [
-                        data_value,
-                        *(ArrayShapeElement(callback_storage, convert_to_literal(i)) for i in range(native_var.rank)),
-                    ]
-                )
-                if getattr(native_var, "intent", "in") != "in":
-                    adapter_post_body.append(Assign(adapter_var, callback_storage))
-                abi_arguments.append({"kind": "array", "native": native_var, "abi": (data, *dimensions)})
-                continue
-
-            if isinstance(native_var.class_type, CustomDataType):
-                data = Variable(
-                    BindCPointer(),
-                    c_scope.get_new_name(f"{native_var.name}_data"),
-                    is_argument=True,
-                    memory_handling="stack",
-                )
-                c_scope.insert_variable(data)
-                c_arguments.append(FunctionDefArgument(data))
-                data_value = Variable(
-                    BindCPointer(),
-                    adapter_scope.get_new_name(f"{native_var.name}_data"),
-                    memory_handling="stack",
-                )
-                adapter_scope.insert_variable(data_value)
-                callback_storage = adapter_var.clone(
-                    adapter_scope.get_new_name(f"{native_var.name}_callback_storage"),
-                    new_class=Variable,
-                    is_argument=False,
-                    is_target=True,
-                    memory_handling="stack",
-                )
-                adapter_scope.insert_variable(callback_storage)
-                if getattr(native_var, "intent", "in") != "out":
-                    adapter_body.append(Assign(callback_storage, adapter_var))
-                adapter_body.append(CLocFunc(callback_storage, data_value))
-                adapter_call_arguments.append(data_value)
-                if getattr(native_var, "intent", "in") != "in":
-                    adapter_post_body.append(Assign(adapter_var, callback_storage))
-                abi_arguments.append({"kind": "derived", "native": native_var, "abi": (data,)})
-                continue
-
-            raise ValueError(
-                f"Callback {callback_name!r} argument {native_var.name!s} uses unsupported type {native_var.class_type}"
+            converted = self._convert_callback_abi_argument(
+                callback_name,
+                native_var,
+                adapter_var,
+                c_scope,
+                adapter_scope,
             )
+            c_arguments.extend(converted["c_arguments"])
+            adapter_call_arguments.extend(converted["call_arguments"])
+            adapter_body.extend(converted["body"])
+            adapter_post_body.extend(converted["post_body"])
+            abi_arguments.append(converted["abi"])
 
         native_result = callback.results.var
         abi_result = {"kind": "none", "native": NIL}
@@ -980,6 +917,111 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_arg": FunctionCallArgument(adapter, keyword=expr.name),
             "body": [],
         }
+
+    def _convert_callback_abi_argument(self, callback_name, native_var, adapter_var, c_scope, adapter_scope):
+        """Dispatch one callback argument to its ABI converter."""
+        if isinstance(native_var.class_type, FixedSizeNumericType):
+            return self._convert_callback_scalar_argument(callback_name, native_var, adapter_var, c_scope)
+        if isinstance(native_var.class_type, NumpyNDArrayType):
+            return self._convert_callback_pointer_argument(
+                native_var, adapter_var, c_scope, adapter_scope, is_array=True
+            )
+        if isinstance(native_var.class_type, CustomDataType):
+            return self._convert_callback_pointer_argument(
+                native_var, adapter_var, c_scope, adapter_scope, is_array=False
+            )
+        raise ValueError(
+            f"Callback {callback_name!r} argument {native_var.name!s} uses unsupported type {native_var.class_type}"
+        )
+
+    @staticmethod
+    def _convert_callback_scalar_argument(callback_name, native_var, adapter_var, c_scope):
+        """Convert a scalar callback argument to its interoperable ABI."""
+        if getattr(native_var, "intent", "in") != "in":
+            raise ValueError(f"Callback {callback_name!r} scalar argument {native_var.name!s} must have intent(in)")
+        c_var = native_var.clone(
+            str(native_var.name),
+            new_class=Variable,
+            is_argument=True,
+            memory_handling="stack",
+            passes_by_value=True,
+        )
+        c_scope.insert_variable(c_var, name=str(native_var.name))
+        return {
+            "c_arguments": [FunctionDefArgument(c_var)],
+            "call_arguments": [cast_to(adapter_var, c_var.dtype)],
+            "body": [],
+            "post_body": [],
+            "abi": {"kind": "scalar", "native": native_var, "abi": (c_var,)},
+        }
+
+    @staticmethod
+    def _callback_pointer_storage(native_var, adapter_var, adapter_scope):
+        """Create adapter-side pointer storage for a callback argument."""
+        data_value = Variable(
+            BindCPointer(),
+            adapter_scope.get_new_name(f"{native_var.name}_data"),
+            memory_handling="stack",
+        )
+        adapter_scope.insert_variable(data_value)
+        callback_storage = adapter_var.clone(
+            adapter_scope.get_new_name(f"{native_var.name}_callback_storage"),
+            new_class=Variable,
+            is_argument=False,
+            is_target=True,
+            memory_handling="stack",
+        )
+        adapter_scope.insert_variable(callback_storage)
+        return data_value, callback_storage
+
+    def _convert_callback_pointer_argument(self, native_var, adapter_var, c_scope, adapter_scope, *, is_array):
+        """Convert an array or derived callback argument to pointer ABI data."""
+        data = Variable(
+            BindCPointer(),
+            c_scope.get_new_name(f"{native_var.name}_data"),
+            is_argument=True,
+            memory_handling="stack",
+        )
+        c_scope.insert_variable(data)
+        dimensions = self._callback_array_dimensions(native_var, c_scope) if is_array else []
+        data_value, callback_storage = self._callback_pointer_storage(native_var, adapter_var, adapter_scope)
+        body = []
+        post_body = []
+        if getattr(native_var, "intent", "in") != "out":
+            body.append(Assign(callback_storage, adapter_var))
+        body.append(CLocFunc(callback_storage, data_value))
+        if getattr(native_var, "intent", "in") != "in":
+            post_body.append(Assign(adapter_var, callback_storage))
+        shape_arguments = [
+            ArrayShapeElement(callback_storage, convert_to_literal(index)) for index in range(native_var.rank)
+        ]
+        return {
+            "c_arguments": [FunctionDefArgument(item) for item in (data, *dimensions)],
+            "call_arguments": [data_value, *shape_arguments],
+            "body": body,
+            "post_body": post_body,
+            "abi": {
+                "kind": "array" if is_array else "derived",
+                "native": native_var,
+                "abi": (data, *dimensions),
+            },
+        }
+
+    @staticmethod
+    def _callback_array_dimensions(native_var, c_scope):
+        """Create C ABI dimension arguments for a callback array."""
+        dimensions = [
+            Variable(
+                NumpyInt64Type(),
+                c_scope.get_new_name(f"{native_var.name}_shape_{index + 1}"),
+                is_argument=True,
+                passes_by_value=True,
+            )
+            for index in range(native_var.rank)
+        ]
+        for dimension in dimensions:
+            c_scope.insert_variable(dimension)
+        return dimensions
 
     def _convert_numeric_argument(self, var, func):
         """Convert numeric argument for the current wrapper."""

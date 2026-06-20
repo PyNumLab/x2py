@@ -117,6 +117,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(list(argv or sys.argv[1:]))
     source_paths = tuple(Path(path) for path in args.paths)
     base_ref = resolve_base_ref(args.base_ref)
+    if args.base_ref == "auto" and base_ref is None:
+        print(
+            "Radon policy could not resolve --base-ref auto; set PR_BASE_SHA, "
+            "PUSH_BEFORE_SHA, or GITHUB_BASE_SHA, or pass an explicit base ref.",
+            file=sys.stderr,
+        )
+        return 2
     result = check_policy(
         source_paths=source_paths,
         base_ref=base_ref,
