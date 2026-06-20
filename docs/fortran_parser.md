@@ -265,7 +265,7 @@ source path or source text
   -> FortranFile parser facts
   -> parse_fortran_project(...) dependency ordering and namespace resolution
   -> semantics.fortran2ir conversion
-  -> readiness, `.pyi`, and later wrapper stages
+  -> readiness, `.pyi`, and the implemented Fortran wrapper stages
 ```
 
 The recursive parsing pattern is:
@@ -1166,7 +1166,7 @@ Lower-level unit parsers are internal `FortranParser` methods.
 
 Semantic conversion lives in `x2py/semantics/fortran2ir.py`. It accepts parsed `FortranFile`
 (or selected `FortranModule`) structures and converts metadata into semantic IR
-consumed by the `.pyi` printer and later wrapper/runtime stages.
+consumed by the `.pyi` printer and current Fortran wrapper/runtime stages.
 Compiler-backed shared-CLI semantic stages resolve compiler-dependent kind
 expressions, measure intrinsic storage with `storage_size`, attach those facts
 to semantic types, and reuse memory and persistent caches. For the maintained

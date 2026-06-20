@@ -874,7 +874,7 @@ source path or source text
   -> CParser.visit_parsed_project(...) or parse_c_project(...)
   -> CProject indexes and cross-file resolution facts
   -> semantics.c2ir conversion
-  -> readiness, `.pyi`, and later wrapper stages
+  -> readiness and `.pyi`; a C-input runtime wrapper backend comes later
 ```
 
 Keep these boundaries:

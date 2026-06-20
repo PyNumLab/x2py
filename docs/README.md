@@ -2,10 +2,15 @@
 
 Start with:
 
-- [Tutorial](tutorial.md): the supported end-to-end user workflow, semantic
-  `.pyi` editing, readiness, and current boundaries.
-- [Verified examples cookbook](examples.md): copy-paste CLI commands, compiler
-  preprocessing recipes, Python API snippets, and blocker examples.
+- [Tutorial](tutorial.md): the supported end-to-end workflow from Fortran
+  source to an imported extension, plus semantic `.pyi` editing, readiness,
+  and the current C boundary.
+- [Verified examples cookbook](examples.md): copy-paste Fortran wrapper builds
+  and calls, CLI inspection commands, compiler preprocessing recipes, Python
+  API snippets, and blocker examples.
+- [Fortran wrapper guide](fortran_wrapper.md): the complete generated Python
+  contract, wrapper mechanism, ownership, lifetime, build modes, and current
+  limitations.
 - [Developer guide](developper_guide.md): implementation ownership, support
   evidence rules, parser references, focused tests, fixture generators, and
   change workflows.
@@ -39,8 +44,10 @@ support claims.
 - [Wrapper design notes](wrapper_design_notes.md)
 - [Semantic multilanguage wrapper runtime architecture](architecture/semantic_multilanguage_wrapper_runtime_architecture.md)
 
-Design documents describe deferred or long-term wrapper decisions. They are
-not evidence that runtime wrapper generation is currently implemented.
+Design documents describe deferred or long-term decisions. They are not
+evidence for behavior beyond the runtime Fortran contracts proved by the
+[Fortran wrapper guide](fortran_wrapper.md) and its linked tests. In
+particular, the wrapper backend for user-supplied C inputs remains future work.
 
 README files under `tests/` intentionally remain next to the fixtures or
 expected outputs they describe. They are local test-maintenance instructions,

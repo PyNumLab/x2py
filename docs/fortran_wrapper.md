@@ -15,6 +15,13 @@ supported only when generated Fortran and C code compile, the extension imports,
 and Python tests exercise successful calls, mutation, lifetime, and relevant
 failure paths.
 
+This guide covers the implemented wrapper for Fortran source inputs. x2py also
+parses C and produces C semantic IR, `.pyi`, and readiness reports, but a
+runtime wrapper backend for user-supplied C libraries will be added later.
+The C source generated internally as part of a Fortran wrapper is an
+implementation detail of the current Fortran path, not the future C-input
+backend.
+
 ## Contents
 
 - Foundations: [building a wrapper](#building-and-importing-a-wrapper),
@@ -46,11 +53,18 @@ failure paths.
 
 ## Building And Importing A Wrapper
 
-The direct wrapper path accepts fixed-form and free-form Fortran sources. A
-single source build can be invoked with:
+The direct wrapper path accepts fixed-form and free-form Fortran sources and
+requires a working GNU Fortran/C toolchain, Python development headers, and
+NumPy headers. Supplying recognizable Fortran sources without a stage flag
+defaults to a wrapper build; `--wrap` makes that choice explicit.
+
+Build the checked scalar example:
 
 ```bash
-python3 -m x2py solver.f90 --out-dir build --json
+python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+  --wrap \
+  --out-dir build/fruntime_abi \
+  --json
 ```
 
 The JSON result reports the module name, generated files, output directory, and
@@ -60,19 +74,88 @@ location where the extension can be imported:
 ```python
 import sys
 
-sys.path.insert(0, "build")
-import solver
+import numpy as np
+
+sys.path.insert(0, "build/fruntime_abi")
+import fruntime_abi_f90
+
+assert fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
 ```
+
+Native scalar arguments use their exact NumPy dtype. x2py rejects a Python
+`float` where the generated contract requires `numpy.float64`; this avoids
+implicit ABI-changing coercions.
+
+### Wrapper Build Mechanism
+
+One direct build executes this pipeline:
+
+```text
+ordered Fortran source files
+  -> compiler preprocessing
+  -> Fortran parser project model
+  -> compiler-dependent kind and storage probes
+  -> semantic modules and readiness blockers
+  -> merged public wrapper module and collision-safe Python names
+  -> codegen AST
+  -> Fortran bind(C) bridge
+  -> C/CPython binding and x2py runtime support
+  -> compile user sources and generated sources
+  -> link one Python extension module
+```
+
+The Fortran bridge converts non-interoperable Fortran contracts into a stable
+C ABI. The generated C layer validates Python and NumPy objects, manages Python
+references and wrapper-owned temporaries, calls the bridge, and projects native
+results onto the documented Python API. The runtime support supplies shared
+array, error, allocation, and ownership helpers.
+
+Typical generated artifacts are:
+
+| Artifact | Purpose |
+| --- | --- |
+| `bind_c_<module>_wrapper.f90` | Fortran-to-C ABI bridge |
+| `<module>_wrapper.c` and `.h` | CPython extension binding |
+| `x2py_runtime/` | Shared native runtime support |
+| user and generated `.o`/`.mod` files | Native build intermediates |
+| `<module>.<extension-suffix>.so` | Importable extension on Linux |
+
+The extension name comes from the first generated semantic module. For a
+multi-source build, x2py merges the public surface into that extension and
+compiles sources in caller-supplied order.
 
 Without `--out-dir`, x2py uses a private `__x2py__` build directory beside the
 source and places the importable extension beside the source file. Generated
 Fortran and C wrapper sources remain build artifacts; users do not edit them to
-change the Python API. The editable contract is the semantic `.pyi` described
-in [Semantic `.pyi` format](pyi_format.md).
+change the Python API.
+
+The semantic `.pyi` described in [Semantic `.pyi` format](pyi_format.md) is the
+editable semantic contract and readiness surface. The current CLI build is
+source-driven: `--wrap` accepts Fortran sources and cannot be combined with
+`--pyi` or a `.pyi` input. Edited `.pyi` contracts can be loaded and lowered by
+the semantic/codegen APIs, but integrating an edited stub directly into the CLI
+build is a separate future workflow.
 
 Use `--verbose` to execute the direct build while printing every exact,
 shell-escaped compiler and linker command. Use `--makefile` to generate an
 editable `Makefile.x2py` without compiling. These modes are mutually exclusive.
+
+The equivalent Python entrypoint returns structured artifact paths:
+
+```python
+from x2py import build_fortran_extension
+
+result = build_fortran_extension(
+    "tests/wrapper/fruntime_abi_f90.f90",
+    output_dir="build/fruntime_abi",
+)
+print(result.module_name)
+print(result.shared_library)
+```
+
+See the [examples cookbook](examples.md#fortran-runtime-wrapper-examples) for
+copy-paste direct-build, Makefile, import, and temporary-directory Python API
+recipes.
 
 ## How Support Claims Are Established
 

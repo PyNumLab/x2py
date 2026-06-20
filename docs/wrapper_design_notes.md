@@ -1,9 +1,11 @@
 # Wrapper Design Notes
 
-This file records policy decisions that should wait until wrapper generation is
-implemented. The parser and semantic layers should keep collecting source facts,
-emitting blockers where policy is missing, and leaving wrapper behavior to the
-wrapper phase.
+This file records policy decisions that are not settled by the implemented
+Fortran wrapper contract. The parser and semantic layers should keep collecting
+source facts, emitting blockers where policy is missing, and leaving runtime
+behavior to the owning wrapper backend. User-supplied C inputs do not yet have a
+runtime backend; the generated C binding used by the Fortran path does not
+change that boundary.
 
 Reference details live in:
 

@@ -13,7 +13,8 @@ maintenance material starts in the [developer guide](developper_guide.md).
 
 ## Current Scope
 
-x2py builds a Python extension by default when given one Fortran source file:
+x2py builds one Python extension by default when given one or more ordered
+Fortran source files:
 
 ```bash
 python3 -m x2py solver.f90
@@ -24,15 +25,30 @@ x2py also supports four explicit inspection stages:
 1. Parse wrapper-relevant Fortran or C declarations.
 2. Convert parser facts to language-neutral semantic IR.
 3. Emit an editable semantic `.pyi` interface.
-4. Report whether that semantic interface has enough information for future
-   wrapper generation.
+4. Report whether that semantic interface has enough information for wrapper
+   generation, while distinguishing readiness from an available runtime
+   backend.
 
-The current runtime wrapper build path is implemented for one Fortran source
-file. `Wrappable: yes` means the semantic contract has no known readiness
+The current runtime wrapper build path is implemented for Fortran source
+files. `Wrappable: yes` means the semantic contract has no known readiness
 blockers; for C and edited `.pyi` contracts it does not mean a compiled Python
-extension already exists.
+extension already exists. Runtime wrapping of user-supplied C libraries will
+be added later.
 
-The supported pipeline is:
+The implemented Fortran build pipeline is:
+
+```text
+ordered Fortran sources
+  -> compiler preprocessing and target-type probing
+  -> parser project facts
+  -> semantic IR
+  -> codegen AST
+  -> generated Fortran bind(C) bridge
+  -> generated C/CPython binding and runtime support
+  -> compiled and linked Python extension
+```
+
+The inspection pipeline is shared by Fortran and C:
 
 ```text
 Fortran or C source
@@ -42,10 +58,16 @@ Fortran or C source
   -> semantic readiness report
 ```
 
+Fortran wrapper generation continues from semantic IR into native codegen.
+The current C path stops at semantic readiness; the generated C source used by
+the Fortran backend is not a wrapper backend for C inputs.
+
 Parsers preserve source facts. Semantic IR normalizes those facts. Edited
-`.pyi` files are the user-controlled contract when source alone cannot express
-enough policy. Readiness reports blockers rather than guessing ownership,
-callback lifetime, ABI shims, or Python-visible projections.
+`.pyi` files are the user-controlled inspection and readiness contract when
+source alone cannot express enough policy. The current Fortran build remains
+source-driven and does not consume an edited `.pyi` directly. Readiness reports
+blockers rather than guessing ownership, callback lifetime, ABI shims, or
+Python-visible projections.
 
 ## Before You Start
 
@@ -183,6 +205,87 @@ python3 -m x2py basic_subroutine.pyi --wrap-readiness
 
 Readiness treats the edited `.pyi` contract as the source of truth.
 
+### 5. Build A Fortran Extension
+
+Use the checked runtime example for a complete build and call:
+
+<!-- x2py-doc-source: tests/wrapper/fruntime_abi_f90.f90 -->
+```fortran
+module fruntime_abi_f90
+contains
+  real(8) function scale(value, factor) result(output)
+    real(8), intent(in) :: value
+    real(8), intent(in) :: factor
+    output = value * factor
+  end function scale
+end module fruntime_abi_f90
+```
+
+Build it into an explicit directory:
+
+```bash
+python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+  --wrap \
+  --out-dir build/fruntime_abi \
+  --json
+```
+
+`--wrap` is optional when all inputs have recognizable Fortran suffixes and no
+inspection stage is selected. It is shown here to make the build action
+explicit. The JSON payload reports the extension name, shared-library path,
+generated wrapper sources, and all build artifacts.
+
+Import and call the module:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/fruntime_abi")
+import fruntime_abi_f90
+
+value = fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5))
+assert value == np.float64(7.5)
+```
+
+The exact NumPy scalar types are intentional. The wrapper validates the native
+ABI contract instead of silently converting arbitrary Python numeric objects.
+
+Without `--out-dir`, intermediate files go into `__x2py__` beside the first
+source and the extension is placed beside that source. Use `--verbose` to print
+the executed compiler and linker commands.
+
+### 6. Understand The Generated Boundary
+
+The build lowers semantic IR through two native layers:
+
+1. A generated Fortran `bind(C)` bridge adapts Fortran calling conventions,
+   arrays, derived types, optional values, and results to a C-compatible ABI.
+2. A generated C/CPython binding validates Python objects, manages ownership
+   and references, invokes the bridge, and creates Python or NumPy results.
+
+The x2py runtime support is compiled with those generated sources. The final
+link combines user objects, the Fortran bridge, the CPython binding, and the
+runtime into one extension module. Generated sources are build artifacts; the
+public behavior is the documented semantic and wrapper contract.
+
+For a build-system-controlled workflow, generate sources and a GNU Make build
+without compiling:
+
+```bash
+python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+  --makefile \
+  --out-dir build/fruntime_abi \
+  --json
+```
+
+Then run `make -f build/fruntime_abi/Makefile.x2py`. The Makefile exposes
+`FC`, `CC`, `X2PY_LD`, `X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS`.
+The [Fortran wrapper guide](fortran_wrapper.md) defines the complete Python API
+and the [examples cookbook](examples.md#fortran-runtime-wrapper-examples)
+contains multi-source and Python API recipes.
+
 ## C Walkthrough
 
 Input (`tests/data/c/general/math_api.h`):
@@ -281,7 +384,9 @@ File: tests/data/c/general/math_api.h
 ```
 
 The C frontend supports wrapper-oriented declaration and signature extraction.
-It is not a C++ frontend or a full compiler frontend. The
+It does not yet lower user C inputs into a compiled extension. That backend
+will be added later after its ABI, ownership, and runtime contracts are proved.
+The C frontend is not a C++ frontend or a full compiler frontend. The
 [supported boundaries](#supported-boundaries) below summarize the user-facing
 scope.
 
@@ -289,6 +394,8 @@ scope.
 
 | Goal | Command flag | Output |
 | --- | --- | --- |
+| Build a Fortran extension | no stage flag or `--wrap` | Generated sources, objects, and importable extension |
+| Generate an editable native build | `--makefile` | Generated sources and `Makefile.x2py`, without compilation |
 | Inspect native parser facts | `--parse` | Human-readable report |
 | Consume full parser facts | `--parse --json` | Parser payload |
 | Consume language-neutral facts | `--semantics` | Semantic payload |
@@ -305,6 +412,11 @@ python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
 python3 -m x2py tests/data/c/general/math_api.h \
   --language c --pyi --wrap-readiness
 ```
+
+Build mode is separate from inspection mode: `--wrap` and `--makefile` cannot
+be combined with `--parse`, `--semantics`, `--pyi`, or `--wrap-readiness`.
+Both build modes currently require Fortran source files rather than directories
+or `.pyi` inputs.
 
 ## Select Inputs And Language
 
@@ -453,13 +565,18 @@ readiness blocker. A placeholder such as `Procedure` or
 `Callable[..., Return]` remains incomplete because argument types are unknown.
 
 Supported projection metadata such as `@native_call(...)` is parsed and
-preserved, but x2py does not yet execute projections or generate runtime
-wrapper code. See the [semantic `.pyi` format](pyi_format.md) before writing
-custom semantic annotations.
+preserved. The source-driven Fortran wrapper executes the built-in projection
+rules documented in the [Fortran wrapper guide](fortran_wrapper.md), but the
+CLI does not currently build directly from an edited `.pyi` or execute an
+arbitrary edited `@native_call` contract. See the
+[semantic `.pyi` format](pyi_format.md) before writing custom annotations.
 
 ## Use The Python API
 
-The package exports parser, semantic conversion, `.pyi`, and readiness helpers.
+The package exports `build_fortran_extension` as well as parser, semantic
+conversion, `.pyi`, and readiness helpers. The
+[examples cookbook](examples.md#build-and-import-through-the-python-api) shows
+a complete temporary-directory build and import.
 
 Parse inline source:
 
@@ -531,13 +648,17 @@ Readiness is a semantic check. It can report blockers such as:
 
 When the missing information is expressible in supported semantic `.pyi`
 syntax, edit the generated interface and rerun readiness. Some blockers require
-future wrapper policy or implementation work and cannot currently be resolved
-by an annotation.
+additional wrapper policy or backend implementation and cannot currently be
+resolved by an annotation.
 
 ## Supported Boundaries
 
 Use x2py for the behavior implemented and tested today:
 
+- generated and compiled CPython extensions from one or more ordered Fortran
+  source files;
+- generated Fortran `bind(C)` bridges, C/CPython bindings, and runtime support
+  for the contracts in the [Fortran wrapper guide](fortran_wrapper.md);
 - wrapper-relevant Fortran and C source-fact extraction;
 - compiler-preprocessed CLI workflows;
 - typed parser models and language-neutral semantic IR;
@@ -550,8 +671,9 @@ Do not assume current support for:
 - full compiler-grade parsing or ABI validation;
 - automatic pointer ownership or lifetime inference;
 - automatic callback lifetime/threading policy;
-- generated or compiled runtime wrappers;
-- execution of `@native_call` projections.
+- generated or compiled runtime wrappers from user-supplied C inputs;
+- direct CLI wrapper builds from edited `.pyi` files;
+- arbitrary edited `@native_call` projection execution through the CLI build.
 
 The [semantic `.pyi` format](pyi_format.md) is the maintained user-facing
 contract for editable stubs. The [semantic IR reference](semantics.md) owns
@@ -562,6 +684,7 @@ the [developer guide](developper_guide.md#references).
 ## Continue Reading
 
 - [Verified examples cookbook](examples.md)
+- [Fortran wrapper guide](fortran_wrapper.md)
 - [Semantic `.pyi` format](pyi_format.md)
 - [Semantic IR reference](semantics.md)
 - [Diagnostic code registry](diagnostic_codes.md)

@@ -3,7 +3,14 @@
 Semantic `.pyi` files are x2py's editable wrapper contract. They are valid
 Python stub files, but they are not meant to be clean static-type-checker stubs.
 They preserve native type, storage, ownership, shape and visibility facts that a
-future wrapper generator needs.
+wrapper generator needs. The implemented Fortran wrapper uses the same semantic
+contract internally; the wrapper backend for user-supplied C inputs remains
+future work.
+
+The current `--wrap` workflow is source-driven and accepts Fortran source files,
+not an edited `.pyi` file. Edited stubs can be loaded, round-tripped, and checked
+for readiness today. Directly building an extension from an edited stub is a
+separate future workflow.
 
 Status terms used below:
 

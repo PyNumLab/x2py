@@ -1,5 +1,13 @@
 # Semantic Multilanguage Wrapper and Interoperability Runtime
 
+> **Status:** This is a long-term architecture document, not a statement that
+> every backend below exists. The source-driven Fortran-to-Python wrapper is
+> implemented and documented in
+> [the Fortran wrapper guide](../fortran_wrapper.md). C parsing, semantic IR,
+> `.pyi`, and readiness are implemented, but the runtime backend for
+> user-supplied C inputs will be added later. Other language backends and the
+> broader coercion runtime remain design goals.
+
 ## Vision
 
 The goal of this project is to create a modern interoperability framework capable of wrapping and connecting libraries written in multiple native languages through a unified semantic API layer.

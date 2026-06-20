@@ -7,14 +7,16 @@ underlying semantic model and datatype policy in one place.
 
 Sections through [Deferred C Work](#deferred-c-work) describe current semantic
 behavior. The final self-contained C runtime-contract section is explicitly a
-design proposal and is not implemented wrapper support.
+design proposal and is not implemented C-input wrapper support. The current
+Fortran runtime contract is documented separately in
+[fortran_wrapper.md](fortran_wrapper.md).
 
 ## Datatype Mapping
 
 This document records the shared scalar datatype policy used when C and Fortran
 parser facts are converted to semantic IR. The semantic names are the stable
 bridge between parser-native type spellings, `.pyi` output, readiness checks,
-and eventual NumPy-oriented wrapper code.
+the implemented Fortran wrapper, and a future C-input wrapper backend.
 
 ### Semantic Names
 
@@ -805,9 +807,11 @@ semantic `external_type_ref` metadata. If the user replaces the opaque owner
 stub with a concrete class body, the imported semantic reference becomes
 `representation="wrapped"` without changing the importing stub.
 
-This file-set round-trip is the editing boundary for future wrapper policy.
-Existing type constraints encoded with `Annotated[...]` are preserved now.
-Additional coercion and executable contract syntax remains deferred.
+This file-set round-trip is the editing boundary for wrapper policy. Existing
+type constraints encoded with `Annotated[...]` are preserved now. The current
+Fortran CLI build is source-driven and does not consume an edited `.pyi`
+directly; a direct edited-contract build workflow and additional coercion or
+executable contract syntax remain deferred.
 
 For C, an unresolved typedef is not automatically opaque: its ABI could be an
 integer, pointer, struct, or another representation. The C frontend emits an
@@ -1445,7 +1449,7 @@ the Phase 1 parser, IR, printer or wrapper generator.
 
 ### 11. Proposed Phase 1 Runtime Errors
 
-A future wrapper generator or optional importer would need to report
+A future C-input wrapper generator or optional importer would need to report
 unsupported behavior instead of silently changing the interface.
 
 | Code | Condition |

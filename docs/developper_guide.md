@@ -33,6 +33,7 @@ public command or Python API
   -> semantic conversion, when applicable
   -> .pyi printer/loader, when applicable
   -> readiness, when applicable
+  -> Fortran bridge, CPython binding, native build, and runtime tests, when wrapping
   -> focused tests and maintained reference docs
 ```
 
@@ -61,6 +62,7 @@ Use these documentation roles consistently:
 | --- | --- |
 | [tutorial.md](tutorial.md) | Main supported user workflow and boundaries |
 | [examples.md](examples.md) | Copy-paste commands and Python API recipes |
+| [fortran_wrapper.md](fortran_wrapper.md) | Implemented Fortran runtime contract, mechanism, ownership, and build modes |
 | [c_parser.md](c_parser.md) | Maintainer inventory for the C frontend |
 | [fortran_parser.md](fortran_parser.md) | Maintainer inventory for the Fortran frontend |
 | [semantics.md](semantics.md) | Accepted semantic IR and datatype contract |
@@ -74,7 +76,9 @@ When adding a user example:
 3. Add or identify the focused test that owns the behavior.
 4. State limitations next to the example when metadata is preserved but not
    executed, such as `@native_call` projection metadata.
-5. Do not describe future wrapper generation as implemented support.
+5. Distinguish the implemented source-driven Fortran wrapper from deferred
+   workflows such as C-input wrapping, direct edited-`.pyi` CLI builds, and
+   arbitrary Pythonic projection execution.
 
 ### Automatically Verify Markdown Examples
 
@@ -86,6 +90,10 @@ with the active test interpreter and runs them without a shell. It rejects
 shell operators, output-writing options, and options that select custom
 executables or preprocessing command templates. Python snippets run with the
 active test interpreter.
+
+Wrapper examples that need native compilation should use
+`build_fortran_extension` with `TemporaryDirectory` so verification does not
+leave build artifacts in the checkout.
 
 Mark a command that only needs to exit successfully:
 
@@ -191,6 +199,10 @@ implementation files.
 | `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
 | `.pyi` loading/editing | `x2py/semantics/pyi_parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
+| Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/test_build_modes.py`, `tests/wrapper/multi_source_builds/test_multi_source_builds.py` |
+| Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
+| Fortran-to-C bridge and CPython binding | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | `tests/wrapper/` subject suites |
+| Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/test_runtime_abi.py`, `tests/wrapper/test_build_modes.py` |
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/tools/test_documentation_examples.py` |
 
@@ -346,8 +358,8 @@ CLI args
   -> preprocessing config and source loading
   -> parser models
   -> semantic IR
-  -> .pyi printing / .pyi loading
-  -> readiness report
+  -> inspection: .pyi printing / .pyi loading / readiness report
+  -> Fortran build: codegen AST / native bridge / CPython binding / extension
 ```
 
 ### CLI And Language Resolution
@@ -358,6 +370,9 @@ CLI args
 - rejecting ambiguous directories and unknown suffixes without `--language`;
 - building `PreprocessingConfig`;
 - dispatching the requested stage flags;
+- defaulting recognizable Fortran sources to a wrapper build when no stage is
+  selected;
+- routing `--wrap` and `--makefile` through `x2py/wrapping.py`;
 - routing text, JSON, and `--out` output.
 
 Recognizable Fortran files and `.pyi` readiness inputs can omit `--language`.
@@ -674,6 +689,53 @@ converter/probe machinery to print target-specific mapping examples for
 `docs/semantics.md`; changes there need both semantic conversion tests and
 documentation-example verification.
 
+### Fortran Runtime Wrapper Path
+
+`x2py/wrapping.py::build_fortran_extension(...)` is the public orchestration
+boundary for direct Fortran builds. Keep its stages explicit:
+
+```text
+ordered source paths
+  -> preprocess_source(..., language="fortran")
+  -> parse_fortran_project(...)
+  -> compile-time expression and storage probes
+  -> fortran_project_to_semantic_modules(...)
+  -> merge public semantic modules
+  -> semantic_ir_to_codegen_ast(...)
+  -> Codegen and create_shared_library(...)
+  -> WrapperBuildResult
+```
+
+The main ownership boundaries are:
+
+- `x2py/wrapping.py`: source order, preprocessing/probing, semantic merge,
+  output placement, direct-versus-Makefile mode, and artifact reporting;
+- `x2py/semantics/ir2ast.py`: semantic contract validation and conversion to
+  codegen models;
+- `x2py/codegen/bridges/fortran_to_c.py`: Fortran-to-C ABI adaptation;
+- `x2py/codegen/bindings/c_to_python.py`: Python argument/result conversion,
+  reference handling, and CPython wrapper construction;
+- `x2py/codegen/printers/{fcode,ccode,cpythoncode}.py`: source rendering only;
+- `x2py/compiling/`: compiler commands and shared-library linking; and
+- `x2py/stdlib/x2py_runtime/`: native runtime support copied into each build.
+
+Do not move semantic ownership or projection policy into printers. Do not infer
+source dependencies: multi-source builds compile in caller order, and the first
+semantic module names the merged extension. `--makefile` records the same
+compiler/linker plan without executing it.
+
+The current CLI build is source-driven and Fortran-only. Edited `.pyi` files
+have loader, round-trip, readiness, and lower-level semantic/codegen coverage,
+but `--wrap` does not accept them directly. User C inputs currently stop at
+semantic readiness; their runtime backend is future work even though the
+Fortran wrapper internally emits C source.
+
+Runtime verification belongs in `tests/wrapper`. The subject index in
+[`tests/wrapper/README.md`](../tests/wrapper/README.md) maps generated behavior
+to compiled/imported tests. Build-mode changes should at least cover
+`test_build_modes.py`, `multi_source_builds/test_multi_source_builds.py`, and
+the affected runtime subject test.
+
 ### Parser Model Internals
 
 Parser models are source facts. They should answer "what did the source say?"
@@ -765,6 +827,8 @@ coverage only when the public contract changes.
 | `.pyi` tests | Editable contract loader/printer behavior | `tests/pyi/test_pyi_to_ir.py`, `tests/semantics/test_pyi_printer.py` |
 | Readiness tests | User-facing blocker and wrappability decisions | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_c_semantic_readiness.py` |
 | CLI tests | User commands, output routing, diagnostics | `tests/parser/test_cli.py`, `tests/parser/test_preprocessing_cli.py` |
+| Wrapper build tests | Artifact placement, direct/Makefile modes, multi-source ordering | `tests/wrapper/test_build_modes.py`, `tests/wrapper/multi_source_builds/` |
+| Wrapper runtime tests | Imported extension behavior, ownership, lifetime, and failures | `tests/wrapper/` subject suites indexed by `tests/wrapper/README.md` |
 | Property/fuzz tests | Broad parser robustness invariants | `tests/property/test_parser_properties.py`, `tests/property/test_semantic_properties.py` |
 
 ### Choosing Tests For A Change
@@ -781,6 +845,9 @@ coverage only when the public contract changes.
   user-facing messages change.
 - Preprocessing behavior: preprocessing CLI tests and at least one parser path
   that consumes the recipe.
+- Wrapper orchestration or codegen behavior: the focused `tests/wrapper`
+  build-mode or subject suite, including an imported runtime assertion rather
+  than build success alone.
 
 ### Golden Fixture Rules
 
@@ -1007,6 +1074,7 @@ Run the major suites individually while iterating:
 PYTHONPATH=. pytest -q tests/parser
 PYTHONPATH=. pytest -q tests/semantics
 PYTHONPATH=. pytest -q tests/pyi
+PYTHONPATH=. pytest -q tests/wrapper
 ```
 
 As a project policy, do not merge pull requests unless all checks are green.

@@ -1,9 +1,10 @@
 # x2py
 
-Wrapper-oriented parser and semantic-interface tooling for Fortran and C. x2py
-extracts native declarations, converts them to language-neutral semantic IR,
-emits editable `.pyi` interface files, and reports whether an interface has
-enough information for future wrapper generation.
+Fortran-to-Python wrapper generation plus wrapper-oriented parser and semantic
+interface tooling for Fortran and C. x2py builds importable CPython extensions
+from Fortran sources, extracts native declarations into language-neutral
+semantic IR, emits editable `.pyi` interfaces, and reports unsupported or
+incomplete contracts before code generation.
 
 [![Quality](https://github.com/PyNumLab/x2py/actions/workflows/quality.yml/badge.svg?branch=main)](https://github.com/PyNumLab/x2py/actions/workflows/quality.yml)
 [![codecov](https://codecov.io/gh/PyNumLab/x2py/graph/badge.svg?token=QZRRCS5YO6)](https://codecov.io/gh/PyNumLab/x2py)
@@ -24,6 +25,41 @@ extension:
 python3 -m x2py solver.f90
 ```
 
+Build a checked example into an explicit directory:
+
+```bash
+python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+  --out-dir build/fruntime_abi \
+  --json
+```
+
+Import the generated extension and call it with the exact NumPy scalar dtype
+required by the native signature:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/fruntime_abi")
+import fruntime_abi_f90
+
+print(fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
+```
+
+The runtime wrapper mechanism is:
+
+```text
+Fortran sources
+  -> compiler preprocessing and target-type probing
+  -> Fortran parser
+  -> semantic IR and readiness validation
+  -> generated Fortran bind(C) bridge
+  -> generated C/CPython binding and x2py runtime support
+  -> native compilation and shared-library link
+  -> importable Python extension
+```
+
 The inspection workflow also has four explicit stages:
 
 ```text
@@ -32,7 +68,6 @@ native source
   -> semantic IR
   -> editable .pyi
   -> readiness report
-  -> future wrapper generation
 ```
 
 | Goal | Command flag |
@@ -43,9 +78,10 @@ native source
 | Find missing information or unsupported contracts | `--wrap-readiness` |
 
 `Wrappable: yes` means the semantic contract has no known readiness blockers.
-The current runtime wrapper build path is implemented for single Fortran
-sources; C runtime wrapping is still tracked through semantic readiness until
-the C wrapper backend is completed.
+The runtime build path accepts one or more ordered Fortran sources. C parsing,
+semantic IR, `.pyi`, and readiness are implemented, but wrapping user-supplied
+C libraries is a later backend. The generated C code used internally by the
+Fortran wrapper is not that future C-input backend.
 The [generated target datatype mapping example](docs/semantics.md#generated-linux-x86_64-mapping-example)
 shows how the GitHub Actions C and Fortran scalar types map to NumPy dtypes.
 
@@ -222,8 +258,18 @@ to write selected output to a file or beside each source.
 
 ## Python API
 
-Public entrypoints cover parsing, semantic conversion, `.pyi` emission, and
-readiness:
+Public entrypoints cover Fortran extension builds, parsing, semantic
+conversion, `.pyi` emission, and readiness:
+
+```python
+from x2py import build_fortran_extension
+
+result = build_fortran_extension("solver.f90", output_dir="build/solver")
+print(result.module_name)
+print(result.shared_library)
+```
+
+Parser and semantic entrypoints remain available independently:
 
 ```python
 from x2py import (
@@ -250,6 +296,9 @@ x2py preserves wrapper-relevant declarations, signatures, types, source
 locations, include/use relationships, diagnostics, and semantic metadata.
 Current support includes:
 
+- compiled CPython extensions from one or more ordered fixed-form or free-form
+  Fortran sources, including generated Fortran/C bridges and an optional GNU
+  Make build;
 - free-form and fixed-form Fortran, procedures, modules, derived types,
   imports, arrays, and wrapper-relevant declaration attributes;
 - C declarations and definitions, variables, typedefs, aggregates, enums,
@@ -257,13 +306,22 @@ Current support includes:
 - language-neutral semantic IR, editable `.pyi` interfaces, and semantic
   readiness reports.
 
+Runtime wrapper generation from user C inputs is not implemented yet. It will
+reuse the shared semantic contracts after the C backend and its ownership,
+ABI, and runtime tests are complete.
+
 x2py is not a full compiler frontend. It does not silently infer pointer
 ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 ## Documentation
 
 - [Tutorial](docs/tutorial.md): the complete supported user workflow,
-  additional recipes, semantic interface editing, readiness, and current
+  Fortran extension build, semantic interface editing, readiness, and current
+  C boundary.
+- [Examples cookbook](docs/examples.md): checked Fortran wrapper builds and
+  calls, inspection commands, compiler recipes, and Python API examples.
+- [Fortran wrapper guide](docs/fortran_wrapper.md): generated Python behavior,
+  ownership, lifetime, arrays, derived types, callbacks, build modes, and
   limitations.
 - [Developer guide](docs/developper_guide.md): implementation ownership,
   parser references, testing, fixtures, and change workflows.

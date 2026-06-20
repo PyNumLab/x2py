@@ -14,6 +14,8 @@ The most useful small, checked examples are:
 
 | Purpose | Repository fixture |
 | --- | --- |
+| Compiled Fortran wrapper and scalar call | `tests/wrapper/fruntime_abi_f90.f90` |
+| Multi-source Fortran wrapper | `tests/wrapper/multi_source_builds/modules/` |
 | Basic Fortran procedure | `tests/data/fortran/general/basic_subroutine.f90` |
 | Rich Fortran module, types, arrays, and visibility | `tests/data/fortran/general/modern_pyi_example.f90` |
 | Basic C functions, pointers, and arrays | `tests/data/c/general/math_api.h` |
@@ -34,6 +36,20 @@ subroutine add1(n, x)
   real(kind=8), intent(inout), dimension(n) :: x
 end subroutine add1
 end module m1
+```
+
+### Runtime Fortran Wrapper Input
+
+<!-- x2py-doc-source: tests/wrapper/fruntime_abi_f90.f90 -->
+```fortran
+module fruntime_abi_f90
+contains
+  real(8) function scale(value, factor) result(output)
+    real(8), intent(in) :: value
+    real(8), intent(in) :: factor
+    output = value * factor
+  end function scale
+end module fruntime_abi_f90
 ```
 
 ### Basic C Input
@@ -133,6 +149,145 @@ end module modern_math_physics
 ```
 
 </details>
+
+## Fortran Runtime Wrapper Examples
+
+These examples use the implemented Fortran wrapper backend. They require a GNU
+Fortran/C toolchain, Python development headers, and NumPy headers. Runtime
+wrapping of user-supplied C inputs is not implemented yet and will be added as
+a separate backend later.
+
+### Build And Import With The CLI
+
+Build the checked scalar fixture into an explicit directory:
+
+```bash
+python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+  --wrap \
+  --out-dir build/fruntime_abi \
+  --json
+```
+
+Recognizable Fortran sources default to `--wrap` when no inspection stage is
+selected, so the shorter equivalent is:
+
+```bash
+python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+  --out-dir build/fruntime_abi \
+  --json
+```
+
+Import and call the extension:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/fruntime_abi")
+import fruntime_abi_f90
+
+result = fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5))
+print(result)  # 7.5
+```
+
+Exact NumPy scalars are part of the native contract. Passing ordinary Python
+numbers where a specific native dtype is required raises `TypeError` rather
+than silently changing the ABI conversion.
+
+With no `--out-dir`, x2py writes intermediates under `__x2py__` beside the
+first source and writes the extension beside that source. Use `--verbose` to
+print the direct compiler and linker commands. Use `--strict-wrapper-names` to
+reject public names that need Python keyword escaping or collision suffixes.
+
+### Build And Import Through The Python API
+
+`build_fortran_extension` returns a `WrapperBuildResult` containing the module
+name and every generated artifact. This checked example uses a temporary
+directory and loads the extension directly from the returned shared-library
+path:
+
+<!-- x2py-doc-test: exact -->
+```python
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import numpy as np
+
+from x2py import build_fortran_extension
+
+source = Path("tests/wrapper/fruntime_abi_f90.f90")
+with TemporaryDirectory() as output_dir:
+    build = build_fortran_extension(source, output_dir=output_dir)
+    spec = spec_from_file_location(build.module_name, build.shared_library)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    print(build.module_name)
+    print(module.scale(np.float64(3.0), np.float64(2.5)))
+```
+
+<!-- x2py-doc-test-output -->
+```text
+fruntime_abi_f90
+7.5
+```
+
+### Generate An Editable Makefile
+
+Generate wrapper sources and `Makefile.x2py` without compiling:
+
+```bash
+python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+  --makefile \
+  --out-dir build/fruntime_abi \
+  --json
+```
+
+Build it with GNU Make:
+
+```bash
+make -f build/fruntime_abi/Makefile.x2py -j4 \
+  X2PY_FFLAGS=-O3 \
+  X2PY_CFLAGS=-O3 \
+  X2PY_LDFLAGS=-O3
+```
+
+The generated Makefile exposes `FC`, `CC`, `X2PY_LD`, `X2PY_FFLAGS`,
+`X2PY_CFLAGS`, and `X2PY_LDFLAGS`. User Fortran sources remain ordered;
+independent generated objects may be built in parallel.
+
+### Build One Extension From Multiple Sources
+
+Supply every source in compiler-valid order. The first semantic module names
+the merged extension:
+
+```bash
+python3 -m x2py \
+  tests/wrapper/multi_source_builds/modules/first_api.f90 \
+  tests/wrapper/multi_source_builds/modules/second_api.f90 \
+  --wrap \
+  --out-dir build/multi_api \
+  --json
+```
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/multi_api")
+import first_api
+
+assert first_api.add_one(np.int32(4)) == np.int32(5)
+assert first_api.double_value(np.int32(4)) == np.int32(10)
+```
+
+x2py does not discover missing sources or reorder dependencies. Provide module
+providers before consumers. See
+[Multiple Sources And Build Modes](fortran_wrapper.md#multiple-sources-and-build-modes)
+for output placement and build-system details.
 
 ## CLI Stage Examples
 
@@ -673,9 +828,11 @@ def add(a: Float64, b: Float64) -> Float64: ...
 ```
 
 The current loader and printer preserve supported `@native_call` metadata.
-x2py does not currently execute the projection or generate runtime wrapper
-code. Use the [semantic `.pyi` format](pyi_format.md) for the accepted projection
-entries and limitations.
+The source-driven Fortran wrapper implements the built-in projections documented
+in the [Fortran wrapper guide](fortran_wrapper.md), but the CLI does not build
+directly from an edited `.pyi` or execute arbitrary edited `@native_call`
+metadata. Use the [semantic `.pyi` format](pyi_format.md) for accepted entries
+and limitations.
 
 ## Readiness Blocker Examples
 
@@ -729,6 +886,7 @@ generate a runtime wrapper for the variadic contract.
 ## More References
 
 - [Tutorial](tutorial.md)
+- [Fortran wrapper guide](fortran_wrapper.md)
 - [Semantic `.pyi` format](pyi_format.md)
 - [Semantic IR reference](semantics.md)
 - [Diagnostic code registry](diagnostic_codes.md)
