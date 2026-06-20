@@ -1,0 +1,7 @@
+{
+   glibc-dynamic-loader-strncmp
+   Memcheck:Addr8
+   fun:strncmp
+   fun:is_dst
+   ...
+}

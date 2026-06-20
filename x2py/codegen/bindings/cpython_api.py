@@ -44,6 +44,8 @@ from ..models.core import Variable
 
 __all__ = (
     # --------- CLASSES -----------
+    "PyAllowThreadsBegin",
+    "PyAllowThreadsEnd",
     "PyArgKeywords",
     "PyArg_ParseTupleNode",
     "PyArgumentError",
@@ -60,6 +62,7 @@ __all__ = (
     "PyDict_New",
     "PyDict_SetItem",
     "PyErr_Occurred",
+    "PyErr_SetObject",
     "PyErr_SetString",
     "PyErr_WarnEx",
     "PyFunctionDef",
@@ -77,6 +80,7 @@ __all__ = (
     "PyModule_Create",
     "PyNotImplementedError",
     "PyObject_TypeCheck",
+    "PyRuntimeError",
     "PyRuntimeWarning",
     "PySys_GetObject",
     "PyTuple_Pack",
@@ -176,6 +180,24 @@ class PyCallbackContextPop:
 
     def __init__(self, callback):
         self.callback = callback
+        init_model_object(self)
+
+
+class PyAllowThreadsBegin:
+    """Release the CPython GIL before entering a callback-free native call."""
+
+    __slots__ = ()
+
+    def __init__(self):
+        init_model_object(self)
+
+
+class PyAllowThreadsEnd:
+    """Reacquire the CPython GIL after a callback-free native call returns."""
+
+    __slots__ = ()
+
+    def __init__(self):
         init_model_object(self)
 
 
@@ -1359,6 +1381,15 @@ PyErr_SetString = FunctionDef(
     ],
 )
 
+PyErr_SetObject = FunctionDef(
+    name="PyErr_SetObject",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), name="o")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="value", memory_handling="alias")),
+    ],
+)
+
 PyErr_WarnEx = FunctionDef(
     name="PyErr_WarnEx",
     body=[],
@@ -1374,6 +1405,7 @@ PyNotImplementedError = Variable(PythonObjectType(), name="PyExc_NotImplementedE
 PyMemoryError = Variable(PythonObjectType(), name="PyExc_MemoryError")
 PyTypeError = Variable(PythonObjectType(), name="PyExc_TypeError")
 PyAttributeError = Variable(PythonObjectType(), name="PyExc_AttributeError")
+PyRuntimeError = Variable(PythonObjectType(), name="PyExc_RuntimeError")
 PyRuntimeWarning = Variable(PythonObjectType(), name="PyExc_RuntimeWarning")
 
 PyObject_TypeCheck = FunctionDef(

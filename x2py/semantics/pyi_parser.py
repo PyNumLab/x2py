@@ -21,6 +21,8 @@ from .models import (
     PYTHON_STATIC_METADATA,
     PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     PYI_USER_PRIVATE_METADATA,
+    RUNTIME_HOLD_GIL_METADATA,
+    RUNTIME_STATUS_ERROR_METADATA,
     ProjectionMapping,
     ProcedureOverloadSet,
     SemanticArgument,
@@ -104,6 +106,8 @@ class _Decorators:
     bind_target: str | None = None
     module_variable: str | None = None
     is_static: bool = False
+    hold_gil: bool = False
+    error_status_policy: dict[str, object] | None = None
 
 
 @dataclass
@@ -210,9 +214,15 @@ class _PyiAstParser:
         visibility: str,
         projection: list[ProjectionMapping] | None = None,
         native_name: str | None = None,
+        hold_gil: bool = False,
+        error_status_policy: dict[str, object] | None = None,
     ) -> SemanticFunction:
         semantic_args, return_type = self._callable_parts(node, projection=projection or [])
         metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        if hold_gil:
+            metadata[RUNTIME_HOLD_GIL_METADATA] = True
+        if error_status_policy is not None:
+            metadata[RUNTIME_STATUS_ERROR_METADATA] = dict(error_status_policy)
         origin = self._origin(
             source_language="fortran" if native_name is not None else None,
             user_private=visibility == "private",
@@ -236,6 +246,8 @@ class _PyiAstParser:
         projection: list[ProjectionMapping] | None = None,
         is_static: bool = False,
         native_name: str | None = None,
+        hold_gil: bool = False,
+        error_status_policy: dict[str, object] | None = None,
     ) -> SemanticMethod:
         semantic_args, return_type = self._callable_parts(
             node,
@@ -243,6 +255,10 @@ class _PyiAstParser:
             drop_untyped_self=True,
         )
         metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        if hold_gil:
+            metadata[RUNTIME_HOLD_GIL_METADATA] = True
+        if error_status_policy is not None:
+            metadata[RUNTIME_STATUS_ERROR_METADATA] = dict(error_status_policy)
         origin = self._origin(
             source_language="fortran" if native_name is not None else None,
             user_private=visibility == "private",
@@ -328,6 +344,13 @@ class _PyiAstParser:
             if self.matches_name(node, "staticmethod"):
                 parsed.is_static = True
                 continue
+            if isinstance(node, ast.Call) and self.matches_name(node.func, "hold_gil"):
+                raise ValueError("hold_gil does not accept arguments")
+            if self.matches_name(node, "hold_gil"):
+                if parsed.hold_gil:
+                    raise ValueError(f"Duplicate {context} hold_gil decorator")
+                parsed.hold_gil = True
+                continue
             if isinstance(node, ast.Call) and self.matches_name(node.func, "module_variable"):
                 if parsed.module_variable is not None:
                     raise ValueError(f"Duplicate {context} module_variable decorator")
@@ -344,6 +367,13 @@ class _PyiAstParser:
                 parsed.has_native_call = True
                 parsed.projection = self.native_call(node)
                 continue
+            if isinstance(node, ast.Call) and self.matches_name(node.func, "raises"):
+                if parsed.error_status_policy is not None:
+                    raise ValueError(f"Duplicate {context} raises decorator")
+                parsed.error_status_policy = self.error_status_policy(node)
+                continue
+            if self.matches_name(node, "raises"):
+                raise ValueError("raises expects keyword arguments")
             raise ValueError(f"Unsupported {context} decorator: {ast.unparse(node)!r}")
         if parsed.overload_target is not None and parsed.bind_target is not None:
             raise ValueError("bind cannot be combined with overload")
@@ -358,6 +388,38 @@ class _PyiAstParser:
         return [
             self.native_projection_entry(entry, native_position) for native_position, entry in enumerate(entries.elts)
         ]
+
+    @staticmethod
+    def error_status_policy(node: ast.Call) -> dict[str, object]:
+        if node.args:
+            raise ValueError("raises accepts keyword arguments only")
+        allowed = {"status", "message", "success"}
+        values: dict[str, object] = {}
+        for keyword in node.keywords:
+            if keyword.arg is None:
+                raise ValueError("raises does not accept ** expansion")
+            if keyword.arg not in allowed:
+                raise ValueError(f"raises got unsupported keyword {keyword.arg!r}")
+            if keyword.arg in values:
+                raise ValueError(f"raises repeats {keyword.arg!r}")
+            values[keyword.arg] = ast.literal_eval(keyword.value)
+
+        status = values.get("status")
+        if not isinstance(status, str) or not status:
+            raise ValueError("raises requires status=<non-empty output name>")
+
+        message = values.get("message")
+        if message is not None and (not isinstance(message, str) or not message):
+            raise ValueError("raises message must be a non-empty output name")
+
+        success = values.get("success", 0)
+        if not isinstance(success, int) or isinstance(success, bool):
+            raise ValueError("raises success must be an integer status value")
+
+        policy = {"status": status, "success": success}
+        if message is not None:
+            policy["message"] = message
+        return policy
 
     def _resolve_overloads(self) -> None:
         for pending in self._pending_overloads:
@@ -422,6 +484,9 @@ class _PyiAstParser:
         candidate = deepcopy(target)
         candidate.visibility = declaration.visibility
         candidate.metadata[OVERLOAD_TARGET_METADATA] = target.native_name or target.name
+        for key in (RUNTIME_HOLD_GIL_METADATA, RUNTIME_STATUS_ERROR_METADATA):
+            if key in declaration.metadata:
+                candidate.metadata[key] = deepcopy(declaration.metadata[key])
 
         if isinstance(owner, SemanticModule):
             if generic_name is not None:
@@ -1435,6 +1500,8 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             projection=decorators.projection,
             is_static=decorators.is_static,
             native_name=decorators.bind_target,
+            hold_gil=decorators.hold_gil,
+            error_status_policy=decorators.error_status_policy,
         )
         if node.name == "__init__" and decorators.bind_target is not None:
             self.has_bound_constructor = True
@@ -1461,7 +1528,12 @@ class _ClassBodyVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")
-        if decorators.has_native_call or decorators.bind_target is not None:
+        if (
+            decorators.has_native_call
+            or decorators.bind_target is not None
+            or decorators.hold_gil
+            or decorators.error_status_policy is not None
+        ):
             raise ValueError(f"Unsupported class body decorator: {ast.unparse(node.decorator_list[-1])!r}")
         if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
             raise ValueError(
@@ -1495,7 +1567,12 @@ class _ModuleVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class")
-        if decorators.has_native_call or decorators.bind_target is not None:
+        if (
+            decorators.has_native_call
+            or decorators.bind_target is not None
+            or decorators.hold_gil
+            or decorators.error_status_policy is not None
+        ):
             raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
         if decorators.module_variable is not None:
             raise ValueError("module_variable is only valid for module-level getter functions")
@@ -1512,8 +1589,12 @@ class _ModuleVisitor(ast.NodeVisitor):
                 decorators.overload_target is not None
                 or decorators.has_native_call
                 or decorators.bind_target is not None
+                or decorators.hold_gil
+                or decorators.error_status_policy is not None
             ):
-                raise ValueError("module_variable cannot be combined with overload, bind, or native_call")
+                raise ValueError(
+                    "module_variable cannot be combined with overload, bind, native_call, hold_gil, or raises"
+                )
             self.parser.module.variables.append(self.parser.module_variable_getter(node, decorators))
             return
         function = self.parser.function_def(
@@ -1521,6 +1602,8 @@ class _ModuleVisitor(ast.NodeVisitor):
             visibility=decorators.visibility,
             projection=decorators.projection,
             native_name=decorators.bind_target,
+            hold_gil=decorators.hold_gil,
+            error_status_policy=decorators.error_status_policy,
         )
         if decorators.overload_target is not None:
             self.parser._pending_overloads.append(

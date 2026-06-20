@@ -11,7 +11,11 @@ from x2py.ownership_policy import (
     codegen_action_for_variable,
     ownership_decision_for_codegen_variable,
 )
-from x2py.semantics.models import PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA
+from x2py.semantics.models import (
+    PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
+    RUNTIME_HOLD_GIL_METADATA,
+    RUNTIME_STATUS_ERROR_METADATA,
+)
 
 from ..bind_c import (
     BindCArrayVariable,
@@ -63,6 +67,8 @@ from .cpython_api import (
     PyArg_ParseTupleNode,
     PyArgKeywords,
     PyArgumentError,
+    PyAllowThreadsBegin,
+    PyAllowThreadsEnd,
     PyAttributeError,
     PyBuildValueNode,
     PyCallbackContextPop,
@@ -74,6 +80,7 @@ from .cpython_api import (
     PythonTypeObjectType,
     PyClassDef,
     PyErr_SetString,
+    PyErr_SetObject,
     PyFunctionDef,
     PyGetSetDefElement,
     PyFunctionOverloadSet,
@@ -87,6 +94,7 @@ from .cpython_api import (
     PyModule_AddObject,
     PyModule_Create,
     PyNotImplementedError,
+    PyRuntimeError,
     PyObject_TypeCheck,
     PySys_GetObject,
     PyTuple_Pack,
@@ -284,6 +292,13 @@ class CPythonBindingGenerator(BindingGenerator):
                 "    If an argument has incompatible dtype, rank, shape, layout, or wrapped class.",
             ]
         )
+        if isinstance(getattr(original_func, "decorators", {}).get(RUNTIME_STATUS_ERROR_METADATA), dict):
+            sections.extend(
+                [
+                    "RuntimeError",
+                    "    If the annotated native status output is not the declared success value.",
+                ]
+            )
         return CommentBlock("\n".join(sections))
 
     @staticmethod
@@ -518,7 +533,10 @@ class CPythonBindingGenerator(BindingGenerator):
             if not arg.bound_argument
             and (getattr(arg.var, "intent", "in") == "out" or self._is_allocatable_replacement_argument(arg.var))
         )
-        return result_vars or self._doc_result_vars(func)
+        if not result_vars:
+            result_vars = self._doc_result_vars(func)
+        excluded = self._status_error_output_names(original_func)
+        return [var for var in result_vars if str(self._doc_original_var(var).name) not in excluded]
 
     def _doc_result_summary(self, result_vars):
         parts = [
@@ -1711,7 +1729,16 @@ class CPythonBindingGenerator(BindingGenerator):
 
         # Call the C-compatible function
         body.extend(callback_setup)
-        body.append(init_function(*func_call_args))
+        body.extend(
+            self._native_call_nodes(
+                init_function,
+                original_func,
+                func_call_args,
+                [],
+                wrapped_args,
+                force_hold=True,
+            )
+        )
         body.extend(callback_cleanup)
 
         # Pack the Python compatible results of the function into one argument.
@@ -2035,14 +2062,128 @@ class CPythonBindingGenerator(BindingGenerator):
             return Assign(res, func_call)
         return Assign(results, func(*args))
 
-    def _project_python_return(self, func, original_func, native_py_results, native_owned_results):
+    @staticmethod
+    def _native_call_holds_gil(original_func, wrapped_args, *, force_hold=False):
+        decorators = getattr(original_func, "decorators", {})
+        return bool(
+            force_hold
+            or decorators.get(RUNTIME_HOLD_GIL_METADATA)
+            or "property" in decorators
+            or any(arg.get("callback_setup") for arg in wrapped_args)
+        )
+
+    def _native_call_nodes(self, func, original_func, args, results, wrapped_args, *, force_hold=False):
+        call = self._call_wrapped_function(func, args, results)
+        if self._native_call_holds_gil(original_func, wrapped_args, force_hold=force_hold):
+            return [call]
+        return [PyAllowThreadsBegin(), call, PyAllowThreadsEnd()]
+
+    @staticmethod
+    def _status_error_output_names(original_func):
+        policy = getattr(original_func, "decorators", {}).get(RUNTIME_STATUS_ERROR_METADATA)
+        if not isinstance(policy, dict):
+            return set()
+        names = {policy.get("status")}
+        message = policy.get("message")
+        if message is not None:
+            names.add(message)
+        return {name for name in names if isinstance(name, str)}
+
+    @staticmethod
+    def _result_bindings_by_name(wrapped_results):
+        bindings = {}
+        for binding in wrapped_results.get("result_bindings", ()):
+            name = binding.get("name")
+            if isinstance(name, str):
+                bindings[name] = binding
+        return bindings
+
+    @staticmethod
+    def _validate_status_error_binding(policy, bindings):
+        status_name = policy.get("status")
+        if not isinstance(status_name, str):
+            raise ValueError("raises metadata requires a status output name")
+        status = bindings.get(status_name)
+        if status is None:
+            raise ValueError(f"raises status target {status_name!r} is not a native output")
+        status_var = status.get("c_result")
+        status_dtype = getattr(status_var, "dtype", None)
+        if not isinstance(getattr(status_dtype, "primitive_type", None), PrimitiveIntegerType):
+            raise ValueError(f"raises status target {status_name!r} must be a scalar integer output")
+
+        message_name = policy.get("message")
+        message = None
+        if message_name is not None:
+            if not isinstance(message_name, str):
+                raise ValueError("raises message target must be an output name")
+            message = bindings.get(message_name)
+            if message is None:
+                raise ValueError(f"raises message target {message_name!r} is not a native output")
+            original = message.get("original")
+            if not isinstance(getattr(original, "class_type", None), StringType):
+                raise ValueError(f"raises message target {message_name!r} must be a string output")
+        return status, message
+
+    def _status_error_check(
+        self,
+        original_func,
+        wrapped_results,
+        native_py_results,
+        native_owned_results,
+        cleanup,
+    ):
+        policy = getattr(original_func, "decorators", {}).get(RUNTIME_STATUS_ERROR_METADATA)
+        if not isinstance(policy, dict):
+            return []
+
+        bindings = self._result_bindings_by_name(wrapped_results)
+        status, message = self._validate_status_error_binding(policy, bindings)
+        status_var = status["c_result"]
+        success = int(policy.get("success", 0))
+        if message is not None:
+            set_error = PyErr_SetObject(PyRuntimeError, message["py_result"])
+        else:
+            set_error = PyErr_SetString(
+                PyRuntimeError,
+                CStrStr(convert_to_literal(f"native call failed with status {status['name']} != {success}")),
+            )
+        error_body = [
+            set_error,
+            *(Py_DECREF(item) for item, owned in zip(native_py_results, native_owned_results, strict=False) if owned),
+            *cleanup,
+            Return(self._error_exit_code),
+        ]
+        return [
+            If(
+                IfSection(
+                    Ne(status_var, convert_to_literal(success, dtype=status_var.dtype)),
+                    error_body,
+                )
+            )
+        ]
+
+    def _project_python_return(
+        self,
+        func,
+        original_func,
+        native_py_results,
+        native_owned_results,
+        *,
+        excluded_output_names=(),
+    ):
         output_items = []
         output_owned = []
+        discarded_owned_items = []
         native_index = 0
+        excluded = set(excluded_output_names)
 
         if original_func.results.var is not NIL:
-            output_items.append(native_py_results[native_index])
-            output_owned.append(native_owned_results[native_index])
+            result_name = getattr(original_func.results.var, "name", None)
+            if result_name not in excluded:
+                output_items.append(native_py_results[native_index])
+                output_owned.append(native_owned_results[native_index])
+            elif native_owned_results[native_index]:
+                discarded_owned_items.append(native_py_results[native_index])
             native_index += 1
 
         visible_outputs = self._visible_output_argument_objects(func)
@@ -2052,18 +2193,31 @@ class CPythonBindingGenerator(BindingGenerator):
                 continue
             if argument.bound_argument:
                 continue
+            output_name = getattr(orig_var, "name", None)
             if self._is_allocatable_replacement_argument(orig_var):
-                output_items.append(native_py_results[native_index])
-                output_owned.append(native_owned_results[native_index])
+                if output_name not in excluded:
+                    output_items.append(native_py_results[native_index])
+                    output_owned.append(native_owned_results[native_index])
+                elif native_owned_results[native_index]:
+                    discarded_owned_items.append(native_py_results[native_index])
                 native_index += 1
                 continue
             if self._is_string_replacement_argument(orig_var) and native_index < len(native_py_results):
-                output_items.append(native_py_results[native_index])
-                output_owned.append(native_owned_results[native_index])
+                if output_name not in excluded:
+                    output_items.append(native_py_results[native_index])
+                    output_owned.append(native_owned_results[native_index])
+                elif native_owned_results[native_index]:
+                    discarded_owned_items.append(native_py_results[native_index])
                 native_index += 1
                 continue
             if getattr(orig_var, "intent", "in") == "out":
                 visible_object = visible_outputs.get(orig_var) or visible_outputs.get(getattr(orig_var, "name", None))
+                if output_name in excluded:
+                    if visible_object is None:
+                        if native_owned_results[native_index]:
+                            discarded_owned_items.append(native_py_results[native_index])
+                        native_index += 1
+                    continue
                 if visible_object is not None:
                     output_items.append(visible_object)
                     output_owned.append(False)
@@ -2074,21 +2228,28 @@ class CPythonBindingGenerator(BindingGenerator):
 
         if not output_items:
             return {
-                "body": [Py_INCREF(Py_None)],
+                "body": [*(Py_DECREF(item) for item in discarded_owned_items), Py_INCREF(Py_None)],
                 "result": Py_None,
                 "owned_result": False,
             }
         if len(output_items) == 1:
             if not output_owned[0]:
                 return {
-                    "body": [Py_INCREF(output_items[0])],
+                    "body": [*(Py_DECREF(item) for item in discarded_owned_items), Py_INCREF(output_items[0])],
                     "result": output_items[0],
                     "owned_result": False,
                 }
-            return {"body": [], "result": output_items[0], "owned_result": True}
+            return {
+                "body": [Py_DECREF(item) for item in discarded_owned_items],
+                "result": output_items[0],
+                "owned_result": True,
+            }
 
         tuple_result = self.get_new_PyObject("result_obj")
-        body = [AliasAssign(tuple_result, PyTuple_Pack(*(ObjectAddress(item) for item in output_items)))]
+        body = [
+            *(Py_DECREF(item) for item in discarded_owned_items),
+            AliasAssign(tuple_result, PyTuple_Pack(*(ObjectAddress(item) for item in output_items))),
+        ]
         body.append(If(IfSection(Is(tuple_result, NIL), [Return(self._error_exit_code)])))
         body.extend(Py_DECREF(item) for item, owned in zip(output_items, output_owned, strict=False) if owned)
         return {"body": body, "result": tuple_result, "owned_result": True}
@@ -2614,7 +2775,7 @@ class CPythonBindingGenerator(BindingGenerator):
 
         # Call the C-compatible function
         body.extend(callback_setup)
-        body.append(self._call_wrapped_function(expr, func_call_args, c_results))
+        body.extend(self._native_call_nodes(expr, original_func, func_call_args, c_results, wrapped_args))
         body.extend(callback_cleanup)
 
         # Deallocate the C equivalent of any array arguments
@@ -2646,11 +2807,22 @@ class CPythonBindingGenerator(BindingGenerator):
                 "owned_py_results",
                 [True] * len(native_py_results),
             )
+            wrapped_arg_cleanup = [ai for arg in wrapped_args for ai in arg["clean_up"]]
+            body.extend(
+                self._status_error_check(
+                    original_func,
+                    wrapped_results,
+                    native_py_results,
+                    native_owned_results,
+                    wrapped_arg_cleanup,
+                )
+            )
             projected_return = self._project_python_return(
                 expr,
                 original_func,
                 native_py_results,
                 native_owned_results,
+                excluded_output_names=self._status_error_output_names(original_func),
             )
             body.extend(projected_return["body"])
             python_result_variable = projected_return["result"]
@@ -4261,7 +4433,19 @@ class CPythonBindingGenerator(BindingGenerator):
         self.scope.insert_variable(c_res)
 
         body = [AliasAssign(py_res, FunctionCall(C_to_Python(c_res), [c_res]))]
-        return {"c_results": [c_res], "py_result": py_res, "body": body}
+        return {
+            "c_results": [c_res],
+            "py_result": py_res,
+            "body": body,
+            "result_bindings": [
+                {
+                    "name": str(name),
+                    "original": orig_var,
+                    "c_result": c_res,
+                    "py_result": py_res,
+                }
+            ],
+        }
 
     def _extract_snapshot_copy_scalar_result(self, wrapped_var):
         orig_var = getattr(wrapped_var, "original_var", wrapped_var)
@@ -4350,6 +4534,7 @@ class CPythonBindingGenerator(BindingGenerator):
         c_results = []
         py_results = []
         owned_py_results = []
+        result_bindings = []
         setup = []
         body = []
         assert funcdef is not None
@@ -4368,6 +4553,7 @@ class CPythonBindingGenerator(BindingGenerator):
             body.extend(result["body"])
             py_results.extend(result.get("py_results", [result["py_result"]]))
             owned_py_results.extend(result.get("owned_py_results", [True]))
+            result_bindings.extend(result.get("result_bindings", ()))
         return {
             "c_results": PythonTuple(*c_results),
             "py_result": Py_None,
@@ -4375,6 +4561,7 @@ class CPythonBindingGenerator(BindingGenerator):
             "owned_py_results": owned_py_results,
             "body": body,
             "setup": setup,
+            "result_bindings": result_bindings,
         }
 
     def _extract_BindCArrayType_FunctionDefResult(self, wrapped_var, funcdef, *, tuple_item=False):
@@ -4505,4 +4692,16 @@ class CPythonBindingGenerator(BindingGenerator):
                 ]
         else:
             body = [AliasAssign(py_res, PyBuildValueNode([char_data]))]
-        return {"c_results": result, "py_result": py_res, "body": body}
+        return {
+            "c_results": result,
+            "py_result": py_res,
+            "body": body,
+            "result_bindings": [
+                {
+                    "name": str(name),
+                    "original": orig_var,
+                    "c_result": c_res,
+                    "py_result": py_res,
+                }
+            ],
+        }

@@ -9,9 +9,8 @@ Reference details live in:
 
 - `docs/c_parser.md`
 - `docs/fortran_parser.md`
-- `docs/fortran_wrapper_ownership_policy.md`
+- `docs/fortran_wrapper.md`
 - `docs/semantics.md`
-- `docs/fortran_wrapper_checklist.md`
 
 ## Known Semantic Gaps To Track
 
@@ -257,8 +256,8 @@ or copy that value into wrapper-owned native storage before the temporary goes
 out of scope. Python/C must not deallocate allocatable components directly.
 Instead, the wrapper object's `tp_dealloc` path should call a generated
 Fortran-aware destroy helper for owned instances. That helper releases
-allocatable components and, when section 12 finalizer support exists, invokes
-the correct Fortran finalization behavior. Borrowed child wrappers and borrowed
+allocatable components and invokes the supported Fortran finalization behavior.
+Borrowed child wrappers and borrowed
 array views keep the owning wrapper alive and never destroy native storage
 themselves. Pointer component targets are not owned by the containing derived
 type unless explicit pointer policy says so, so destroying the wrapper must not

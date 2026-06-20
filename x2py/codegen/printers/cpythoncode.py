@@ -226,6 +226,12 @@ class CPythonCodePrinter(CCodePrinter):
             f"Py_DECREF({context_name}.callable);\n"
         )
 
+    def _print_PyAllowThreadsBegin(self, expr):
+        return "Py_BEGIN_ALLOW_THREADS\n"
+
+    def _print_PyAllowThreadsEnd(self, expr):
+        return "Py_END_ALLOW_THREADS\n"
+
     @staticmethod
     def _callback_numpy_typenum(dtype):
         primitive = dtype.primitive_type

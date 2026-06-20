@@ -772,6 +772,49 @@ def _raise_for_unsupported_allocatable_scalar_outputs(node: models.SemanticFunct
             )
 
 
+def _is_scalar_integer_runtime_status(semantic_type: models.SemanticType) -> bool:
+    if semantic_type.rank != 0:
+        return False
+    try:
+        numpy_dtype = SEMANTIC_DTYPE_TO_NUMPY_DTYPE[semantic_type.dtype]
+        return bool(np.issubdtype(np.dtype(_numpy_type(numpy_dtype)), np.integer))
+    except (AttributeError, KeyError, TypeError):
+        return False
+
+
+def _raise_for_invalid_runtime_policy(node: models.SemanticFunction) -> None:
+    policy = node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA)
+    if policy is None:
+        return
+    if not isinstance(policy, dict):
+        raise ValueError(f"Function {node.name!r} has invalid raises metadata")
+
+    success = policy.get("success", 0)
+    if not isinstance(success, int) or isinstance(success, bool):
+        raise ValueError(f"Function {node.name!r} raises success value must be an integer")
+
+    hidden_outputs = {argument.name: argument for argument in node.arguments if str(argument.intent).lower() == "out"}
+    status_name = policy.get("status")
+    status = hidden_outputs.get(status_name) if isinstance(status_name, str) else None
+    if status is None:
+        raise ValueError(f"Function {node.name!r} raises status target must name a hidden output")
+    if not _is_scalar_integer_runtime_status(status.semantic_type):
+        raise ValueError(
+            f"Function {node.name!r} raises status target {status.name!r} must be a scalar integer hidden output"
+        )
+
+    message_name = policy.get("message")
+    if message_name is None:
+        return
+    message = hidden_outputs.get(message_name) if isinstance(message_name, str) else None
+    if message is None:
+        raise ValueError(f"Function {node.name!r} raises message target must name a hidden output")
+    if message.semantic_type.rank != 0 or message.semantic_type.name != "String":
+        raise ValueError(
+            f"Function {node.name!r} raises message target {message.name!r} must be a scalar string hidden output"
+        )
+
+
 def _is_bind_c_derived_type(
     semantic_type: models.SemanticType,
     class_lookup: dict[str, models.SemanticClass],
@@ -1056,6 +1099,7 @@ def semantic_ir_to_codegen_ast(
         return overload_set
 
     if isinstance(node, models.SemanticFunction):
+        _raise_for_invalid_runtime_policy(node)
         _raise_for_unsupported_bind_c_abi(node, class_lookup or {})
         _raise_for_unsupported_allocatable_scalar_outputs(node)
         _raise_for_unsupported_pointer_outputs(node)
@@ -1170,12 +1214,18 @@ def semantic_ir_to_codegen_ast(
             )
         else:
             name = scope.get_new_name(native_name, object_type="function")
+        decorators = {}
+        if node.metadata.get(models.RUNTIME_HOLD_GIL_METADATA):
+            decorators[models.RUNTIME_HOLD_GIL_METADATA] = True
+        if isinstance(status_policy := node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA), dict):
+            decorators[models.RUNTIME_STATUS_ERROR_METADATA] = dict(status_policy)
         func = FunctionDef(
             name,
             args,
             [],
             result,
             scope=func_scope,
+            decorators=decorators,
             is_external=legacy or (node.origin.source_language == "fortran" and node.origin.native_scope is None),
             is_private=node.visibility == "private",
             bind_c_external_name=(

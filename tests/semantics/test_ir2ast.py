@@ -388,7 +388,7 @@ end module constructor_generic_mod
         ),
     ],
 )
-def test_unsupported_section_12_feature_raises_before_codegen(source, message):
+def test_unsupported_generic_constructor_raises_before_codegen(source, message):
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
     with pytest.raises(ValueError, match=message):

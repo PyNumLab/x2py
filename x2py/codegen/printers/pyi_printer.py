@@ -20,6 +20,8 @@ from x2py.semantics.models import (
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
+    RUNTIME_HOLD_GIL_METADATA,
+    RUNTIME_STATUS_ERROR_METADATA,
     ProjectionMapping,
     ProcedureOverloadSet,
     SemanticArgument,
@@ -747,9 +749,30 @@ class PyiPrinter:
             decorators.append(f"{indent}@bind({json.dumps(str(bind_target))})")
         if self._requires_native_call(func):
             decorators.append(f"{indent}{self._native_call(func.projection)}")
+        if isinstance(policy := func.metadata.get(RUNTIME_STATUS_ERROR_METADATA), dict):
+            decorators.append(f"{indent}{self._raises(policy)}")
+        if func.metadata.get(RUNTIME_HOLD_GIL_METADATA):
+            decorators.append(f"{indent}@hold_gil")
         if not decorators:
             return ""
         return "\n".join(decorators) + "\n"
+
+    @staticmethod
+    def _raises(policy: dict[str, object]) -> str:
+        status = policy.get("status")
+        if not isinstance(status, str) or not status:
+            raise ValueError("raises metadata requires a non-empty status output name")
+        parts = [f"status={json.dumps(status)}"]
+        message = policy.get("message")
+        if message is not None:
+            if not isinstance(message, str) or not message:
+                raise ValueError("raises metadata message must be a non-empty output name")
+            parts.append(f"message={json.dumps(message)}")
+        success = policy.get("success", 0)
+        if not isinstance(success, int) or isinstance(success, bool):
+            raise ValueError("raises metadata success must be an integer")
+        parts.append(f"success={success}")
+        return f"@raises({', '.join(parts)})"
 
     def _native_call(self, projection: list[ProjectionMapping]) -> str:
         entries = ", ".join(

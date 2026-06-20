@@ -10,6 +10,8 @@ MODULE_VARIABLE_GETTER_METADATA = "module_variable_getter"
 PYI_BIND_TARGET_METADATA = "pyi_bind_target"
 PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA = "pyi_suppress_default_constructor"
 PYI_USER_PRIVATE_METADATA = "pyi_user_private"
+RUNTIME_HOLD_GIL_METADATA = "runtime_hold_gil"
+RUNTIME_STATUS_ERROR_METADATA = "runtime_status_error"
 
 
 # ============================================================
