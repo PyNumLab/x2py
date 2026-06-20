@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from numpy.lib.stride_tricks import as_strided
 
 from tests.wrapper._support import (
     _build_text_and_import,
@@ -61,6 +62,20 @@ def test_remaining_array_contracts_are_validated_before_fortran_calls(tmp_path: 
     empty_rank4_out = np.empty_like(empty_rank4, order="F")
     assert module.shift4(empty_rank4, empty_rank4_out) is empty_rank4_out
     assert empty_rank4_out.shape == empty_rank4.shape
+
+    zero_stride_empty = as_strided(
+        np.empty(1, dtype=np.float64),
+        shape=empty_rank4.shape,
+        strides=(0, 0, 0, 0),
+    )
+    zero_stride_empty_out = as_strided(
+        np.empty(1, dtype=np.float64),
+        shape=empty_rank4.shape,
+        strides=(0, 0, 0, 0),
+    )
+    assert zero_stride_empty.flags.f_contiguous
+    assert zero_stride_empty_out.flags.f_contiguous
+    assert module.shift4(zero_stride_empty, zero_stride_empty_out) is zero_stride_empty_out
 
     for rank in range(1, _MAX_WRAPPER_TEST_RANK + 1):
         shape = (2, *([1] * (rank - 1)))

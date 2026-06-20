@@ -137,6 +137,18 @@ PyObject	*Float_to_NumpyDouble(float *d)
  * Functions : Numpy array handling functions
  */
 
+static bool _pyarray_has_zero_extent(PyArrayObject *a)
+{
+    int nd = PyArray_NDIM(a);
+    npy_intp* np_shape = PyArray_SHAPE(a);
+    for (int i = 0; i < nd; ++i) {
+        if (np_shape[i] == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /**
  * Calculate the shapes and strides necessary to pass an array to low-level code.
  *
@@ -180,11 +192,20 @@ void get_strides_and_shape_from_numpy_array(PyObject* arr, int64_t base_shape[],
     // Get information about the array
     PyArrayObject* a = (PyArrayObject*)(arr);
     int nd = PyArray_NDIM(a);
+    npy_intp* np_shape = PyArray_SHAPE(a);
+
+    if (_pyarray_has_zero_extent(a)) {
+        for (int i = 0; i < nd; ++i) {
+            base_shape[i] = np_shape[i];
+            ubounds[i] = np_shape[i];
+            strides[i] = 1;
+        }
+        return;
+    }
 
     // Determine whether the array is a sub-view of a different array
     PyArrayObject* base = (PyArrayObject*)PyArray_BASE(a);
     if (base == NULL) {
-        npy_intp* np_shape = PyArray_SHAPE(a);
         for (int i = 0; i < nd; ++i) {
             base_shape[i] = np_shape[i];
             ubounds[i] = np_shape[i];
@@ -344,6 +365,40 @@ static char* _check_pyarray_rank(PyArrayObject *a, int rank, bool allow_empty)
     return NULL;
 }
 
+static bool _pyarray_has_ordered_positive_strides(PyArrayObject *a, bool fortran_order)
+{
+    if (_pyarray_has_zero_extent(a)) {
+        return true;
+    }
+
+    int nd = PyArray_NDIM(a);
+    npy_intp* np_shape = PyArray_SHAPE(a);
+    npy_intp* np_strides = PyArray_STRIDES(a);
+    npy_intp previous_stride = 0;
+    bool has_previous_stride = false;
+
+    for (int i = 0; i < nd; ++i) {
+        if (np_shape[i] <= 1) {
+            continue;
+        }
+        if (np_strides[i] <= 0) {
+            return false;
+        }
+        if (has_previous_stride) {
+            if (fortran_order && previous_stride > np_strides[i]) {
+                return false;
+            }
+            if (!fortran_order && previous_stride < np_strides[i]) {
+                return false;
+            }
+        }
+        previous_stride = np_strides[i];
+        has_previous_stride = true;
+    }
+
+    return true;
+}
+
 /*
  * Function: _check_pyarray_order
  * --------------------
@@ -375,20 +430,10 @@ static char* _check_pyarray_order(PyArrayObject *a, int flag)
         valid = PyArray_CHKFLAGS(a, NPY_ARRAY_C_CONTIGUOUS) || PyArray_CHKFLAGS(a, NPY_ARRAY_F_CONTIGUOUS);
     }
     else if (flag == NPY_ARRAY_C_CONTIGUOUS) {
-        int nd = PyArray_NDIM(a);
-        npy_intp* np_strides = PyArray_STRIDES(a);
-        valid = nd == 0 || np_strides[0] > 0;
-        for (int i = 1; i<nd; ++i) {
-            valid = valid && np_strides[i] > 0 && np_strides[i-1] >= np_strides[i];
-        }
+        valid = _pyarray_has_ordered_positive_strides(a, false);
     }
     else if (flag == NPY_ARRAY_F_CONTIGUOUS) {
-        int nd = PyArray_NDIM(a);
-        npy_intp* np_strides = PyArray_STRIDES(a);
-        valid = nd == 0 || np_strides[0] > 0;
-        for (int i = 1; i<nd; ++i) {
-            valid = valid && np_strides[i] > 0 && np_strides[i-1] <= np_strides[i];
-        }
+        valid = _pyarray_has_ordered_positive_strides(a, true);
     }
     else {
         valid = PyArray_CHKFLAGS(a, flag);

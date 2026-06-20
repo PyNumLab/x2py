@@ -744,6 +744,10 @@ The wrapper validates before entering Fortran:
 Read-only arrays are accepted for `intent(in)`. The wrapper does not repair
 alignment, byte-swap, copy to avoid overlap, or de-alias overlapping arrays.
 Native Fortran aliasing rules and the routine's documented semantics apply.
+Zero-sized dimensions are accepted when the array otherwise satisfies the
+declared dtype, rank, writeability, and expressible extent contract; degenerate
+strides in dimensions with no addressable movement do not make the array layout
+invalid.
 
 ```fortran
 subroutine scale_matrix(n, m, values)
