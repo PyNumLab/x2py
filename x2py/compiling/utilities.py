@@ -7,7 +7,7 @@ from pathlib import Path
 
 from filelock import FileLock
 
-from x2py.codegen.printers.codegen import printer_registry
+from x2py.codegen.printers.fcode import FCodePrinter
 from .basic import CompileObj
 from .library_config import recognised_libs
 
@@ -15,9 +15,6 @@ from .library_config import recognised_libs
 x2py_root = Path(__file__).parent.parent
 
 __all__ = ["recompile_object"]
-
-# ==============================================================================
-language_extension = {"fortran": "f90", "c": "c", "python": "py"}
 
 
 # ==============================================================================
@@ -86,7 +83,7 @@ def generate_extension_modules(
         mod = import_node.source_module
         filename = os.path.join(x2py_dirpath, import_key) + ".F90"
         folder = os.path.dirname(filename)
-        printer = printer_registry[language](filename, verbose=verbose)
+        printer = FCodePrinter(filename, verbose=verbose)
         code = printer.doprint(mod)
         if not os.path.exists(folder):
             os.mkdir(folder)

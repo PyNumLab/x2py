@@ -196,6 +196,12 @@ implementation files.
 
 ### Codegen Class Organization
 
+Current runtime wrapper codegen is intentionally narrow: Fortran sources lower
+through the generated Fortran bridge, generated C, and the CPython extension
+binding. Semantic `.pyi` emission is the editable contract printer. Do not keep
+placeholder C++, pybind11, or Python source printers in `x2py/codegen` until
+those backends have a documented runtime contract and tests.
+
 Organize generators and printers using `FortranParser` in
 `x2py/fortran_parser/parser.py` as the structural reference. A maintainer
 should be able to read each class from top to bottom in the same order that

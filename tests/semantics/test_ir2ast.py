@@ -195,7 +195,7 @@ module generic_mod
 end module generic_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
-    with pytest.raises(ValueError, match="missing specific procedure.*missing"):
+    with pytest.raises(ValueError, match=r"missing specific procedure.*missing"):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),

@@ -283,53 +283,6 @@ class FCodePrinter(CodePrinter):
 
         return "\n".join([a for a in parts if a])
 
-    def _visit_Program(self, expr):
-        """Render the ``Program`` model node."""
-        self.set_scope(expr.scope)
-        self._constantImports.append({})
-
-        name = f"prog_{self._visit(expr.name)}".replace(".", "_")
-        imports = "".join(self._visit(i) for i in expr.imports)
-        body = self._visit(expr.body)
-
-        # Print the declarations of all variables in the scope, which include:
-        #  - user-defined variables (available in Program.variables)
-        #  - x2py-generated variables added to Scope when printing 'expr.body'
-        variables = self.scope.variables.values()
-        decs = "".join(self._visit(Declare(v)) for v in variables)
-
-        # Detect if we are using mpi4py
-        # TODO should we find a better way to do this?
-        mpi = any(str(getattr(i.source, "name", i.source)) == "mpi4py" for i in expr.imports)
-
-        # Additional code and variable declarations for MPI usage
-        # TODO: check if we should really add them like this
-        if mpi:
-            body = (
-                "call mpi_init(ierr)\n"
-                + "\nallocate(status(0:-1 + mpi_status_size)) "
-                + "\nstatus = 0\n"
-                + body
-                + "\ncall mpi_finalize(ierr)"
-            )
-
-            decs += "\ninteger :: ierr = -1" + "\ninteger, allocatable :: status (:)"
-        imports += "".join(self._visit(i) for i in self._additional_imports.values())
-        imports += "\n" + self._constant_imports()
-        parts = [
-            f"program {name}\n",
-            imports,
-            "implicit none\n",
-            decs,
-            body,
-            f"end program {name}\n",
-        ]
-
-        self.exit_scope()
-        self._constantImports.pop()
-
-        return "\n".join(a for a in parts if a)
-
     def _visit_Import(self, expr):
         """Render the ``Import`` model node."""
         source = ""
@@ -416,21 +369,10 @@ class FCodePrinter(CodePrinter):
         """Render the ``EmptyNode`` model node."""
         return ""
 
-    def _visit_AnnotatedComment(self, expr):
-        """Render the ``AnnotatedComment`` model node."""
-        accel = self._visit(expr.accel)
-        txt = str(expr.txt)
-        return f"!${accel} {txt}\n"
-
     def _visit_tuple(self, expr):
         """Render the ``tuple`` model node."""
         if expr[0].rank > 0:
             raise NotImplementedError(" tuple with elements of rank > 0 is not implemented")
-        fs = ", ".join(self._visit(f) for f in expr)
-        return f"[{fs}]"
-
-    def _visit_InhomogeneousTupleVariable(self, expr):
-        """Render the ``InhomogeneousTupleVariable`` model node."""
         fs = ", ".join(self._visit(f) for f in expr)
         return f"[{fs}]"
 
@@ -462,14 +404,6 @@ class FCodePrinter(CodePrinter):
             self._additional_code += self._visit(Assign(var, expr.lhs)) + "\n"
             return self._visit(var) + "%" + self._visit(expr.name)
         return self._visit(expr.lhs) + "%" + self._visit(expr.name)
-
-    def _visit_DottedName(self, expr):
-        """Render the ``DottedName`` model node."""
-        return " % ".join(self._visit(n) for n in expr.name)
-
-    def _visit_Lambda(self, expr):
-        """Render the ``Lambda`` model node."""
-        return f'"{expr.variables} -> {expr.expr}"'
 
     def _visit_ComplexPart(self, expr):
         """Render the ``ComplexPart`` model node."""
@@ -845,10 +779,6 @@ class FCodePrinter(CodePrinter):
             name = expr.low_level_name
         return name
 
-    def _visit_DataType(self, expr):
-        """Render the ``DataType`` model node."""
-        return self._visit(expr.name)
-
     def _visit_FunctionOverloadSet(self, expr):
         """Render the ``FunctionOverloadSet`` model node."""
         dispatcher_funcs = expr.functions
@@ -971,10 +901,6 @@ class FCodePrinter(CodePrinter):
             code += self._visit(expr.stmt)
         code += "return\n"
         return code
-
-    def _visit_Del(self, expr):
-        """Render the ``Del`` model node."""
-        return "".join(self._visit(var) for var in expr.variables)
 
     def _visit_ClassDef(self, expr):
         # ... we don't print 'hidden' classes
@@ -1268,10 +1194,6 @@ class FCodePrinter(CodePrinter):
             return f"{a} == 0"
         return f".not. {a}"
 
-    def _visit_Header(self, expr):
-        """Render the ``Header`` model node."""
-        return ""
-
     def _visit_int(self, expr):
         """Render the ``int`` model node."""
         return str(expr)
@@ -1469,12 +1391,6 @@ class FCodePrinter(CodePrinter):
 
     # =======================================================================================
 
-    def _visit_PythonConjugate(self, expr):
-        """Render the ``PythonConjugate`` model node."""
-        return f"conjg( {self._visit(expr.internal_var)} )"
-
-    # =======================================================================================
-
     def _visit_BindCArrayVariable(self, expr):
         """Render the ``BindCArrayVariable`` model node."""
         return self._visit(expr.wrapper_function)
@@ -1505,14 +1421,6 @@ class FCodePrinter(CodePrinter):
             return f"transfer({source}, {mold})"
         size = self._visit(expr.size)
         return f"transfer({source}, {mold}, {size})"
-
-    def _visit_AllDeclaration(self, expr):
-        """Render the ``AllDeclaration`` model node."""
-        return ""
-
-    def _visit_KindSpecification(self, expr):
-        """Render the ``KindSpecification`` model node."""
-        return f"(kind = {self._kind(expr.type_specifier)})"
 
     # ------------------------------------------------------------------
     # Shared helpers

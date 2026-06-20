@@ -179,7 +179,7 @@ from ..models.core import (
 from ..models.core import DottedVariable, IndexedElement, Variable
 from ..scope import Scope
 
-from .base import BindingGenerator
+from ..generator import BindingGenerator
 
 cpython_ndarray_imports = [
     Import("python_runtime_ndarrays", Module("python_runtime_ndarrays", (), ())),

@@ -1426,7 +1426,7 @@ def apply(callback: Callable[[Float64], Float64], x: Float64) -> Float64: ...
     assert "Py_BEGIN_ALLOW_THREADS" not in c_wrapper
     assert "Py_END_ALLOW_THREADS" not in c_wrapper
 
-    with pytest.raises(ValueError, match="Unsupported .pyi decorator: 'release_gil'"):
+    with pytest.raises(ValueError, match=r"Unsupported \.pyi decorator: 'release_gil'"):
         parse_pyi_text(
             "@release_gil\ndef removed(x: Float64) -> Float64: ...",
             module_name="removed_release_gil",

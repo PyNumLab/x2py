@@ -69,7 +69,6 @@ __all__ = (
     "PyFunctionOverloadSet",
     "PyGetSetDefElement",
     "PyList_Append",
-    "PyList_Clear",
     "PyList_GetItem",
     "PyList_New",
     "PyList_SetItem",
@@ -1488,40 +1487,6 @@ PyList_SetItem = FunctionDef(
 )
 
 
-class PyList_Clear:
-    """
-    A class representing a call to list.clear() in the wrapper.
-
-    A class representing a call to list.clear() in the wrapper.
-    There is no simple method to describe this operation before
-    Python 3.13.
-
-    Parameters
-    ----------
-    list_obj : model object
-        The list that must be emptied.
-    """
-
-    __slots__ = ("_list_obj",)
-    _attribute_nodes = ("_list_obj",)
-    _class_type = NumpyInt64Type()
-    _shape = ()
-
-    def __init__(self, list_obj):
-        """Initialize one ``PyList_Clear`` model instance."""
-        self._list_obj = list_obj
-        init_model_object(self)
-
-    @property
-    def list_obj(self):
-        """
-        The list that must be emptied.
-
-        The list that must be emptied.
-        """
-        return self._list_obj
-
-
 # -------------------------------------------------------------------
 #                         Dict functions
 # -------------------------------------------------------------------
@@ -1628,7 +1593,6 @@ for _model_cls in (
     PyArg_ParseTupleNode,
     PyGetSetDefElement,
     PyArgumentError,
-    PyList_Clear,
 ):
     register_model_class(_model_cls)
 

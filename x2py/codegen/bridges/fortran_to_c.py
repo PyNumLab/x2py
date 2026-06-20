@@ -81,7 +81,7 @@ from ..models.core import Add, IsNot, Mul
 from ..models.core import DottedVariable, IndexedElement, Variable
 from ..scope import Scope
 
-from .base import BridgeGenerator
+from ..generator import BridgeGenerator
 
 _MAX_SUPPORTED_ASSUMED_RANK = 15
 

@@ -10,25 +10,21 @@ from pathlib import Path
 from .models.core import ModuleHeader
 from x2py.naming import name_clash_checkers
 from .scope import Scope
-from .printers.codegen import _extension_registry, _header_extension_registry
 from .printers.cpythoncode import CPythonCodePrinter
 from .printers.fcode import FCodePrinter
-from .printers.pybindcode import PyBindCodePrinter
 from .bindings.c_to_python import CPythonBindingGenerator
-from .bindings.cpp_to_python import Pybind11BindingGenerator
 from .bridges.fortran_to_c import FortranToCBridgeGenerator
+
+_EXTENSIONS = {"fortran": "f90", "c": "c"}
+_HEADER_EXTENSIONS = {"fortran": None, "c": "h"}
 
 binding_pipeline_registry = {
     "fortran": [FortranToCBridgeGenerator, CPythonBindingGenerator],
-    "c": [CPythonBindingGenerator],
-    "c++": [Pybind11BindingGenerator],
-    "python": [],
 }
 
 printer_registry = {
     FortranToCBridgeGenerator: FCodePrinter,
     CPythonBindingGenerator: CPythonCodePrinter,
-    Pybind11BindingGenerator: PyBindCodePrinter,
 }
 
 
@@ -43,7 +39,7 @@ class BindingPipeline:
     name : str
         Name of the generated module or program.
     language : str
-        Source language of the generated code.
+        Source language accepted by the runtime wrapper pipeline.
     verbose : int
         The level of verbosity.
     """
@@ -51,7 +47,6 @@ class BindingPipeline:
     def __init__(self, codegen, name, language, verbose):
         self._ast = codegen.ast
         self._name = name
-        self._language = language
         self._verbose = verbose
         self._generated_asts = []
 
@@ -108,13 +103,13 @@ class BindingPipeline:
         """
         dirpath = Path(dirpath)
         files = [
-            dirpath / f"{ast.name}_wrapper.{_extension_registry[Step.start_language.lower()]}"
+            dirpath / f"{ast.name}_wrapper.{_EXTENSIONS[Step.start_language.lower()]}"
             for ast, Step in zip(self._generated_asts, self._pipeline_steps, strict=False)
         ]
         for i, (filepath, ast, Printer) in enumerate(
             zip(files, self._generated_asts, self._printer_types, strict=False)
         ):
-            header_ext = _header_extension_registry[Printer.language.lower()]
+            header_ext = _HEADER_EXTENSIONS[Printer.language.lower()]
 
             if self._verbose:
                 print(">>> Printing :: ", filepath)

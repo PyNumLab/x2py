@@ -1,6 +1,6 @@
 # C Parser Reference
 
-Status: current reference for the partial C frontend. The `c_parser`
+Status: current reference for the partial C frontend. The `x2py.c_parser`
 package, typed parser models, explicit C CLI parse path, raw directive
 metadata, compiler-assisted preprocessing, source-location remapping, project
 indexes, legacy parser schema snapshots, C standard-type probe, first semantic IR conversion
@@ -58,11 +58,11 @@ only user-supplied files or files beneath a user-supplied directory are parsed.
 
 Implemented:
 
-- `c_parser` package
+- `x2py.c_parser` package
 - typed C parser models for partial parse reports and raw metadata
 - `CParser`, `parse_c_file`, and `parse_c_project`
 - top-level `x2py.parse_c_file` and `x2py.parse_c_project` exports alongside
-  the `c_parser` package entrypoints
+  the `x2py.c_parser` package entrypoints
 - `CParseError` with compiler-style diagnostic formatting
 - explicit `x2py --language c --parse` output
 - explicit `x2py --language c --semantics` and
@@ -358,6 +358,12 @@ already parsed individually. The x2py CLI uses it after compiler preprocessing
 and recipe attachment. Most callers should use `parse_c_project(...)`, which
 handles source loading before delegating to the same project assembly path.
 
+The C parser now lives under the main `x2py` package. The legacy top-level
+`c_parser` package entrypoint was removed, so direct parser imports should use
+`x2py.c_parser` or the stable top-level `x2py` exports. This keeps parser
+models, CLI wiring, semantic conversion, and wrapper-facing entrypoints in one
+package tree.
+
 ## Public API
 
 Implemented top-level and package entrypoints:
@@ -365,7 +371,7 @@ Implemented top-level and package entrypoints:
 ```python
 from x2py import parse_c_file, parse_c_project
 # Equivalent parser-package imports remain available:
-# from c_parser import parse_c_file, parse_c_project
+# from x2py.c_parser import parse_c_file, parse_c_project
 ```
 
 Implemented signatures:

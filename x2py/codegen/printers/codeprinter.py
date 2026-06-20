@@ -6,7 +6,7 @@ used by all code printers, such as the management of imports and the current
 scope.
 """
 
-from ..models.core import Module, ModuleHeader, Program
+from ..models.core import Module, ModuleHeader
 
 # TODO: add examples
 
@@ -54,7 +54,7 @@ class CodePrinter:
         str
             The generated code.
         """
-        assert isinstance(expr, Module | ModuleHeader | Program)
+        assert isinstance(expr, Module | ModuleHeader)
 
         # Do the actual printing
         lines = self._visit(expr).splitlines(True)

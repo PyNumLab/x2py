@@ -182,30 +182,6 @@ class CCodePrinter(CodePrinter):
     # Model visitors
     # ------------------------------------------------------------------
 
-    def _visit_PythonAbs(self, expr):
-        """Render the ``PythonAbs`` model node."""
-        if expr.arg.dtype.primitive_type is PrimitiveFloatingPointType():
-            self.add_import(c_imports["math"])
-            func = "fabs"
-        elif expr.arg.dtype.primitive_type is PrimitiveComplexType():
-            self.add_import(c_imports["complex"])
-            func = "cabs"
-        else:
-            func = "labs"
-        return f"{func}({self._visit(expr.arg)})"
-
-    def _visit_PythonRound(self, expr):
-        """Render the ``PythonRound`` model node."""
-        self.add_import(c_imports["pyc_math_c"])
-        arg = self._visit(expr.arg)
-        ndigits = self._visit(expr.ndigits or convert_to_literal(0))
-        if isinstance(
-            expr.arg.class_type.primitive_type,
-            PrimitiveBooleanType | PrimitiveIntegerType,
-        ):
-            return f"ipyc_bankers_round({arg}, {ndigits})"
-        return f"fpyc_bankers_round({arg}, {ndigits})"
-
     def _visit_Cast(self, expr):
         """Render the ``Cast`` model node."""
         value = self._visit(expr.arg)
@@ -264,10 +240,6 @@ class CCodePrinter(CodePrinter):
             sign = "-" if value.imag < 0 else "+"
             return f"({real} {sign} {imag} * _Complex_I)"
         return repr(value)
-
-    def _visit_Header(self, expr):
-        """Render the ``Header`` model node."""
-        return ""
 
     def _visit_ModuleHeader(self, expr):
         """Render the ``ModuleHeader`` model node."""
@@ -333,22 +305,6 @@ class CCodePrinter(CodePrinter):
 
         self.exit_scope()
         return code
-
-    def _visit_Break(self, expr):
-        """Render the ``Break`` model node."""
-        return "break;\n"
-
-    def _visit_Continue(self, expr):
-        """Render the ``Continue`` model node."""
-        return "continue;\n"
-
-    def _visit_While(self, expr):
-        """Render the ``While`` model node."""
-        self.set_scope(expr.scope)
-        body = self._visit(expr.body)
-        self.exit_scope()
-        cond = self._visit(expr.test)
-        return f"while({cond})\n{{\n{body}}}\n"
 
     def _visit_If(self, expr):
         """Render the ``If`` model node."""
@@ -1089,18 +1045,10 @@ class CCodePrinter(CodePrinter):
             body_stmts.append(code)
         return "".join(self._visit(b) for b in body_stmts)
 
-    def _visit_Idx(self, expr):
-        """Render the ``Idx`` model node."""
-        return self._visit(expr.label)
-
     def _visit_ComplexPart(self, expr):
         """Render the ``ComplexPart`` model node."""
         function = "creal" if expr.part == "real" else "cimag"
         return f"{function}({self._visit(expr.arg)})"
-
-    def _visit_PythonConjugate(self, expr):
-        """Render the ``PythonConjugate`` model node."""
-        return f"conj({self._visit(expr.internal_var)})"
 
     def _visit_IsNot(self, expr):
         """Render the ``IsNot`` model node."""
@@ -1109,39 +1057,6 @@ class CCodePrinter(CodePrinter):
     def _visit_Is(self, expr):
         """Render the ``Is`` model node."""
         return self._handle_is_operator("==", expr)
-
-    def _visit_Piecewise(self, expr):
-        """Render the ``Piecewise`` model node."""
-        if expr.args[-1].cond is not True:
-            # We need the last conditional to be a True, otherwise the resulting
-            # function may not return a result.
-            raise ValueError(
-                "All Piecewise expressions must contain an "
-                "(expr, True) statement to be used as a default "
-                "condition. Without one, the generated "
-                "expression may not evaluate to anything under "
-                "some condition."
-            )
-        lines = []
-        if expr.has(Assign):
-            for i, (e, c) in enumerate(expr.args):
-                if i == 0:
-                    lines.append(f"if ({self._visit(c)}) {{\n")
-                elif i == len(expr.args) - 1 and c is True:
-                    lines.append("else {\n")
-                else:
-                    lines.append(f"else if ({self._visit(c)}) {{\n")
-                code0 = self._visit(e)
-                lines.append(code0)
-                lines.append("}\n")
-            return "".join(lines)
-        # The piecewise was used in an expression, need to do inline
-        # operators. This has the downside that inline operators will
-        # not work for statements that span multiple lines (Matrix or
-        # Indexed expressions).
-        ecpairs = [f"(({self._visit(c)}) ? (\n{self._visit(e)}\n)\n" for e, c in expr.args[:-1]]
-        last_line = f": (\n{self._visit(expr.args[-1].expr)}\n)"
-        return ": ".join(ecpairs) + last_line + " ".join([")" * len(ecpairs)])
 
     def _visit_Variable(self, expr):
         """Render the ``Variable`` model node."""
@@ -1185,14 +1100,6 @@ class CCodePrinter(CodePrinter):
 
         return "/*" + comments + "*/\n"
 
-    def _visit_Assert(self, expr):
-        """Render the ``Assert`` model node."""
-        if isinstance(expr.test, Literal) and expr.test.python_value is True:
-            return ""
-        condition = self._visit(expr.test)
-        self.add_import(c_imports["assert"])
-        return f"assert({condition});\n"
-
     def _visit_Symbol(self, expr):
         """Render the ``Symbol`` model node."""
         return expr
@@ -1220,60 +1127,9 @@ class CCodePrinter(CodePrinter):
         """Render the ``EmptyNode`` model node."""
         return ""
 
-    # =================== OMP ==================
-
-    def _visit_OmpAnnotatedComment(self, expr):
-        """Render the ``OmpAnnotatedComment`` model node."""
-        clauses = ""
-        if expr.combined:
-            clauses = " " + expr.combined
-        clauses += str(expr.txt)
-        if expr.has_nowait:
-            clauses = clauses + " nowait"
-        omp_expr = f"#pragma omp {expr.name}{clauses}\n"
-
-        if expr.is_multiline and (
-            expr.combined is None
-            or (
-                expr.combined
-                and "for" not in expr.combined
-                and "masked taskloop" not in expr.combined
-                and "distribute" not in expr.combined
-            )
-        ):
-            omp_expr += "{\n"
-
-        return omp_expr
-
-    def _visit_Omp_End_Clause(self, expr):
-        """Render the ``Omp_End_Clause`` model node."""
-        return "}\n"
-
-    # =====================================
-
-    def _visit_Program(self, expr):
-        """Render the ``Program`` model node."""
-        self.set_scope(expr.scope)
-        body = self._visit(expr.body)
-        variables = self.scope.variables.values()
-        decs = "".join(self._visit(Declare(v)) for v in variables)
-
-        imports = [i for i in chain(expr.imports, self._additional_imports.values()) if not i.ignore]
-        imports = self._sort_imports(imports)
-        imports = "".join(self._visit(i) for i in imports)
-
-        self.exit_scope()
-        return f"{imports}int main()\n{{\n{decs}{body}return 0;\n}}"
-
-    # ================== CLASSES ==================
-
     def _visit_CustomDataType(self, expr):
         """Render the ``CustomDataType`` model node."""
         return "struct " + expr.low_level_name
-
-    def _visit_Del(self, expr):
-        """Render the ``Del`` model node."""
-        return "".join(self._visit(var) for var in expr.variables)
 
     def _visit_ClassDef(self, expr):
         """Render the ``ClassDef`` model node."""
@@ -1293,10 +1149,6 @@ class CCodePrinter(CodePrinter):
         if code.startswith("&cstr_lit("):
             return code[10:-1]
         return f"cstr_str({code})"
-
-    def _visit_AllDeclaration(self, expr):
-        """Render the ``AllDeclaration`` model node."""
-        return ""
 
     # ------------------------------------------------------------------
     # Shared helpers

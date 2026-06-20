@@ -132,31 +132,6 @@ def _find_model_parent(obj, parent_type, excluded_types=()):
     return find(obj)
 
 
-def _has_model_descendant(obj, descendant_type, excluded_types=()):
-    """Return whether ``obj`` contains a descendant with the requested type."""
-    visited = set()
-
-    def contains(current):
-        current_id = id(current)
-        if current_id in visited:
-            return False
-        visited.add(current_id)
-
-        for attribute_name in getattr(type(current), "_attribute_nodes", ()):
-            value = getattr(current, attribute_name)
-            values = value if isinstance(value, tuple) else (value,)
-            for item in values:
-                if isinstance(item, excluded_types):
-                    continue
-                if isinstance(item, descendant_type):
-                    return True
-                if not _ignore_model_child(item) and is_model_object(item) and contains(item):
-                    return True
-        return False
-
-    return contains(obj)
-
-
 def _shape(obj):
     return obj._shape
 
@@ -1468,18 +1443,6 @@ if hasattr(numpy, "float128"):
 x2py_type_to_original_type.update(numpy_type_to_original_type)
 original_type_to_x2py_type.update({v: k for k, v in numpy_type_to_original_type.items()})
 
-typenames_to_dtypes = {
-    "float": NumpyFloat64Type(),
-    "double": NumpyFloat64Type(),
-    "complex": NumpyComplex128Type(),
-    "int": NumpyInt64Type(),
-    "bool": NumpyBoolType(),
-    "b1": NumpyBoolType(),
-    "void": VoidType(),
-    "*": GenericType(),
-    "str": StringType(),
-}
-
 
 # ======================================================================
 class Literal:
@@ -1738,81 +1701,6 @@ class Cast(_DataTypeFunction):
 
     def __str__(self):
         return f"Cast({self.arg}, {self.dtype})"
-
-
-# ==============================================================================================
-dtype_registry = typenames_to_dtypes
-dtype_registry.update(
-    {
-        "int8": NumpyInt8Type(),
-        "int16": NumpyInt16Type(),
-        "int32": NumpyInt32Type(),
-        "int64": NumpyInt64Type(),
-        "i1": NumpyInt8Type(),
-        "i2": NumpyInt16Type(),
-        "i4": NumpyInt32Type(),
-        "i8": NumpyInt64Type(),
-        "float32": NumpyFloat32Type(),
-        "float64": NumpyFloat64Type(),
-        "float128": NumpyFloat128Type(),
-        "f4": NumpyFloat32Type(),
-        "f8": NumpyFloat64Type(),
-        "complex64": NumpyComplex64Type(),
-        "complex128": NumpyComplex128Type(),
-        "complex256": NumpyComplex256Type(),
-        "c8": NumpyComplex64Type(),
-        "c16": NumpyComplex128Type(),
-    }
-)
-
-
-def process_dtype(dtype):
-    """
-    Analyse a dtype passed to a NumPy array creation function.
-
-    This function takes a dtype passed to a NumPy array creation function,
-    processes it in different ways depending on its type, and finally extracts
-    the corresponding type and precision from the `dtype_registry` dictionary.
-
-    This function could be useful when working with numpy creation function
-    having a dtype argument, like numpy.array, numpy.arrange, numpy.linspace...
-
-    Parameters
-    ----------
-    dtype : X2pyFunctionDef, Literal, str
-        The actual dtype passed to the NumPy function.
-
-    Returns
-    -------
-    Datatype
-        The Datatype corresponding to the passed dtype.
-    int
-        The precision corresponding to the passed dtype.
-
-    Raises
-    ------
-    TypeError: In the case of unrecognized argument type.
-    TypeError: In the case of passed string argument not recognized as valid dtype.
-    """
-    from .core import X2pyFunctionDef
-
-    if isinstance(dtype, X2pyFunctionDef):
-        dtype = dtype.cls_name.static_type()
-
-    elif isinstance(dtype, Literal) and isinstance(dtype.dtype, StringType):
-        dtype = dtype.python_value
-
-    if isinstance(dtype, str):
-        try:
-            dtype = dtype_registry[dtype]
-        except KeyError as e:
-            raise TypeError(f"Unknown type of {dtype}.") from e
-
-    if isinstance(dtype, NumpyNumericType | GenericType):
-        return dtype
-    if isinstance(dtype, FixedSizeNumericType):
-        return numpy_precision_map[(dtype.primitive_type, dtype.precision)]
-    raise TypeError(f"Unknown type of {dtype}.")
 
 
 def cast_to(arg, target_type):

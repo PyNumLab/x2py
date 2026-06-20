@@ -16,14 +16,12 @@ from .datatypes import (
     FinalType,
     Type,
     NumpyBoolType,
-    SymbolicType,
     TupleType,
     PrimitiveIntegerType,
     NumpyInt64Type,
     StringType,
     _find_direct_model_parent,
     _find_model_parent,
-    _has_model_descendant,
     attach_model_child,
     detach_model_child,
     init_model_object,
@@ -101,7 +99,6 @@ __all__ = (
     "Or",
     "Pass",
     "Pow",
-    "Program",
     "PythonTuple",
     "Return",
     "SelectCase",
@@ -113,7 +110,6 @@ __all__ = (
     "UnaryPlus",
     "UnarySub",
     "Variable",
-    "X2pyFunctionDef",
     "get_direct_assignment",
     "get_direct_function_argument",
     "get_direct_module",
@@ -121,7 +117,6 @@ __all__ = (
     "get_enclosing_class",
     "get_enclosing_function",
     "get_enclosing_module",
-    "has_return_statement",
     "is_in_overload_set",
 )
 
@@ -1478,10 +1473,6 @@ class Module:
     free_func : FunctionDef, default: None
         The function which frees any variables allocated in the module.
 
-    program : Program/CodeBlock
-        CodeBlock containing any expressions which are only executed
-        when the module is executed directly.
-
     overload_sets : list
         A list of FunctionOverloadSet instances.
 
@@ -1534,7 +1525,6 @@ class Module:
         "_is_external",
         "_name",
         "_overload_sets",
-        "_program",
         "_variable_inits",
         "_variables",
     )
@@ -1546,7 +1536,6 @@ class Module:
         "_imports",
         "_init_func",
         "_free_func",
-        "_program",
         "_variable_inits",
     )
 
@@ -1557,7 +1546,6 @@ class Module:
         funcs,
         init_func=None,
         free_func=None,
-        program=None,
         overload_sets=(),
         classes=(),
         imports=(),
@@ -1598,9 +1586,6 @@ class Module:
         if not isinstance(free_func, NoneType | FunctionDef):
             raise TypeError("free_func must be a FunctionDef")
 
-        if not isinstance(program, NoneType | Program | CodeBlock):
-            raise TypeError("program must be a Program (or a CodeBlock at the syntactic stage)")
-
         if not iterable(imports):
             raise TypeError("imports must be an iterable")
         imports = list(imports)
@@ -1617,7 +1602,6 @@ class Module:
         self._funcs = funcs
         self._init_func = init_func
         self._free_func = free_func
-        self._program = program
         self._overload_sets = overload_sets
         self._classes = classes
         self._imports = imports
@@ -1663,19 +1647,6 @@ class Module:
     def free_func(self):
         """The function which frees any variables allocated in the module"""
         return self._free_func
-
-    @property
-    def program(self):
-        """CodeBlock or Program containing any expressions which are only executed
-        when the module is executed directly
-        """
-        return self._program
-
-    @program.setter
-    def program(self, prog):
-        assert self._program is None
-        self._program = prog
-        attach_model_child(self, self._program)
 
     @property
     def funcs(self):
@@ -1808,87 +1779,6 @@ class ModuleHeader:
     @property
     def module(self):
         return self._module
-
-
-class Program:
-    """
-    Represents a Program in the code.
-
-    A class representing a program in the code. A program is a set of statements
-    that are executed when the module is run directly. In Python these statements
-    are located in an `if __name__ == '__main__':` block.
-
-    Parameters
-    ----------
-    name : str
-        The name used to identify the program (this is used for printing in Fortran).
-
-    variables : tuple[Variable]
-        An iterable object containing the variables that appear in the program.
-
-    body : CodeBlock
-        An CodeBlock containing the statements in the body of the program.
-
-    imports : tuple[Import]
-        An iterable object containing the imports used by the program.
-
-    scope : Scope
-        The scope of the program.
-    """
-
-    __slots__ = ("_body", "_imports", "_name", "_variables")
-    _attribute_nodes = ("_variables", "_body", "_imports")
-
-    def __init__(self, name, variables, body, imports=(), scope=None):
-        if not isinstance(name, str):
-            raise TypeError("name must be a string")
-
-        if not iterable(variables):
-            raise TypeError("variables must be an iterable")
-
-        for i in variables:
-            if not isinstance(i, Variable):
-                raise TypeError("Only a Variable instance is allowed.")
-
-        assert isinstance(body, CodeBlock)
-
-        if not iterable(imports):
-            raise TypeError("imports must be an iterable")
-
-        imports = dict.fromkeys(imports)  # for unicity and ordering
-        imports = tuple(imports.keys())
-
-        self._name = name
-        self._variables = tuple(variables)
-        self._body = body
-        self._imports = tuple(imports)
-        init_model_object(self, scope=scope)
-
-    @property
-    def name(self):
-        """Name of the executable"""
-        return self._name
-
-    @property
-    def variables(self):
-        """Variables contained within the program"""
-        return self._variables
-
-    @property
-    def body(self):
-        """Statements in the program"""
-        return self._body
-
-    @property
-    def imports(self):
-        """Imports imported in the program"""
-        return self._imports
-
-    def remove_import(self, name):
-        """Remove an import with the given source name from the list
-        of imports
-        """
-        self._imports = tuple(i for i in self.imports if i.source != name)
 
 
 class FunctionCallArgument:
@@ -3078,65 +2968,6 @@ class FunctionDef:
         arguments = [a if isinstance(a, FunctionCallArgument) else FunctionCallArgument(a) for a in args]
         arguments += [FunctionCallArgument(a, keyword=key) for key, a in kwargs.items()]
         return FunctionCall(self, arguments)
-
-
-class X2pyFunctionDef(FunctionDef):
-    """
-    Class used for storing `Function` objects in a FunctionDef.
-
-    Class inheriting from `FunctionDef` which can store a pointer
-    to a class type defined by x2py for treating internal functions.
-    This is useful for importing builtin functions and for defining
-    classes which have `Function` objects as attributes or methods.
-
-    Parameters
-    ----------
-    name : str
-        The name of the function.
-
-    func_class : type inheriting from Function / model object
-        The class which should be instantiated upon a FunctionCall
-        to this FunctionDef object.
-
-    decorators : dictionary
-        A dictionary whose keys are the names of decorators and whose values
-        contain their implementation.
-
-    argument_description : dict, optional
-        A dictionary containing all arguments and their default values. This
-        is useful in order to reuse types with similar functionalities but
-        different default values.
-    """
-
-    __slots__ = ("_argument_description",)
-    class_type = SymbolicType()
-
-    def __init__(self, name, func_class, *, decorators=None, argument_description=None):
-        if argument_description is None:
-            argument_description = {}
-        if decorators is None:
-            decorators = {}
-        assert isinstance(func_class, type) and (issubclass(func_class, Function) or is_model_class(func_class))
-        assert isinstance(argument_description, dict)
-        arguments = ()
-        body = ()
-        super().__init__(name, arguments, body, decorators=decorators)
-        self._cls_name = func_class
-        self._argument_description = argument_description
-
-    @property
-    def argument_description(self):
-        """
-        Get a description of the arguments.
-
-        Return a dictionary whose keys are the arguments with default values
-        and whose values are the default values for the function described by
-        the `X2pyFunctionDef`
-        """
-        return self._argument_description
-
-    def __call__(self, *args, **kwargs):
-        return self._cls_name(*args, **kwargs)
 
 
 class FunctionOverloadSet:
@@ -4964,11 +4795,6 @@ def get_enclosing_module(obj):
     return _find_model_parent(obj, Module)
 
 
-def has_return_statement(obj):
-    """Return whether ``obj`` contains a return statement."""
-    return _has_model_descendant(obj, Return)
-
-
 def is_in_overload_set(obj):
     """Return whether ``obj`` belongs to an interface outside a function call."""
     return _find_model_parent(obj, FunctionOverloadSet, excluded_types=(FunctionCall,)) is not None
@@ -4986,7 +4812,6 @@ for _model_cls in (
     AliasAssign,
     Module,
     ModuleHeader,
-    Program,
     FunctionCallArgument,
     FunctionDefArgument,
     FunctionDefResult,

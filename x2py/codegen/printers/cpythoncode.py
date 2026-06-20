@@ -3,7 +3,6 @@ Module containing the `CWrapperCodePrinter` class which is responsible for
 printing the C-Python interface.
 """
 
-import sys
 from typing import ClassVar
 
 from ..bind_c import BindCFunctionDef, BindCModule, BindCPointer
@@ -139,11 +138,6 @@ class CPythonCodePrinter(CCodePrinter):
         callbacks = [item.callback for item in expr.body.body if isinstance(item, PyCallbackContextPush)]
         support = "".join(self._callback_support_code(callback) for callback in callbacks)
         return support + CCodePrinter._visit_FunctionDef(self, expr)
-
-    def _visit_DottedName(self, expr):
-        """Render the ``DottedName`` model node."""
-        names = expr.name
-        return ".".join(self._visit(n) for n in names)
 
     def _visit_PyFunctionOverloadSet(self, expr):
         """Render the ``PyFunctionOverloadSet`` model node."""
@@ -651,13 +645,6 @@ class CPythonCodePrinter(CCodePrinter):
             args_code = ", ".join(self._visit(a) for a in args)
             return f"(*PyTuple_Pack( {n}, {args_code} ))"
         return f"(*PyTuple_Pack( {n} ))"
-
-    def _visit_PyList_Clear(self, expr):
-        """Render the ``PyList_Clear`` model node."""
-        list_code = self._visit(ObjectAddress(expr.list_obj))
-        if sys.version_info < (3, 13):
-            return f"PyList_SetSlice({list_code}, 0, PY_SSIZE_T_MAX, NULL)"
-        return f"PyList_Clear({list_code})"
 
     def _visit_PyArgumentError(self, expr):
         """Render the ``PyArgumentError`` model node."""

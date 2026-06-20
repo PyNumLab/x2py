@@ -108,6 +108,12 @@ wrappers at the bottom, then read the class from top to bottom:
 Parser methods carry focused docstrings, with examples where a compatibility
 visitor or lexical helper is easier to understand from a concrete call.
 
+The Fortran parser is now packaged under `x2py.fortran_parser` rather than a
+top-level parser package. The package includes its CLI module, lexer,
+JSON-compatible parse models, project parser, type resolver, and utility
+helpers. Public callers should use the stable top-level `x2py` parser exports
+or `x2py.fortran_parser` package imports.
+
 ## Implementation Inventory And Maintenance
 
 This file is the single maintained Fortran parser reference. It replaces the
