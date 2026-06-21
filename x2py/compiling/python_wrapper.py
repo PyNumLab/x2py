@@ -9,7 +9,7 @@ import os
 import time
 
 from .basic import CompileObj
-from .utilities import manage_dependencies
+from .runtime_support import install_runtime_support
 from x2py.codegen.binding_pipeline import BindingPipeline
 
 __all__ = ["create_shared_library"]
@@ -140,11 +140,11 @@ def create_shared_library(
         )
     ):
         obj.add_dependencies(*wrapper_compile_objs[:i])
-        manage_dependencies(
+        install_runtime_support(
             imports,
             x2py_dirpath=x2py_dirpath,
             compiler=compiler,
-            mod_obj=obj,
+            wrapper_obj=obj,
             language=lang,
             verbose=verbose,
         )

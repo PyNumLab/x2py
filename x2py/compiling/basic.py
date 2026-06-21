@@ -112,49 +112,10 @@ class CompileObj:
         self._dependencies = {getattr(a, "module_target", a): a for a in dependencies}
         self._has_target_file = has_target_file
 
-    def reset_folder(self, folder):
-        """
-        Change the folder in which the source file is saved.
-
-        Change the folder in which the source file is saved. Normally the location
-        of the source file should not change during the execution, however when
-        working with the stdlib, the `CompileObj` is created with the folder set
-        to the file's location in the X2py install directory. When the file is
-        used it is copied to the user's folder, at which point the folder of the
-        `CompileObj` must be updated.
-
-        Parameters
-        ----------
-        folder : str
-            The new folder where the source file can be found.
-        """
-        folder = Path(folder)
-        self._include.remove(self._folder)
-        self._include.add(folder)
-
-        self._file = folder / self._file.name
-        self._lock_source = FileLock(self.source.with_suffix(self.source.suffix + ".lock"))
-        self._folder = folder
-        self._include.add(self._folder)
-
-        rel_mod_name = folder / self._module_name
-        self._module_target = rel_mod_name.with_suffix(".o")
-
-        self._prog_target = rel_mod_name
-        if sys.platform == "win32":
-            self._prog_target.with_suffix(".exe")
-
-        self._lock_target = FileLock(self.module_target.with_suffix(self.module_target.suffix + ".lock"))
-
     @property
     def source(self):
         """Returns the file to be compiled"""
         return self._file
-
-    @property
-    def source_folder(self):
-        """Returns the location of the file to be compiled"""
-        return self._folder
 
     @property
     def python_module(self):
@@ -221,10 +182,6 @@ class CompileObj:
     def dependencies(self):
         """Returns the objects which the file to be compiled uses"""
         return self._dependencies.values()
-
-    def get_dependency(self, target):
-        """Returns the objects which the file to be compiled uses"""
-        return self._dependencies.get(target, None)
 
     def add_dependencies(self, *args):
         """

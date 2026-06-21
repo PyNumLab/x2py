@@ -114,14 +114,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         FixedSizeNumericType: "_convert_numeric_argument",
         CustomDataType: "_convert_custom_type_argument",
         NumpyNDArrayType: "_convert_array_argument",
-        TupleType: "_convert_tuple_argument",
         StringType: "_convert_string_argument",
     }
     _RESULT_CONVERTERS: ClassVar[dict[type, str]] = {
         FixedSizeNumericType: "_convert_scalar_result",
         CustomDataType: "_convert_custom_type_result",
         NumpyNDArrayType: "_convert_array_result",
-        TupleType: "_convert_tuple_result",
         StringType: "_convert_string_result",
     }
     _NDARRAY_RESULT_DISPATCHER = OwnershipActionDispatcher(
@@ -1282,46 +1280,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             },
         }
 
-    def _convert_tuple_argument(self, var, func):
-        """Convert tuple argument for the current wrapper."""
-        name = var.name
-        scope = self.scope
-        scope.insert_symbol(name)
-        collisionless_name = scope.get_expected_name(name)
-        rank = var.rank
-        bind_var = Variable(
-            BindCPointer(),
-            scope.get_new_name(f"bound_{name}"),
-            is_argument=True,
-            is_optional=False,
-            memory_handling="alias",
-        )
-        arg_var = var.clone(
-            collisionless_name,
-            is_argument=False,
-            is_optional=False,
-            memory_handling="alias",
-            new_class=Variable,
-        )
-        scope.insert_variable(arg_var)
-        scope.insert_variable(bind_var)
-
-        shape_var = scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_size", is_argument=True)
-
-        body = [C_F_Pointer(bind_var, arg_var, (shape_var,))]
-
-        c_arg_var = Variable(
-            BindCArrayType.get_new(rank, has_strides=False),
-            scope.get_new_name(),
-            is_argument=True,
-            shape=(convert_to_literal(rank + 1),),
-        )
-
-        scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
-        scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(1)), shape_var)
-
-        return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": arg_var, "body": body}
-
     def _convert_string_argument(self, var, func):
         """Convert string argument for the current wrapper."""
         name = var.name
@@ -1552,10 +1510,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         result["f_result"] = local_var
 
         return result
-
-    def _convert_tuple_result(self, orig_var, orig_func_scope):
-        """Convert tuple result for the current wrapper."""
-        return self._convert_array_result(orig_var, orig_func_scope)
 
     def _convert_string_result(self, orig_var, orig_func_scope):
         """Convert string result for the current wrapper."""
@@ -2019,11 +1973,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     def _is_string_replacement_argument(var):
         """Return whether is string replacement argument."""
         return bool(isinstance(var.class_type, StringType) and getattr(var, "intent", "in") == "inout")
-
-    @staticmethod
-    def _is_pointer_snapshot_result(var):
-        """Return whether is pointer snapshot result."""
-        return codegen_action_for_variable(var) is CodegenAction.SNAPSHOT_COPY_ARRAY
 
     @staticmethod
     def _is_allocatable_copy_return_result(var):

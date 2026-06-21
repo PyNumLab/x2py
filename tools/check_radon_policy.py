@@ -36,8 +36,6 @@ LEGACY_COMPLEXITY_BASELINE = {
     ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._print_FunctionDef"): 27,
     ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._print_FunctionCall"): 29,
     ("x2py/codegen/printers/fcode.py", "function", "FCodePrinter._wrap_fortran"): 23,
-    ("x2py/compiling/library_config.py", "function", "STCInstaller.install_to"): 22,
-    ("x2py/compiling/project.py", "function", "DirTarget.__init__"): 30,
     ("x2py/semantics/ir2ast.py", "function", "semantic_ir_to_codegen_ast"): 33,
 }
 

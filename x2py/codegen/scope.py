@@ -4,7 +4,7 @@ from immutabledict import immutabledict
 
 from .bind_c import BindCVariable
 from .models.datatypes import TupleType
-from .models.core import ClassDef, FunctionDef
+from .models.core import ClassDef
 from .models.core import Symbol
 from .models.core import (
     DottedVariable,
@@ -273,13 +273,6 @@ class Scope:
         return immutabledict(self._locals["cls_constructs"])
 
     @property
-    def sons_scopes(self):
-        """A dictionary of all the scopes contained within the
-        current scope
-        """
-        return self._sons_scopes
-
-    @property
     def symbolic_aliases(self):
         """
         A dictionary of symbolic alias defined in this scope.
@@ -362,11 +355,6 @@ class Scope:
     def is_loop(self):
         """Indicates whether this scope describes a loop"""
         return self._is_loop
-
-    @property
-    def loops(self):
-        """Returns the scopes associated with any loops within this scope"""
-        return self._loops
 
     def create_new_loop_scope(self):
         """
@@ -456,26 +444,6 @@ class Scope:
         else:
             raise RuntimeError("Variable not found in scope")
 
-    def inline_variable_definition(self, var_value, name):
-        """
-        Add the definition of a variable inline.
-
-        Add an object to the variables dictionary. This object will
-        be returned when the variable is collected but may not be
-        itself a variable. This is important when translating inlined
-        functions. To ensure that when searching for the variables
-        representing the arguments, the value is used directly.
-
-        Parameters
-        ----------
-        var_value : model object
-            The value of the variable.
-        name : str
-            The name of the variable.
-        """
-        self._locals["variables"][name] = var_value
-        self._used_symbols[name] = name
-
     def insert_class(self, cls, name=None):
         """
         Add a class to the current scope.
@@ -538,20 +506,6 @@ class Scope:
         assert name in self._used_symbols
         assert name not in self._locals["functions"]
         self._locals["functions"][name] = func
-
-    def remove_function(self, name):
-        """
-        Remove a function from the scope.
-
-        Remove a function from the scope. This method is often used when handling
-        Interfaces.
-
-        Parameters
-        ----------
-        name : str
-            The original name of the function in the Python code.
-        """
-        self._locals["functions"].pop(name)
 
     def insert_symbol(self, symbol, object_type="variable"):
         """
@@ -664,22 +618,6 @@ class Scope:
 
             symbolic_aliases[symbol] = alias
 
-    def insert_symbols(self, symbols):
-        """Add multiple new symbols to the scope"""
-        for s in symbols:
-            self.insert_symbol(s)
-
-    @property
-    def dotted_symbols(self):
-        """
-        Return all dotted symbols that were inserted into the scope.
-
-        Return all dotted symbols that were inserted into the scope.
-        This is useful to ensure that class variable names are
-        in the class scope.
-        """
-        return self._dotted_symbols
-
     @property
     def all_used_symbols(self):
         """
@@ -739,40 +677,6 @@ class Scope:
         if self.parent_scope:
             return self.parent_scope.symbol_in_use(name)
         return False
-
-    def get_new_incremented_symbol(self, prefix, counter):
-        """
-        Create a new name by adding a numbered suffix to the provided prefix.
-
-        Create a new name which does not clash with any existing names by
-        adding a numbered suffix to the provided prefix.
-
-        Parameters
-        ----------
-        prefix : str
-            The prefix from which the new name will be created.
-
-        counter : int
-            The starting point for the incrementation.
-
-        Returns
-        -------
-        Symbol
-            The newly created name.
-        """
-
-        new_name, counter = create_incremented_string(
-            self.local_used_symbols.values(),
-            prefix=prefix,
-            counter=counter,
-            name_clash_checker=self.name_clash_checker,
-        )
-
-        chosen_new_symbol = Symbol(new_name, is_temp=True)
-
-        new_symbol = self.insert_symbol(chosen_new_symbol)
-
-        return new_symbol, counter
 
     def get_new_name(self, current_name=None, *, is_temp=None, object_type="variable"):
         """
@@ -957,24 +861,6 @@ class Scope:
             return self.parent_scope.get_import_alias(obj, category)
         raise RuntimeError(f"Can't find expected imported object {obj} in scope")
 
-    def create_product_loop_scope(self, inner_scope, n_loops):
-        """Create a n_loops loop scopes such that the innermost loop
-        has the scope inner_scope
-
-        Parameters
-        ----------
-        inner_scope : Namespace
-                      Namespace describing the innermost scope
-        n_loops     : The number of loop scopes required
-        """
-        assert inner_scope == self._loops[-1]
-        scopes = [self.create_new_loop_scope()]
-        for _ in range(n_loops - 2):
-            scopes.append(scopes[-1].create_new_loop_scope())
-        inner_scope.update_parent_scope(scopes[-1], is_loop=True)
-        scopes.append(inner_scope)
-        return scopes
-
     def collect_all_imports(self):
         """Collect the names of all modules necessary to understand this scope"""
         imports = list(self._imports["imports"].keys())
@@ -1065,30 +951,6 @@ class Scope:
     def python_names(self):
         """Get map of new names to original python names"""
         return self._original_symbol
-
-    def rename_function(self, o, name):
-        """
-        Rename a function that exists in the scope.
-
-        Rename a function that exists in the scope. This is done by
-        finding a new collisionless name, renaming the FunctionDef
-        instance, and updating the dictionary of symbols.
-
-        Parameters
-        ----------
-        o : FunctionDef
-            The object that should be renamed.
-
-        name : str
-            The suggested name for the new function.
-        """
-        assert isinstance(o, FunctionDef)
-        newname = self.get_new_name(name)
-        python_name = self._original_symbol.pop(o.name)
-        assert python_name == o.scope.python_names.pop(o.name)
-        o.rename(newname)
-        self._original_symbol[newname] = python_name
-        o.scope.python_names[newname] = python_name
 
     def collect_tuple_element(self, tuple_elem):
         """

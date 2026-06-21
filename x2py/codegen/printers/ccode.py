@@ -3,14 +3,12 @@ Module containing the `CCodePrinter` class which converts X2py's AST to
 strings of C code.
 """
 
-import functools
 from itertools import chain
 from typing import ClassVar
 
 
 from ..bind_c import BindCPointer
 from ..bindings.c_concepts import (
-    CMacro,
     CStrStr,
     ObjectAddress,
     PointerCast,
@@ -18,7 +16,6 @@ from ..bindings.c_concepts import (
 from ..models.core import (
     AsName,
     Assign,
-    Deallocate,
     Declare,
     FunctionAddress,
     FunctionCall,
@@ -40,29 +37,18 @@ from ..models.datatypes import (
     PrimitiveFloatingPointType,
     PrimitiveIntegerType,
     NumpyBoolType,
-    NumpyComplex128Type,
-    NumpyInt64Type,
-    ComplexPart,
     StringType,
     VoidType,
 )
 from ..models.datatypes import (
     Literal,
     NIL,
-    cast_to,
-    convert_to_literal,
 )
 from ..models.datatypes import (
-    NumpyFloat64Type,
     NumpyNDArrayType,
 )
-from ..models.core import (
-    IfTernaryOperator,
-    AssociativeParenthesis,
-    Mul,
-    Operator,
-)
-from ..models.core import DottedVariable, IndexedElement, Variable
+from ..models.core import Operator
+from ..models.core import IndexedElement, Variable
 from .codeprinter import CodePrinter
 
 # TODO: add examples
@@ -105,15 +91,6 @@ c_imports = {
     ]
 }
 
-import_header_guard_prefix = {
-    "stc/common": "_TOOLS_COMMON",
-    "stc/cspan": "",  # Included for import sorting
-}
-
-stc_extension_mapping = {
-    "stc/common": "STC_Extensions/Common_extensions",
-}
-
 
 class CCodePrinter(CodePrinter):
     """
@@ -153,15 +130,6 @@ class CCodePrinter(CodePrinter):
         (PrimitiveIntegerType(), 2): "int16_t",
         (PrimitiveIntegerType(), 1): "int8_t",
         (PrimitiveBooleanType(), -1): "bool",
-    }
-
-    type_to_format: ClassVar = {
-        (PrimitiveFloatingPointType(), 8): "%.15lf",
-        (PrimitiveFloatingPointType(), 4): "%.6f",
-        (PrimitiveIntegerType(), 4): "%d",
-        (PrimitiveIntegerType(), 8): convert_to_literal("%") + CMacro("PRId64"),
-        (PrimitiveIntegerType(), 2): convert_to_literal("%") + CMacro("PRId16"),
-        (PrimitiveIntegerType(), 1): convert_to_literal("%") + CMacro("PRId8"),
     }
 
     # ------------------------------------------------------------------
@@ -241,77 +209,6 @@ class CCodePrinter(CodePrinter):
             return f"({real} {sign} {imag} * _Complex_I)"
         return repr(value)
 
-    def _visit_ModuleHeader(self, expr):
-        """Render the ``ModuleHeader`` model node."""
-        self.set_scope(expr.module.scope)
-        self._in_header = True
-        name = expr.module.name
-        if isinstance(name, AsName):
-            name = name.name
-        classes, func_blocks = self._class_header_blocks(expr.module.classes)
-        func_blocks.append("".join(f"{self._function_signature(f)};\n" for f in expr.module.funcs if f.is_semantic))
-
-        func_blocks.extend(
-            "".join(f"{self._function_signature(f)};\n" for f in i.functions if f.is_semantic)
-            for i in expr.module.overload_sets
-        )
-
-        funcs = "\n".join(f for f in func_blocks if f)
-
-        decls = [Declare(v, external=True, module_variable=True) for v in expr.module.variables if not v.is_private]
-        global_variables = "".join(self._visit(d) for d in decls)
-
-        # Print imports last to be sure that all additional_imports have been collected
-        imports = [i for i in chain(expr.module.imports, self._additional_imports.values()) if not i.ignore]
-        imports = self._sort_imports(imports)
-        imports = "".join(self._visit(i) for i in imports)
-
-        self._in_header = False
-        self.exit_scope()
-        body = "\n".join(info_block for info_block in (imports, global_variables, classes, funcs) if info_block)
-        return f"#ifndef {name.upper()}_H\n \
-                #define {name.upper()}_H\n\n \
-                {body}\n \
-                #endif // {name}_H\n"
-
-    def _class_header_blocks(self, classes):
-        """Render class declarations and their function prototype blocks."""
-        definitions = []
-        function_blocks = []
-        for class_def in classes:
-            class_parts = []
-            if class_def.docstring is not None:
-                class_parts.append(self._visit(class_def.docstring))
-            class_parts.append(f"struct {class_def.name} {{\n")
-            declarations = [self._visit(Declare(var, external=True)) for var in class_def.attributes]
-            class_parts.extend(declaration.removeprefix("extern ") for declaration in declarations)
-            class_parts.append("};\n")
-            definitions.extend(class_parts)
-            function_blocks.append(self._class_function_prototypes(class_def))
-        return "".join(definitions), function_blocks
-
-    def _class_function_prototypes(self, class_def):
-        """Render method and overload prototypes for one class."""
-        functions = [method for method in class_def.methods if method.is_semantic]
-        functions.extend(function for interface in class_def.overload_sets for function in interface.functions)
-        return "".join(f"{self._function_signature(function)};\n" for function in functions)
-
-    def _visit_Module(self, expr):
-        """Render the ``Module`` model node."""
-        self.set_scope(expr.scope)
-        body = "\n".join(self._visit(i) for i in expr.body)
-
-        global_variables = "".join([self._visit(d) for d in expr.declarations])
-
-        # Print imports last to be sure that all additional_imports have been collected
-        imports = Import(self.scope.get_python_name(expr.name), Module(expr.name, (), ()))
-        imports = self._visit(imports)
-
-        code = "\n".join((imports, self._x2py_malloc_helper(), global_variables, body))
-
-        self.exit_scope()
-        return code
-
     def _visit_If(self, expr):
         """Render the ``If`` model node."""
         lines = []
@@ -348,26 +245,12 @@ class CCodePrinter(CodePrinter):
 
     def _visit_And(self, expr):
         """Render the ``And`` model node."""
-        args = [
-            (
-                f"({self._visit(a)})"
-                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
-                else self._visit(a)
-            )
-            for a in expr.args
-        ]
+        args = [(f"({self._visit(a)})" if isinstance(a, Operator) else self._visit(a)) for a in expr.args]
         return " && ".join(args)
 
     def _visit_Or(self, expr):
         """Render the ``Or`` model node."""
-        args = [
-            (
-                f"({self._visit(a)})"
-                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
-                else self._visit(a)
-            )
-            for a in expr.args
-        ]
+        args = [(f"({self._visit(a)})" if isinstance(a, Operator) else self._visit(a)) for a in expr.args]
         return " || ".join(args)
 
     def _visit_Eq(self, expr):
@@ -408,12 +291,6 @@ class CCodePrinter(CodePrinter):
         rhs = self._visit(expr.args[1])
         return f"{lhs} <= {rhs}"
 
-    def _visit_Gt(self, expr):
-        """Render the ``Gt`` model node."""
-        lhs = self._visit(expr.args[0])
-        rhs = self._visit(expr.args[1])
-        return f"{lhs} > {rhs}"
-
     def _visit_Ge(self, expr):
         """Render the ``Ge`` model node."""
         lhs = self._visit(expr.args[0])
@@ -424,47 +301,9 @@ class CCodePrinter(CodePrinter):
         """Render the ``Not`` model node."""
         arg = expr.args[0]
         a = self._visit(arg)
-        if isinstance(arg, Operator) and not isinstance(arg, AssociativeParenthesis):
+        if isinstance(arg, Operator):
             a = f"({a})"
         return f"!{a}"
-
-    def _visit_Mod(self, expr):
-        """Render the ``Mod`` model node."""
-        self.add_import(c_imports["math"])
-        self.add_import(c_imports["pyc_math_c"])
-
-        first = self._visit(expr.args[0])
-        second = self._visit(expr.args[1])
-
-        if expr.dtype.primitive_type is PrimitiveIntegerType():
-            return f"pyc_modulo({first}, {second})"
-
-        if expr.args[0].dtype.primitive_type is PrimitiveIntegerType():
-            first = self._visit(cast_to(expr.args[0], NumpyFloat64Type()))
-        if expr.args[1].dtype.primitive_type is PrimitiveIntegerType():
-            second = self._visit(cast_to(expr.args[1], NumpyFloat64Type()))
-        return f"pyc_fmodulo({first}, {second})"
-
-    def _visit_Pow(self, expr):
-        """Render the ``Pow`` model node."""
-        b = expr.args[0]
-        e = expr.args[1]
-
-        if expr.dtype.primitive_type is PrimitiveComplexType():
-            b = self._visit(
-                b if b.dtype.primitive_type is PrimitiveComplexType() else cast_to(b, NumpyComplex128Type())
-            )
-            e = self._visit(
-                e if e.dtype.primitive_type is PrimitiveComplexType() else cast_to(e, NumpyComplex128Type())
-            )
-            self.add_import(c_imports["complex"])
-            return f"cpow({b}, {e})"
-
-        self.add_import(c_imports["math"])
-        b = self._visit(b if b.dtype.primitive_type is PrimitiveFloatingPointType() else cast_to(b, NumpyFloat64Type()))
-        e = self._visit(e if e.dtype.primitive_type is PrimitiveFloatingPointType() else cast_to(e, NumpyFloat64Type()))
-        code = f"pow({b}, {e})"
-        return self._cast_to(expr, expr.dtype).format(code)
 
     def _visit_Import(self, expr):
         """Render the ``Import`` model node."""
@@ -485,77 +324,6 @@ class CCodePrinter(CodePrinter):
         if expr.source in c_library_headers:
             return f"#include <{source}.h>\n"
         return f'#include "{source}.h"\n'
-
-    def _format_and_arg(self, var):
-        """
-        Get the C print format string for the object var.
-
-        Get the C print format string which will allow the generated code
-        to print the variable passed as argument.
-
-        Parameters
-        ----------
-        var : model object
-            The object which will be printed.
-
-        Returns
-        -------
-        arg_format : str
-            The format which should be printed in the format string of the
-            generated print expression.
-        arg : str
-            The code which should be printed in the arguments of the generated
-            print expression to print the object.
-        """
-        if isinstance(var.dtype, FixedSizeNumericType):
-            primitive_type = var.dtype.primitive_type
-            if isinstance(primitive_type, PrimitiveComplexType):
-                _, real_part = self._format_and_arg(ComplexPart(var, "real"))
-                float_format, imag_part = self._format_and_arg(ComplexPart(var, "imag"))
-                return (
-                    f"({float_format} + {float_format}j)",
-                    f"{real_part}, {imag_part}",
-                )
-            if isinstance(primitive_type, PrimitiveBooleanType):
-                return self._format_and_arg(
-                    IfTernaryOperator(
-                        var,
-                        CStrStr(convert_to_literal("True")),
-                        CStrStr(convert_to_literal("False")),
-                    )
-                )
-            try:
-                arg_format = self.type_to_format[(primitive_type, var.dtype.precision)]
-            except KeyError as error:
-                raise TypeError(
-                    f"Printing {var.dtype} type is not supported currently",
-                ) from error
-            arg = self._visit(var)
-        elif isinstance(var.dtype, StringType):
-            arg = self._visit(CStrStr(var))
-            arg_format = "%s"
-        elif isinstance(var.dtype, CharType):
-            arg = self._visit(var)
-            arg_format = "%s"
-        else:
-            try:
-                arg_format = self.type_to_format[var.dtype]
-            except KeyError as error:
-                raise TypeError(
-                    f"Printing {var.dtype} type is not supported currently",
-                ) from error
-
-            arg = self._visit(var)
-
-        return arg_format, arg
-
-    def _visit_CStringExpression(self, expr):
-        """Render the ``CStringExpression`` model node."""
-        return "".join(self._visit(CStrStr(e)) for e in expr.get_flat_expression_list())
-
-    def _visit_CMacro(self, expr):
-        """Render the ``CMacro`` model node."""
-        return str(expr.macro)
 
     def _visit_Declare(self, expr):
         """Render the ``Declare`` model node."""
@@ -585,13 +353,6 @@ class CCodePrinter(CodePrinter):
 
         return f"{preface}{static}{external}{const}{declaration_type} {var.name}{init};\n"
 
-    def _visit_IndexedElement(self, expr):
-        """Render the ``IndexedElement`` model node."""
-        base = expr.base
-
-        list(expr.indices)
-        raise NotImplementedError(f"Indexing not implemented for {base}")
-
     def _visit_DottedVariable(self, expr):
         """convert dotted Variable to their C equivalent"""
 
@@ -605,124 +366,9 @@ class CCodePrinter(CodePrinter):
             return f"(*{code})"
         return code
 
-    def _visit_ArraySize(self, expr):
-        """Render the ``ArraySize`` model node."""
-        arg = self._visit(ObjectAddress(expr.arg))
-        return f"cspan_size({arg})"
-
-    def _visit_ArrayShapeElement(self, expr):
-        """Render the ``ArrayShapeElement`` model node."""
-        arg = expr.arg
-        if isinstance(arg.class_type, NumpyNDArrayType):
-            idx = self._visit(expr.index)
-            cast_code = f"({self._c_type(NumpyInt64Type())})"
-            if self._is_c_pointer(arg):
-                arg_code = self._visit(ObjectAddress(arg))
-                return f"{cast_code}{arg_code}->shape[{idx}]"
-            arg_code = self._visit(arg)
-            return f"{cast_code}{arg_code}.shape[{idx}]"
-        if isinstance(arg.class_type, StringType):
-            arg_code = self._visit(ObjectAddress(arg))
-            return f"cstr_size({arg_code})"
-        raise NotImplementedError(f"Don't know how to represent shape of object of type {arg.class_type}")
-
-    def _visit_Allocate(self, expr):
-        """Render the ``Allocate`` model node."""
-        free_code = ""
-        variable = expr.variable
-        if isinstance(variable.class_type, StringType):
-            if expr.status in ("allocated", "unknown"):
-                free_code = f"{self._visit(Deallocate(variable))}"
-            if expr.shape[0] is None:
-                return free_code
-            if expr.alloc_type == "function":
-                return free_code
-            size = self._visit(expr.shape[0])
-            variable_address = self._visit(ObjectAddress(expr.variable))
-            container_type = self._c_type(expr.variable.class_type)
-            if expr.alloc_type == "reserve":
-                if expr.status != "unallocated":
-                    return (
-                        f"{container_type}_clear({variable_address});\n"
-                        f"{container_type}_reserve({variable_address}, {size});\n"
-                    )
-                return f"{container_type}_reserve({variable_address}, {size});\n"
-            if expr.alloc_type == "resize":
-                return f"{container_type}_resize({variable_address}, {size}, {0});\n"
-            return free_code
-        if isinstance(variable.class_type, (NumpyNDArrayType)):
-            # free the array if its already allocated and checking if its not null if the status is unknown
-            if expr.status == "unknown":
-                data_ptr = ObjectAddress(DottedVariable(VoidType(), "data", lhs=variable, memory_handling="alias"))
-                free_code = f"if ({self._visit(data_ptr)} != NULL)\n"
-                free_code += "".join(("{\n", self._visit(Deallocate(variable)), "}\n"))
-            elif expr.status == "allocated":
-                free_code += self._visit(Deallocate(variable))
-            if expr.alloc_type == "function":
-                return free_code
-
-            tot_shape = self._visit(functools.reduce(Mul.make_simplified, expr.shape))
-            c_type = self._c_type(variable.class_type)
-            element_type = self._c_type(variable.class_type.element_type)
-
-            if expr.like:
-                buffer_array = ""
-                if isinstance(expr.like.class_type, VoidType):
-                    dummy_array_name = self._visit(ObjectAddress(expr.like))
-                else:
-                    raise NotImplementedError("Unexpected type passed to like argument")
-            else:
-                dummy_array_name = self.scope.get_new_name(f"{variable.name}_ptr")
-                buffer_array_var = Variable(
-                    variable.class_type.datatype,
-                    dummy_array_name,
-                    memory_handling="alias",
-                )
-                self.scope.insert_variable(buffer_array_var)
-                buffer_array = f"{dummy_array_name} = malloc(sizeof({element_type}) * ({tot_shape}));\n"
-
-            order = "c_COLMAJOR" if variable.order == "F" else "c_ROWMAJOR"
-            shape = ", ".join(self._visit(i) for i in expr.shape)
-
-            return (
-                free_code
-                + buffer_array
-                + f"{self._visit(variable)} = ({c_type})cspan_md_layout({order}, {dummy_array_name}, {shape});\n"
-            )
-        if variable.is_alias:
-            var_code = self._visit(ObjectAddress(variable))
-            if expr.like:
-                declaration_type = self._get_declare_type(expr.like)
-                malloc_size = f"sizeof({declaration_type})"
-                if variable.rank:
-                    tot_shape = self._visit(functools.reduce(Mul.make_simplified, expr.shape))
-                    malloc_size = f"{malloc_size} * ({tot_shape})"
-                return f"{var_code} = malloc({malloc_size});\n"
-            raise NotImplementedError(f"Allocate not implemented for {variable.class_type}")
-        raise NotImplementedError(f"Allocate not implemented for {variable.class_type}")
-
     def _visit_Deallocate(self, expr):
         """Render the ``Deallocate`` model node."""
         var = expr.variable
-        if isinstance(var.class_type, StringType):
-            if var.is_alias:
-                return ""
-
-            variable_address = self._visit(ObjectAddress(var))
-            container_type = self._c_type(var.class_type)
-            return f"{container_type}_drop({variable_address});\n"
-        if isinstance(var.dtype, CustomDataType):
-            variable_address = self._visit(ObjectAddress(var))
-            x2py__del = var.cls_base.scope.find("__del__")
-            if x2py__del:
-                return f"{x2py__del.name}({variable_address});\n"
-            return ""
-        if isinstance(var.class_type, NumpyNDArrayType):
-            if var.is_alias:
-                return ""
-            data_ptr = DottedVariable(VoidType(), "data", lhs=var, memory_handling="alias")
-            data_ptr_code = self._visit(ObjectAddress(data_ptr))
-            return f"free({data_ptr_code});\n{data_ptr_code} = NULL;\n"
         variable_address = self._visit(ObjectAddress(var))
         return f"free({variable_address});\n"
 
@@ -907,91 +553,6 @@ class CCodePrinter(CodePrinter):
         """Render the ``Mul`` model node."""
         return " * ".join(self._visit(a) for a in expr.args)
 
-    def _visit_Div(self, expr):
-        """Render the ``Div`` model node."""
-        if all(a.dtype.primitive_type is PrimitiveIntegerType() for a in expr.args):
-            args = [cast_to(a, NumpyFloat64Type()) for a in expr.args]
-        else:
-            args = expr.args
-        return " / ".join(self._visit(a) for a in args)
-
-    def _visit_FloorDiv(self, expr):
-        # the result type of the floor division is dependent on the arguments
-        # type, if all arguments are integers or booleans the result is integer
-        # otherwise the result type is float
-        """Render the ``FloorDiv`` model node."""
-        need_to_cast = all(
-            a.dtype.primitive_type in (PrimitiveIntegerType(), PrimitiveBooleanType()) for a in expr.args
-        )
-        if need_to_cast:
-            self.add_import(c_imports["pyc_math_c"])
-            cast_type = self._c_type(expr.dtype)
-            return f"py_floor_div_{cast_type}({self._visit(expr.args[0])}, {self._visit(expr.args[1])})"
-
-        self.add_import(c_imports["math"])
-        code = " / ".join(
-            self._visit(a if a.dtype.primitive_type is PrimitiveFloatingPointType() else cast_to(a, NumpyFloat64Type()))
-            for a in expr.args
-        )
-        return f"floor({code})"
-
-    def _visit_RShift(self, expr):
-        """Render the ``RShift`` model node."""
-        return " >> ".join(self._visit(a) for a in expr.args)
-
-    def _visit_LShift(self, expr):
-        """Render the ``LShift`` model node."""
-        return " << ".join(self._visit(a) for a in expr.args)
-
-    def _visit_BitXor(self, expr):
-        """Render the ``BitXor`` model node."""
-        if expr.dtype is NumpyBoolType():
-            return f"{self._visit(expr.args[0])} != {self._visit(expr.args[1])}"
-        return " ^ ".join(self._visit(a) for a in expr.args)
-
-    def _visit_BitOr(self, expr):
-        """Render the ``BitOr`` model node."""
-        args = [
-            (
-                f"({self._visit(a)})"
-                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
-                else self._visit(a)
-            )
-            for a in expr.args
-        ]
-        if expr.dtype is NumpyBoolType():
-            return " || ".join(args)
-        return " | ".join(args)
-
-    def _visit_BitAnd(self, expr):
-        """Render the ``BitAnd`` model node."""
-        args = [
-            (
-                f"({self._visit(a)})"
-                if isinstance(a, Operator) and not isinstance(a, AssociativeParenthesis)
-                else self._visit(a)
-            )
-            for a in expr.args
-        ]
-        if expr.dtype is NumpyBoolType():
-            return " && ".join(args)
-        return " & ".join(args)
-
-    def _visit_Invert(self, expr):
-        """Render the ``Invert`` model node."""
-        arg = self._visit(expr.args[0])
-        if expr.dtype is NumpyBoolType():
-            return f"!{arg}"
-        return f"~{arg}"
-
-    def _visit_AssociativeParenthesis(self, expr):
-        """Render the ``AssociativeParenthesis`` model node."""
-        return f"({self._visit(expr.args[0])})"
-
-    def _visit_UnaryPlus(self, expr):
-        """Render the ``UnaryPlus`` model node."""
-        return f"+{self._visit(expr.args[0])}"
-
     def _visit_UnarySub(self, expr):
         """Render the ``UnarySub`` model node."""
         return f"-{self._visit(expr.args[0])}"
@@ -1060,11 +621,6 @@ class CCodePrinter(CodePrinter):
             self._additional_code = ""
             body_stmts.append(code)
         return "".join(self._visit(b) for b in body_stmts)
-
-    def _visit_ComplexPart(self, expr):
-        """Render the ``ComplexPart`` model node."""
-        function = "creal" if expr.part == "real" else "cimag"
-        return f"{function}({self._visit(expr.arg)})"
 
     def _visit_IsNot(self, expr):
         """Render the ``IsNot`` model node."""
@@ -1147,15 +703,6 @@ class CCodePrinter(CodePrinter):
         """Render the ``CustomDataType`` model node."""
         return "struct " + expr.low_level_name
 
-    def _visit_ClassDef(self, expr):
-        """Render the ``ClassDef`` model node."""
-        methods = "".join(self._visit(method) for method in expr.methods)
-        interfaces = "".join(
-            self._visit(function) for interface in expr.overload_sets for function in interface.functions
-        )
-
-        return methods + interfaces
-
     # ================== String methods ==================
 
     def _visit_CStrStr(self, expr):
@@ -1169,44 +716,6 @@ class CCodePrinter(CodePrinter):
     # ------------------------------------------------------------------
     # Shared helpers
     # ------------------------------------------------------------------
-
-    def _sort_imports(self, imports):
-        """
-        Sort imports to avoid any errors due to bad ordering.
-
-        Sort imports. This is important so that types exist before they are used to create
-        container types. E.g. it is important that complex or inttypes be imported before
-        vec_int or vec_double_complex is declared.
-
-        Parameters
-        ----------
-        imports : list[Import]
-            A list of the imports.
-
-        Returns
-        -------
-        list[Import]
-            A sorted list of the imports.
-        """
-        stc_imports = [i for i in imports if str(i.source) in import_header_guard_prefix]
-        split_stc_imports = [Import(i.source, t) for i in stc_imports for t in i.target]
-        split_stc_imports.sort(
-            key=lambda i: (
-                # Sort by rank to avoid elements printed after classes
-                (
-                    next(iter(i.target)).object.class_type.rank,
-                    # Additionally sort by the source file
-                    str(i.source),
-                    # Finally sort by type name for reproducibility
-                    next(iter(i.target)).local_alias,
-                )
-            )
-        )
-
-        non_stc_imports = [i for i in imports if i not in stc_imports]
-        non_stc_imports.sort(key=lambda i: str(i.source))
-
-        return non_stc_imports + split_stc_imports
 
     def _format_code(self, lines):
         """Format code."""
@@ -1457,33 +966,6 @@ class CCodePrinter(CodePrinter):
         if isinstance(expr, FunctionAddress):
             return f"{static}{ret_type} (*{name})({arg_code})"
         return f"{static}{ret_type} {name}({arg_code})"
-
-    def _cast_to(self, expr, dtype):
-        """
-        Add a cast to an expression when needed.
-
-        Get a format string which provides the code to cast the object `expr`
-        to the specified dtype. If the dtypes already
-        match then the format string will simply print the expression.
-
-        Parameters
-        ----------
-        expr : model object
-            The expression to be cast.
-        dtype : Type
-            The target type of the cast.
-
-        Returns
-        -------
-        str
-            A format string that contains the desired cast type.
-            NB: You should insert the expression to be cast in the string
-            after using this function.
-        """
-        if expr.dtype != dtype:
-            cast = self._c_type(dtype)
-            return f"({cast}){{}}"
-        return "{}"
 
     @staticmethod
     def _result_vars(func):

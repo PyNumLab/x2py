@@ -186,7 +186,6 @@ __all__ = (
     "Cast",
     # ------------ Fixed size types ------------
     "CharType",
-    "ComplexPart",
     # ------------ Container types ------------
     "CustomDataType",
     "DataTypeFactory",
@@ -839,16 +838,6 @@ def DataTypeFactory(ll_name, python_name, argnames=(), *, BaseClass=CustomDataTy
 
 
 # ========================================================================================
-primitive_type_precedence = [
-    PrimitiveBooleanType(),
-    PrimitiveIntegerType(),
-    PrimitiveFloatingPointType(),
-    PrimitiveComplexType(),
-]
-
-# ==============================================================================
-
-
 class NumpyNumericType(FixedSizeNumericType):
     """
     Base class representing a scalar numeric datatype defined in the numpy module.
@@ -1316,29 +1305,6 @@ class NumpyNDArrayType(Type):
             raw=self.raw,
         )
 
-    def swap_order(self):
-        """
-        Get a type which is identical to this type in all aspects except the order.
-
-        Get a type which is identical to this type in all aspects except the order.
-        In the case of a 1D array the final type will be the same as this type. Otherwise
-        if the array is C-ordered the final type will be F-ordered, while if the array
-        is F-ordered the final type will be C-ordered.
-
-        Returns
-        -------
-        Type
-            The new type.
-        """
-        order = None if self._order is None else ("C" if self._order == "F" else "F")
-        return NumpyNDArrayType.get_new(
-            self.element_type,
-            self._container_rank,
-            order,
-            self._allows_strides,
-            raw=self.raw,
-        )
-
     @property
     def rank(self):
         """
@@ -1630,50 +1596,6 @@ class _DataTypeFunction:
     @property
     def is_elemental(self):
         return False
-
-    @property
-    def modified_args(self):
-        return ()
-
-    @property
-    def is_indexable(self):
-        return self.is_elemental
-
-
-class ComplexPart(_DataTypeFunction):
-    """Access the real or imaginary component of a complex expression."""
-
-    __slots__ = ("_class_type", "_part", "_shape")
-
-    def __new__(cls, arg, part):
-        if part not in ("real", "imag"):
-            raise ValueError("part must be 'real' or 'imag'")
-        if not isinstance(arg.dtype.primitive_type, PrimitiveComplexType):
-            if part == "real":
-                if isinstance(arg.dtype, NumpyBoolType):
-                    return cast_to(arg, NumpyInt64Type())
-                return arg
-            if arg.rank > 0:
-                raise NotImplementedError("imaginary-part access for non-complex arrays is not supported")
-            return convert_to_literal(0, dtype=arg.dtype)
-        return super().__new__(cls)
-
-    def __init__(self, arg, part):
-        self._part = part
-        self._shape = arg.shape
-        self._class_type = _cast_result_type(arg, arg.dtype.element_type)
-        super().__init__(arg)
-
-    @property
-    def arg(self):
-        return self._args[0]
-
-    @property
-    def part(self):
-        return self._part
-
-    def __str__(self):
-        return f"ComplexPart({self.arg}, {self.part!r})"
 
 
 class Cast(_DataTypeFunction):

@@ -587,15 +587,13 @@ class CPythonCodePrinter(CCodePrinter):
     def _visit_Allocate(self, expr):
         """Render the ``Allocate`` model node."""
         variable = expr.variable
-        if isinstance(variable.dtype, WrapperCustomDataType):
-            cls_base = variable.cls_base.original_class
-            class_def = self.scope.find(cls_base.scope.get_python_name(cls_base.name), "classes")
+        cls_base = variable.cls_base.original_class
+        class_def = self.scope.find(cls_base.scope.get_python_name(cls_base.name), "classes")
 
-            type_name = class_def.type_name
-            var_code = self._visit(ObjectAddress(variable))
-            decl_type = self._get_declare_type(variable)
-            return f"{var_code} = ({decl_type}){type_name}.tp_alloc(&{type_name}, 0);\n"
-        return CCodePrinter._visit_Allocate(self, expr)
+        type_name = class_def.type_name
+        var_code = self._visit(ObjectAddress(variable))
+        decl_type = self._get_declare_type(variable)
+        return f"{var_code} = ({decl_type}){type_name}.tp_alloc(&{type_name}, 0);\n"
 
     def _visit_Deallocate(self, expr):
         """Render the ``Deallocate`` model node."""
@@ -660,12 +658,6 @@ class CPythonCodePrinter(CCodePrinter):
             + [f"PyObject_Str((PyObject*)Py_TYPE({self._visit(a)}))" for a in expr.args]
         )
         return f"PyErr_SetObject({self._visit(expr.error_type)}, PyUnicode_FromFormat({args}));\n"
-
-    def _visit_BindCModuleVariable(self, expr):
-        """Render the ``BindCModuleVariable`` model node."""
-        if self._is_c_pointer(expr):
-            return f"(*{expr.name.lower()})"
-        return expr.name.lower()
 
     # ------------------------------------------------------------------
     # Shared helpers

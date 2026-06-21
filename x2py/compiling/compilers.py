@@ -125,11 +125,6 @@ class Compiler:
         """Exact expanded compiler commands prepared by this instance."""
         return tuple(tuple(command) for command in self._command_log)
 
-    @property
-    def executes_commands(self):
-        """Whether prepared compiler commands are executed immediately."""
-        return self._execute_commands
-
     def _run_or_record_command(self, cmd, verbose):
         expanded = [os.path.expandvars(str(part)) for part in cmd]
         self._command_log.append(expanded)
@@ -477,69 +472,6 @@ class Compiler:
 
         self._language_info = None
 
-    def compile_program(self, compile_obj, output_folder, language, verbose):
-        """
-        Compile a program.
-
-        Compile a file containing a program to an executable.
-
-        Parameters
-        ----------
-        compile_obj : CompileObj
-            Object containing all information about the object to be compiled.
-
-        output_folder : str
-            The folder where the result should be saved.
-
-        language : str
-            Language that we are compiling.
-
-        verbose : int
-            Indicates the level of verbosity.
-
-        Returns
-        -------
-        str
-            The name of the generated executable.
-        """
-        self._language_info = self._compiler_info[language]
-
-        extra_compilation_tools = compile_obj.extra_compilation_tools
-
-        # get flags
-        flags = self._get_flags(compile_obj.flags, extra_compilation_tools)
-
-        # Get compile options
-        exec_cmd, include, libs_flags, libdir_flags, m_code = self._get_compile_components(
-            compile_obj, extra_compilation_tools
-        )
-        linker_libdir_flags = ["-Wl,-rpath" if flag == "-L" else flag for flag in libdir_flags]
-
-        out_target = os.path.join(output_folder, compile_obj.program_target)
-
-        if verbose:
-            print(">> Compiling executable :: ", out_target)
-
-        cmd = [
-            exec_cmd,
-            *flags,
-            *include,
-            *libdir_flags,
-            *linker_libdir_flags,
-            *m_code,
-            compile_obj.source,
-            "-o",
-            out_target,
-            *libs_flags,
-        ]
-
-        with compile_obj:
-            self._run_or_record_command(cmd, verbose)
-
-        self._language_info = None
-
-        return out_target
-
     def compile_shared_library(self, compile_obj, output_folder, language, verbose, sharedlib_modname=None):
         """
         Compile a module to a shared library.
@@ -659,53 +591,3 @@ class Compiler:
             warnings.warn(UserWarning(err), stacklevel=2)
 
         return cmd
-
-    def export_compiler_info(self, compiler_export_filename):
-        """
-        Export the compiler configuration to a json file.
-
-        Print the information describing all compiler options to the
-        specified file in json format. This file can be used for
-        debugging purposes or it can be manually modified and fed
-        back to X2py to correct compilation problems or request
-        more unusual flags/include directories/etc.
-
-        Parameters
-        ----------
-        compiler_export_filename : str | Path
-            The name of the file where the compiler configuration
-            should be printed.
-        """
-        compiler_export_file = pathlib.Path(compiler_export_filename)
-        folder = compiler_export_file.parent
-        os.makedirs(folder, exist_ok=True)
-        with open(compiler_export_file, "w", encoding="utf-8") as out_file:
-            print(json.dumps(self._compiler_info, indent=4), file=out_file)
-
-    @property
-    def compiler_family(self):
-        """
-        Get the compiler family.
-
-        Get an identifier for the compiler family. This is equal to the compiler-family
-        key in the default compilers or to the stem of the provided JSON compiler file.
-        """
-        return self._compiler_family
-
-    @property
-    def is_debug(self):
-        """
-        Check if debug mode is activated.
-
-        Check if debug mode is activated.
-        """
-        return self._debug
-
-    @property
-    def compiler_info(self):
-        """
-        Get the dictionary containing compiler information.
-
-        Get the dictionary containing compiler information. Keys are languages.
-        """
-        return self._compiler_info

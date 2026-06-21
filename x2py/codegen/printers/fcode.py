@@ -9,7 +9,6 @@ from typing import ClassVar
 
 
 from ..bind_c import (
-    BindCClassDef,
     BindCFunctionDef,
     BindCModule,
     BindCModuleConstant,
@@ -29,7 +28,6 @@ from ..models.core import (
     FunctionDef,
     get_direct_assignment,
     get_direct_function_argument,
-    Import,
     Module,
     SeparatorComment,
     Slice,
@@ -45,7 +43,6 @@ from ..models.datatypes import (
     PrimitiveFloatingPointType,
     PrimitiveIntegerType,
     Type,
-    NumpyBoolType,
     StringType,
     SymbolicType,
     TupleType,
@@ -57,7 +54,6 @@ from ..models.datatypes import (
 )
 
 from ..models.datatypes import (
-    NumpyFloat64Type,
     NumpyInt64Type,
     NumpyNDArrayType,
 )
@@ -241,9 +237,6 @@ class FCodePrinter(CodePrinter):
 
     def _module_declarations(self, module):
         """Render module declarations and collect class method bodies."""
-        for class_def in module.classes:
-            if not isinstance(class_def, BindCClassDef):
-                self._calculate_class_names(class_def)
         class_parts = [self._visit(class_def) for class_def in module.classes]
         declarations = [
             declaration
@@ -372,35 +365,9 @@ class FCodePrinter(CodePrinter):
         comments = self._visit(expr.text)
         return "!" + comments + "\n"
 
-    def _visit_CommentBlock(self, expr):
-        """Render the ``CommentBlock`` model node."""
-        txts = expr.comments
-        header = expr.header
-        header_size = len(expr.header)
-
-        ln = max(len(i) for i in txts)
-        if ln < max(20, header_size + 2):
-            ln = 20
-        top = "!" + "_" * int((ln - header_size) / 2) + header + "_" * int((ln - header_size) / 2) + "!"
-        ln = len(top) - 2
-        bottom = "!" + "_" * ln + "!"
-
-        txts = ["!" + txt + " " * (ln - len(txt)) + "!" for txt in txts]
-
-        body = "\n".join(i for i in txts)
-
-        return f"{top}\n{body}\n{bottom}\n"
-
     def _visit_EmptyNode(self, expr):
         """Render the ``EmptyNode`` model node."""
         return ""
-
-    def _visit_tuple(self, expr):
-        """Render the ``tuple`` model node."""
-        if expr[0].rank > 0:
-            raise NotImplementedError(" tuple with elements of rank > 0 is not implemented")
-        fs = ", ".join(self._visit(f) for f in expr)
-        return f"[{fs}]"
 
     def _visit_Variable(self, expr):
         """Render the ``Variable`` model node."""
@@ -430,11 +397,6 @@ class FCodePrinter(CodePrinter):
             self._additional_code += self._visit(Assign(var, expr.lhs)) + "\n"
             return self._visit(var) + "%" + self._visit(expr.name)
         return self._visit(expr.lhs) + "%" + self._visit(expr.name)
-
-    def _visit_ComplexPart(self, expr):
-        """Render the ``ComplexPart`` model node."""
-        function = "real" if expr.part == "real" else "aimag"
-        return f"{function}({self._visit(expr.arg)})"
 
     def _visit_Cast(self, expr):
         """Render the ``Cast`` model node."""
@@ -843,14 +805,6 @@ class FCodePrinter(CodePrinter):
         """Render the ``StringType`` model node."""
         return "character"
 
-    def _visit_FixedSizeNumericType(self, expr):
-        """Render the ``FixedSizeNumericType`` model node."""
-        return f"{self._visit(expr.primitive_type)}{expr.precision}"
-
-    def _visit_NumpyBoolType(self, expr):
-        """Render the ``NumpyBoolType`` model node."""
-        return "logical"
-
     def _visit_CustomDataType(self, expr):
         """Render the ``CustomDataType`` model node."""
         while hasattr(expr, "underlying_type"):
@@ -860,61 +814,6 @@ class FCodePrinter(CodePrinter):
         except RuntimeError:
             name = expr.low_level_name
         return name
-
-    def _visit_FunctionOverloadSet(self, expr):
-        """Render the ``FunctionOverloadSet`` model node."""
-        dispatcher_funcs = expr.functions
-
-        example_func = dispatcher_funcs[0]
-
-        # ... we don't print 'hidden' functions
-        if not example_func.is_semantic:
-            return ""
-
-        if example_func.results and len({f.results.var.rank == 0 for f in dispatcher_funcs}) != 1:
-            message = (
-                "Fortran cannot yet handle a templated function returning either a scalar or an array. "
-                "If you are using the terminal interface, please pass --language c, "
-                "if you are using the interactive interfaces ex2py or lambdify, please pass language='c'. "
-                "See https://github.com/x2py/x2py/issues/1339 to monitor the advancement of this issue."
-            )
-            raise NotImplementedError(message)
-
-        name = self._visit(expr.native_name)
-        if all(isinstance(f, FunctionAddress) for f in dispatcher_funcs):
-            funcs = dispatcher_funcs
-        else:
-            funcs = [
-                f
-                for f in dispatcher_funcs
-                if f
-                is expr.point([FunctionCallArgument(a.var.clone("arg_" + str(i))) for i, a in enumerate(f.arguments)])
-            ]
-
-        if expr.is_argument:
-            funcs_sigs = []
-            for f in funcs:
-                self._constantImports.append({})
-                parts = self._function_signature(f, f.name)
-                parts = [
-                    "{}({}) {}\n".format(parts["sig"], parts["arg_code"], parts["func_end"]),
-                    self._constant_imports() + "\n",
-                    parts["arg_decs"],
-                    "end {} {}\n".format(parts["func_type"], f.name),
-                ]
-                funcs_sigs.append("".join(a for a in parts))
-                self._constantImports.pop()
-            return "interface\n" + "\n".join(a for a in funcs_sigs) + "end interface\n"
-
-        if funcs[0].cls_name:
-            cls_name = expr.cls_name
-            if cls_name != "__UNDEFINED__":
-                name = f"{cls_name}_{name}"
-        interface = "interface " + name + "\n"
-        for f in funcs:
-            interface += "module procedure " + str(f.name) + "\n"
-        interface += "end interface\n"
-        return interface
 
     def _visit_FunctionAddress(self, expr):
         """Render the ``FunctionAddress`` model node."""
@@ -998,54 +897,6 @@ class FCodePrinter(CodePrinter):
         code += "return\n"
         return code
 
-    def _visit_ClassDef(self, expr):
-        # ... we don't print 'hidden' classes
-        """Render the ``ClassDef`` model node."""
-        if expr.hide:
-            return "", ""
-        # ...
-        self.set_scope(expr.scope)
-
-        name = self._visit(expr.name)
-        base = None  # TODO: add base in ClassDef
-
-        decs = "".join(self._visit(Declare(i)) for i in expr.attributes)
-
-        names = []
-        methods = "".join(
-            f"procedure :: {method.name} => {method.cls_name}\n" for method in expr.methods if method.is_semantic
-        )
-        for i in expr.overload_sets:
-            names = ",".join(f.cls_name for f in i.functions if f.is_semantic)
-            if names:
-                methods += f"generic, public :: {i.native_name} => {names}\n"
-                methods += f"procedure :: {names}\n"
-
-        self.exit_scope()
-
-        sig = "type"
-        if base is not None:
-            sig = f"{sig}, extends({base})"
-
-        docstring = self._visit(expr.docstring) if expr.docstring else ""
-        code = f"{sig} :: {name}\n{decs}\n"
-        code = code + "contains\n" + methods
-        decs = "".join([docstring, code, f"end type {name}\n"])
-
-        sep = self._visit(SeparatorComment(40))
-        cls_methods = [i for i in expr.methods if i.is_semantic]
-        for i in expr.overload_sets:
-            cls_methods += [j for j in i.functions if j.is_semantic]
-
-        methods = "".join("\n".join(["", sep, self._visit(i), sep, ""]) for i in cls_methods)
-
-        return decs, methods
-
-    def _visit_AugAssign(self, expr):
-        """Render the ``AugAssign`` model node."""
-        new_expr = expr.to_basic_assign()
-        return self._visit(new_expr)
-
     def _visit_IsNot(self, expr):
         """Render the ``IsNot`` model node."""
         lhs, rhs = expr.args
@@ -1054,15 +905,6 @@ class FCodePrinter(CodePrinter):
         if lhs is NIL:
             return self._handle_not_none(self._visit(rhs), rhs)
         raise NotImplementedError(f"Fortran is-not printing is not implemented for {expr}")
-
-    def _visit_Is(self, expr):
-        """Render the ``Is`` model node."""
-        lhs, rhs = expr.args
-        if rhs is NIL:
-            return f".not. {self._handle_not_none(self._visit(lhs), lhs)}"
-        if lhs is NIL:
-            return f".not. {self._handle_not_none(self._visit(rhs), rhs)}"
-        raise NotImplementedError(f"Fortran is printing is not implemented for {expr}")
 
     def _visit_If(self, expr):
         # ...
@@ -1104,29 +946,6 @@ class FCodePrinter(CodePrinter):
         lines.append("end select\n")
         return "".join(lines)
 
-    def _visit_IfTernaryOperator(self, expr):
-        """Render the ``IfTernaryOperator`` model node."""
-        cond = (
-            cast_to(expr.cond, NumpyBoolType())
-            if not isinstance(expr.cond.dtype.primitive_type, PrimitiveBooleanType)
-            else expr.cond
-        )
-        value_true, value_false = self._apply_cast(expr.dtype, expr.value_true, expr.value_false)
-
-        cond = self._visit(cond)
-        value_true = self._visit(value_true)
-        value_false = self._visit(value_false)
-        return f"merge({value_true}, {value_false}, {cond})"
-
-    def _visit_Pow(self, expr):
-        """Render the ``Pow`` model node."""
-        base = expr.args[0]
-        e = expr.args[1]
-
-        base_c = self._visit(base)
-        e_c = self._visit(e)
-        return f"{base_c} ** {e_c}"
-
     def _visit_Add(self, expr):
         """Render the ``Add`` model node."""
         if isinstance(expr.dtype, StringType):
@@ -1155,144 +974,6 @@ class FCodePrinter(CodePrinter):
         ]
         args_code = [self._visit(a) for a in args]
         return " * ".join(a for a in args_code)
-
-    def _visit_Div(self, expr):
-        """Render the ``Div`` model node."""
-        if all(isinstance(a.dtype.primitive_type, PrimitiveBooleanType | PrimitiveIntegerType) for a in expr.args):
-            args = [cast_to(a, NumpyFloat64Type()) for a in expr.args]
-        else:
-            args = expr.args
-        return " / ".join(self._visit(a) for a in args)
-
-    def _visit_Mod(self, expr):
-        """Render the ``Mod`` model node."""
-        is_float = isinstance(expr.dtype.primitive_type, PrimitiveFloatingPointType)
-
-        def correct_type_arg(a):
-            if is_float and isinstance(a.dtype.primitive_type, PrimitiveIntegerType):
-                return cast_to(a, NumpyFloat64Type())
-            return a
-
-        args = [self._visit(correct_type_arg(a)) for a in expr.args]
-
-        code = args[0]
-        for c in args[1:]:
-            code = f"MODULO({code},{c})"
-        return code
-
-    def _visit_FloorDiv(self, expr):
-        """Render the ``FloorDiv`` model node."""
-        new_args = [self._apply_cast(expr.dtype, arg) for arg in expr.args]
-        args = [self._visit(arg) for arg in new_args]
-        if all(
-            isinstance(
-                arg.dtype.primitive_type,
-                PrimitiveBooleanType | PrimitiveIntegerType,
-            )
-            for arg in expr.args
-        ):
-            self.add_import(Import("pyc_math_f90", Module("pyc_math_f90", (), ())))
-            return f"pyc_floor_div({args[0]}, {args[1]})"
-        return f"real(FLOOR({args[0]} / {args[1]}, {self._kind(expr)}), {self._kind(expr)})"
-
-    def _visit_And(self, expr):
-        """Render the ``And`` model node."""
-        args = [
-            (a if isinstance(a.dtype.primitive_type, PrimitiveBooleanType) else cast_to(a, NumpyBoolType()))
-            for a in expr.args
-        ]
-        return " .and. ".join(self._visit(a) for a in args)
-
-    def _visit_Or(self, expr):
-        """Render the ``Or`` model node."""
-        args = [
-            (a if isinstance(a.dtype.primitive_type, PrimitiveBooleanType) else cast_to(a, NumpyBoolType()))
-            for a in expr.args
-        ]
-        return " .or. ".join(self._visit(a) for a in args)
-
-    def _visit_Eq(self, expr):
-        """Render the ``Eq`` model node."""
-        lhs, rhs = expr.args
-        lhs_code = self._visit(lhs)
-        rhs_code = self._visit(rhs)
-        a = lhs.dtype.primitive_type
-        b = rhs.dtype.primitive_type
-
-        if all(isinstance(var, PrimitiveBooleanType) for var in (a, b)):
-            return f"{lhs_code} .eqv. {rhs_code}"
-        if lhs.class_type is rhs.class_type or (
-            isinstance(lhs.class_type, FixedSizeNumericType) and isinstance(rhs.class_type, FixedSizeNumericType)
-        ):
-            return f"{lhs_code} == {rhs_code}"
-        raise NotImplementedError(f"Fortran equality printing is not implemented for {expr}")
-
-    def _visit_Ne(self, expr):
-        """Render the ``Ne`` model node."""
-        lhs, rhs = expr.args
-        lhs_code = self._visit(lhs)
-        rhs_code = self._visit(rhs)
-        a = lhs.dtype.primitive_type
-        b = rhs.dtype.primitive_type
-
-        if all(isinstance(var, PrimitiveBooleanType) for var in (a, b)):
-            return f"{lhs_code} .neqv. {rhs_code}"
-        if lhs.class_type is rhs.class_type or (
-            isinstance(lhs.class_type, FixedSizeNumericType) and isinstance(rhs.class_type, FixedSizeNumericType)
-        ):
-            return f"{lhs_code} /= {rhs_code}"
-        raise NotImplementedError(f"Fortran inequality printing is not implemented for {expr}")
-
-    def _visit_Lt(self, expr):
-        """Render the ``Lt`` model node."""
-        args = [
-            (cast_to(a, NumpyInt64Type()) if isinstance(a.dtype.primitive_type, PrimitiveBooleanType) else a)
-            for a in expr.args
-        ]
-        lhs = self._visit(args[0])
-        rhs = self._visit(args[1])
-        return f"{lhs} < {rhs}"
-
-    def _visit_Le(self, expr):
-        """Render the ``Le`` model node."""
-        args = [
-            (cast_to(a, NumpyInt64Type()) if isinstance(a.dtype.primitive_type, PrimitiveBooleanType) else a)
-            for a in expr.args
-        ]
-        lhs = self._visit(args[0])
-        rhs = self._visit(args[1])
-        return f"{lhs} <= {rhs}"
-
-    def _visit_Gt(self, expr):
-        """Render the ``Gt`` model node."""
-        args = [
-            (cast_to(a, NumpyInt64Type()) if isinstance(a.dtype.primitive_type, PrimitiveBooleanType) else a)
-            for a in expr.args
-        ]
-        lhs = self._visit(args[0])
-        rhs = self._visit(args[1])
-        return f"{lhs} > {rhs}"
-
-    def _visit_Ge(self, expr):
-        """Render the ``Ge`` model node."""
-        args = [
-            (cast_to(a, NumpyInt64Type()) if isinstance(a.dtype.primitive_type, PrimitiveBooleanType) else a)
-            for a in expr.args
-        ]
-        lhs = self._visit(args[0])
-        rhs = self._visit(args[1])
-        return f"{lhs} >= {rhs}"
-
-    def _visit_Not(self, expr):
-        """Render the ``Not`` model node."""
-        a = self._visit(expr.args[0])
-        if not isinstance(expr.args[0].dtype.primitive_type, PrimitiveBooleanType):
-            return f"{a} == 0"
-        return f".not. {a}"
-
-    def _visit_int(self, expr):
-        """Render the ``int`` model node."""
-        return str(expr)
 
     def _visit_Literal(self, expr):
         """Render the ``Literal`` model node."""
@@ -1665,58 +1346,6 @@ class FCodePrinter(CodePrinter):
                 v = f.results.var.clone(str(key))
                 decs.append(Declare(v, external=True))
 
-    def _calculate_class_names(self, expr):
-        """
-        Calculate the class names of the functions in a class.
-
-        Calculate the names that will be referenced from the class
-        for each function in a class. Also rename magic methods.
-
-        Parameters
-        ----------
-        expr : ClassDef
-            The class whose functions should be renamed.
-        """
-        scope = expr.scope
-        name = expr.name.lower()
-        for method in expr.methods:
-            if method.is_semantic:
-                method.cls_name = scope.get_new_name(f"{name}_{method.name}")
-        for i in expr.overload_sets:
-            for f in i.functions:
-                if f.is_semantic:
-                    f.cls_name = scope.get_new_name(f"{name}_{f.name}")
-
-    def _apply_cast(self, target_type, *args):
-        """
-        Cast the arguments to the specified target type.
-
-        Cast the arguments to the specified target type. For literal containers this
-        function applies the cast to the elements.
-
-        Parameters
-        ----------
-        target_type : Type
-            The type which we should cast to.
-        *args : model object
-            A node that should be cast to the target type.
-
-        Returns
-        -------
-        model object | iterable[model object]
-            A model object for each argument. The new nodes will have the target type.
-        """
-        new_args = []
-        for a in args:
-            if target_type != a.class_type:
-                a = cast_to(a, target_type)
-            new_args.append(a)
-
-        if len(args) == 1:
-            return new_args[0]
-        return new_args
-
-    # ============ Elements ============ #
     def _function_signature(self, expr, name):
         """
         Get the different parts of the signature of the function `expr`.

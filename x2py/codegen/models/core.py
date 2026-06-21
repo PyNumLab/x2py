@@ -50,7 +50,6 @@ __all__ = (
     "ArraySize",
     "AsName",
     "Assign",
-    "AssociativeParenthesis",
     "AugAssign",
     "BinaryBooleanOperator",
     "BinaryOperator",
@@ -67,7 +66,6 @@ __all__ = (
     "DottedVariable",
     "EmptyNode",
     "Eq",
-    "FloorDiv",
     "Function",
     "FunctionAddress",
     "FunctionCall",
@@ -89,7 +87,6 @@ __all__ = (
     "Le",
     "Lt",
     "Minus",
-    "Mod",
     "Module",
     "ModuleHeader",
     "Mul",
@@ -98,7 +95,6 @@ __all__ = (
     "Operator",
     "Or",
     "Pass",
-    "Pow",
     "PythonTuple",
     "Return",
     "SelectCase",
@@ -107,7 +103,6 @@ __all__ = (
     "Symbol",
     "UnaryBooleanOperator",
     "UnaryOperator",
-    "UnaryPlus",
     "UnarySub",
     "Variable",
     "get_direct_assignment",
@@ -205,18 +200,14 @@ class ComparisonOperator(BinaryBooleanOperator):
     __slots__ = ()
 
 
-UnaryPlus = make_operator_class("UnaryPlus", UnaryOperator, "+")
 UnarySub = make_operator_class("UnarySub", UnaryOperator, "-")
 
 Not = make_operator_class("Not", UnaryBooleanOperator, "not ")
 
-Pow = make_operator_class("Pow", ArithmeticOperator, "**")
 Add = make_operator_class("Add", ArithmeticOperator, "+")
 Mul = make_operator_class("Mul", ArithmeticOperator, "*")
 Minus = make_operator_class("Minus", ArithmeticOperator, "-")
 Div = make_operator_class("Div", ArithmeticOperator, "/")
-Mod = make_operator_class("Mod", ArithmeticOperator, "%")
-FloorDiv = make_operator_class("FloorDiv", ArithmeticOperator, "//")
 
 Eq = make_operator_class("Eq", ComparisonOperator, "==")
 Ne = make_operator_class("Ne", ComparisonOperator, "!=")
@@ -233,13 +224,6 @@ In = make_operator_class("In", BinaryBooleanOperator, "in")
 
 
 # ==============================================================================
-class AssociativeParenthesis(UnaryOperator):
-    __slots__ = ()
-
-    def __repr__(self):
-        return f"({self.args[0]!r})"
-
-
 class IfTernaryOperator(Operator):
     """
     Represent a ternary conditional operator in the code.
@@ -822,15 +806,6 @@ class IndexedElement:
         indices = ",".join(repr(i) for i in self.indices)
         return f"{self.base!r}[{indices}]"
 
-    @property
-    def is_slice(self):
-        """
-        Indicates whether this instance represents a slice.
-
-        Indicates whether this instance represents a slice or an element.
-        """
-        return self._is_slice
-
     def __hash__(self):
         return hash((self.base, self._indices))
 
@@ -1287,18 +1262,6 @@ class CodeBlock:
     def lhs(self):
         return self.body[-1].lhs
 
-    def insert2body(self, *obj, back=True):
-        """Insert object(s) to the body of the codeblock
-        The object(s) are inserted at the back by default but
-        can be inserted at the front by setting back to False
-        """
-        for child in obj:
-            attach_model_child(self, child)
-        if back:
-            self._body = (*self.body, *obj)
-        else:
-            self._body = (*obj, *self.body)
-
     def __repr__(self):
         return f"CodeBlock({self.body})"
 
@@ -1420,15 +1383,6 @@ class AugAssign(Assign):
         Get the string describing the operator which modifies the lhs variable.
         """
         return self._op
-
-    @property
-    def x2py_operator(self):
-        """
-        Get the Operator which modifies the lhs variable.
-
-        Get the Operator which modifies the lhs variable.
-        """
-        return self._accepted_operators[self._op]
 
     def to_basic_assign(self):
         """
@@ -1999,13 +1953,6 @@ class FunctionDefArgument:
         return self._value
 
     @property
-    def default_call_arg(self):
-        """The FunctionCallArgument which is passed to FunctionCall
-        if no value is provided for this argument
-        """
-        return FunctionCallArgument(self.value, keyword=self.name) if self.has_default else None
-
-    @property
     def has_default(self):
         """Indicates whether the argument has a default value
         (if not then it must be provided)
@@ -2338,11 +2285,6 @@ class FunctionCall:
         args = ", ".join(str(a) for a in self.args)
         return f"{self.func_name}({args})"
 
-    @classmethod
-    def _ignore(cls, c):
-        """Indicates if a node should be ignored when recursing"""
-        return c is None or isinstance(c, (FunctionDef, *cls._ignored_types))
-
 
 class Return:
     """
@@ -2380,15 +2322,6 @@ class Return:
     @property
     def stmt(self):
         return self._stmt
-
-    @property
-    def n_explicit_results(self):
-        """
-        The number of variables explicitly returned.
-
-        The number of variables explicitly returned.
-        """
-        return self._n_returns
 
     def __repr__(self):
         code = repr(self.stmt) + ";" if self.stmt else ""
@@ -3640,34 +3573,6 @@ class ClassDef:
         """
         return {self.scope.get_python_name(m.name) if m.is_semantic else m.name: m for m in self.methods}
 
-    @property
-    def attributes_as_dict(self):
-        """Returns a dictionary that contains all attributes, where the key is the
-        attribute's name."""
-
-        d_attributes = {}
-        for i in self.attributes:
-            d_attributes[i.name] = i
-        return d_attributes
-
-    def add_new_attribute(self, attr):
-        """
-        Add a new attribute to the current class.
-
-        Add a new attribute to the current ClassDef.
-
-        Parameters
-        ----------
-        attr : Variable
-            The Variable that will be added.
-        """
-
-        if not isinstance(attr, Variable):
-            raise TypeError("Attributes must be Variables")
-        assert attr not in self._attributes
-        attach_model_child(self, attr)
-        self._attributes += (attr,)
-
     def add_new_method(self, method):
         """
         Add a new method to the current class.
@@ -3702,74 +3607,6 @@ class ClassDef:
             raise TypeError("Argument 'overload_set' must be of type FunctionOverloadSet")
         attach_model_child(self, overload_set)
         self._overload_sets += (overload_set,)
-
-    def update_method(self, syntactic_method, semantic_method):
-        """
-        Replace a syntactic_method with its semantic equivalent.
-
-        Replace a syntactic_method with its semantic equivalent.
-
-        Parameters
-        ----------
-        syntactic_method : FunctionDef
-            The method that has already been added to the class.
-        semantic_method : FunctionDef
-            The method that will replace the syntactic_method.
-        """
-        assert isinstance(semantic_method, FunctionDef)
-        assert syntactic_method in self._methods
-        assert semantic_method.is_semantic
-        detach_model_child(self, syntactic_method)
-        attach_model_child(self, semantic_method)
-        self._methods = (*tuple(m for m in self._methods if m is not syntactic_method), semantic_method)
-
-    def update_overload_set(self, syntactic_overload_set, semantic_overload_set):
-        """
-        Replace an existing interface with a new interface.
-
-        Replace an existing interface with a new semantic interface.
-        When translating a .py file this will always be an operation which
-        replaces a syntactic interface with its semantic equivalent.
-        The syntactic interface is inserted into the class at its creation
-        to ensure that the method can be located when it is called, but
-        it is only treated on the first call (or once the rest of the
-        enlosing Module has been translated) to ensure that all global
-        variables that it may use have been declared. When the method
-        is visited to create the semantic version, this method is called
-        to update the stored interface.
-
-        When translating a .pyi file, an additional case is seen due to
-        the use of the `@overload` decorator. When this decorator is used
-        each `FunctionDef` in the `FunctionOverloadSet` is visited individually.
-        When the first implementation is visited, the syntactic interface
-        will be replaced by the semantic interface, but when subsequent
-        implementations are visited, the syntactic interface will already
-        have been removed, rather it is the previous semantic interface
-        (identified by its name) which will be replaced.
-
-        Parameters
-        ----------
-        syntactic_overload_set : FunctionDef
-            The syntactic interface that should be removed from the class.
-            In the case of a .pyi file this interface may not appear in
-            the class any more.
-        semantic_overload_set : FunctionDef
-            The new interface that should appear in the class.
-        """
-        assert isinstance(semantic_overload_set, FunctionOverloadSet)
-        assert semantic_overload_set.is_semantic
-        if syntactic_overload_set in self._methods:
-            detach_model_child(self, syntactic_overload_set)
-        attach_model_child(self, semantic_overload_set)
-        self._methods = tuple(m for m in self._methods if m is not syntactic_overload_set)
-        self._overload_sets = (
-            *tuple(
-                m
-                for m in self._overload_sets
-                if m is not syntactic_overload_set and m.name != semantic_overload_set.name
-            ),
-            semantic_overload_set,
-        )
 
     def get_method(self, name, raise_error_from=None):
         """
@@ -3853,16 +3690,6 @@ class ClassDef:
         if "__exit__" in names:
             raise ValueError("ClassDef does not contain __enter__ method")
         return False
-
-    @property
-    def hide(self):
-        """
-        Indicate whether the class should be hidden.
-
-        Indicate whether the class should be hidden. A hidden class does
-        not appear in the printed code.
-        """
-        return self.is_iterable or self.is_with_construct
 
 
 class Import:
@@ -4005,54 +3832,6 @@ class Import:
             self._target.update(dict.fromkeys(new_target))
         else:
             self._target[new_target] = None
-
-    def remove_target(self, target_to_remove):
-        """
-        Remove a target from the imports.
-
-        Remove a target from the imports.
-        I.e., if `imp` is an Import defined as:
-        >>> from numpy import ones, cos
-
-        and we call `imp.remove_target('cos')`
-        then it becomes:
-        >>> from numpy import ones
-
-        Parameters
-        ----------
-        target_to_remove : str | AsName | iterable[str | AsName]
-            The import target(s) to remove.
-        """
-
-        if iterable(target_to_remove):
-            for t in target_to_remove:
-                self._target.pop(t, None)
-        else:
-            self._target.pop(target_to_remove, None)
-
-    def find_module_target(self, new_target):
-        """
-        Find the specified target amongst the targets of the Import.
-
-        Find the specified target amongst the targets of the Import.
-
-        Parameters
-        ----------
-        new_target : str
-            The name of the target that has been imported.
-
-        Returns
-        -------
-        str
-            The name of the target in the local scope or None if the
-            target is not found.
-        """
-        for t in self._target:
-            if isinstance(t, AsName) and new_target == t.name:
-                return t.local_alias
-            if new_target == t:
-                return t
-        return None
 
     @property
     def source_module(self):
@@ -4491,27 +4270,6 @@ class Function:
         elementwise on an array argument. Here we set the default to False.
         """
         return False
-
-    @property
-    def modified_args(self):
-        """
-        Return a tuple of all the arguments which may be modified by this function.
-
-        Return a tuple of all the arguments which may be modified by this function.
-        This is notably useful in order to determine the constness of arguments.
-        """
-        return ()
-
-    @property
-    def is_indexable(self):
-        """
-        Indicate whether the expression can be indexed.
-
-        Indicate whether the expression can be indexed to get an element without
-        calculating the entire result. E.g `cos(x)[i]` is equivalent to `cos(x[i])`
-        but `func_call(x)[i]` is not equivalent to `func_call(x[i])`.
-        """
-        return self.is_elemental
 
 
 class ArraySize(Function):
