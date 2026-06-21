@@ -60,6 +60,7 @@ _NUMPY_TYPE_EXPORTS = {
 _WRAPPING_EXPORTS = {
     "WrapperBuildResult",
     "build_fortran_extension",
+    "build_pyi_extension",
 }
 
 
@@ -100,6 +101,7 @@ __all__ = (
     "assess_semantic_wrap_readiness",
     "build_fortran_extension",
     "build_fortran_type_probe_source",
+    "build_pyi_extension",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

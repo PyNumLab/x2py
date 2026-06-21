@@ -15,7 +15,10 @@ import pytest
 
 
 ROOT = Path(__file__).parents[2]
-DOC_PATHS = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
+DOC_PATHS = [
+    ROOT / "README.md",
+    *sorted(path for path in (ROOT / "docs").rglob("*.md") if "old_docs" not in path.parts),
+]
 TEST_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test:\s*(run|exact)(?:\s+([a-z0-9_-]+))?\s*-->\s*$")
 OUTPUT_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test-output\s*-->\s*$")
 SOURCE_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-source:\s*(.+?)\s*-->\s*$")

@@ -1,0 +1,126 @@
+---
+title: Documentation Architecture
+audience: contributors, maintainers
+prerequisites: repository checkout, documentation metadata standard
+related: index.md, README.md, developer-guide/testing-strategy.md
+status: draft
+---
+
+# Documentation Architecture
+
+This page defines the documentation system before the project commits to a
+specific static documentation generator. The repository remains Markdown-first,
+but the structure below maps cleanly to MkDocs Material, Sphinx, Docusaurus, or
+another generator with hierarchical navigation and front matter.
+
+## Architecture Principles
+
+1. User documentation and developer documentation are separate directories.
+2. Implemented behavior is documented as a supported contract only when current
+   implementation and tests prove it.
+3. Planned behavior has a reserved page now, marked as planned or not yet
+   implemented, with explicit TODO items.
+4. Generated reference documentation lives under `reference/` and can later be
+   produced by a documentation build step.
+5. Maintainer-only internals live under `internal-architecture/` rather than in
+   user workflows.
+
+## Audience Separation
+
+The website-oriented tree has two explicit lanes:
+
+- User-facing documentation: `getting-started/`, `user-guide/`, `tutorials/`,
+  `examples-gallery/`, `reference/`, `language-support/`, `faq/`,
+  `troubleshooting/`, and `changelog/`.
+- Contributor and maintainer documentation: `design/`, `developer-guide/`,
+  `internal-architecture/`, and `contributing/`.
+
+Maintained references now live inside the separated lanes. Historical top-level
+files are archived under `old_docs/` for comparison only; new pages should be
+added inside the separated lanes above.
+
+## Page Metadata Contract
+
+Every page under `docs/` must start with front matter containing:
+
+- `title`: navigation title.
+- `audience`: intended readers.
+- `prerequisites`: assumed knowledge or pages.
+- `related`: adjacent pages.
+- `status`: one of `maintained`, `draft`, `planned-documentation`,
+  `not-yet-implemented`, `design`, or `active-roadmap`.
+
+Pages with status `draft`, `planned-documentation`, or `not-yet-implemented`
+must include a `## TODO` section. The TODO list is part of the documentation
+contract, not a casual note.
+
+## Recommended Repository Tree
+
+```text
+docs/
+  index.md
+  documentation-architecture.md
+  getting-started/
+  user-guide/
+  tutorials/
+  examples-gallery/
+  reference/
+  language-support/
+  design/
+  developer-guide/
+  internal-architecture/
+  roadmap/
+  faq/
+  troubleshooting/
+  changelog/
+  contributing/
+```
+
+Existing maintained contract references have been copied into the
+website-oriented tree. The previous top-level files remain under `old_docs/`
+as an archive and should not receive new active content.
+
+## Maturity Roadmap
+
+### Phase 1: Architecture And Placeholders
+
+- Create the site-ready directory tree.
+- Add page metadata and TODO markers.
+- Reserve pages for user workflows, tutorials, examples, reference, language
+  support, design, developer material, internals, roadmap, FAQ,
+  troubleshooting, changelog, and contributing.
+- Add automated checks for metadata and planned-page TODO sections.
+
+### Phase 2: User Workflow Content
+
+- Promote the maintained tutorial, examples cookbook, and Fortran wrapper guide
+  into the user-facing tree.
+- Keep workflow pages organized by user tasks rather than implementation files.
+- Add runnable examples only when they are backed by tests or checked fixtures.
+
+### Phase 3: Generated Reference
+
+- Select the generated reference toolchain.
+- Generate Python API, generated wrapper API, CLI, and configuration reference
+  pages.
+- Keep generated files separate from handwritten guides.
+
+### Phase 4: Publication
+
+- Select the static site generator.
+- Convert the tree into generator navigation.
+- Add release-versioned builds and publish preview checks for pull requests.
+
+### Phase 5: Continuous Documentation Quality
+
+- Require page metadata for all new pages.
+- Treat unsupported-feature placeholders as blocking reminders during feature
+  completion.
+- Add link checks, generated-reference freshness checks, and runnable-example
+  checks to CI.
+
+## TODO
+
+- TODO: Select the static documentation generator after the page tree is stable.
+- TODO: Decide whether existing top-level maintained pages are moved or kept as
+  stable contract references during the website migration.

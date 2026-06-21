@@ -1,0 +1,50 @@
+---
+title: Work With Semantic .pyi Contracts
+audience: users, advanced users
+prerequisites: semantic .pyi format
+related: ../verified-cookbook.md, ../../reference/semantic-pyi-format.md, ../../roadmap/semantic-pyi-wrapper-checklist.md
+status: maintained
+---
+
+# Work With Semantic .pyi Contracts
+
+Use this recipe when source facts are not enough and you need an editable
+semantic contract.
+
+## Generate A Starter Contract
+
+```bash
+python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
+  --pyi --out basic_subroutine.pyi
+```
+
+Open the generated `.pyi`, edit only the supported semantic contract syntax,
+then check readiness:
+
+```bash
+python3 -m x2py basic_subroutine.pyi --wrap-readiness
+```
+
+## Build From A `.pyi` Contract
+
+The implemented `.pyi` wrapper subset can build from a semantic contract when
+you provide the native artifacts explicitly:
+
+```bash
+python3 -m x2py path/to/module.pyi \
+  --wrap \
+  --native-object path/to/module.o \
+  --native-include-dir path/to/mod-files \
+  --out-dir build/module
+```
+
+At least one `--native-object` or `--native-library` is required. Native source
+is not reparsed during `.pyi`-driven wrapper generation.
+
+## Notes
+
+- Generated contracts are starter contracts, not ordinary type-checker stubs.
+- User edits may add supported wrapper policy, but they must not contradict the
+  retained native ABI or binding topology.
+- The parity plan is tracked in the
+  [Semantic .pyi Wrapper Checklist](../../roadmap/semantic-pyi-wrapper-checklist.md).

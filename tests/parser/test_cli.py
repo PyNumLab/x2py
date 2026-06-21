@@ -72,6 +72,9 @@ def _install_main_parser(monkeypatch, args):
         def add_argument(self, *_args, **_kwargs):
             pass
 
+        def add_argument_group(self, *_args, **_kwargs):
+            return self
+
         def parse_args(self):
             return args
 
@@ -1849,13 +1852,17 @@ def test_cli_help_includes_examples():
     cmd = [sys.executable, "-m", "x2py", "--help"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert "Examples:" in res.stdout
-    assert "Parse, compact tree:" in res.stdout
-    assert "python -m x2py path/to/file.f90 --parse" in res.stdout
-    assert "python -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
-    assert "python -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
-    assert "python -m x2py path/to/api.h --language c --parse --print-limit 50" in res.stdout
-    assert "python -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
-    assert "python -m x2py path/to/file.f" in res.stdout
+    assert "Inspect Fortran source:" in res.stdout
+    assert "Inspect C source:" in res.stdout
+    assert "Use compiler preprocessing:" in res.stdout
+    assert "Check wrapper readiness:" in res.stdout
+    assert "Build wrappers:" in res.stdout
+    assert "python3 -m x2py path/to/file.f90 --parse" in res.stdout
+    assert "python3 -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
+    assert "python3 -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
+    assert "python3 -m x2py path/to/api.h --language c --parse --print-limit 50" in res.stdout
+    assert "python3 -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
+    assert "python3 -m x2py path/to/file.f" in res.stdout
 
 
 def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
@@ -1864,13 +1871,25 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
 
     captured = {}
 
+    class FakeArgumentGroup:
+        def __init__(self, title: str):
+            self.title = title
+
+        def add_argument(self, *args, **kwargs):
+            captured["arguments"].append((self.title, args, kwargs))
+
     class FakeParser:
         def __init__(self, *args, **kwargs):
             captured["parser"] = (args, kwargs)
+            captured["groups"] = []
             captured["arguments"] = []
 
         def add_argument(self, *args, **kwargs):
-            captured["arguments"].append((args, kwargs))
+            captured["arguments"].append(("parser", args, kwargs))
+
+        def add_argument_group(self, title):
+            captured["groups"].append(title)
+            return FakeArgumentGroup(title)
 
         def parse_args(self):
             raise StopAfterParserSetup
@@ -1883,321 +1902,93 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
     assert captured["parser"] == (
         (),
         {
-            "description": "x2py CLI for parser and semantic conversion stages.",
+            "prog": "python3 -m x2py",
+            "description": x2py_cli._CLI_HELP_DESCRIPTION,
             "formatter_class": x2py_cli.argparse.RawDescriptionHelpFormatter,
-            "epilog": (
-                "Examples:\n"
-                "  Parse, compact tree:\n"
-                "    python -m x2py path/to/file.f90 --parse\n"
-                "  Parse, include scope variables:\n"
-                "    python -m x2py path/to/file.f90 --parse --show-vars\n"
-                "  Parse, cap every repeated section to 50 items:\n"
-                "    python -m x2py path/to/file.f90 --parse --print-limit 50\n"
-                "  Parse, include variables and cap every repeated section:\n"
-                "    python -m x2py path/to/file.f90 --parse --show-vars --print-limit 50\n"
-                "  Parse directory recursively:\n"
-                "    python -m x2py path/to/src_dir --language fortran --parse --print-limit 20\n"
-                "  Print parser JSON:\n"
-                "    python -m x2py path/to/file.f90 --parse --json\n"
-                "  Parse C subset JSON:\n"
-                "    python -m x2py path/to/api.h --language c --parse --json\n"
-                "  Parse C readable report with capped repeated sections:\n"
-                "    python -m x2py path/to/api.h --language c --parse --print-limit 50\n"
-                "  Parse C with an exact compiler executable and API flags:\n"
-                "    python -m x2py path/to/api.h --language c --parse --compiler clang-18 -I include -D API_EXPORT= --std c11\n"
-                "  Parse C with a compiler path and target/sysroot passthrough flags:\n"
-                "    python -m x2py path/to/api.c --language c --parse --compiler /usr/bin/gcc-13 --compiler-arg=--sysroot=/opt/sdk\n"
-                "  Parse C with compile_commands.json for project flags:\n"
-                "    python -m x2py path/to/api.c --language c --parse --compile-commands build/compile_commands.json\n"
-                "  Parse Fortran with an exact compiler executable:\n"
-                "    python -m x2py path/to/file.F90 --parse --compiler /usr/bin/gfortran-12 -I include -D USE_MPI\n"
-                "  Parse with a custom preprocessing command template:\n"
-                "    python -m x2py path/to/api.h --language c --parse --preprocessor-adapter command-template --preprocess-template 'cc -E {include_dirs} {defines} {source}'\n"
-                "  Write parser JSON:\n"
-                "    python -m x2py path/to/file.f90 --parse --json --out report.json\n"
-                "  Write one JSON file next to each source:\n"
-                "    python -m x2py path/to/src_dir --language fortran --parse --out\n"
-                "  Show wrap-readiness only:\n"
-                "    python -m x2py path/to/file.f90 --wrap-readiness\n"
-                "  Print semantic IR JSON:\n"
-                "    python -m x2py path/to/file.f90 --semantics\n"
-                "  Print generated Python stub text:\n"
-                "    python -m x2py path/to/file.f90 --pyi\n"
-                "  Write generated Python stub text:\n"
-                "    python -m x2py path/to/file.f90 --pyi --out module.pyi\n"
-                "  Print semantic IR with readiness attached:\n"
-                "    python -m x2py path/to/file.f90 --semantics --wrap-readiness\n"
-                "  Check edited .pyi semantic readiness:\n"
-                "    python -m x2py path/to/module.pyi --wrap-readiness\n"
-                "  Print semantic readiness JSON:\n"
-                "    python -m x2py path/to/module.pyi --wrap-readiness --json\n"
-                "  Build a Python extension from a Fortran source:\n"
-                "    python -m x2py path/to/file.f\n"
-                "  Generate a parallel GNU Make build without compiling:\n"
-                "    python -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
-                "\nOptional:\n"
-                "  Install 'rich' for colored terminal syntax highlighting:\n"
-                "      pip install rich"
-            ),
+            "epilog": x2py_cli._CLI_HELP_EPILOG,
         },
     )
-    assert captured["arguments"] == [
-        (("paths",), {"nargs": "+", "help": "Source file(s), .pyi file(s), or directory path(s)"}),
-        (
-            ("--language",),
-            {
-                "choices": ("fortran", "c"),
-                "default": None,
-                "help": (
-                    "Frontend language. Omission is allowed for recognizable Fortran files and .pyi readiness input; "
-                    "C files, directories, and unknown-suffix source inputs require this flag."
-                ),
-            },
-        ),
-        (("--parse",), {"action": "store_true", "help": "Run and output parser stage report"}),
-        (
-            ("--preprocessor-adapter",),
-            {
-                "choices": ("auto", "gcc-compatible-c", "gnu-fortran", "command-template"),
-                "default": "auto",
-                "help": "Compiler adapter family. Use command-template for unsupported compiler families.",
-            },
-        ),
-        (
-            ("--compiler",),
-            {
-                "help": (
-                    "Exact compiler/preprocessor executable, e.g. gcc-13, "
-                    "clang-18, /usr/bin/gfortran-12, or /opt/intel/oneapi/compiler/latest/bin/ifx."
-                )
-            },
-        ),
-        (
-            ("--compile-commands",),
-            {
-                "metavar": "PATH",
-                "help": "compile_commands.json database used for compiler preprocessing.",
-            },
-        ),
-        (
-            ("--preprocess-template",),
-            {
-                "metavar": "TEMPLATE",
-                "help": (
-                    "Custom preprocessing command template. Supported placeholders include {source}, "
-                    "{include_dirs}, {defines}, {undefs}, {standard}, and {compiler_args}."
-                ),
-            },
-        ),
-        (
-            ("-I", "--include-dir"),
-            {
-                "dest": "include_dirs",
-                "action": "append",
-                "metavar": "DIR",
-                "help": "Include directory passed as -IDIR during compiler preprocessing.",
-            },
-        ),
-        (
-            ("-D", "--define"),
-            {
-                "dest": "defines",
-                "action": "append",
-                "metavar": "NAME[=VALUE]",
-                "help": "Define a preprocessing macro. NAME means NAME=1; NAME=VALUE preserves VALUE.",
-            },
-        ),
-        (
-            ("-U", "--undef"),
-            {
-                "dest": "undefs",
-                "action": "append",
-                "metavar": "NAME",
-                "help": "Undefine a preprocessing macro.",
-            },
-        ),
-        (
-            ("--std",),
-            {
-                "metavar": "STANDARD",
-                "help": "Language standard passed to compiler mode, e.g. c11, c23, f2008, or f2018.",
-            },
-        ),
-        (
-            ("--compiler-arg",),
-            {
-                "dest": "compiler_args",
-                "action": "append",
-                "metavar": "ARG",
-                "help": "Raw compiler preprocessing argument. Use --compiler-arg=-target for values starting with '-'.",
-            },
-        ),
-        (
-            ("--c-type-report",),
-            {
-                "metavar": "PATH",
-                "help": "Reuse a C ABI report generated by `python -m x2py.c_type_probe`.",
-            },
-        ),
-        (
-            ("--c-type-probe-runner",),
-            {
-                "dest": "c_type_probe_runner",
-                "action": "append",
-                "metavar": "ARG",
-                "help": "Runner command item for a cross-compiled C ABI probe; repeat for arguments.",
-            },
-        ),
-        (
-            ("--c-type-probe-cache-dir",),
-            {
-                "metavar": "PATH",
-                "help": "Directory for reusable automatic C ABI probe results.",
-            },
-        ),
-        (
-            ("--refresh-c-type-probe",),
-            {
-                "action": "store_true",
-                "help": "Ignore a reusable C ABI result and probe the selected compiler target again.",
-            },
-        ),
-        (
-            ("--fortran-type-report",),
-            {
-                "metavar": "PATH",
-                "help": "Reuse a Fortran type report generated by `python -m x2py.fortran_type_probe`.",
-            },
-        ),
-        (
-            ("--fortran-type-probe-runner",),
-            {
-                "dest": "fortran_type_probe_runner",
-                "action": "append",
-                "metavar": "ARG",
-                "help": "Runner command item for a cross-compiled Fortran type probe; repeat for arguments.",
-            },
-        ),
-        (
-            ("--fortran-type-probe-cache-dir",),
-            {
-                "metavar": "PATH",
-                "help": "Directory for reusable automatic Fortran type probe results.",
-            },
-        ),
-        (
-            ("--refresh-fortran-type-probe",),
-            {
-                "action": "store_true",
-                "help": "Ignore reusable Fortran type results and probe the selected compiler target again.",
-            },
-        ),
-        (
-            ("--include-exposure",),
-            {
-                "choices": ("reachable-project", "roots-only"),
-                "default": "reachable-project",
-                "help": "Public wrapper exposure policy for reachable included files.",
-            },
-        ),
-        (
-            ("--public-include",),
-            {
-                "dest": "public_includes",
-                "action": "append",
-                "metavar": "PATH_OR_PATTERN",
-                "help": "Force a matched included file to be public in wrapper output.",
-            },
-        ),
-        (
-            ("--private-include",),
-            {
-                "dest": "private_includes",
-                "action": "append",
-                "metavar": "PATH_OR_PATTERN",
-                "help": "Force a matched included file to be private in wrapper output.",
-            },
-        ),
-        (
-            ("--show-vars",),
-            {
-                "action": "store_true",
-                "help": "Include module, submodule, program, and block-data variables in the human-readable parse report.",
-            },
-        ),
-        (
-            ("--print-limit",),
-            {
-                "type": int,
-                "metavar": "N",
-                "help": "Show at most N items per repeated section in the human-readable parse report.",
-            },
-        ),
-        (("--vars-limit",), {"type": int, "metavar": "N", "help": x2py_cli.argparse.SUPPRESS}),
-        (
-            ("--wrap-readiness",),
-            {
-                "action": "store_true",
-                "help": "Convert Fortran, C, or .pyi input to semantic IR and show wrapper readiness",
-            },
-        ),
-        (
-            ("--wrap",),
-            {
-                "action": "store_true",
-                "help": "Explicitly build one Python extension module from the supplied Fortran source files",
-            },
-        ),
-        (
-            ("--makefile",),
-            {
-                "action": "store_true",
-                "help": "Generate wrapper sources and a GNU Make build without compiling",
-            },
-        ),
-        (
-            ("--strict-wrapper-names",),
-            {
-                "action": "store_true",
-                "help": "Reject Python wrapper names that require escaping or collision suffixes",
-            },
-        ),
-        (
-            ("--semantics",),
-            {"action": "store_true", "help": "Generate semantic IR models from parsed source modules"},
-        ),
-        (("--pyi",), {"action": "store_true", "help": "Generate semantic Python .pyi content"}),
-        (("--json",), {"action": "store_true", "help": "Print JSON to stdout"}),
-        (
-            ("--out",),
-            {
-                "nargs": "?",
-                "const": "",
-                "type": str,
-                "help": "Write stage output to file (optional explicit output filename)",
-            },
-        ),
-        (
-            ("--out-dir",),
-            {
-                "metavar": "DIR",
-                "help": (
-                    "Directory for --wrap generated sources, objects, and extension module; "
-                    "by default build files go in __x2py__ and the extension is written beside the source"
-                ),
-            },
-        ),
-        (("--verbose",), {"action": "store_true", "help": "Print wrapper compiler commands and build steps"}),
-        (("--no-color",), {"action": "store_true", "help": "Disable ANSI color in parse diagnostics"}),
-        (
-            ("--debug", "--debug-traceback"),
-            {
-                "dest": "debug",
-                "action": "store_true",
-                "help": "Re-raise parser errors so Python prints a traceback for parser debugging",
-            },
-        ),
+    assert captured["groups"] == [
+        "input selection",
+        "inspection stages",
+        "compiler preprocessing",
+        "target type probes",
+        "C include exposure",
+        "parse report controls",
+        "wrapper builds",
+        "output and diagnostics",
     ]
+    assert [(group, args) for group, args, _ in captured["arguments"]] == [
+        ("parser", ("paths",)),
+        ("input selection", ("--language",)),
+        ("inspection stages", ("--parse",)),
+        ("inspection stages", ("--semantics",)),
+        ("inspection stages", ("--pyi",)),
+        ("inspection stages", ("--wrap-readiness",)),
+        ("compiler preprocessing", ("--preprocessor-adapter",)),
+        ("compiler preprocessing", ("--compiler",)),
+        ("compiler preprocessing", ("--compile-commands",)),
+        ("compiler preprocessing", ("--preprocess-template",)),
+        ("compiler preprocessing", ("-I", "--include-dir")),
+        ("compiler preprocessing", ("-D", "--define")),
+        ("compiler preprocessing", ("-U", "--undef")),
+        ("compiler preprocessing", ("--std",)),
+        ("compiler preprocessing", ("--compiler-arg",)),
+        ("target type probes", ("--c-type-report",)),
+        ("target type probes", ("--c-type-probe-runner",)),
+        ("target type probes", ("--c-type-probe-cache-dir",)),
+        ("target type probes", ("--refresh-c-type-probe",)),
+        ("target type probes", ("--fortran-type-report",)),
+        ("target type probes", ("--fortran-type-probe-runner",)),
+        ("target type probes", ("--fortran-type-probe-cache-dir",)),
+        ("target type probes", ("--refresh-fortran-type-probe",)),
+        ("C include exposure", ("--include-exposure",)),
+        ("C include exposure", ("--public-include",)),
+        ("C include exposure", ("--private-include",)),
+        ("parse report controls", ("--show-vars",)),
+        ("parse report controls", ("--print-limit",)),
+        ("parse report controls", ("--vars-limit",)),
+        ("wrapper builds", ("--wrap",)),
+        ("wrapper builds", ("--makefile",)),
+        ("wrapper builds", ("--strict-wrapper-names",)),
+        ("wrapper builds", ("--native-object",)),
+        ("wrapper builds", ("--native-library",)),
+        ("wrapper builds", ("--native-library-dir", "--library-dir")),
+        ("wrapper builds", ("--native-include-dir",)),
+        ("output and diagnostics", ("--json",)),
+        ("output and diagnostics", ("--out",)),
+        ("output and diagnostics", ("--out-dir",)),
+        ("output and diagnostics", ("--verbose",)),
+        ("output and diagnostics", ("--no-color",)),
+        ("output and diagnostics", ("--debug", "--debug-traceback")),
+    ]
+
+    arguments_by_name = {args[0]: kwargs for _, args, kwargs in captured["arguments"]}
+    assert arguments_by_name["paths"] == {"nargs": "+", "help": "Source file(s), .pyi file(s), or directory path(s)"}
+    assert arguments_by_name["--language"] == {
+        "choices": ("fortran", "c"),
+        "default": None,
+        "help": (
+            "Frontend language. Omission is allowed for recognizable Fortran files and .pyi readiness input; "
+            "C files, directories, and unknown-suffix source inputs require this flag."
+        ),
+    }
+    assert arguments_by_name["--preprocessor-adapter"] == {
+        "choices": ("auto", "gcc-compatible-c", "gnu-fortran", "command-template"),
+        "default": "auto",
+        "help": "Compiler adapter family. Use command-template for unsupported compiler families.",
+    }
+    assert arguments_by_name["--include-exposure"] == {
+        "choices": ("reachable-project", "roots-only"),
+        "default": "reachable-project",
+        "help": "Public wrapper exposure policy for reachable included files.",
+    }
+    assert arguments_by_name["--vars-limit"] == {"type": int, "metavar": "N", "help": x2py_cli.argparse.SUPPRESS}
+    assert arguments_by_name["--debug"] == {
+        "dest": "debug",
+        "action": "store_true",
+        "help": "Re-raise parser errors so Python prints a traceback for parser debugging",
+    }
 
 
 def test_cli_requires_explicit_language_for_directory_and_unknown_suffix(tmp_path: Path):

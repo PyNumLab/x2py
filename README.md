@@ -28,7 +28,7 @@ python3 -m x2py solver.f90
 Build a checked example into an explicit directory:
 
 ```bash
-python3 -m x2py tests/wrapper/fruntime_abi_f90.f90 \
+python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```
@@ -82,7 +82,7 @@ The runtime build path accepts one or more ordered Fortran sources. C parsing,
 semantic IR, `.pyi`, and readiness are implemented, but wrapping user-supplied
 C libraries is a later backend. The generated C code used internally by the
 Fortran wrapper is not that future C-input backend.
-The [generated target datatype mapping example](docs/semantics.md#generated-linux-x86_64-mapping-example)
+The [generated target datatype mapping example](docs/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
 shows how the GitHub Actions C and Fortran scalar types map to NumPy dtypes.
 
 ### Fortran
@@ -315,15 +315,19 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 ## Documentation
 
-- [Tutorial](docs/tutorial.md): the complete supported user workflow,
+- [Documentation landing](docs/index.md): draft entry point for the future
+  documentation website.
+- [Documentation architecture](docs/documentation-architecture.md): site-ready
+  directory tree, page metadata contract, and maturity roadmap.
+- [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported user workflow,
   Fortran extension build, semantic interface editing, readiness, and current
   C boundary.
-- [Examples cookbook](docs/examples.md): checked Fortran wrapper builds and
+- [Examples cookbook](docs/examples-gallery/verified-cookbook.md): checked Fortran wrapper builds and
   calls, inspection commands, compiler recipes, and Python API examples.
-- [Fortran wrapper guide](docs/fortran_wrapper.md): generated Python behavior,
+- [Fortran wrapper guide](docs/user-guide/fortran-wrapper.md): generated Python behavior,
   ownership, lifetime, arrays, derived types, callbacks, build modes, and
   limitations.
-- [Developer guide](docs/developper_guide.md): implementation ownership,
+- [Developer guide](docs/developer-guide/maintainer-guide.md): implementation ownership,
   parser references, testing, fixtures, and change workflows.
 
 ## Development
@@ -335,4 +339,4 @@ PYTHONPATH=. python3 -m pytest -q
 ```
 
 Focused verification commands and fixture-maintenance workflows are in the
-[Developer guide](docs/developper_guide.md#testing-map).
+[Developer guide](docs/developer-guide/maintainer-guide.md#testing-map).

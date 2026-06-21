@@ -70,6 +70,7 @@ force-exclude = true
 extend-exclude = [
     "tests/data",
     "tests/pyi/fixtures",
+    "tests/wrapper/fortran/pyi",
     "x2py.egg-info",
 ]
 
@@ -106,7 +107,7 @@ exclude_dirs = ["tests", "docs", "x2py.egg-info"]
 
 [tool.vulture]
 paths = ["x2py", "tests"]
-exclude = ["tests/data/", "tests/pyi/fixtures/", "x2py.egg-info/"]
+exclude = ["tests/data/", "tests/pyi/fixtures/", "tests/wrapper/fortran/pyi/", "x2py.egg-info/"]
 min_confidence = 80
 sort_by_size = true
 ignore_names = [

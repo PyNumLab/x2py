@@ -25,6 +25,7 @@ from x2py.semantics.fortran2ir import (
 )
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
 from x2py.semantics.models import SemanticModule
+from x2py.semantics.pyi_parser import load_pyi_modules
 
 
 _DEFAULT_BUILD_DIR_NAME = "__x2py__"
@@ -44,6 +45,7 @@ class WrapperBuildResult:
     compiled: bool
     generated_sources: tuple[Path, ...]
     generated_files: tuple[Path, ...]
+    native_inputs: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -55,6 +57,7 @@ class WrapperBuildResult:
             "compiled": self.compiled,
             "generated_sources": [str(path) for path in self.generated_sources],
             "generated_files": [str(path) for path in self.generated_files],
+            "native_inputs": list(self.native_inputs),
         }
 
 
@@ -123,6 +126,106 @@ def _source_paths(sources: str | Path | Iterable[str | Path]) -> tuple[Path, ...
         if not path.is_file():
             raise FileNotFoundError(f"Fortran source not found: {path}")
     return paths
+
+
+def _pyi_contract_paths(contracts: str | Path | Iterable[str | Path]) -> tuple[Path, ...]:
+    paths = (Path(contracts),) if isinstance(contracts, str | Path) else tuple(Path(contract) for contract in contracts)
+    if not paths:
+        raise ValueError(".pyi wrapper build requires at least one semantic contract file")
+    for path in paths:
+        if path.suffix.lower() != ".pyi":
+            raise ValueError(f".pyi wrapper build expects semantic contract files, not {path}")
+        if not path.is_file():
+            raise FileNotFoundError(f"Semantic .pyi contract not found: {path}")
+    return paths
+
+
+def _existing_paths(
+    paths: Iterable[str | Path] | None,
+    *,
+    kind: str,
+    require_directory: bool = False,
+) -> tuple[Path, ...]:
+    resolved = tuple(Path(path) for path in (paths or ()))
+    for path in resolved:
+        if require_directory:
+            if not path.is_dir():
+                raise FileNotFoundError(f"{kind} directory not found: {path}")
+        elif not path.is_file():
+            raise FileNotFoundError(f"{kind} not found: {path}")
+    return resolved
+
+
+def _native_artifact_compile_object(path: Path) -> CompileObj:
+    compile_obj = CompileObj(
+        file_name=path.name,
+        folder=str(path.parent),
+        has_target_file=True,
+        include=(path.parent,),
+        libdir=(path.parent,) if path.suffix.lower() in {".so", ".dylib", ".dll"} else (),
+    )
+    if compile_obj.module_target != path:
+        compile_obj._module_target = path
+        compile_obj._lock_target = FileLock(str(path.with_suffix(path.suffix + ".lock")))
+    return compile_obj
+
+
+def _normalize_pyi_modules_for_fortran_wrapping(modules: Iterable[SemanticModule]) -> None:
+    for module in modules:
+        native_module_name = str(module.origin.native_name or module.name)
+        _normalize_module_origin(module, native_module_name)
+        for variable in module.variables:
+            _normalize_variable_origin(variable, native_module_name, source_kind="variable")
+        for function in module.functions:
+            _normalize_function_origin(function, native_module_name, source_kind="function")
+        for overload_set in module.overload_sets:
+            for procedure in overload_set.procedures:
+                _normalize_function_origin(procedure, native_module_name, source_kind="function")
+        for semantic_class in module.classes:
+            _normalize_class_origin(semantic_class, native_module_name)
+
+
+def _normalize_module_origin(module: SemanticModule, native_module_name: str) -> None:
+    module.origin.source_language = module.origin.source_language or "fortran"
+    module.origin.native_name = module.origin.native_name or native_module_name
+    module.origin.native_scope = module.origin.native_scope or native_module_name
+    module.origin.source_kind = module.origin.source_kind or "module"
+
+
+def _normalize_variable_origin(variable, native_module_name: str, *, source_kind: str) -> None:
+    variable.origin.source_language = variable.origin.source_language or "fortran"
+    variable.origin.native_name = variable.origin.native_name or variable.name
+    variable.origin.native_scope = variable.origin.native_scope or native_module_name
+    variable.origin.source_kind = variable.origin.source_kind or source_kind
+
+
+def _normalize_function_origin(function, native_module_name: str, *, source_kind: str) -> None:
+    function.origin.source_language = function.origin.source_language or "fortran"
+    function.origin.native_name = function.origin.native_name or function.native_name or function.name
+    function.origin.native_scope = function.origin.native_scope or native_module_name
+    function.origin.source_kind = function.origin.source_kind or source_kind
+    function.native_name = function.native_name or function.name
+    for argument in function.arguments:
+        _normalize_variable_origin(argument, native_module_name, source_kind="argument")
+
+
+def _normalize_class_origin(semantic_class, native_module_name: str) -> None:
+    semantic_class.origin.source_language = semantic_class.origin.source_language or "fortran"
+    semantic_class.origin.native_name = (
+        semantic_class.origin.native_name or semantic_class.native_name or semantic_class.name
+    )
+    semantic_class.origin.native_scope = semantic_class.origin.native_scope or native_module_name
+    semantic_class.origin.source_kind = semantic_class.origin.source_kind or "derived_type"
+    semantic_class.native_name = semantic_class.native_name or semantic_class.name
+    for field in semantic_class.fields:
+        _normalize_variable_origin(field, native_module_name, source_kind="field")
+    for method in semantic_class.methods:
+        _normalize_function_origin(method, native_module_name, source_kind="method")
+    for overload_set in semantic_class.overload_sets:
+        for procedure in overload_set.procedures:
+            _normalize_function_origin(procedure, native_module_name, source_kind="method")
+    for nested in semantic_class.classes:
+        _normalize_class_origin(nested, native_module_name)
 
 
 def _source_object_stems(source_paths: tuple[Path, ...]) -> tuple[str, ...]:
@@ -478,4 +581,107 @@ def build_fortran_extension(
         compiled=not makefile,
         generated_sources=generated_sources,
         generated_files=generated_files,
+    )
+
+
+def build_pyi_extension(
+    contracts: str | Path | Iterable[str | Path],
+    *,
+    native_objects: Iterable[str | Path] | None = None,
+    native_libraries: Iterable[str] | None = None,
+    native_library_dirs: Iterable[str | Path] | None = None,
+    native_include_dirs: Iterable[str | Path] | None = None,
+    output_dir: str | Path | None = None,
+    strict_wrapper_names: bool = False,
+    makefile: bool = False,
+    verbose: bool | int = False,
+) -> WrapperBuildResult:
+    """Build one extension from semantic `.pyi` contracts and native link inputs."""
+
+    if makefile:
+        raise ValueError("makefile generation is not yet supported for .pyi wrapper builds")
+
+    contract_paths = _pyi_contract_paths(contracts)
+    artifact_paths = _existing_paths(native_objects, kind="Native artifact")
+    libraries = tuple(native_libraries or ())
+    library_dirs = _existing_paths(native_library_dirs, kind="Native library", require_directory=True)
+    explicit_include_dirs = _existing_paths(native_include_dirs, kind="Native include", require_directory=True)
+    if not artifact_paths and not libraries:
+        raise ValueError(".pyi wrapper build requires at least one native object, archive, shared library, or -l name")
+
+    primary_contract = contract_paths[0]
+    output_path = Path(output_dir) if output_dir is not None else primary_contract.parent / _DEFAULT_BUILD_DIR_NAME
+    shared_library_output_path = Path(output_dir) if output_dir is not None else primary_contract.parent
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    modules = load_pyi_modules(contract_paths)
+    _normalize_pyi_modules_for_fortran_wrapping(modules)
+    module = _merge_wrapper_modules(modules)
+    scope = Scope(
+        name=module.name,
+        scope_type="module",
+        public_name_policy=PublicNamePolicy(strict=strict_wrapper_names),
+        public_namespace=(module.name.casefold(),),
+    )
+    codegen_ast = semantic_ir_to_codegen_ast(module, scope)
+    module_name = str(codegen_ast.scope.get_python_name(codegen_ast.name))
+
+    artifact_dependencies = tuple(_native_artifact_compile_object(path) for path in artifact_paths)
+    inferred_include_dirs = tuple(dict.fromkeys(path.parent for path in artifact_paths))
+    include_dirs = (*explicit_include_dirs, *inferred_include_dirs)
+    compiler = _new_gnu_compiler()
+    codegen = Codegen(module_name, codegen_ast, codegen_ast.scope)
+    module_obj = CompileObj(
+        file_name=module_name,
+        folder=str(output_path),
+        has_target_file=False,
+        include=include_dirs,
+        libs=libraries,
+        libdir=library_dirs,
+    )
+    shared_library, _timings = create_shared_library(
+        codegen,
+        module_obj,
+        language="fortran",
+        wrapper_flags="",
+        x2py_dirpath=str(output_path),
+        output_dirpath=str(shared_library_output_path),
+        compiler=compiler,
+        sharedlib_modname=module_name,
+        dependencies=artifact_dependencies,
+        verbose=verbose,
+    )
+
+    shared_library_path = Path(shared_library)
+    generated_sources = tuple(
+        path
+        for path in (
+            output_path / f"bind_c_{module_name}_wrapper.f90",
+            output_path / f"{module_name}_wrapper.c",
+            output_path / f"{module_name}_wrapper.h",
+        )
+        if path.exists()
+    )
+    generated_files = _expected_generated_files(
+        source_objects=(),
+        output_dir=output_path,
+        module_name=module_name,
+        shared_library=shared_library_path,
+    )
+    native_inputs = (
+        *(str(path) for path in artifact_paths),
+        *(f"-l{library}" if not str(library).startswith("-l") else str(library) for library in libraries),
+        *(f"-L{path}" for path in library_dirs),
+        *(f"-I{path}" for path in include_dirs),
+    )
+    return WrapperBuildResult(
+        sources=contract_paths,
+        module_name=module_name,
+        output_dir=output_path,
+        shared_library=shared_library_path,
+        build_makefile=None,
+        compiled=True,
+        generated_sources=generated_sources,
+        generated_files=generated_files,
+        native_inputs=native_inputs,
     )

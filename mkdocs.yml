@@ -1,0 +1,54 @@
+site_name: x2py
+docs_dir: docs
+nav:
+  - Home: index.md
+  - Documentation Architecture: documentation-architecture.md
+  - Getting Started: getting-started/index.md
+  - User Guide:
+      - Overview: user-guide/index.md
+      - Fortran Wrapper Guide: user-guide/fortran-wrapper.md
+  - Tutorials:
+      - Overview: tutorials/index.md
+      - Basic Wrapper Tutorial: tutorials/basic-wrapper.md
+  - Examples Gallery:
+      - Overview: examples-gallery/index.md
+      - Verified Examples Cookbook: examples-gallery/verified-cookbook.md
+      - Recipes:
+          - Build and Import With the CLI: examples-gallery/recipes/build-and-import-cli.md
+          - Build and Import With the Python API: examples-gallery/recipes/build-and-import-python-api.md
+          - Generate an Editable Makefile: examples-gallery/recipes/generate-editable-makefile.md
+          - Build Multiple Fortran Sources: examples-gallery/recipes/build-multiple-fortran-sources.md
+          - Inspect a Fortran API: examples-gallery/recipes/inspect-fortran-api.md
+          - Inspect a C API: examples-gallery/recipes/inspect-c-api.md
+          - Work With Semantic .pyi Contracts: examples-gallery/recipes/semantic-pyi-contracts.md
+          - Control CLI Output: examples-gallery/recipes/control-cli-output.md
+          - Use Python Inspection APIs: examples-gallery/recipes/use-python-inspection-apis.md
+          - Use Compiler Preprocessing Options: examples-gallery/recipes/compiler-preprocessing.md
+  - Reference:
+      - Overview: reference/index.md
+      - CLI Commands: reference/cli-commands.md
+      - Python API: reference/python-api.md
+      - Semantic IR: reference/semantic-ir.md
+      - Semantic .pyi Format: reference/semantic-pyi-format.md
+      - Diagnostic Codes: reference/diagnostic-codes.md
+  - Language Support: language-support/index.md
+  - Design Documents: design/index.md
+  - Developer Guide:
+      - Overview: developer-guide/index.md
+      - Maintainer Guide: developer-guide/maintainer-guide.md
+      - Source Map: developer-guide/source-map.md
+      - Feature To Code Map: developer-guide/feature-to-code-map.md
+      - Repository Structure: developer-guide/repository-structure.md
+      - C Parser Reference: developer-guide/c-parser-reference.md
+      - Fortran Parser Reference: developer-guide/fortran-parser-reference.md
+      - Quality Assurance: developer-guide/quality-assurance.md
+  - Internal Architecture:
+      - Overview: internal-architecture/index.md
+      - Pipeline Map: internal-architecture/pipeline-map.md
+  - Roadmap:
+      - Overview: roadmap/index.md
+      - Semantic .pyi Wrapper Checklist: roadmap/semantic-pyi-wrapper-checklist.md
+  - FAQ: faq/index.md
+  - Troubleshooting: troubleshooting/index.md
+  - Changelog: changelog/index.md
+  - Contributing: contributing/index.md
