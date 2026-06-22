@@ -354,25 +354,18 @@ class CPythonBindingGenerator(BindingGenerator):
         # Wrap classes
         classes = [self._visit(i) for i in expr.classes]
 
-        # Wrap functions
-        funcs_to_wrap = [f for f in expr.funcs if f not in (expr.init_func, expr.free_func)]
-        funcs_to_wrap = [f for f in funcs_to_wrap if f.is_semantic and not f.is_private]
-
-        # Add any functions removed by the Fortran printer
-        funcs_to_wrap.extend(expr.removed_functions)
-
-        funcs = [self._visit(f) for f in funcs_to_wrap]
-        funcs.extend(
-            self._get_allocatable_module_array_getter(variable)
-            for variable in expr.variable_wrappers
-            if variable.memory_handling == "heap"
-        )
-
-        # Wrap interfaces
-        interfaces = [self._visit(i) for i in expr.overload_sets if not i.is_private]
+        funcs, interfaces, python_exports = self._wrap_module_callables(expr)
+        if python_exports is not None:
+            python_exports.update(
+                {
+                    id(wrapped): expr.get_python_exports(source)
+                    for source, wrapped in zip(expr.classes, classes, strict=True)
+                }
+            )
 
         module_def_name = self.scope.get_new_name("module")
-        init_func = self._build_module_init_function(expr, imports, module_def_name)
+        namespace_module_defs = self._namespace_module_definitions(expr)
+        init_func = self._build_module_init_function(expr, imports, module_def_name, namespace_module_defs)
 
         API_var, import_func = self._build_module_import_function(expr)
 
@@ -390,7 +383,64 @@ class CPythonBindingGenerator(BindingGenerator):
             init_func=init_func,
             import_func=import_func,
             module_def_name=module_def_name,
+            namespace_module_defs=namespace_module_defs,
+            python_exports=python_exports,
         )
+
+    def _wrap_module_callables(self, expr):
+        funcs_to_wrap = [
+            function
+            for function in expr.funcs
+            if function not in (expr.init_func, expr.free_func) and function.is_semantic and not function.is_private
+        ]
+        funcs_to_wrap.extend(expr.removed_functions)
+        funcs = [self._visit(function) for function in funcs_to_wrap]
+        python_exports = self._callable_python_exports(expr, funcs_to_wrap, funcs)
+        self._append_allocatable_variable_getters(expr, funcs, python_exports)
+
+        source_interfaces = [interface for interface in expr.overload_sets if not interface.is_private]
+        interfaces = [self._visit(interface) for interface in source_interfaces]
+        if python_exports is not None:
+            python_exports.update(
+                {
+                    id(wrapped): expr.get_python_exports(source)
+                    for source, wrapped in zip(source_interfaces, interfaces, strict=True)
+                }
+            )
+        return funcs, interfaces, python_exports
+
+    @staticmethod
+    def _callable_python_exports(expr, source_functions, wrapped_functions):
+        if not expr.has_explicit_python_exports:
+            return None
+        return {
+            id(wrapped): expr.get_python_exports(source)
+            for source, wrapped in zip(source_functions, wrapped_functions, strict=True)
+        }
+
+    def _append_allocatable_variable_getters(self, expr, funcs, python_exports):
+        for variable in expr.variable_wrappers:
+            if variable.memory_handling != "heap":
+                continue
+            getter = self._get_allocatable_module_array_getter(variable)
+            funcs.append(getter)
+            if python_exports is not None:
+                source_name = getter.original_function.name
+                python_exports[id(getter)] = tuple(
+                    (namespace, str(self.scope.get_python_name(source_name)))
+                    for namespace, _ in expr.get_python_exports(variable)
+                )
+
+    def _namespace_module_definitions(self, expr):
+        namespaces = set()
+        objects = (*expr.funcs, *expr.overload_sets, *expr.classes, *expr.variables)
+        for obj in objects:
+            for namespace, _ in expr.get_python_exports(obj):
+                namespaces.update(tuple(namespace[:index]) for index in range(1, len(namespace) + 1))
+        return {
+            namespace: self.scope.get_new_name(f"module_{'_'.join(namespace)}", object_type="wrapper")
+            for namespace in sorted(namespaces, key=lambda item: (len(item), item))
+        }
 
     def _visit_BindCModule(self, expr):
         """
@@ -1312,6 +1362,9 @@ class CPythonBindingGenerator(BindingGenerator):
         Import | None
             The import needed in the wrapper, or None if none is necessary.
         """
+        if expr.source_module is None:
+            return None
+
         # Imports do not use collision handling as there is not enough context available.
         # This should be fixed when stub files and proper pickling is added
         import_wrapper = False
@@ -2206,7 +2259,7 @@ class CPythonBindingGenerator(BindingGenerator):
     # Node builders
     # ------------------------------------------------------------------
 
-    def _build_module_init_function(self, expr, imports, module_def_name):
+    def _build_module_init_function(self, expr, imports, module_def_name, namespace_module_defs):
         """
         Build the function that will be called when the module is first imported.
 
@@ -2260,6 +2313,12 @@ class CPythonBindingGenerator(BindingGenerator):
         ]
 
         initialised = [module_var]
+        namespace_modules, namespace_body = self._create_namespace_modules(
+            namespace_module_defs,
+            module_var,
+            initialised,
+        )
+        body.extend(namespace_body)
 
         # Save classes to the module variable
         for i, c in enumerate(expr.classes):
@@ -2291,39 +2350,64 @@ class CPythonBindingGenerator(BindingGenerator):
         if expr.init_func:
             body.append(expr.init_func())
 
-        # Save classes to the module variable
-        for i, c in enumerate(expr.classes):
-            wrapped_class = self._python_object_map[c]
-            type_object = wrapped_class.type_object
-            class_name = self.scope.get_python_name(wrapped_class.name)
-
-            ready_type = PyType_Ready(type_object)
-            if_expr = If(
-                IfSection(
-                    Lt(ready_type, convert_to_literal(0)),
-                    [Py_DECREF(i) for i in initialised] + [Return(self._error_exit_code)],
-                )
-            )
-            body.append(if_expr)
-
-            body.extend(self._add_object_to_mod(module_var, type_object, class_name, initialised))
-
-        # Save module variables to the module variable
-        for v in expr.variables:
-            if v.is_private:
-                continue
-            if isinstance(v, BindCArrayVariable) and v.memory_handling == "heap":
-                continue
-            body.extend(self._visit(v))
-            wrapped_var = self._python_object_map[v]
-            var_name = self.scope.get_python_name(v.name)
-            body.extend(self._add_object_to_mod(module_var, wrapped_var, var_name, initialised))
+        body.extend(self._add_classes_to_modules(expr, module_var, namespace_modules, initialised))
+        body.extend(self._add_variables_to_modules(expr, module_var, namespace_modules, initialised))
 
         body.append(Return(module_var))
 
         self.exit_scope()
 
         return PyModInitFunc(func_name, body, [API_var], func_scope)
+
+    def _create_namespace_modules(self, namespace_module_defs, root_module, initialised):
+        namespace_modules = {}
+        body = []
+        for namespace, child_def_name in namespace_module_defs.items():
+            child_module = self._new_python_object("mod_" + "_".join(namespace))
+            namespace_modules[namespace] = child_module
+            body.extend(
+                [
+                    AliasAssign(child_module, PyModule_Create(child_def_name)),
+                    If(
+                        IfSection(
+                            Is(child_module, NIL),
+                            [Py_DECREF(item) for item in initialised] + [Return(self._error_exit_code)],
+                        )
+                    ),
+                ]
+            )
+            parent_module = root_module if len(namespace) == 1 else namespace_modules[namespace[:-1]]
+            body.extend(self._add_object_to_mod(parent_module, child_module, namespace[-1], initialised))
+        return namespace_modules, body
+
+    def _add_classes_to_modules(self, expr, root_module, namespace_modules, initialised):
+        body = []
+        for semantic_class in expr.classes:
+            type_object = self._python_object_map[semantic_class].type_object
+            body.append(
+                If(
+                    IfSection(
+                        Lt(PyType_Ready(type_object), convert_to_literal(0)),
+                        [Py_DECREF(item) for item in initialised] + [Return(self._error_exit_code)],
+                    )
+                )
+            )
+            for namespace, class_name in expr.get_python_exports(semantic_class):
+                target_module = root_module if not namespace else namespace_modules[namespace]
+                body.extend(self._add_object_to_mod(target_module, type_object, class_name, initialised))
+        return body
+
+    def _add_variables_to_modules(self, expr, root_module, namespace_modules, initialised):
+        body = []
+        for variable in expr.variables:
+            if variable.is_private or (isinstance(variable, BindCArrayVariable) and variable.memory_handling == "heap"):
+                continue
+            body.extend(self._visit(variable))
+            wrapped_variable = self._python_object_map[variable]
+            for namespace, variable_name in expr.get_python_exports(variable):
+                target_module = root_module if not namespace else namespace_modules[namespace]
+                body.extend(self._add_object_to_mod(target_module, wrapped_variable, variable_name, initialised))
+        return body
 
     def _build_module_import_function(self, expr):
         """

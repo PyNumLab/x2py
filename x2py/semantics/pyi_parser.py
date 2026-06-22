@@ -13,9 +13,11 @@ from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     MODULE_VARIABLE_GETTER_METADATA,
+    MODULE_VARIABLE_SETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
     PYI_BIND_TARGET_METADATA,
+    PYI_LOADED_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -105,6 +107,9 @@ class _Decorators:
     overload_generic: str | None = None
     bind_target: str | None = None
     module_variable: str | None = None
+    module_variable_access: str = "get"
+    native_type: dict[str, object] | None = None
+    external: bool = False
     is_static: bool = False
     hold_gil: bool = False
     error_status_policy: dict[str, object] | None = None
@@ -120,7 +125,7 @@ class _PendingOverload:
 
 class _PyiAstParser:
     def __init__(self, *, module_name: str):
-        self.module = SemanticModule(name=module_name)
+        self.module = SemanticModule(name=module_name, metadata={PYI_LOADED_METADATA: True})
         self._pending_overloads: list[_PendingOverload] = []
 
     def parse(self, tree: ast.Module) -> SemanticModule:
@@ -138,19 +143,31 @@ class _PyiAstParser:
     def import_name(self, node: ast.Import) -> str:
         return ", ".join(f"{alias.name} as {alias.asname}" if alias.asname else alias.name for alias in node.names)
 
-    def class_def(self, node: ast.ClassDef, *, visibility: str) -> SemanticClass:
-        body = _ClassBodyVisitor(self)
+    def class_def(
+        self,
+        node: ast.ClassDef,
+        *,
+        visibility: str,
+        native_type: dict[str, object] | None = None,
+    ) -> SemanticClass:
+        body = _ClassBodyVisitor(self, class_name=node.name)
         body.visit_body(node.body)
         if body.constructor_from_fields and body.has_bound_constructor:
             raise ValueError("Direct constructor bindings replace the generated field constructor; remove one __init__")
         base_classes = [ast.unparse(base) for base in node.bases]
         origin = self._origin(
-            source_language="fortran" if body.constructor_from_fields else None,
+            source_language="fortran" if body.constructor_from_fields or native_type is not None else None,
             user_private=visibility == "private",
         )
         if not body.constructor_from_fields:
             origin.metadata[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
 
+        metadata = self._class_metadata(base_classes)
+        if native_type is not None:
+            metadata["fortran_type_attributes"] = list(native_type.get("attributes", ()))
+            finalizers = list(native_type.get("finalizers", ()))
+            if finalizers:
+                metadata["fortran_final_procedures"] = finalizers
         semantic_class = SemanticClass(
             name=node.name,
             native_name=node.name,
@@ -158,7 +175,7 @@ class _PyiAstParser:
             methods=body.methods,
             classes=body.classes,
             base_classes=base_classes,
-            metadata=self._class_metadata(base_classes),
+            metadata=metadata,
             visibility=visibility,
             origin=origin,
         )
@@ -183,7 +200,10 @@ class _PyiAstParser:
             if len(candidates) > 1:
                 raise ValueError(f"Bound constructor target {target_name!r} is ambiguous")
             target = candidates[0]
-            if constructor.arguments != target.arguments or constructor.return_type != target.return_type:
+            target_arguments = list(target.arguments)
+            if isinstance(target, SemanticMethod) and target.passed_object_position is not None:
+                target_arguments.pop(target.passed_object_position)
+            if constructor.arguments != target_arguments or constructor.return_type != target.return_type:
                 raise ValueError(f"Bound constructor declaration is incompatible with class method {target_name!r}")
             constructor.native_name = target.native_name or target.name
 
@@ -214,6 +234,7 @@ class _PyiAstParser:
         visibility: str,
         projection: list[ProjectionMapping] | None = None,
         native_name: str | None = None,
+        external: bool = False,
         hold_gil: bool = False,
         error_status_policy: dict[str, object] | None = None,
     ) -> SemanticFunction:
@@ -224,9 +245,12 @@ class _PyiAstParser:
         if error_status_policy is not None:
             metadata[RUNTIME_STATUS_ERROR_METADATA] = dict(error_status_policy)
         origin = self._origin(
-            source_language="fortran" if native_name is not None else None,
+            source_language="fortran" if external else None,
             user_private=visibility == "private",
         )
+        if external:
+            origin.source_kind = "function" if return_type is not None else "subroutine"
+            origin.native_name = native_name or node.name
         return SemanticFunction(
             name=node.name,
             native_name=native_name or node.name,
@@ -246,6 +270,8 @@ class _PyiAstParser:
         projection: list[ProjectionMapping] | None = None,
         is_static: bool = False,
         native_name: str | None = None,
+        class_name: str,
+        infer_passed_object: bool = True,
         hold_gil: bool = False,
         error_status_policy: dict[str, object] | None = None,
     ) -> SemanticMethod:
@@ -255,12 +281,35 @@ class _PyiAstParser:
             drop_untyped_self=True,
         )
         metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        passed_object_name = None
+        passed_object_position = None
+        if infer_passed_object and not is_static and node.name != "__init__":
+            pass_mappings = [mapping for mapping in projection or [] if mapping.value_kind == "pass"]
+            if len(pass_mappings) > 1:
+                raise ValueError("native_call may contain at most one Pass() entry")
+            passed_object_position = pass_mappings[0].native_position if pass_mappings else 0
+            if not isinstance(passed_object_position, int) or not 0 <= passed_object_position <= len(semantic_args):
+                raise ValueError("native_call Pass() position is out of range")
+            passed_object_name = "self"
+            semantic_args.insert(
+                passed_object_position,
+                SemanticArgument(
+                    passed_object_name,
+                    SemanticType(
+                        class_name,
+                        dtype=class_name,
+                        storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
+                    ),
+                    intent="inout",
+                ),
+            )
+            self._restore_pass_projection(projection or [], passed_object_position)
         if hold_gil:
             metadata[RUNTIME_HOLD_GIL_METADATA] = True
         if error_status_policy is not None:
             metadata[RUNTIME_STATUS_ERROR_METADATA] = dict(error_status_policy)
         origin = self._origin(
-            source_language="fortran" if native_name is not None else None,
+            source_language=None,
             user_private=visibility == "private",
         )
         return SemanticMethod(
@@ -273,7 +322,21 @@ class _PyiAstParser:
             visibility=visibility,
             origin=origin,
             is_static=is_static,
+            passed_object_name=passed_object_name,
+            passed_object_position=passed_object_position,
         )
+
+    @staticmethod
+    def _restore_pass_projection(projection: list[ProjectionMapping], passed_position: int) -> None:
+        for mapping in projection:
+            if mapping.value_kind == "pass":
+                mapping.value_kind = None
+                mapping.python_position = passed_position
+                mapping.python_name = "self"
+                mapping.native_name = mapping.native_name or "self"
+                mapping.intent = "inout"
+            elif mapping.python_position is not None and mapping.python_position >= passed_position:
+                mapping.python_position += 1
 
     def ann_assign(
         self,
@@ -321,9 +384,11 @@ class _PyiAstParser:
         handlers = {
             "overload": self._apply_overload_decorator,
             "bind": self._apply_bind_decorator,
+            "external": self._apply_external_decorator,
             "hold_gil": self._apply_hold_gil_decorator,
             "module_variable": self._apply_module_variable_decorator,
             "native_call": self._apply_native_call_decorator,
+            "native_type": self._apply_native_type_decorator,
             "raises": self._apply_raises_decorator,
         }
         handler = next((value for name, value in handlers.items() if self.matches_name(target, name)), None)
@@ -377,7 +442,45 @@ class _PyiAstParser:
     def _apply_module_variable_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
         if parsed.module_variable is not None:
             raise ValueError(f"Duplicate {context} module_variable decorator")
-        parsed.module_variable = self._required_string_decorator_argument(node, "module_variable")
+        if not isinstance(node, ast.Call) or len(node.args) != 1:
+            raise ValueError("module_variable expects one native variable name")
+        target = ast.literal_eval(node.args[0])
+        if not isinstance(target, str) or not target:
+            raise ValueError("module_variable expects a non-empty native variable name")
+        if len(node.keywords) > 1 or any(keyword.arg != "access" for keyword in node.keywords):
+            raise ValueError("module_variable accepts only the optional access keyword")
+        access = ast.literal_eval(node.keywords[0].value) if node.keywords else "get"
+        if access not in {"get", "set"}:
+            raise ValueError("module_variable access must be 'get' or 'set'")
+        parsed.module_variable = target
+        parsed.module_variable_access = access
+
+    @staticmethod
+    def _apply_external_decorator(parsed: _Decorators, node: ast.expr, context: str) -> None:
+        if isinstance(node, ast.Call):
+            raise ValueError("external does not accept arguments")
+        if parsed.external:
+            raise ValueError(f"Duplicate {context} external decorator")
+        parsed.external = True
+
+    @staticmethod
+    def _apply_native_type_decorator(parsed: _Decorators, node: ast.expr, context: str) -> None:
+        if parsed.native_type is not None:
+            raise ValueError(f"Duplicate {context} native_type decorator")
+        if not isinstance(node, ast.Call) or node.args:
+            raise ValueError("native_type accepts keyword arguments only")
+        allowed = {"attributes", "finalizers"}
+        values: dict[str, object] = {}
+        for keyword in node.keywords:
+            if keyword.arg not in allowed:
+                raise ValueError(f"native_type got unsupported keyword {keyword.arg!r}")
+            if keyword.arg in values:
+                raise ValueError(f"native_type repeats {keyword.arg!r}")
+            value = ast.literal_eval(keyword.value)
+            if not isinstance(value, tuple) or not all(isinstance(item, str) and item for item in value):
+                raise ValueError(f"native_type {keyword.arg} must be a tuple of non-empty strings")
+            values[keyword.arg] = value
+        parsed.native_type = values
 
     def _apply_native_call_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
         del context
@@ -689,6 +792,13 @@ class _PyiAstParser:
                 result_position=int(ast.literal_eval(position_arg)),
                 intent="out",
             )
+        if helper == "Pass":
+            if node.args:
+                raise ValueError("Pass does not accept arguments")
+            return ProjectionMapping(
+                native_position=native_position,
+                value_kind="pass",
+            )
         if helper == "Const":
             if len(node.args) != 1:
                 raise ValueError("Const expects one value")
@@ -874,6 +984,8 @@ class _PyiAstParser:
         if helper in {"Intent", "FortranCharacterLength"}:
             self._apply_scalar_annotation_metadata(semantic_type, node, helper)
             return
+        if helper in {"FortranType", "FortranCallback"}:
+            raise ValueError(f"{helper} metadata is no longer part of the semantic .pyi contract")
         if helper == "PointerAssociation":
             self._apply_pointer_association_metadata(semantic_type, node)
             return
@@ -972,6 +1084,12 @@ class _PyiAstParser:
         if name == "FortranTarget":
             semantic_type.metadata["fortran_target"] = True
             return True
+        if name == "AssumedType":
+            semantic_type.metadata["fortran_assumed_type"] = True
+            return True
+        if name == "Polymorphic":
+            semantic_type.metadata["fortran_polymorphic"] = True
+            return True
         return False
 
     @staticmethod
@@ -1029,7 +1147,7 @@ class _PyiAstParser:
         storage = semantic_type.storage
         if storage is None:
             return "in"
-        if storage.kind in {"reference", "array", "pointer"} and not storage.read_only:
+        if storage.kind in {"reference", "array", "pointer", "callback"} and not storage.read_only:
             return "inout"
         return "in"
 
@@ -1126,7 +1244,8 @@ class _PyiAstParser:
             return SemanticType(
                 name="Callable",
                 dtype="Callable",
-                metadata={"arguments": None, "return": self.semantic_type(raw_return)},
+                metadata=self._callback_metadata(None, self.semantic_type(raw_return)),
+                storage=self._callback_storage(),
             )
         if not isinstance(raw_args, ast.List):
             raise ValueError(f"Callable arguments must be a list: {ast.unparse(node)!r}")
@@ -1134,10 +1253,30 @@ class _PyiAstParser:
         return SemanticType(
             name="Callable",
             dtype="Callable",
-            metadata={
-                "arguments": [self.semantic_type(item) for item in raw_args.elts],
-                "return": self.semantic_type(raw_return),
-            },
+            metadata=self._callback_metadata(
+                [self.semantic_type(item) for item in raw_args.elts],
+                self.semantic_type(raw_return),
+            ),
+            storage=self._callback_storage(),
+        )
+
+    @staticmethod
+    def _callback_metadata(arguments: list[SemanticType] | None, return_type: SemanticType) -> dict[str, object]:
+        return {
+            "arguments": arguments,
+            "return": return_type,
+            "fortran_callback_kind": "subroutine" if return_type.name == "None" else "function",
+            "callback_lifetime": "call",
+            "callback_thread": "entering_thread",
+            "callback_exception": "print_traceback_and_abort",
+        }
+
+    @staticmethod
+    def _callback_storage() -> SemanticStorageContract:
+        return SemanticStorageContract(
+            kind="callback",
+            ownership="borrowed",
+            calling_convention="fortran_dummy_procedure",
         )
 
     def return_projection(
@@ -1218,6 +1357,40 @@ class _PyiAstParser:
             origin=self._origin(user_private=decorators.visibility == "private"),
         )
 
+    def apply_module_variable_setter(
+        self,
+        node: ast.FunctionDef,
+        decorators: _Decorators,
+        variable: SemanticVariable,
+    ) -> None:
+        if (
+            len(node.args.args) != 1
+            or node.args.vararg
+            or node.args.kwarg
+            or node.args.kwonlyargs
+            or node.args.posonlyargs
+        ):
+            raise ValueError("module_variable setter must accept exactly one argument")
+        self._validate_stub_callable(node)
+        returns_none = self.matches_name(node.returns, "None") or (
+            isinstance(node.returns, ast.Constant) and node.returns.value is None
+        )
+        if node.returns is None or not returns_none:
+            raise ValueError("module_variable setter must return None")
+        value = self.ann_assign(
+            ast.AnnAssign(
+                target=ast.Name(id=node.args.args[0].arg),
+                annotation=node.args.args[0].annotation,
+                value=None,
+                simple=1,
+            ),
+            default_intent="in",
+            binding_cls=SemanticArgument,
+        )
+        if value.semantic_type != variable.semantic_type:
+            raise ValueError(f"module_variable setter for {variable.name!r} has an incompatible value type")
+        variable.metadata[MODULE_VARIABLE_SETTER_METADATA] = node.name
+
     def _module_variable_return_type(self, node: ast.expr) -> SemanticType:
         optional = False
         if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
@@ -1229,7 +1402,7 @@ class _PyiAstParser:
             optional = True
         semantic_type = self.semantic_type(node)
         storage = semantic_type.storage
-        if not optional or storage is None or storage.array is None or not storage.array.allocatable:
+        if optional and (storage is None or storage.array is None or not storage.array.allocatable):
             raise ValueError("module_variable getter return must be an allocatable array unioned with None")
         return semantic_type
 
@@ -1344,7 +1517,7 @@ class _PyiAstParser:
             raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
 
         args = list(zip(node.args.args, self._argument_defaults(node), strict=False))
-        if drop_untyped_self and args and args[0][0].arg == "self" and args[0][0].annotation is None:
+        if drop_untyped_self and args and args[0][0].arg == "self":
             args = args[1:]
 
         semantic_args = [self._callable_argument(arg, default) for arg, default in args]
@@ -1429,6 +1602,8 @@ class _PyiAstParser:
             if mapping.native_name and not mapping.python_name:
                 mapping.python_name = mapping.native_name
             return_type.ownership.mutable = True
+            if return_type.rank == 0 and return_type.storage is None:
+                return_type.storage = SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1)
             returned_args.insert(
                 0,
                 SemanticArgument(
@@ -1486,8 +1661,9 @@ class _PyiAstParser:
 
 
 class _ClassBodyVisitor(ast.NodeVisitor):
-    def __init__(self, parser: _PyiAstParser):
+    def __init__(self, parser: _PyiAstParser, *, class_name: str):
         self.parser = parser
+        self.class_name = class_name
         self.fields: list[SemanticField] = []
         self.methods: list[SemanticMethod] = []
         self.pending_overloads: list[tuple[SemanticMethod, str, str | None]] = []
@@ -1509,6 +1685,10 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         decorators = self.parser.decorators(node.decorator_list, context="class body")
         if decorators.module_variable is not None:
             raise ValueError("module_variable is only valid for module-level getter functions")
+        if decorators.external:
+            raise ValueError("external is not valid for a class method")
+        if decorators.native_type is not None:
+            raise ValueError("native_type is only valid for classes")
         if not node.decorator_list and self._is_generated_constructor(node):
             self.constructor_from_fields = True
             return
@@ -1528,6 +1708,8 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             projection=decorators.projection,
             is_static=decorators.is_static,
             native_name=decorators.bind_target,
+            class_name=self.class_name,
+            infer_passed_object=decorators.overload_target is None,
             hold_gil=decorators.hold_gil,
             error_status_policy=decorators.error_status_policy,
         )
@@ -1561,13 +1743,20 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             or decorators.bind_target is not None
             or decorators.hold_gil
             or decorators.error_status_policy is not None
+            or decorators.external
         ):
             raise ValueError(f"Unsupported class body decorator: {ast.unparse(node.decorator_list[-1])!r}")
         if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
             raise ValueError(
                 f"Enum declarations are not supported; use Final[...] integer constants: {_node_text(node)!r}"
             )
-        self.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
+        self.classes.append(
+            self.parser.class_def(
+                node,
+                visibility=decorators.visibility,
+                native_type=decorators.native_type,
+            )
+        )
 
     def generic_visit(self, node: ast.AST) -> None:
         raise ValueError(f"Unsupported class body node: {_node_text(node)!r}")
@@ -1600,6 +1789,7 @@ class _ModuleVisitor(ast.NodeVisitor):
             or decorators.bind_target is not None
             or decorators.hold_gil
             or decorators.error_status_policy is not None
+            or decorators.external
         ):
             raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
         if decorators.module_variable is not None:
@@ -1608,10 +1798,18 @@ class _ModuleVisitor(ast.NodeVisitor):
             raise ValueError(
                 f"Enum declarations are not supported; use Final[...] integer constants: {_node_text(node)!r}"
             )
-        self.parser.module.classes.append(self.parser.class_def(node, visibility=decorators.visibility))
+        self.parser.module.classes.append(
+            self.parser.class_def(
+                node,
+                visibility=decorators.visibility,
+                native_type=decorators.native_type,
+            )
+        )
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context=".pyi")
+        if decorators.native_type is not None:
+            raise ValueError("native_type is only valid for classes")
         if decorators.module_variable is not None:
             if (
                 decorators.overload_target is not None
@@ -1619,17 +1817,34 @@ class _ModuleVisitor(ast.NodeVisitor):
                 or decorators.bind_target is not None
                 or decorators.hold_gil
                 or decorators.error_status_policy is not None
+                or decorators.external
             ):
                 raise ValueError(
-                    "module_variable cannot be combined with overload, bind, native_call, hold_gil, or raises"
+                    "module_variable cannot be combined with overload, bind, native_call, external, hold_gil, or raises"
                 )
-            self.parser.module.variables.append(self.parser.module_variable_getter(node, decorators))
+            if decorators.module_variable_access == "get":
+                if any(variable.name == decorators.module_variable for variable in self.parser.module.variables):
+                    raise ValueError(f"Duplicate module_variable getter for {decorators.module_variable!r}")
+                self.parser.module.variables.append(self.parser.module_variable_getter(node, decorators))
+            else:
+                matches = [
+                    variable
+                    for variable in self.parser.module.variables
+                    if variable.name == decorators.module_variable
+                    and MODULE_VARIABLE_GETTER_METADATA in variable.metadata
+                ]
+                if len(matches) != 1:
+                    raise ValueError(
+                        f"module_variable setter for {decorators.module_variable!r} requires one preceding getter"
+                    )
+                self.parser.apply_module_variable_setter(node, decorators, matches[0])
             return
         function = self.parser.function_def(
             node,
             visibility=decorators.visibility,
             projection=decorators.projection,
             native_name=decorators.bind_target,
+            external=decorators.external,
             hold_gil=decorators.hold_gil,
             error_status_policy=decorators.error_status_policy,
         )

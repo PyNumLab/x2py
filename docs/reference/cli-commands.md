@@ -137,7 +137,7 @@ Important boundaries:
 | Option | Purpose |
 | --- | --- |
 | `--json` | Prints JSON to stdout for inspection stages. |
-| `--out [PATH]` | Writes stage output to a file. Without a path, writes one output next to each input where supported. |
+| `--out [PATH]` | Writes stage output. For `--pyi`, `PATH` is the parent of generated source contract directories. |
 | `--out-dir DIR` | Selects the wrapper build output directory. |
 | `--verbose` | Prints wrapper compiler commands and build steps. |
 | `--no-color` | Disables ANSI color in parse diagnostics. |
@@ -157,7 +157,7 @@ artifacts.
 | Parse with compiler preprocessing | `python3 -m x2py path/to/api.h --language c --parse --compiler clang-18 -I include -D API_EXPORT= --std c11` |
 | Write parser JSON | `python3 -m x2py path/to/file.f90 --parse --json --out report.json` |
 | Print semantic IR | `python3 -m x2py path/to/file.f90 --semantics` |
-| Emit semantic `.pyi` text | `python3 -m x2py path/to/file.f90 --pyi --out module.pyi` |
+| Emit a semantic `.pyi` contract directory | `python3 -m x2py path/to/file.f90 --pyi --out contracts` |
 | Check edited `.pyi` readiness | `python3 -m x2py path/to/module.pyi --wrap-readiness --json` |
 | Build a Fortran wrapper | `python3 -m x2py path/to/file.f` |
 | Generate an editable Makefile | `python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build` |

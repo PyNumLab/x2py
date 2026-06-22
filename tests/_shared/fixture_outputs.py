@@ -1,6 +1,7 @@
 import json
 import shutil
 from dataclasses import asdict
+from functools import lru_cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -12,6 +13,7 @@ from x2py.semantics.c2ir import c_project_to_semantic_module
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules, fortran_module_to_semantic_module
 from x2py.codegen.printers.pyi_printer import emit_module
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
+from x2py.cli import _fortran_contract_files, _semantic_report
 
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
@@ -155,8 +157,10 @@ def wrap_readiness_message_payload_for_corpus() -> dict:
     }
 
 
-def pyi_text_for_fixture(path: Path) -> str:
-    return "\n\n".join(emit_module(module) for module in semantic_modules_for_fixture(path)).strip()
+@lru_cache
+def pyi_files_for_fixture(path: Path) -> dict[Path, str]:
+    report = _semantic_report([str(path)])[str(path)]
+    return _fortran_contract_files(path, report)
 
 
 def parse_c_fixture_project(paths: list[Path]):
@@ -211,10 +215,6 @@ def semantics_fixture_path(path: Path) -> Path:
     return (SEMANTICS_FIXTURE_DIR / path.name).with_suffix(".json")
 
 
-def pyi_fixture_path(path: Path) -> Path:
-    return (PYI_FIXTURE_DIR / path.name).with_suffix(".pyi")
-
-
 def c_pyi_fixture_path(project_key: Path) -> Path:
     return (C_PYI_FIXTURE_DIR / project_key).with_suffix(".pyi")
 
@@ -226,11 +226,22 @@ def write_semantics_fixture(path: Path) -> Path:
     return out
 
 
-def write_pyi_fixture(path: Path) -> Path:
-    out = pyi_fixture_path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(pyi_text_for_fixture(path) + "\n", encoding="utf-8")
-    return out
+def reset_fortran_pyi_fixtures() -> None:
+    PYI_FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
+    for path in PYI_FIXTURE_DIR.iterdir():
+        if path.is_dir():
+            shutil.rmtree(path)
+        elif path.suffix == ".pyi":
+            path.unlink()
+
+
+def write_pyi_fixture_package(path: Path) -> Path:
+    package_dir = PYI_FIXTURE_DIR / path.stem
+    for relative_path, text in pyi_files_for_fixture(path).items():
+        target = PYI_FIXTURE_DIR / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text + "\n", encoding="utf-8")
+    return package_dir
 
 
 def write_c_pyi_fixture(project_key: Path, paths: list[Path]) -> Path:

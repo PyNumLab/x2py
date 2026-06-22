@@ -720,6 +720,10 @@ class FortranToIRConverter:
         return SemanticModule(
             name=name,
             functions=[self.visit_procedure(proc, callback_interfaces=callback_interfaces) for proc in procedures],
+            origin=SemanticOrigin(
+                source_language="fortran",
+                source_kind="external_root",
+            ),
         )
 
     def variable_to_semantic_type(self, var) -> SemanticType:

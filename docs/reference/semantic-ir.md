@@ -405,25 +405,27 @@ Rank-one storage has no C-versus-Fortran order distinction, so no order marker
 is emitted for vectors.
 
 `ArrayCategory(...)`, `SourceDims(...)`, `LowerBounds(...)` and `Contiguous`
-are not part of newly generated canonical array annotations. They described
-native declaration provenance rather than additional requirements on the
-Python-visible array. The loader continues to accept existing edited stubs
-that contain these metadata forms. Fortran source category, original bounds
-and declaration dimensions may remain available as internal source provenance
+are not part of generated canonical array annotations. They described native
+declaration provenance rather than additional requirements on the
+Python-visible array. Fortran source category, original bounds and declaration
+dimensions may remain available as internal source provenance
 when converting source; they are not required for the public storage contract
 or for ordinary Python-to-Fortran array argument association.
 
-### Implemented Fortran Exact Form
+### Implemented Fortran Native Contract And Projection
 
-Generated Fortran `.pyi` currently represents the exact native dummy-argument
-interface. It does not synthesize, reorder or hide arguments and it does not
-turn `intent(out)` or `intent(inout)` dummy arguments into Python return
-values.
+Generated Fortran `.pyi` retains the exact native dummy-argument interface but
+may expose hidden outputs as Python return values. Ordinary annotations carry
+the native types. When the Python signature differs from native argument order,
+ordered `@native_call` projection metadata carries that topology.
 
 Fortran scalar dummy arguments are represented as follows:
 
 - Scalar dummy without `value`, `intent(in)`: `Ptr(Const(T))`.
-- Scalar dummy without `value`, `intent(out)` or `intent(inout)`: `Ptr(T)`.
+- Scalar dummy without `value`, `intent(out)`: hidden Python result backed by
+  an `Intent("out")` native argument and a `Return(...)` projection entry.
+- Scalar dummy without `value`, `intent(inout)`: `Ptr(T)`, except documented
+  immutable replacement values that use a named return projection.
 - Scalar dummy with `value`: direct `T`.
 - Function result: direct return annotation.
 
@@ -438,11 +440,11 @@ end subroutine
 ```
 
 ```python
+@native_call([Arg(0), Arg(1), Return("result", 0)])
 def update(
     scale: Float64,
     value: Ptr(Float64),
-    result: Annotated[Ptr(Float64), Intent("out")]
-) -> None: ...
+) -> Returns["result", Float64]: ...
 ```
 
 Fortran derived-type fields are data declarations, not procedure dummy
@@ -593,14 +595,14 @@ The loader rejects removed dimension helper syntax in type annotations. Use
 array subscriptions such as `Float64[n]`, `Float64[:, :]` or
 `Float64[::Strided]` instead.
 
-### Pythonic Projection (Later)
+### Pythonic Projection
 
-The implemented Fortran generator emits the exact form described above. A
-later optional generation or editing mode, for example `--pythonic`, may
-expose a friendlier Python API whose arguments or results differ from that
-native contract. Such a projected interface must retain a mapping back to the
-exact semantic/native interface; it must not discard source origin, storage,
-intent, shape, ownership or lowering facts needed to issue the call.
+The implemented Fortran generator uses projection for supported output and
+replacement contracts. Further optional generation or editing may expose a
+friendlier Python API whose arguments or results differ from the native
+contract. Every projected interface must retain a mapping back to the exact
+semantic/native interface; it must not discard source origin, storage, intent,
+shape, ownership or lowering facts needed to issue the call.
 
 A projection is allowed to be more restrictive or more expressive than the
 exact native interface, according to the Python API the user wants to expose.
@@ -610,14 +612,15 @@ use that the native routine could technically accept. At the native-call
 boundary, however, the mapped native values must still satisfy the
 requirements encoded by the exact native contract.
 
-The Fortran converter does not automatically generate a projected interface.
-The loader and printer retain explicit projection mappings for edited semantic
-stubs, including `@native_call` entries formed from `Arg`, `Return`, `Const`,
-`Len`, `IsPresent`, `Work` and `.shape[...]`, plus `Returns[...]`. The
-pointer/reference adaptation examples below (`Ptr(Arg(...))` and
-`Ptr(Return(...))`), `As[...]`, `.strides[...]`, coercion policy and
-validation contracts describe extensions required for the fuller Pythonic
-projection; they are not currently accepted or emitted by this path.
+The Fortran converter automatically generates projection mappings for
+supported hidden and replacement outputs. The loader and printer also retain
+explicit mappings from edited semantic stubs, including `@native_call` entries
+formed from `Arg`, `Return`, `Const`, `Len`, `IsPresent`, `Work`, `Pass`, and
+`.shape[...]`, plus `Returns[...]`. The pointer/reference adaptation examples
+below (`Ptr(Arg(...))` and `Ptr(Return(...))`), `As[...]`, `.strides[...]`,
+coercion policy and validation contracts describe extensions required for the
+fuller Pythonic projection; they are not currently accepted or emitted by this
+path.
 
 #### Native Argument Projection
 
@@ -642,15 +645,11 @@ native call and read the updated value back as a Python result:
 def advance(value: Float64) -> Returns["value", Float64]: ...
 ```
 
-Similarly, an `intent(out)` scalar currently remains an explicit writable
-reference with its preserved source intent:
+An `intent(out)` scalar is generated as a hidden Python result while preserving
+its native position:
 
 ```python
-# Implemented exact form.
-def get_count(result: Annotated[Ptr(Int32), Intent("out")]) -> None: ...
-
-# Projected form, not currently implemented.
-@native_call([Ptr(Return(0))])
+@native_call([Return("result", 0)])
 def get_count() -> Int32: ...
 ```
 

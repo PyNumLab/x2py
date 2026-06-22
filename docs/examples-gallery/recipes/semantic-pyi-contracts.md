@@ -15,14 +15,14 @@ semantic contract.
 
 ```bash
 python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --pyi --out basic_subroutine.pyi
+  --pyi --out contracts
 ```
 
 Open the generated `.pyi`, edit only the supported semantic contract syntax,
 then check readiness:
 
 ```bash
-python3 -m x2py basic_subroutine.pyi --wrap-readiness
+python3 -m x2py contracts/basic_subroutine/basic_subroutine.pyi --wrap-readiness
 ```
 
 ## Build From A `.pyi` Contract

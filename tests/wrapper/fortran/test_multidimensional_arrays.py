@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.wrapper.fortran._support import _sole_native_module
+
 
 SOURCE = Path(__file__).with_name("multid_arrays.f90")
 EXPECTED_GENERATED_SOURCES = {
@@ -50,7 +52,7 @@ def module(tmp_path_factory):
     sys.modules.pop(SOURCE.stem, None)
     sys.path.insert(0, str(build_dir))
     try:
-        return importlib.import_module(SOURCE.stem)
+        return _sole_native_module(importlib.import_module(SOURCE.stem))
     finally:
         sys.path.remove(str(build_dir))
 

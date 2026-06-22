@@ -642,7 +642,13 @@ class PyModule(Module):
     Module : The super class from which the class inherits.
     """
 
-    __slots__ = ("_declarations", "_external_funcs", "_import_func", "_module_def_name")
+    __slots__ = (
+        "_declarations",
+        "_external_funcs",
+        "_import_func",
+        "_module_def_name",
+        "_namespace_module_defs",
+    )
     _attribute_nodes = (*Module._attribute_nodes, "_external_funcs", "_declarations", "_import_func")
 
     def __init__(
@@ -654,12 +660,14 @@ class PyModule(Module):
         init_func=None,
         import_func,
         module_def_name,
+        namespace_module_defs=None,
         **kwargs,
     ):
         """Initialize one ``PyModule`` model instance."""
         self._external_funcs = external_funcs
         self._declarations = declarations
         self._module_def_name = module_def_name
+        self._namespace_module_defs = dict(namespace_module_defs or {})
         self._import_func = import_func
         super().__init__(name, *args, init_func=init_func, **kwargs)
 
@@ -673,6 +681,11 @@ class PyModule(Module):
         definition and declaration is inaccessible from C.
         """
         return self._external_funcs
+
+    @property
+    def namespace_module_defs(self):
+        """Return child namespace paths and their generated module definitions."""
+        return self._namespace_module_defs
 
     @external_funcs.setter
     def external_funcs(self, funcs):

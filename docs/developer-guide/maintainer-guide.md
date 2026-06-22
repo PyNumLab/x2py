@@ -795,6 +795,8 @@ from `x2py/semantics/models.py`.
   treated as wrapper interface items by default.
 - `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
 - `x2py/semantics/pyi_parser.py` loads edited contracts back into semantic IR.
+- `x2py/semantics/native_contract.py` validates immutable native scope, ABI,
+  placement, type, callback, and projection facts before source-free codegen.
 - `x2py/semantics/readiness.py` decides whether that IR is complete enough for
   wrapping.
 
@@ -805,7 +807,10 @@ semantic contract, avoid changing semantic fixtures.
 
 `@native_call` is stored as projection metadata on `SemanticFunction`. The
 loader and printer currently support `Arg`, `Return`, `Const`, `Len`,
-`IsPresent`, `Work`, and `.shape[...]` value references. They do not currently
+`IsPresent`, `Work`, `Pass`, and `.shape[...]` value references. Generated
+Fortran contracts use it when outputs make the Python-visible argument order
+differ from native order. `Pass()` preserves the hidden passed object when a
+type-bound method also needs such a projection. They do not currently
 implement future wrapper projection helpers such as `Ptr(Arg(...))`, `As[...]`,
 status-return policy, ownership conversion, or coercion execution.
 

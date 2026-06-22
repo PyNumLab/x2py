@@ -11,6 +11,7 @@ editable `.pyi` files, readiness diagnostics, and wrapper code generation.
 | `fortran2ir.py` | Fortran parser facts to semantic modules. |
 | `c2ir.py` | C parser facts to semantic modules. |
 | `pyi_parser.py` | User-editable semantic `.pyi` loading and validation. |
+| `native_contract.py` | Source-free native ABI and placement validation. |
 | `readiness.py` | Support blockers and readiness reports before wrapper codegen. |
 | `ir2ast.py` | Semantic IR to codegen AST lowering for wrapper generation. |
 

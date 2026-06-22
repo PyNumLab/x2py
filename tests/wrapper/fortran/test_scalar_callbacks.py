@@ -74,6 +74,7 @@ def test_callback_exception_prints_traceback_and_aborts_host_process(tmp_path: P
     script = """
 import numpy as np
 import fcallback_scalar_f90 as module
+module = module.fcallback_scalar_f90
 
 def fail(value):
     raise ValueError(f"callback exploded at {value}")
@@ -97,7 +98,7 @@ module.apply_scalar(fail, np.float64(4.0))
             sys.executable,
             "-c",
             (
-                "import numpy as np; import fcallback_scalar_f90 as module; "
+                "import numpy as np; import fcallback_scalar_f90 as root; module = root.fcallback_scalar_f90; "
                 "module.apply_scalar(lambda value: 'wrong', np.float64(4.0))"
             ),
         ],
@@ -114,7 +115,7 @@ module.apply_scalar(fail, np.float64(4.0))
             sys.executable,
             "-c",
             (
-                "import numpy as np; import fcallback_scalar_f90 as module; "
+                "import numpy as np; import fcallback_scalar_f90 as root; module = root.fcallback_scalar_f90; "
                 "module.apply_scalar(lambda: np.float64(1.0), np.float64(4.0))"
             ),
         ],

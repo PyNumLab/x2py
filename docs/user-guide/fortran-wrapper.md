@@ -104,7 +104,7 @@ ordered Fortran source files
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
   -> semantic modules and readiness blockers
-  -> merged public wrapper module and collision-safe Python names
+  -> source-root export tree preserving native module namespaces
   -> codegen AST
   -> Fortran bind(C) bridge
   -> C/CPython binding and x2py runtime support
@@ -128,9 +128,11 @@ Typical generated artifacts are:
 | user and generated `.o`/`.mod` files | Native build intermediates |
 | `<module>.<extension-suffix>.so` | Importable extension on Linux |
 
-The extension name comes from the first generated semantic module. For a
-multi-source build, x2py merges the public surface into that extension and
-compiles sources in caller-supplied order.
+The extension name comes from the first source filename. Contained Fortran
+modules become child Python namespaces and standalone procedures remain at the
+extension root. For example, `solver.f90` containing module `kernels` exposes
+`solver.kernels`, not a flattened `solver` surface. Multi-source builds preserve
+one child per contained module and compile sources in caller-supplied order.
 
 Without `--out-dir`, x2py uses a private `__x2py__` build directory beside the
 source and places the importable extension beside the source file. Generated
@@ -1310,9 +1312,10 @@ way.
 
 ### Semantic Stub Output
 
-Semantic `.pyi` output is module-based rather than source-file-based. A file
-containing two Fortran modules produces two stubs for implicit `--pyi --out`
-writes. An explicit path such as `--out api.pyi` requests one aggregate file.
+Semantic `.pyi` output creates one contract directory per source file. The
+directory contains the source-named entry contract and one leaf per Fortran
+module. `--out contracts` selects the parent directory; without a path, the
+contract directory is created beside the source.
 
 ### Editable Makefile
 

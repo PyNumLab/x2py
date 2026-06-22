@@ -63,21 +63,59 @@ Function and method bodies must be `...`. Positional-only, keyword-only,
 part of the semantic format. The generated keyword-only derived-type
 constructor described below is the only keyword-only exception.
 
-`load_pyi_modules(...)` can load one file, several files, or a directory tree.
-Directory loading derives dotted module names from relative `.pyi` paths and
-reconciles imported external type references across the loaded set.
+Wrapper commands accept exactly one entry `.pyi`. Relative imports from that
+entry recursively discover the remaining contract files and reconcile imported
+type references across the discovered project. Low-level semantic loading may
+still operate on the resulting file set internally; users do not pass that set
+as separate wrapper inputs.
 
-## Contract Bundles And Native Procedure Placement
-
-> **Roadmap:** `@external`, generated contract bundles, `__init__.pyi` export
-> lowering, `--root-contract`, and `--extension-name` are the required contract
-> described here, but are not implemented by the current `.pyi` build subset.
+## Contract Files And Native Procedure Placement
 
 Wrapper generation must distinguish immutable native structure from editable
 Python export policy. Module `.pyi` files describe where native declarations
 actually live. A root export contract describes where those declarations appear
 in Python. Export policy must never rewrite native module membership or ABI
 facts.
+
+Every contained Fortran module is emitted as a leaf named after that module:
+
+```text
+solver_mod.pyi
+```
+
+The leaf filename is the native module identity. Renaming the leaf changes the
+module selected by generated bridge code. Module procedures need no placement
+or kind decorator: a declaration returning `None` is a subroutine; an
+unprojected return is a function result; returns named by `@native_call` are
+native output arguments.
+
+The ordinary module-procedure form is intentionally small:
+
+```python
+def update(value: Ptr(Float64)) -> None: ...
+```
+
+Only standalone procedures carry `@external`:
+
+```python
+@external
+def update(value: Ptr(Float64)) -> None: ...
+```
+
+`@bind("native_name")` remains necessary only when the Python declaration name
+differs from the native symbol. `@native_call` remains necessary only when the
+Python signature hides, inserts, or reorders native arguments. For type-bound
+methods, `Pass()` records a non-default passed-object position.
+
+Ordinary semantic types are the native type contract. `Int32`, `Float64`,
+`Ptr`, `Const`, array rank, shape, and focused metadata such as `Allocatable`
+are not duplicated with source-language spellings. `@native_type(...)` is
+emitted only when a derived type has irreducible attributes or finalizers.
+
+These facts are structurally validated before `.pyi` wrapper code generation.
+They are declarations about the supplied native artifacts, not binary
+introspection: x2py cannot prove that an arbitrary opaque binary actually uses
+the declared ABI.
 
 ### Contained Module Procedures
 
@@ -144,20 +182,73 @@ suffix:
 
 | Native input shape | Generated contract shape |
 | --- | --- |
-| One source containing one module | One `<module>.pyi` |
-| One source containing several modules | One contract directory with `__init__.pyi` and one `.pyi` per module |
-| Several sources containing modules | One contract directory with `__init__.pyi` and one `.pyi` per module |
-| One fixed- or free-form source containing only standalone procedures | One root fragment with `@external` on every procedure |
-| Several standalone-procedure sources, such as BLAS/LAPACK | One contract directory with `__init__.pyi` and organized external fragments |
-| Mixed modules and standalone procedures | One contract directory containing module contracts, external fragments, and `__init__.pyi` |
+| One source containing one module | One source-named contract directory containing the entry and one `<module>.pyi` leaf |
+| One source containing several modules | One source-named contract directory containing the entry and one `<module>.pyi` per module |
+| Several sources containing modules | Module leaves plus one entry contract for the requested extension surface |
+| One fixed- or free-form source containing only standalone procedures | One `<source>/<source>.pyi` entry with `@external` on every procedure |
+| Several standalone-procedure sources, such as BLAS/LAPACK | One entry contract importing organized external fragments |
+| Mixed modules and standalone procedures | One entry contract containing standalone declarations and importing module leaves |
 
-A physical source file containing two modules generates two module `.pyi` files.
-Conversely, a source file containing several standalone procedures may generate
-one external fragment containing several `@external` declarations because those
-procedures all contribute to the extension root rather than a native module
-namespace.
+A physical source file always generates a source-named contract directory. The
+entry normally retains the source filename and imports one leaf per native
+module. For example,
+`basic_subroutine.f90` containing module `m1` emits:
 
-For a LAPACK-style bundle, the generated layout may be:
+```text
+basic_subroutine/
+├── basic_subroutine.pyi  # entry contract: from . import m1
+└── m1.pyi                # declarations for native module m1
+```
+
+The source-named file is the only wrapper input. It recursively discovers its
+native leaves:
+
+```bash
+python3 -m x2py basic_subroutine/basic_subroutine.pyi \
+  --wrap \
+  --native-object basic_subroutine.o
+```
+
+`--extension-name` remains an optional override; otherwise the entry filename
+supplies the extension name. The runtime follows the entry's import policy:
+`from . import m1` exposes `basic_subroutine.m1`, while
+`from .m1 import *` explicitly flattens `m1` into the extension root.
+
+A mixed source keeps standalone procedures in the entry contract and marks each
+one with `@external`:
+
+```python
+from . import m1
+
+@external
+def func(value: Ptr(Float64)) -> None: ...
+```
+
+This exposes `basic_subroutine.func` and `basic_subroutine.m1.add1`. The
+standalone marker remains necessary because the bridge must distinguish an
+external call from `use m1, only: add1`.
+
+When the source and a contained module are both named `foo`, the source-named
+entry would collide with the required native leaf. Generation uses
+`foo/__init__.pyi` only for that collision:
+
+```text
+foo/
+├── __init__.pyi  # from . import foo; standalone externals also live here
+└── foo.pyi       # declarations contained in native module foo
+```
+
+This deliberately exposes `foo.foo.module_procedure`; a standalone procedure
+from the same source remains `foo.external_procedure`. A standalone-only source
+does not need the collision form and generates only `foo/foo.pyi`.
+
+When source and module names are identical, generation writes the native leaf
+and uses it as the implicit root instead of writing a second file with the same
+name. A source file containing standalone procedures may generate one external
+fragment containing several `@external` declarations because those procedures
+all contribute to the extension root rather than a native module namespace.
+
+For a LAPACK-style project, the organized layout may be:
 
 ```text
 contracts/lapack/
@@ -168,16 +259,16 @@ contracts/lapack/
     └── dgetrs.pyi
 ```
 
-The `externals/` directory organizes contract fragments; it is not automatically
-a public runtime namespace.
+The entry is still the sole wrapper input. The `externals/` directory organizes
+contract fragments; its declarations appear only where the entry imports them.
 
 ### Native Artifacts And Link Resolution
 
 Semantic contracts do not map to native artifacts by filename. x2py must never
 assume that `name.pyi` is implemented by `name.o`:
 
-- one `.pyi` may require several objects and libraries;
-- several `.pyi` files may be implemented by one object or archive;
+- one entry `.pyi` may require several objects and libraries;
+- several imported `.pyi` files may be implemented by one object or archive;
 - one shared library may implement an entire BLAS/LAPACK contract bundle; and
 - module files, objects, archives, shared libraries, and transitive libraries
   may come from different directories or build systems.
@@ -227,8 +318,8 @@ Required link cases are:
 | --- | --- |
 | One contract, one object | one `.o` plus module directory when applicable |
 | One contract, several dependencies | repeated objects/archives/shared libraries and named libraries |
-| Several contracts, separate objects | all required `.o` files in dependency-safe link order |
-| Several contracts, one archive | one `.a`; no contract-to-member mapping is inferred |
+| Imported contracts, separate objects | all required `.o` files in dependency-safe link order |
+| Imported contracts, one archive | one `.a`; no contract-to-member mapping is inferred |
 | Vendor shared implementation | direct `.so` path or `--native-library NAME` plus search directory |
 | Mixed implementation | objects, archives, direct shared libraries, and named libraries in one ordered plan |
 | Module procedures | native artifacts plus every required `.mod` search directory |
@@ -252,8 +343,8 @@ build or import diagnostics rather than triggering a source fallback.
 
 ### Root Export Contract
 
-For multi-file contract sets, generated `__init__.pyi` is the default root
-export contract. Native module boundaries remain preserved by default:
+For multi-file contract projects, one entry file defines the export contract.
+Native module boundaries remain preserved by default:
 
 ```python
 from . import module1 as module1
@@ -263,6 +354,17 @@ from . import module2 as module2
 With extension name `library`, this exposes
 `library.module1.update` and `library.module2.update`. Identically named members
 in different native modules do not collide.
+
+Aliases change only the Python export tree. They never change native placement:
+
+```python
+from . import module1 as solver
+from .module2 import update as update_second
+```
+
+This exposes `library.solver` and `library.update_second`, not
+`library.module1` or `library.update`. The bridge still imports native module
+`module1` and still calls native procedure `module2.update`.
 
 Standalone procedures are explicitly re-exported at the extension root:
 
@@ -293,46 +395,40 @@ from .module2 import *
 Wildcard import order must not silently resolve collisions. If both modules
 export `update`, readiness fails and requires explicit aliases or exclusions.
 
-### Root Selection And Extension Identity
+### Entry Contract And Extension Identity
 
-Root export resolution follows this order:
-
-1. an explicit `--root-contract PATH`;
-2. otherwise `__init__.pyi` in the contract directory;
-3. otherwise one supplied `.pyi` may act as an implicit root; and
-4. several `.pyi` inputs without either root form fail as ambiguous.
-
-When one module `.pyi` acts as the implicit root, the extension root represents
-that sole native module. A multi-module bundle needs a separate root contract so
-each native module can remain a distinct child namespace.
+Every `.pyi` wrapper build takes exactly one entry contract. A module leaf may
+itself be the entry; in that case its declarations appear at the extension root.
+A multi-module project uses an entry containing relative imports so each native
+module remains a distinct child namespace unless explicitly re-exported.
 
 An arbitrary root file is allowed and uses normal stub import syntax without a
 `.pyi` suffix:
 
 ```python
 # api.pyi
-from module1 import *
-from module2 import *
+from .module1 import *
+from .module2 import *
 ```
 
-The root filename does not choose the compiled extension name. Multi-module and
-standalone-only contract sets require `--extension-name`, which controls the
-extension filename, `PyInit_<name>` symbol, and Python import name. Source,
-generated-contract, and modified-contract parity builds use the same explicit
-extension name.
+The entry filename chooses the compiled extension and shared-library name by
+default. For `__init__.pyi`, the resolved containing directory name is used;
+calling x2py as either `foo/__init__.pyi` or `__init__.pyi` from inside `foo/`
+therefore selects `foo`. `--extension-name`
+overrides that inference and controls the extension filename,
+`PyInit_<name>` symbol, and Python import name.
 
 Target CLI shapes are:
 
 ```bash
-python3 -m x2py contracts/library \
+python3 -m x2py contracts/library/__init__.pyi \
   --wrap \
   --extension-name library \
   --native-object native.a
 ```
 
 ```bash
-python3 -m x2py module1.pyi module2.pyi \
-  --root-contract api.pyi \
+python3 -m x2py api.pyi \
   --wrap \
   --extension-name library \
   --native-library native \
@@ -348,8 +444,41 @@ python3 -m x2py dgesv.pyi \
   --native-object dgesv.o
 ```
 
-These future commands still treat native artifacts as link inputs only. They do
-not permit fallback parsing of unavailable Fortran source.
+These commands treat native artifacts as link inputs only. They do not permit
+fallback parsing of unavailable Fortran source. The entry recursively resolves
+its relative imports; imported contracts must not also appear as positional
+arguments.
+
+### Contract Import Graph
+
+x2py parses the entry as a restricted semantic stub; it does not execute Python
+code. Every relative import is resolved recursively to a sibling `.pyi` or a
+package `__init__.pyi`, producing the complete transitive contract graph before
+readiness or code generation. Files that both declare native objects and import
+other contracts contribute both roles.
+
+The resolver preserves normal explicit export intent:
+
+```python
+from . import m1 as m2
+from .m1 import func as f
+from .m1 import *
+```
+
+The first form creates child namespace `m2`, the second exports only `f`, and
+the third explicitly flattens all public names. Missing relative imports,
+relative-import cycles, and conflicting exports fail before code generation and
+identify the participating contract paths.
+
+Absolute support imports such as `from typing import Callable` or
+`from types import SimpleNamespace` may support annotation parsing, but they are
+not contract graph edges and never create runtime exports. Generated references
+to declarations in another contract package file use relative imports.
+
+Source-driven wrapping applies the same export construction internally. A
+source `foo.f90` containing module `m1` therefore exposes `foo.m1`, while
+standalone procedures remain directly below `foo`; source and generated-contract
+builds must not disagree about namespace placement.
 
 ## Semantic Type Names
 
@@ -587,9 +716,10 @@ a wrapped external type without changing the importing file.
 
 ## Functions, Methods And Returns
 
-Generated C and Fortran stubs currently describe exact native interfaces: they
-do not hide length arguments, reorder parameters, synthesize output returns, or
-guess pointer ownership.
+Generated Fortran stubs present the documented Python call while retaining the
+exact native argument topology. An identity call needs no `@native_call`.
+Whenever the Python signature hides, inserts, or reorders a native argument,
+the generated declaration includes `@native_call`.
 
 Fortran scalar dummy arguments are generated as:
 
@@ -616,6 +746,22 @@ return components after the first are converted to generated output arguments.
 When the name matches an existing Python-visible argument, the argument remains
 an input and the return item represents replacement-style `intent(inout)`
 behavior for immutable public values such as Python `str`.
+
+For example, a native subroutine ordered as `(a, status, b)` with hidden scalar
+`status` output is represented as:
+
+```python
+@native_call([Arg(0), Return("status", 0), Arg(1)])
+def solve(
+    a: Ptr(Const(Float64)),
+    b: Ptr(Const(Float64)),
+) -> Int32: ...
+```
+
+`@native_call` preserves native argument order. The return annotation preserves
+Python result order and the hidden output's native name and type. A function
+result is Python result slot zero; projected output arguments follow it in
+native argument order.
 
 Class methods use the same stub form. An untyped leading `self` is allowed in a
 method and is not treated as a native argument.
@@ -897,8 +1043,10 @@ variable. The variable itself is not added as a mutable Python module
 attribute.
 
 ```python
+@module_variable("counter", access="get")
 def get_counter() -> Int32: ...
 
+@module_variable("counter", access="set")
 def set_counter(value: Int32) -> None: ...
 ```
 
@@ -978,9 +1126,9 @@ def f(class_: Annotated[Int32, Name("class")]) -> None: ...
 
 ## Projection Metadata
 
-`@native_call` is loaded and printed as projection metadata for edited stubs
-whose Python-visible signature intentionally differs from the exact native
-signature:
+`@native_call` is loaded and printed whenever the Python-visible signature
+differs from the exact native signature, whether the projection was generated
+from native `intent(out)` behavior or written by the user:
 
 ```python
 @native_call([Arg(0), Arg(0).shape[0], Return("result", 0)])
@@ -994,15 +1142,17 @@ Loaded projection entries:
 | `Arg(i)` | native argument is Python argument `i` |
 | `Return(i)` | native argument is supplied by projected return slot `i` |
 | `Return("name", i)` | named native argument is supplied by projected return slot `i` |
+| `Pass()` | hidden type-bound passed-object argument |
 | `Const(value)` | hidden native literal |
 | `Len(Arg(i))`, `Len(Return(i))`, `Len(Work("name"))` | hidden native length metadata |
 | `Arg(i).shape[d]`, `Return(i).shape[d]`, `Work("name").shape[d]` | hidden native shape metadata |
 | `IsPresent(Arg(i))` | hidden native optional-presence metadata |
 | `Work("name")` | hidden workspace value |
 
-This syntax is metadata today. Runtime lowering, allocation, copy-back,
-validation, coercions and ownership behavior are roadmap work unless a backend
-explicitly implements them.
+Generated hidden-output mappings and existing backend-supported projection
+entries are lowered into runtime calls. General allocation, coercion,
+validation, and ownership transformations remain unsupported unless the
+relevant backend explicitly implements them.
 
 ## Current Generated Coverage
 
@@ -1012,31 +1162,33 @@ Generated `.pyi` currently covers these exact-contract areas:
 | --- | --- |
 | Fortran intrinsic scalars | compiler-aware semantic dtype names |
 | C primitive scalars | compiler-probed semantic dtype names when a target report is supplied |
-| Functions/subroutines | exact native argument order and direct return type |
+| Native scope | module-leaf filename, or `@external` for standalone procedures |
+| Functions/subroutines | declaration return shape, optional native rename, ABI argument order, and direct result |
+| Hidden Fortran outputs | Python returns plus generated `@native_call` in native argument order |
 | Fortran scalar references | `Ptr(Const(T))`, `Ptr(T)`, `Intent("out")` |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
 | Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
 | C and Fortran enums | module-level `Final[...]` integer constants |
-| Fortran derived types | classes with fields and methods when resolvable |
+| Fortran derived types | classes with fields and methods; `@native_type` only for irreducible attributes or finalizers |
 | Fortran generic interfaces | explicit `@overload("specific")` links with C-extension dtype/rank dispatch |
 | Fortran defined operators | Python data-model methods plus explicit named-operator methods |
 | Fortran defined assignment | explicit mutating `assign(...)` overloads |
 | C structs/unions | `CStruct` and `CUnion` classes |
 | C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
 | Opaque types | `Opaque` classes and owner-module dependency stubs |
-| Imports | `import ...` and `from ... import ...` with aliases |
+| Imports | retained native `import ...` and `from ... import ...` dependencies with aliases |
+| Callbacks | complete `Callable` signatures when source interfaces resolve |
 | Incomplete C callbacks | placeholder type that readiness reports as incomplete |
 
 Loaded but usually not generated from source today:
 
 | Area | Loaded behavior |
 | --- | --- |
-| `Callable[[...], ...]` | complete callback/procedure signature metadata |
 | `Ptr[n](T)` for `n > 1` | direct low-level pointer topology |
 | `ORDER_ANY` | edited orientation-independent array contract |
 | generic `Annotated` constraints | preserved semantic constraints |
-| `@native_call` and `Returns[...]` | projection metadata |
+| additional `@native_call` and `Returns[...]` edits | projection metadata beyond generated output mappings |
 | source-provenance array helpers | compatibility loading for older or edited stubs |
 
 ## Rejected Or Not Yet Supported
@@ -1052,10 +1204,11 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
   for the generated derived-type constructor shape.
 - nested enum declarations.
 - ordinary function bodies instead of `...`.
-- unsupported decorators other than `@private`, `@native_call`,
-  `@module_variable("native_name")`,
-  `@overload("specific")`, its documented `generic=` form, and
-  `@staticmethod`.
+- unsupported decorators other than `@private`, `@bind`, `@external`,
+  `@native_call`, `@native_type`,
+  `@module_variable("native_name", access="get" | "set")`,
+  `@overload("specific")`, its documented `generic=` form, `@raises`,
+  `@hold_gil`, and `@staticmethod`.
 - bare `@overload` or `typing.overload`; overload links require one concrete
   procedure name.
 

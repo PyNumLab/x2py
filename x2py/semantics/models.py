@@ -7,6 +7,7 @@ from typing import Any
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
 MODULE_VARIABLE_GETTER_METADATA = "module_variable_getter"
+MODULE_VARIABLE_SETTER_METADATA = "module_variable_setter"
 PYI_BIND_TARGET_METADATA = "pyi_bind_target"
 PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA = "pyi_suppress_default_constructor"
 PYI_USER_PRIVATE_METADATA = "pyi_user_private"
@@ -328,6 +329,10 @@ OVERLOAD_KIND_METADATA = "overload_kind"
 OVERLOAD_TARGET_METADATA = "overload_target"
 PYTHON_BOUND_POSITION_METADATA = "python_bound_position"
 PYTHON_METHOD_NAME_METADATA = "python_method_name"
+PYTHON_EXPORTS_METADATA = "python_exports"
+PYTHON_EXPORTS_PREPARED_METADATA = "python_exports_prepared"
+PYI_LOADED_METADATA = "pyi_loaded"
+PYI_NATIVE_CONTRACT_PREPARED_METADATA = "pyi_native_contract_prepared"
 PYTHON_STATIC_METADATA = "python_static"
 
 

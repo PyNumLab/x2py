@@ -34,11 +34,11 @@ def test_multi_file_modules_build_one_merged_extension(tmp_path: Path):
     )
 
     assert payload["module_name"] == "first_api"
-    assert module.add_one(np.int32(4)) == 5
-    assert module.double_value(np.int32(4)) == 10
-    assert module.get_counter() == 3
-    module.set_counter(np.int32(7))
-    assert module.get_counter() == 7
+    assert module.first_api.add_one(np.int32(4)) == 5
+    assert module.second_api.double_value(np.int32(4)) == 10
+    assert module.second_api.get_counter() == 3
+    module.second_api.set_counter(np.int32(7))
+    assert module.second_api.get_counter() == 7
     bridge = (tmp_path / "bind_c_first_api_wrapper.f90").read_text(encoding="utf-8").lower()
     assert "use first_api" in bridge
     assert "use second_api" in bridge
@@ -116,6 +116,6 @@ def test_makefile_mode_reproduces_multi_source_build(tmp_path: Path):
     sys.path.insert(0, str(tmp_path))
     try:
         module = importlib.import_module("first_api")
-        assert module.double_value(np.int32(4)) == 10
+        assert module.second_api.double_value(np.int32(4)) == 10
     finally:
         sys.path.remove(str(tmp_path))

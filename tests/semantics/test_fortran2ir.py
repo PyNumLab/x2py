@@ -36,6 +36,8 @@ from x2py.semantics.fortran2ir import (
     resolve_semantic_compile_time_values,
 )
 from x2py.semantics import models as semantic_models
+from x2py.semantics.native_contract import native_contract_issues
+from x2py.semantics.pyi_parser import parse_pyi_text
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.codegen.printers.pyi_printer import emit_module
 
@@ -52,7 +54,7 @@ from x2py.semantics.models import (
     SemanticVariable,
 )
 
-OPERATOR_F90_SOURCE = Path(__file__).parents[1] / "wrapper" / "foperators_f90.f90"
+OPERATOR_F90_SOURCE = Path(__file__).parents[1] / "wrapper" / "fortran" / "foperators_f90.f90"
 
 
 # ============================================================
@@ -1251,6 +1253,9 @@ end module lifecycle_mod
     assert state.fields[0].default_value == "7"
     assert state.fields[0].metadata["fortran_initializer"] == "7"
     assert state.metadata["fortran_final_procedures"] == ["cleanup"]
+    emitted = emit_module(module)
+    assert "@native_type(finalizers=('cleanup',))" in emitted
+    assert native_contract_issues(parse_pyi_text(emitted, module_name=module.name)) == []
 
 
 def test_bind_c_and_sequence_types_preserve_accessor_layout_metadata():
@@ -1278,6 +1283,7 @@ end module layout_mod
     point, tagged, ordered = module.classes
 
     assert point.metadata["fortran_type_attributes"] == ["bind(c)"]
+    assert "@native_type(attributes=('bind(c)',))" in emit_module(module)
     assert point.metadata["fortran_bind_c"] is True
     assert point.metadata["fortran_layout_policy"] == "accessors"
     assert point.metadata["fortran_direct_layout"] is False
@@ -1309,6 +1315,7 @@ end module layout_mod
     assert tagged.fields[1].origin.source_type == "logical(kind=c_bool)"
     assert tagged.fields[2].origin.source_type == "complex(kind=c_double_complex)"
     assert ordered.metadata["fortran_type_attributes"] == ["sequence"]
+    assert "@native_type(attributes=('sequence',))" in emit_module(module)
     assert ordered.metadata["fortran_sequence"] is True
     assert ordered.metadata["fortran_layout_policy"] == "accessors"
 
@@ -2520,10 +2527,9 @@ end module callbacks
     assert notify_callback.metadata["return"].name == "None"
 
     emitted = emit_module(module)
-    assert (
-        "callback: Callable[[Ptr(Const(Int32)), Const(Float64[count]), Ptr(Const(point_t))], Float64[count]]" in emitted
-    )
-    assert "callback: Callable[[Ptr(Const(Int32))], None]" in emitted
+    assert "FortranCallback" not in emitted
+    assert "Callable[[" in emitted
+    assert native_contract_issues(parse_pyi_text(emitted, module_name=module.name)) == []
 
     project = parse_fortran_project(
         {

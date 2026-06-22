@@ -423,7 +423,7 @@ def test_cli_pyi_output():
     assert "def add1(" in res.stdout
 
 
-def test_cli_pyi_out_writes_adjacent_file(tmp_path: Path):
+def test_cli_pyi_out_writes_adjacent_contract_package(tmp_path: Path):
     f90 = tmp_path / "mini.f90"
     f90.write_text(
         """module m
@@ -441,12 +441,12 @@ end module m
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert res.stdout == ""
-    out = tmp_path / "m.pyi"
-    assert out.exists()
-    assert "def add1" in out.read_text(encoding="utf-8")
+    package = tmp_path / "mini"
+    assert (package / "mini.pyi").read_text(encoding="utf-8") == "from . import m\n"
+    assert "def add1" in (package / "m.pyi").read_text(encoding="utf-8")
 
 
-def test_cli_pyi_out_writes_one_file_per_fortran_module(tmp_path: Path):
+def test_cli_pyi_out_writes_modules_inside_source_contract_package(tmp_path: Path):
     source = tmp_path / "combined.f90"
     source.write_text(
         """module first_mod
@@ -468,11 +468,15 @@ end module second_mod
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert result.stdout == ""
-    assert "def first(" in (tmp_path / "first_mod.pyi").read_text(encoding="utf-8")
-    assert "def second(" in (tmp_path / "second_mod.pyi").read_text(encoding="utf-8")
+    package = tmp_path / "combined"
+    assert (package / "combined.pyi").read_text(encoding="utf-8") == (
+        "from . import first_mod\nfrom . import second_mod\n"
+    )
+    assert "def first(" in (package / "first_mod.pyi").read_text(encoding="utf-8")
+    assert "def second(" in (package / "second_mod.pyi").read_text(encoding="utf-8")
 
 
-def test_cli_pyi_out_writes_explicit_file_from_inline_code(tmp_path: Path):
+def test_cli_pyi_out_uses_explicit_contract_parent_from_inline_code(tmp_path: Path):
     f90 = tmp_path / "explicit.f90"
     f90.write_text(
         """module explicit_mod
@@ -484,17 +488,19 @@ end module explicit_mod
 """,
         encoding="utf-8",
     )
-    out = tmp_path / "explicit_api.pyi"
+    out = tmp_path / "contracts"
 
     cmd = [sys.executable, "-m", "x2py", str(f90), "--pyi", "--out", str(out)]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert res.stdout == ""
-    assert out.exists()
-    text = out.read_text(encoding="utf-8")
-    assert "@native_call([Return('x', 0)])" in text
-    assert "def set_value(" in text
-    assert "-> Ptr(Float64): ..." in text
+    package = out / "explicit"
+    text = (package / "explicit.pyi").read_text(encoding="utf-8")
+    assert text == "from . import explicit_mod\n"
+    leaf_text = package.joinpath("explicit_mod.pyi").read_text(encoding="utf-8")
+    assert "@native_call([Return('x', 0)])" in leaf_text
+    assert "def set_value(" in leaf_text
+    assert "-> Float64: ..." in leaf_text
 
 
 def test_cli_rejects_conflicting_json_and_pyi_out_from_inline_code(tmp_path: Path):
@@ -683,8 +689,9 @@ end module physics
     monkeypatch.setattr(sys, "argv", ["x2py", str(physics), "--pyi", "--out"])
     assert x2py_cli.main() == 0
 
-    assert (tmp_path / "physics.pyi").exists()
-    assert (tmp_path / "types_mod.pyi").read_text(encoding="utf-8") == "class particle(Opaque):\n    pass\n"
+    package = tmp_path / "physics"
+    assert (package / "__init__.pyi").read_text(encoding="utf-8") == "from . import physics\n"
+    assert (package / "types_mod.pyi").read_text(encoding="utf-8") == "class particle(Opaque):\n    pass\n"
 
 
 def test_x2py_pyi_report_formats_and_rejects_conflicting_dependency_stubs():
@@ -1861,7 +1868,7 @@ def test_cli_help_includes_examples():
     assert "python3 -m x2py path/to/file.f90 --parse --show-vars" in res.stdout
     assert "python3 -m x2py path/to/file.f90 --parse --print-limit 50" in res.stdout
     assert "python3 -m x2py path/to/api.h --language c --parse --print-limit 50" in res.stdout
-    assert "python3 -m x2py path/to/file.f90 --pyi --out module.pyi" in res.stdout
+    assert "python3 -m x2py path/to/file.f90 --pyi --out contracts" in res.stdout
     assert "python3 -m x2py path/to/file.f" in res.stdout
 
 
@@ -1955,6 +1962,7 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         ("wrapper builds", ("--native-library",)),
         ("wrapper builds", ("--native-library-dir", "--library-dir")),
         ("wrapper builds", ("--native-include-dir",)),
+        ("wrapper builds", ("--extension-name",)),
         ("output and diagnostics", ("--json",)),
         ("output and diagnostics", ("--out",)),
         ("output and diagnostics", ("--out-dir",)),
@@ -2806,10 +2814,18 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
         assert preprocessing is config
         return expected_compile_time_values
 
-    def convert(module, *, compile_time_values: object, wrapped_derived_types):
+    def convert(
+        received,
+        *,
+        standalone_module_name,
+        compile_time_values: object,
+        wrapped_derived_types,
+    ):
+        assert received is parsed
+        assert standalone_module_name == "api"
         assert compile_time_values is expected_compile_time_values
         assert wrapped_derived_types is wrapped_types
-        return {native_left: left, native_right: right}[module]
+        return [left, right]
 
     def emit(modules, *, available_modules):
         assert modules == [left, right]
@@ -2825,7 +2841,7 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
     monkeypatch.setattr(x2py_cli, "_fortran_source_for_path", source)
     monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
     monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
-    monkeypatch.setattr("x2py.semantics.fortran2ir.fortran_module_to_semantic_module", convert)
+    monkeypatch.setattr("x2py.semantics.fortran2ir.fortran_file_to_semantic_modules", convert)
     monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
@@ -3055,9 +3071,10 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
         calls.append(("asdict", received))
         return {"name": "api"}
 
-    def assess(modules, *, source):
+    def assess(modules, *, source, require_native_contract):
         assert modules == [module]
         assert source == str(stub)
+        assert require_native_contract is True
         calls.append(("assess", modules, source))
         return readiness
 

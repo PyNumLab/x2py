@@ -30,6 +30,8 @@ from x2py.semantics.pyi_parser import (
     parse_pyi_text,
 )
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
+from x2py.semantics.native_contract import native_contract_issues
+from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.codegen.bindings.c_to_python import CPythonBindingGenerator
 from x2py.codegen.printers.pyi_printer import emit_module
 from x2py.codegen.scope import Scope
@@ -406,8 +408,8 @@ class wrapper:
 
 class particle:
     @private
-    @native_call([Arg(0)])
-    def reset(self: particle) -> Int32: ...
+    @native_call([Pass()])
+    def reset(self) -> Int32: ...
 """,
         module_name="edited",
     )
@@ -426,9 +428,9 @@ class particle:
         "native_position": 0,
         "python_position": 0,
         "result_position": None,
-        "value_kind": "",
+        "value_kind": None,
         "value": None,
-        "intent": "in",
+        "intent": "inout",
     }
     emitted = emit_module(module)
     assert "    @private\n    def reset(self) -> Int32: ..." in emitted
@@ -1481,6 +1483,7 @@ def helper(value: Int32) -> None: ...
     )
 
     helper = module.functions[0]
+    assert native_contract_issues(module) == []
     assert helper.visibility == "private"
     assert helper.origin.source_language == "fortran"
     assert helper.origin.metadata[PYI_USER_PRIVATE_METADATA] is True
@@ -1602,6 +1605,8 @@ def test_generated_pyi_loads_and_reemits_for_all_fortran_fixtures(tmp_path: Path
             try:
                 loaded = load_pyi_file(pyi_path)
                 assert parse_pyi_text(emit_module(loaded), module_name=loaded.name) == loaded
+                issues = native_contract_issues(loaded)
+                assert issues == []
             finally:
                 pyi_path.unlink(missing_ok=True)
 
@@ -1610,3 +1615,74 @@ def test_generated_pyi_loads_and_reemits_for_all_fortran_fixtures(tmp_path: Path
     assert checked_modules > 0
     assert skipped_unresolved_types > 0
     assert not list(tmp_path.glob("*.pyi"))
+
+
+def test_generated_native_scope_comes_from_contract_filename():
+    parsed = parse_fortran_file(
+        """
+module solver_mod
+contains
+  subroutine solve(value)
+    real(8), intent(in) :: value
+  end subroutine solve
+end module solver_mod
+"""
+    )
+    module = fortran_file_to_semantic_modules(parsed)[0]
+    loaded = parse_pyi_text(emit_module(module), module_name="renamed_contract")
+
+    assert loaded.name == "renamed_contract"
+    assert native_contract_issues(loaded) == []
+    assert loaded.origin.native_name == "renamed_contract"
+    assert loaded.functions[0].origin.native_scope == "renamed_contract"
+
+
+def test_generated_standalone_contract_retains_external_native_placement():
+    parsed = parse_fortran_file(
+        """
+subroutine solve(value)
+  real(8), intent(in) :: value
+end subroutine solve
+"""
+    )
+    module = fortran_file_to_semantic_modules(parsed, standalone_module_name="root_contract")[0]
+    generated = emit_module(module)
+    loaded = parse_pyi_text(generated, module_name="renamed_root_contract")
+
+    assert "@external" in generated
+    assert loaded.functions[0].origin.native_scope is None
+    assert native_contract_issues(loaded) == []
+    assert loaded.origin.native_name == "renamed_root_contract"
+    assert loaded.functions[0].origin.native_scope is None
+
+
+def test_native_contract_structurally_accepts_declared_type_and_constraint_edits():
+    parsed = parse_fortran_file(
+        """
+module solver_mod
+contains
+  function solve(value) result(result)
+    real(8), intent(in) :: value
+    real(8) :: result
+  end function solve
+end module solver_mod
+"""
+    )
+    generated = emit_module(fortran_file_to_semantic_modules(parsed)[0])
+    constrained = generated.replace(
+        "Ptr(Const(Float64))",
+        "Annotated[Ptr(Const(Float64)), Finite]",
+        1,
+    )
+    changed_abi = generated.replace("Ptr(Const(Float64))", "Ptr(Const(Int32))", 1)
+
+    assert native_contract_issues(parse_pyi_text(constrained, module_name="solver_mod")) == []
+    assert native_contract_issues(parse_pyi_text(changed_abi, module_name="solver_mod")) == []
+
+
+def test_readiness_uses_source_free_contract_filename_as_native_scope():
+    module = parse_pyi_text("def solve(value: Float64) -> Float64: ...\n", module_name="missing")
+    report = assess_semantic_wrap_readiness(module, require_native_contract=True)
+
+    assert report["wrappable"] is True
+    assert module.origin.native_name == "missing"

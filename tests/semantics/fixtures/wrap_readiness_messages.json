@@ -1618,6 +1618,56 @@
       "messages": [],
       "blockers": []
     },
+    "general/contract_import_graph.f90": {
+      "wrappable": true,
+      "status": "ok",
+      "n_modules": 2,
+      "n_functions": 2,
+      "n_classes": 0,
+      "n_variables": 0,
+      "messages": [],
+      "blockers": []
+    },
+    "general/contract_mixed_module_external.f90": {
+      "wrappable": true,
+      "status": "ok",
+      "n_modules": 2,
+      "n_functions": 2,
+      "n_classes": 0,
+      "n_variables": 0,
+      "messages": [],
+      "blockers": []
+    },
+    "general/contract_multi_module.f90": {
+      "wrappable": true,
+      "status": "ok",
+      "n_modules": 2,
+      "n_functions": 2,
+      "n_classes": 0,
+      "n_variables": 0,
+      "messages": [],
+      "blockers": []
+    },
+    "general/contract_same_name.f90": {
+      "wrappable": true,
+      "status": "ok",
+      "n_modules": 2,
+      "n_functions": 2,
+      "n_classes": 0,
+      "n_variables": 0,
+      "messages": [],
+      "blockers": []
+    },
+    "general/contract_standalone_only.f90": {
+      "wrappable": true,
+      "status": "ok",
+      "n_modules": 1,
+      "n_functions": 2,
+      "n_classes": 0,
+      "n_variables": 0,
+      "messages": [],
+      "blockers": []
+    },
     "general/derived_type.f90": {
       "wrappable": true,
       "status": "ok",

@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.wrapper.fortran._support import _build_text_and_import
+from tests.wrapper.fortran._support import _build_text_and_import, _sole_native_module
 
 RUNTIME_ABI_SOURCE = Path(__file__).with_name("fruntime_abi_f90.f90")
 
@@ -77,7 +77,7 @@ def test_debug_and_optimized_wrapper_builds_preserve_runtime_abi(tmp_path: Path)
     sys.modules.pop("fruntime_abi_f90", None)
     sys.path.insert(0, str(optimized_dir))
     try:
-        optimized_module = importlib.import_module("fruntime_abi_f90")
+        optimized_module = _sole_native_module(importlib.import_module("fruntime_abi_f90"))
         assert optimized_module.scale(np.float64(4.0), np.float64(1.25)) == np.float64(5.0)
     finally:
         sys.path.remove(str(optimized_dir))

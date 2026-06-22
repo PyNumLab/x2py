@@ -17,6 +17,7 @@ from .models import (
     SemanticType,
     SemanticVariable,
 )
+from .native_contract import native_contract_issues
 from .pyi_parser import load_pyi_modules
 
 
@@ -84,13 +85,18 @@ def assess_pyi_wrap_readiness(
     raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
     expanded = _expand_pyi_paths(raw_paths)
     modules = load_pyi_modules(raw_paths, encoding=encoding)
-    return assess_semantic_wrap_readiness(modules, source=[str(path) for path in expanded])
+    return assess_semantic_wrap_readiness(
+        modules,
+        source=[str(path) for path in expanded],
+        require_native_contract=True,
+    )
 
 
 def assess_semantic_wrap_readiness(
     semantic_ir: SemanticModule | Iterable[SemanticModule],
     *,
     source: str | list[str] | None = None,
+    require_native_contract: bool = False,
 ) -> dict:
     """Assess whether semantic IR is complete enough to drive wrapping.
 
@@ -98,7 +104,7 @@ def assess_semantic_wrap_readiness(
     interface, this semantic check treats that interface as the source of truth.
     """
     modules = list(semantic_ir) if not isinstance(semantic_ir, SemanticModule) else [semantic_ir]
-    checker = _SemanticReadinessChecker(modules)
+    checker = _SemanticReadinessChecker(modules, require_native_contract=require_native_contract)
     return checker.assess(source=source)
 
 
@@ -115,8 +121,9 @@ def _expand_pyi_paths(paths: str | Path | Iterable[str | Path]) -> list[Path]:
 
 
 class _SemanticReadinessChecker:
-    def __init__(self, modules: list[SemanticModule]):
+    def __init__(self, modules: list[SemanticModule], *, require_native_contract: bool = False):
         self.modules = modules
+        self.require_native_contract = require_native_contract
         self.index = _SemanticTypeIndex(modules)
         self._blockers: dict[str, dict] = {}
         self._unit_blockers: dict[str, dict] = {}
@@ -181,6 +188,15 @@ class _SemanticReadinessChecker:
         }
 
     def _check_module(self, module: SemanticModule) -> None:
+        if self.require_native_contract:
+            for issue in native_contract_issues(module):
+                self._add_blocker(
+                    issue.code,
+                    issue.message,
+                    {"owner": issue.owner, "item": issue.owner.rsplit(".", 1)[-1]},
+                    unit=issue.owner,
+                    unit_kind="native_contract",
+                )
         self._check_metadata_blockers(
             getattr(module, "metadata", {}),
             owner=module.name,

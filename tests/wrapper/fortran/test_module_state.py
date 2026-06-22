@@ -8,6 +8,7 @@ import numpy as np
 
 from tests.wrapper.fortran._support import (
     _build_text_and_import,
+    _sole_native_module,
 )
 
 MODULE_VARIABLES_F90_TEXT = Path(__file__).with_name("fmodule_vars_f90.f90").read_text(encoding="utf-8")
@@ -66,7 +67,7 @@ def test_scalar_module_variables_use_accessors_and_parameters_have_no_setter(tmp
     sys.modules.pop("fmodule_vars_f90", None)
     sys.path.insert(0, str(tmp_path))
     try:
-        second_module = importlib.import_module("fmodule_vars_f90")
+        second_module = _sole_native_module(importlib.import_module("fmodule_vars_f90"))
     finally:
         sys.path.remove(str(tmp_path))
 

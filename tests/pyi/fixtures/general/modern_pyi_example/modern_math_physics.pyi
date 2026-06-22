@@ -13,8 +13,10 @@ class particle:
 class vector3:
     values: Float64[3]
 
+@module_variable("counter", access="get")
 def get_counter() -> Int32: ...
 
+@module_variable("counter", access="set")
 def set_counter(value: Int32) -> None: ...
 
 @native_call([Return('p', 0), Arg(0), Arg(1), Arg(2), Arg(3), Arg(4)])
@@ -24,7 +26,7 @@ def init_particle(
     x: Ptr(Const(Float64)),
     y: Ptr(Const(Float64)),
     z: Ptr(Const(Float64))
-) -> Ptr(particle): ...
+) -> particle: ...
 
 def kinetic_energy(
     p: Ptr(Const(particle)),

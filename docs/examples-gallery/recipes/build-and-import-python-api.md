@@ -30,9 +30,10 @@ with TemporaryDirectory() as output_dir:
     spec = spec_from_file_location(build.module_name, build.shared_library)
     module = module_from_spec(spec)
     spec.loader.exec_module(module)
+    native_module = module.fruntime_abi_f90
 
     print(build.module_name)
-    print(module.scale(np.float64(3.0), np.float64(2.5)))
+    print(native_module.scale(np.float64(3.0), np.float64(2.5)))
 ```
 
 Expected output:

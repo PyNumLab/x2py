@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.wrapper.fortran._support import _sole_native_module
+
 RUNTIME_POLICY_SOURCE = Path(__file__).with_name("fruntime_policy_f90.f90")
 
 
@@ -39,7 +41,7 @@ def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_pat
     sys.modules.pop(result.module_name, None)
     sys.path.insert(0, str(tmp_path))
     try:
-        module = importlib.import_module(result.module_name)
+        module = _sole_native_module(importlib.import_module(result.module_name))
         assert module.solve(np.int32(1)) is None
         with pytest.raises(RuntimeError, match="negative input"):
             module.solve(np.int32(-1))

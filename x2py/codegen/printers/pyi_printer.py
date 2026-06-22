@@ -13,6 +13,7 @@ from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     MODULE_VARIABLE_GETTER_METADATA,
+    MODULE_VARIABLE_SETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
     PYI_BIND_TARGET_METADATA,
@@ -165,11 +166,32 @@ class PyiPrinter:
         """Emit class syntax."""
         bases = f"({', '.join(cls.base_classes)})" if cls.base_classes else ""
         body = self._class_body(cls)
-        decorator = "@private\n" if self._is_private(cls) else ""
+        decorators = []
+        if self._is_private(cls):
+            decorators.append("@private")
+        native_type = self._native_type_decorator(cls)
+        if native_type:
+            decorators.append(native_type)
+        decorator_text = "\n".join(decorators)
+        if decorator_text:
+            decorator_text += "\n"
         return f"""
-{decorator}class {cls.name}{bases}:
+{decorator_text}class {cls.name}{bases}:
 {body}
 """.strip()
+
+    @staticmethod
+    def _native_type_decorator(cls: SemanticClass) -> str:
+        if cls.origin.source_language != "fortran" or cls.origin.source_kind != "derived_type":
+            return ""
+        attributes = tuple(str(item) for item in cls.metadata.get("fortran_type_attributes", ()))
+        finalizers = tuple(str(item) for item in cls.metadata.get("fortran_final_procedures", ()))
+        parts = []
+        if attributes:
+            parts.append(f"attributes={attributes!r}")
+        if finalizers:
+            parts.append(f"finalizers={finalizers!r}")
+        return f"@native_type({', '.join(parts)})" if parts else ""
 
     def _visit_SemanticModule(self, module: SemanticModule) -> str:
         """Emit module syntax."""
@@ -262,6 +284,11 @@ class PyiPrinter:
     def _semantic_annotation_metadata(semantic_type: SemanticType) -> list[str]:
         """Handle semantic annotation metadata for the current generation context."""
         metadata: list[str] = []
+        source_type = (semantic_type.origin.source_type or "").casefold().replace(" ", "")
+        if source_type in {"type(*)", "class(*)"} or semantic_type.metadata.get("fortran_assumed_type"):
+            metadata.append("AssumedType")
+        if semantic_type.metadata.get("fortran_polymorphic"):
+            metadata.append("Polymorphic")
         character_length = semantic_type.metadata.get("fortran_character_length")
         if character_length is not None:
             metadata.append(f"FortranCharacterLength({json.dumps(str(character_length))})")
@@ -323,11 +350,13 @@ class PyiPrinter:
         """Emit scalar module variable accessors syntax."""
         type_text = self._visit(arg.semantic_type)
         getter_name = str(arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) or f"get_{arg.name}")
-        setter_name = str(arg.metadata.get("module_variable_setter") or f"set_{arg.name}")
+        setter_name = str(arg.metadata.get(MODULE_VARIABLE_SETTER_METADATA) or f"set_{arg.name}")
         return "\n".join(
             (
+                f'@module_variable("{arg.name}", access="get")',
                 f"def {getter_name}() -> {type_text}: ...",
                 "",
+                f'@module_variable("{arg.name}", access="set")',
                 f"def {setter_name}(value: {type_text}) -> None: ...",
             )
         )
@@ -336,7 +365,7 @@ class PyiPrinter:
         """Emit module variable getter syntax."""
         getter_name = str(arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) or f"get_{arg.name}")
         return_type = f"{self._visit(arg.semantic_type)} | None"
-        return f'@module_variable("{arg.name}")\ndef {getter_name}() -> {return_type}: ...'
+        return f'@module_variable("{arg.name}", access="get")\ndef {getter_name}() -> {return_type}: ...'
 
     @staticmethod
     def _is_allocatable_module_array(arg: SemanticVariable) -> bool:
@@ -353,7 +382,7 @@ class PyiPrinter:
     def _is_scalar_module_variable(arg: SemanticVariable) -> bool:
         """Return whether is scalar module variable."""
         return (
-            arg.origin.source_language == "fortran"
+            (arg.origin.source_language == "fortran" or MODULE_VARIABLE_GETTER_METADATA in arg.metadata)
             and arg.visibility == "public"
             and arg.semantic_type.rank == 0
             and arg.semantic_type.name != "String"
@@ -802,7 +831,10 @@ class PyiPrinter:
 
     def _plain_projected_return(self, arg: SemanticArgument) -> str:
         """Handle plain projected return for the current generation context."""
-        type_text = self._visit(arg.semantic_type)
+        semantic_type = deepcopy(arg.semantic_type)
+        if semantic_type.rank == 0 and semantic_type.storage is not None and semantic_type.storage.kind == "reference":
+            semantic_type.storage = None
+        type_text = self._visit(semantic_type)
         if arg.optional or self._is_allocatable_array(arg.semantic_type):
             return f"{type_text} | None"
         return type_text
@@ -814,10 +846,20 @@ class PyiPrinter:
             decorators.append(f"{indent}@private")
         if isinstance(func, SemanticMethod) and func.is_static:
             decorators.append(f"{indent}@staticmethod")
-        if bind_target := func.metadata.get(PYI_BIND_TARGET_METADATA):
+        bind_target = func.metadata.get(PYI_BIND_TARGET_METADATA)
+        if bind_target is None and func.native_name and func.native_name != func.name:
+            bind_target = func.native_name
+        if bind_target and not func.metadata.get(OVERLOAD_TARGET_METADATA):
             decorators.append(f"{indent}@bind({json.dumps(str(bind_target))})")
+        if (
+            func.origin.source_language == "fortran"
+            and func.origin.native_scope is None
+            and not isinstance(func, SemanticMethod)
+            and not func.metadata.get(OVERLOAD_TARGET_METADATA)
+        ):
+            decorators.append(f"{indent}@external")
         if self._requires_native_call(func):
-            decorators.append(f"{indent}{self._native_call(func.projection)}")
+            decorators.append(f"{indent}{self._native_call(self._pyi_projection(func))}")
         if isinstance(policy := func.metadata.get(RUNTIME_STATUS_ERROR_METADATA), dict):
             decorators.append(f"{indent}{self._raises(policy)}")
         if func.metadata.get(RUNTIME_HOLD_GIL_METADATA):
@@ -825,6 +867,32 @@ class PyiPrinter:
         if not decorators:
             return ""
         return "\n".join(decorators) + "\n"
+
+    @staticmethod
+    def _pyi_projection(func: SemanticFunction) -> list[ProjectionMapping]:
+        if not isinstance(func, SemanticMethod) or func.is_static or func.passed_object_position is None:
+            return func.projection
+        passed_position = func.passed_object_position
+        projected = deepcopy(func.projection)
+        if not projected:
+            projected = [
+                ProjectionMapping(
+                    python_name=argument.name,
+                    native_name=argument.name,
+                    native_position=index,
+                    python_position=index,
+                    intent=argument.intent,
+                )
+                for index, argument in enumerate(func.arguments)
+            ]
+        for mapping in projected:
+            if mapping.python_position == passed_position:
+                mapping.python_position = None
+                mapping.value_kind = "pass"
+                continue
+            if mapping.python_position is not None and mapping.python_position > passed_position:
+                mapping.python_position -= 1
+        return projected
 
     @staticmethod
     def _raises(policy: dict[str, object]) -> str:
@@ -880,6 +948,8 @@ class PyiPrinter:
             return f"IsPresent({PyiPrinter._native_value_ref(mapping.value)})"
         if mapping.value_kind == "work":
             return f"Work({mapping.value!r})"
+        if mapping.value_kind == "pass":
+            return "Pass()"
         raise ValueError(f"Unsupported native_call projection entry: {mapping.value_kind!r}")
 
     @staticmethod
@@ -897,6 +967,8 @@ class PyiPrinter:
     @staticmethod
     def _requires_native_call(func: SemanticFunction) -> bool:
         """Return whether requires native call."""
+        if isinstance(func, SemanticMethod) and not func.is_static and func.passed_object_position not in {None, 0}:
+            return True
         return any(PyiPrinter._requires_explicit_projection_mapping(mapping) for mapping in func.projection)
 
     @staticmethod

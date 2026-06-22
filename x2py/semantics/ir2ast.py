@@ -11,6 +11,7 @@ from x2py import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.ownership_policy import OwnershipContext, default_ownership_policy
 from x2py.codegen.models.core import (
     Add,
+    AsName,
     ClassDef,
     Div,
     FunctionDef,
@@ -994,6 +995,7 @@ def _convert_semantic_module(node, scope, legacy, custom_types):
         custom_types.setdefault(semantic_class.name, _class_type(semantic_class))
         scope.insert_cls_construct(custom_types[semantic_class.name])
 
+    class_items = [item for item in node.classes if _is_public(item)]
     classes = [
         semantic_ir_to_codegen_ast(
             item,
@@ -1004,11 +1006,16 @@ def _convert_semantic_module(node, scope, legacy, custom_types):
             class_descendants=class_descendants,
             class_order=class_order,
         )
-        for item in node.classes
-        if _is_public(item)
+        for item in class_items
     ]
     funcs = []
     generated_overload_sets = []
+    python_exports = {}
+    native_imports = []
+    for item, converted in zip(class_items, classes, strict=True):
+        python_exports[id(converted)] = _semantic_python_exports(item, converted, scope)
+        if native_import := _pyi_native_import(item, converted):
+            native_imports.append(native_import)
     for item in node.functions:
         converted = semantic_ir_to_codegen_ast(
             item,
@@ -1023,6 +1030,9 @@ def _convert_semantic_module(node, scope, legacy, custom_types):
             generated_overload_sets.append(converted)
         else:
             funcs.append(converted)
+        python_exports[id(converted)] = _semantic_python_exports(item, converted, scope)
+        if native_import := _pyi_native_import(item, converted):
+            native_imports.append(native_import)
     overload_sets = [
         semantic_ir_to_codegen_ast(
             item,
@@ -1035,11 +1045,24 @@ def _convert_semantic_module(node, scope, legacy, custom_types):
         )
         for item in node.overload_sets
     ]
+    for item, converted in zip(node.overload_sets, overload_sets, strict=True):
+        python_exports[id(converted)] = _semantic_python_exports(item, converted, scope)
+        if native_import := _pyi_native_import(item, converted):
+            native_imports.append(native_import)
     declarations = [
         semantic_ir_to_codegen_ast(item, scope, legacy, custom_types=custom_types) for item in node.variables
     ]
+    for item, converted in zip(node.variables, declarations, strict=True):
+        python_exports[id(converted)] = _semantic_python_exports(item, converted, scope)
+        if native_import := _pyi_native_import(item, converted):
+            native_imports.append(native_import)
     name = scope.get_new_public_name(node.name, object_type="module", owner=node.name)
-    imports = [Import(module_name, target=()) for module_name in node.metadata.get("wrapper_native_modules", ())]
+    explicit_exports = node.metadata.get(models.PYTHON_EXPORTS_PREPARED_METADATA)
+    imports = (
+        native_imports
+        if node.metadata.get(models.PYI_LOADED_METADATA)
+        else [Import(module_name, target=()) for module_name in node.metadata.get("wrapper_native_modules", ())]
+    )
     return Module(
         name,
         declarations,
@@ -1048,7 +1071,37 @@ def _convert_semantic_module(node, scope, legacy, custom_types):
         classes=classes,
         imports=imports,
         scope=scope,
+        python_exports=python_exports if explicit_exports else None,
     )
+
+
+def _semantic_python_exports(node, converted, scope) -> tuple[tuple[tuple[str, ...], str], ...]:
+    if isinstance(node, models.ProcedureOverloadSet):
+        metadata = node.procedures[0].metadata if node.procedures else {}
+    else:
+        metadata = node.metadata
+    exports = metadata.get(models.PYTHON_EXPORTS_METADATA, ())
+    if not exports:
+        return ()
+    public_name = str(scope.get_python_name(converted.name)) if any(item["name"] is None for item in exports) else ""
+    return tuple(
+        (tuple(item["namespace"]), public_name if item["name"] is None else str(item["name"])) for item in exports
+    )
+
+
+def _pyi_native_import(node, converted) -> Import | None:
+    if isinstance(node, models.ProcedureOverloadSet):
+        if not node.procedures:
+            return None
+        origin = node.procedures[0].origin
+        native_name = node.name
+    else:
+        origin = node.origin
+        native_name = getattr(node, "native_name", None) or node.name
+    if origin.native_scope is None:
+        return None
+    target = AsName(converted, str(converted.name), source_name=str(native_name))
+    return Import(str(origin.native_scope), target=(target,))
 
 
 def _convert_procedure_overload_set(
@@ -1424,6 +1477,12 @@ def semantic_ir_to_codegen_ast(
     """Convert one semantic IR node into the current codegen AST representation."""
 
     if isinstance(node, models.SemanticModule):
+        if node.metadata.get(models.PYI_LOADED_METADATA) and not node.metadata.get(
+            models.PYI_NATIVE_CONTRACT_PREPARED_METADATA
+        ):
+            from .native_contract import prepare_pyi_native_contract
+
+            prepare_pyi_native_contract([node])
         return _convert_semantic_module(node, scope, legacy, custom_types)
 
     if isinstance(node, models.ProcedureOverloadSet):

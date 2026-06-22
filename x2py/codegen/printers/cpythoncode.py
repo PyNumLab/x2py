@@ -294,48 +294,12 @@ class CPythonCodePrinter(CCodePrinter):
 
         class_defs = f"\n{sep}\n".join(self._visit(c) for c in expr.classes)
 
-        method_def_func = "".join(
-            ('{{\n"{name}",\n(PyCFunction){wrapper_name},\nMETH_VARARGS | METH_KEYWORDS,\n{docstring}\n}},\n').format(
-                name=self._get_python_name(expr.scope, f.original_function),
-                wrapper_name=f.name,
-                docstring=(
-                    self._visit(CStrStr(convert_to_literal("\n".join(f.docstring.comments)))) if f.docstring else '""'
-                ),
-            )
-            for f in funcs
-            if not getattr(f, "is_header", False)
-        )
-
-        method_def_name = self.scope.get_new_name(f"{expr.name}_methods", object_type="wrapper")
-        method_def = f"static PyMethodDef {method_def_name}[] = {{\n{method_def_func}{{ NULL, NULL, 0, NULL}}\n}};\n"
-        module_doc_lines = [
-            str(expr.name),
-            "",
-            "Functions",
-            "---------",
-            *[
-                self._get_python_name(expr.scope, f.original_function)
-                for f in funcs
-                if not getattr(f, "is_header", False)
-            ],
-            "",
-            "Classes",
-            "-------",
-            *[str(expr.scope.get_python_name(c.name)) for c in expr.classes],
-        ]
-        module_docstring = self._visit(CStrStr(convert_to_literal("\n".join(module_doc_lines))))
-
-        module_def = (
-            f"static struct PyModuleDef {expr.module_def_name} = {{\n"
-            "PyModuleDef_HEAD_INIT,\n"
-            "/* name of module */\n"
-            f'"{self._module_name}",\n'
-            "/* module documentation, may be NULL */\n"
-            f"{module_docstring},\n"
-            "/* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */\n"
-            "0,\n"
-            f"{method_def_name},\n"
-            "};\n"
+        namespace_defs, namespace_functions, namespace_classes = self._module_namespace_exports(expr, funcs)
+        method_defs, module_defs = self._module_definition_blocks(
+            expr,
+            namespace_defs,
+            namespace_functions,
+            namespace_classes,
         )
 
         init_func = self._visit(expr.init_func)
@@ -361,13 +325,96 @@ class CPythonCodePrinter(CCodePrinter):
                 sep,
                 function_defs,
                 sep,
-                method_def,
+                *method_defs,
                 sep,
-                module_def,
+                *module_defs,
                 sep,
                 init_func,
             ]
         )
+
+    def _module_namespace_exports(self, expr, funcs):
+        namespace_defs = {(): expr.module_def_name, **expr.namespace_module_defs}
+        namespace_functions = {namespace: [] for namespace in namespace_defs}
+        for function in funcs:
+            if getattr(function, "is_header", False):
+                continue
+            exports = (
+                expr.get_python_exports(function)
+                if expr.has_explicit_python_exports
+                else (((), self._get_python_name(expr.scope, function.original_function)),)
+            )
+            for namespace, export_name in exports:
+                namespace_functions[namespace].append((export_name, function))
+
+        namespace_classes = {namespace: [] for namespace in namespace_defs}
+        for wrapped_class in expr.classes:
+            exports = (
+                expr.get_python_exports(wrapped_class)
+                if expr.has_explicit_python_exports
+                else (((), str(expr.scope.get_python_name(wrapped_class.name))),)
+            )
+            for namespace, export_name in exports:
+                namespace_classes[namespace].append(export_name)
+        return namespace_defs, namespace_functions, namespace_classes
+
+    def _module_definition_blocks(self, expr, namespace_defs, namespace_functions, namespace_classes):
+        method_defs = []
+        module_defs = []
+        for namespace, definition_name in namespace_defs.items():
+            method_entries = "".join(
+                (
+                    '{{\n"{name}",\n(PyCFunction){wrapper_name},\nMETH_VARARGS | METH_KEYWORDS,\n{docstring}\n}},\n'
+                ).format(
+                    name=export_name,
+                    wrapper_name=function.name,
+                    docstring=(
+                        self._visit(CStrStr(convert_to_literal("\n".join(function.docstring.comments))))
+                        if function.docstring
+                        else '""'
+                    ),
+                )
+                for export_name, function in namespace_functions[namespace]
+            )
+            suffix = "root" if not namespace else "_".join(namespace)
+            method_name = self.scope.get_new_name(f"{expr.name}_{suffix}_methods", object_type="wrapper")
+            method_defs.append(
+                f"static PyMethodDef {method_name}[] = {{\n{method_entries}{{ NULL, NULL, 0, NULL}}\n}};\n"
+            )
+            qualified_name = ".".join((str(self._module_name), *namespace))
+            exported_names = [name for name, _ in namespace_functions[namespace]]
+            module_docstring = self._visit(
+                CStrStr(
+                    convert_to_literal(
+                        "\n".join(
+                            (
+                                qualified_name,
+                                "",
+                                "Functions",
+                                "---------",
+                                *exported_names,
+                                "",
+                                "Classes",
+                                "-------",
+                                *namespace_classes[namespace],
+                            )
+                        )
+                    )
+                )
+            )
+            module_defs.append(
+                f"static struct PyModuleDef {definition_name} = {{\n"
+                "PyModuleDef_HEAD_INIT,\n"
+                "/* name of module */\n"
+                f'"{qualified_name}",\n'
+                "/* module documentation, may be NULL */\n"
+                f"{module_docstring},\n"
+                "/* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */\n"
+                "0,\n"
+                f"{method_name},\n"
+                "};\n"
+            )
+        return method_defs, module_defs
 
     def _visit_PyClassDef(self, expr):
         """Render the ``PyClassDef`` model node."""

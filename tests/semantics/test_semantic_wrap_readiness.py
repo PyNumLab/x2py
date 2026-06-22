@@ -447,7 +447,7 @@ def integrate(objective: Callable[..., Float64], x0: Float64) -> Float64: ...
     assert "callback_signature_incomplete" in _blocker_codes(report)
 
 
-def test_assess_pyi_wrap_readiness_expands_directory_and_deduplicates_paths(tmp_path: Path):
+def test_assess_pyi_wrap_readiness_expands_directory_and_uses_leaf_filenames(tmp_path: Path):
     nested = tmp_path / "nested"
     nested.mkdir()
     first = tmp_path / "first.pyi"
@@ -462,6 +462,7 @@ def test_assess_pyi_wrap_readiness_expands_directory_and_deduplicates_paths(tmp_
     assert report["wrappable"] is True
     assert report["n_modules"] == 2
     assert report["source"] == [str(first), str(second)]
+    assert _blocker_codes(report) == set()
 
 
 def test_assess_pyi_wrap_readiness_honors_explicit_encoding(tmp_path: Path):
@@ -472,6 +473,7 @@ def test_assess_pyi_wrap_readiness_honors_explicit_encoding(tmp_path: Path):
 
     assert report["wrappable"] is True
     assert report["source"] == [str(pyi)]
+    assert _blocker_codes(report) == set()
 
 
 def test_readiness_skips_private_api_and_normalizes_metadata_blocker_items():
@@ -1104,7 +1106,7 @@ def test_readiness_report_preserves_blocker_payloads_and_unit_ownership():
     }
 
 
-def test_cli_wrap_readiness_loads_completed_pyi(tmp_path: Path):
+def test_cli_wrap_readiness_uses_pyi_filename_as_native_contract(tmp_path: Path):
     pyi = tmp_path / "solver.pyi"
     pyi.write_text(
         """
@@ -1123,7 +1125,7 @@ def fill(x: Float64[n]) -> None: ...
     assert "No semantic readiness blockers detected." in res.stdout
 
 
-def test_cli_wrap_readiness_json_loads_pyi(tmp_path: Path):
+def test_cli_wrap_readiness_json_uses_pyi_filename_as_native_contract(tmp_path: Path):
     pyi = tmp_path / "solver.pyi"
     pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
 
@@ -1132,7 +1134,9 @@ def test_cli_wrap_readiness_json_loads_pyi(tmp_path: Path):
     payload = json.loads(res.stdout)
 
     assert payload[str(pyi)]["source_kind"] == "pyi"
-    assert payload[str(pyi)]["wrap_readiness"]["wrappable"] is True
+    report = payload[str(pyi)]["wrap_readiness"]
+    assert report["wrappable"] is True
+    assert _blocker_codes(report) == set()
 
 
 def test_cli_wrap_readiness_output_from_fortran():
@@ -1181,9 +1185,9 @@ def test_cli_semantics_can_include_semantic_wrap_readiness():
 def test_cli_help_includes_semantic_wrap_readiness_examples():
     cmd = [sys.executable, "-m", "x2py", "--help"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    assert "python -m x2py path/to/file.f90 --wrap-readiness" in res.stdout
-    assert "python -m x2py path/to/file.f90 --semantics --wrap-readiness" in res.stdout
-    assert "python -m x2py path/to/module.pyi --wrap-readiness" in res.stdout
+    assert "python3 -m x2py path/to/file.f90 --wrap-readiness" in res.stdout
+    assert "python3 -m x2py path/to/file.f90 --semantics --wrap-readiness" in res.stdout
+    assert "python3 -m x2py path/to/module.pyi --wrap-readiness" in res.stdout
 
 
 def test_x2py_main_wrap_readiness_mode_from_inline_source(tmp_path: Path, monkeypatch, capsys):

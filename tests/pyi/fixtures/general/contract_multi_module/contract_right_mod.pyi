@@ -1,0 +1,3 @@
+def shared_value(
+    value: Ptr(Const(Int32))
+) -> Int32: ...

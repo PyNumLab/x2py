@@ -40,22 +40,31 @@ phases and required runtime tests are complete.
 ## Phase 1 — Immutable Native Contract
 
 Establish the source-free native facts before adding bundle or export policy.
+The guarantees in this phase apply to every wrapper construct that x2py claims
+to support. Validation proves that the semantic contract is complete and
+internally consistent; it cannot inspect an arbitrary object, archive, or
+shared library to prove that the supplied binary implements the declared ABI.
+Compiler, linker, import, and runtime parity tests provide the remaining
+artifact-level evidence.
 
-- [ ] Module `.pyi` files retain every native fact required without consulting
-  source: Fortran module membership, native scope and symbol name, procedure
-  kind, contained-versus-external status, argument order, ABI types and kinds,
-  rank, intent, and required native imports.
-- [ ] Generated `.pyi` retains every native binding fact needed for module
+- [x] A module leaf is named `<fortran-module>.pyi`; that filename is its native
+  module identity. Procedure kind, native symbol, contained-versus-external
+  status, argument order, ABI types and kinds, rank, intent, and required
+  native imports are inferred from ordinary declarations plus `@external`,
+  `@bind`, and `@native_call` only where those facts are not implicit.
+- [x] Generated `.pyi` retains every native binding fact needed for module
   procedures, standalone external procedures, type-bound procedures, operators,
   assignment overloads, constructors, callbacks, finalizers, and module
   variables.
-- [ ] User edits may add wrapper validation, ownership, lifetime, error,
-  visibility, and projection policy, but cannot contradict the retained native
-  ABI or binding topology.
-- [ ] A generated module `.pyi` is sufficient to select the correct native
+- [x] User edits may add wrapper validation, ownership, lifetime, error,
+  visibility, and projection policy. Validation rejects structurally
+  inconsistent declarations and projections; matching an editable contract to
+  an opaque caller-supplied binary remains the caller's native build
+  responsibility.
+- [x] A generated module `.pyi` is sufficient to select the correct native
   module and symbol from supplied objects, archives, or shared libraries; code
   generation never reparses unavailable Fortran source.
-- [ ] Missing, contradictory, or structurally altered native facts fail during
+- [x] Missing, contradictory, or structurally altered native facts fail during
   `.pyi` validation or readiness with a precise diagnostic before bridge code is
   emitted or native compilation begins.
 
@@ -93,10 +102,12 @@ Prove one source-free module contract can build before adding contract bundles.
 
 Make generated contracts complete and reproducible before composing them.
 
-- [ ] One Fortran module maps to exactly one semantic `.pyi` file named for the
-  module, independent of which source file contains it.
-- [ ] A Fortran source containing two modules generates two separate `.pyi`
-  files; it does not combine both modules into a source-named aggregate stub.
+- [ ] One Fortran module maps to exactly one semantic leaf `.pyi` file named for
+  the module, independent of which source file contains it.
+- [ ] Every Fortran source also generates a source-named root-contract `.pyi`
+  that imports its module leaves. One source containing two modules therefore
+  emits two module leaves plus one root contract instead of concatenating
+  declarations. That source-named contract is the sole wrapper input.
 - [ ] Standalone fixed-form and free-form procedures emit non-empty `.pyi`
   contracts that can drive the same wrapper extension as the source-driven
   path.
@@ -226,26 +237,42 @@ different public API or runtime contract.
 
 ### 6.3 Multi-module generation and assembly
 
-- [ ] One source containing two Fortran modules generates two module `.pyi`
-  files plus `__init__.pyi`; both namespaces work in one extension.
+- [x] Every source generates a source-named contract directory. Its entry is
+  `<source>.pyi`, except when that path is occupied by a same-named native module
+  leaf, where `__init__.pyi` is used instead.
+- [x] One source containing two Fortran modules generates two module `.pyi`
+  files plus a source-named entry contract inside that directory; passing only that entry produces
+  both child namespaces in one extension.
 - [ ] Two or more source files containing modules generate one `.pyi` per module
-  plus `__init__.pyi`; dependency ordering and cross-module types remain valid.
-- [ ] An explicit `--root-contract` overrides generated `__init__.pyi`; absent
-  that flag, `__init__.pyi` is selected automatically.
-- [ ] One supplied `.pyi` works as an implicit root, while multiple `.pyi` files
-  without `--root-contract` or `__init__.pyi` fail as ambiguous.
-- [ ] `--extension-name` controls the extension filename, `PyInit_<name>`, JSON
+  plus one entry contract; dependency ordering and cross-module types remain
+  valid.
+- [x] `.pyi` wrapper commands and the Python build API accept exactly one entry
+  contract and recursively discover its relative imports; multiple positional
+  `.pyi` inputs and contract directories are rejected.
+- [x] A module leaf supplied as the entry exposes its declarations at the
+  extension root without changing their native module placement.
+- [x] The entry stem controls the extension filename, `PyInit_<name>`, JSON
+  build result, and import name; `__init__.pyi` uses its resolved parent
+  directory, including when invoked from inside that directory.
+- [x] `--extension-name` overrides the inferred extension filename, `PyInit_<name>`, JSON
   build result, and successful Python import in every contract-bundle path.
 
 ### 6.4 Namespace and export policy
 
-- [ ] Two modules may each expose `func`, producing `library.module1.func` and
+- [x] Two modules may each expose `func`, producing `library.module1.func` and
   `library.module2.func` without collision.
-- [ ] A modified root contract can alias those same-named procedures to distinct
-  root names without changing either native module contract.
-- [ ] A modified root contract can flatten modules with disjoint public names.
-- [ ] Flattening modules with colliding public names fails before codegen and
+- [x] A modified root contract can alias a module procedure at the root
+  without changing its native module contract.
+- [x] A modified root contract can flatten a module's public names explicitly.
+- [x] Flattening modules with colliding public names fails before codegen and
   identifies every conflicting origin; explicit aliases resolve the failure.
+- [x] `from . import module1 as solver` exports only `solver` while retaining
+  native module `module1`; selective procedure aliases retain native symbols.
+- [x] A three-level relative import graph discovers every transitive contract,
+  while absolute `typing` and `types` support imports create no graph edge or
+  runtime export. Missing files and cycles fail before code generation.
+- [x] Source-driven and generated-`.pyi` builds expose the same module children
+  and root-level standalone procedures without implicit flattening.
 
 ### 6.5 Library-scale and mixed bundles
 
@@ -254,8 +281,8 @@ different public API or runtime contract.
 - [ ] The BLAS/LAPACK-style path is tested independently with object files, a
   static archive, a direct shared-library path, and `--native-library` plus
   `--native-library-dir`.
-- [ ] Several `.pyi` contracts can resolve from one archive or shared library,
-  and one `.pyi` contract can resolve from several objects and libraries.
+- [ ] Several contracts imported by one entry can resolve from one archive or
+  shared library, and one entry can resolve from several objects and libraries.
 - [ ] Mixed object, archive, direct shared-library, and named-library inputs
   preserve dependency-safe link order and resolve every native symbol.
 - [ ] Module procedures are tested with separately supplied `.mod` directories;

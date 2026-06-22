@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.wrapper.fortran._support import _assert_fmath_examples
+from tests.wrapper.fortran._support import _assert_fmath_examples, _sole_native_module
 from x2py.preprocessing import PreprocessingConfig
 from x2py.wrapping import build_fortran_extension
 
@@ -82,7 +82,7 @@ def test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper(tmp
     sys.modules.pop(result.module_name, None)
     sys.path.insert(0, str(build_dir))
     try:
-        module = importlib.import_module(result.module_name)
+        module = _sole_native_module(importlib.import_module(result.module_name))
     finally:
         sys.path.remove(str(build_dir))
     _assert_fmath_examples(module)

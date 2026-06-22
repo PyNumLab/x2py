@@ -54,6 +54,10 @@ Expected output:
 <!-- x2py-doc-test-output -->
 ```python
 File: tests/data/fortran/general/basic_subroutine.f90
+Root contract: basic_subroutine/basic_subroutine.pyi
+from . import m1
+
+Module contract: m1.pyi
 def add1(
     n: Ptr(Const(Int32)),
     x: Float64[n]

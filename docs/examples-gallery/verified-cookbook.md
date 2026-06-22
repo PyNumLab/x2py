@@ -42,7 +42,7 @@ The recipes reuse these checked fixtures:
 | Basic Fortran procedure | `tests/data/fortran/general/basic_subroutine.f90` |
 | Basic C functions, pointers, and arrays | `tests/data/c/general/math_api.h` |
 | Rich Fortran module, types, arrays, and visibility | `tests/data/fortran/general/modern_pyi_example.f90` |
-| Generated Fortran semantic interface | `tests/pyi/fixtures/general/modern_pyi_example.pyi` |
+| Generated Fortran semantic interface | `tests/pyi/fixtures/general/modern_pyi_example/modern_pyi_example.pyi` |
 | Generated C semantic interface | `tests/pyi/fixtures/c/general/math_api.pyi` |
 
 ## Current Boundary

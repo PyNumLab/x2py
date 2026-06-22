@@ -180,14 +180,25 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         # Wrap contents
         funcs_to_generate = [f for f in expr.funcs if f.is_semantic and not f.is_private]
 
-        funcs = [self._visit(f) for f in funcs_to_generate]
-        init_func = self._wrapped_special_function(expr.init_func, funcs_to_generate, funcs)
-        free_func = self._wrapped_special_function(expr.free_func, funcs_to_generate, funcs)
-        removed_functions = [f for f, w in zip(funcs_to_generate, funcs, strict=False) if isinstance(w, EmptyNode)]
-        funcs = [f for f in funcs if not isinstance(f, EmptyNode)]
-        interfaces = [self._visit(f) for f in expr.overload_sets]
+        wrapped_funcs = [self._visit(f) for f in funcs_to_generate]
+        init_func = self._wrapped_special_function(expr.init_func, funcs_to_generate, wrapped_funcs)
+        free_func = self._wrapped_special_function(expr.free_func, funcs_to_generate, wrapped_funcs)
+        removed_functions = [
+            f for f, wrapped in zip(funcs_to_generate, wrapped_funcs, strict=False) if isinstance(wrapped, EmptyNode)
+        ]
+        python_exports = self._wrapped_python_exports(expr, funcs_to_generate, wrapped_funcs)
+        funcs = [f for f in wrapped_funcs if not isinstance(f, EmptyNode)]
+        interfaces = self._wrapped_interfaces(expr, python_exports)
         classes = [self._visit(f) for f in expr.classes]
-        variables, variable_accessor_funcs = self._wrapped_module_variables(expr.variables)
+        self._extend_python_exports(python_exports, expr, expr.classes, classes)
+        variables, variable_accessor_funcs, variable_sources = self._wrapped_module_variables(expr.variables)
+        self._extend_variable_python_exports(
+            python_exports,
+            expr,
+            variables,
+            variable_accessor_funcs,
+            variable_sources,
+        )
         funcs.extend(variable_accessor_funcs)
         variable_getters = [v for v in variables if isinstance(v, BindCArrayVariable)]
         # Import the module and its dependencies (in case they are used for argument types)
@@ -213,7 +224,58 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             original_module=expr,
             scope=mod_scope,
             removed_functions=removed_functions,
+            python_exports=python_exports,
         )
+
+    @staticmethod
+    def _wrapped_python_exports(expr, source_functions, wrapped_functions):
+        if not expr.has_explicit_python_exports:
+            return None
+        return {
+            id(wrapped): expr.get_python_exports(source)
+            for source, wrapped in zip(source_functions, wrapped_functions, strict=True)
+            if not isinstance(wrapped, EmptyNode)
+        }
+
+    def _wrapped_interfaces(self, expr, python_exports):
+        interfaces = []
+        for item in expr.overload_sets:
+            wrapped = self._visit(item)
+            if isinstance(wrapped, EmptyNode):
+                continue
+            interfaces.append(wrapped)
+            if python_exports is not None:
+                python_exports[id(wrapped)] = expr.get_python_exports(item)
+        return interfaces
+
+    @staticmethod
+    def _extend_python_exports(python_exports, expr, sources, wrapped_objects):
+        if python_exports is None:
+            return
+        python_exports.update(
+            {
+                id(wrapped): expr.get_python_exports(source)
+                for source, wrapped in zip(sources, wrapped_objects, strict=True)
+            }
+        )
+
+    def _extend_variable_python_exports(
+        self,
+        python_exports,
+        expr,
+        variables,
+        accessor_functions,
+        variable_sources,
+    ):
+        if python_exports is None:
+            return
+        accessor_ids = {id(function) for function in accessor_functions}
+        for wrapped in (*variables, *accessor_functions):
+            exports = expr.get_python_exports(variable_sources[id(wrapped)])
+            if id(wrapped) in accessor_ids:
+                source_name = wrapped.original_function.name
+                exports = tuple((namespace, str(self.scope.get_python_name(source_name))) for namespace, _ in exports)
+            python_exports[id(wrapped)] = exports
 
     @staticmethod
     def _wrapped_special_function(original, source_functions, wrapped_functions):
@@ -227,12 +289,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """Split wrapped module variables into storage and accessor functions."""
         variables = []
         accessors = []
-        for variable in (self._visit(item) for item in module_variables if not item.is_private):
+        sources = {}
+        for item in module_variables:
+            if item.is_private:
+                continue
+            variable = self._visit(item)
             if isinstance(variable, BindCScalarModuleVariable):
                 accessors.extend((variable.getter_function, variable.setter_function))
+                sources[id(variable.getter_function)] = item
+                sources[id(variable.setter_function)] = item
             else:
                 variables.append(variable)
-        return variables, accessors
+                sources[id(variable)] = item
+        return variables, accessors, sources
 
     @staticmethod
     def _module_imports(module, wrapped_functions):
@@ -412,7 +481,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         x2py.ast.core.FunctionOverloadSet
             The C-compatible interface.
         """
-        functions = [self._visit(f) for f in expr.functions if not isinstance(f, EmptyNode)]
+        functions = [wrapped for item in expr.functions if not isinstance(wrapped := self._visit(item), EmptyNode)]
+        if not functions:
+            return EmptyNode()
         return FunctionOverloadSet(
             expr.name,
             functions,

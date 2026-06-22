@@ -78,6 +78,7 @@ def test_allocatable_replacement_has_no_native_memory_errors(tmp_path: Path):
 import gc
 import numpy as np
 import fallocatable_inout_f90 as module
+module = module.fallocatable_inout_f90
 
 for mode in (1, 2, 0) * 50:
     value = module.replace_values(None, np.int32(mode))

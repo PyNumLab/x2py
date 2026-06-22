@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.wrapper.fortran._support import _sole_native_module
+
 OPENMP_SOURCE = Path(__file__).with_name("fopenmp_runtime_f90.f90")
 
 
@@ -61,7 +63,7 @@ def test_openmp_enabled_procedure_builds_with_explicit_gnu_flags(tmp_path: Path)
     sys.modules.pop("fopenmp_runtime_f90", None)
     sys.path.insert(0, str(tmp_path))
     try:
-        module = importlib.import_module("fopenmp_runtime_f90")
+        module = _sole_native_module(importlib.import_module("fopenmp_runtime_f90"))
         values = np.arange(1, 33, dtype=np.float64)
         assert module.parallel_sum(values) == np.sum(values)
     finally:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import shlex
 
@@ -24,8 +24,20 @@ from x2py.semantics.fortran2ir import (
     fortran_project_to_semantic_modules,
 )
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
-from x2py.semantics.models import SemanticModule
-from x2py.semantics.pyi_parser import load_pyi_modules
+from x2py.semantics.models import (
+    PYTHON_EXPORTS_METADATA,
+    PYTHON_EXPORTS_PREPARED_METADATA,
+    PYI_LOADED_METADATA,
+    PYI_NATIVE_CONTRACT_PREPARED_METADATA,
+    ProcedureOverloadSet,
+    SemanticClass,
+    SemanticFunction,
+    SemanticImport,
+    SemanticModule,
+    SemanticVariable,
+)
+from x2py.semantics.pyi_parser import load_pyi_file, load_pyi_modules
+from x2py.semantics.native_contract import validate_pyi_native_contract
 
 
 _DEFAULT_BUILD_DIR_NAME = "__x2py__"
@@ -128,16 +140,241 @@ def _source_paths(sources: str | Path | Iterable[str | Path]) -> tuple[Path, ...
     return paths
 
 
-def _pyi_contract_paths(contracts: str | Path | Iterable[str | Path]) -> tuple[Path, ...]:
-    paths = (Path(contracts),) if isinstance(contracts, str | Path) else tuple(Path(contract) for contract in contracts)
-    if not paths:
-        raise ValueError(".pyi wrapper build requires at least one semantic contract file")
-    for path in paths:
-        if path.suffix.lower() != ".pyi":
-            raise ValueError(f".pyi wrapper build expects semantic contract files, not {path}")
-        if not path.is_file():
-            raise FileNotFoundError(f"Semantic .pyi contract not found: {path}")
-    return paths
+def _pyi_entry_path(contract: str | Path) -> Path:
+    if not isinstance(contract, str | Path):
+        raise TypeError(".pyi wrapper build accepts exactly one entry contract path")
+    path = Path(contract)
+    if path.suffix.lower() != ".pyi":
+        raise ValueError(f".pyi wrapper build expects one semantic contract file, not {path}")
+    if not path.is_file():
+        raise FileNotFoundError(f"Semantic .pyi contract not found: {path}")
+    return path
+
+
+@dataclass(frozen=True)
+class _PyiContractBundle:
+    entry: Path
+    leaves: tuple[Path, ...]
+    paths: tuple[Path, ...]
+    modules: tuple[SemanticModule, ...]
+
+
+def _pyi_contract_bundle(
+    entry: Path,
+) -> _PyiContractBundle:
+    discovered = {entry, *_discover_pyi_imports(entry)}
+    sorted_paths = tuple(sorted(discovered))
+    loaded_modules = load_pyi_modules(sorted_paths)
+    modules_by_path = dict(zip(sorted_paths, loaded_modules, strict=True))
+    _apply_pyi_python_exports(entry, modules_by_path)
+    leaves = [path for path in sorted_paths if _module_has_native_declarations(modules_by_path[path])]
+    if not leaves:
+        raise ValueError("Entry contract does not resolve any native declarations")
+    return _PyiContractBundle(
+        entry=entry,
+        leaves=tuple(leaves),
+        paths=(entry, *sorted(discovered - {entry})),
+        modules=tuple(modules_by_path[path] for path in leaves),
+    )
+
+
+def _discover_pyi_imports(root: Path) -> tuple[Path, ...]:
+    discovered: set[Path] = set()
+    pending = [root]
+    while pending:
+        path = pending.pop()
+        module = load_pyi_file(path)
+        for dependency in _relative_pyi_dependencies(path, module):
+            if dependency in discovered or dependency == root:
+                continue
+            if not dependency.is_file():
+                raise FileNotFoundError(f"Imported semantic .pyi contract not found: {dependency}")
+            discovered.add(dependency)
+            pending.append(dependency)
+    return tuple(sorted(discovered))
+
+
+def _relative_pyi_dependencies(path: Path, module: SemanticModule) -> tuple[Path, ...]:
+    dependencies: list[Path] = []
+    for semantic_import in module.imports:
+        if not isinstance(semantic_import, SemanticImport) or not semantic_import.module.startswith("."):
+            continue
+        level = len(semantic_import.module) - len(semantic_import.module.lstrip("."))
+        parent = path.parent
+        for _ in range(level - 1):
+            parent = parent.parent
+        imported_module = semantic_import.module[level:]
+        if imported_module:
+            dependencies.append(_pyi_dependency_path(parent, imported_module))
+        else:
+            dependencies.extend(_pyi_dependency_path(parent, item.source) for item in semantic_import.items)
+    return tuple(dependencies)
+
+
+def _pyi_dependency_path(parent: Path, dotted_name: str) -> Path:
+    target = parent.joinpath(*dotted_name.split("."))
+    module_file = target.with_suffix(".pyi")
+    if module_file.is_file() or not target.is_dir():
+        return module_file
+    return target / "__init__.pyi"
+
+
+def _module_has_native_declarations(module: SemanticModule) -> bool:
+    return bool(module.variables or module.functions or module.classes or module.overload_sets)
+
+
+@dataclass
+class _PyiExportNode:
+    declarations: list[object] = field(default_factory=list)
+    children: dict[str, _PyiExportNode] = field(default_factory=dict)
+    origins: set[Path] = field(default_factory=set)
+
+
+def _apply_pyi_python_exports(entry: Path, modules_by_path: dict[Path, SemanticModule]) -> None:
+    for module in modules_by_path.values():
+        module.metadata[PYTHON_EXPORTS_PREPARED_METADATA] = True
+        for declaration in _module_declarations(module):
+            _set_declaration_exports(declaration, [])
+
+    tree = _pyi_export_tree(entry, modules_by_path, cache={}, pending=set())
+    _record_pyi_exports(tree)
+
+
+def _pyi_export_tree(
+    path: Path,
+    modules_by_path: dict[Path, SemanticModule],
+    *,
+    cache: dict[Path, _PyiExportNode],
+    pending: set[Path],
+) -> _PyiExportNode:
+    if path in cache:
+        return cache[path]
+    if path in pending:
+        raise ValueError(f"Cyclic relative .pyi export imports include {path}")
+    pending.add(path)
+    module = modules_by_path[path]
+    tree = _PyiExportNode(origins={path})
+    for declaration in _module_declarations(module):
+        if getattr(declaration, "visibility", "public") == "public":
+            _merge_export_child(
+                tree,
+                declaration.name,
+                _PyiExportNode(declarations=[declaration], origins={path}),
+                origin=path,
+            )
+
+    for semantic_import in module.imports:
+        if not isinstance(semantic_import, SemanticImport) or not semantic_import.module.startswith("."):
+            continue
+        _merge_relative_import(tree, path, semantic_import, modules_by_path, cache, pending)
+    pending.remove(path)
+    cache[path] = tree
+    return tree
+
+
+def _merge_relative_import(
+    tree: _PyiExportNode,
+    path: Path,
+    semantic_import: SemanticImport,
+    modules_by_path: dict[Path, SemanticModule],
+    cache: dict[Path, _PyiExportNode],
+    pending: set[Path],
+) -> None:
+    imported_module = semantic_import.module.lstrip(".")
+    if imported_module:
+        dependency = _relative_import_path(path, semantic_import.module, imported_module)
+        dependency_tree = _required_export_tree(dependency, modules_by_path, cache, pending)
+        for item in semantic_import.items:
+            if item.source == "*":
+                for name, child in dependency_tree.children.items():
+                    _merge_export_child(tree, name, child, origin=path)
+                continue
+            if item.source not in dependency_tree.children:
+                raise ValueError(f"Imported semantic name {item.source!r} not found in {dependency}")
+            _merge_export_child(tree, item.target or item.source, dependency_tree.children[item.source], origin=path)
+        return
+
+    for item in semantic_import.items:
+        dependency = _relative_import_path(path, semantic_import.module, item.source)
+        dependency_tree = _required_export_tree(dependency, modules_by_path, cache, pending)
+        _merge_export_child(tree, item.target or item.source, dependency_tree, origin=path)
+
+
+def _relative_import_path(path: Path, module: str, imported_module: str) -> Path:
+    level = len(module) - len(module.lstrip("."))
+    parent = path.parent
+    for _ in range(level - 1):
+        parent = parent.parent
+    return _pyi_dependency_path(parent, imported_module)
+
+
+def _required_export_tree(
+    path: Path,
+    modules_by_path: dict[Path, SemanticModule],
+    cache: dict[Path, _PyiExportNode],
+    pending: set[Path],
+) -> _PyiExportNode:
+    if path not in modules_by_path:
+        raise FileNotFoundError(f"Imported semantic .pyi contract not found: {path}")
+    return _pyi_export_tree(path, modules_by_path, cache=cache, pending=pending)
+
+
+def _merge_export_child(tree: _PyiExportNode, name: str, child: _PyiExportNode, *, origin: Path) -> None:
+    existing = tree.children.get(name)
+    if existing is None or existing is child:
+        tree.children[name] = child
+        return
+    existing_origins = ", ".join(str(path) for path in sorted(existing.origins))
+    new_origins = ", ".join(str(path) for path in sorted(child.origins))
+    raise ValueError(
+        f"Conflicting .pyi exports for {name!r} while resolving {origin}: "
+        f"existing from {existing_origins}; new from {new_origins}"
+    )
+
+
+def _record_pyi_exports(tree: _PyiExportNode, namespace: tuple[str, ...] = ()) -> None:
+    for name, child in tree.children.items():
+        for declaration in child.declarations:
+            exports = _declaration_exports(declaration)
+            export = {"namespace": namespace, "name": name}
+            if export not in exports:
+                exports.append(export)
+        _record_pyi_exports(child, (*namespace, name))
+
+
+def _module_declarations(module: SemanticModule) -> tuple[object, ...]:
+    return (*module.variables, *module.functions, *module.overload_sets, *module.classes)
+
+
+def _declaration_metadata(declaration: object) -> dict[str, object]:
+    if isinstance(declaration, ProcedureOverloadSet):
+        if not declaration.procedures:
+            return {}
+        return declaration.procedures[0].metadata
+    if isinstance(declaration, SemanticVariable | SemanticFunction | SemanticClass):
+        return declaration.metadata
+    raise TypeError(f"Unsupported semantic declaration: {type(declaration).__name__}")
+
+
+def _declaration_exports(declaration: object) -> list[dict[str, object]]:
+    metadata = _declaration_metadata(declaration)
+    return metadata.setdefault(PYTHON_EXPORTS_METADATA, [])
+
+
+def _set_declaration_exports(declaration: object, exports: list[dict[str, object]]) -> None:
+    metadata = _declaration_metadata(declaration)
+    metadata[PYTHON_EXPORTS_METADATA] = exports
+
+
+def _apply_source_python_exports(modules: list[SemanticModule]) -> None:
+    for module in modules:
+        module.metadata[PYTHON_EXPORTS_PREPARED_METADATA] = True
+        namespace = (module.name.casefold(),) if module.origin.source_kind == "module" else ()
+        for declaration in _module_declarations(module):
+            _set_declaration_exports(
+                declaration,
+                [{"namespace": namespace, "name": None}],
+            )
 
 
 def _existing_paths(
@@ -170,64 +407,6 @@ def _native_artifact_compile_object(path: Path) -> CompileObj:
     return compile_obj
 
 
-def _normalize_pyi_modules_for_fortran_wrapping(modules: Iterable[SemanticModule]) -> None:
-    for module in modules:
-        native_module_name = str(module.origin.native_name or module.name)
-        _normalize_module_origin(module, native_module_name)
-        for variable in module.variables:
-            _normalize_variable_origin(variable, native_module_name, source_kind="variable")
-        for function in module.functions:
-            _normalize_function_origin(function, native_module_name, source_kind="function")
-        for overload_set in module.overload_sets:
-            for procedure in overload_set.procedures:
-                _normalize_function_origin(procedure, native_module_name, source_kind="function")
-        for semantic_class in module.classes:
-            _normalize_class_origin(semantic_class, native_module_name)
-
-
-def _normalize_module_origin(module: SemanticModule, native_module_name: str) -> None:
-    module.origin.source_language = module.origin.source_language or "fortran"
-    module.origin.native_name = module.origin.native_name or native_module_name
-    module.origin.native_scope = module.origin.native_scope or native_module_name
-    module.origin.source_kind = module.origin.source_kind or "module"
-
-
-def _normalize_variable_origin(variable, native_module_name: str, *, source_kind: str) -> None:
-    variable.origin.source_language = variable.origin.source_language or "fortran"
-    variable.origin.native_name = variable.origin.native_name or variable.name
-    variable.origin.native_scope = variable.origin.native_scope or native_module_name
-    variable.origin.source_kind = variable.origin.source_kind or source_kind
-
-
-def _normalize_function_origin(function, native_module_name: str, *, source_kind: str) -> None:
-    function.origin.source_language = function.origin.source_language or "fortran"
-    function.origin.native_name = function.origin.native_name or function.native_name or function.name
-    function.origin.native_scope = function.origin.native_scope or native_module_name
-    function.origin.source_kind = function.origin.source_kind or source_kind
-    function.native_name = function.native_name or function.name
-    for argument in function.arguments:
-        _normalize_variable_origin(argument, native_module_name, source_kind="argument")
-
-
-def _normalize_class_origin(semantic_class, native_module_name: str) -> None:
-    semantic_class.origin.source_language = semantic_class.origin.source_language or "fortran"
-    semantic_class.origin.native_name = (
-        semantic_class.origin.native_name or semantic_class.native_name or semantic_class.name
-    )
-    semantic_class.origin.native_scope = semantic_class.origin.native_scope or native_module_name
-    semantic_class.origin.source_kind = semantic_class.origin.source_kind or "derived_type"
-    semantic_class.native_name = semantic_class.native_name or semantic_class.name
-    for field in semantic_class.fields:
-        _normalize_variable_origin(field, native_module_name, source_kind="field")
-    for method in semantic_class.methods:
-        _normalize_function_origin(method, native_module_name, source_kind="method")
-    for overload_set in semantic_class.overload_sets:
-        for procedure in overload_set.procedures:
-            _normalize_function_origin(procedure, native_module_name, source_kind="method")
-    for nested in semantic_class.classes:
-        _normalize_class_origin(nested, native_module_name)
-
-
 def _source_object_stems(source_paths: tuple[Path, ...]) -> tuple[str, ...]:
     totals: dict[str, int] = {}
     for source_path in source_paths:
@@ -242,28 +421,49 @@ def _source_object_stems(source_paths: tuple[Path, ...]) -> tuple[str, ...]:
     return tuple(stems)
 
 
-def _merge_wrapper_modules(modules: list[SemanticModule]) -> SemanticModule:
+def _merge_wrapper_modules(modules: list[SemanticModule], *, name: str | None = None) -> SemanticModule:
     if not modules:
         raise ValueError("wrapper build found no Fortran modules or standalone procedures")
 
-    native_modules = list(
-        dict.fromkeys(
-            str(module.origin.native_name or module.name) for module in modules if module.origin.source_kind == "module"
-        )
-    )
-    readiness_blockers = [blocker for module in modules for blocker in module.metadata.get("readiness_blockers", ())]
-    metadata: dict[str, object] = {"wrapper_native_modules": native_modules}
-    if readiness_blockers:
-        metadata["readiness_blockers"] = readiness_blockers
     return SemanticModule(
-        name=modules[0].name,
+        name=name or modules[0].name,
         functions=[function for module in modules for function in module.functions],
         overload_sets=[overload for module in modules for overload in module.overload_sets],
         classes=[semantic_class for module in modules for semantic_class in module.classes],
         variables=[variable for module in modules for variable in module.variables],
-        metadata=metadata,
+        metadata=_wrapper_module_metadata(modules),
         origin=modules[0].origin,
     )
+
+
+def _wrapper_module_metadata(modules: list[SemanticModule]) -> dict[str, object]:
+    metadata: dict[str, object] = {"wrapper_native_modules": _wrapper_native_modules(modules)}
+    if any(module.metadata.get(PYTHON_EXPORTS_PREPARED_METADATA) for module in modules):
+        metadata[PYTHON_EXPORTS_PREPARED_METADATA] = True
+    if any(module.metadata.get(PYI_LOADED_METADATA) for module in modules):
+        metadata[PYI_LOADED_METADATA] = True
+        metadata[PYI_NATIVE_CONTRACT_PREPARED_METADATA] = True
+    readiness_blockers = [blocker for module in modules for blocker in module.metadata.get("readiness_blockers", ())]
+    if readiness_blockers:
+        metadata["readiness_blockers"] = readiness_blockers
+    return metadata
+
+
+def _wrapper_native_modules(modules: list[SemanticModule]) -> list[str]:
+    return list(
+        dict.fromkeys(
+            str(module.origin.native_name or module.name)
+            for module in modules
+            if module.origin.source_kind == "module" and _module_requires_native_scope(module)
+        )
+    )
+
+
+def _module_requires_native_scope(module: SemanticModule) -> bool:
+    if module.variables or module.classes:
+        return True
+    functions = [*module.functions, *(procedure for item in module.overload_sets for procedure in item.procedures)]
+    return any(function.origin.native_scope is not None for function in functions)
 
 
 def _command_output(command: tuple[str, ...]) -> str | None:
@@ -502,7 +702,8 @@ def build_fortran_extension(
         compile_time_values=compile_time_values,
         type_facts=type_facts,
     )
-    module = _merge_wrapper_modules(modules)
+    _apply_source_python_exports(modules)
+    module = _merge_wrapper_modules(modules, name=primary_source.stem)
     scope = Scope(
         name=module.name,
         scope_type="module",
@@ -585,23 +786,25 @@ def build_fortran_extension(
 
 
 def build_pyi_extension(
-    contracts: str | Path | Iterable[str | Path],
+    contract: str | Path,
     *,
     native_objects: Iterable[str | Path] | None = None,
     native_libraries: Iterable[str] | None = None,
     native_library_dirs: Iterable[str | Path] | None = None,
     native_include_dirs: Iterable[str | Path] | None = None,
+    extension_name: str | None = None,
     output_dir: str | Path | None = None,
     strict_wrapper_names: bool = False,
     makefile: bool = False,
     verbose: bool | int = False,
 ) -> WrapperBuildResult:
-    """Build one extension from semantic `.pyi` contracts and native link inputs."""
+    """Build one extension from one entry `.pyi` and native link inputs."""
 
     if makefile:
         raise ValueError("makefile generation is not yet supported for .pyi wrapper builds")
 
-    contract_paths = _pyi_contract_paths(contracts)
+    entry = _pyi_entry_path(contract)
+    bundle = _pyi_contract_bundle(entry)
     artifact_paths = _existing_paths(native_objects, kind="Native artifact")
     libraries = tuple(native_libraries or ())
     library_dirs = _existing_paths(native_library_dirs, kind="Native library", require_directory=True)
@@ -609,14 +812,17 @@ def build_pyi_extension(
     if not artifact_paths and not libraries:
         raise ValueError(".pyi wrapper build requires at least one native object, archive, shared library, or -l name")
 
-    primary_contract = contract_paths[0]
+    primary_contract = bundle.entry
     output_path = Path(output_dir) if output_dir is not None else primary_contract.parent / _DEFAULT_BUILD_DIR_NAME
     shared_library_output_path = Path(output_dir) if output_dir is not None else primary_contract.parent
     output_path.mkdir(parents=True, exist_ok=True)
 
-    modules = load_pyi_modules(contract_paths)
-    _normalize_pyi_modules_for_fortran_wrapping(modules)
-    module = _merge_wrapper_modules(modules)
+    modules = list(bundle.modules)
+    validate_pyi_native_contract(modules)
+    requested_name = extension_name or _bundle_extension_name(bundle)
+    if not requested_name.isidentifier():
+        raise ValueError(f"Extension name must be a valid Python identifier: {requested_name!r}")
+    module = _merge_wrapper_modules(modules, name=requested_name)
     scope = Scope(
         name=module.name,
         scope_type="module",
@@ -675,7 +881,7 @@ def build_pyi_extension(
         *(f"-I{path}" for path in include_dirs),
     )
     return WrapperBuildResult(
-        sources=contract_paths,
+        sources=bundle.paths,
         module_name=module_name,
         output_dir=output_path,
         shared_library=shared_library_path,
@@ -685,3 +891,9 @@ def build_pyi_extension(
         generated_files=generated_files,
         native_inputs=native_inputs,
     )
+
+
+def _bundle_extension_name(bundle: _PyiContractBundle) -> str:
+    if bundle.entry.name == "__init__.pyi":
+        return bundle.entry.resolve().parent.name
+    return bundle.entry.stem

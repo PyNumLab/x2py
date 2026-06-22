@@ -127,6 +127,10 @@ python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
 <!-- x2py-doc-test-output -->
 ```python
 File: tests/data/fortran/general/basic_subroutine.f90
+Root contract: basic_subroutine/basic_subroutine.pyi
+from . import m1
+
+Module contract: m1.pyi
 def add1(
     n: Ptr(Const(Int32)),
     x: Float64[n]
@@ -156,8 +160,8 @@ Write a draft interface, edit it when source facts are not enough, then check
 the edited contract:
 
 ```bash
-python3 -m x2py solver.f90 --pyi --out solver.pyi
-python3 -m x2py solver.pyi --wrap-readiness
+python3 -m x2py solver.f90 --pyi --out contracts
+python3 -m x2py contracts/solver/solver.pyi --wrap-readiness
 ```
 
 ### C

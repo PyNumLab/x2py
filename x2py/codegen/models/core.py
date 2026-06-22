@@ -882,18 +882,21 @@ class AsName:
         Name of variable or function in this context.
     """
 
-    __slots__ = ("_local_alias", "_obj")
+    __slots__ = ("_local_alias", "_obj", "_source_name")
     _attribute_nodes = ()
 
-    def __init__(self, obj, local_alias):
+    def __init__(self, obj, local_alias, *, source_name=None):
         assert (is_model_object(obj) and not isinstance(obj, Symbol)) or is_model_class(obj)
         self._obj = obj
         self._local_alias = local_alias
+        self._source_name = source_name
         init_model_object(self)
 
     @property
     def name(self):
         """The original name of the object"""
+        if self._source_name is not None:
+            return self._source_name
         obj = self._obj
         if isinstance(obj, str | Symbol):
             return obj
@@ -1479,6 +1482,7 @@ class Module:
         "_is_external",
         "_name",
         "_overload_sets",
+        "_python_exports",
         "_variable_inits",
         "_variables",
     )
@@ -1505,6 +1509,7 @@ class Module:
         imports=(),
         scope=None,
         is_external=False,
+        python_exports=None,
     ):
         if not isinstance(name, str):
             raise TypeError("name must be a string")
@@ -1560,6 +1565,7 @@ class Module:
         self._classes = classes
         self._imports = imports
         self._is_external = is_external
+        self._python_exports = None if python_exports is None else dict(python_exports)
 
         def get_name(o):
             """Get the syntactic/Python name of the object"""
@@ -1621,6 +1627,18 @@ class Module:
     def imports(self):
         """Any imports in the module"""
         return self._imports
+
+    def get_python_exports(self, obj):
+        """Return ``(namespace, name)`` locations exported for one object."""
+        if self._python_exports is None:
+            name = self.scope.get_python_name(obj.name) if self.scope else obj.name
+            return (((), str(name)),)
+        return self._python_exports.get(id(obj), ())
+
+    @property
+    def has_explicit_python_exports(self):
+        """Whether export locations came from an entry `.pyi` contract."""
+        return self._python_exports is not None
 
     @property
     def declarations(self):

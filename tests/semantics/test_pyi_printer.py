@@ -89,7 +89,7 @@ end module
     assert "b: Ptr(Const(Float64))" in code
     assert "c: Annotated[Ptr(Float64), Intent('out')]" not in code
     assert 'Returns["c"' not in code
-    assert ") -> Ptr(Float64): ..." in code
+    assert ") -> Float64: ..." in code
 
 
 def test_emit_rejects_unknown_semantic_type():
@@ -813,7 +813,7 @@ end module
 
     assert "c: Annotated[Ptr(Float64), Intent('out')]" not in code
     assert 'Returns["c"' not in code
-    assert ") -> Ptr(Float64): ..." in code
+    assert ") -> Float64: ..." in code
 
 
 # ============================================================
@@ -1021,7 +1021,10 @@ end module pass_mod
 
     assert "    def shift(\n        self,\n        dx: Ptr(Const(Float64)),\n        dy: Ptr(Const(Float64))" in code
     assert "        owner: Ptr(vector)" not in code
-    assert "    @staticmethod\n    def make(\n        value: Ptr(Const(Float64))\n    ) -> vector: ..." in code
+    assert "@native_call([Arg(0), Pass(), Arg(1)])" in code
+    assert '    @staticmethod\n    @bind("make_vector")' in code
+    assert "value: Ptr(Const(Float64))" in code
+    assert "-> vector: ..." in code
 
 
 def test_emit_and_load_module_and_type_bound_overload_sets():
@@ -1088,7 +1091,7 @@ end module alloc_view_mod
 """
     code = generate_pyi(source)
 
-    assert '@module_variable("values")' in code
+    assert '@module_variable("values", access="get")' in code
     assert "def get_values() -> Annotated[Float64[:], Allocatable, FortranTarget] | None: ..." in code
     assert "field: Annotated[Float64[:], Allocatable]" in code
 
@@ -1108,7 +1111,7 @@ end module alloc_view_mod
 
 
 def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():
-    source_path = Path(__file__).parents[1] / "wrapper" / "foperators_f90.f90"
+    source_path = Path(__file__).parents[1] / "wrapper" / "fortran" / "foperators_f90.f90"
     semantic_module = fortran_module_to_semantic_module(
         parse_fortran_source(source_path.read_text(), filename=str(source_path))
     )
@@ -1142,7 +1145,7 @@ def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_
 
 
 def test_defined_operator_pyi_generates_wrapper_sources_without_fortran_source(tmp_path: Path):
-    source_path = Path(__file__).parents[1] / "wrapper" / "foperators_f90.f90"
+    source_path = Path(__file__).parents[1] / "wrapper" / "fortran" / "foperators_f90.f90"
     semantic_module = fortran_module_to_semantic_module(
         parse_fortran_source(source_path.read_text(), filename=str(source_path))
     )
@@ -1230,7 +1233,9 @@ end module
 """
     code = generate_pyi(source)
     assert "answer:" not in code
+    assert '@module_variable("counter", access="get")' in code
     assert "def get_counter() -> Int32: ..." in code
+    assert '@module_variable("counter", access="set")' in code
     assert "def set_counter(value: Int32) -> None: ..." in code
     assert "counter: Int32" not in code
     assert "hidden_scale" not in code
@@ -1268,7 +1273,7 @@ end module
     assert "secret" not in code
     assert "hidden" not in code
     assert "hidden_impl" not in code
-    assert "visible_impl" not in code
+    assert '@bind("visible_impl")' in code
     assert "    def visible(self) -> None: ..." in code
 
 
@@ -1598,7 +1603,7 @@ def test_printer_projection_return_helpers_and_keyword_data_members():
 
     assert printer._projected_argument_return(argument, visible=True) == 'Returns["x", Ptr(Float64), Optional]'
     assert printer._named_return(plain) == 'Returns["value", Int32]'
-    assert printer._projected_argument_return(argument, visible=False) == "Ptr(Float64) | None"
+    assert printer._projected_argument_return(argument, visible=False) == "Float64 | None"
     assert printer._projected_argument_return(plain, visible=False) == "Int32"
     assert "var['class']: Int32" in emit_module(module)
     assert "@native_call([Return(0)])" in emit_module(module)

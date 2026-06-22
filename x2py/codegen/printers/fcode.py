@@ -347,8 +347,7 @@ class FCodePrinter(CodePrinter):
             if old_name != new_name:
                 target = f"{new_name} => {old_name}"
                 line = f"{prefix} {target}"
-
-            if isinstance(new_name, str):
+            elif isinstance(new_name, str):
                 line = f"{prefix} {new_name}"
 
             else:

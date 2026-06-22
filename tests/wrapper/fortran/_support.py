@@ -3,6 +3,7 @@ import json
 import shutil
 import subprocess
 import sys
+from types import ModuleType
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +26,15 @@ def _assert_fmath_examples(module):
             assert actual == expected, public_name
         else:
             np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-6, err_msg=public_name)
+
+
+def _sole_native_module(module):
+    children = [
+        value
+        for value in vars(module).values()
+        if isinstance(value, ModuleType) and value.__name__.startswith(f"{module.__name__}.")
+    ]
+    return children[0] if len(children) == 1 else module
 
 
 def _build_and_import(source_template: Path, workdir: Path, expected_generated_sources: set[str]):
@@ -55,7 +65,7 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
     sys.modules.pop(module_name, None)
     sys.path.insert(0, str(workdir))
     try:
-        return importlib.import_module(module_name)
+        return _sole_native_module(importlib.import_module(module_name))
     finally:
         sys.path.remove(str(workdir))
 
@@ -84,7 +94,7 @@ def _build_text_and_import(source_text: str, filename: str, workdir: Path, expec
     sys.modules.pop(module_name, None)
     sys.path.insert(0, str(workdir))
     try:
-        return importlib.import_module(module_name)
+        return _sole_native_module(importlib.import_module(module_name))
     finally:
         sys.path.remove(str(workdir))
 

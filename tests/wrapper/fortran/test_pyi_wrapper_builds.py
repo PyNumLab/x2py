@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import numpy as np
 import pytest
@@ -15,6 +16,33 @@ from x2py.wrapping import build_fortran_extension
 
 SOURCE = Path(__file__).with_name("fruntime_abi_f90.f90")
 PYI_FIXTURE = Path(__file__).with_name("pyi") / "fruntime_abi_f90.pyi"
+BASIC_SOURCE = Path(__file__).parents[2] / "data" / "fortran" / "general" / "basic_subroutine.f90"
+MIXED_SOURCE = """\
+module m1
+contains
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+  x = x + 1.0d0
+end subroutine add1
+end module m1
+
+subroutine func()
+end subroutine func
+"""
+MULTI_MODULE_SOURCE = """\
+module first_mod
+contains
+subroutine shared_call()
+end subroutine shared_call
+end module first_mod
+
+module second_mod
+contains
+subroutine shared_call()
+end subroutine shared_call
+end module second_mod
+"""
 
 
 def _compile_native_object(source: Path, workdir: Path) -> Path:
@@ -71,7 +99,7 @@ def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
     return _import_from_build_dir(payload["module_name"], build_dir), payload
 
 
-def _generate_pyi(source: Path, output: Path) -> None:
+def _generate_pyi(source: Path, output_parent: Path) -> Path:
     subprocess.run(
         [
             sys.executable,
@@ -80,12 +108,24 @@ def _generate_pyi(source: Path, output: Path) -> None:
             str(source),
             "--pyi",
             "--out",
-            str(output),
+            str(output_parent),
         ],
         capture_output=True,
         text=True,
         check=True,
     )
+    package = output_parent / source.stem
+    init_entry = package / "__init__.pyi"
+    return init_entry if init_entry.is_file() else package / f"{source.stem}.pyi"
+
+
+def _sole_native_module(module):
+    children = [
+        value
+        for value in vars(module).values()
+        if isinstance(value, ModuleType) and value.__name__.startswith(f"{module.__name__}.")
+    ]
+    return children[0] if len(children) == 1 else module
 
 
 def _assert_scale_runtime_contract(module) -> None:
@@ -96,13 +136,12 @@ def _assert_scale_runtime_contract(module) -> None:
 def scale_runtime_module(pyi_parity_build_mode: str, tmp_path: Path):
     if pyi_parity_build_mode == "source":
         result = build_fortran_extension(SOURCE, output_dir=tmp_path / "source_build")
-        return _import_from_build_dir(result.module_name, result.output_dir)
+        return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
-    generated_pyi = tmp_path / PYI_FIXTURE.name
-    _generate_pyi(SOURCE, generated_pyi)
+    generated_pyi = _generate_pyi(SOURCE, tmp_path / "contracts")
     native_object = _compile_native_object(SOURCE, tmp_path / "native")
     module, _payload = _build_pyi_cli(generated_pyi, native_object, tmp_path / "pyi_build")
-    return module
+    return _sole_native_module(module)
 
 
 def test_pyi_cli_requires_a_native_link_input(tmp_path: Path):
@@ -117,11 +156,53 @@ def test_pyi_cli_requires_a_native_link_input(tmp_path: Path):
     assert "--wrap from .pyi requires --native-object or --native-library" in result.stderr
 
 
+def test_pyi_cli_accepts_exactly_one_entry_contract(tmp_path: Path):
+    other = tmp_path / "other.pyi"
+    other.write_text("", encoding="utf-8")
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(PYI_FIXTURE),
+            str(other),
+            "--wrap",
+            "--native-object",
+            str(tmp_path / "unused.o"),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "--wrap from .pyi accepts exactly one entry contract" in result.stderr
+
+
 def test_pyi_python_api_rejects_a_missing_native_artifact(tmp_path: Path):
     missing_object = tmp_path / "missing.o"
 
     with pytest.raises(FileNotFoundError, match=f"Native artifact not found: {missing_object}"):
         build_pyi_extension(PYI_FIXTURE, native_objects=[missing_object], output_dir=tmp_path / "build")
+
+
+def test_pyi_python_api_accepts_exactly_one_entry_contract(tmp_path: Path):
+    with pytest.raises(TypeError, match="exactly one entry contract"):
+        build_pyi_extension([PYI_FIXTURE], native_objects=[tmp_path / "unused.o"])
+
+
+def test_pyi_python_api_rejects_invalid_projection_before_codegen(tmp_path: Path):
+    contract = tmp_path / "incomplete.pyi"
+    contract.write_text(
+        "@native_call([Arg(1)])\ndef scale(value: Float64) -> Float64: ...\n",
+        encoding="utf-8",
+    )
+    native_object = tmp_path / "native.o"
+    native_object.touch()
+
+    with pytest.raises(ValueError, match="native_call argument position is out of range"):
+        build_pyi_extension(contract, native_objects=[native_object], output_dir=tmp_path / "build")
+
+    assert not list((tmp_path / "build").glob("*_wrapper.*"))
 
 
 def test_handwritten_pyi_fixture_builds_from_native_object_without_source_reparse(tmp_path: Path):
@@ -135,10 +216,116 @@ def test_handwritten_pyi_fixture_builds_from_native_object_without_source_repars
 
 
 def test_generated_pyi_matches_checked_in_fixture(tmp_path: Path):
-    generated_pyi = tmp_path / "fruntime_abi_f90.pyi"
-    _generate_pyi(SOURCE, generated_pyi)
+    entry = _generate_pyi(SOURCE, tmp_path / "contracts")
+    generated_pyi = entry.parent / PYI_FIXTURE.name
 
     assert generated_pyi.read_text(encoding="utf-8") == PYI_FIXTURE.read_text(encoding="utf-8")
+
+
+def test_source_named_root_discovers_and_builds_module_leaf(tmp_path: Path):
+    root = _generate_pyi(BASIC_SOURCE, tmp_path / "contracts")
+    leaf = root.parent / "m1.pyi"
+    native_object = _compile_native_object(BASIC_SOURCE, tmp_path / "native")
+
+    module, payload = _build_pyi_cli(root, native_object, tmp_path / "pyi_build")
+
+    assert root.read_text(encoding="utf-8") == "from . import m1\n"
+    assert leaf.is_file()
+    assert payload["module_name"] == "basic_subroutine"
+    assert payload["sources"] == [str(root), str(leaf)]
+    assert not hasattr(module, "add1")
+    values = np.array([1.0, 2.0], dtype=np.float64)
+    module.m1.add1(np.int32(values.size), values)
+    np.testing.assert_array_equal(values, np.array([1.0, 2.0], dtype=np.float64))
+
+
+def test_entry_wildcard_import_explicitly_flattens_module_leaf(tmp_path: Path):
+    root = _generate_pyi(BASIC_SOURCE, tmp_path / "contracts")
+    root.write_text("from .m1 import *\n", encoding="utf-8")
+    native_object = _compile_native_object(BASIC_SOURCE, tmp_path / "native")
+
+    module, _payload = _build_pyi_cli(root, native_object, tmp_path / "pyi_build")
+
+    assert not hasattr(module, "m1")
+    values = np.array([1.0, 2.0], dtype=np.float64)
+    module.add1(np.int32(values.size), values)
+
+
+def test_entry_can_alias_one_module_procedure_at_the_root(tmp_path: Path):
+    root = _generate_pyi(BASIC_SOURCE, tmp_path / "contracts")
+    root.write_text("from .m1 import add1 as increment\n", encoding="utf-8")
+    native_object = _compile_native_object(BASIC_SOURCE, tmp_path / "native")
+
+    module, _payload = _build_pyi_cli(root, native_object, tmp_path / "pyi_build")
+
+    assert not hasattr(module, "m1")
+    assert not hasattr(module, "add1")
+    values = np.array([1.0, 2.0], dtype=np.float64)
+    module.increment(np.int32(values.size), values)
+
+
+def test_entry_rejects_colliding_wildcard_exports(tmp_path: Path):
+    entry = tmp_path / "api.pyi"
+    first = tmp_path / "first.pyi"
+    second = tmp_path / "second.pyi"
+    entry.write_text("from .first import *\nfrom .second import *\n", encoding="utf-8")
+    declaration = "def update(value: Int32) -> Int32: ...\n"
+    first.write_text(declaration, encoding="utf-8")
+    second.write_text(declaration, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Conflicting .pyi exports for 'update'"):
+        build_pyi_extension(entry, native_objects=[tmp_path / "unused.o"])
+
+
+def test_module_leaf_can_be_the_entry_contract(tmp_path: Path):
+    root = _generate_pyi(BASIC_SOURCE, tmp_path / "contracts")
+    leaf = root.parent / "m1.pyi"
+    native_object = _compile_native_object(BASIC_SOURCE, tmp_path / "native")
+
+    module, payload = _build_pyi_cli(leaf, native_object, tmp_path / "pyi_build")
+
+    assert payload["module_name"] == "m1"
+    assert payload["sources"] == [str(leaf)]
+    assert not hasattr(module, "m1")
+    values = np.array([1.0, 2.0], dtype=np.float64)
+    module.add1(np.int32(values.size), values)
+
+
+def test_mixed_entry_exposes_externals_at_root_and_modules_as_children(tmp_path: Path):
+    source = tmp_path / "mixed_api.f90"
+    source.write_text(MIXED_SOURCE, encoding="utf-8")
+    entry = _generate_pyi(source, tmp_path / "contracts")
+    native_object = _compile_native_object(source, tmp_path / "native")
+
+    module, payload = _build_pyi_cli(entry, native_object, tmp_path / "pyi_build")
+
+    contract = entry.read_text(encoding="utf-8")
+    assert "from . import m1" in contract
+    assert "@external\ndef func() -> None: ..." in contract
+    assert payload["sources"] == [str(entry), str(entry.parent / "m1.pyi")]
+    assert module.func() is None
+    values = np.array([1.0, 2.0], dtype=np.float64)
+    module.m1.add1(np.int32(values.size), values)
+    np.testing.assert_array_equal(values, np.array([2.0, 3.0], dtype=np.float64))
+
+
+def test_one_entry_preserves_multiple_native_module_namespaces(tmp_path: Path):
+    source = tmp_path / "multi_api.f90"
+    source.write_text(MULTI_MODULE_SOURCE, encoding="utf-8")
+    entry = _generate_pyi(source, tmp_path / "contracts")
+    native_object = _compile_native_object(source, tmp_path / "native")
+
+    module, payload = _build_pyi_cli(entry, native_object, tmp_path / "pyi_build")
+
+    assert entry.read_text(encoding="utf-8") == "from . import first_mod\nfrom . import second_mod\n"
+    assert payload["sources"] == [
+        str(entry),
+        str(entry.parent / "first_mod.pyi"),
+        str(entry.parent / "second_mod.pyi"),
+    ]
+    assert not hasattr(module, "shared_call")
+    assert module.first_mod.shared_call() is None
+    assert module.second_mod.shared_call() is None
 
 
 def test_scale_runtime_contract(scale_runtime_module):

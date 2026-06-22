@@ -49,7 +49,7 @@ _CLI_HELP_EPILOG = (
     "    python3 -m x2py path/to/file.f90 --parse --show-vars\n"
     "    python3 -m x2py path/to/file.f90 --parse --print-limit 50\n"
     "    python3 -m x2py path/to/file.f90 --semantics\n"
-    "    python3 -m x2py path/to/file.f90 --pyi --out module.pyi\n"
+    "    python3 -m x2py path/to/file.f90 --pyi --out contracts\n"
     "\n"
     "  Inspect C source:\n"
     "    python3 -m x2py path/to/api.h --language c --parse --json\n"
@@ -70,6 +70,7 @@ _CLI_HELP_EPILOG = (
     "  Build wrappers:\n"
     "    python3 -m x2py path/to/file.f\n"
     "    python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
+    "    python3 -m x2py basic_subroutine.pyi --wrap --native-object basic_subroutine.o\n"
     "\n"
     "  Write stage output:\n"
     "    python3 -m x2py path/to/file.f90 --parse --json --out report.json\n"
@@ -388,7 +389,7 @@ def _fortran_semantic_report(
     fortran_type_probe_cache_dir: str | None,
     refresh_fortran_type_probe: bool,
 ) -> dict[str, dict]:
-    from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
+    from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 
     parser = FortranParser()
     parsed_files = []
@@ -412,15 +413,13 @@ def _fortran_semantic_report(
             compile_time_values=compile_time_values,
             **probe_options,
         )
-        modules = [
-            fortran_module_to_semantic_module(
-                m,
-                compile_time_values=compile_time_values,
-                wrapped_derived_types=wrapped_derived_types,
-                **({"type_facts": type_facts} if type_facts is not None else {}),
-            )
-            for m in fobj.modules
-        ]
+        modules = fortran_file_to_semantic_modules(
+            fobj,
+            standalone_module_name=p.stem,
+            compile_time_values=compile_time_values,
+            wrapped_derived_types=wrapped_derived_types,
+            **({"type_facts": type_facts} if type_facts is not None else {}),
+        )
         converted_files.append((p, modules))
     return _semantic_payload_for_converted_files(converted_files)
 
@@ -432,6 +431,9 @@ def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
     available_modules = [module for _p, modules in converted_files for module in modules]
     primary_names = {module.name for module in available_modules}
     for p, modules in converted_files:
+        if _is_fortran_semantic_file(modules):
+            out[str(p)] = _fortran_contract_payload(Path(p), modules, available_modules)
+            continue
         stubs = emit_module_stubs(modules, available_modules=available_modules)
         module_stubs = {module.name: stubs[module.name] for module in modules}
         out[str(p)] = {
@@ -445,12 +447,64 @@ def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
     return out
 
 
+def _is_fortran_semantic_file(modules) -> bool:
+    return any(getattr(getattr(module, "origin", None), "source_language", None) == "fortran" for module in modules)
+
+
+def _fortran_contract_payload(path: Path, modules, available_modules) -> dict[str, object]:
+    from x2py.codegen.printers.pyi_printer import emit_module_stubs
+
+    native_modules = [module for module in modules if module.origin.source_kind == "module"]
+    external_modules = [module for module in modules if module.origin.source_kind != "module"]
+    emitted = emit_module_stubs(native_modules, available_modules=available_modules) if native_modules else {}
+    module_stubs = {module.name: emitted.pop(module.name) for module in native_modules}
+    dependencies = dict(emitted)
+    external_text = []
+    for module in external_modules:
+        external_stubs = emit_module_stubs([module], available_modules=available_modules)
+        external_text.append(external_stubs.pop(module.name))
+        for name, text in external_stubs.items():
+            if name in dependencies and dependencies[name] != text:
+                raise ValueError(f"Conflicting generated dependency stub for {name}")
+            dependencies[name] = text
+
+    root_stub = _source_root_stub([module.name for module in native_modules], external_text)
+    payload: dict[str, object] = {
+        "semantic_modules": [asdict(module) for module in modules],
+        "pyi": "\n\n".join([*module_stubs.values(), *external_text]).strip(),
+        "pyi_modules": module_stubs,
+        "pyi_root": root_stub,
+    }
+    if dependencies:
+        payload["pyi_dependencies"] = dependencies
+    return payload
+
+
+def _source_root_stub(module_names: list[str], external_text: list[str]) -> str:
+    lines = [f"from . import {name}" for name in module_names]
+    sections = ["\n".join(lines), *external_text]
+    return "\n\n".join(section for section in sections if section).strip()
+
+
 def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
     lines: list[str] = []
     emitted_dependencies: set[str] = set()
     for fname, payload in semantic_report.items():
         lines.append(f"File: {fname}")
-        lines.append(payload.get("pyi") or "<no module declarations found>")
+        root = payload.get("pyi_root")
+        if root:
+            entry_name = (
+                "__init__.pyi" if Path(fname).stem in payload.get("pyi_modules", {}) else f"{Path(fname).stem}.pyi"
+            )
+            lines.append(f"Root contract: {Path(fname).stem}/{entry_name}")
+            lines.append(root)
+            lines.append("")
+        for module_name, text in payload.get("pyi_modules", {}).items():
+            lines.append(f"Module contract: {module_name}.pyi")
+            lines.append(text)
+            lines.append("")
+        if not payload.get("pyi_modules"):
+            lines.append(payload.get("pyi") or "<no module declarations found>")
         lines.append("")
         for module_name, text in payload.get("pyi_dependencies", {}).items():
             if module_name in emitted_dependencies:
@@ -565,7 +619,11 @@ def _pyi_readiness_report(paths: list[str]) -> dict[str, dict]:
         str(path): {
             "source_kind": "pyi",
             "semantic_modules": [asdict(module) for module in modules],
-            "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(path)),
+            "wrap_readiness": assess_semantic_wrap_readiness(
+                modules,
+                source=str(path),
+                require_native_contract=True,
+            ),
         }
         for path in pyi_paths
     }
@@ -826,6 +884,8 @@ def _validate_pyi_wrap_options(args: argparse.Namespace, parser: argparse.Argume
         parser.error("--wrap from .pyi expects semantic contract files, not directories")
     if any(not _path_is_pyi_contract(path) for path in args.paths):
         parser.error("--wrap from .pyi cannot mix positional native sources; pass native artifacts with flags")
+    if len(args.paths) != 1:
+        parser.error("--wrap from .pyi accepts exactly one entry contract")
     if getattr(args, "makefile", False):
         parser.error("--makefile is not yet supported for .pyi wrapper builds")
     if not (getattr(args, "native_objects", None) or getattr(args, "native_libraries", None)):
@@ -837,6 +897,8 @@ def _validate_source_wrap_options(args: argparse.Namespace, parser: argparse.Arg
         parser.error("Native artifact link flags are only supported for .pyi wrapper builds")
     if any(Path(path).is_dir() for path in args.paths):
         parser.error("--wrap expects Fortran source files, not directories")
+    if getattr(args, "extension_name", None) is not None:
+        parser.error("--extension-name is only supported for .pyi wrapper builds")
 
 
 def _validate_c_type_probe_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -1018,11 +1080,12 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
 
     if _wrap_uses_pyi_contract(args):
         return build_pyi_extension(
-            args.paths,
+            args.paths[0],
             native_objects=getattr(args, "native_objects", None),
             native_libraries=getattr(args, "native_libraries", None),
             native_library_dirs=getattr(args, "native_library_dirs", None),
             native_include_dirs=getattr(args, "native_include_dirs", None),
+            extension_name=getattr(args, "extension_name", None),
             output_dir=getattr(args, "out_dir", None),
             strict_wrapper_names=getattr(args, "strict_wrapper_names", False),
             makefile=getattr(args, "makefile", False),
@@ -1084,15 +1147,71 @@ def _select_main_payload(args: argparse.Namespace, parse_payload, semantic_paylo
 
 
 def _write_pyi_output(args: argparse.Namespace, semantic_payload: dict[str, dict]) -> None:
+    if any("pyi_root" in report for report in semantic_payload.values()):
+        output_parent = Path(args.out) if args.out else None
+        _write_fortran_contract_packages(semantic_payload, output_parent=output_parent)
+        return
     if args.out:
-        pyi_text = "\n\n".join((report.get("pyi") or "") for report in semantic_payload.values()).strip()
+        roots = [report.get("pyi_root") for report in semantic_payload.values() if report.get("pyi_root")]
+        pyi_text = "\n\n".join(roots).strip()
+        if not pyi_text:
+            pyi_text = "\n\n".join((report.get("pyi") or "") for report in semantic_payload.values()).strip()
         Path(args.out).write_text(pyi_text + "\n", encoding="utf-8")
+        _write_pyi_modules(semantic_payload, output_dir=Path(args.out).parent, skip=Path(args.out))
         _write_pyi_dependencies(semantic_payload, output_dir=Path(args.out).parent)
         return
+    _write_pyi_modules(semantic_payload)
     for fname, report in semantic_payload.items():
-        for module_name, text in report.get("pyi_modules", {}).items():
-            Path(fname).parent.joinpath(module_name).with_suffix(".pyi").write_text(text + "\n", encoding="utf-8")
+        root = report.get("pyi_root")
+        if root:
+            Path(fname).with_suffix(".pyi").write_text(root + "\n", encoding="utf-8")
     _write_pyi_dependencies(semantic_payload)
+
+
+def _write_fortran_contract_packages(
+    semantic_payload: dict[str, dict],
+    *,
+    output_parent: Path | None,
+) -> None:
+    for fname, report in semantic_payload.items():
+        source = Path(fname)
+        target_parent = output_parent or source.parent
+        for relative_path, text in _fortran_contract_files(source, report).items():
+            target = target_parent / relative_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text + "\n", encoding="utf-8")
+
+
+def _fortran_contract_files(source: Path, report: dict[str, object]) -> dict[Path, str]:
+    package_dir = Path(source.stem)
+    entry_name = "__init__.pyi" if source.stem in report.get("pyi_modules", {}) else f"{source.stem}.pyi"
+    files = {package_dir / entry_name: str(report.get("pyi_root", ""))}
+    _add_contract_mapping(files, package_dir, report.get("pyi_modules", {}))
+    _add_contract_mapping(files, package_dir, report.get("pyi_dependencies", {}))
+    return files
+
+
+def _add_contract_mapping(files: dict[Path, str], package_dir: Path, contracts: object) -> None:
+    if not isinstance(contracts, dict):
+        raise TypeError("Generated contract mapping must be a dictionary")
+    for module_name, text in contracts.items():
+        target = package_dir.joinpath(*str(module_name).split(".")).with_suffix(".pyi")
+        files[target] = str(text)
+
+
+def _write_pyi_modules(
+    semantic_payload: dict[str, dict],
+    *,
+    output_dir: Path | None = None,
+    skip: Path | None = None,
+) -> None:
+    for fname, report in semantic_payload.items():
+        target_dir = output_dir or Path(fname).parent
+        for module_name, text in report.get("pyi_modules", {}).items():
+            target = target_dir.joinpath(module_name).with_suffix(".pyi")
+            if skip is not None and target.resolve() == skip.resolve():
+                continue
+            target.write_text(text + "\n", encoding="utf-8")
 
 
 def _write_json_output(args: argparse.Namespace, payload: dict) -> None:
@@ -1453,9 +1572,18 @@ def main() -> int:
         metavar="DIR",
         help="Directory containing native module/interface files needed to compile .pyi wrapper bridges",
     )
+    wrapper_group.add_argument(
+        "--extension-name",
+        metavar="NAME",
+        help="Override the extension import name inferred from the entry contract",
+    )
     output_group.add_argument("--json", action="store_true", help="Print JSON to stdout")
     output_group.add_argument(
-        "--out", nargs="?", const="", type=str, help="Write stage output to file (optional explicit output filename)"
+        "--out",
+        nargs="?",
+        const="",
+        type=str,
+        help="Write stage output; for --pyi, PATH is the parent directory for generated contract packages",
     )
     output_group.add_argument(
         "--out-dir",
