@@ -36,6 +36,9 @@ from x2py.semantics.models import (
     SemanticType,
 )
 
+WRAPPER_FEATURE_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper" / "feature_parity"
+OPERATOR_F90_SOURCE = WRAPPER_FEATURE_DATA / "operators" / "foperators_f90.f90"
+
 
 # ============================================================
 # Helpers
@@ -1109,9 +1112,8 @@ end module alloc_view_mod
 
 
 def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():
-    source_path = Path(__file__).parents[1] / "wrapper" / "fortran" / "foperators_f90.f90"
     semantic_module = fortran_module_to_semantic_module(
-        parse_fortran_source(source_path.read_text(), filename=str(source_path))
+        parse_fortran_source(OPERATOR_F90_SOURCE.read_text(), filename=str(OPERATOR_F90_SOURCE))
     )
     code = emit_module(semantic_module)
 
@@ -1143,9 +1145,8 @@ def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_
 
 
 def test_defined_operator_pyi_generates_wrapper_sources_without_fortran_source(tmp_path: Path):
-    source_path = Path(__file__).parents[1] / "wrapper" / "fortran" / "foperators_f90.f90"
     semantic_module = fortran_module_to_semantic_module(
-        parse_fortran_source(source_path.read_text(), filename=str(source_path))
+        parse_fortran_source(OPERATOR_F90_SOURCE.read_text(), filename=str(OPERATOR_F90_SOURCE))
     )
     pyi = emit_module(semantic_module)
     loaded = parse_pyi_text(pyi, module_name=semantic_module.name)

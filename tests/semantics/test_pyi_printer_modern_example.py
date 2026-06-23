@@ -7,7 +7,14 @@ from x2py.codegen.printers.pyi_printer import emit_module
 
 def test_modern_fortran_example_pyi_snapshot():
     fixture = Path(__file__).resolve().parents[1] / "data" / "fortran" / "general" / "modern_pyi_example.f90"
-    expected_fixture = Path(__file__).resolve().parents[1] / "pyi" / "fixtures" / "general" / "modern_math_physics.pyi"
+    expected_fixture = (
+        Path(__file__).resolve().parents[1]
+        / "pyi"
+        / "fixtures"
+        / "general"
+        / "modern_pyi_example"
+        / "modern_math_physics.pyi"
+    )
     source = fixture.read_text(encoding="utf-8")
 
     parsed = parse_fortran_file(source, filename=str(fixture.name))

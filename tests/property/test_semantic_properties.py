@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 import pytest
 
@@ -16,6 +16,7 @@ from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules, resolve_
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     OwnershipPolicy,
+    PYI_LOADED_METADATA,
     SemanticArgument,
     SemanticArrayContract,
     SemanticConstraint,
@@ -345,4 +346,4 @@ def test_generated_semantic_ir_round_trips_through_pyi(arguments):
     emitted = emit_module(module)
     reparsed = parse_pyi_text(emitted, module_name="generated")
 
-    assert reparsed == module
+    assert reparsed == replace(module, metadata={PYI_LOADED_METADATA: True})
