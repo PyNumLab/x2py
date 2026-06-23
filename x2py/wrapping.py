@@ -43,6 +43,119 @@ from x2py.semantics.native_contract import validate_pyi_native_contract
 _DEFAULT_BUILD_DIR_NAME = "__x2py__"
 _FORTRAN_SOURCE_SUFFIXES = {".f", ".f03", ".f08", ".f77", ".f90", ".f95", ".for", ".ftn"}
 _C_SOURCE_SUFFIXES = {".c"}
+_NATIVE_PATH_LINK_KINDS = frozenset({"object", "archive", "shared_library"})
+_NATIVE_LINK_KINDS = frozenset({*_NATIVE_PATH_LINK_KINDS, "named_library", "linker_argument"})
+
+
+@dataclass(frozen=True)
+class NativeCompilationUnit:
+    """One caller-supplied native source and the object it produces."""
+
+    source: Path
+    object_path: Path
+    language: str
+    module_dir: Path | None = None
+    include_dirs: tuple[Path, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "source", Path(self.source))
+        object.__setattr__(self, "object_path", Path(self.object_path))
+        if self.module_dir is not None:
+            object.__setattr__(self, "module_dir", Path(self.module_dir))
+        object.__setattr__(self, "include_dirs", tuple(Path(path) for path in self.include_dirs))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "source": str(self.source),
+            "object": str(self.object_path),
+            "language": self.language,
+            "module_dir": str(self.module_dir) if self.module_dir is not None else None,
+            "include_dirs": [str(path) for path in self.include_dirs],
+        }
+
+
+@dataclass(frozen=True)
+class NativePrebuiltArtifact:
+    """One caller-supplied native artifact used by the extension link."""
+
+    path: Path
+    kind: str
+
+    def __post_init__(self) -> None:
+        if self.kind not in _NATIVE_PATH_LINK_KINDS:
+            raise ValueError(f"Unsupported native artifact kind: {self.kind!r}")
+        object.__setattr__(self, "path", Path(self.path))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "kind": self.kind,
+            "path": str(self.path),
+        }
+
+
+@dataclass(frozen=True)
+class NativeLinkItem:
+    """One ordered item in the native implementation link plan."""
+
+    kind: str
+    value: Path | str
+
+    def __post_init__(self) -> None:
+        if self.kind not in _NATIVE_LINK_KINDS:
+            raise ValueError(f"Unsupported native link item kind: {self.kind!r}")
+        if self.kind in _NATIVE_PATH_LINK_KINDS:
+            object.__setattr__(self, "value", Path(self.value))
+        else:
+            object.__setattr__(self, "value", str(self.value))
+
+    def to_dict(self) -> dict[str, object]:
+        if self.kind in _NATIVE_PATH_LINK_KINDS:
+            return {
+                "kind": self.kind,
+                "path": str(self.value),
+            }
+        if self.kind == "named_library":
+            return {
+                "kind": self.kind,
+                "name": str(self.value),
+            }
+        return {
+            "kind": self.kind,
+            "argument": str(self.value),
+        }
+
+
+@dataclass(frozen=True)
+class NativeBuildPlan:
+    """Extension-level native implementation build and link plan."""
+
+    compilation_units: tuple[NativeCompilationUnit, ...] = ()
+    produced_objects: tuple[Path, ...] = ()
+    prebuilt_artifacts: tuple[NativePrebuiltArtifact, ...] = ()
+    module_dirs: tuple[Path, ...] = ()
+    include_dirs: tuple[Path, ...] = ()
+    library_dirs: tuple[Path, ...] = ()
+    link_items: tuple[NativeLinkItem, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "compilation_units", tuple(self.compilation_units))
+        object.__setattr__(self, "produced_objects", tuple(Path(path) for path in self.produced_objects))
+        object.__setattr__(self, "prebuilt_artifacts", tuple(self.prebuilt_artifacts))
+        object.__setattr__(self, "module_dirs", tuple(Path(path) for path in self.module_dirs))
+        object.__setattr__(self, "include_dirs", tuple(Path(path) for path in self.include_dirs))
+        object.__setattr__(self, "library_dirs", tuple(Path(path) for path in self.library_dirs))
+        object.__setattr__(self, "link_items", tuple(self.link_items))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "compilation_units": [unit.to_dict() for unit in self.compilation_units],
+            "produced_objects": [str(path) for path in self.produced_objects],
+            "prebuilt_artifacts": [artifact.to_dict() for artifact in self.prebuilt_artifacts],
+            "module_dirs": [str(path) for path in self.module_dirs],
+            "include_dirs": [str(path) for path in self.include_dirs],
+            "library_dirs": [str(path) for path in self.library_dirs],
+            "link_items": [item.to_dict() for item in self.link_items],
+        }
 
 
 @dataclass(frozen=True)
@@ -57,7 +170,7 @@ class WrapperBuildResult:
     compiled: bool
     generated_sources: tuple[Path, ...]
     generated_files: tuple[Path, ...]
-    native_inputs: tuple[str, ...] = ()
+    native_build_plan: NativeBuildPlan = field(default_factory=NativeBuildPlan)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -69,7 +182,7 @@ class WrapperBuildResult:
             "compiled": self.compiled,
             "generated_sources": [str(path) for path in self.generated_sources],
             "generated_files": [str(path) for path in self.generated_files],
-            "native_inputs": list(self.native_inputs),
+            "native_build_plan": self.native_build_plan.to_dict(),
         }
 
 
@@ -407,6 +520,67 @@ def _native_artifact_compile_object(path: Path) -> CompileObj:
     return compile_obj
 
 
+def _native_artifact_kind(path: Path) -> str:
+    name = path.name.lower()
+    suffix = path.suffix.lower()
+    if suffix in {".a", ".lib"}:
+        return "archive"
+    if suffix in {".so", ".dylib", ".dll"} or ".so." in name:
+        return "shared_library"
+    return "object"
+
+
+def _unique_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
+    return tuple(dict.fromkeys(Path(path) for path in paths))
+
+
+def _source_native_build_plan(
+    source_paths: tuple[Path, ...],
+    source_objects: tuple[CompileObj, ...],
+    *,
+    module_dir: Path,
+) -> NativeBuildPlan:
+    produced_objects = tuple(Path(source_object.module_target) for source_object in source_objects)
+    return NativeBuildPlan(
+        compilation_units=tuple(
+            NativeCompilationUnit(
+                source=source_path,
+                object_path=source_object.module_target,
+                language="fortran",
+                module_dir=module_dir,
+                include_dirs=(module_dir,),
+            )
+            for source_path, source_object in zip(source_paths, source_objects, strict=True)
+        ),
+        produced_objects=produced_objects,
+        module_dirs=(module_dir,),
+        include_dirs=(module_dir,),
+        link_items=tuple(NativeLinkItem("object", object_path) for object_path in produced_objects),
+    )
+
+
+def _pyi_native_build_plan(
+    *,
+    artifact_paths: tuple[Path, ...],
+    libraries: tuple[str, ...],
+    library_dirs: tuple[Path, ...],
+    explicit_include_dirs: tuple[Path, ...],
+    include_dirs: tuple[Path, ...],
+) -> NativeBuildPlan:
+    prebuilt_artifacts = tuple(
+        NativePrebuiltArtifact(path=path, kind=_native_artifact_kind(path)) for path in artifact_paths
+    )
+    artifact_link_items = tuple(NativeLinkItem(artifact.kind, artifact.path) for artifact in prebuilt_artifacts)
+    library_link_items = tuple(NativeLinkItem("named_library", library) for library in libraries)
+    return NativeBuildPlan(
+        prebuilt_artifacts=prebuilt_artifacts,
+        module_dirs=explicit_include_dirs,
+        include_dirs=include_dirs,
+        library_dirs=library_dirs,
+        link_items=(*artifact_link_items, *library_link_items),
+    )
+
+
 def _source_object_stems(source_paths: tuple[Path, ...]) -> tuple[str, ...]:
     totals: dict[str, int] = {}
     for source_path in source_paths:
@@ -718,6 +892,11 @@ def build_fortran_extension(
         _source_compile_object(source_path, output_path, object_stem=object_stem)
         for source_path, object_stem in zip(source_paths, _source_object_stems(source_paths), strict=True)
     )
+    native_build_plan = _source_native_build_plan(
+        source_paths,
+        source_objects,
+        module_dir=output_path,
+    )
     for source_obj in source_objects:
         compiler.compile_module(
             source_obj,
@@ -782,6 +961,7 @@ def build_fortran_extension(
         compiled=not makefile,
         generated_sources=generated_sources,
         generated_files=generated_files,
+        native_build_plan=native_build_plan,
     )
 
 
@@ -833,8 +1013,15 @@ def build_pyi_extension(
     module_name = str(codegen_ast.scope.get_python_name(codegen_ast.name))
 
     artifact_dependencies = tuple(_native_artifact_compile_object(path) for path in artifact_paths)
-    inferred_include_dirs = tuple(dict.fromkeys(path.parent for path in artifact_paths))
-    include_dirs = (*explicit_include_dirs, *inferred_include_dirs)
+    inferred_include_dirs = _unique_paths(path.parent for path in artifact_paths)
+    include_dirs = _unique_paths((*explicit_include_dirs, *inferred_include_dirs))
+    native_build_plan = _pyi_native_build_plan(
+        artifact_paths=artifact_paths,
+        libraries=libraries,
+        library_dirs=library_dirs,
+        explicit_include_dirs=explicit_include_dirs,
+        include_dirs=include_dirs,
+    )
     compiler = _new_gnu_compiler()
     codegen = Codegen(module_name, codegen_ast, codegen_ast.scope)
     module_obj = CompileObj(
@@ -874,12 +1061,6 @@ def build_pyi_extension(
         module_name=module_name,
         shared_library=shared_library_path,
     )
-    native_inputs = (
-        *(str(path) for path in artifact_paths),
-        *(f"-l{library}" if not str(library).startswith("-l") else str(library) for library in libraries),
-        *(f"-L{path}" for path in library_dirs),
-        *(f"-I{path}" for path in include_dirs),
-    )
     return WrapperBuildResult(
         sources=bundle.paths,
         module_name=module_name,
@@ -889,7 +1070,7 @@ def build_pyi_extension(
         compiled=True,
         generated_sources=generated_sources,
         generated_files=generated_files,
-        native_inputs=native_inputs,
+        native_build_plan=native_build_plan,
     )
 
 

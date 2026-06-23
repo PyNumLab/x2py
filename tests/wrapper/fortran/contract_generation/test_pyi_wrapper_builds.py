@@ -246,10 +246,17 @@ def test_pyi_python_api_rejects_invalid_projection_before_codegen(tmp_path: Path
 def test_generated_pyi_fixture_builds_from_native_object_without_source_reparse(tmp_path: Path):
     native_object = _compile_native_object(SOURCE, tmp_path / "native")
     module, payload = _build_pyi_cli(PYI_FIXTURE, native_object, tmp_path / "pyi_build")
+    native_plan = payload["native_build_plan"]
 
     assert Path(payload["shared_library"]).is_file()
     assert payload["sources"] == [str(PYI_FIXTURE)]
-    assert str(native_object) in payload["native_inputs"]
+    assert "native_inputs" not in payload
+    assert native_plan["compilation_units"] == []
+    assert native_plan["produced_objects"] == []
+    assert native_plan["prebuilt_artifacts"] == [{"kind": "object", "path": str(native_object)}]
+    assert native_plan["module_dirs"] == [str(native_object.parent)]
+    assert native_plan["include_dirs"] == [str(native_object.parent)]
+    assert native_plan["link_items"] == [{"kind": "object", "path": str(native_object)}]
     assert module.scale(np.float64(2.0), np.float64(4.0)) == np.float64(8.0)
 
 

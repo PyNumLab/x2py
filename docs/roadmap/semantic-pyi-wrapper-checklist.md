@@ -57,17 +57,6 @@ contract output and build models stabilize first, feature parity builds on that
 foundation, editable policy follows unmodified parity, and library-scale tests
 exercise the completed build surface last.
 
-### Stage 2 — Structured native build model
-
-- [ ] The build result records one structured, extension-level native build plan
-  separately from semantic contract paths. The plan distinguishes native
-  compilation units, produced objects, prebuilt artifacts, module/include
-  directories, and ordered link items instead of flattening them into strings.
-- [ ] One ordered native-link representation preserves interleaving across
-  objects, archives, direct shared libraries, named libraries, and explicit
-  linker arguments instead of grouping inputs in a way that changes linker
-  semantics.
-
 ### Stage 3 — Multi-source combined contract generation
 
 - [ ] Source, generated-contract, and modified-contract parity builds use the
@@ -278,6 +267,32 @@ Runtime wrapper tests are organized by stable subjects under
 - [x] Explicit Fortran `--pyi --out` output writes contract packages and rejects
   ambiguous single-file `.pyi` targets so the one-module-per-file rule is
   preserved.
+
+### Stage 2 — Structured Native Build Model
+
+`WrapperBuildResult.native_build_plan` records the extension-level native
+implementation build plan separately from semantic `sources`.
+
+- [x] The build result records one structured, extension-level native build plan
+  separately from semantic contract paths. The plan distinguishes native
+  compilation units, produced objects, prebuilt artifacts, module/include
+  directories, library directories, and ordered link items instead of flattening
+  them into strings.
+- [x] One ordered native-link representation preserves interleaving across
+  objects, archives, direct shared libraries, named libraries, and explicit
+  linker arguments instead of grouping inputs in a way that changes linker
+  semantics.
+- [x] Source-driven wrapper builds record caller-supplied native source
+  compilation units, produced objects, module/include directories, and object
+  link items in `NativeBuildPlan`.
+- [x] `.pyi` wrapper builds record semantic contract paths in `sources` and
+  caller-supplied native artifacts, include/module directories, library
+  directories, and ordered link items in `NativeBuildPlan`.
+- [x] The lower compiler object dependency model preserves caller order for
+  native object inputs instead of converting them through an unordered set.
+- [x] Documentation explains the native build plan with five examples covering
+  source builds, `.pyi` object builds, object/archive ordering, direct shared
+  libraries, and explicit linker-argument representation.
 
 ### Immutable Native Contract
 

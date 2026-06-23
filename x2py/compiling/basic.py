@@ -171,12 +171,18 @@ class CompileObj:
     @property
     def extra_modules(self):
         """Returns the additional objects required to compile the file"""
-        deps = set()
+        deps = []
+        seen = set()
         for d in self._dependencies.values():
             if d.has_target_file:
-                deps.add(d.module_target)
-                deps.update(d.extra_modules)
-        return deps
+                if d.module_target not in seen:
+                    deps.append(d.module_target)
+                    seen.add(d.module_target)
+                for extra_module in d.extra_modules:
+                    if extra_module not in seen:
+                        deps.append(extra_module)
+                        seen.add(extra_module)
+        return tuple(deps)
 
     @property
     def dependencies(self):

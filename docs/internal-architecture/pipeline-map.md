@@ -33,7 +33,7 @@ CLI request
 | Stage | Main source | Input | Output | Primary evidence |
 | --- | --- | --- | --- | --- |
 | CLI request | `x2py/cli.py` | source paths and stage flags | selected stage or wrapper build options | `tests/parser/test_cli.py` |
-| Build orchestration | `x2py/wrapping.py` | ordered Fortran sources or `.pyi` contracts | `WrapperBuildResult` and generated artifact plan | wrapper build-mode tests |
+| Build orchestration | `x2py/wrapping.py` | ordered Fortran sources or `.pyi` contracts plus explicit native artifacts | `WrapperBuildResult`, `NativeBuildPlan`, and generated artifact plan | wrapper build-mode tests |
 | Preprocessing | `x2py/preprocessing.py` | source path, compiler config | preprocessed source and dependency facts | preprocessing tests |
 | Parser project model | `x2py/fortran_parser/parser.py` | preprocessed Fortran source | parser project with modules, procedures, types, visibility | Fortran parser fixture tests |
 | Target probes | `x2py/fortran_type_probe.py` | semantic type requirements and compiler flags | resolved kind/storage facts | Fortran type probe tests |

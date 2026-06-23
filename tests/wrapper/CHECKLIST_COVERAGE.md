@@ -15,6 +15,14 @@ modules are searchable without relying on old flat filenames.
 | Subject README and stale-path guard | `parity_policy/test_wrapper_guide_layout.py` |
 | Explicit `.pyi` output and single-entry contract behavior | `contract_generation/test_contract_package_namespaces.py`, `contract_generation/test_pyi_wrapper_builds.py` |
 
+## Stage 2 — Structured Native Build Model
+
+| Roadmap item | Evidence |
+| --- | --- |
+| Structured extension-level native build plan | `native_build/test_build_modes.py::test_source_build_result_records_structured_native_plan`, `contract_generation/test_pyi_wrapper_builds.py::test_generated_pyi_fixture_builds_from_native_object_without_source_reparse` |
+| Ordered link item model across native item kinds | `native_build/test_build_modes.py::test_native_link_plan_serializes_interleaved_item_kinds` |
+| Lower compiler dependency order preserves caller order | `native_build/test_build_modes.py::test_compile_object_dependency_modules_keep_caller_order` |
+
 ## Contract Generation
 
 - `contract_generation/test_contract_package_namespaces.py`

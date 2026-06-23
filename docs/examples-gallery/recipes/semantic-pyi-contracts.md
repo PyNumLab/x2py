@@ -41,6 +41,27 @@ python3 -m x2py path/to/module.pyi \
 At least one `--native-object` or `--native-library` is required. Native source
 is not reparsed during `.pyi`-driven wrapper generation.
 
+Python callers can inspect the normalized native implementation plan after a
+build:
+
+```python
+from x2py import build_pyi_extension
+
+result = build_pyi_extension(
+    "contracts/module.pyi",
+    native_objects=["build/module.o"],
+    native_include_dirs=["build/mod"],
+    output_dir="build/module",
+)
+
+print(result.sources)
+print(result.native_build_plan.to_dict()["link_items"])
+```
+
+`result.sources` is the semantic contract graph. The native build plan is the
+separate extension-level compile/link plan for objects, archives, shared
+libraries, named libraries, include/module directories, and ordered link items.
+
 ## Notes
 
 - Generated contracts are starter contracts, not ordinary type-checker stubs.

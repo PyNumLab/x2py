@@ -699,8 +699,9 @@ documentation-example verification.
 
 ### Fortran Runtime Wrapper Path
 
-`x2py/wrapping.py::build_fortran_extension(...)` is the public orchestration
-boundary for direct Fortran builds. Keep its stages explicit:
+`x2py/wrapping.py::build_fortran_extension(...)` and
+`x2py/wrapping.py::build_pyi_extension(...)` are the public orchestration
+boundaries for wrapper builds. Keep their stages explicit:
 
 ```text
 ordered source paths
@@ -717,7 +718,8 @@ ordered source paths
 The main ownership boundaries are:
 
 - `x2py/wrapping.py`: source order, preprocessing/probing, semantic merge,
-  output placement, direct-versus-Makefile mode, and artifact reporting;
+  `.pyi` entry-contract loading, native build plan assembly, output placement,
+  direct-versus-Makefile mode, and artifact reporting;
 - `x2py/semantics/ir2ast.py`: semantic contract validation and conversion to
   codegen models;
 - `x2py/codegen/bridges/fortran_to_c.py`: Fortran-to-C ABI adaptation;
@@ -728,15 +730,18 @@ The main ownership boundaries are:
 - `x2py/stdlib/x2py_runtime/`: native runtime support copied into each build.
 
 Do not move semantic ownership or projection policy into printers. Do not infer
-source dependencies: multi-source builds compile in caller order, and the first
-semantic module names the merged extension. `--makefile` records the same
-compiler/linker plan without executing it.
+source dependencies: multi-source source builds compile in caller order, and
+the first semantic module names the merged extension. `.pyi` builds use exactly
+one semantic entry contract plus a separate extension-level
+`NativeBuildPlan`; they must not recover Python API facts by reparsing native
+implementation sources. `--makefile` records the source-build compiler/linker
+plan without executing it.
 
-The current CLI build is source-driven and Fortran-only. Edited `.pyi` files
-have loader, round-trip, readiness, and lower-level semantic/codegen coverage,
-but `--wrap` does not accept them directly. User C inputs currently stop at
-semantic readiness; their runtime backend is future work even though the
-Fortran wrapper internally emits C source.
+The current runtime build surface is Fortran-focused. Edited `.pyi` files can
+drive `.pyi` wrapper builds when the caller supplies explicit native artifacts,
+but full generated-contract parity is still tracked in the roadmap. User C
+inputs currently stop at semantic readiness; their runtime backend is future
+work even though the Fortran wrapper internally emits C source.
 
 Runtime verification belongs in `tests/wrapper`. The subject index in
 [`tests/wrapper/fortran/README.md`](../../tests/wrapper/fortran/README.md) maps generated behavior

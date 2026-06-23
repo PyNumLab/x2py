@@ -58,6 +58,10 @@ _NUMPY_TYPE_EXPORTS = {
     "semantic_type_to_numpy_dtype",
 }
 _WRAPPING_EXPORTS = {
+    "NativeBuildPlan",
+    "NativeCompilationUnit",
+    "NativeLinkItem",
+    "NativePrebuiltArtifact",
     "WrapperBuildResult",
     "build_fortran_extension",
     "build_pyi_extension",
@@ -96,6 +100,10 @@ __all__ = (
     "FortranSubmodule",
     "FortranTypeProbeError",
     "FortranTypeProbeReport",
+    "NativeBuildPlan",
+    "NativeCompilationUnit",
+    "NativeLinkItem",
+    "NativePrebuiltArtifact",
     "WrapperBuildResult",
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",

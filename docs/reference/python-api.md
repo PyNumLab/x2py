@@ -107,10 +107,18 @@ generated stubs.
 | `build_fortran_extension` | Builds a Python extension from Fortran source inputs. |
 | `build_pyi_extension` | Builds a Python extension from semantic `.pyi` contracts plus explicit native artifacts. |
 | `WrapperBuildResult` | Result model returned by wrapper build functions. |
+| `NativeBuildPlan` | Structured native implementation compile/link plan attached to a wrapper build result. |
+| `NativeCompilationUnit` | Native source compilation unit and produced object recorded in a native build plan. |
+| `NativePrebuiltArtifact` | Caller-supplied native object, archive, or shared library recorded in a native build plan. |
+| `NativeLinkItem` | One ordered object, archive, shared library, named library, or linker argument in a native link plan. |
 
 Fortran source wrapper builds own the normal source-to-extension workflow.
 Semantic `.pyi` wrapper builds require explicit native link inputs such as
-objects, libraries, and include/module directories.
+objects, libraries, and include/module directories. Inspect
+`WrapperBuildResult.native_build_plan` when a caller needs the native
+compilation units, produced objects, prebuilt artifacts, module/include
+directories, library directories, or ordered native link items separately from
+the semantic contract paths.
 
 ## Target type and NumPy helpers
 

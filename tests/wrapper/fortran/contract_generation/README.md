@@ -18,8 +18,9 @@ runtime baseline. `contracts/basic_subroutine/modified/flatten_m1.pyi` and
 entry-export edits. `contracts/projection_metadata/invalid/incomplete_native_call.pyi`
 is the invalid projection fixture.
 
-Roadmap items: Stage 1 contract fixture layout, explicit `.pyi` output policy,
-single-entry contract discovery, namespace/export policy, and generated-contract
-runtime parity baseline.
+Roadmap items: Stage 1 contract fixture layout, Stage 2 structured `.pyi`
+native artifact plan evidence, explicit `.pyi` output policy, single-entry
+contract discovery, namespace/export policy, and generated-contract runtime
+parity baseline.
 
 Tests: `test_contract_package_namespaces.py`, `test_pyi_wrapper_builds.py`.

@@ -201,6 +201,120 @@ result = build_pyi_extension(
 )
 ```
 
+### Native Build Plan In Build Results
+
+Every wrapper build returns a `WrapperBuildResult` with a structured
+`native_build_plan`. This plan is separate from `sources`: `sources` records the
+semantic inputs used to define the Python API, while `native_build_plan` records
+the native implementation inputs used to compile and link the extension.
+
+The plan records:
+
+- `compilation_units`: native sources that x2py compiled and their produced
+  objects;
+- `produced_objects`: object files produced from those compilation units;
+- `prebuilt_artifacts`: caller-supplied objects, archives, or shared libraries;
+- `module_dirs` and `include_dirs`: directories needed while compiling the
+  generated bridge; and
+- `link_items`: the ordered native implementation link items.
+
+`link_items` is the order-sensitive representation. It can record objects,
+static archives, direct shared-library paths, named `-l` libraries, and explicit
+linker arguments without flattening them into one ambiguous string list.
+Current CLI options expose objects, archives, shared libraries, named
+libraries, library directories, and include/module directories. A general CLI
+for arbitrary ordered linker arguments is planned in the later manifest stage.
+
+Example 1: a source-driven build records native source compilation separately
+from generated wrapper files.
+
+```python
+from x2py import build_fortran_extension
+
+result = build_fortran_extension("solver.f90", output_dir="build/solver")
+plan = result.native_build_plan
+
+print(plan.compilation_units[0].source)
+print(plan.compilation_units[0].object_path)
+print(plan.link_items[0].kind)  # object
+```
+
+Example 2: a `.pyi` build from a native object keeps semantic contracts and
+native artifacts separate.
+
+```python
+from pathlib import Path
+
+from x2py import build_pyi_extension
+
+result = build_pyi_extension(
+    "contracts/solver/__init__.pyi",
+    native_objects=["build/solver.o"],
+    native_include_dirs=["build/mod"],
+    output_dir="build/solver",
+)
+
+assert result.sources[0] == Path("contracts/solver/__init__.pyi")
+assert result.native_build_plan.prebuilt_artifacts[0].kind == "object"
+```
+
+Example 3: an object followed by a static archive remains ordered in the link
+plan.
+
+```python
+from x2py import build_pyi_extension
+
+result = build_pyi_extension(
+    "contracts/api.pyi",
+    native_objects=["build/api.o", "vendor/libsupport.a"],
+    output_dir="build/api",
+)
+
+print([item.to_dict() for item in result.native_build_plan.link_items])
+# [{'kind': 'object', 'path': 'build/api.o'},
+#  {'kind': 'archive', 'path': 'vendor/libsupport.a'}]
+```
+
+Example 4: a direct shared-library path is distinct from a named library.
+
+```python
+from pathlib import Path
+
+from x2py import build_pyi_extension
+
+result = build_pyi_extension(
+    "contracts/vendor_solver.pyi",
+    native_objects=["vendor/libsolver.so"],
+    native_library_dirs=["vendor"],
+    output_dir="build/vendor_solver",
+)
+
+artifact = result.native_build_plan.prebuilt_artifacts[0]
+assert artifact.kind == "shared_library"
+assert result.native_build_plan.library_dirs == (Path("vendor"),)
+```
+
+Example 5: the ordered representation can express linker control arguments for
+future manifest and Makefile replay without pretending they are objects or
+libraries.
+
+```python
+from pathlib import Path
+
+from x2py import NativeBuildPlan, NativeLinkItem
+
+plan = NativeBuildPlan(
+    link_items=(
+        NativeLinkItem("object", Path("build/api.o")),
+        NativeLinkItem("linker_argument", "-Wl,--start-group"),
+        NativeLinkItem("archive", Path("vendor/liba.a")),
+        NativeLinkItem("archive", Path("vendor/libb.a")),
+        NativeLinkItem("linker_argument", "-Wl,--end-group"),
+        NativeLinkItem("named_library", "gfortran"),
+    )
+)
+```
+
 See the [examples cookbook](../examples-gallery/verified-cookbook.md) for
 copy-paste recipes covering
 [direct CLI builds](../examples-gallery/recipes/build-and-import-cli.md),

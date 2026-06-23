@@ -136,7 +136,7 @@ Important boundaries:
 
 | Option | Purpose |
 | --- | --- |
-| `--json` | Prints JSON to stdout for inspection stages. |
+| `--json` | Prints JSON to stdout for inspection stages and wrapper build results. |
 | `--out [PATH]` | Writes stage output. For `--pyi`, `PATH` is the parent of generated source contract directories. |
 | `--out-dir DIR` | Selects the wrapper build output directory. |
 | `--verbose` | Prints wrapper compiler commands and build steps. |
@@ -144,7 +144,8 @@ Important boundaries:
 | `--debug`, `--debug-traceback` | Re-raises parser errors so Python prints a traceback. |
 
 Use `--out` for inspection-stage output. Use `--out-dir` for wrapper build
-artifacts.
+artifacts. Wrapper build JSON includes generated artifact paths and
+`native_build_plan`, the structured native compile/link plan for the extension.
 
 ## Checked workflows
 

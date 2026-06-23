@@ -278,6 +278,15 @@ native references from the immutable `.pyi` binding metadata, and the linker
 resolves those references from caller-supplied artifacts. The `.pyi` filename is
 never used to guess an object, archive, or shared-library name.
 
+Build results expose that plan as `WrapperBuildResult.native_build_plan`, not
+as a flattened string list. `sources` records the semantic entry contract and
+its recursively imported `.pyi` files. The native plan separately records
+compiled native source units, produced objects, prebuilt objects/archives/shared
+libraries, module/include directories, library directories, and ordered
+`link_items`. Link items can represent `object`, `archive`, `shared_library`,
+`named_library`, and `linker_argument` entries, so the model can preserve order
+without pretending every item is the same kind of input.
+
 The current `.pyi` build subset accepts direct artifact paths through repeated
 `--native-object`, despite that option's broad historical name:
 

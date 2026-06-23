@@ -10,8 +10,9 @@ from pathlib import Path
 import pytest
 
 from tests.wrapper.fortran._support import _assert_fmath_examples, _sole_native_module, wrapper_source
+from x2py.compiling.basic import CompileObj
 from x2py.preprocessing import PreprocessingConfig
-from x2py.wrapping import build_fortran_extension
+from x2py.wrapping import NativeBuildPlan, NativeLinkItem, build_fortran_extension
 
 VERBOSE_SOURCE = wrapper_source("verbose_api.f90")
 DEFAULT_OUTPUT_SOURCE = wrapper_source("fdefault_output.f")
@@ -86,6 +87,62 @@ def test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper(tmp
     finally:
         sys.path.remove(str(build_dir))
     _assert_fmath_examples(module)
+
+
+def test_source_build_result_records_structured_native_plan(tmp_path: Path):
+    source = tmp_path / SCALAR_SOURCE.name
+    shutil.copyfile(SCALAR_SOURCE, source)
+
+    result = build_fortran_extension(source, output_dir=tmp_path)
+
+    plan = result.native_build_plan
+    object_path = tmp_path / "fmath.o"
+    assert isinstance(plan, NativeBuildPlan)
+    assert result.to_dict()["native_build_plan"] == plan.to_dict()
+    assert plan.compilation_units[0].source == source
+    assert plan.compilation_units[0].object_path == object_path
+    assert plan.compilation_units[0].language == "fortran"
+    assert plan.produced_objects == (object_path,)
+    assert plan.prebuilt_artifacts == ()
+    assert plan.module_dirs == (tmp_path,)
+    assert plan.include_dirs == (tmp_path,)
+    assert plan.link_items == (NativeLinkItem("object", object_path),)
+    assert "native_inputs" not in result.to_dict()
+
+
+def test_native_link_plan_serializes_interleaved_item_kinds():
+    plan = NativeBuildPlan(
+        link_items=(
+            NativeLinkItem("object", Path("objects/entry.o")),
+            NativeLinkItem("linker_argument", "-Wl,--start-group"),
+            NativeLinkItem("archive", Path("lib/libsolver.a")),
+            NativeLinkItem("shared_library", Path("lib/libsupport.so")),
+            NativeLinkItem("named_library", "lapack"),
+            NativeLinkItem("linker_argument", "-Wl,--end-group"),
+        )
+    )
+
+    assert plan.to_dict()["link_items"] == [
+        {"kind": "object", "path": "objects/entry.o"},
+        {"kind": "linker_argument", "argument": "-Wl,--start-group"},
+        {"kind": "archive", "path": "lib/libsolver.a"},
+        {"kind": "shared_library", "path": "lib/libsupport.so"},
+        {"kind": "named_library", "name": "lapack"},
+        {"kind": "linker_argument", "argument": "-Wl,--end-group"},
+    ]
+
+
+def test_compile_object_dependency_modules_keep_caller_order(tmp_path: Path):
+    first = CompileObj("first.f90", tmp_path)
+    archive = CompileObj("libsolver.a", tmp_path)
+    shared = CompileObj("libsupport.so", tmp_path)
+    main = CompileObj("wrapper.c", tmp_path, dependencies=(first, archive, shared))
+
+    assert main.extra_modules == (
+        first.module_target,
+        archive.module_target,
+        shared.module_target,
+    )
 
 
 def test_wrapper_build_rejects_empty_source_list(tmp_path: Path):

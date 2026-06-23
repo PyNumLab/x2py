@@ -10,7 +10,7 @@ runtime fixtures in `tests/data/fortran/wrapper/feature_parity/`.
 
 Contract fixtures: none; this subject builds from native source paths.
 
-Roadmap items: Stage 1 native data routing and Stage 2/7 native build model
-evidence.
+Roadmap items: Stage 1 native data routing, Stage 2 structured native build
+plan evidence, and Stage 7 manifest/Makefile follow-up evidence.
 
 Tests: `test_build_modes.py`, `test_compiler_verbose.py`, `test_runtime_abi.py`.
