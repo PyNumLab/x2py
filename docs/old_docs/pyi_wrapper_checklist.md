@@ -103,11 +103,11 @@ Make generated contracts complete and reproducible before composing them.
 - [ ] Explicit `.pyi` output options preserve the one-module-per-file rule and
   reject ambiguous single-file output when the source contains several modules.
 - [ ] Each supported wrapper scenario checks in the unmodified generated
-  fixtures as `tests/wrapper/fortran/pyi/<module>.pyi`.
+  fixtures as `tests/wrapper/fortran/contract_generation/contracts/<module>.pyi`.
 - [ ] Regenerating fixtures with `--pyi` exactly matches the checked-in baseline
   `.pyi` text, so generator drift is explicit in review.
 - [ ] Edited variants use the `.pyi` suffix, for example
-  `tests/wrapper/fortran/pyi/modified_<module>.pyi`; `.py` is not a semantic contract
+  `tests/wrapper/fortran/contract_generation/contracts/modified_<module>.pyi`; `.py` is not a semantic contract
   input.
 - [ ] A modified fixture records the intentional difference from its generated
   baseline and has runtime assertions for both the changed contract and
@@ -190,7 +190,7 @@ not reparse source; the test name or a nearby comment must state that reason.
 Modified-contract tests remain separate when they intentionally assert a
 different public API or runtime contract.
 
-- [x] Store `.pyi` parity fixtures under `tests/wrapper/fortran/pyi/`.
+- [x] Store `.pyi` parity fixtures under `tests/wrapper/fortran/contract_generation/contracts/`.
 - [x] Generate a `.pyi` from a source fixture, rebuild from the generated `.pyi`
   plus a native object, and compare runtime behavior with the source-driven
   build for the first callable-only fixture.

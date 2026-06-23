@@ -219,7 +219,7 @@ Readiness treats the edited `.pyi` contract as the source of truth.
 
 Use the checked runtime example for a complete build and call:
 
-<!-- x2py-doc-source: tests/wrapper/fortran/fruntime_abi_f90.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 -->
 ```fortran
 module fruntime_abi_f90
 contains
@@ -234,7 +234,7 @@ end module fruntime_abi_f90
 Build it into an explicit directory:
 
 ```bash
-python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --wrap \
   --out-dir build/fruntime_abi \
   --json
@@ -284,7 +284,7 @@ For a build-system-controlled workflow, generate sources and a GNU Make build
 without compiling:
 
 ```bash
-python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --makefile \
   --out-dir build/fruntime_abi \
   --json

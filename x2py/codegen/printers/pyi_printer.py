@@ -180,6 +180,7 @@ class PyiPrinter:
 
     @staticmethod
     def _native_type_decorator(cls: SemanticClass) -> str:
+        """Emit native derived-type metadata when the class needs it."""
         if cls.origin.source_language != "fortran" or cls.origin.source_kind != "derived_type":
             return ""
         attributes = tuple(str(item) for item in cls.metadata.get("fortran_type_attributes", ()))
@@ -842,6 +843,7 @@ class PyiPrinter:
 
     @staticmethod
     def _pyi_projection(func: SemanticFunction) -> list[ProjectionMapping]:
+        """Return projection metadata adjusted for bound instance methods."""
         if not isinstance(func, SemanticMethod) or func.is_static or func.passed_object_position is None:
             return func.projection
         passed_position = func.passed_object_position

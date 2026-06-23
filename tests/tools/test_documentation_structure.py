@@ -214,9 +214,9 @@ SOURCE_NAVIGATION_TEST_TARGETS = [
     "tests/tools/test_documentation_examples.py",
     "tests/tools/test_documentation_structure.py",
     "tests/wrapper/fortran/",
-    "tests/wrapper/fortran/multi_source_builds/test_multi_source_builds.py",
-    "tests/wrapper/fortran/test_build_modes.py",
-    "tests/wrapper/fortran/test_runtime_abi.py",
+    "tests/wrapper/fortran/multi_source/test_multi_source_builds.py",
+    "tests/wrapper/fortran/native_build/test_build_modes.py",
+    "tests/wrapper/fortran/native_build/test_runtime_abi.py",
 ]
 PACKAGE_README_NAVIGATION_REFERENCES = [
     "docs/developer-guide/source-map.md",

@@ -3,13 +3,26 @@ import json
 import shutil
 import subprocess
 import sys
-from types import ModuleType
+from functools import cache
 from pathlib import Path
+from types import ModuleType
 
 import numpy as np
 import pytest
 
 from tests.wrapper.fortran.fmath_cases import fmath_cases
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+WRAPPER_TEST_ROOT = Path(__file__).resolve().parent
+WRAPPER_FORTRAN_DATA = REPO_ROOT / "tests" / "data" / "fortran" / "wrapper"
+
+
+@cache
+def wrapper_source(filename: str) -> Path:
+    matches = tuple(sorted(WRAPPER_FORTRAN_DATA.rglob(filename)))
+    if len(matches) != 1:
+        raise FileNotFoundError(f"Expected one wrapper Fortran fixture named {filename!r}, found {len(matches)}")
+    return matches[0]
 
 
 def _assert_fmath_examples(module):

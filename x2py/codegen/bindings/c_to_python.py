@@ -399,6 +399,7 @@ class CPythonBindingGenerator(BindingGenerator):
         )
 
     def _wrap_module_callables(self, expr):
+        """Wrap module functions, overloads, and generated variable getters."""
         funcs_to_wrap = [
             function
             for function in expr.funcs
@@ -422,6 +423,7 @@ class CPythonBindingGenerator(BindingGenerator):
 
     @staticmethod
     def _callable_python_exports(expr, source_functions, wrapped_functions):
+        """Map wrapped callables to their explicit Python export paths."""
         if not expr.has_explicit_python_exports:
             return None
         return {
@@ -430,6 +432,7 @@ class CPythonBindingGenerator(BindingGenerator):
         }
 
     def _append_allocatable_variable_getters(self, expr, funcs, python_exports):
+        """Add heap-backed module array getters to callable wrappers."""
         for variable in expr.variable_wrappers:
             if variable.memory_handling != "heap":
                 continue
@@ -443,6 +446,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 )
 
     def _namespace_module_definitions(self, expr):
+        """Create generated module-definition names for nested exports."""
         namespaces = set()
         objects = (*expr.funcs, *expr.overload_sets, *expr.classes, *expr.variables)
         for obj in objects:
@@ -2417,6 +2421,7 @@ class CPythonBindingGenerator(BindingGenerator):
         return PyModInitFunc(func_name, body, [API_var], func_scope)
 
     def _create_namespace_modules(self, namespace_module_defs, root_module, initialised):
+        """Create nested Python module objects and register them on parents."""
         namespace_modules = {}
         body = []
         for namespace, child_def_name in namespace_module_defs.items():
@@ -2438,6 +2443,7 @@ class CPythonBindingGenerator(BindingGenerator):
         return namespace_modules, body
 
     def _add_classes_to_modules(self, expr, root_module, namespace_modules, initialised):
+        """Ready generated classes and add them to their export modules."""
         body = []
         for semantic_class in expr.classes:
             type_object = self._python_object_map[semantic_class].type_object
@@ -2455,6 +2461,7 @@ class CPythonBindingGenerator(BindingGenerator):
         return body
 
     def _add_variables_to_modules(self, expr, root_module, namespace_modules, initialised):
+        """Install generated module-variable descriptors on export modules."""
         body = []
         for variable in expr.variables:
             if variable.is_private or (isinstance(variable, BindCArrayVariable) and variable.memory_handling == "heap"):

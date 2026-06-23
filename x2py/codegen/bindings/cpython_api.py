@@ -513,6 +513,7 @@ class PyModule_SetPropertyType(Function):
     _class_type = CNativeInt()
 
     def __init__(self, setup_name, module):
+        """Store the setup helper name and target module expression."""
         self._setup_name = setup_name
         self._module = module
         super().__init__(module)

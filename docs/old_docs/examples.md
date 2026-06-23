@@ -22,8 +22,8 @@ The most useful small, checked examples are:
 
 | Purpose | Repository fixture |
 | --- | --- |
-| Compiled Fortran wrapper and scalar call | `tests/wrapper/fortran/fruntime_abi_f90.f90` |
-| Multi-source Fortran wrapper | `tests/wrapper/fortran/multi_source_builds/modules/` |
+| Compiled Fortran wrapper and scalar call | `tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90` |
+| Multi-source Fortran wrapper | `tests/wrapper/fortran/multi_source/modules/` |
 | Basic Fortran procedure | `tests/data/fortran/general/basic_subroutine.f90` |
 | Rich Fortran module, types, arrays, and visibility | `tests/data/fortran/general/modern_pyi_example.f90` |
 | Basic C functions, pointers, and arrays | `tests/data/c/general/math_api.h` |
@@ -48,7 +48,7 @@ end module m1
 
 ### Runtime Fortran Wrapper Input
 
-<!-- x2py-doc-source: tests/wrapper/fortran/fruntime_abi_f90.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 -->
 ```fortran
 module fruntime_abi_f90
 contains
@@ -170,7 +170,7 @@ a separate backend later.
 Build the checked scalar fixture into an explicit directory:
 
 ```bash
-python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --wrap \
   --out-dir build/fruntime_abi \
   --json
@@ -180,7 +180,7 @@ Recognizable Fortran sources default to `--wrap` when no inspection stage is
 selected, so the shorter equivalent is:
 
 ```bash
-python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```
@@ -225,7 +225,7 @@ import numpy as np
 
 from x2py import build_fortran_extension
 
-source = Path("tests/wrapper/fortran/fruntime_abi_f90.f90")
+source = Path("tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90")
 with TemporaryDirectory() as output_dir:
     build = build_fortran_extension(source, output_dir=output_dir)
     spec = spec_from_file_location(build.module_name, build.shared_library)
@@ -247,7 +247,7 @@ fruntime_abi_f90
 Generate wrapper sources and `Makefile.x2py` without compiling:
 
 ```bash
-python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --makefile \
   --out-dir build/fruntime_abi \
   --json
@@ -273,8 +273,8 @@ the merged extension:
 
 ```bash
 python3 -m x2py \
-  tests/wrapper/fortran/multi_source_builds/modules/first_api.f90 \
-  tests/wrapper/fortran/multi_source_builds/modules/second_api.f90 \
+  tests/data/fortran/wrapper/multi_source/modules/first_api.f90 \
+  tests/data/fortran/wrapper/multi_source/modules/second_api.f90 \
   --wrap \
   --out-dir build/multi_api \
   --json

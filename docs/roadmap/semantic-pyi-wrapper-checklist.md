@@ -57,81 +57,6 @@ contract output and build models stabilize first, feature parity builds on that
 foundation, editable policy follows unmodified parity, and library-scale tests
 exercise the completed build surface last.
 
-### Stage 1 — Searchable test layout, contract output, and fixtures
-
-Runtime wrapper tests are organized by stable subjects rather than checklist
-stage numbers. The target top-level subjects under `tests/wrapper/fortran/` are
-`contract_generation/`, `native_build/`, `multi_source/`, `standalone/`,
-`feature_parity/`, `editable_contracts/`, `parity_policy/`, and
-`library_scale/`. A subject may add a deeper feature directory, such as
-`feature_parity/arrays/`, when several test modules belong together.
-
-Runtime semantic contracts stay beside the subject tests that consume them:
-
-```text
-tests/wrapper/fortran/<subject>/
-├── test_<behavior>.py
-└── contracts/
-    └── <case>/
-        ├── generated/
-        ├── modified/
-        ├── handwritten/
-        └── invalid/
-```
-
-Only directories applicable to a case are created. A contract directory keeps
-its complete graph together, including its entry and imported module leaves.
-
-Native source fixtures live in the shared `tests/data/fortran/` corpus, not in a
-wrapper-only subtree. A supported fixture should be reusable across parser,
-semantic IR, `.pyi` generation, readiness, and wrapper tests when that full path
-is valid for the feature. Passing a wrapper test proves the source can pass
-through the earlier stages for that runtime path, but it does not replace the
-focused parser, semantic, and `.pyi` golden assertions that pinpoint exact stage
-regressions. Negative fixtures remain stage-specific under paths such as
-`tests/data/fortran/errors/parser/`, `tests/data/fortran/errors/semantics/`, and
-`tests/data/fortran/errors/pyi/` because they intentionally stop before the full
-pipeline.
-
-The existing `tests/pyi/fixtures/general/` tree has a different purpose and
-stays where it is. Those fixtures are exact generator goldens used to detect
-unintended `.pyi` printer changes; they are not relocated into runtime wrapper
-subjects and do not replace compiled runtime contract fixtures.
-
-- [ ] Reorganize `tests/wrapper/fortran/` into the stable subject directories
-  above, using descriptive test filenames instead of checklist-stage prefixes.
-- [ ] Move native wrapper source fixtures into feature-oriented or project-style
-  paths under the shared `tests/data/fortran/` corpus and update all parser,
-  semantic, `.pyi`, wrapper, documentation, and helper references. The wrapper
-  test tree contains no Fortran source files after the move.
-- [ ] For each supported fixture that can reach runtime wrapping, drive the same
-  native source through parser, semantic IR, `.pyi` generation, readiness,
-  source-wrapper runtime, generated-contract runtime, and modified-contract
-  runtime tests where applicable. Stage-specific negative fixtures explicitly
-  document where and why the pipeline must stop.
-- [ ] Store generated, modified, handwritten, and invalid runtime `.pyi`
-  contracts under the consuming subject's `contracts/<case>/` directory. Do not
-  move these runtime contracts into `tests/pyi/fixtures/general/` or a separate
-  `tests/data/pyi/` tree.
-- [ ] Keep `tests/pyi/fixtures/general/` and its exact regeneration comparisons
-  as the canonical `.pyi` generation-regression suite.
-- [ ] Give every top-level wrapper subject a short `README.md` that lists its
-  scope, focused pytest command, native data path, contract fixtures, and mapped
-  roadmap items. Update `tests/wrapper/CHECKLIST_COVERAGE.md` with exact test
-  paths or pytest node IDs.
-- [ ] Extend the wrapper layout guard to enforce the allowed subject tree,
-  forbid native source fixtures under `tests/wrapper/fortran/`, validate subject
-  README and data routing, and reject stale paths after moves.
-
-- [ ] Explicit `.pyi` output options preserve the one-module-per-file rule and
-  reject ambiguous single-file output when the source contains several modules.
-- [ ] Edited runtime fixtures use the `.pyi` suffix inside their subject's
-  `contracts/<case>/modified/` directory; `.py` is not accepted as a semantic
-  contract input.
-- [ ] Every modified fixture records its intentional difference from the
-  generated baseline and has runtime assertions for both the changed contract
-  and unaffected API behavior.
-
 ### Stage 2 — Structured native build model
 
 - [ ] The build result records one structured, extension-level native build plan
@@ -315,6 +240,45 @@ python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
 
 ## Completed evidence
 
+### Stage 1 — Searchable Test Layout, Contract Output, And Fixtures
+
+Runtime wrapper tests are organized by stable subjects under
+`tests/wrapper/fortran/`: `contract_generation/`, `native_build/`,
+`multi_source/`, `standalone/`, `feature_parity/`, `editable_contracts/`,
+`parity_policy/`, and `library_scale/`.
+
+- [x] Wrapper test modules live under the stable subject directories above,
+  using descriptive filenames and subject README files. The index is
+  `tests/wrapper/fortran/README.md`.
+- [x] Native wrapper source fixtures live under the shared
+  `tests/data/fortran/wrapper/` corpus. The wrapper test tree contains no
+  Fortran source files.
+- [x] Runtime wrapper tests resolve native fixtures through
+  `tests/wrapper/fortran/_support.py`, so moved tests no longer depend on
+  colocated source fixtures.
+- [x] Runtime `.pyi` contracts stay under the consuming subject's
+  `contracts/<case>/` tree. Current checked fixtures include
+  `contract_generation/contracts/runtime_abi/generated/fruntime_abi_f90.pyi`,
+  `contract_generation/contracts/basic_subroutine/modified/flatten_m1.pyi`,
+  `contract_generation/contracts/basic_subroutine/modified/alias_increment.pyi`,
+  and `contract_generation/contracts/projection_metadata/invalid/incomplete_native_call.pyi`.
+- [x] Modified runtime fixtures use `.pyi`, record their intentional difference
+  in the fixture text, and have runtime assertions for both the changed export
+  contract and unaffected native behavior.
+- [x] `.py` files are rejected as semantic `.pyi` contract inputs by the Python
+  API.
+- [x] `tests/pyi/fixtures/general/` remains the canonical exact `.pyi`
+  generation-regression suite and is not used for compiled runtime contract
+  fixtures.
+- [x] `tests/wrapper/CHECKLIST_COVERAGE.md` maps roadmap subjects to exact test
+  paths.
+- [x] `tests/wrapper/fortran/parity_policy/test_wrapper_guide_layout.py`
+  enforces the subject tree, README fields, checklist routing, shared native
+  fixture data, runtime contract placement, and stale-path rejection.
+- [x] Explicit Fortran `--pyi --out` output writes contract packages and rejects
+  ambiguous single-file `.pyi` targets so the one-module-per-file rule is
+  preserved.
+
 ### Immutable Native Contract
 
 Establish the source-free native facts before adding bundle or export policy.
@@ -388,7 +352,7 @@ Make generated contracts complete and reproducible before composing them.
   contracts with explicit `@external` placement.
 - [x] General parser fixtures check in generated source-owned contract
   directories under `tests/pyi/fixtures/general/`; runtime parity fixtures live
-  under `tests/wrapper/fortran/pyi/` as they are added.
+  under `tests/wrapper/fortran/contract_generation/contracts/` as they are added.
 - [x] The general fixture suite and runtime parity baseline compare regenerated
   `.pyi` text exactly with the checked-in contract, so generator drift is
   explicit in review.
@@ -464,7 +428,7 @@ not reparse source; the test name or a nearby comment must state that reason.
 Modified-contract tests remain separate when they intentionally assert a
 different public API or runtime contract.
 
-- [x] Store `.pyi` parity fixtures under `tests/wrapper/fortran/pyi/`.
+- [x] Store `.pyi` parity fixtures under `tests/wrapper/fortran/contract_generation/contracts/`.
 - [x] Generate a `.pyi` from a source fixture, rebuild from the generated `.pyi`
   plus a native object, and compare runtime behavior with the source-driven
   build for the first callable-only fixture.

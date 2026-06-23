@@ -207,10 +207,10 @@ implementation files.
 | `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
 | `.pyi` loading/editing | `x2py/semantics/pyi_parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
-| Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/test_build_modes.py`, `tests/wrapper/fortran/multi_source_builds/test_multi_source_builds.py` |
+| Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/test_multi_source_builds.py` |
 | Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
 | Fortran-to-C bridge and CPython binding | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | `tests/wrapper/` subject suites |
-| Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/test_runtime_abi.py`, `tests/wrapper/fortran/test_build_modes.py` |
+| Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/native_build/test_runtime_abi.py`, `tests/wrapper/fortran/native_build/test_build_modes.py` |
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/tools/test_documentation_examples.py` |
 
@@ -741,7 +741,7 @@ Fortran wrapper internally emits C source.
 Runtime verification belongs in `tests/wrapper`. The subject index in
 [`tests/wrapper/fortran/README.md`](../tests/wrapper/fortran/README.md) maps generated behavior
 to compiled/imported tests. Build-mode changes should at least cover
-`test_build_modes.py`, `multi_source_builds/test_multi_source_builds.py`, and
+`test_build_modes.py`, `multi_source/test_multi_source_builds.py`, and
 the affected runtime subject test.
 
 ### Parser Model Internals
@@ -835,7 +835,7 @@ coverage only when the public contract changes.
 | `.pyi` tests | Editable contract loader/printer behavior | `tests/pyi/test_pyi_to_ir.py`, `tests/semantics/test_pyi_printer.py` |
 | Readiness tests | User-facing blocker and wrappability decisions | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_c_semantic_readiness.py` |
 | CLI tests | User commands, output routing, diagnostics | `tests/parser/test_cli.py`, `tests/parser/test_preprocessing_cli.py` |
-| Wrapper build tests | Artifact placement, direct/Makefile modes, multi-source ordering | `tests/wrapper/fortran/test_build_modes.py`, `tests/wrapper/fortran/multi_source_builds/` |
+| Wrapper build tests | Artifact placement, direct/Makefile modes, multi-source ordering | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/` |
 | Wrapper runtime tests | Imported extension behavior, ownership, lifetime, and failures | `tests/wrapper/` subject suites indexed by `tests/wrapper/fortran/README.md` |
 | Property/fuzz tests | Broad parser robustness invariants | `tests/property/test_parser_properties.py`, `tests/property/test_semantic_properties.py` |
 

@@ -28,7 +28,7 @@ python3 -m x2py solver.f90
 Build a checked example into an explicit directory:
 
 ```bash
-python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```

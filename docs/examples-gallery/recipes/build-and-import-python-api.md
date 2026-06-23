@@ -24,7 +24,7 @@ import numpy as np
 
 from x2py import build_fortran_extension
 
-source = Path("tests/wrapper/fortran/fruntime_abi_f90.f90")
+source = Path("tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90")
 with TemporaryDirectory() as output_dir:
     build = build_fortran_extension(source, output_dir=output_dir)
     spec = spec_from_file_location(build.module_name, build.shared_library)

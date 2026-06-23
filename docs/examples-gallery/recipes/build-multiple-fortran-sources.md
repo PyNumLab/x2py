@@ -18,8 +18,8 @@ merged extension:
 
 ```bash
 python3 -m x2py \
-  tests/wrapper/fortran/multi_source_builds/modules/first_api.f90 \
-  tests/wrapper/fortran/multi_source_builds/modules/second_api.f90 \
+  tests/data/fortran/wrapper/multi_source/modules/first_api.f90 \
+  tests/data/fortran/wrapper/multi_source/modules/second_api.f90 \
   --wrap \
   --out-dir build/multi_api \
   --json

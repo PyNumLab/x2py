@@ -343,6 +343,7 @@ class CPythonCodePrinter(CCodePrinter):
         )
 
     def _module_namespace_exports(self, expr, funcs):
+        """Group wrapped functions and classes by Python module namespace."""
         namespace_defs = {(): expr.module_def_name, **expr.namespace_module_defs}
         namespace_functions = {namespace: [] for namespace in namespace_defs}
         for function in funcs:
@@ -371,6 +372,7 @@ class CPythonCodePrinter(CCodePrinter):
         return namespace_defs, namespace_functions, namespace_classes
 
     def _module_definition_blocks(self, expr, namespace_defs, namespace_functions, namespace_classes):
+        """Render PyMethodDef arrays and PyModuleDef blocks for namespaces."""
         method_defs = []
         module_defs = []
         for namespace, definition_name in namespace_defs.items():
@@ -436,6 +438,7 @@ class CPythonCodePrinter(CCodePrinter):
         ]
 
     def _module_property_block(self, namespace, descriptor):
+        """Render a custom module type for native-backed attributes."""
         setup_name = descriptor["setup_name"]
         items = descriptor["items"]
         get_name = f"{setup_name}_getattro"
@@ -492,6 +495,7 @@ class CPythonCodePrinter(CCodePrinter):
 
     @staticmethod
     def _module_property_get_case(name, getter):
+        """Render one custom module-attribute getter branch."""
         if getter is None:
             return ""
         return (
@@ -514,6 +518,7 @@ class CPythonCodePrinter(CCodePrinter):
 
     @staticmethod
     def _module_property_set_case(name, setter):
+        """Render one custom module-attribute setter branch."""
         prefix = (
             "        {\n"
             f'        int comparison = PyUnicode_CompareWithASCIIString(name, "{name}");\n'

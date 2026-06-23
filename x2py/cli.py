@@ -1149,6 +1149,11 @@ def _select_main_payload(args: argparse.Namespace, parse_payload, semantic_paylo
 def _write_pyi_output(args: argparse.Namespace, semantic_payload: dict[str, dict]) -> None:
     if any("pyi_root" in report for report in semantic_payload.values()):
         output_parent = Path(args.out) if args.out else None
+        if output_parent is not None and output_parent.suffix.lower() == ".pyi":
+            raise ValueError(
+                "--out for Fortran --pyi expects a directory, not a single .pyi file; "
+                "generated contracts use one file per module"
+            )
         _write_fortran_contract_packages(semantic_payload, output_parent=output_parent)
         return
     if args.out:

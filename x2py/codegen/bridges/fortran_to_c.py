@@ -233,6 +233,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     @staticmethod
     def _wrapped_python_exports(expr, source_functions, wrapped_functions):
+        """Map wrapped functions to their explicit Python export paths."""
         if not expr.has_explicit_python_exports:
             return None
         return {
@@ -242,6 +243,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         }
 
     def _wrapped_interfaces(self, expr, python_exports):
+        """Wrap overload sets and attach explicit Python export metadata."""
         interfaces = []
         for item in expr.overload_sets:
             wrapped = self._visit(item)
@@ -254,6 +256,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     @staticmethod
     def _extend_python_exports(python_exports, expr, sources, wrapped_objects):
+        """Add source-to-wrapper export mappings when explicit exports exist."""
         if python_exports is None:
             return
         python_exports.update(
@@ -271,6 +274,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         accessor_functions,
         variable_sources,
     ):
+        """Attach module-variable and accessor export paths to wrapped objects."""
         if python_exports is None:
             return
         accessor_ids = {id(function) for function in accessor_functions}

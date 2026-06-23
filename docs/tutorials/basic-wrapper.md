@@ -162,7 +162,7 @@ runtime wrapper backend exists.
 
 Use a tiny runtime fixture for the first compiled wrapper:
 
-<!-- x2py-doc-source: tests/wrapper/fortran/fruntime_abi_f90.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 -->
 ```fortran
 module fruntime_abi_f90
 contains
@@ -177,7 +177,7 @@ end module fruntime_abi_f90
 From the command line, a build looks like this:
 
 ```bash
-python3 -m x2py tests/wrapper/fortran/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --wrap \
   --out-dir build/fruntime_abi \
   --json
@@ -204,7 +204,7 @@ import numpy as np
 
 from x2py import build_fortran_extension
 
-source = Path("tests/wrapper/fortran/fruntime_abi_f90.f90")
+source = Path("tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90")
 with TemporaryDirectory() as output_dir:
     build = build_fortran_extension(source, output_dir=output_dir)
     spec = spec_from_file_location(build.module_name, build.shared_library)

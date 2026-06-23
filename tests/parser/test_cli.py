@@ -476,6 +476,33 @@ end module second_mod
     assert "def second(" in (package / "second_mod.pyi").read_text(encoding="utf-8")
 
 
+def test_cli_pyi_out_rejects_ambiguous_single_file_contract_package(tmp_path: Path):
+    source = tmp_path / "combined.f90"
+    source.write_text(
+        """module first_mod
+contains
+  subroutine first()
+  end subroutine first
+end module first_mod
+
+module second_mod
+contains
+  subroutine second()
+  end subroutine second
+end module second_mod
+""",
+        encoding="utf-8",
+    )
+    output = tmp_path / "combined.pyi"
+
+    cmd = [sys.executable, "-m", "x2py", str(source), "--pyi", "--out", str(output)]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode != 0
+    assert "generated contracts use one file per module" in result.stderr
+    assert not output.exists()
+
+
 def test_cli_pyi_out_uses_explicit_contract_parent_from_inline_code(tmp_path: Path):
     f90 = tmp_path / "explicit.f90"
     f90.write_text(
