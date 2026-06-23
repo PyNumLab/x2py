@@ -319,7 +319,7 @@ def test_entry_rejects_colliding_wildcard_exports(tmp_path: Path):
     first.write_text(declaration, encoding="utf-8")
     second.write_text(declaration, encoding="utf-8")
 
-    with pytest.raises(ValueError, match="Conflicting .pyi exports for 'update'"):
+    with pytest.raises(ValueError, match=r"Conflicting \.pyi exports for 'update'"):
         build_pyi_extension(entry, native_objects=[tmp_path / "unused.o"])
 
 

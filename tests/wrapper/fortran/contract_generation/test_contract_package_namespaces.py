@@ -255,7 +255,7 @@ def test_recursive_graph_reports_missing_relative_contract_before_native_validat
     entry = tmp_path / "api.pyi"
     entry.write_text("from . import missing\n", encoding="utf-8")
 
-    with pytest.raises(FileNotFoundError, match="missing.pyi"):
+    with pytest.raises(FileNotFoundError, match=r"missing\.pyi"):
         build_pyi_extension(entry, native_objects=[tmp_path / "unused.o"])
 
 
@@ -265,5 +265,5 @@ def test_recursive_graph_reports_cycles_before_codegen(tmp_path: Path):
     entry.write_text("from . import dependency\n", encoding="utf-8")
     dependency.write_text("from . import api\n", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="Cyclic relative .pyi export imports"):
+    with pytest.raises(ValueError, match=r"Cyclic relative \.pyi export imports"):
         build_pyi_extension(entry, native_objects=[tmp_path / "unused.o"])
