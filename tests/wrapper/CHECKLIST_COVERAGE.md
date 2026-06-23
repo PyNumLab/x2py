@@ -23,6 +23,14 @@ modules are searchable without relying on old flat filenames.
 | Ordered link item model across native item kinds | `native_build/test_build_modes.py::test_native_link_plan_serializes_interleaved_item_kinds` |
 | Lower compiler dependency order preserves caller order | `native_build/test_build_modes.py::test_compile_object_dependency_modules_keep_caller_order` |
 
+## Stage 3 — Multi-Source Combined Contract Generation
+
+| Roadmap item | Evidence |
+| --- | --- |
+| One explicit package for ordered multi-source `--pyi --out` | `multi_source/test_multi_source_builds.py::test_multi_source_pyi_out_writes_one_flat_combined_package` |
+| Source/generated-contract parity with same extension name, namespaces, and link order | `multi_source/test_multi_source_builds.py::test_multi_source_generated_contract_build_matches_source_runtime_and_link_order` |
+| Modified entry export policy while preserving native module children | `multi_source/test_multi_source_builds.py::test_multi_source_modified_entry_preserves_modules_and_adds_documented_alias` |
+
 ## Contract Generation
 
 - `contract_generation/test_contract_package_namespaces.py`

@@ -35,8 +35,8 @@ import numpy as np
 sys.path.insert(0, "build/multi_api")
 import first_api
 
-assert first_api.add_one(np.int32(4)) == np.int32(5)
-assert first_api.double_value(np.int32(4)) == np.int32(10)
+assert first_api.first_api.add_one(np.int32(4)) == np.int32(5)
+assert first_api.second_api.double_value(np.int32(4)) == np.int32(10)
 ```
 
 ## Ordering Rules
@@ -44,6 +44,22 @@ assert first_api.double_value(np.int32(4)) == np.int32(10)
 x2py does not discover missing sources and does not reorder dependencies. Put
 module providers before module consumers, matching the order your compiler
 expects for a direct native build.
+
+## Generate One Contract Package
+
+The same ordered source list can generate one combined semantic `.pyi` package:
+
+```bash
+python3 -m x2py \
+  tests/data/fortran/wrapper/multi_source/modules/first_api.f90 \
+  tests/data/fortran/wrapper/multi_source/modules/second_api.f90 \
+  --pyi \
+  --out contracts/multi_api
+```
+
+`contracts/multi_api/__init__.pyi` is the only semantic wrapper input. Native
+module leaves are written directly under `contracts/multi_api/`; x2py does not
+create per-source subdirectories.
 
 ## Notes
 

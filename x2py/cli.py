@@ -456,6 +456,7 @@ def _fortran_contract_payload(path: Path, modules, available_modules) -> dict[st
 
     native_modules = [module for module in modules if module.origin.source_kind == "module"]
     external_modules = [module for module in modules if module.origin.source_kind != "module"]
+    root_modules = [module.name for module in native_modules]
     emitted = emit_module_stubs(native_modules, available_modules=available_modules) if native_modules else {}
     module_stubs = {module.name: emitted.pop(module.name) for module in native_modules}
     dependencies = dict(emitted)
@@ -468,12 +469,14 @@ def _fortran_contract_payload(path: Path, modules, available_modules) -> dict[st
                 raise ValueError(f"Conflicting generated dependency stub for {name}")
             dependencies[name] = text
 
-    root_stub = _source_root_stub([module.name for module in native_modules], external_text)
+    root_stub = _source_root_stub(root_modules, external_text)
     payload: dict[str, object] = {
         "semantic_modules": [asdict(module) for module in modules],
         "pyi": "\n\n".join([*module_stubs.values(), *external_text]).strip(),
         "pyi_modules": module_stubs,
         "pyi_root": root_stub,
+        "pyi_root_modules": root_modules,
+        "pyi_root_externals": external_text,
     }
     if dependencies:
         payload["pyi_dependencies"] = dependencies
@@ -1178,13 +1181,43 @@ def _write_fortran_contract_packages(
     *,
     output_parent: Path | None,
 ) -> None:
-    for fname, report in semantic_payload.items():
-        source = Path(fname)
-        target_parent = output_parent or source.parent
-        for relative_path, text in _fortran_contract_files(source, report).items():
-            target = target_parent / relative_path
+    if output_parent is not None:
+        for relative_path, text in _combined_fortran_contract_files(semantic_payload).items():
+            target = output_parent / relative_path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text + "\n", encoding="utf-8")
+        return
+
+    for fname, report in semantic_payload.items():
+        source = Path(fname)
+        for relative_path, text in _fortran_contract_files(source, report).items():
+            target = source.parent / relative_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text + "\n", encoding="utf-8")
+
+
+def _combined_fortran_contract_files(semantic_payload: dict[str, dict]) -> dict[Path, str]:
+    module_names: list[str] = []
+    external_text: list[str] = []
+    files: dict[Path, str] = {}
+    dependency_files: dict[Path, str] = {}
+
+    for report in semantic_payload.values():
+        for module_name in report.get("pyi_root_modules", ()):
+            if module_name not in module_names:
+                module_names.append(module_name)
+        external_text.extend(str(text) for text in report.get("pyi_root_externals", ()))
+        _merge_contract_mapping(files, Path(), report.get("pyi_modules", {}))
+        _merge_contract_mapping(dependency_files, Path(), report.get("pyi_dependencies", {}))
+
+    package_files = {Path("__init__.pyi"): _source_root_stub(module_names, external_text)}
+    package_files.update(files)
+    for path, text in dependency_files.items():
+        existing = package_files.get(path)
+        if existing is not None and existing != text:
+            raise ValueError(f"Conflicting generated contract for {path}")
+        package_files[path] = text
+    return package_files
 
 
 def _fortran_contract_files(source: Path, report: dict[str, object]) -> dict[Path, str]:
@@ -1197,11 +1230,19 @@ def _fortran_contract_files(source: Path, report: dict[str, object]) -> dict[Pat
 
 
 def _add_contract_mapping(files: dict[Path, str], package_dir: Path, contracts: object) -> None:
+    _merge_contract_mapping(files, package_dir, contracts)
+
+
+def _merge_contract_mapping(files: dict[Path, str], package_dir: Path, contracts: object) -> None:
     if not isinstance(contracts, dict):
         raise TypeError("Generated contract mapping must be a dictionary")
     for module_name, text in contracts.items():
         target = package_dir.joinpath(*str(module_name).split(".")).with_suffix(".pyi")
-        files[target] = str(text)
+        contract_text = str(text)
+        existing = files.get(target)
+        if existing is not None and existing != contract_text:
+            raise ValueError(f"Conflicting generated contract for {target}")
+        files[target] = contract_text
 
 
 def _write_pyi_modules(
@@ -1588,7 +1629,7 @@ def main() -> int:
         nargs="?",
         const="",
         type=str,
-        help="Write stage output; for --pyi, PATH is the parent directory for generated contract packages",
+        help="Write stage output; for Fortran --pyi, PATH is the generated contract package directory",
     )
     output_group.add_argument(
         "--out-dir",

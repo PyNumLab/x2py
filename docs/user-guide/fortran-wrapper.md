@@ -1428,10 +1428,92 @@ way.
 
 ### Semantic Stub Output
 
-Semantic `.pyi` output creates one contract directory per source file. The
-directory contains the source-named entry contract and one leaf per Fortran
-module. `--out contracts` selects the parent directory; without a path, the
-contract directory is created beside the source.
+Semantic `.pyi` output writes a contract package. With an explicit `--out`, the
+requested directory is the package itself. The package contains one
+`__init__.pyi` entry contract and one flat `<fortran-module>.pyi` leaf for each
+native Fortran module from the ordered source inputs. x2py does not add
+per-source subdirectories or a synthetic `combined_extensions/` directory.
+
+When `--out` is omitted, x2py prints the contract report. When `--out` is
+present without a path, x2py writes adjacent source-owned packages beside each
+input source for inspection workflows. Use explicit `--out PATH` for
+wrapper-contract builds and parity tests.
+
+Example 1: one source containing one native module writes one package entry and
+one leaf directly under the requested directory.
+
+```bash
+python3 -m x2py solver.f90 --pyi --out contracts/solver
+```
+
+```text
+contracts/solver/
+├── __init__.pyi
+└── solver_mod.pyi
+```
+
+Example 2: two ordered sources that each define two native modules write one
+combined package with five files total when no extra dependency stubs are
+needed.
+
+```bash
+python3 -m x2py first_api.f90 second_api.f90 --pyi --out contracts
+```
+
+```text
+contracts/
+├── __init__.pyi
+├── first_math.pyi
+├── shared_types.pyi
+├── second_math.pyi
+└── box_ops.pyi
+```
+
+Example 3: the generated entry is the only semantic wrapper input. Native
+objects are separate build inputs and keep caller order.
+
+```bash
+python3 -m x2py contracts/__init__.pyi \
+  --wrap \
+  --extension-name first_api \
+  --native-object native/first_api.o \
+  --native-object native/second_api.o \
+  --native-include-dir native \
+  --out-dir build/first_api
+```
+
+Example 4: source and generated-contract parity builds use the same extension
+name and native module namespaces.
+
+```python
+from x2py import build_pyi_extension
+
+result = build_pyi_extension(
+    "contracts/__init__.pyi",
+    native_objects=["native/first_api.o", "native/second_api.o"],
+    native_include_dirs=["native"],
+    extension_name="first_api",
+    output_dir="build/first_api",
+)
+
+print(result.module_name)  # first_api
+```
+
+Example 5: a modified entry may add documented Python export policy while
+preserving native module leaves.
+
+```python
+# contracts/__init__.pyi
+from . import first_math
+from . import shared_types
+from . import second_math
+from . import box_ops
+from .second_math import double_after_add as fused_value
+```
+
+This keeps `first_api.second_math.double_after_add(...)` available and also
+exports `first_api.fused_value(...)`. The module leaves still define the native
+module contracts; the entry only changes the Python-facing export tree.
 
 ### Editable Makefile
 

@@ -177,41 +177,41 @@ compilation.
 
 ### Source-To-Contract Layout
 
-The required generated layout depends on semantic contents, not only the source
-suffix:
+For Fortran `--pyi --out PATH`, `PATH` is the generated contract package
+directory. The package entry is `PATH/__init__.pyi`. Native Fortran module
+contracts are flat leaves named `<fortran-module>.pyi` directly under `PATH`;
+the generator does not add per-source directories.
 
 | Native input shape | Generated contract shape |
 | --- | --- |
-| One source containing one module | One source-named contract directory containing the entry and one `<module>.pyi` leaf |
-| One source containing several modules | One source-named contract directory containing the entry and one `<module>.pyi` per module |
-| Several sources containing modules | Module leaves plus one entry contract for the requested extension surface |
-| One fixed- or free-form source containing only standalone procedures | One `<source>/<source>.pyi` entry with `@external` on every procedure |
-| Several standalone-procedure sources, such as BLAS/LAPACK | One entry contract importing organized external fragments |
-| Mixed modules and standalone procedures | One entry contract containing standalone declarations and importing module leaves |
+| One source containing one module | `__init__.pyi` plus one `<module>.pyi` leaf |
+| One source containing several modules | `__init__.pyi` plus one flat leaf per native module |
+| Several ordered sources containing modules | one combined package with one `__init__.pyi` and one flat leaf per native module across all sources |
+| One fixed- or free-form source containing only standalone procedures | one `__init__.pyi` entry with `@external` on every procedure |
+| Several standalone-procedure sources, such as BLAS/LAPACK | one entry contract importing or containing organized external fragments |
+| Mixed modules and standalone procedures | one entry contract containing standalone declarations and importing module leaves |
 
-A physical source file always generates a source-named contract directory. The
-entry normally retains the source filename and imports one leaf per native
-module. For example,
-`basic_subroutine.f90` containing module `m1` emits:
+For example, explicit output for `basic_subroutine.f90` containing module `m1`
+emits:
 
 ```text
-basic_subroutine/
-├── basic_subroutine.pyi  # entry contract: from . import m1
-└── m1.pyi                # declarations for native module m1
+contracts/basic_subroutine/
+├── __init__.pyi  # entry contract: from . import m1
+└── m1.pyi        # declarations for native module m1
 ```
 
-The source-named file is the only wrapper input. It recursively discovers its
-native leaves:
+The entry file is the only wrapper input. It recursively discovers its native
+leaves:
 
 ```bash
-python3 -m x2py basic_subroutine/basic_subroutine.pyi \
+python3 -m x2py contracts/basic_subroutine/__init__.pyi \
   --wrap \
   --native-object basic_subroutine.o
 ```
 
-`--extension-name` remains an optional override; otherwise the entry filename
-supplies the extension name. The runtime follows the entry's import policy:
-`from . import m1` exposes `basic_subroutine.m1`, while
+For `__init__.pyi`, the package directory name supplies the extension name
+unless `--extension-name` is provided. The runtime follows the entry's import
+policy: `from . import m1` exposes `basic_subroutine.m1`, while
 `from .m1 import *` explicitly flattens `m1` into the extension root.
 
 A mixed source keeps standalone procedures in the entry contract and marks each
@@ -228,25 +228,27 @@ This exposes `basic_subroutine.func` and `basic_subroutine.m1.add1`. The
 standalone marker remains necessary because the bridge must distinguish an
 external call from `use m1, only: add1`.
 
-When the source and a contained module are both named `foo`, the source-named
-entry would collide with the required native leaf. Generation uses
-`foo/__init__.pyi` only for that collision:
+For several ordered sources, the requested output directory is still the package
+itself. If two sources each define two modules, then:
 
-```text
-foo/
-├── __init__.pyi  # from . import foo; standalone externals also live here
-└── foo.pyi       # declarations contained in native module foo
+```bash
+python3 -m x2py first_api.f90 second_api.f90 --pyi --out contracts
 ```
 
-This deliberately exposes `foo.foo.module_procedure`; a standalone procedure
-from the same source remains `foo.external_procedure`. A standalone-only source
-does not need the collision form and generates only `foo/foo.pyi`.
+emits exactly this shape when no extra dependency stubs are needed:
 
-When source and module names are identical, generation writes the native leaf
-and uses it as the implicit root instead of writing a second file with the same
-name. A source file containing standalone procedures may generate one external
-fragment containing several `@external` declarations because those procedures
-all contribute to the extension root rather than a native module namespace.
+```text
+contracts/
+├── __init__.pyi
+├── first_math.pyi
+├── shared_types.pyi
+├── second_math.pyi
+└── box_ops.pyi
+```
+
+The entry imports module leaves in source order. Native source order and native
+link order remain build-plan facts; the `.pyi` package records the Python API
+and native module topology.
 
 For a LAPACK-style project, the organized layout may be:
 

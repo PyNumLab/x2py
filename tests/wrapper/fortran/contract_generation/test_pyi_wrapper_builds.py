@@ -105,6 +105,7 @@ def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
 
 
 def _generate_pyi(source: Path, output_parent: Path) -> Path:
+    package = output_parent / source.stem
     subprocess.run(
         [
             sys.executable,
@@ -113,15 +114,13 @@ def _generate_pyi(source: Path, output_parent: Path) -> Path:
             str(source),
             "--pyi",
             "--out",
-            str(output_parent),
+            str(package),
         ],
         capture_output=True,
         text=True,
         check=True,
     )
-    package = output_parent / source.stem
-    init_entry = package / "__init__.pyi"
-    return init_entry if init_entry.is_file() else package / f"{source.stem}.pyi"
+    return package / "__init__.pyi"
 
 
 def _sole_native_module(module):

@@ -137,7 +137,7 @@ Important boundaries:
 | Option | Purpose |
 | --- | --- |
 | `--json` | Prints JSON to stdout for inspection stages and wrapper build results. |
-| `--out [PATH]` | Writes stage output. For `--pyi`, `PATH` is the parent of generated source contract directories. |
+| `--out [PATH]` | Writes stage output. For Fortran `--pyi`, `PATH` is the generated contract package directory. |
 | `--out-dir DIR` | Selects the wrapper build output directory. |
 | `--verbose` | Prints wrapper compiler commands and build steps. |
 | `--no-color` | Disables ANSI color in parse diagnostics. |

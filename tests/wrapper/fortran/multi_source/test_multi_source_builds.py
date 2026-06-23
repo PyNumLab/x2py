@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from x2py import build_pyi_extension
+
 from tests.wrapper.fortran._support import (
     WRAPPER_FORTRAN_DATA,
     _build_sources_and_import,
@@ -19,10 +21,160 @@ from tests.wrapper.fortran._support import (
 FIXTURES = WRAPPER_FORTRAN_DATA / "multi_source"
 MODULE_FIXTURES = FIXTURES / "modules"
 STANDALONE_FIXTURES = FIXTURES / "standalone"
+FIRST_COMBINED_SOURCE = """\
+module first_math
+contains
+integer function add_one(value) result(out)
+  integer, intent(in) :: value
+  out = value + 1
+end function add_one
+end module first_math
+
+module shared_types
+  type :: box
+    integer :: value
+  end type box
+contains
+function make_box(value) result(out)
+  integer, intent(in) :: value
+  type(box) :: out
+  out%value = value
+end function make_box
+end module shared_types
+"""
+SECOND_COMBINED_SOURCE = """\
+module second_math
+  use first_math, only: add_one
+contains
+integer function double_after_add(value) result(out)
+  integer, intent(in) :: value
+  out = 2 * add_one(value)
+end function double_after_add
+end module second_math
+
+module box_ops
+  use shared_types, only: box
+contains
+integer function box_value(item) result(out)
+  type(box), intent(in) :: item
+  out = item%value
+end function box_value
+end module box_ops
+"""
 
 
 def _source_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _compiler() -> str:
+    compiler = shutil.which("gfortran")
+    if compiler is None:
+        pytest.skip("gfortran is required for generated-contract multi-source tests")
+    return compiler
+
+
+def _write_combined_sources(workdir: Path) -> tuple[Path, Path]:
+    first = workdir / "first_api.f90"
+    second = workdir / "second_api.f90"
+    first.write_text(FIRST_COMBINED_SOURCE, encoding="utf-8")
+    second.write_text(SECOND_COMBINED_SOURCE, encoding="utf-8")
+    return first, second
+
+
+def _generate_combined_contract(sources: tuple[Path, ...], package_dir: Path) -> Path:
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            *(str(source) for source in sources),
+            "--pyi",
+            "--out",
+            str(package_dir),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return package_dir / "__init__.pyi"
+
+
+def _compile_native_objects(sources: tuple[Path, ...], native_dir: Path) -> tuple[Path, ...]:
+    native_dir.mkdir(parents=True, exist_ok=True)
+    objects = []
+    for source in sources:
+        native_object = native_dir / f"{source.stem}.o"
+        subprocess.run(
+            [
+                _compiler(),
+                "-fPIC",
+                "-c",
+                str(source),
+                "-o",
+                str(native_object),
+                "-J",
+                str(native_dir),
+                "-I",
+                str(native_dir),
+            ],
+            check=True,
+        )
+        objects.append(native_object)
+    return tuple(objects)
+
+
+def _import_extension(module_name: str, build_dir: Path):
+    sys.modules.pop(module_name, None)
+    sys.path.insert(0, str(build_dir))
+    try:
+        return importlib.import_module(module_name)
+    finally:
+        sys.path.remove(str(build_dir))
+
+
+def _build_sources(sources: tuple[Path, ...], build_dir: Path) -> tuple[object, dict[str, object]]:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            *(str(source) for source in sources),
+            "--wrap",
+            "--out-dir",
+            str(build_dir),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+    return _import_extension(str(payload["module_name"]), build_dir), payload
+
+
+def _build_contract(
+    entry: Path,
+    native_objects: tuple[Path, ...],
+    build_dir: Path,
+    *,
+    extension_name: str,
+):
+    result = build_pyi_extension(
+        entry,
+        native_objects=native_objects,
+        native_include_dirs=[native_objects[0].parent],
+        extension_name=extension_name,
+        output_dir=build_dir,
+    )
+    return _import_extension(result.module_name, build_dir), result.to_dict()
+
+
+def _assert_combined_runtime(module) -> None:
+    assert module.first_math.add_one(np.int32(4)) == np.int32(5)
+    assert module.second_math.double_after_add(np.int32(4)) == np.int32(10)
+    box = module.shared_types.make_box(np.int32(7))
+    assert module.box_ops.box_value(box) == np.int32(7)
 
 
 def test_multi_file_modules_build_one_merged_extension(tmp_path: Path):
@@ -59,6 +211,91 @@ def test_multi_file_standalone_procedures_build_one_merged_extension(tmp_path: P
     assert payload["module_name"] == "standalone_api"
     assert module.add_one(np.int32(4)) == 5
     assert module.double_value(np.int32(4)) == 8
+
+
+def test_multi_source_pyi_out_writes_one_flat_combined_package(tmp_path: Path):
+    sources = _write_combined_sources(tmp_path)
+    package = tmp_path / "contracts"
+    entry = _generate_combined_contract(sources, package)
+
+    assert entry == package / "__init__.pyi"
+    assert sorted(path.relative_to(package).as_posix() for path in package.rglob("*.pyi")) == [
+        "__init__.pyi",
+        "box_ops.pyi",
+        "first_math.pyi",
+        "second_math.pyi",
+        "shared_types.pyi",
+    ]
+    assert not (package / "first_api").exists()
+    assert not (package / "second_api").exists()
+    assert not (package / "combined_extensions").exists()
+    assert entry.read_text(encoding="utf-8") == (
+        "from . import first_math\nfrom . import shared_types\nfrom . import second_math\nfrom . import box_ops\n"
+    )
+    assert "shared_types" in (package / "box_ops.pyi").read_text(encoding="utf-8")
+
+
+def test_multi_source_generated_contract_build_matches_source_runtime_and_link_order(tmp_path: Path):
+    sources = _write_combined_sources(tmp_path)
+    source_module, source_payload = _build_sources(sources, tmp_path / "source_build")
+    entry = _generate_combined_contract(sources, tmp_path / "contracts")
+    native_objects = _compile_native_objects(sources, tmp_path / "native")
+    generated_module, generated_payload = _build_contract(
+        entry,
+        native_objects,
+        tmp_path / "generated_build",
+        extension_name=str(source_payload["module_name"]),
+    )
+
+    assert source_payload["module_name"] == "first_api"
+    assert generated_payload["module_name"] == source_payload["module_name"]
+    assert generated_payload["sources"] == [
+        str(entry),
+        str(entry.parent / "box_ops.pyi"),
+        str(entry.parent / "first_math.pyi"),
+        str(entry.parent / "second_math.pyi"),
+        str(entry.parent / "shared_types.pyi"),
+    ]
+    assert [item["path"] for item in source_payload["native_build_plan"]["link_items"]] == [
+        str(Path(source_payload["output_dir"]) / f"{source.stem}.o") for source in sources
+    ]
+    assert generated_payload["native_build_plan"]["link_items"] == [
+        {"kind": "object", "path": str(native_objects[0])},
+        {"kind": "object", "path": str(native_objects[1])},
+    ]
+    _assert_combined_runtime(source_module)
+    _assert_combined_runtime(generated_module)
+
+
+def test_multi_source_modified_entry_preserves_modules_and_adds_documented_alias(tmp_path: Path):
+    sources = _write_combined_sources(tmp_path)
+    source_module, source_payload = _build_sources(sources, tmp_path / "source_build")
+    generated_entry = _generate_combined_contract(sources, tmp_path / "contracts")
+    native_objects = _compile_native_objects(sources, tmp_path / "native")
+    modified_package = tmp_path / "modified_contracts"
+    shutil.copytree(generated_entry.parent, modified_package)
+    modified_entry = modified_package / "__init__.pyi"
+    modified_entry.write_text(
+        "# Intentional difference: preserve native module children and add a root alias.\n"
+        "from . import first_math\n"
+        "from . import shared_types\n"
+        "from . import second_math\n"
+        "from . import box_ops\n"
+        "from .second_math import double_after_add as fused_value\n",
+        encoding="utf-8",
+    )
+
+    modified_module, modified_payload = _build_contract(
+        modified_entry,
+        native_objects,
+        tmp_path / "modified_build",
+        extension_name=str(source_payload["module_name"]),
+    )
+
+    assert modified_payload["module_name"] == source_payload["module_name"]
+    assert not hasattr(source_module, "fused_value")
+    assert modified_module.fused_value(np.int32(4)) == np.int32(10)
+    _assert_combined_runtime(modified_module)
 
 
 @pytest.mark.skipif(

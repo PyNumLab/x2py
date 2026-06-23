@@ -15,14 +15,16 @@ semantic contract.
 
 ```bash
 python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --pyi --out contracts
+  --pyi --out contracts/basic_subroutine
 ```
 
-Open the generated `.pyi`, edit only the supported semantic contract syntax,
-then check readiness:
+`--out` names the generated contract package directory. The entry is
+`contracts/basic_subroutine/__init__.pyi`, and module leaves sit directly below
+that directory. Open the generated `.pyi`, edit only the supported semantic
+contract syntax, then check readiness:
 
 ```bash
-python3 -m x2py contracts/basic_subroutine/basic_subroutine.pyi --wrap-readiness
+python3 -m x2py contracts/basic_subroutine/__init__.pyi --wrap-readiness
 ```
 
 ## Build From A `.pyi` Contract
@@ -61,6 +63,15 @@ print(result.native_build_plan.to_dict()["link_items"])
 `result.sources` is the semantic contract graph. The native build plan is the
 separate extension-level compile/link plan for objects, archives, shared
 libraries, named libraries, include/module directories, and ordered link items.
+
+For multi-source packages, pass all ordered sources and one package directory:
+
+```bash
+python3 -m x2py first_api.f90 second_api.f90 --pyi --out contracts
+```
+
+The generated `contracts/__init__.pyi` imports all native module leaves directly
+under `contracts/`; x2py does not add per-source subdirectories.
 
 ## Notes
 

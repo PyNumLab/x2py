@@ -57,24 +57,6 @@ contract output and build models stabilize first, feature parity builds on that
 foundation, editable policy follows unmodified parity, and library-scale tests
 exercise the completed build surface last.
 
-### Stage 3 — Multi-source combined contract generation
-
-- [ ] Source, generated-contract, and modified-contract parity builds use the
-  same extension name and native namespace structure. Only documented Python
-  export policy or wrapper contracts may differ.
-- [ ] Multiple ordered native sources generate one combined contract package
-  without losing native imports, dependency objects, cross-module types, source
-  order, link order, or extension identity.
-- [ ] The requested output directory is the contract package itself. It contains
-  one `__init__.pyi` entry and one flat `<fortran-module>.pyi` leaf per native
-  module; generation adds neither a `combined_extensions/` directory nor
-  per-source subdirectories.
-- [ ] For two ordered sources that each define two native modules,
-  `--pyi --out contracts` writes four module leaves directly under `contracts/`
-  plus `contracts/__init__.pyi`. The entry imports all four leaves and is the
-  sole wrapper input. With no external dependency stubs, these are the only five
-  generated contract files.
-
 ### Stage 4 — Shared parity harness and standalone procedures
 
 - [ ] Apply one parametrized imported-module fixture to every parity-eligible
@@ -294,6 +276,36 @@ implementation build plan separately from semantic `sources`.
   source builds, `.pyi` object builds, object/archive ordering, direct shared
   libraries, and explicit linker-argument representation.
 
+### Stage 3 — Multi-Source Combined Contract Generation
+
+Explicit Fortran `--pyi --out PATH` now treats `PATH` as the generated contract
+package itself. The package entry is `PATH/__init__.pyi`; native module leaves
+sit directly under `PATH`.
+
+- [x] Source, generated-contract, and modified-contract parity builds use the
+  same extension name and native namespace structure. Only documented Python
+  export policy or wrapper contracts may differ.
+- [x] Multiple ordered native sources generate one combined contract package
+  without losing native imports, dependency objects, cross-module types, source
+  order, link order, or extension identity.
+- [x] The requested output directory is the contract package itself. It contains
+  one `__init__.pyi` entry and one flat `<fortran-module>.pyi` leaf per native
+  module; generation adds neither a `combined_extensions/` directory nor
+  per-source subdirectories.
+- [x] For two ordered sources that each define two native modules,
+  `--pyi --out contracts` writes four module leaves directly under `contracts/`
+  plus `contracts/__init__.pyi`. The entry imports all four leaves and is the
+  sole wrapper input. With no external dependency stubs, these are the only five
+  generated contract files.
+- [x] Runtime evidence covers source, generated-contract, and modified-entry
+  builds for the same two-source package. The generated and modified builds use
+  the same extension name as the source build, preserve child module namespaces,
+  and link native objects in caller order.
+- [x] Documentation explains the combined package behavior with five examples
+  covering single-source packages, two-source/four-module packages,
+  source-free wrapper builds, Python API parity builds, and modified entry
+  export policy.
+
 ### Immutable Native Contract
 
 Establish the source-free native facts before adding bundle or export policy.
@@ -359,10 +371,10 @@ Make generated contracts complete and reproducible before composing them.
 
 - [x] One Fortran module maps to exactly one semantic leaf `.pyi` file named for
   the module, independent of which source file contains it.
-- [x] Every Fortran source also generates a source-named root-contract `.pyi`
-  that imports its module leaves. One source containing two modules therefore
-  emits two module leaves plus one root contract instead of concatenating
-  declarations. That source-named contract is the sole wrapper input.
+- [x] Source-owned fixture generation records a root-contract `.pyi` that
+  imports its module leaves. One source containing two modules therefore emits
+  two module leaves plus one root contract instead of concatenating
+  declarations. That root contract is the sole wrapper input.
 - [x] Standalone fixed-form and free-form procedures emit non-empty `.pyi`
   contracts with explicit `@external` placement.
 - [x] General parser fixtures check in generated source-owned contract
@@ -382,9 +394,9 @@ implemented single-entry contract and is not a future feature.
   contract directories are rejected.
 - [x] Imports and cross-module references between `.pyi` files retain the
   native dependency relationship without relying on source-file boundaries.
-- [x] A generated source-named entry defines the default Python export surface
-  without redefining native module structure. `__init__.pyi` is used only when
-  the source-named entry would collide with a same-named native module leaf.
+- [x] A generated entry defines the default Python export surface without
+  redefining native module structure. For explicit `--out PATH`, `PATH` is the
+  package and `PATH/__init__.pyi` is the entry.
 - [x] The entry stem determines extension identity. For `__init__.pyi`, the
   parent directory name is used. `--extension-name` explicitly overrides either
   inference path.
@@ -452,18 +464,17 @@ different public API or runtime contract.
   callable-only fixture.
 #### Single-module baseline
 
-- [x] One source containing one Fortran module generates one module leaf plus a
-  source-named entry `.pyi`, and
-  produces equivalent source and `.pyi` extensions.
+- [x] One source containing one Fortran module generates one module leaf plus an
+  entry `.pyi`, and produces equivalent source and `.pyi` extensions.
 
 #### Multi-module generation and assembly
 
-- [x] Every source generates a source-named contract directory. Its entry is
-  `<source>.pyi`, except when that path is occupied by a same-named native module
-  leaf, where `__init__.pyi` is used instead.
+- [x] Source-owned fixture generation keeps one contract directory per source.
+  Explicit `--pyi --out PATH` instead treats `PATH` as the package directory and
+  writes `PATH/__init__.pyi`.
 - [x] One source containing two Fortran modules generates two module `.pyi`
-  files plus a source-named entry contract inside that directory; passing only that entry produces
-  both child namespaces in one extension.
+  files plus an entry contract inside the package; passing only that entry
+  produces both child namespaces in one extension.
 - [x] `.pyi` wrapper commands and the Python build API accept exactly one entry
   contract and recursively discover its relative imports; multiple positional
   `.pyi` inputs and contract directories are rejected.

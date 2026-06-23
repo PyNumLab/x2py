@@ -57,6 +57,7 @@ def _compile_native(source: Path, workdir: Path) -> Path:
 
 
 def _generate_contract_package(source: Path, output_parent: Path) -> Path:
+    package = output_parent / source.stem
     subprocess.run(
         [
             sys.executable,
@@ -65,16 +66,13 @@ def _generate_contract_package(source: Path, output_parent: Path) -> Path:
             str(source),
             "--pyi",
             "--out",
-            str(output_parent),
+            str(package),
         ],
         capture_output=True,
         text=True,
         check=True,
     )
-    package = output_parent / source.stem
-    init_entry = package / "__init__.pyi"
-    normal_entry = package / f"{source.stem}.pyi"
-    return init_entry if init_entry.is_file() else normal_entry
+    return package / "__init__.pyi"
 
 
 def _run_json(command: list[str], *, cwd: Path | None = None) -> dict[str, object]:
@@ -143,25 +141,25 @@ def test_source_build_preserves_modules_and_root_externals(tmp_path: Path):
     assert module.external_double(np.int32(4)) == np.int32(8)
 
 
-def test_standalone_generation_uses_source_named_entry_without_init(tmp_path: Path):
+def test_standalone_generation_writes_explicit_package_entry(tmp_path: Path):
     source = _copy_source(STANDALONE_ONLY, tmp_path)
     entry = _generate_contract_package(source, tmp_path / "contracts")
 
-    assert entry == tmp_path / "contracts" / "contract_standalone_only" / "contract_standalone_only.pyi"
-    assert {path.name for path in entry.parent.iterdir()} == {"contract_standalone_only.pyi"}
+    assert entry == tmp_path / "contracts" / "contract_standalone_only" / "__init__.pyi"
+    assert {path.name for path in entry.parent.iterdir()} == {"__init__.pyi"}
     text = entry.read_text(encoding="utf-8")
     assert text.count("@external") == 2
     assert "def standalone_ping() -> None: ..." in text
     assert "def standalone_double(" in text
 
 
-def test_module_generation_uses_source_entry_and_native_leaf(tmp_path: Path):
+def test_module_generation_writes_explicit_package_entry_and_native_leaf(tmp_path: Path):
     source = _copy_source(SOURCE_NAMESPACE, tmp_path)
     entry = _generate_contract_package(source, tmp_path / "contracts")
 
-    assert entry == (tmp_path / "contracts" / "contract_mixed_module_external" / "contract_mixed_module_external.pyi")
+    assert entry == tmp_path / "contracts" / "contract_mixed_module_external" / "__init__.pyi"
     assert {path.name for path in entry.parent.iterdir()} == {
-        "contract_mixed_module_external.pyi",
+        "__init__.pyi",
         "contract_math_mod.pyi",
     }
     assert entry.read_text(encoding="utf-8").startswith("from . import contract_math_mod\n\n@external\n")

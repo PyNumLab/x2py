@@ -503,7 +503,7 @@ end module second_mod
     assert not output.exists()
 
 
-def test_cli_pyi_out_uses_explicit_contract_parent_from_inline_code(tmp_path: Path):
+def test_cli_pyi_out_uses_explicit_contract_package_from_inline_code(tmp_path: Path):
     f90 = tmp_path / "explicit.f90"
     f90.write_text(
         """module explicit_mod
@@ -521,10 +521,9 @@ end module explicit_mod
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert res.stdout == ""
-    package = out / "explicit"
-    text = (package / "explicit.pyi").read_text(encoding="utf-8")
+    text = (out / "__init__.pyi").read_text(encoding="utf-8")
     assert text == "from . import explicit_mod\n"
-    leaf_text = package.joinpath("explicit_mod.pyi").read_text(encoding="utf-8")
+    leaf_text = (out / "explicit_mod.pyi").read_text(encoding="utf-8")
     assert "@native_call([Return('x', 0)])" in leaf_text
     assert "def set_value(" in leaf_text
     assert "-> Float64: ..." in leaf_text
