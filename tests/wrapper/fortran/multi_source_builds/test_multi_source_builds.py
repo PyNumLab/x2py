@@ -36,9 +36,11 @@ def test_multi_file_modules_build_one_merged_extension(tmp_path: Path):
     assert payload["module_name"] == "first_api"
     assert module.first_api.add_one(np.int32(4)) == 5
     assert module.second_api.double_value(np.int32(4)) == 10
-    assert module.second_api.get_counter() == 3
-    module.second_api.set_counter(np.int32(7))
-    assert module.second_api.get_counter() == 7
+    assert module.second_api.counter == 3
+    module.second_api.counter = np.int32(7)
+    assert module.second_api.counter == 7
+    assert not hasattr(module.second_api, "get_counter")
+    assert not hasattr(module.second_api, "set_counter")
     bridge = (tmp_path / "bind_c_first_api_wrapper.f90").read_text(encoding="utf-8").lower()
     assert "use first_api" in bridge
     assert "use second_api" in bridge

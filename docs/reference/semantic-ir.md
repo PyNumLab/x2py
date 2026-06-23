@@ -463,17 +463,16 @@ rank, shape, and storage metadata. This metadata does not authorize direct C
 struct access: generated wrappers treat every Fortran derived type as opaque
 and route component access through Fortran accessors.
 
-Fortran module variables are native module storage. Public scalar numeric,
-logical, and complex module variables are represented in the generated Python
-surface by explicit `get_<name>()` and `set_<name>(value)` functions. Public
-Fortran parameters are semantic constants and use `Final[T]`:
+Fortran module variables are native module storage. Public variables remain
+direct module-level declarations in the semantic `.pyi`; wrapper-only native
+accessors implement Python attribute reads and writes but are not public
+procedures. Public Fortran parameters are semantic constants and use
+`Final[T]`:
 
 ```python
 answer: Final[Int32]
-
-def get_counter() -> Int32: ...
-
-def set_counter(value: Int32) -> None: ...
+counter: Int32
+label: String[8]
 ```
 
 Fortran generic interfaces whose name matches a derived type are constructor

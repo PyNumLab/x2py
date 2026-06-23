@@ -35,16 +35,14 @@ def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(tmp_path:
     assert "TypeError" in module.build_values.__doc__
     assert "Rank: 2" in module.build_matrix.__doc__
     assert "Layout: F-contiguous" in module.build_matrix.__doc__
-    assert "get_module_values() -> ndarray[float64] | None" in module.get_module_values.__doc__
-    assert "Ownership: Native-owned" in module.get_module_values.__doc__
-    assert "zero-copy view of native Fortran memory" in module.get_module_values.__doc__
+    assert not hasattr(module, "get_module_values")
     assert "Fields" in module.buffer.__doc__
     assert "values : ndarray[float64] or None" in module.buffer.__doc__
     assert "Ownership: Wrapper-owned" in module.buffer.values.__doc__
 
-    assert module.get_module_values() is None
+    assert module.module_values is None
     module.allocate_module_values(np.int32(3))
-    module_values = module.get_module_values()
+    module_values = module.module_values
     np.testing.assert_allclose(module_values, np.array([1.0, 2.0, 3.0], dtype=np.float64))
 
     module_values[0] = np.float64(10.0)
@@ -53,7 +51,7 @@ def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(tmp_path:
     np.testing.assert_allclose(module_values, np.array([20.0, 4.0, 6.0], dtype=np.float64))
 
     module.deallocate_module_values()
-    assert module.get_module_values() is None
+    assert module.module_values is None
 
     built_values = module.build_values(np.int32(4))
     np.testing.assert_allclose(built_values, np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))

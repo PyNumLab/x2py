@@ -14,7 +14,7 @@ from tests.wrapper.fortran._support import (
 MODULE_VARIABLES_F90_TEXT = Path(__file__).with_name("fmodule_vars_f90.f90").read_text(encoding="utf-8")
 
 
-def test_scalar_module_variables_use_accessors_and_parameters_have_no_setter(tmp_path: Path):
+def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_setter(tmp_path: Path):
     module = _build_text_and_import(
         MODULE_VARIABLES_F90_TEXT,
         "fmodule_vars_f90.f90",
@@ -27,26 +27,28 @@ def test_scalar_module_variables_use_accessors_and_parameters_have_no_setter(tmp
     )
 
     assert module.nmax == np.int32(12)
-    assert not hasattr(module, "counter")
-    assert not hasattr(module, "scale")
+    assert module.counter == np.int32(3)
+    assert module.scale == np.float64(1.5)
+    assert not hasattr(module, "get_counter")
+    assert not hasattr(module, "set_counter")
+    assert not hasattr(module, "get_scale")
+    assert not hasattr(module, "set_scale")
     assert not hasattr(module, "set_nmax")
     assert not hasattr(module, "set_red")
     assert not hasattr(module, "hidden_counter")
     assert not hasattr(module, "get_hidden_counter")
 
-    assert module.get_counter() == np.int32(3)
     assert module.summarize() == np.int32(15)
-    module.set_counter(np.int32(9))
-    assert module.get_counter() == np.int32(9)
+    module.counter = np.int32(9)
+    assert module.counter == np.int32(9)
     assert module.summarize() == np.int32(21)
 
-    assert module.get_scale() == np.float64(1.5)
-    module.set_scale(np.float64(2.0))
+    module.scale = np.float64(2.0)
     assert module.scaled_counter() == np.float64(18.0)
 
-    assert module.get_saved_counter() == np.int32(6)
-    module.set_saved_counter(np.int32(8))
-    assert module.get_saved_counter() == np.int32(8)
+    assert module.saved_counter == np.int32(6)
+    module.saved_counter = np.int32(8)
+    assert module.saved_counter == np.int32(8)
     assert module.next_local() == np.int32(1)
     assert module.next_local() == np.int32(2)
 
@@ -72,10 +74,10 @@ def test_scalar_module_variables_use_accessors_and_parameters_have_no_setter(tmp
         sys.path.remove(str(tmp_path))
 
     assert second_module is not module
-    assert second_module.get_counter() == np.int32(9)
-    assert second_module.get_saved_counter() == np.int32(8)
-    second_module.set_counter(np.int32(4))
-    assert module.get_counter() == np.int32(4)
+    assert second_module.counter == np.int32(9)
+    assert second_module.saved_counter == np.int32(8)
+    second_module.counter = np.int32(4)
+    assert module.counter == np.int32(4)
 
     module.nmax = np.int32(99)
     assert module.nmax == np.int32(99)

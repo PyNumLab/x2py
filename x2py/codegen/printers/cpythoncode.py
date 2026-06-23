@@ -5,6 +5,8 @@ printing the C-Python interface.
 
 from typing import ClassVar
 
+from x2py.semantics.models import INTERNAL_MODULE_VARIABLE_NAME_METADATA
+
 from ..bind_c import BindCFunctionDef, BindCModule, BindCPointer
 from ..bindings.c_concepts import CStrStr, ObjectAddress
 from ..models.core import Declare, FunctionAddress, Import, Module, SeparatorComment
@@ -196,6 +198,10 @@ class CPythonCodePrinter(CCodePrinter):
         """Render the ``PyModule_Create`` model node."""
         return f"PyModule_Create(&{expr.module_def_name})"
 
+    def _visit_PyModule_SetPropertyType(self, expr):
+        """Render one generated module-property type setup call."""
+        return f"{expr.setup_name}({self._visit(ObjectAddress(expr.module))})"
+
     def _visit_ModuleHeader(self, expr):
         """Render the ``ModuleHeader`` model node."""
         mod = expr.module
@@ -301,6 +307,7 @@ class CPythonCodePrinter(CCodePrinter):
             namespace_functions,
             namespace_classes,
         )
+        property_defs = self._module_property_blocks(expr)
 
         init_func = self._visit(expr.init_func)
 
@@ -327,6 +334,8 @@ class CPythonCodePrinter(CCodePrinter):
                 sep,
                 *method_defs,
                 sep,
+                *property_defs,
+                sep,
                 *module_defs,
                 sep,
                 init_func,
@@ -338,6 +347,9 @@ class CPythonCodePrinter(CCodePrinter):
         namespace_functions = {namespace: [] for namespace in namespace_defs}
         for function in funcs:
             if getattr(function, "is_header", False):
+                continue
+            original = getattr(function, "original_function", None)
+            if INTERNAL_MODULE_VARIABLE_NAME_METADATA in getattr(original, "decorators", {}):
                 continue
             exports = (
                 expr.get_python_exports(function)
@@ -415,6 +427,129 @@ class CPythonCodePrinter(CCodePrinter):
                 "};\n"
             )
         return method_defs, module_defs
+
+    def _module_property_blocks(self, expr):
+        """Render custom module types that route attributes through native accessors."""
+        return [
+            self._module_property_block(namespace, descriptor)
+            for namespace, descriptor in expr.module_properties.items()
+        ]
+
+    def _module_property_block(self, namespace, descriptor):
+        setup_name = descriptor["setup_name"]
+        items = descriptor["items"]
+        get_name = f"{setup_name}_getattro"
+        set_name = f"{setup_name}_setattro"
+        slots_name = f"{setup_name}_slots"
+        spec_name = f"{setup_name}_spec"
+        qualified_name = ".".join((str(self._module_name), *namespace, "__x2py_module_type"))
+
+        get_cases = "".join(self._module_property_get_case(name, accessors["get"]) for name, accessors in items.items())
+        set_cases = "".join(self._module_property_set_case(name, accessors["set"]) for name, accessors in items.items())
+        return (
+            f"static PyObject *{get_name}(PyObject *self, PyObject *name)\n"
+            "{\n"
+            "    if (PyUnicode_Check(name)) {\n"
+            f"{get_cases}"
+            "    }\n"
+            "    return PyModule_Type.tp_getattro(self, name);\n"
+            "}\n\n"
+            f"static int {set_name}(PyObject *self, PyObject *name, PyObject *value)\n"
+            "{\n"
+            "    if (PyUnicode_Check(name)) {\n"
+            f"{set_cases}"
+            "    }\n"
+            "    return PyModule_Type.tp_setattro(self, name, value);\n"
+            "}\n\n"
+            f"static PyType_Slot {slots_name}[] = {{\n"
+            f"    {{Py_tp_getattro, (void *){get_name}}},\n"
+            f"    {{Py_tp_setattro, (void *){set_name}}},\n"
+            "    {0, NULL}\n"
+            "};\n"
+            f"static PyType_Spec {spec_name} = {{\n"
+            f'    "{qualified_name}",\n'
+            "    0,\n"
+            "    0,\n"
+            "    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,\n"
+            f"    {slots_name}\n"
+            "};\n\n"
+            f"static int {setup_name}(PyObject *module)\n"
+            "{\n"
+            "    PyObject *bases = PyTuple_Pack(1, (PyObject *)&PyModule_Type);\n"
+            "    if (bases == NULL) {\n"
+            "        return -1;\n"
+            "    }\n"
+            f"    PyObject *module_type = PyType_FromSpecWithBases(&{spec_name}, bases);\n"
+            "    Py_DECREF(bases);\n"
+            "    if (module_type == NULL) {\n"
+            "        return -1;\n"
+            "    }\n"
+            '    int status = PyObject_SetAttrString(module, "__class__", module_type);\n'
+            "    Py_DECREF(module_type);\n"
+            "    return status;\n"
+            "}\n"
+        )
+
+    @staticmethod
+    def _module_property_get_case(name, getter):
+        if getter is None:
+            return ""
+        return (
+            "        {\n"
+            f'        int comparison = PyUnicode_CompareWithASCIIString(name, "{name}");\n'
+            "        if (comparison == -1 && PyErr_Occurred()) {\n"
+            "            return NULL;\n"
+            "        }\n"
+            "        if (comparison == 0) {\n"
+            "            PyObject *args = PyTuple_New(0);\n"
+            "            if (args == NULL) {\n"
+            "                return NULL;\n"
+            "            }\n"
+            f"            PyObject *result = {getter.name}(self, args, NULL);\n"
+            "            Py_DECREF(args);\n"
+            "            return result;\n"
+            "        }\n"
+            "        }\n"
+        )
+
+    @staticmethod
+    def _module_property_set_case(name, setter):
+        prefix = (
+            "        {\n"
+            f'        int comparison = PyUnicode_CompareWithASCIIString(name, "{name}");\n'
+            "        if (comparison == -1 && PyErr_Occurred()) {\n"
+            "            return -1;\n"
+            "        }\n"
+            "        if (comparison == 0) {\n"
+        )
+        if setter is None:
+            return (
+                prefix
+                + f'            PyErr_SetString(PyExc_AttributeError, "module variable {name} is read-only");\n'
+                + "            return -1;\n"
+                + "        }\n"
+                + "        }\n"
+            )
+        return (
+            prefix
+            + "            if (value == NULL) {\n"
+            + f'                PyErr_SetString(PyExc_AttributeError, "module variable {name} cannot be deleted");\n'
+            + "                return -1;\n"
+            + "            }\n"
+            + "            PyObject *args = PyTuple_Pack(1, value);\n"
+            + "            if (args == NULL) {\n"
+            + "                return -1;\n"
+            + "            }\n"
+            + f"            PyObject *result = {setter.name}(self, args, NULL);\n"
+            + "            Py_DECREF(args);\n"
+            + "            if (result == NULL) {\n"
+            + "                return -1;\n"
+            + "            }\n"
+            + "            Py_DECREF(result);\n"
+            + "            return 0;\n"
+            + "        }\n"
+            + "        }\n"
+        )
 
     def _visit_PyClassDef(self, expr):
         """Render the ``PyClassDef`` model node."""

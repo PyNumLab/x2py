@@ -12,8 +12,6 @@ from x2py.ownership_policy import set_ownership_metadata, set_pointer_policy_met
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
-    MODULE_VARIABLE_GETTER_METADATA,
-    MODULE_VARIABLE_SETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
     PYI_BIND_TARGET_METADATA,
@@ -106,8 +104,6 @@ class _Decorators:
     overload_target: str | None = None
     overload_generic: str | None = None
     bind_target: str | None = None
-    module_variable: str | None = None
-    module_variable_access: str = "get"
     native_type: dict[str, object] | None = None
     external: bool = False
     is_static: bool = False
@@ -386,7 +382,6 @@ class _PyiAstParser:
             "bind": self._apply_bind_decorator,
             "external": self._apply_external_decorator,
             "hold_gil": self._apply_hold_gil_decorator,
-            "module_variable": self._apply_module_variable_decorator,
             "native_call": self._apply_native_call_decorator,
             "native_type": self._apply_native_type_decorator,
             "raises": self._apply_raises_decorator,
@@ -438,22 +433,6 @@ class _PyiAstParser:
         if parsed.hold_gil:
             raise ValueError(f"Duplicate {context} hold_gil decorator")
         parsed.hold_gil = True
-
-    def _apply_module_variable_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
-        if parsed.module_variable is not None:
-            raise ValueError(f"Duplicate {context} module_variable decorator")
-        if not isinstance(node, ast.Call) or len(node.args) != 1:
-            raise ValueError("module_variable expects one native variable name")
-        target = ast.literal_eval(node.args[0])
-        if not isinstance(target, str) or not target:
-            raise ValueError("module_variable expects a non-empty native variable name")
-        if len(node.keywords) > 1 or any(keyword.arg != "access" for keyword in node.keywords):
-            raise ValueError("module_variable accepts only the optional access keyword")
-        access = ast.literal_eval(node.keywords[0].value) if node.keywords else "get"
-        if access not in {"get", "set"}:
-            raise ValueError("module_variable access must be 'get' or 'set'")
-        parsed.module_variable = target
-        parsed.module_variable_access = access
 
     @staticmethod
     def _apply_external_decorator(parsed: _Decorators, node: ast.expr, context: str) -> None:
@@ -875,6 +854,12 @@ class _PyiAstParser:
         return "public", semantic_type, original_name
 
     def semantic_type_annotation(self, node: ast.expr) -> tuple[SemanticType, str | None]:
+        optional_item = self._optional_union_item(node)
+        if optional_item is not None:
+            semantic_type = self.semantic_type(optional_item)
+            storage = semantic_type.storage
+            if storage is not None and storage.array is not None and storage.array.allocatable:
+                return semantic_type, None
         if not self.is_subscript_of(node, "Annotated"):
             return self.semantic_type(node), None
 
@@ -897,35 +882,16 @@ class _PyiAstParser:
             semantic_type, _ = self.semantic_type_annotation(node)
             return semantic_type
         if self.is_subscript_of(node, "Final"):
-            items = self.subscript_items(node)
-            if len(items) != 1:
-                raise ValueError(f"Final expects exactly one type: {ast.unparse(node)!r}")
-            semantic_type = self.semantic_type(items[0])
-            if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
-                semantic_type.constraints.append(SemanticConstraint("Constant"))
-            return semantic_type
+            return self._final_type(node)
         if self.matches_name(node, "Callable") or self.is_subscript_of(node, "Callable"):
             return self.callable_type(node)
         if isinstance(node, ast.Call) and self.matches_name(node.func, "Const"):
-            if len(node.args) != 1 or node.keywords:
-                raise ValueError(f"Const type expects one argument: {ast.unparse(node)!r}")
-            semantic_type = self.semantic_type(node.args[0])
-            self._mark_storage_read_only(semantic_type)
-            return semantic_type
+            return self._const_type(node)
         if isinstance(node, ast.Call) and self._is_ptr_call(node):
-            if len(node.args) != 1 or node.keywords:
-                raise ValueError(f"Ptr type expects one argument: {ast.unparse(node)!r}")
-            pointer_depth = self._ptr_depth(node.func)
-            pointee = self.semantic_type(node.args[0])
-            read_only = pointee.storage.read_only if pointee.storage is not None else False
-            pointee.storage = SemanticStorageContract(
-                kind="reference" if pointer_depth == 1 else "pointer",
-                read_only=read_only,
-                mutable=not read_only,
-                pointer_depth=pointer_depth,
-            )
-            pointee.ownership.mutable = not read_only
-            return pointee
+            return self._pointer_type(node)
+
+        if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
+            return self._character_type(node)
 
         name = self.type_name(node)
         if name == "Unknown":
@@ -940,8 +906,46 @@ class _PyiAstParser:
             )
         return self.array_type(node)
 
+    def _final_type(self, node: ast.Subscript) -> SemanticType:
+        items = self.subscript_items(node)
+        if len(items) != 1:
+            raise ValueError(f"Final expects exactly one type: {ast.unparse(node)!r}")
+        semantic_type = self.semantic_type(items[0])
+        if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
+            semantic_type.constraints.append(SemanticConstraint("Constant"))
+        return semantic_type
+
+    def _const_type(self, node: ast.Call) -> SemanticType:
+        if len(node.args) != 1 or node.keywords:
+            raise ValueError(f"Const type expects one argument: {ast.unparse(node)!r}")
+        semantic_type = self.semantic_type(node.args[0])
+        self._mark_storage_read_only(semantic_type)
+        return semantic_type
+
+    def _pointer_type(self, node: ast.Call) -> SemanticType:
+        if len(node.args) != 1 or node.keywords:
+            raise ValueError(f"Ptr type expects one argument: {ast.unparse(node)!r}")
+        pointer_depth = self._ptr_depth(node.func)
+        pointee = self.semantic_type(node.args[0])
+        read_only = pointee.storage.read_only if pointee.storage is not None else False
+        pointee.storage = SemanticStorageContract(
+            kind="reference" if pointer_depth == 1 else "pointer",
+            read_only=read_only,
+            mutable=not read_only,
+            pointer_depth=pointer_depth,
+        )
+        pointee.ownership.mutable = not read_only
+        return pointee
+
     def array_type(self, node: ast.Subscript) -> SemanticType:
         if isinstance(node.value, ast.Subscript):
+            if self.matches_name(node.value.value, "String"):
+                semantic_type = self._character_type(node.value)
+                return self._array_type_from_dimensions(
+                    semantic_type.name,
+                    [self.dimension_text(item) for item in self.subscript_items(node)],
+                    metadata=semantic_type.metadata,
+                )
             semantic_type = self.array_type(node.value)
             selector = ", ".join(self.dimension_text(item) for item in self.subscript_items(node))
             semantic_type.metadata["rank_selector"] = selector
@@ -949,8 +953,18 @@ class _PyiAstParser:
                 semantic_type.storage.array.metadata["rank_selector"] = selector
             return semantic_type
 
-        name = self.type_name(node)
-        dims = [self.dimension_text(item) for item in self.subscript_items(node)]
+        return self._array_type_from_dimensions(
+            self.type_name(node),
+            [self.dimension_text(item) for item in self.subscript_items(node)],
+        )
+
+    @staticmethod
+    def _array_type_from_dimensions(
+        name: str,
+        dims: list[str],
+        *,
+        metadata: dict[str, object] | None = None,
+    ) -> SemanticType:
         rank = None if "..." in dims else len(dims)
         array = SemanticArrayContract(
             rank=rank,
@@ -966,7 +980,23 @@ class _PyiAstParser:
             dtype=name,
             shape=list(dims) if rank is not None else [],
             constraints=[],
+            metadata=dict(metadata or {}),
             storage=storage,
+        )
+
+    def _character_type(self, node: ast.Subscript) -> SemanticType:
+        items = self.subscript_items(node)
+        if (
+            len(items) != 1
+            or isinstance(items[0], ast.Slice)
+            or (isinstance(items[0], ast.Constant) and items[0].value is Ellipsis)
+        ):
+            raise ValueError("Fixed character types use String[length]; use String for non-fixed length")
+        length = self.dimension_text(items[0])
+        return SemanticType(
+            name="String",
+            dtype="String",
+            metadata={"fortran_character_length": length},
         )
 
     def apply_annotation_metadata(self, semantic_type: SemanticType, node: ast.expr) -> None:
@@ -981,7 +1011,7 @@ class _PyiAstParser:
 
     def _apply_annotation_metadata_call(self, semantic_type: SemanticType, node: ast.Call) -> None:
         helper = self.required_name(node.func)
-        if helper in {"Intent", "FortranCharacterLength"}:
+        if helper == "Intent":
             self._apply_scalar_annotation_metadata(semantic_type, node, helper)
             return
         if helper in {"FortranType", "FortranCallback"}:
@@ -1032,8 +1062,7 @@ class _PyiAstParser:
         return ast.literal_eval(node.args[0])
 
     def _apply_scalar_annotation_metadata(self, semantic_type: SemanticType, node: ast.Call, helper: str) -> None:
-        metadata_key = "_pyi_intent" if helper == "Intent" else "fortran_character_length"
-        semantic_type.metadata[metadata_key] = str(self._require_single_metadata_argument(node, helper))
+        semantic_type.metadata["_pyi_intent"] = str(self._require_single_metadata_argument(node, helper))
 
     def _apply_pointer_association_metadata(self, semantic_type: SemanticType, node: ast.Call) -> None:
         value = self._require_single_metadata_argument(node, "PointerAssociation")
@@ -1340,72 +1369,6 @@ class _PyiAstParser:
             return None
         return node.right if left_none else node.left
 
-    def module_variable_getter(self, node: ast.FunctionDef, decorators: _Decorators) -> SemanticVariable:
-        if decorators.module_variable is None:
-            raise ValueError("module_variable getter is missing its native variable name")
-        if node.args.args or node.args.vararg or node.args.kwarg or node.args.kwonlyargs or node.args.posonlyargs:
-            raise ValueError("module_variable getter must not accept arguments")
-        self._validate_stub_callable(node)
-        if node.returns is None:
-            raise ValueError("module_variable getter must declare a return type")
-        semantic_type = self._module_variable_return_type(node.returns)
-        return SemanticVariable(
-            name=decorators.module_variable,
-            semantic_type=semantic_type,
-            visibility=decorators.visibility,
-            metadata={MODULE_VARIABLE_GETTER_METADATA: node.name},
-            origin=self._origin(user_private=decorators.visibility == "private"),
-        )
-
-    def apply_module_variable_setter(
-        self,
-        node: ast.FunctionDef,
-        decorators: _Decorators,
-        variable: SemanticVariable,
-    ) -> None:
-        if (
-            len(node.args.args) != 1
-            or node.args.vararg
-            or node.args.kwarg
-            or node.args.kwonlyargs
-            or node.args.posonlyargs
-        ):
-            raise ValueError("module_variable setter must accept exactly one argument")
-        self._validate_stub_callable(node)
-        returns_none = self.matches_name(node.returns, "None") or (
-            isinstance(node.returns, ast.Constant) and node.returns.value is None
-        )
-        if node.returns is None or not returns_none:
-            raise ValueError("module_variable setter must return None")
-        value = self.ann_assign(
-            ast.AnnAssign(
-                target=ast.Name(id=node.args.args[0].arg),
-                annotation=node.args.args[0].annotation,
-                value=None,
-                simple=1,
-            ),
-            default_intent="in",
-            binding_cls=SemanticArgument,
-        )
-        if value.semantic_type != variable.semantic_type:
-            raise ValueError(f"module_variable setter for {variable.name!r} has an incompatible value type")
-        variable.metadata[MODULE_VARIABLE_SETTER_METADATA] = node.name
-
-    def _module_variable_return_type(self, node: ast.expr) -> SemanticType:
-        optional = False
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
-            left_none = isinstance(node.left, ast.Constant) and node.left.value is None
-            right_none = isinstance(node.right, ast.Constant) and node.right.value is None
-            if left_none == right_none:
-                raise ValueError("module_variable getter return must be T | None")
-            node = node.right if left_none else node.left
-            optional = True
-        semantic_type = self.semantic_type(node)
-        storage = semantic_type.storage
-        if optional and (storage is None or storage.array is None or not storage.array.allocatable):
-            raise ValueError("module_variable getter return must be an allocatable array unioned with None")
-        return semantic_type
-
     def returned_argument(self, node: ast.expr) -> SemanticArgument | None:
         if not self.is_subscript_of(node, "Returns"):
             return None
@@ -1683,8 +1646,6 @@ class _ClassBodyVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         decorators = self.parser.decorators(node.decorator_list, context="class body")
-        if decorators.module_variable is not None:
-            raise ValueError("module_variable is only valid for module-level getter functions")
         if decorators.external:
             raise ValueError("external is not valid for a class method")
         if decorators.native_type is not None:
@@ -1792,8 +1753,6 @@ class _ModuleVisitor(ast.NodeVisitor):
             or decorators.external
         ):
             raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
-        if decorators.module_variable is not None:
-            raise ValueError("module_variable is only valid for module-level getter functions")
         if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
             raise ValueError(
                 f"Enum declarations are not supported; use Final[...] integer constants: {_node_text(node)!r}"
@@ -1810,35 +1769,6 @@ class _ModuleVisitor(ast.NodeVisitor):
         decorators = self.parser.decorators(node.decorator_list, context=".pyi")
         if decorators.native_type is not None:
             raise ValueError("native_type is only valid for classes")
-        if decorators.module_variable is not None:
-            if (
-                decorators.overload_target is not None
-                or decorators.has_native_call
-                or decorators.bind_target is not None
-                or decorators.hold_gil
-                or decorators.error_status_policy is not None
-                or decorators.external
-            ):
-                raise ValueError(
-                    "module_variable cannot be combined with overload, bind, native_call, external, hold_gil, or raises"
-                )
-            if decorators.module_variable_access == "get":
-                if any(variable.name == decorators.module_variable for variable in self.parser.module.variables):
-                    raise ValueError(f"Duplicate module_variable getter for {decorators.module_variable!r}")
-                self.parser.module.variables.append(self.parser.module_variable_getter(node, decorators))
-            else:
-                matches = [
-                    variable
-                    for variable in self.parser.module.variables
-                    if variable.name == decorators.module_variable
-                    and MODULE_VARIABLE_GETTER_METADATA in variable.metadata
-                ]
-                if len(matches) != 1:
-                    raise ValueError(
-                        f"module_variable setter for {decorators.module_variable!r} requires one preceding getter"
-                    )
-                self.parser.apply_module_variable_setter(node, decorators, matches[0])
-            return
         function = self.parser.function_def(
             node,
             visibility=decorators.visibility,

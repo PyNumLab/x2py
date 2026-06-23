@@ -77,6 +77,7 @@ __all__ = (
     "PyModule",
     "PyModule_AddObject",
     "PyModule_Create",
+    "PyModule_SetPropertyType",
     "PyNotImplementedError",
     "PyObject_TypeCheck",
     "PyRuntimeError",
@@ -503,6 +504,30 @@ class PyModule_Create(Function):
         return self._module_def_name
 
 
+class PyModule_SetPropertyType(Function):
+    """Call a generated helper that installs module-variable attribute hooks."""
+
+    __slots__ = ("_module", "_setup_name")
+    _attribute_nodes = ("_module",)
+    _shape = None
+    _class_type = CNativeInt()
+
+    def __init__(self, setup_name, module):
+        self._setup_name = setup_name
+        self._module = module
+        super().__init__(module)
+
+    @property
+    def setup_name(self):
+        """Return the generated setup helper name."""
+        return self._setup_name
+
+    @property
+    def module(self):
+        """Return the module object receiving the custom type."""
+        return self._module
+
+
 # -------------------------------------------------------------------
 class PyCapsule_New(Function):
     """
@@ -647,6 +672,7 @@ class PyModule(Module):
         "_external_funcs",
         "_import_func",
         "_module_def_name",
+        "_module_properties",
         "_namespace_module_defs",
     )
     _attribute_nodes = (*Module._attribute_nodes, "_external_funcs", "_declarations", "_import_func")
@@ -660,6 +686,7 @@ class PyModule(Module):
         init_func=None,
         import_func,
         module_def_name,
+        module_properties=None,
         namespace_module_defs=None,
         **kwargs,
     ):
@@ -667,6 +694,7 @@ class PyModule(Module):
         self._external_funcs = external_funcs
         self._declarations = declarations
         self._module_def_name = module_def_name
+        self._module_properties = dict(module_properties or {})
         self._namespace_module_defs = dict(namespace_module_defs or {})
         self._import_func = import_func
         super().__init__(name, *args, init_func=init_func, **kwargs)
@@ -686,6 +714,11 @@ class PyModule(Module):
     def namespace_module_defs(self):
         """Return child namespace paths and their generated module definitions."""
         return self._namespace_module_defs
+
+    @property
+    def module_properties(self):
+        """Return generated module-variable property descriptors by namespace."""
+        return self._module_properties
 
     @external_funcs.setter
     def external_funcs(self, funcs):

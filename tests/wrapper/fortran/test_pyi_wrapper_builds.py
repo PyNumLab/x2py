@@ -17,6 +17,7 @@ from x2py.wrapping import build_fortran_extension
 SOURCE = Path(__file__).with_name("fruntime_abi_f90.f90")
 PYI_FIXTURE = Path(__file__).with_name("pyi") / "fruntime_abi_f90.pyi"
 BASIC_SOURCE = Path(__file__).parents[2] / "data" / "fortran" / "general" / "basic_subroutine.f90"
+MODULE_VARIABLE_SOURCE = Path(__file__).with_name("fmodule_vars_f90.f90")
 MIXED_SOURCE = """\
 module m1
 contains
@@ -132,6 +133,15 @@ def _assert_scale_runtime_contract(module) -> None:
     assert module.scale(np.float64(2.0), np.float64(4.0)) == np.float64(8.0)
 
 
+def _assert_module_variable_runtime_contract(module) -> None:
+    assert module.counter == np.int32(3)
+    module.counter = np.int32(9)
+    assert module.counter == np.int32(9)
+    assert module.summarize() == np.int32(21)
+    assert not hasattr(module, "get_counter")
+    assert not hasattr(module, "set_counter")
+
+
 @pytest.fixture
 def scale_runtime_module(pyi_parity_build_mode: str, tmp_path: Path):
     if pyi_parity_build_mode == "source":
@@ -140,6 +150,18 @@ def scale_runtime_module(pyi_parity_build_mode: str, tmp_path: Path):
 
     generated_pyi = _generate_pyi(SOURCE, tmp_path / "contracts")
     native_object = _compile_native_object(SOURCE, tmp_path / "native")
+    module, _payload = _build_pyi_cli(generated_pyi, native_object, tmp_path / "pyi_build")
+    return _sole_native_module(module)
+
+
+@pytest.fixture
+def module_variable_runtime_module(pyi_parity_build_mode: str, tmp_path: Path):
+    if pyi_parity_build_mode == "source":
+        result = build_fortran_extension(MODULE_VARIABLE_SOURCE, output_dir=tmp_path / "source_build")
+        return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+
+    generated_pyi = _generate_pyi(MODULE_VARIABLE_SOURCE, tmp_path / "contracts")
+    native_object = _compile_native_object(MODULE_VARIABLE_SOURCE, tmp_path / "native")
     module, _payload = _build_pyi_cli(generated_pyi, native_object, tmp_path / "pyi_build")
     return _sole_native_module(module)
 
@@ -330,3 +352,7 @@ def test_one_entry_preserves_multiple_native_module_namespaces(tmp_path: Path):
 
 def test_scale_runtime_contract(scale_runtime_module):
     _assert_scale_runtime_contract(scale_runtime_module)
+
+
+def test_module_variable_runtime_contract(module_variable_runtime_module):
+    _assert_module_variable_runtime_contract(module_variable_runtime_module)

@@ -253,7 +253,7 @@ be exposed as a borrowed view whose base keeps that object alive.
 | Caller-owned | The caller supplied the Python object and retains ownership. | A NumPy array passed as `intent(in)`, `intent(out)`, or `intent(inout)`. |
 | Wrapper-owned | A Python extension object owns one native Fortran instance. | A wrapped derived-type result. |
 | Native-owned | Fortran or an external library owns storage independently of Python. | A module allocatable array or external-library buffer. |
-| Borrowed view | Python references storage owned elsewhere and does not destroy it. | An allocatable component view or module-array getter. |
+| Borrowed view | Python references storage owned elsewhere and does not destroy it. | An allocatable component view or module-array attribute. |
 | Copy-return | Native output is copied into a new Python-owned value before return. | Allocatable output arrays and array function results. |
 | Snapshot copy | Python receives a copy of current native state, not a live view. | Supported pointer results and pointer-backed getters. |
 | Call-local association | Native code may use Python storage only during the wrapped call. | Pointer `intent(in)` array arguments. |
@@ -1049,9 +1049,11 @@ and [`test_borrowed_finalizers.py`](../../tests/wrapper/fortran/test_borrowed_fi
 
 ## Module Variables, Constants, Saved State, And Common Blocks
 
-Public scalar numeric, logical, and complex module variables use explicit typed
-accessors. This avoids pretending that assignment to a Python module attribute
-can intercept or mutate native storage.
+Supported public scalar numeric, logical, and complex module variables are
+normal Python module attributes. Reading an attribute fetches current native
+storage; assigning to it writes through to the Fortran module variable.
+Generated native getter and setter bridge functions are implementation details
+and are not Python-callable procedures.
 
 ```fortran
 module state
@@ -1065,10 +1067,10 @@ end module state
 ```
 
 ```python
-assert get_counter() == 0
-set_counter(np.int32(4))
+assert counter == 0
+counter = np.int32(4)
 advance()
-assert get_counter() == 5
+assert counter == 5
 
 assert max_count == 100
 ```
@@ -1078,12 +1080,12 @@ a Python literal; no setter is generated. Rebinding `module.max_count` only
 shadows the Python attribute and does not change native Fortran state. Private
 variables are omitted.
 
-Target-backed allocatable module arrays use explicit getters returning
-native-owned borrowed views or `None`:
+Target-backed allocatable module arrays are attributes returning native-owned
+borrowed views or `None`:
 
 ```python
 allocate_values(3)
-view = get_values()
+view = values
 view[0] = 5.0            # writes native module storage
 
 independent = view.copy()
@@ -1344,8 +1346,8 @@ type.
 
 ### Name Normalization
 
-The same normalization applies to module members, types, methods, fields,
-generated module-variable accessors, and keyword arguments:
+The same normalization applies to module members, types, methods, fields, and
+keyword arguments:
 
 1. Fortran identifiers are lowercased because Fortran lookup is
    case-insensitive.
@@ -1354,9 +1356,8 @@ generated module-variable accessors, and keyword arguments:
 3. Invalid identifier characters become underscores, and a leading underscore
    is added when the first character would otherwise be invalid.
 4. `bind(C, name=...)` changes only the native ABI symbol.
-5. Mutable scalar module variables become `get_<name>()` and
-   `set_<name>(value)`; allocatable module arrays use `get_<name>()`; parameters
-   retain `<name>` as constants.
+5. Module variables retain `<name>` as Python attributes; generated native
+   accessors remain internal. Parameters retain `<name>` as constants.
 
 ```fortran
 subroutine class(value) bind(C, name="native_class_entry")
@@ -1383,8 +1384,9 @@ class__2
 class__3
 ```
 
-Generated helper names follow the same rule, so a procedure named `get_value`
-cannot silently overwrite the accessor for a variable named `value`.
+Generated helper names use an internal namespace, so a user procedure named
+`get_value` does not collide with the internal accessor for a variable named
+`value`.
 
 With `--strict-wrapper-names`, x2py applies no fixes. Any name requiring keyword
 or identifier escaping, or any collision after normalization, raises a
@@ -1635,8 +1637,11 @@ wrappers:
 ## Finding The Runtime Tests
 
 The subject index in [`tests/wrapper/fortran/README.md`](../../tests/wrapper/fortran/README.md)
-maps each feature to its Python runtime tests and co-located Fortran fixtures.
-Most subjects use flat `test_<subject>.py` and Fortran source pairs. Only builds
+maps each feature to its Python runtime tests and fixture routes. Native source
+fixtures are being consolidated under the shared `tests/data/fortran/` corpus so
+the same valid source can exercise parser, semantic IR, `.pyi`, readiness, and
+wrapper stages. Runtime semantic `.pyi` contracts remain with the wrapper tests
+that consume them. Most subjects use flat `test_<subject>.py` modules. Only builds
 that wrap several related sources together use the
 [`multi_source_builds`](../../tests/wrapper/fortran/multi_source_builds) directory.
 

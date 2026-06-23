@@ -73,6 +73,9 @@ Source navigation is considered maintained when these files agree:
   hand-edited as source.
 - Parser and `.pyi` fixture files should be regenerated with the documented
   fixture commands instead of edited loosely.
-- Wrapper native fixtures live with the wrapper tests that prove their behavior.
+- Native source fixtures live under the shared `tests/data/fortran/` and
+  `tests/data/c/` corpora; wrapper runtime tests should reference those shared
+  fixtures instead of owning duplicate native sources. Runtime semantic `.pyi`
+  contracts stay with the wrapper tests that consume them.
 - `x2py.egg-info/`, caches, and benchmark output are generated local artifacts,
   not source ownership boundaries.

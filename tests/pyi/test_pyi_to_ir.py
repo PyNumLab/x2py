@@ -1383,7 +1383,7 @@ def test_parse_pyi_text_preserves_extended_array_metadata_and_nested_selector():
         """
 value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
 nested: Float64[:, :][rank, kind]
-name: Annotated[Ptr(String), FortranCharacterLength("16"), FortranAllocatable]
+name: Annotated[Ptr(String[16]), FortranAllocatable]
 
 def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
 """,

@@ -13,6 +13,8 @@ from x2py.ownership_policy import (
     ownership_decision_for_codegen_variable,
 )
 from x2py.semantics.models import (
+    INTERNAL_MODULE_VARIABLE_ACCESS_METADATA,
+    INTERNAL_MODULE_VARIABLE_NAME_METADATA,
     PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
@@ -93,6 +95,7 @@ from .cpython_api import (
     PyModule,
     PyModule_AddObject,
     PyModule_Create,
+    PyModule_SetPropertyType,
     PyRuntimeError,
     PyObject_TypeCheck,
     PySys_GetObject,
@@ -365,7 +368,14 @@ class CPythonBindingGenerator(BindingGenerator):
 
         module_def_name = self.scope.get_new_name("module")
         namespace_module_defs = self._namespace_module_definitions(expr)
-        init_func = self._build_module_init_function(expr, imports, module_def_name, namespace_module_defs)
+        module_properties = self._module_variable_properties(expr, funcs)
+        init_func = self._build_module_init_function(
+            expr,
+            imports,
+            module_def_name,
+            namespace_module_defs,
+            module_properties,
+        )
 
         API_var, import_func = self._build_module_import_function(expr)
 
@@ -383,6 +393,7 @@ class CPythonBindingGenerator(BindingGenerator):
             init_func=init_func,
             import_func=import_func,
             module_def_name=module_def_name,
+            module_properties=module_properties,
             namespace_module_defs=namespace_module_defs,
             python_exports=python_exports,
         )
@@ -441,6 +452,32 @@ class CPythonBindingGenerator(BindingGenerator):
             namespace: self.scope.get_new_name(f"module_{'_'.join(namespace)}", object_type="wrapper")
             for namespace in sorted(namespaces, key=lambda item: (len(item), item))
         }
+
+    def _module_variable_properties(self, expr, funcs):
+        """Group internal module-variable accessors by exported namespace."""
+        properties = {}
+        source_variables = {str(variable.name): variable for variable in expr.original_module.variables}
+        for function in funcs:
+            decorators = getattr(getattr(function, "original_function", None), "decorators", {})
+            variable_name = decorators.get(INTERNAL_MODULE_VARIABLE_NAME_METADATA)
+            access = decorators.get(INTERNAL_MODULE_VARIABLE_ACCESS_METADATA)
+            if not isinstance(variable_name, str) or access not in {"get", "set"}:
+                continue
+            source = source_variables[variable_name]
+            for namespace, export_name in expr.original_module.get_python_exports(source):
+                descriptor = properties.setdefault(
+                    namespace,
+                    {
+                        "setup_name": self.scope.get_new_name(
+                            f"{'_'.join(namespace) or 'root'}_module_property_setup",
+                            object_type="wrapper",
+                        ),
+                        "items": {},
+                    },
+                )
+                item = descriptor["items"].setdefault(export_name, {"get": None, "set": None})
+                item[access] = function
+        return properties
 
     def _visit_BindCModule(self, expr):
         """
@@ -2259,7 +2296,14 @@ class CPythonBindingGenerator(BindingGenerator):
     # Node builders
     # ------------------------------------------------------------------
 
-    def _build_module_init_function(self, expr, imports, module_def_name, namespace_module_defs):
+    def _build_module_init_function(
+        self,
+        expr,
+        imports,
+        module_def_name,
+        namespace_module_defs,
+        module_properties,
+    ):
         """
         Build the function that will be called when the module is first imported.
 
@@ -2319,6 +2363,19 @@ class CPythonBindingGenerator(BindingGenerator):
             initialised,
         )
         body.extend(namespace_body)
+        for namespace, descriptor in module_properties.items():
+            target_module = module_var if not namespace else namespace_modules[namespace]
+            body.append(
+                If(
+                    IfSection(
+                        Lt(
+                            PyModule_SetPropertyType(descriptor["setup_name"], target_module),
+                            convert_to_literal(0),
+                        ),
+                        [Py_DECREF(item) for item in initialised] + [Return(self._error_exit_code)],
+                    )
+                )
+            )
 
         # Save classes to the module variable
         for i, c in enumerate(expr.classes):
@@ -4432,6 +4489,10 @@ class CPythonBindingGenerator(BindingGenerator):
             (),
             FunctionDefResult(expr),
             scope=self.scope,
+            decorators={
+                INTERNAL_MODULE_VARIABLE_NAME_METADATA: expr.name,
+                INTERNAL_MODULE_VARIABLE_ACCESS_METADATA: "get",
+            },
         )
         func_scope = self.scope.new_child_scope(wrapper_name, "function")
         self.scope = func_scope

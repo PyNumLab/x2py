@@ -501,6 +501,12 @@ Current C callback placeholders such as `CFunctionPointer` can appear in
 generated stubs when source callback policy is incomplete; edit them to a full
 `Callable[[...], ...]` contract before expecting readiness to pass.
 
+Fixed-size character storage uses `String[length]`, for example `String[8]`.
+Assumed, deferred, or otherwise non-fixed character length uses plain `String`.
+The subscription on `String` is a character length, not an array rank. Source
+kind names are already resolved into semantic dtypes, so generated contracts do
+not import `iso_c_binding`, `iso_fortran_env`, or their kind constants.
+
 ## Storage Contracts
 
 Bare types are direct values:
@@ -574,7 +580,6 @@ Generated canonical metadata:
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
 | `Intent("out")` | exact native argument is an output argument |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
-| `FortranCharacterLength("n")` | Fortran character storage length for `String` contracts |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
 | `FortranTarget` | native storage has the Fortran `target` attribute needed for module zero-copy views |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
@@ -935,7 +940,7 @@ Python wrapper, so the wrapper cannot be destroyed while the view exists.
 For module variables, the Fortran module owns the storage for the process
 lifetime.
 
-Unallocated allocatable arrays return `None`. A fresh getter call after native
+Unallocated allocatable arrays return `None`. A fresh attribute read after native
 deallocation also returns `None`. Existing views are not invalidated, detached,
 or tracked. If a wrapped Fortran procedure reallocates or deallocates the native
 storage while Python still holds an old view, that old view is stale; reading or
@@ -1022,33 +1027,29 @@ declarations may still be used only when the generated field constructor is
 present; overloaded `tp_init` runtime lowering is not implemented yet and code
 generation reports an explicit blocker for that form.
 
-Module allocatable arrays are emitted as explicit getter functions so
-unallocated storage can be represented as `None`:
+Module variables are declarations in the semantic contract. Allocatable arrays
+include `None` because native storage may be unallocated:
 
 ```python
-@module_variable("module_values")
-def get_module_values() -> Annotated[Float64[:], Allocatable, FortranTarget] | None: ...
+module_values: Annotated[Float64[:], Allocatable, FortranTarget] | None
 ```
 
-`@module_variable("name")` is x2py metadata linking the getter to the native
-module variable. The getter must take no arguments and must return an
-allocatable array type unioned with `None`. `FortranTarget` is required for
-module allocatable arrays because the generated Fortran bridge needs `c_loc` on
-the native storage. Without that native `target` attribute, readiness and direct
-code generation report a blocker instead of generating a copied fallback.
+`FortranTarget` is required for module allocatable arrays because the generated
+Fortran bridge needs `c_loc` on the native storage. Without that native `target`
+attribute, readiness and direct code generation report a blocker instead of
+generating a copied fallback.
 
-Public scalar Fortran module variables use explicit accessors. The getter reads
-current native storage; the setter writes through to the Fortran module
-variable. The variable itself is not added as a mutable Python module
-attribute.
+Public scalar Fortran module variables are emitted directly with their resolved
+semantic type:
 
 ```python
-@module_variable("counter", access="get")
-def get_counter() -> Int32: ...
-
-@module_variable("counter", access="set")
-def set_counter(value: Int32) -> None: ...
+counter: Int32
+label: String[8]
 ```
+
+Wrapper generation may synthesize native getter and setter bridge functions to
+implement Python attribute reads and writes. Those functions are internal: they
+are absent from the `.pyi` and are not exported as Python-callable procedures.
 
 Fortran `parameter` declarations are emitted as `Final[...]` constants when
 their literal value can be represented in `.pyi`:
@@ -1167,6 +1168,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Hidden Fortran outputs | Python returns plus generated `@native_call` in native argument order |
 | Fortran scalar references | `Ptr(Const(T))`, `Ptr(T)`, `Intent("out")` |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
+| Module variables | direct module-level annotations; native accessors remain internal |
 | Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
 | C and Fortran enums | module-level `Final[...]` integer constants |
@@ -1177,7 +1179,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | C structs/unions | `CStruct` and `CUnion` classes |
 | C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
 | Opaque types | `Opaque` classes and owner-module dependency stubs |
-| Imports | retained native `import ...` and `from ... import ...` dependencies with aliases |
+| Imports | retained contract dependencies with aliases; source kind modules are omitted after dtype resolution |
 | Callbacks | complete `Callable` signatures when source interfaces resolve |
 | Incomplete C callbacks | placeholder type that readiness reports as incomplete |
 
@@ -1206,7 +1208,6 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - ordinary function bodies instead of `...`.
 - unsupported decorators other than `@private`, `@bind`, `@external`,
   `@native_call`, `@native_type`,
-  `@module_variable("native_name", access="get" | "set")`,
   `@overload("specific")`, its documented `generic=` form, `@raises`,
   `@hold_gil`, and `@staticmethod`.
 - bare `@overload` or `typing.overload`; overload links require one concrete
@@ -1220,8 +1221,8 @@ Near-term format work:
    complete `Callable[[...], ...]` contracts from source.
 2. Add explicit pointer ownership, borrow, nullability, output-buffer and
    copy/readback policy so pointer-heavy C APIs can move beyond blockers.
-3. Strengthen Fortran `character(len=...)` with length, kind, hidden-length ABI
-   and `bind(c)` byte-string metadata.
+3. Strengthen Fortran character kind, hidden-length ABI, and `bind(c)`
+   byte-string metadata beyond the existing `String[n]` fixed-length contract.
 4. Expand aggregate layout metadata for C bitfields, C attributes, Fortran
    `bind(c)`, `sequence`, and by-value aggregate ABI checks.
 5. Represent Fortran polymorphic `class(...)` and procedure bindings without

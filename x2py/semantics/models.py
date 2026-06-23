@@ -6,8 +6,8 @@ from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
-MODULE_VARIABLE_GETTER_METADATA = "module_variable_getter"
-MODULE_VARIABLE_SETTER_METADATA = "module_variable_setter"
+INTERNAL_MODULE_VARIABLE_ACCESS_METADATA = "internal_module_variable_access"
+INTERNAL_MODULE_VARIABLE_NAME_METADATA = "internal_module_variable_name"
 PYI_BIND_TARGET_METADATA = "pyi_bind_target"
 PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA = "pyi_suppress_default_constructor"
 PYI_USER_PRIVATE_METADATA = "pyi_user_private"

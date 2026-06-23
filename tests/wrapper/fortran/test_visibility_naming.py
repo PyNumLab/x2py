@@ -28,9 +28,11 @@ def test_visibility_and_default_python_name_fixing_policy(tmp_path: Path):
     assert module.lambda_(np.int32(3)) == 4
     assert module.lambda__2(np.int32(3)) == 5
     assert module.get_value() == 100
-    assert module.get_value_2() == 7
-    module.set_value(np.int32(11))
-    assert module.get_value_2() == 11
+    assert module.value == 7
+    module.value = np.int32(11)
+    assert module.value == 11
+    assert not hasattr(module, "get_value_2")
+    assert not hasattr(module, "set_value")
 
     assert not hasattr(module, "hidden_t")
     assert not hasattr(module, "hidden_proc")

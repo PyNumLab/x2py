@@ -3,10 +3,12 @@
 Fortran runtime wrapper tests mirror
 [`docs/user-guide/fortran-wrapper.md`](../../../docs/user-guide/fortran-wrapper.md)
 using feature subjects, not numbered directories. Search for a feature
-name, then open its `test_<subject>.py` module and the co-located Fortran fixture.
-Shared build/assertion helpers live in `_support.py`.
+name, then open its subject test module and fixture references. Native Fortran
+fixtures should come from the shared `tests/data/fortran/` corpus as tests are
+migrated; runtime semantic `.pyi` contracts stay under the wrapper subject that
+consumes them. Shared build/assertion helpers live in `_support.py`.
 
-Tests and fixtures stay flat when each source is wrapped independently. The
+Tests stay flat when each source is wrapped independently. The
 `multi_source_builds/` directory is the deliberate exception: each test there
 passes several related source files to one wrapper build.
 

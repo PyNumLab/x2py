@@ -23,5 +23,5 @@ extension identity, and Python-visible namespaces.
 ## TODO
 
 - TODO: Add module build and import examples that are backed by current tests.
-- TODO: Document module variable getter behavior and unsupported common-block
+- TODO: Document module variable attribute behavior and unsupported common-block
   behavior.

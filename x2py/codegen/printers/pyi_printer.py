@@ -12,8 +12,6 @@ from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
-    MODULE_VARIABLE_GETTER_METADATA,
-    MODULE_VARIABLE_SETTER_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
     PYI_BIND_TARGET_METADATA,
@@ -93,7 +91,7 @@ class PyiPrinter:
         elif semantic_type.storage is not None:
             text = self._emit_storage_type(semantic_type)
         else:
-            text = semantic_type.name
+            text = self._semantic_base_type(semantic_type)
         annotations = [
             *self._semantic_annotation_metadata(semantic_type),
             *[self._visit(constraint) for constraint in semantic_type.constraints],
@@ -215,14 +213,15 @@ class PyiPrinter:
     def _emit_storage_type(self, semantic_type: SemanticType) -> str:
         """Emit storage type syntax."""
         storage = semantic_type.storage
+        base_type = self._semantic_base_type(semantic_type)
         if storage is None:
-            return semantic_type.name
+            return base_type
         if storage.kind == "value":
             if storage.read_only:
-                return f"Const({semantic_type.name})"
-            return semantic_type.name
+                return f"Const({base_type})"
+            return base_type
         if storage.kind in {"reference", "pointer"}:
-            target = semantic_type.name
+            target = base_type
             if storage.read_only:
                 target = f"Const({target})"
             if storage.pointer_depth > 1:
@@ -230,14 +229,24 @@ class PyiPrinter:
             return f"Ptr({target})"
         if storage.kind == "array":
             return self._emit_array_type(semantic_type)
-        return semantic_type.name
+        return base_type
+
+    @staticmethod
+    def _semantic_base_type(semantic_type: SemanticType) -> str:
+        """Return the semantic dtype including fixed character length."""
+        if semantic_type.name != "String":
+            return semantic_type.name
+        length = semantic_type.metadata.get("fortran_character_length")
+        if length is None or str(length) in {"", ":", "*"}:
+            return "String"
+        return f"String[{length}]"
 
     def _emit_array_type(self, semantic_type: SemanticType) -> str:
         """Emit array type syntax."""
         storage = semantic_type.storage
         array = storage.array if storage is not None else None
         dimensions = self._array_dimensions(semantic_type, array)
-        base = f"{semantic_type.name}[{', '.join(dimensions)}]"
+        base = f"{self._semantic_base_type(semantic_type)}[{', '.join(dimensions)}]"
         if storage is not None and storage.read_only:
             base = f"Const({base})"
 
@@ -289,9 +298,6 @@ class PyiPrinter:
             metadata.append("AssumedType")
         if semantic_type.metadata.get("fortran_polymorphic"):
             metadata.append("Polymorphic")
-        character_length = semantic_type.metadata.get("fortran_character_length")
-        if character_length is not None:
-            metadata.append(f"FortranCharacterLength({json.dumps(str(character_length))})")
         if semantic_type.metadata.get("fortran_allocatable"):
             metadata.append("FortranAllocatable")
         if semantic_type.metadata.get("fortran_target"):
@@ -338,56 +344,16 @@ class PyiPrinter:
 
     def _emit_module_variable(self, arg: SemanticVariable) -> str:
         """Emit module variable syntax."""
-        if self._is_constant(arg.semantic_type):
-            return self._emit_typed_name(self._annotation_target(arg.name), arg)
         if self._is_allocatable_module_array(arg):
-            return self._emit_module_variable_getter(arg)
-        if self._is_scalar_module_variable(arg):
-            return self._emit_scalar_module_variable_accessors(arg)
+            name = self._annotation_target(arg.name)
+            return f"{name}: {self._visit(arg.semantic_type)} | None"
         return self._emit_typed_name(self._annotation_target(arg.name), arg)
-
-    def _emit_scalar_module_variable_accessors(self, arg: SemanticVariable) -> str:
-        """Emit scalar module variable accessors syntax."""
-        type_text = self._visit(arg.semantic_type)
-        getter_name = str(arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) or f"get_{arg.name}")
-        setter_name = str(arg.metadata.get(MODULE_VARIABLE_SETTER_METADATA) or f"set_{arg.name}")
-        return "\n".join(
-            (
-                f'@module_variable("{arg.name}", access="get")',
-                f"def {getter_name}() -> {type_text}: ...",
-                "",
-                f'@module_variable("{arg.name}", access="set")',
-                f"def {setter_name}(value: {type_text}) -> None: ...",
-            )
-        )
-
-    def _emit_module_variable_getter(self, arg: SemanticVariable) -> str:
-        """Emit module variable getter syntax."""
-        getter_name = str(arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) or f"get_{arg.name}")
-        return_type = f"{self._visit(arg.semantic_type)} | None"
-        return f'@module_variable("{arg.name}", access="get")\ndef {getter_name}() -> {return_type}: ...'
 
     @staticmethod
     def _is_allocatable_module_array(arg: SemanticVariable) -> bool:
         """Return whether is allocatable module array."""
         storage = arg.semantic_type.storage
-        return bool(
-            storage is not None
-            and storage.array is not None
-            and storage.array.allocatable
-            and arg.metadata.get(MODULE_VARIABLE_GETTER_METADATA) is not False
-        )
-
-    @staticmethod
-    def _is_scalar_module_variable(arg: SemanticVariable) -> bool:
-        """Return whether is scalar module variable."""
-        return (
-            (arg.origin.source_language == "fortran" or MODULE_VARIABLE_GETTER_METADATA in arg.metadata)
-            and arg.visibility == "public"
-            and arg.semantic_type.rank == 0
-            and arg.semantic_type.name != "String"
-            and arg.semantic_type.name in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
-        )
+        return bool(storage is not None and storage.array is not None and storage.array.allocatable)
 
     @staticmethod
     def _is_allocatable_array(semantic_type: SemanticType) -> bool:
@@ -647,7 +613,7 @@ class PyiPrinter:
     @staticmethod
     def _effective_imports(module: SemanticModule) -> list[str | SemanticImport]:
         """Handle effective imports for the current generation context."""
-        imports = list(module.imports)
+        imports = [imp for imp in module.imports if not PyiPrinter._is_source_kind_import(imp)]
         imported_items = {
             (imp.module, item.source, item.target or item.source)
             for imp in imports
@@ -682,6 +648,12 @@ class PyiPrinter:
             for module_name, items in sorted(synthetic.items())
         )
         return imports
+
+    @staticmethod
+    def _is_source_kind_import(imp: str | SemanticImport) -> bool:
+        """Return whether an import only names a source-language kind module."""
+        module = imp.module if isinstance(imp, SemanticImport) else str(imp).split()[0]
+        return module.casefold().lstrip(".") in {"iso_c_binding", "iso_fortran_env"}
 
     @staticmethod
     def _has_overload_sets(module: SemanticModule) -> bool:

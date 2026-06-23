@@ -14,7 +14,11 @@ from x2py.ownership_policy import (
     codegen_action_for_variable,
     ownership_decision_for_codegen_variable,
 )
-from x2py.semantics.models import RUNTIME_HOLD_GIL_METADATA
+from x2py.semantics.models import (
+    INTERNAL_MODULE_VARIABLE_ACCESS_METADATA,
+    INTERNAL_MODULE_VARIABLE_NAME_METADATA,
+    RUNTIME_HOLD_GIL_METADATA,
+)
 
 from ..bind_c import (
     C_NULL_CHAR,
@@ -2144,7 +2148,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             [],
             FunctionDefResult(original_result),
             scope=scope,
-            decorators={RUNTIME_HOLD_GIL_METADATA: True},
+            decorators={
+                RUNTIME_HOLD_GIL_METADATA: True,
+                INTERNAL_MODULE_VARIABLE_NAME_METADATA: expr.name,
+                INTERNAL_MODULE_VARIABLE_ACCESS_METADATA: "get",
+            },
         )
         return BindCFunctionDef(
             func_name,
@@ -2188,7 +2196,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             [],
             FunctionDefResult(NIL),
             scope=scope,
-            decorators={RUNTIME_HOLD_GIL_METADATA: True},
+            decorators={
+                RUNTIME_HOLD_GIL_METADATA: True,
+                INTERNAL_MODULE_VARIABLE_NAME_METADATA: expr.name,
+                INTERNAL_MODULE_VARIABLE_ACCESS_METADATA: "set",
+            },
         )
         return BindCFunctionDef(
             func_name,

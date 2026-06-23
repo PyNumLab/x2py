@@ -433,7 +433,7 @@ end module
 
     code = generate_pyi(source)
 
-    annotation = 'Annotated[Ptr(String), FortranCharacterLength("8")]'
+    annotation = "Ptr(String[8])"
     assert "@native_call([Arg(0)])" in code
     assert f"name: {annotation}" in code
     assert f') -> Returns["name", {annotation}]: ...' in code
@@ -545,7 +545,7 @@ end module
 # ============================================================
 
 
-def test_emit_imports():
+def test_emit_omits_resolved_source_kind_imports():
     source = """
 module user_mod
 
@@ -564,7 +564,7 @@ end module
 
     code = generate_pyi(source)
 
-    assert "import iso_c_binding" in code
+    assert "iso_c_binding" not in code
 
 
 def test_emit_import_renames():
@@ -622,7 +622,7 @@ end module physics
     assert stubs["types_mod"] == "class particle(Opaque):\n    pass"
 
 
-def test_emit_structured_import_without_items_as_plain_import():
+def test_emit_omits_structured_source_kind_import_without_items():
     module = SemanticModule(
         name="imports",
         imports=[SemanticImport(module="iso_c_binding")],
@@ -630,7 +630,7 @@ def test_emit_structured_import_without_items_as_plain_import():
 
     code = emit_module(module)
 
-    assert "import iso_c_binding" in code
+    assert code == ""
 
 
 def test_parameter_target_sanitizes_non_identifier_names():
@@ -1080,7 +1080,7 @@ end module generic_mod
     ]
 
 
-def test_emit_and_load_allocatable_module_variable_getter():
+def test_emit_and_load_allocatable_module_variable_declaration():
     source = """
 module alloc_view_mod
   real(8), allocatable, target :: values(:)
@@ -1091,13 +1091,11 @@ end module alloc_view_mod
 """
     code = generate_pyi(source)
 
-    assert '@module_variable("values", access="get")' in code
-    assert "def get_values() -> Annotated[Float64[:], Allocatable, FortranTarget] | None: ..." in code
+    assert "values: Annotated[Float64[:], Allocatable, FortranTarget] | None" in code
     assert "field: Annotated[Float64[:], Allocatable]" in code
 
     loaded = parse_pyi_text(code, module_name="alloc_view_mod")
     assert [variable.name for variable in loaded.variables] == ["values"]
-    assert loaded.variables[0].metadata["module_variable_getter"] == "get_values"
     assert loaded.variables[0].semantic_type.storage.array.allocatable is True
     assert loaded.variables[0].semantic_type.metadata["fortran_target"] is True
     assert loaded.classes[0].fields[0].semantic_type.storage.array.allocatable is True
@@ -1233,11 +1231,7 @@ end module
 """
     code = generate_pyi(source)
     assert "answer:" not in code
-    assert '@module_variable("counter", access="get")' in code
-    assert "def get_counter() -> Int32: ..." in code
-    assert '@module_variable("counter", access="set")' in code
-    assert "def set_counter(value: Int32) -> None: ..." in code
-    assert "counter: Int32" not in code
+    assert "counter: Int32" in code
     assert "hidden_scale" not in code
     assert "ping" not in code
 
@@ -1571,8 +1565,8 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit(annotated_array) == (
         "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
     )
-    assert printer.emit(character) == ('Annotated[Ptr(String), FortranCharacterLength("16")]')
-    assert printer.emit(allocatable_character) == ('Annotated[String, FortranCharacterLength(":"), FortranAllocatable]')
+    assert printer.emit(character) == "Ptr(String[16])"
+    assert printer.emit(allocatable_character) == "Annotated[String, FortranAllocatable]"
     assert printer.emit(full_callback) == "Callable[[Int32, Float64], Float64]"
     assert printer.emit(any_callback) == "Callable[..., Float64]"
     assert printer.emit(SemanticType("Callable")) == "Callable"
