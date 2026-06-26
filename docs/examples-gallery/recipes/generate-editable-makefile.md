@@ -10,7 +10,8 @@ status: maintained
 
 Use this recipe when you want x2py to generate wrapper sources and
 `Makefile.x2py`, then let your build environment run the compile and link
-steps.
+steps. For semantic `.pyi` builds, x2py also writes `x2py-build.json`; that
+manifest is the source of truth used to generate the Makefile.
 
 ## Generate The Build Files
 
@@ -23,6 +24,22 @@ python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
 
 This writes generated wrapper sources, runtime support, dependency files, and
 `build/fruntime_abi/Makefile.x2py`.
+
+For a semantic `.pyi` contract with native implementation sources, use the same
+mode with explicit native inputs:
+
+```bash
+python3 -m x2py contracts/fruntime_abi_f90.pyi \
+  --wrap \
+  --native-fortran-source native/fruntime_abi_f90.f90 \
+  --native-fortran-flag="-O3 -fopenmp" \
+  --out-dir build/fruntime_abi \
+  --makefile \
+  --json
+```
+
+This writes `build/fruntime_abi/x2py-build.json` first and then projects
+`build/fruntime_abi/Makefile.x2py` from that manifest.
 
 ## Build With GNU Make
 
@@ -48,7 +65,9 @@ The generated Makefile exposes these variables for local override:
 
 - `--makefile` generates the build plan without compiling immediately.
 - `--makefile` and `--verbose` are mutually exclusive.
-- Makefile generation is for source-driven Fortran builds. It is not supported
-  for `.pyi` wrapper builds that consume explicit native artifacts.
+- `.pyi` Makefile generation is replayable through
+  `python3 -m x2py --build-manifest build/fruntime_abi/x2py-build.json --makefile`
+  or buildable through
+  `python3 -m x2py --build-manifest build/fruntime_abi/x2py-build.json --wrap`.
 - User Fortran sources remain in caller-provided order. Generated independent
   objects may be built in parallel by Make.

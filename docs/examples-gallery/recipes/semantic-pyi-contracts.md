@@ -35,13 +35,15 @@ you provide the native artifacts explicitly:
 ```bash
 python3 -m x2py path/to/module.pyi \
   --wrap \
-  --native-object path/to/module.o \
-  --native-include-dir path/to/mod-files \
+  --native-objects path/to/module.o path/to/support.a \
+  --native-include-dir path/to/mod-files path/to/vendor-mod-files \
   --out-dir build/module
 ```
 
-At least one `--native-object` or `--native-library` is required. Native source
-is not reparsed during `.pyi`-driven wrapper generation.
+At least one `--native-objects` path, `--native-fortran-source`,
+`--native-library`, or `--native-link-item` is required. Native input options
+accept one or more values per occurrence. Native source is not reparsed during
+`.pyi`-driven wrapper generation.
 
 Python callers can inspect the normalized native implementation plan after a
 build:

@@ -206,7 +206,7 @@ leaves:
 ```bash
 python3 -m x2py contracts/basic_subroutine/__init__.pyi \
   --wrap \
-  --native-object basic_subroutine.o
+  --native-objects basic_subroutine.o
 ```
 
 For `__init__.pyi`, the package directory name supplies the extension name
@@ -334,21 +334,19 @@ libraries, module/include directories, library directories, and ordered
 `named_library`, and `linker_argument` entries, so the model can preserve order
 without pretending every item is the same kind of input.
 
-The current `.pyi` build subset accepts direct artifact paths through repeated
-`--native-object`, despite that option's broad historical name:
+The current `.pyi` build subset accepts direct artifact paths through
+`--native-objects`:
 
 ```bash
---native-object build/module1.o \
---native-object build/module2.o \
---native-object /opt/vendor/lib/libsupport.a \
---native-object /opt/vendor/lib/libsolver.so
+--native-objects build/module1.o build/module2.o \
+  /opt/vendor/lib/libsupport.a \
+  /opt/vendor/lib/libsolver.so
 ```
 
 Named libraries use linker-style names and directories:
 
 ```bash
---native-library lapack \
---native-library blas \
+--native-library lapack blas \
 --native-library-dir /opt/vendor/lib
 ```
 
@@ -373,7 +371,7 @@ Required link cases are:
 | Case | Native inputs |
 | --- | --- |
 | One contract, one object | one `.o` plus module directory when applicable |
-| One contract, several dependencies | repeated objects/archives/shared libraries and named libraries |
+| One contract, several dependencies | ordered objects/archives/shared libraries and named libraries |
 | Imported contracts, separate objects | all required `.o` files in dependency-safe link order |
 | Imported contracts, one archive | one `.a`; no contract-to-member mapping is inferred |
 | Vendor shared implementation | direct `.so` path or `--native-library NAME` plus search directory |
@@ -480,7 +478,7 @@ Target CLI shapes are:
 python3 -m x2py contracts/library/__init__.pyi \
   --wrap \
   --extension-name library \
-  --native-object native.a
+  --native-objects native.a
 ```
 
 ```bash
@@ -497,7 +495,7 @@ For a single standalone fragment, no `__init__.pyi` is required:
 python3 -m x2py dgesv.pyi \
   --wrap \
   --extension-name lapack_dgesv \
-  --native-object dgesv.o
+  --native-objects dgesv.o
 ```
 
 These commands treat native artifacts as link inputs only. They do not permit

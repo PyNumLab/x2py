@@ -54,6 +54,16 @@ def _main_args(**overrides):
         "wrap_readiness": False,
         "wrap": False,
         "makefile": False,
+        "build_manifest": None,
+        "native_fortran_sources": None,
+        "native_fortran_flags": None,
+        "native_objects": None,
+        "native_libraries": None,
+        "native_link_items": None,
+        "native_library_dirs": None,
+        "native_include_dirs": None,
+        "extension_name": None,
+        "strict_wrapper_names": False,
         "semantics": False,
         "pyi": False,
         "json": False,
@@ -1182,6 +1192,102 @@ def test_x2py_main_runs_wrap_stage(monkeypatch, tmp_path: Path, capsys):
     assert payload["module_name"] == "fmath"
 
 
+def test_x2py_main_collects_many_native_inputs_from_one_option_group(
+    monkeypatch,
+    tmp_path: Path,
+    capsys,
+):
+    contract = tmp_path / "module.pyi"
+    contract.write_text("def scale(x: float) -> float: ...\n", encoding="utf-8")
+    build_dir = tmp_path / "build"
+    calls = []
+    result = types.SimpleNamespace(
+        to_dict=lambda: {
+            "module_name": "module",
+            "shared_library": str(build_dir / "module.so"),
+        }
+    )
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "x2py",
+            str(contract),
+            "--wrap",
+            "--native-fortran-source",
+            "source_one.f90",
+            "source_two.f90",
+            "--native-fortran-flag=-O2 -g0",
+            "--native-objects",
+            "one.o",
+            "two.a",
+            "libsolver.so",
+            "--native-library",
+            "blas",
+            "lapack",
+            "--native-link-item",
+            "arg:-Wl,--start-group",
+            "object:one.o",
+            "arg:-Wl,--end-group",
+            "--native-library-dir",
+            "lib",
+            "vendor/lib",
+            "--native-include-dir",
+            "mods",
+            "vendor/mods",
+            "--out-dir",
+            str(build_dir),
+            "--json",
+        ],
+    )
+    monkeypatch.setattr(
+        x2py_cli,
+        "_run_wrap_build_with_diagnostics",
+        lambda active_args, active_preprocessing: calls.append((active_args, active_preprocessing)) or result,
+    )
+
+    assert x2py_cli.main() == 0
+
+    assert len(calls) == 1
+    active_args, _preprocessing = calls[0]
+    assert active_args.paths == [str(contract)]
+    assert active_args.native_fortran_sources == ["source_one.f90", "source_two.f90"]
+    assert active_args.native_fortran_flags == ["-O2 -g0"]
+    assert active_args.native_objects == ["one.o", "two.a", "libsolver.so"]
+    assert active_args.native_libraries == ["blas", "lapack"]
+    assert active_args.native_link_items == [
+        "arg:-Wl,--start-group",
+        "object:one.o",
+        "arg:-Wl,--end-group",
+    ]
+    assert active_args.native_library_dirs == ["lib", "vendor/lib"]
+    assert active_args.native_include_dirs == ["mods", "vendor/mods"]
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["module_name"] == "module"
+
+
+def test_cli_native_fortran_flags_split_grouped_shell_words():
+    assert x2py_cli._cli_native_fortran_flags(["-O2 -g0", "-DNAME='value with spaces'"]) == (
+        "-O2",
+        "-g0",
+        "-DNAME=value with spaces",
+    )
+
+
+def test_cli_native_fortran_flags_reject_malformed_grouped_value():
+    with pytest.raises(ValueError, match="Invalid --native-fortran-flag value"):
+        x2py_cli._cli_native_fortran_flags(["'-O2"])
+
+
+def test_cli_native_libraries_split_grouped_prefixed_names():
+    assert x2py_cli._cli_native_libraries(["blas", "-llapack -lscalapack"]) == (
+        "blas",
+        "-llapack",
+        "-lscalapack",
+    )
+
+
 @pytest.mark.parametrize(
     ("language", "error_type", "env_name"),
     [
@@ -1984,8 +2090,12 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         ("wrapper builds", ("--wrap",)),
         ("wrapper builds", ("--makefile",)),
         ("wrapper builds", ("--strict-wrapper-names",)),
-        ("wrapper builds", ("--native-object",)),
+        ("wrapper builds", ("--build-manifest",)),
+        ("wrapper builds", ("--native-fortran-source",)),
+        ("wrapper builds", ("--native-fortran-flag",)),
+        ("wrapper builds", ("--native-objects",)),
         ("wrapper builds", ("--native-library",)),
+        ("wrapper builds", ("--native-link-item",)),
         ("wrapper builds", ("--native-library-dir", "--library-dir")),
         ("wrapper builds", ("--native-include-dir",)),
         ("wrapper builds", ("--extension-name",)),
@@ -1998,7 +2108,10 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
     ]
 
     arguments_by_name = {args[0]: kwargs for _, args, kwargs in captured["arguments"]}
-    assert arguments_by_name["paths"] == {"nargs": "+", "help": "Source file(s), .pyi file(s), or directory path(s)"}
+    assert arguments_by_name["paths"] == {
+        "nargs": "*",
+        "help": "Source file(s), .pyi file(s), or directory path(s); omit when using --build-manifest",
+    }
     assert arguments_by_name["--language"] == {
         "choices": ("fortran", "c"),
         "default": None,
@@ -2018,6 +2131,55 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         "help": "Public wrapper exposure policy for reachable included files.",
     }
     assert arguments_by_name["--vars-limit"] == {"type": int, "metavar": "N", "help": x2py_cli.argparse.SUPPRESS}
+    assert arguments_by_name["--native-objects"] == {
+        "dest": "native_objects",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "PATH",
+        "help": "Native object, static archive, or shared library paths linked into a .pyi wrapper build",
+    }
+    assert arguments_by_name["--native-fortran-source"] == {
+        "dest": "native_fortran_sources",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "PATH",
+        "help": "Native Fortran implementation source paths compiled for a .pyi wrapper build",
+    }
+    assert arguments_by_name["--native-fortran-flag"] == {
+        "dest": "native_fortran_flags",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "FLAG",
+        "help": "Fortran compiler flags applied to each --native-fortran-source input",
+    }
+    assert arguments_by_name["--native-library"] == {
+        "dest": "native_libraries",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "NAME",
+        "help": "Native libraries linked into a .pyi wrapper build, passed as -lNAME unless already prefixed",
+    }
+    assert arguments_by_name["--native-link-item"] == {
+        "dest": "native_link_items",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "KIND:VALUE",
+        "help": "Ordered native link items for .pyi builds: object, archive, shared-library, library, or arg",
+    }
+    assert arguments_by_name["--native-library-dir"] == {
+        "dest": "native_library_dirs",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "DIR",
+        "help": "Directories searched and added to rpath for native libraries in a .pyi wrapper build",
+    }
+    assert arguments_by_name["--native-include-dir"] == {
+        "dest": "native_include_dirs",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "DIR",
+        "help": "Directories containing native module/interface files needed to compile .pyi wrapper bridges",
+    }
     assert arguments_by_name["--debug"] == {
         "dest": "debug",
         "action": "store_true",

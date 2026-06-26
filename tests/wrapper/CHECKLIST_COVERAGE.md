@@ -90,7 +90,7 @@ modules are searchable without relying on old flat filenames.
 ## Edit `.pyi` Contracts
 
 - Current coverage: temporary edited-entry assertions in `build_from_pyi/test_pyi_wrapper_builds.py`
-- Dedicated subject tests: planned in Stage 6.
+- Dedicated subject tests: planned for Stage 8 editable contract semantics.
 
 ## Arrays
 

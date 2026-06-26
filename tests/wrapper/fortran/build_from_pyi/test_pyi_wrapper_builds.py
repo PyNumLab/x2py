@@ -102,7 +102,7 @@ def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
         "x2py",
         str(pyi_path),
         "--wrap",
-        "--native-object",
+        "--native-objects",
         str(native_object),
         "--native-include-dir",
         str(native_object.parent),
@@ -198,7 +198,104 @@ def test_pyi_cli_requires_a_native_link_input(tmp_path: Path):
     )
 
     assert result.returncode == 2
-    assert "--wrap from .pyi requires --native-object or --native-library" in result.stderr
+    assert "--wrap from .pyi requires --native-fortran-source" in result.stderr
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32" or shutil.which("make") is None or shutil.which("gfortran") is None,
+    reason="generated Makefile requires GNU Make and a POSIX shell",
+)
+def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
+    native_source = tmp_path / SOURCE.name
+    build_dir = tmp_path / "pyi_build"
+    shutil.copyfile(SOURCE, native_source)
+
+    generated = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(PYI_FIXTURE),
+            "--wrap",
+            "--native-fortran-source",
+            str(native_source),
+            "--native-fortran-flag=-O2 -g0",
+            "--out-dir",
+            str(build_dir),
+            "--makefile",
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(generated.stdout)
+    manifest_path = Path(payload["build_manifest"])
+    makefile_path = Path(payload["build_makefile"])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    makefile_text = makefile_path.read_text(encoding="utf-8")
+
+    assert payload["compiled"] is False
+    assert manifest_path == build_dir / "x2py-build.json"
+    assert makefile_path == build_dir / "Makefile.x2py"
+    assert manifest == payload["manifest"]
+    assert manifest["schema_version"] == 1
+    assert manifest["build_kind"] == "pyi-wrapper"
+    assert manifest["compiler"]["fortran_flags"] == ["-O2", "-g0"]
+    assert manifest["entry_contract"].endswith("fruntime_abi_f90.pyi")
+    assert [item["kind"] for item in manifest["native_build_plan"]["link_items"]] == ["object"]
+    assert manifest["native_build_plan"]["compilation_units"][0]["source"].endswith(native_source.name)
+    assert "-O2" in makefile_text
+    assert "-g0" in makefile_text
+    assert "x2py-build.json" in makefile_text
+    assert str(PYI_FIXTURE) in makefile_text
+    assert not Path(payload["shared_library"]).exists()
+
+    subprocess.run(["make", "-j4", "-f", str(makefile_path), "all"], capture_output=True, text=True, check=True)
+    assert Path(payload["shared_library"]).is_file()
+    module = _sole_native_module(_import_from_build_dir(payload["module_name"], build_dir))
+    _assert_scale_runtime_contract(module)
+
+    makefile_path.unlink()
+    regenerated = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            "--build-manifest",
+            str(manifest_path),
+            "--makefile",
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    regenerated_payload = json.loads(regenerated.stdout)
+    assert regenerated_payload["compiled"] is False
+    assert Path(regenerated_payload["build_makefile"]).is_file()
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
+
+    Path(payload["shared_library"]).unlink()
+    replayed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            "--build-manifest",
+            str(manifest_path),
+            "--wrap",
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    replayed_payload = json.loads(replayed.stdout)
+    assert replayed_payload["compiled"] is True
+    assert Path(replayed_payload["shared_library"]).is_file()
+    replayed_module = _sole_native_module(_import_from_build_dir(replayed_payload["module_name"], build_dir))
+    _assert_scale_runtime_contract(replayed_module)
 
 
 def test_pyi_cli_accepts_exactly_one_entry_contract(tmp_path: Path):
@@ -212,7 +309,7 @@ def test_pyi_cli_accepts_exactly_one_entry_contract(tmp_path: Path):
             str(PYI_FIXTURE),
             str(other),
             "--wrap",
-            "--native-object",
+            "--native-objects",
             str(tmp_path / "unused.o"),
         ],
         capture_output=True,
@@ -269,6 +366,45 @@ def test_generated_pyi_fixture_builds_from_native_object_without_source_reparse(
     assert native_plan["module_dirs"] == [str(native_object.parent)]
     assert native_plan["include_dirs"] == [str(native_object.parent)]
     assert native_plan["link_items"] == [{"kind": "object", "path": str(native_object)}]
+    assert module.scale(np.float64(2.0), np.float64(4.0)) == np.float64(8.0)
+
+
+def test_pyi_cli_preserves_explicit_ordered_link_items(tmp_path: Path):
+    native_object = _compile_native_object(SOURCE, tmp_path / "native")
+    build_dir = tmp_path / "pyi_build"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(PYI_FIXTURE),
+            "--wrap",
+            "--native-link-item",
+            "arg:-Wl,--start-group",
+            f"object:{native_object}",
+            "arg:-Wl,--end-group",
+            "--out-dir",
+            str(build_dir),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+    native_plan = payload["native_build_plan"]
+    module = _sole_native_module(_import_from_build_dir(payload["module_name"], build_dir))
+
+    assert native_plan["link_items"] == [
+        {"kind": "linker_argument", "argument": "-Wl,--start-group"},
+        {"kind": "object", "path": str(native_object)},
+        {"kind": "linker_argument", "argument": "-Wl,--end-group"},
+    ]
+    manifest_link_items = payload["manifest"]["native_build_plan"]["link_items"]
+    assert manifest_link_items[0] == {"argument": "-Wl,--start-group", "kind": "linker_argument"}
+    assert manifest_link_items[1]["kind"] == "object"
+    assert manifest_link_items[1]["path"].endswith(native_object.name)
+    assert manifest_link_items[2] == {"argument": "-Wl,--end-group", "kind": "linker_argument"}
     assert module.scale(np.float64(2.0), np.float64(4.0)) == np.float64(8.0)
 
 

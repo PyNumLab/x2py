@@ -11,7 +11,7 @@ Contract fixtures: generated naming and dispatch packages live under
 `contracts/<case>/` and are refreshed only with `WRAPPER_UPDATE_PYI_FIXTURES=1`.
 
 Roadmap items: Stage 5 generated-contract runtime parity for generic
-interfaces and overload sets, and Stage 6 editable contract visibility and
+interfaces and overload sets, and Stage 8 editable contract visibility and
 renaming semantics.
 
 Tests: `test_defined_operators.py`, `test_naming_generated_pyi_contracts.py`,

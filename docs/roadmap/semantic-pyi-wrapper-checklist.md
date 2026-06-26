@@ -54,8 +54,9 @@ evidence section instead of leaving completed and incomplete work interleaved.
 
 Only unfinished work belongs in this section. The ordering is intentional:
 contract output and build models stabilize first, feature parity builds on that
-foundation, editable policy follows unmodified parity, and library-scale tests
-exercise the completed build surface last.
+foundation, replayable native build manifests and library-scale bundles prove
+the source-free build surface, and editable policy is reserved for the final
+stage.
 
 ### Stage 5 — Full generated-contract runtime parity
 
@@ -83,7 +84,31 @@ exercise the completed build surface last.
   source/generated-contract assertion body, and rebuilds without reparsing
   native source.
 
-### Stage 6 — Editable contract semantics
+### Stage 7 — Library-scale and mixed-bundle evidence
+
+- [ ] Several contracts imported by one entry resolve from one archive or shared
+  library, and one entry resolves from several objects and libraries.
+- [ ] Module procedures work with separately supplied `.mod` directories;
+  standalone `@external` procedures work without `.mod` inputs.
+- [ ] A mixed bundle containing native modules and standalone external
+  procedures exposes module members below their namespaces and externals at the
+  extension root.
+- [ ] The BLAS/LAPACK-style path is tested independently with a static archive,
+  a direct shared-library path, and `--native-library` plus
+  `--native-library-dir`.
+- [ ] Mixed object, archive, direct shared-library, and named-library inputs
+  preserve dependency-safe link order and resolve every native symbol.
+- [ ] Static archive dependency order, repeated archives or linker groups for
+  cyclic dependencies, and required transitive libraries have runtime tests.
+- [ ] Missing symbols, duplicate definitions, incompatible artifacts, missing
+  `.mod` files, and unavailable dependent shared libraries produce direct
+  diagnostics without any source fallback.
+
+### Stage 8 — Editable contract semantics
+
+This stage is intentionally last: edited Python-facing contracts should build
+on the replayable native-input and library-scale surfaces proven by Stages 6
+and 7.
 
 - [ ] Every editable wrapper feature has a modified `.pyi` fixture and a third
   build whose runtime assertions prove the intentional contract change.
@@ -103,86 +128,6 @@ exercise the completed build surface last.
 - [ ] Contradictory or incomplete edited contracts fail during readiness or
   wrapper generation with precise diagnostics instead of silently falling back
   to source-derived behavior.
-
-### Stage 7 — Replayable JSON, native compilation, and Makefiles
-
-The intended direct workflow is:
-
-```bash
-python3 -m x2py contracts/module.pyi \
-  --wrap \
-  --native-fortran-source native/module.f90 \
-  --native-fortran-flag=-O3 \
-  --native-fortran-flag=-march=native \
-  --native-object vendor/support.o \
-  --native-library lapack \
-  --out-dir build/module \
-  --makefile \
-  --json
-```
-
-Makefile mode writes `x2py-build.json` first and generates `Makefile.x2py` only
-from that normalized manifest. The replay workflows are:
-
-```bash
-python3 -m x2py --build-manifest build/module/x2py-build.json --wrap
-python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
-```
-
-- [ ] Python API `.pyi` builds accept the same output directory, naming,
-  Makefile, verbose, and strict-wrapper-name controls as source-driven builds.
-- [ ] A deterministic, schema-versioned wrapper build manifest stores the entry
-  `.pyi`, recursively discovered contract paths, extension identity, output
-  policy, compiler configuration, ordered native compilation units, and native
-  link plan as separate structured fields. Relative paths are resolved relative
-  to the manifest.
-- [ ] Repeated `--native-fortran-source` inputs compile opaque native
-  implementation sources in caller-provided dependency order without using
-  them to reconstruct the Python API. Produced objects and module files become
-  inputs to the extension build plan.
-- [ ] Repeated `--native-fortran-flag` inputs preserve optimization, target,
-  preprocessing, module, and other caller-supplied compiler options while x2py
-  still adds required flags such as position-independent code. Compiler
-  selection, flag ordering, output objects, and module directories are recorded
-  for replay.
-- [ ] Native implementation sources, prebuilt objects, archives, direct shared
-  libraries, and named libraries can be mixed in one build. Changing compiler
-  flags never changes the `.pyi`-defined Python API or triggers semantic source
-  reparsing.
-- [ ] `--json` build output includes the normalized manifest and resulting
-  artifacts. Makefile mode also writes `<out-dir>/x2py-build.json`; serialization
-  is stable enough for exact fixtures and reviewable build changes.
-- [ ] `--build-manifest PATH --wrap` validates and executes a saved manifest.
-- [ ] `--build-manifest PATH --makefile` regenerates the Makefile without
-  requiring positional contracts or repeated native flags.
-- [ ] `Makefile.x2py` is a deterministic projection of `x2py-build.json`, with
-  no unrecorded compiler or linker inputs. It tracks the manifest, complete
-  `.pyi` import graph, and native implementation sources as dependencies and
-  preserves compile and link order.
-- [ ] Explicit linker arguments support static archive groups, repeated
-  archives, whole-archive policy, and required platform-specific link flags.
-- [ ] Runtime shared-library lookup is reproducible through recorded rpath or a
-  documented loader-path policy, including transitive shared dependencies.
-
-### Stage 8 — Library-scale and mixed-bundle evidence
-
-- [ ] Several contracts imported by one entry resolve from one archive or shared
-  library, and one entry resolves from several objects and libraries.
-- [ ] Module procedures work with separately supplied `.mod` directories;
-  standalone `@external` procedures work without `.mod` inputs.
-- [ ] A mixed bundle containing native modules and standalone external
-  procedures exposes module members below their namespaces and externals at the
-  extension root.
-- [ ] The BLAS/LAPACK-style path is tested independently with a static archive,
-  a direct shared-library path, and `--native-library` plus
-  `--native-library-dir`.
-- [ ] Mixed object, archive, direct shared-library, and named-library inputs
-  preserve dependency-safe link order and resolve every native symbol.
-- [ ] Static archive dependency order, repeated archives or linker groups for
-  cyclic dependencies, and required transitive libraries have runtime tests.
-- [ ] Missing symbols, duplicate definitions, incompatible artifacts, missing
-  `.mod` files, and unavailable dependent shared libraries produce direct
-  diagnostics without any source fallback.
 
 ## Completed evidence
 
@@ -367,8 +312,9 @@ objects, archives, and libraries remain separate build-plan facts.
 - [x] Runtime behavior parity covers recursive native calls in both `source`
   and `generated-pyi` modes, plus edited `.pyi` runtime policy decorators for
   `@hold_gil` and `@raises(...)` using native object builds. OpenMP remains
-  source/makefile evidence until Stage 7 adds `.pyi` makefile/native-flag
-  replay.
+  source/makefile evidence; Stage 6 now provides the `.pyi`
+  makefile/native-flag surface needed for future OpenMP-specific `.pyi`
+  evidence.
 - [x] Naming and generic-interface parity covers public-name normalization,
   visibility filtering, keyword/collision policy, public generic dispatch,
   type-bound binding names, defined operators, comparisons, named operators,
@@ -377,7 +323,46 @@ objects, archives, and libraries remain separate build-plan facts.
   import public native generics instead of private specific procedures, and
   preserve keyword-normalized type-bound binding names.
 
-### Stage 8 — Library-Scale And Mixed-Bundle Evidence
+### Stage 6 — Replayable JSON, Native Compilation, And Makefiles
+
+Runtime evidence lives in
+`tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py` and CLI
+surface evidence lives in `tests/parser/test_cli.py`.
+
+- [x] Python API `.pyi` builds accept output directory, extension naming,
+  Makefile, verbose, and strict-wrapper-name controls. `--makefile` and
+  `--verbose` remain mutually exclusive.
+- [x] Semantic `.pyi` build JSON includes a schema-versioned replay `manifest`
+  with the entry contract, recursively discovered contract paths, extension
+  identity, output policy, compiler configuration, native compilation units,
+  and ordered native link plan as separate fields. Manifest-relative paths are
+  resolved relative to the manifest during replay.
+- [x] Grouped or repeated `--native-fortran-source` inputs compile native
+  implementation sources in caller order without using them to reconstruct the
+  Python API. Produced objects and module files are recorded in
+  `NativeBuildPlan` and used by the extension link.
+- [x] Grouped or repeated `--native-fortran-flag` inputs are recorded in the
+  manifest and in each native compilation unit while x2py still emits its
+  required compiler flags, including position-independent code.
+- [x] Native sources, prebuilt objects, archives, direct shared libraries, named
+  libraries, and ordered native link items can be mixed without changing the
+  `.pyi`-defined Python API or reparsing native implementation sources.
+- [x] `.pyi --makefile --json` writes `<out-dir>/x2py-build.json` and
+  `<out-dir>/Makefile.x2py`; JSON output reports both artifacts and the
+  normalized manifest.
+- [x] `--build-manifest PATH --wrap` validates and executes a saved manifest,
+  and `--build-manifest PATH --makefile` regenerates `Makefile.x2py` without
+  positional contracts or repeated native flags.
+- [x] `Makefile.x2py` tracks the manifest, complete `.pyi` graph, native
+  implementation inputs, compile outputs, and link target while preserving
+  source compile order and native link order.
+- [x] `--native-link-item` supports grouped or repeated ordered explicit linker
+  arguments, including linker groups around objects or archives and repeated
+  path items.
+- [x] Runtime shared-library lookup is recorded through `native_library_dirs`
+  and direct shared-library parent directories in the native build plan.
+
+### Stage 7 — Library-Scale And Mixed-Bundle Evidence
 
 Real BLAS/LAPACK object-file evidence now lives in
 `tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py`.
@@ -442,11 +427,11 @@ Prove one source-free module contract can build before adding contract bundles.
 - [x] Link caller-supplied native object files while skipping parser and
   semantic lowering for native source.
 - [x] Build and import a callable-only Fortran module extension from
-  `module.pyi --wrap --native-object module.o`.
+  `module.pyi --wrap --native-objects module.o`.
 - [x] Preserve the existing source-driven wrapper path and makefile/verbose
   modes while adding the `.pyi`-driven entrypoint.
 - [x] CLI `.pyi` builds accept native object, archive, and shared-library paths
-  with `--native-object`.
+  with `--native-objects`.
 - [x] CLI `.pyi` builds accept `-l` libraries with `--native-library`.
 - [x] CLI `.pyi` builds accept library search/rpath directories with
   `--native-library-dir`.
@@ -456,8 +441,8 @@ Prove one source-free module contract can build before adding contract bundles.
 - [x] JSON build output reports both the semantic contract sources and the
   explicit native artifact and link inputs.
 - [x] Native object files, module search paths, libraries, and library paths can
-  be supplied without parsing native source. A general ordered linker-argument
-  interface remains in Phase 9.
+  be supplied without parsing native source. Stage 6 adds the general ordered
+  linker-argument interface.
 - [x] Contract files and native artifacts are many-to-many: no code path assumes
   that `name.pyi` must be implemented by `name.o`, or infers an artifact name
   from a contract filename.

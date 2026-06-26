@@ -158,16 +158,41 @@ include directory when the generated bridge contains `use <module>`:
 ```bash
 python3 -m x2py path/to/module.pyi \
   --wrap \
-  --native-object path/to/module.o \
+  --native-objects path/to/module.o \
   --native-include-dir path/to/mod-files \
   --out-dir build/module
 ```
 
-`--native-object` may be repeated for ordered object, static archive, or shared
-library inputs. Named libraries use `--native-library NAME` and
-`--native-library-dir DIR`. The latter is passed as both a link search path and
-a runtime search path. At least one `--native-object` or `--native-library` is
-required. Makefile generation is not yet supported for `.pyi` builds.
+`--native-fortran-source` accepts one or more native implementation sources
+that x2py should compile without using them as semantic input.
+`--native-fortran-flag` applies to those native source compile commands; group
+dash-prefixed compiler flags with the equals form, such as
+`--native-fortran-flag="-O3 -fopenmp"`. `--native-objects` accepts one or more
+ordered object, static archive, or shared library paths. Named libraries use
+`--native-library NAME [NAME ...]` and `--native-library-dir DIR [DIR ...]`.
+If you pass already-prefixed names, group them with the equals form, for example
+`--native-library="-lblas -llapack"`.
+The latter is passed as both a link search path and a runtime search path. At
+least one native implementation input is required.
+Use `--native-fortran-source` when x2py should compile the implementation and
+`--native-objects` when objects, archives, or shared libraries are already built.
+
+Semantic `.pyi` Makefile mode writes `<out-dir>/x2py-build.json` first and then
+generates `<out-dir>/Makefile.x2py` from that manifest. The manifest can be
+replayed directly:
+
+```bash
+python3 -m x2py contracts/module.pyi \
+  --wrap \
+  --native-fortran-source native/module.f90 \
+  --native-fortran-flag="-O3 -fopenmp" \
+  --out-dir build/module \
+  --makefile \
+  --json
+
+python3 -m x2py --build-manifest build/module/x2py-build.json --wrap
+python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
+```
 
 The parity checklist is maintained in
 [Semantic `.pyi` wrapper checklist](../roadmap/semantic-pyi-wrapper-checklist.md).
@@ -176,9 +201,8 @@ Runtime tests: [`test_pyi_wrapper_builds.py`](../../tests/wrapper/fortran/build_
 [`test_contract_package_runtime.py`](../../tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py).
 
 Use `--verbose` to execute a build while printing every exact, shell-escaped
-compiler and linker command. For source-driven builds, use `--makefile` to
-generate an editable `Makefile.x2py` without compiling. These modes are mutually
-exclusive.
+compiler and linker command. Use `--makefile` to generate an editable
+`Makefile.x2py` without compiling. These modes are mutually exclusive.
 
 The equivalent Python entrypoint returns structured artifact paths:
 
@@ -193,7 +217,21 @@ print(result.module_name)
 print(result.shared_library)
 ```
 
-The `.pyi` Python entrypoint accepts the same explicit native inputs:
+The `.pyi` Python entrypoint accepts the same explicit native inputs. Use
+native sources when x2py should compile the implementation:
+
+```python
+from x2py import build_pyi_extension
+
+result = build_pyi_extension(
+    "path/to/module.pyi",
+    native_fortran_sources=["path/to/module.f90"],
+    native_fortran_flags=["-O3"],
+    output_dir="build/module",
+)
+```
+
+Use native objects when the implementation was built elsewhere:
 
 ```python
 from x2py import build_pyi_extension
@@ -1493,8 +1531,7 @@ objects are separate build inputs and keep caller order.
 python3 -m x2py contracts/__init__.pyi \
   --wrap \
   --extension-name first_api \
-  --native-object native/first_api.o \
-  --native-object native/second_api.o \
+  --native-objects native/first_api.o native/second_api.o \
   --native-include-dir native \
   --out-dir build/first_api
 ```
@@ -1545,6 +1582,20 @@ shared-library link. It records resolved compilers and exposes `FC`, `CC`,
 sources are conservatively chained in supplied order; independent generated C
 and runtime work may run in parallel. This target expects GNU Make and a POSIX
 shell.
+
+For semantic `.pyi` builds, Makefile mode writes `x2py-build.json` before
+`Makefile.x2py` and the Makefile is regenerated from that manifest:
+
+```bash
+python3 -m x2py contracts/solver.pyi \
+  --wrap \
+  --native-fortran-source native/solver.f90 \
+  --out-dir build/solver \
+  --makefile \
+  --json
+
+python3 -m x2py --build-manifest build/solver/x2py-build.json --wrap
+```
 
 Runtime tests: [`test_multi_source_builds.py`](../../tests/wrapper/fortran/multiple_files/test_multi_source_builds.py),
 [`test_external_procedures.py`](../../tests/wrapper/fortran/external_routines/test_external_procedures.py),

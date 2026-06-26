@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import sys
 from dataclasses import asdict, fields, is_dataclass
 from pathlib import Path
@@ -70,7 +71,8 @@ _CLI_HELP_EPILOG = (
     "  Build wrappers:\n"
     "    python3 -m x2py path/to/file.f\n"
     "    python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
-    "    python3 -m x2py basic_subroutine.pyi --wrap --native-object basic_subroutine.o\n"
+    "    python3 -m x2py basic_subroutine.pyi --wrap --native-objects basic_subroutine.o\n"
+    "    python3 -m x2py --build-manifest build/x2py-build.json --wrap\n"
     "\n"
     "  Write stage output:\n"
     "    python3 -m x2py path/to/file.f90 --parse --json --out report.json\n"
@@ -841,14 +843,25 @@ def _path_is_pyi_contract(path: str) -> bool:
     return Path(path).suffix.lower() == ".pyi"
 
 
+def _wrap_uses_build_manifest(args: argparse.Namespace) -> bool:
+    return _should_run_wrap(args) and getattr(args, "build_manifest", None) is not None
+
+
 def _wrap_uses_pyi_contract(args: argparse.Namespace) -> bool:
-    return _should_run_wrap(args) and any(_path_is_pyi_contract(path) for path in args.paths)
+    return (
+        _should_run_wrap(args)
+        and not _wrap_uses_build_manifest(args)
+        and any(_path_is_pyi_contract(path) for path in args.paths)
+    )
 
 
 def _native_link_options_used(args: argparse.Namespace) -> bool:
     return bool(
-        getattr(args, "native_objects", None)
+        getattr(args, "native_fortran_sources", None)
+        or getattr(args, "native_fortran_flags", None)
+        or getattr(args, "native_objects", None)
         or getattr(args, "native_libraries", None)
+        or getattr(args, "native_link_items", None)
         or getattr(args, "native_library_dirs", None)
         or getattr(args, "native_include_dirs", None)
     )
@@ -901,13 +914,28 @@ def _validate_pyi_wrap_options(args: argparse.Namespace, parser: argparse.Argume
         parser.error("--wrap from .pyi cannot mix positional native sources; pass native artifacts with flags")
     if len(args.paths) != 1:
         parser.error("--wrap from .pyi accepts exactly one entry contract")
-    if getattr(args, "makefile", False):
-        parser.error("--makefile is not yet supported for .pyi wrapper builds")
-    if not (getattr(args, "native_objects", None) or getattr(args, "native_libraries", None)):
-        parser.error("--wrap from .pyi requires --native-object or --native-library")
+    if not (
+        getattr(args, "native_fortran_sources", None)
+        or getattr(args, "native_objects", None)
+        or getattr(args, "native_libraries", None)
+        or getattr(args, "native_link_items", None)
+    ):
+        parser.error(
+            "--wrap from .pyi requires --native-fortran-source, --native-objects, "
+            "--native-library, or --native-link-item"
+        )
+
+
+def _validate_manifest_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    if args.paths:
+        parser.error("--build-manifest replays the saved entry contract; do not pass positional inputs")
+    if _native_link_options_used(args):
+        parser.error("--build-manifest replays saved native inputs; do not pass native build flags")
 
 
 def _validate_source_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    if not args.paths:
+        parser.error("--wrap expects at least one Fortran source file or a semantic .pyi contract")
     if _native_link_options_used(args):
         parser.error("Native artifact link flags are only supported for .pyi wrapper builds")
     if any(Path(path).is_dir() for path in args.paths):
@@ -942,6 +970,10 @@ def _validate_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentPa
     if getattr(args, "makefile", False) and getattr(args, "verbose", False):
         parser.error("--makefile cannot be combined with --verbose")
 
+    if _wrap_uses_build_manifest(args):
+        _validate_manifest_wrap_options(args, parser)
+        return
+
     if _wrap_uses_pyi_contract(args):
         _validate_pyi_wrap_options(args, parser)
         return
@@ -966,6 +998,11 @@ def _validate_output_options(args: argparse.Namespace, parser: argparse.Argument
 
 
 def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
+    if getattr(args, "build_manifest", None) is not None and not _should_run_wrap(args):
+        parser.error("--build-manifest requires --wrap or --makefile")
+    if not args.paths and getattr(args, "build_manifest", None) is None:
+        parser.error("Source input is required unless --build-manifest is used")
+
     _validate_wrap_options(args, parser)
     _validate_c_main_options(args, parser)
 
@@ -1023,6 +1060,62 @@ def _semantic_stage_options(
             }
         )
     return options
+
+
+def _cli_native_link_items(raw_items: list[str] | None) -> tuple[dict[str, object], ...]:
+    if not raw_items:
+        return ()
+    aliases = {
+        "arg": "linker_argument",
+        "archive": "archive",
+        "linker-argument": "linker_argument",
+        "linker_argument": "linker_argument",
+        "library": "named_library",
+        "named-library": "named_library",
+        "named_library": "named_library",
+        "object": "object",
+        "shared-library": "shared_library",
+        "shared_library": "shared_library",
+    }
+    parsed = []
+    for raw in raw_items:
+        kind_text, separator, value = raw.partition(":")
+        kind = aliases.get(kind_text)
+        if separator != ":" or kind is None or not value:
+            raise ValueError(
+                "--native-link-item expects KIND:VALUE where KIND is object, archive, shared-library, library, or arg"
+            )
+        if kind in {"object", "archive", "shared_library"}:
+            parsed.append({"kind": kind, "path": value})
+        elif kind == "named_library":
+            parsed.append({"kind": kind, "name": value})
+        else:
+            parsed.append({"kind": kind, "argument": value})
+    return tuple(parsed)
+
+
+def _cli_native_fortran_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
+    if not raw_flags:
+        return ()
+    flags = []
+    for raw in raw_flags:
+        try:
+            flags.extend(shlex.split(raw))
+        except ValueError as exc:
+            raise ValueError(f"Invalid --native-fortran-flag value {raw!r}: {exc}") from exc
+    return tuple(flags)
+
+
+def _cli_native_libraries(raw_libraries: list[str] | None) -> tuple[str, ...]:
+    if not raw_libraries:
+        return ()
+    libraries = []
+    for raw in raw_libraries:
+        try:
+            libraries.extend(shlex.split(raw))
+        except ValueError as exc:
+            raise ValueError(f"Invalid --native-library value {raw!r}: {exc}") from exc
+    return tuple(libraries)
 
 
 def _parse_stage_report(args: argparse.Namespace, preprocessing: PreprocessingConfig):
@@ -1091,13 +1184,23 @@ def _run_stage_reports_with_diagnostics(args: argparse.Namespace, preprocessing:
 
 
 def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig):
-    from x2py.wrapping import build_fortran_extension, build_pyi_extension
+    from x2py.wrapping import build_fortran_extension, build_pyi_extension, build_pyi_extension_from_manifest
+
+    if _wrap_uses_build_manifest(args):
+        return build_pyi_extension_from_manifest(
+            args.build_manifest,
+            makefile=getattr(args, "makefile", False),
+            verbose=1 if getattr(args, "verbose", False) else 0,
+        )
 
     if _wrap_uses_pyi_contract(args):
         return build_pyi_extension(
             args.paths[0],
+            native_fortran_sources=getattr(args, "native_fortran_sources", None),
+            native_fortran_flags=_cli_native_fortran_flags(getattr(args, "native_fortran_flags", None)),
             native_objects=getattr(args, "native_objects", None),
-            native_libraries=getattr(args, "native_libraries", None),
+            native_libraries=_cli_native_libraries(getattr(args, "native_libraries", None)),
+            native_link_items=_cli_native_link_items(getattr(args, "native_link_items", None)),
             native_library_dirs=getattr(args, "native_library_dirs", None),
             native_include_dirs=getattr(args, "native_include_dirs", None),
             extension_name=getattr(args, "extension_name", None),
@@ -1370,6 +1473,8 @@ def _print_wrap_build_output(args: argparse.Namespace, result) -> None:
     if payload.get("compiled", True):
         print(f"Built extension: {payload['shared_library']}")
     else:
+        if payload.get("build_manifest"):
+            print(f"Generated build manifest: {payload['build_manifest']}")
         print(f"Generated Makefile: {payload['build_makefile']}")
         print(f"Shared library target: {payload['shared_library']}")
         print(f"Build with: make -f {payload['build_makefile']} -j")
@@ -1416,7 +1521,11 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=_CLI_HELP_EPILOG,
     )
-    parser.add_argument("paths", nargs="+", help="Source file(s), .pyi file(s), or directory path(s)")
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        help="Source file(s), .pyi file(s), or directory path(s); omit when using --build-manifest",
+    )
 
     input_group = parser.add_argument_group("input selection")
     inspection_group = parser.add_argument_group("inspection stages")
@@ -1602,33 +1711,66 @@ def main() -> int:
         help="Reject Python wrapper names that require escaping or collision suffixes",
     )
     wrapper_group.add_argument(
-        "--native-object",
-        dest="native_objects",
-        action="append",
+        "--build-manifest",
         metavar="PATH",
-        help="Native object, static archive, or shared library linked into a .pyi wrapper build",
+        help="Replay a saved semantic .pyi wrapper build manifest",
+    )
+    wrapper_group.add_argument(
+        "--native-fortran-source",
+        dest="native_fortran_sources",
+        action="extend",
+        nargs="+",
+        metavar="PATH",
+        help="Native Fortran implementation source paths compiled for a .pyi wrapper build",
+    )
+    wrapper_group.add_argument(
+        "--native-fortran-flag",
+        dest="native_fortran_flags",
+        action="extend",
+        nargs="+",
+        metavar="FLAG",
+        help="Fortran compiler flags applied to each --native-fortran-source input",
+    )
+    wrapper_group.add_argument(
+        "--native-objects",
+        dest="native_objects",
+        action="extend",
+        nargs="+",
+        metavar="PATH",
+        help="Native object, static archive, or shared library paths linked into a .pyi wrapper build",
     )
     wrapper_group.add_argument(
         "--native-library",
         dest="native_libraries",
-        action="append",
+        action="extend",
+        nargs="+",
         metavar="NAME",
-        help="Native library linked into a .pyi wrapper build, passed as -lNAME unless already prefixed",
+        help="Native libraries linked into a .pyi wrapper build, passed as -lNAME unless already prefixed",
+    )
+    wrapper_group.add_argument(
+        "--native-link-item",
+        dest="native_link_items",
+        action="extend",
+        nargs="+",
+        metavar="KIND:VALUE",
+        help="Ordered native link items for .pyi builds: object, archive, shared-library, library, or arg",
     )
     wrapper_group.add_argument(
         "--native-library-dir",
         "--library-dir",
         dest="native_library_dirs",
-        action="append",
+        action="extend",
+        nargs="+",
         metavar="DIR",
-        help="Directory searched and added to rpath for native libraries in a .pyi wrapper build",
+        help="Directories searched and added to rpath for native libraries in a .pyi wrapper build",
     )
     wrapper_group.add_argument(
         "--native-include-dir",
         dest="native_include_dirs",
-        action="append",
+        action="extend",
+        nargs="+",
         metavar="DIR",
-        help="Directory containing native module/interface files needed to compile .pyi wrapper bridges",
+        help="Directories containing native module/interface files needed to compile .pyi wrapper bridges",
     )
     wrapper_group.add_argument(
         "--extension-name",

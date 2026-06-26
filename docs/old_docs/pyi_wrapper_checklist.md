@@ -68,11 +68,11 @@ Prove one source-free module contract can build before adding contract bundles.
 - [x] Link caller-supplied native object files while skipping parser and
   semantic lowering for native source.
 - [x] Build and import a callable-only Fortran module extension from
-  `module.pyi --wrap --native-object module.o`.
+  `module.pyi --wrap --native-objects module.o`.
 - [x] Preserve the existing source-driven wrapper path and makefile/verbose
   modes while adding the `.pyi`-driven entrypoint.
 - [x] CLI `.pyi` builds accept native object, archive, and shared-library paths
-  with `--native-object`.
+  with `--native-objects`.
 - [x] CLI `.pyi` builds accept `-l` libraries with `--native-library`.
 - [x] CLI `.pyi` builds accept library search/rpath directories with
   `--native-library-dir`.

@@ -126,6 +126,7 @@ def create_shared_library(
             wrapper_files[-1].name,
             x2py_dirpath,
             flags=wrapper_flags,
+            link_args=main_obj.link_args,
             dependencies=(main_obj, *dependencies),
             extra_compilation_tools=("python",),
         )

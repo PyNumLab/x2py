@@ -187,14 +187,13 @@ native references from the immutable `.pyi` binding metadata, and the linker
 resolves those references from caller-supplied artifacts. The `.pyi` filename is
 never used to guess an object, archive, or shared-library name.
 
-The current `.pyi` build subset accepts direct artifact paths through repeated
-`--native-object`, despite that option's broad historical name:
+The current `.pyi` build subset accepts direct artifact paths through
+`--native-objects`:
 
 ```bash
---native-object build/module1.o \
---native-object build/module2.o \
---native-object /opt/vendor/lib/libsupport.a \
---native-object /opt/vendor/lib/libsolver.so
+--native-objects build/module1.o build/module2.o \
+  /opt/vendor/lib/libsupport.a \
+  /opt/vendor/lib/libsolver.so
 ```
 
 Named libraries use linker-style names and directories:
@@ -327,7 +326,7 @@ Target CLI shapes are:
 python3 -m x2py contracts/library \
   --wrap \
   --extension-name library \
-  --native-object native.a
+  --native-objects native.a
 ```
 
 ```bash
@@ -345,7 +344,7 @@ For a single standalone fragment, no `__init__.pyi` is required:
 python3 -m x2py dgesv.pyi \
   --wrap \
   --extension-name lapack_dgesv \
-  --native-object dgesv.o
+  --native-objects dgesv.o
 ```
 
 These future commands still treat native artifacts as link inputs only. They do

@@ -65,6 +65,7 @@ _WRAPPING_EXPORTS = {
     "WrapperBuildResult",
     "build_fortran_extension",
     "build_pyi_extension",
+    "build_pyi_extension_from_manifest",
 }
 
 
@@ -110,6 +111,7 @@ __all__ = (
     "build_fortran_extension",
     "build_fortran_type_probe_source",
     "build_pyi_extension",
+    "build_pyi_extension_from_manifest",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

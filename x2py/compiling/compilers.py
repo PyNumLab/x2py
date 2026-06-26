@@ -537,6 +537,7 @@ class Compiler:
             *linker_libdir_flags,
             compile_obj.module_target,
             *m_code,
+            *compile_obj.link_args,
             "-o",
             file_out,
             *libs_flags,

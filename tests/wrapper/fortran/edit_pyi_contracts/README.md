@@ -12,7 +12,7 @@ Contract fixtures: planned modified, handwritten, and invalid editable runtime
 contracts will live under sibling roots such as `modified_contracts/<case>/`
 when this subject gets dedicated tests.
 
-Roadmap items: Stage 1 subject routing and Stage 6 editable contract semantics.
+Roadmap items: Stage 1 subject routing and Stage 8 editable contract semantics.
 
 Tests: none yet; current temporary edited-entry assertions are in
 `../build_from_pyi/test_pyi_wrapper_builds.py`.

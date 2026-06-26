@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+import json
+import os
 from pathlib import Path
 import shlex
 
@@ -41,6 +43,8 @@ from x2py.semantics.native_contract import validate_pyi_native_contract
 
 
 _DEFAULT_BUILD_DIR_NAME = "__x2py__"
+_BUILD_MANIFEST_NAME = "x2py-build.json"
+_BUILD_MANIFEST_SCHEMA_VERSION = 1
 _FORTRAN_SOURCE_SUFFIXES = {".f", ".f03", ".f08", ".f77", ".f90", ".f95", ".for", ".ftn"}
 _C_SOURCE_SUFFIXES = {".c"}
 _NATIVE_PATH_LINK_KINDS = frozenset({"object", "archive", "shared_library"})
@@ -56,6 +60,7 @@ class NativeCompilationUnit:
     language: str
     module_dir: Path | None = None
     include_dirs: tuple[Path, ...] = ()
+    flags: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "source", Path(self.source))
@@ -63,6 +68,7 @@ class NativeCompilationUnit:
         if self.module_dir is not None:
             object.__setattr__(self, "module_dir", Path(self.module_dir))
         object.__setattr__(self, "include_dirs", tuple(Path(path) for path in self.include_dirs))
+        object.__setattr__(self, "flags", tuple(str(flag) for flag in self.flags))
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -71,6 +77,7 @@ class NativeCompilationUnit:
             "language": self.language,
             "module_dir": str(self.module_dir) if self.module_dir is not None else None,
             "include_dirs": [str(path) for path in self.include_dirs],
+            "flags": list(self.flags),
         }
 
 
@@ -171,6 +178,8 @@ class WrapperBuildResult:
     generated_sources: tuple[Path, ...]
     generated_files: tuple[Path, ...]
     native_build_plan: NativeBuildPlan = field(default_factory=NativeBuildPlan)
+    build_manifest: Path | None = None
+    manifest: dict[str, object] | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -183,6 +192,8 @@ class WrapperBuildResult:
             "generated_sources": [str(path) for path in self.generated_sources],
             "generated_files": [str(path) for path in self.generated_files],
             "native_build_plan": self.native_build_plan.to_dict(),
+            "build_manifest": str(self.build_manifest) if self.build_manifest is not None else None,
+            "manifest": self.manifest,
         }
 
 
@@ -229,10 +240,19 @@ def _expected_generated_files(
     return tuple(path for path in candidates if path.exists())
 
 
-def _source_compile_object(source_path: Path, output_dir: Path, *, object_stem: str) -> CompileObj:
+def _source_compile_object(
+    source_path: Path,
+    output_dir: Path,
+    *,
+    object_stem: str,
+    flags: Iterable[str] = (),
+    include_dirs: Iterable[Path] = (),
+) -> CompileObj:
     compile_obj = CompileObj(
         file_name=source_path.name,
         folder=str(source_path.parent),
+        flags=tuple(flags),
+        include=tuple(include_dirs),
         has_target_file=True,
     )
     target = output_dir / f"{object_stem}.o"
@@ -270,6 +290,19 @@ class _PyiContractBundle:
     leaves: tuple[Path, ...]
     paths: tuple[Path, ...]
     modules: tuple[SemanticModule, ...]
+
+
+@dataclass(frozen=True)
+class _PyiNativeBuildInputs:
+    source_paths: tuple[Path, ...]
+    source_flags: tuple[str, ...]
+    artifact_paths: tuple[Path, ...]
+    libraries: tuple[str, ...]
+    explicit_link_items: tuple[NativeLinkItem, ...]
+    complete_link_items: tuple[NativeLinkItem, ...] | None
+    link_item_paths: tuple[Path, ...]
+    library_dirs: tuple[Path, ...]
+    explicit_include_dirs: tuple[Path, ...]
 
 
 def _pyi_contract_bundle(
@@ -571,20 +604,6 @@ def _existing_paths(
     return resolved
 
 
-def _native_artifact_compile_object(path: Path) -> CompileObj:
-    compile_obj = CompileObj(
-        file_name=path.name,
-        folder=str(path.parent),
-        has_target_file=True,
-        include=(path.parent,),
-        libdir=(path.parent,) if path.suffix.lower() in {".so", ".dylib", ".dll"} else (),
-    )
-    if compile_obj.module_target != path:
-        compile_obj._module_target = path
-        compile_obj._lock_target = FileLock(str(path.with_suffix(path.suffix + ".lock")))
-    return compile_obj
-
-
 def _native_artifact_kind(path: Path) -> str:
     name = path.name.lower()
     suffix = path.suffix.lower()
@@ -614,6 +633,7 @@ def _source_native_build_plan(
                 language="fortran",
                 module_dir=module_dir,
                 include_dirs=(module_dir,),
+                flags=tuple(source_object.flags),
             )
             for source_path, source_object in zip(source_paths, source_objects, strict=True)
         ),
@@ -626,24 +646,378 @@ def _source_native_build_plan(
 
 def _pyi_native_build_plan(
     *,
+    source_paths: tuple[Path, ...],
+    source_objects: tuple[CompileObj, ...],
     artifact_paths: tuple[Path, ...],
     libraries: tuple[str, ...],
+    explicit_link_items: tuple[NativeLinkItem, ...],
+    complete_link_items: tuple[NativeLinkItem, ...] | None = None,
     library_dirs: tuple[Path, ...],
     explicit_include_dirs: tuple[Path, ...],
     include_dirs: tuple[Path, ...],
+    module_dir: Path | None,
 ) -> NativeBuildPlan:
+    produced_objects = tuple(Path(source_object.module_target) for source_object in source_objects)
+    source_link_items = tuple(NativeLinkItem("object", object_path) for object_path in produced_objects)
     prebuilt_artifacts = tuple(
         NativePrebuiltArtifact(path=path, kind=_native_artifact_kind(path)) for path in artifact_paths
     )
     artifact_link_items = tuple(NativeLinkItem(artifact.kind, artifact.path) for artifact in prebuilt_artifacts)
     library_link_items = tuple(NativeLinkItem("named_library", library) for library in libraries)
+    link_items = (
+        complete_link_items
+        if complete_link_items is not None
+        else (*source_link_items, *artifact_link_items, *explicit_link_items, *library_link_items)
+    )
+    produced_object_set = set(produced_objects)
+    explicit_path_artifacts = tuple(
+        NativePrebuiltArtifact(path=Path(item.value), kind=item.kind)
+        for item in link_items
+        if item.kind in _NATIVE_PATH_LINK_KINDS and Path(item.value) not in produced_object_set
+    )
     return NativeBuildPlan(
-        prebuilt_artifacts=prebuilt_artifacts,
-        module_dirs=explicit_include_dirs,
+        compilation_units=tuple(
+            NativeCompilationUnit(
+                source=source_path,
+                object_path=source_object.module_target,
+                language="fortran",
+                module_dir=module_dir,
+                include_dirs=include_dirs,
+                flags=tuple(source_object.flags),
+            )
+            for source_path, source_object in zip(source_paths, source_objects, strict=True)
+        ),
+        produced_objects=produced_objects,
+        prebuilt_artifacts=explicit_path_artifacts,
+        module_dirs=_unique_paths(path for path in (module_dir, *explicit_include_dirs) if path is not None),
         include_dirs=include_dirs,
         library_dirs=library_dirs,
-        link_items=(*artifact_link_items, *library_link_items),
+        link_items=link_items,
     )
+
+
+def _native_link_args(link_items: Iterable[NativeLinkItem]) -> tuple[str, ...]:
+    args = []
+    for item in link_items:
+        if item.kind in _NATIVE_PATH_LINK_KINDS:
+            args.append(str(item.value))
+        elif item.kind == "named_library":
+            name = str(item.value)
+            args.append(name if name.startswith("-l") else f"-l{name}")
+        else:
+            args.append(str(item.value))
+    return tuple(args)
+
+
+def _coerce_native_link_items(items: Iterable[NativeLinkItem | dict[str, object]] | None) -> tuple[NativeLinkItem, ...]:
+    if items is None:
+        return ()
+    result = []
+    for item in items:
+        if isinstance(item, NativeLinkItem):
+            result.append(item)
+            continue
+        if not isinstance(item, dict):
+            raise TypeError("native link items must be NativeLinkItem instances or dictionaries")
+        kind = item.get("kind")
+        if not isinstance(kind, str):
+            raise ValueError("native link item dictionaries require a string 'kind'")
+        if kind in _NATIVE_PATH_LINK_KINDS:
+            path = item.get("path")
+            if not isinstance(path, str | Path):
+                raise ValueError(f"{kind!r} native link item requires a path")
+            result.append(NativeLinkItem(kind, path))
+        elif kind == "named_library":
+            name = item.get("name")
+            if not isinstance(name, str):
+                raise ValueError("named_library native link item requires a name")
+            result.append(NativeLinkItem(kind, name))
+        elif kind == "linker_argument":
+            argument = item.get("argument")
+            if not isinstance(argument, str):
+                raise ValueError("linker_argument native link item requires an argument")
+            result.append(NativeLinkItem(kind, argument))
+        else:
+            raise ValueError(f"Unsupported native link item kind: {kind!r}")
+    return tuple(result)
+
+
+def _link_item_paths(link_items: Iterable[NativeLinkItem]) -> tuple[Path, ...]:
+    return tuple(Path(item.value) for item in link_items if item.kind in _NATIVE_PATH_LINK_KINDS)
+
+
+def _path_key(path: Path) -> Path:
+    return path.resolve(strict=False)
+
+
+def _shared_library_dirs(link_items: Iterable[NativeLinkItem]) -> tuple[Path, ...]:
+    return tuple(Path(item.value).parent for item in link_items if item.kind == "shared_library")
+
+
+def _pyi_native_build_inputs(
+    *,
+    native_fortran_sources: Iterable[str | Path] | None,
+    native_fortran_flags: Iterable[str] | None,
+    native_objects: Iterable[str | Path] | None,
+    native_libraries: Iterable[str] | None,
+    native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None,
+    complete_native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None,
+    native_library_dirs: Iterable[str | Path] | None,
+    native_include_dirs: Iterable[str | Path] | None,
+) -> _PyiNativeBuildInputs:
+    source_paths = _existing_paths(native_fortran_sources, kind="Native Fortran source")
+    source_flags = tuple(str(flag) for flag in (native_fortran_flags or ()))
+    artifact_paths = _existing_paths(native_objects, kind="Native artifact")
+    libraries = tuple(native_libraries or ())
+    explicit_link_items = _coerce_native_link_items(native_link_items)
+    complete_link_items = (
+        None if complete_native_link_items is None else _coerce_native_link_items(complete_native_link_items)
+    )
+    selected_link_items = explicit_link_items if complete_link_items is None else complete_link_items
+    link_item_paths = _link_item_paths(selected_link_items)
+    library_dirs = _unique_paths(
+        (
+            *_existing_paths(native_library_dirs, kind="Native library", require_directory=True),
+            *(path.parent for path in artifact_paths if _native_artifact_kind(path) == "shared_library"),
+            *_shared_library_dirs(selected_link_items),
+        )
+    )
+    explicit_include_dirs = _existing_paths(native_include_dirs, kind="Native include", require_directory=True)
+    if (
+        not source_paths
+        and not artifact_paths
+        and not libraries
+        and not explicit_link_items
+        and not complete_link_items
+    ):
+        raise ValueError(
+            ".pyi wrapper build requires at least one native source, object, archive, shared library, "
+            "ordered link item, or -l name"
+        )
+    return _PyiNativeBuildInputs(
+        source_paths=source_paths,
+        source_flags=source_flags,
+        artifact_paths=artifact_paths,
+        libraries=libraries,
+        explicit_link_items=explicit_link_items,
+        complete_link_items=complete_link_items,
+        link_item_paths=link_item_paths,
+        library_dirs=library_dirs,
+        explicit_include_dirs=explicit_include_dirs,
+    )
+
+
+def _pyi_native_include_dirs(inputs: _PyiNativeBuildInputs, *, output_path: Path) -> tuple[Path, ...]:
+    module_include_dirs = (output_path,) if inputs.source_paths else ()
+    inferred_include_dirs = _unique_paths((*inputs.artifact_paths, *inputs.link_item_paths))
+    return _unique_paths(
+        (
+            *module_include_dirs,
+            *inputs.explicit_include_dirs,
+            *(path.parent for path in inferred_include_dirs),
+        )
+    )
+
+
+def _pyi_native_source_objects(
+    inputs: _PyiNativeBuildInputs,
+    *,
+    output_path: Path,
+    include_dirs: tuple[Path, ...],
+) -> tuple[CompileObj, ...]:
+    return tuple(
+        _source_compile_object(
+            source_path,
+            output_path,
+            object_stem=object_stem,
+            flags=inputs.source_flags,
+            include_dirs=include_dirs,
+        )
+        for source_path, object_stem in zip(inputs.source_paths, _source_object_stems(inputs.source_paths), strict=True)
+    )
+
+
+def _validate_native_link_paths(plan: NativeBuildPlan) -> None:
+    produced_object_keys = {_path_key(path) for path in plan.produced_objects}
+    for path in _link_item_paths(plan.link_items):
+        if _path_key(path) not in produced_object_keys and not path.is_file():
+            raise FileNotFoundError(f"Native link item not found: {path}")
+
+
+def _manifest_path(path: str | Path, *, base: Path) -> str:
+    value = Path(path)
+    absolute = value if value.is_absolute() else Path.cwd() / value
+    try:
+        return os.path.relpath(absolute, base)
+    except ValueError:
+        return str(absolute)
+
+
+def _resolve_manifest_path(path: str, *, base: Path) -> Path:
+    value = Path(path)
+    return value if value.is_absolute() else base / value
+
+
+def _manifest_link_item(item: NativeLinkItem, *, base: Path) -> dict[str, object]:
+    if item.kind in _NATIVE_PATH_LINK_KINDS:
+        return {
+            "kind": item.kind,
+            "path": _manifest_path(Path(item.value), base=base),
+        }
+    if item.kind == "named_library":
+        return {
+            "kind": item.kind,
+            "name": str(item.value),
+        }
+    return {
+        "kind": item.kind,
+        "argument": str(item.value),
+    }
+
+
+def _manifest_native_plan(plan: NativeBuildPlan, *, base: Path) -> dict[str, object]:
+    return {
+        "compilation_units": [
+            {
+                "source": _manifest_path(unit.source, base=base),
+                "object": _manifest_path(unit.object_path, base=base),
+                "language": unit.language,
+                "module_dir": _manifest_path(unit.module_dir, base=base) if unit.module_dir is not None else None,
+                "include_dirs": [_manifest_path(path, base=base) for path in unit.include_dirs],
+                "flags": list(unit.flags),
+            }
+            for unit in plan.compilation_units
+        ],
+        "produced_objects": [_manifest_path(path, base=base) for path in plan.produced_objects],
+        "prebuilt_artifacts": [
+            {
+                "kind": artifact.kind,
+                "path": _manifest_path(artifact.path, base=base),
+            }
+            for artifact in plan.prebuilt_artifacts
+        ],
+        "module_dirs": [_manifest_path(path, base=base) for path in plan.module_dirs],
+        "include_dirs": [_manifest_path(path, base=base) for path in plan.include_dirs],
+        "library_dirs": [_manifest_path(path, base=base) for path in plan.library_dirs],
+        "link_items": [_manifest_link_item(item, base=base) for item in plan.link_items],
+    }
+
+
+def _pyi_build_manifest(
+    *,
+    bundle: _PyiContractBundle,
+    module_name: str,
+    output_dir: Path,
+    shared_library: Path,
+    strict_wrapper_names: bool,
+    requested_extension_name: str | None,
+    native_fortran_flags: tuple[str, ...],
+    native_build_plan: NativeBuildPlan,
+    manifest_dir: Path,
+) -> dict[str, object]:
+    return {
+        "schema_version": _BUILD_MANIFEST_SCHEMA_VERSION,
+        "build_kind": "pyi-wrapper",
+        "entry_contract": _manifest_path(bundle.entry, base=manifest_dir),
+        "contract_paths": [_manifest_path(path, base=manifest_dir) for path in bundle.paths],
+        "extension": {
+            "requested_name": requested_extension_name,
+            "module_name": module_name,
+        },
+        "output": {
+            "output_dir": _manifest_path(output_dir, base=manifest_dir),
+            "shared_library": _manifest_path(shared_library, base=manifest_dir),
+            "strict_wrapper_names": strict_wrapper_names,
+        },
+        "compiler": {
+            "vendor": "GNU",
+            "fortran_flags": list(native_fortran_flags),
+            "position_independent_code": True,
+        },
+        "native_build_plan": _manifest_native_plan(native_build_plan, base=manifest_dir),
+    }
+
+
+def _write_build_manifest(path: Path, manifest: dict[str, object]) -> Path:
+    path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def _load_build_manifest(path: str | Path) -> tuple[Path, dict[str, object]]:
+    manifest_path = Path(path)
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"Wrapper build manifest not found: {manifest_path}")
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Wrapper build manifest must be a JSON object")
+    if payload.get("schema_version") != _BUILD_MANIFEST_SCHEMA_VERSION:
+        raise ValueError(f"Unsupported wrapper build manifest schema version: {payload.get('schema_version')!r}")
+    if payload.get("build_kind") != "pyi-wrapper":
+        raise ValueError(f"Unsupported wrapper build manifest kind: {payload.get('build_kind')!r}")
+    return manifest_path, payload
+
+
+def _manifest_section(payload: dict[str, object], key: str) -> dict[str, object]:
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        raise ValueError(f"Wrapper build manifest missing object section: {key}")
+    return value
+
+
+def _manifest_string_list(section: dict[str, object], key: str) -> tuple[str, ...]:
+    value = section.get(key, ())
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError(f"Wrapper build manifest field {key!r} must be a list of strings")
+    return tuple(value)
+
+
+def _manifest_path_list(section: dict[str, object], key: str, *, base: Path) -> tuple[Path, ...]:
+    return tuple(_resolve_manifest_path(item, base=base) for item in _manifest_string_list(section, key))
+
+
+def _native_link_item_from_manifest(item: object, *, base: Path) -> NativeLinkItem:
+    if not isinstance(item, dict):
+        raise ValueError("Wrapper build manifest link items must be objects")
+    kind = item.get("kind")
+    if not isinstance(kind, str):
+        raise ValueError("Wrapper build manifest link item is missing kind")
+    if kind in _NATIVE_PATH_LINK_KINDS:
+        path = item.get("path")
+        if not isinstance(path, str):
+            raise ValueError(f"Wrapper build manifest {kind!r} link item is missing path")
+        return NativeLinkItem(kind, _resolve_manifest_path(path, base=base))
+    if kind == "named_library":
+        name = item.get("name")
+        if not isinstance(name, str):
+            raise ValueError("Wrapper build manifest named library link item is missing name")
+        return NativeLinkItem(kind, name)
+    if kind == "linker_argument":
+        argument = item.get("argument")
+        if not isinstance(argument, str):
+            raise ValueError("Wrapper build manifest linker argument item is missing argument")
+        return NativeLinkItem(kind, argument)
+    raise ValueError(f"Unsupported wrapper build manifest link item kind: {kind!r}")
+
+
+def _manifest_link_items(section: dict[str, object], *, base: Path) -> tuple[NativeLinkItem, ...]:
+    value = section.get("link_items", ())
+    if not isinstance(value, list):
+        raise ValueError("Wrapper build manifest field 'link_items' must be a list")
+    return tuple(_native_link_item_from_manifest(item, base=base) for item in value)
+
+
+def _manifest_compilation_sources(section: dict[str, object], *, base: Path) -> tuple[Path, ...]:
+    value = section.get("compilation_units", ())
+    if not isinstance(value, list):
+        raise ValueError("Wrapper build manifest field 'compilation_units' must be a list")
+    sources = []
+    for unit in value:
+        if not isinstance(unit, dict) or not isinstance(unit.get("source"), str):
+            raise ValueError("Wrapper build manifest compilation units must include source paths")
+        if unit.get("language") != "fortran":
+            raise ValueError(f"Unsupported manifest native source language: {unit.get('language')!r}")
+        sources.append(_resolve_manifest_path(unit["source"], base=base))
+    return tuple(sources)
 
 
 def _source_object_stems(source_paths: tuple[Path, ...]) -> tuple[str, ...]:
@@ -768,6 +1142,7 @@ def _write_build_makefile(
     commands: tuple[tuple[str, ...], ...],
     source_objects: tuple[CompileObj, ...],
     working_directory: Path,
+    extra_dependencies: Iterable[Path] = (),
 ) -> Path:
     """Write a GNU Make build from recorded compiler commands."""
     compile_commands = tuple(command for command in commands if "-c" in command and _command_output(command))
@@ -817,7 +1192,8 @@ def _write_build_makefile(
             ]
         )
 
-    object_dependencies = " ".join(_make_target(output) for output in compile_outputs)
+    all_link_dependencies = tuple(dict.fromkeys((*compile_outputs, *extra_dependencies)))
+    object_dependencies = " ".join(_make_target(output) for output in all_link_dependencies)
     lines.extend(
         [
             f"{_make_target(link_output)}: {object_dependencies}",
@@ -1033,8 +1409,11 @@ def build_fortran_extension(
 def build_pyi_extension(
     contract: str | Path,
     *,
+    native_fortran_sources: Iterable[str | Path] | None = None,
+    native_fortran_flags: Iterable[str] | None = None,
     native_objects: Iterable[str | Path] | None = None,
     native_libraries: Iterable[str] | None = None,
+    native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None = None,
     native_library_dirs: Iterable[str | Path] | None = None,
     native_include_dirs: Iterable[str | Path] | None = None,
     extension_name: str | None = None,
@@ -1042,20 +1421,25 @@ def build_pyi_extension(
     strict_wrapper_names: bool = False,
     makefile: bool = False,
     verbose: bool | int = False,
+    complete_native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None = None,
 ) -> WrapperBuildResult:
     """Build one extension from one entry `.pyi` and native link inputs."""
 
-    if makefile:
-        raise ValueError("makefile generation is not yet supported for .pyi wrapper builds")
+    if makefile and verbose:
+        raise ValueError("makefile generation and verbose direct compilation are separate modes")
 
     entry = _pyi_entry_path(contract)
     bundle = _pyi_contract_bundle(entry)
-    artifact_paths = _existing_paths(native_objects, kind="Native artifact")
-    libraries = tuple(native_libraries or ())
-    library_dirs = _existing_paths(native_library_dirs, kind="Native library", require_directory=True)
-    explicit_include_dirs = _existing_paths(native_include_dirs, kind="Native include", require_directory=True)
-    if not artifact_paths and not libraries:
-        raise ValueError(".pyi wrapper build requires at least one native object, archive, shared library, or -l name")
+    native_inputs = _pyi_native_build_inputs(
+        native_fortran_sources=native_fortran_sources,
+        native_fortran_flags=native_fortran_flags,
+        native_objects=native_objects,
+        native_libraries=native_libraries,
+        native_link_items=native_link_items,
+        complete_native_link_items=complete_native_link_items,
+        native_library_dirs=native_library_dirs,
+        native_include_dirs=native_include_dirs,
+    )
 
     primary_contract = bundle.entry
     output_path = Path(output_dir) if output_dir is not None else primary_contract.parent / _DEFAULT_BUILD_DIR_NAME
@@ -1077,25 +1461,42 @@ def build_pyi_extension(
     codegen_ast = semantic_ir_to_codegen_ast(module, scope)
     module_name = str(codegen_ast.scope.get_python_name(codegen_ast.name))
 
-    artifact_dependencies = tuple(_native_artifact_compile_object(path) for path in artifact_paths)
-    inferred_include_dirs = _unique_paths(path.parent for path in artifact_paths)
-    include_dirs = _unique_paths((*explicit_include_dirs, *inferred_include_dirs))
-    native_build_plan = _pyi_native_build_plan(
-        artifact_paths=artifact_paths,
-        libraries=libraries,
-        library_dirs=library_dirs,
-        explicit_include_dirs=explicit_include_dirs,
+    include_dirs = _pyi_native_include_dirs(native_inputs, output_path=output_path)
+    native_source_objects = _pyi_native_source_objects(
+        native_inputs,
+        output_path=output_path,
         include_dirs=include_dirs,
     )
-    compiler = _new_gnu_compiler()
+    native_build_plan = _pyi_native_build_plan(
+        source_paths=native_inputs.source_paths,
+        source_objects=native_source_objects,
+        artifact_paths=native_inputs.artifact_paths,
+        libraries=native_inputs.libraries,
+        explicit_link_items=native_inputs.explicit_link_items,
+        complete_link_items=native_inputs.complete_link_items,
+        library_dirs=native_inputs.library_dirs,
+        explicit_include_dirs=native_inputs.explicit_include_dirs,
+        include_dirs=include_dirs,
+        module_dir=output_path if native_source_objects else None,
+    )
+    _validate_native_link_paths(native_build_plan)
+    compiler = _new_gnu_compiler(execute_commands=not makefile)
+    for source_obj in native_source_objects:
+        compiler.compile_module(
+            source_obj,
+            output_folder=str(output_path),
+            language="fortran",
+            verbose=verbose,
+        )
+
     codegen = Codegen(module_name, codegen_ast, codegen_ast.scope)
     module_obj = CompileObj(
         file_name=module_name,
         folder=str(output_path),
         has_target_file=False,
         include=include_dirs,
-        libs=libraries,
-        libdir=library_dirs,
+        libdir=native_inputs.library_dirs,
+        link_args=_native_link_args(native_build_plan.link_items),
     )
     shared_library, _timings = create_shared_library(
         codegen,
@@ -1106,11 +1507,39 @@ def build_pyi_extension(
         output_dirpath=str(shared_library_output_path),
         compiler=compiler,
         sharedlib_modname=module_name,
-        dependencies=artifact_dependencies,
+        dependencies=(),
         verbose=verbose,
     )
 
     shared_library_path = Path(shared_library)
+    manifest = _pyi_build_manifest(
+        bundle=bundle,
+        module_name=module_name,
+        output_dir=output_path,
+        shared_library=shared_library_path,
+        strict_wrapper_names=strict_wrapper_names,
+        requested_extension_name=extension_name,
+        native_fortran_flags=native_inputs.source_flags,
+        native_build_plan=native_build_plan,
+        manifest_dir=output_path,
+    )
+    build_manifest = _write_build_manifest(output_path / _BUILD_MANIFEST_NAME, manifest) if makefile else None
+    makefile_dependencies = (
+        *bundle.paths,
+        *_link_item_paths(native_build_plan.link_items),
+        *((build_manifest,) if build_manifest is not None else ()),
+    )
+    build_makefile = (
+        _write_build_makefile(
+            path=output_path / "Makefile.x2py",
+            commands=compiler.command_log,
+            source_objects=native_source_objects,
+            working_directory=Path.cwd(),
+            extra_dependencies=makefile_dependencies,
+        )
+        if makefile
+        else None
+    )
     generated_sources = tuple(
         path
         for path in (
@@ -1121,22 +1550,80 @@ def build_pyi_extension(
         if path.exists()
     )
     generated_files = _expected_generated_files(
-        source_objects=(),
+        source_objects=native_source_objects,
         output_dir=output_path,
         module_name=module_name,
         shared_library=shared_library_path,
     )
+    if build_manifest is not None:
+        generated_files = (*generated_files, build_manifest)
+    if build_makefile is not None:
+        generated_files = (*generated_files, build_makefile)
     return WrapperBuildResult(
         sources=bundle.paths,
         module_name=module_name,
         output_dir=output_path,
         shared_library=shared_library_path,
-        build_makefile=None,
-        compiled=True,
+        build_makefile=build_makefile,
+        compiled=not makefile,
         generated_sources=generated_sources,
         generated_files=generated_files,
         native_build_plan=native_build_plan,
+        build_manifest=build_manifest,
+        manifest=manifest,
     )
+
+
+def build_pyi_extension_from_manifest(
+    manifest: str | Path,
+    *,
+    makefile: bool = False,
+    verbose: bool | int = False,
+) -> WrapperBuildResult:
+    """Replay a saved semantic `.pyi` wrapper build manifest."""
+
+    manifest_path, payload = _load_build_manifest(manifest)
+    base = manifest_path.parent
+    native_section = _manifest_section(payload, "native_build_plan")
+    output_section = _manifest_section(payload, "output")
+    compiler_section = _manifest_section(payload, "compiler")
+    extension_section = _manifest_section(payload, "extension")
+
+    entry_contract = payload.get("entry_contract")
+    if not isinstance(entry_contract, str):
+        raise ValueError("Wrapper build manifest missing entry_contract")
+    output_dir = output_section.get("output_dir")
+    if not isinstance(output_dir, str):
+        raise ValueError("Wrapper build manifest missing output.output_dir")
+    output_path = _resolve_manifest_path(output_dir, base=base)
+    strict_wrapper_names = output_section.get("strict_wrapper_names", False)
+    if not isinstance(strict_wrapper_names, bool):
+        raise ValueError("Wrapper build manifest output.strict_wrapper_names must be a boolean")
+    requested_name = extension_section.get("requested_name")
+    if requested_name is not None and not isinstance(requested_name, str):
+        raise ValueError("Wrapper build manifest extension.requested_name must be a string or null")
+
+    manifest_module_dirs = _manifest_path_list(native_section, "module_dirs", base=base)
+    native_include_dirs = tuple(path for path in manifest_module_dirs if _path_key(path) != _path_key(output_path))
+    result = build_pyi_extension(
+        _resolve_manifest_path(entry_contract, base=base),
+        native_fortran_sources=_manifest_compilation_sources(native_section, base=base),
+        native_fortran_flags=_manifest_string_list(compiler_section, "fortran_flags"),
+        native_include_dirs=native_include_dirs,
+        native_library_dirs=_manifest_path_list(native_section, "library_dirs", base=base),
+        extension_name=requested_name,
+        output_dir=output_path,
+        strict_wrapper_names=strict_wrapper_names,
+        makefile=makefile,
+        verbose=verbose,
+        complete_native_link_items=_manifest_link_items(native_section, base=base),
+    )
+    recorded_contracts = tuple(
+        _resolve_manifest_path(path, base=base) for path in _manifest_string_list(payload, "contract_paths")
+    )
+    if result.sources != recorded_contracts:
+        raise ValueError("Current .pyi import graph does not match the wrapper build manifest contract_paths")
+    return result
 
 
 def _bundle_extension_name(bundle: _PyiContractBundle) -> str:

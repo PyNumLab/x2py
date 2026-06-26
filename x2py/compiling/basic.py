@@ -64,6 +64,7 @@ class CompileObj:
         "_include",
         "_libdir",
         "_libs",
+        "_link_args",
         "_lock_source",
         "_lock_target",
         "_module_name",
@@ -79,6 +80,7 @@ class CompileObj:
         include=(),
         libs=(),
         libdir=(),
+        link_args=(),
         dependencies=(),
         extra_compilation_tools=(),
         has_target_file=True,
@@ -108,6 +110,7 @@ class CompileObj:
             self._include.add(folder)
         self._libs = list(libs)
         self._libdir = set(libdir)
+        self._link_args = tuple(str(arg) for arg in link_args)
         self._extra_compilation_tools = set(extra_compilation_tools)
         self._dependencies = {getattr(a, "module_target", a): a for a in dependencies}
         self._has_target_file = has_target_file
@@ -167,6 +170,11 @@ class CompileObj:
         libraries can be correctly located.
         """
         return self._libdir.union([dld for d in self._dependencies.values() for dld in d.libdir])
+
+    @property
+    def link_args(self):
+        """Return ordered raw linker arguments for the final link command."""
+        return self._link_args
 
     @property
     def extra_modules(self):

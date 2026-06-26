@@ -109,7 +109,7 @@ def _build_contract(
         "x2py",
         str(entry),
         "--wrap",
-        "--native-object",
+        "--native-objects",
         str(native_object),
         "--native-include-dir",
         str(native_object.parent),

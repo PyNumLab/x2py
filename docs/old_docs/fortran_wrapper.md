@@ -152,16 +152,17 @@ include directory when the generated bridge contains `use <module>`:
 ```bash
 python3 -m x2py path/to/module.pyi \
   --wrap \
-  --native-object path/to/module.o \
+  --native-objects path/to/module.o \
   --native-include-dir path/to/mod-files \
   --out-dir build/module
 ```
 
-`--native-object` may be repeated for ordered object, static archive, or shared
-library inputs. Named libraries use `--native-library NAME` and
+`--native-objects` accepts one or more ordered object, static archive, or shared
+library paths. Named libraries use `--native-library NAME` and
 `--native-library-dir DIR`. The latter is passed as both a link search path and
-a runtime search path. At least one `--native-object` or `--native-library` is
-required. Makefile generation is not yet supported for `.pyi` builds.
+a runtime search path. At least one `--native-objects` path or
+`--native-library` is required. Makefile generation is not yet supported for
+`.pyi` builds.
 
 The parity checklist is maintained in
 [Semantic `.pyi` wrapper checklist](pyi_wrapper_checklist.md).

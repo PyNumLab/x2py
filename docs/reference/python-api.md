@@ -106,6 +106,7 @@ generated stubs.
 | --- | --- |
 | `build_fortran_extension` | Builds a Python extension from Fortran source inputs. |
 | `build_pyi_extension` | Builds a Python extension from semantic `.pyi` contracts plus explicit native artifacts. |
+| `build_pyi_extension_from_manifest` | Replays a saved semantic `.pyi` wrapper build manifest, either building directly or regenerating `Makefile.x2py`. |
 | `WrapperBuildResult` | Result model returned by wrapper build functions. |
 | `NativeBuildPlan` | Structured native implementation compile/link plan attached to a wrapper build result. |
 | `NativeCompilationUnit` | Native source compilation unit and produced object recorded in a native build plan. |
@@ -113,12 +114,15 @@ generated stubs.
 | `NativeLinkItem` | One ordered object, archive, shared library, named library, or linker argument in a native link plan. |
 
 Fortran source wrapper builds own the normal source-to-extension workflow.
-Semantic `.pyi` wrapper builds require explicit native link inputs such as
-objects, libraries, and include/module directories. Inspect
+Semantic `.pyi` wrapper builds require explicit native implementation inputs
+such as native Fortran sources, objects, libraries, and include/module
+directories. Inspect
 `WrapperBuildResult.native_build_plan` when a caller needs the native
 compilation units, produced objects, prebuilt artifacts, module/include
 directories, library directories, or ordered native link items separately from
-the semantic contract paths.
+the semantic contract paths. Semantic `.pyi` build results also expose a
+normalized replay `manifest`; Makefile mode writes that manifest to
+`<out-dir>/x2py-build.json` before generating `Makefile.x2py`.
 
 ## Target type and NumPy helpers
 
