@@ -1,0 +1,3 @@
+@external
+@bind("fixed_add")
+def renamed_increment(value: Ptr(Const(Int32))) -> Int32: ...

@@ -274,7 +274,7 @@ class FCodePrinter(CodePrinter):
     def _module_interfaces(self, module):
         """Render module interfaces and their public declarations."""
         if isinstance(module, BindCModule):
-            external_interfaces = self._bind_c_external_optional_interfaces(module)
+            external_interfaces = self._bind_c_external_interfaces(module)
             code = (
                 "interface\n"
                 'function c_malloc(size) bind(C,name="x2py_malloc") result(ptr)\n'
@@ -1248,35 +1248,76 @@ class FCodePrinter(CodePrinter):
             macros.append(macro)
         return "".join(macros)
 
-    def _bind_c_external_optional_interfaces(self, expr):
-        """Handle bind c external optional interfaces for the current generation context."""
+    def _bind_c_external_interfaces(self, expr):
+        """Handle explicit external interfaces for the current generation context."""
         original_module = getattr(expr, "original_module", None)
         if original_module is None:
             return ""
         interfaces = [
-            self._external_optional_interface(func)
+            self._external_interface(func)
             for func in original_module.funcs
-            if func.is_external and any(getattr(arg.var, "is_optional", False) for arg in func.arguments)
+            if func.is_external and func.is_semantic and not func.is_private
         ]
         return "".join(interfaces)
 
-    def _external_optional_interface(self, func):
-        """Handle external optional interface for the current generation context."""
+    def _external_interface(self, func):
+        """Emit an explicit interface for one external native procedure."""
         args = ", ".join(self._visit(arg.name) for arg in func.arguments)
         result_vars = [var for var in func.scope.collect_all_tuple_elements(func.results.var) if var]
         is_function = len(result_vars) == 1
         func_type = "function" if is_function else "subroutine"
         lines = [f"{func_type} {self._visit(func.name)}({args})", "import"]
         if is_function:
-            lines.append(self._visit(Declare(result_vars[0])).rstrip())
+            lines.append(self._visit(Declare(result_vars[0].clone(str(func.name)))).rstrip())
         for arg in func.arguments:
-            var = arg.var
-            declare_intent = (
-                getattr(var, "intent", None) if var.rank > 0 or isinstance(var.class_type, StringType) else None
-            )
-            lines.append(self._visit(Declare(var, intent=declare_intent)).rstrip())
+            lines.append(self._external_interface_argument_declaration(arg.var))
         lines.append(f"end {func_type} {self._visit(func.name)}")
         return "\n".join(lines) + "\n"
+
+    def _external_interface_argument_declaration(self, var):
+        """Declare an external native argument without changing its call ABI."""
+        if isinstance(var.class_type, StringType):
+            intent = getattr(var, "intent", None) if var.rank > 0 or isinstance(var.class_type, StringType) else None
+            return self._visit(Declare(var, intent=intent)).rstrip()
+        if isinstance(var.class_type, CustomDataType):
+            type_code = f"type({self._visit(var.class_type)})"
+        elif isinstance(var.class_type, NumpyNDArrayType | FixedSizeType):
+            type_code = self._visit(var.dtype.primitive_type)
+            if isinstance(var.dtype, FixedSizeNumericType):
+                type_code += f"({self._kind(var)})"
+        else:
+            raise TypeError(f"Unsupported external native argument type {var.class_type}")
+
+        attributes = []
+        if getattr(var, "is_optional", False):
+            attributes.append("optional")
+        intent = getattr(var, "intent", None)
+        if intent:
+            attributes.append(f"intent({intent})")
+        attribute_code = f", {', '.join(attributes)}" if attributes else ""
+        shape_code = ""
+        if var.rank:
+            dimensions = self._external_interface_argument_dimensions(var)
+            shape_code = f"({', '.join(dimensions)})"
+        return f"{type_code}{attribute_code} :: {var.name}{shape_code}"
+
+    def _external_interface_argument_dimensions(self, var):
+        """Return dimensions for an external interface without changing native ABI."""
+        source_shape = tuple(getattr(var, "fortran_source_shape", ()) or ())
+        if getattr(var, "fortran_array_category", None) == "assumed_size" and source_shape:
+            if var.rank > 1 and str(source_shape[0]).strip() == "*":
+                return ["*"]
+            dimensions = []
+            for index, item in enumerate(var.alloc_shape):
+                source_dim = str(source_shape[index]).strip() if index < len(source_shape) else ""
+                if source_dim == "*" or source_dim.endswith(":*"):
+                    dimensions.append(source_dim)
+                elif item is None:
+                    dimensions.append("*" if index == var.rank - 1 else ":")
+                else:
+                    dimensions.append(self._visit(item))
+            return dimensions
+        return [":" if item is None else self._visit(item) for item in var.alloc_shape]
 
     def _format_code(self, lines):
         """

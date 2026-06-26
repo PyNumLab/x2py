@@ -71,6 +71,9 @@ extend-exclude = [
     "tests/data",
     "tests/pyi/fixtures",
     "tests/wrapper/fortran/*/contracts",
+    "tests/wrapper/fortran/*/handwritten_contracts",
+    "tests/wrapper/fortran/*/invalid_contracts",
+    "tests/wrapper/fortran/*/modified_contracts",
     "tests/wrapper/fortran/pyi",
     "x2py.egg-info",
 ]
@@ -112,6 +115,9 @@ exclude = [
     "tests/data/",
     "tests/pyi/fixtures/",
     "tests/wrapper/fortran/*/contracts/",
+    "tests/wrapper/fortran/*/handwritten_contracts/",
+    "tests/wrapper/fortran/*/invalid_contracts/",
+    "tests/wrapper/fortran/*/modified_contracts/",
     "tests/wrapper/fortran/pyi/",
     "x2py.egg-info/",
 ]

@@ -1,0 +1,351 @@
+"""Standalone external procedure parity and contract validation."""
+
+from __future__ import annotations
+
+import importlib
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
+from tests.wrapper.fortran._support import (
+    REPO_ROOT,
+    wrapper_source,
+)
+from x2py import build_pyi_extension
+from x2py.wrapping import build_fortran_extension
+
+FIXED_EXTERNAL = wrapper_source("fixed_external.f")
+FREE_EXTERNAL = wrapper_source("free_external.f90")
+EXTERNAL_BUNDLE = wrapper_source("external_bundle.f90")
+C_ORDER_FLAT_BUFFER = wrapper_source("c_order_flat_buffer.f90")
+BLAS_LIKE_FILENAMES = ("daxpy_like.f90", "ddot_like.f90")
+BLAS_LIKE_SOURCES = tuple(wrapper_source(filename) for filename in BLAS_LIKE_FILENAMES)
+BASIC_SOURCE = REPO_ROOT / "tests" / "data" / "fortran" / "general" / "basic_subroutine.f90"
+CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
+HANDWRITTEN_CONTRACT_FIXTURES = Path(__file__).parent / "handwritten_contracts"
+HANDWRITTEN_RENAMED = HANDWRITTEN_CONTRACT_FIXTURES / "fixed_external" / "renamed_increment.pyi"
+C_ORDER_FLAT_CONTRACT = HANDWRITTEN_CONTRACT_FIXTURES / "c_order_flat_buffer" / "c_order_flat_buffer.pyi"
+
+
+def _compiler() -> str:
+    compiler = shutil.which("gfortran")
+    if compiler is None:
+        pytest.skip("gfortran is required for standalone external wrapper tests")
+    return compiler
+
+
+def _copy_sources(sources: tuple[Path, ...], workdir: Path) -> tuple[Path, ...]:
+    workdir.mkdir(parents=True, exist_ok=True)
+    copied = []
+    for source in sources:
+        target = workdir / source.name
+        shutil.copyfile(source, target)
+        copied.append(target)
+    return tuple(copied)
+
+
+def _compile_native_objects(sources: tuple[Path, ...], native_dir: Path) -> tuple[Path, ...]:
+    native_dir.mkdir(parents=True, exist_ok=True)
+    objects = []
+    for source in sources:
+        native_object = native_dir / f"{source.stem}.o"
+        subprocess.run(
+            [
+                _compiler(),
+                "-fPIC",
+                "-c",
+                str(source),
+                "-o",
+                str(native_object),
+                "-J",
+                str(native_dir),
+                "-I",
+                str(native_dir),
+            ],
+            check=True,
+        )
+        objects.append(native_object)
+    return tuple(objects)
+
+
+def _generated_contract_fixture(case: str) -> Path:
+    return CONTRACT_FIXTURES / case
+
+
+def _generate_contract(input_paths: tuple[Path, ...], package: Path, expected_package: Path | None = None) -> Path:
+    language_args = ["--language", "fortran"] if any(path.is_dir() for path in input_paths) else []
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            *(str(path) for path in input_paths),
+            *language_args,
+            "--pyi",
+            "--out",
+            str(package),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    if expected_package is not None:
+        assert_generated_pyi_package_matches_fixture(package, expected_package)
+    return package / "__init__.pyi"
+
+
+def _import_extension(module_name: str, build_dir: Path):
+    sys.modules.pop(module_name, None)
+    sys.path.insert(0, str(build_dir))
+    try:
+        return importlib.import_module(module_name)
+    finally:
+        sys.path.remove(str(build_dir))
+
+
+def _build_source(sources: tuple[Path, ...], build_dir: Path):
+    result = build_fortran_extension(sources, output_dir=build_dir)
+    return _import_extension(result.module_name, build_dir), result
+
+
+def _build_generated_contract(
+    sources: tuple[Path, ...],
+    workdir: Path,
+    *,
+    extension_name: str,
+    contract_input: tuple[Path, ...] | None = None,
+    expected_package: Path | None = None,
+):
+    entry = _generate_contract(contract_input or sources, workdir / "contracts", expected_package)
+    native_objects = _compile_native_objects(sources, workdir / "native")
+    result = build_pyi_extension(
+        entry,
+        native_objects=native_objects,
+        native_include_dirs=[native_objects[0].parent],
+        extension_name=extension_name,
+        output_dir=workdir / "pyi_build",
+    )
+    return _import_extension(result.module_name, result.output_dir), result, entry
+
+
+def _standalone_module_for_mode(
+    source: Path,
+    build_mode: str,
+    tmp_path: Path,
+):
+    sources = _copy_sources((source,), tmp_path / "sources")
+    if build_mode == "source":
+        module, _result = _build_source(sources, tmp_path / "source_build")
+        return module
+    module, _result, _entry = _build_generated_contract(
+        sources,
+        tmp_path,
+        extension_name=source.stem,
+        expected_package=_generated_contract_fixture(source.stem),
+    )
+    return module
+
+
+@pytest.fixture
+def fixed_external_module(pyi_parity_build_mode: str, tmp_path: Path):
+    return _standalone_module_for_mode(FIXED_EXTERNAL, pyi_parity_build_mode, tmp_path)
+
+
+@pytest.fixture
+def free_external_module(pyi_parity_build_mode: str, tmp_path: Path):
+    return _standalone_module_for_mode(FREE_EXTERNAL, pyi_parity_build_mode, tmp_path)
+
+
+@pytest.fixture
+def bundled_external_module(pyi_parity_build_mode: str, tmp_path: Path):
+    sources = _copy_sources((EXTERNAL_BUNDLE,), tmp_path / "sources")
+    if pyi_parity_build_mode == "source":
+        module, _result = _build_source(sources, tmp_path / "source_build")
+        return module
+    module, _result, _entry = _build_generated_contract(
+        sources,
+        tmp_path,
+        extension_name=EXTERNAL_BUNDLE.stem,
+        expected_package=_generated_contract_fixture(EXTERNAL_BUNDLE.stem),
+    )
+    return module
+
+
+def test_fixed_form_standalone_external_runtime_parity(fixed_external_module):
+    assert fixed_external_module.fixed_add(np.int32(4)) == np.int32(5)
+
+
+def test_free_form_standalone_external_runtime_parity(free_external_module):
+    assert free_external_module.free_square(np.int32(5)) == np.int32(25)
+
+
+def test_one_source_with_several_standalone_externals_exports_each_at_root(bundled_external_module):
+    assert bundled_external_module.triple_value(np.int32(4)) == np.int32(12)
+    assert bundled_external_module.offset_value(np.int32(4)) == np.int32(14)
+
+
+def test_generated_external_contracts_are_non_empty_root_fragments(tmp_path: Path):
+    for source in (FIXED_EXTERNAL, FREE_EXTERNAL, EXTERNAL_BUNDLE):
+        copied = _copy_sources((source,), tmp_path / source.stem)
+        entry = _generate_contract(
+            copied,
+            tmp_path / f"{source.stem}_contracts",
+            _generated_contract_fixture(source.stem),
+        )
+        text = entry.read_text(encoding="utf-8")
+
+        assert entry.name == "__init__.pyi"
+        assert text.strip()
+        assert text.count("@external") == len([line for line in text.splitlines() if line.startswith("def ")])
+        assert sorted(path.name for path in entry.parent.glob("*.pyi")) == ["__init__.pyi"]
+
+
+def test_external_bridge_uses_explicit_interface_and_no_module_use(tmp_path: Path):
+    sources = _copy_sources((FREE_EXTERNAL,), tmp_path / "sources")
+    module, result, entry = _build_generated_contract(
+        sources,
+        tmp_path,
+        extension_name=FREE_EXTERNAL.stem,
+        expected_package=_generated_contract_fixture(FREE_EXTERNAL.stem),
+    )
+
+    bridge = (result.output_dir / f"bind_c_{result.module_name}_wrapper.f90").read_text(encoding="utf-8").lower()
+    assert module.free_square(np.int32(3)) == np.int32(9)
+    assert entry.read_text(encoding="utf-8").startswith("@external\n")
+    assert "function free_square(" in bridge
+    assert "end function free_square" in bridge
+    assert "use free_external" not in bridge
+
+
+def test_module_procedure_bridge_uses_native_module_scope(tmp_path: Path):
+    source = _copy_sources((BASIC_SOURCE,), tmp_path / "sources")
+    entry = _generate_contract(source, tmp_path / "contracts", _generated_contract_fixture(BASIC_SOURCE.stem))
+    native_objects = _compile_native_objects(source, tmp_path / "native")
+    result = build_pyi_extension(
+        entry,
+        native_objects=native_objects,
+        native_include_dirs=[native_objects[0].parent],
+        output_dir=tmp_path / "pyi_build",
+    )
+
+    bridge = (result.output_dir / f"bind_c_{result.module_name}_wrapper.f90").read_text(encoding="utf-8").lower()
+    assert "use m1, only:" in bridge
+    assert "add1" in bridge
+
+
+def test_external_bind_renames_python_export_without_changing_native_call(tmp_path: Path):
+    source = _copy_sources((FIXED_EXTERNAL,), tmp_path / "sources")
+    native_objects = _compile_native_objects(source, tmp_path / "native")
+    result = build_pyi_extension(
+        HANDWRITTEN_RENAMED,
+        native_objects=native_objects,
+        extension_name="renamed_api",
+        output_dir=tmp_path / "pyi_build",
+    )
+    module = _import_extension(result.module_name, result.output_dir)
+    bridge = (result.output_dir / f"bind_c_{result.module_name}_wrapper.f90").read_text(encoding="utf-8").lower()
+
+    assert module.renamed_increment(np.int32(4)) == np.int32(5)
+    assert not hasattr(module, "fixed_add")
+    assert "function fixed_add(" in bridge
+    assert "use fixed_add" not in bridge
+
+
+def test_handwritten_c_order_flat_contract_passes_rank_preserving_bridge_view(tmp_path: Path):
+    source = _copy_sources((C_ORDER_FLAT_BUFFER,), tmp_path / "sources")
+    native_objects = _compile_native_objects(source, tmp_path / "native")
+    result = build_pyi_extension(
+        C_ORDER_FLAT_CONTRACT,
+        native_objects=native_objects,
+        extension_name="c_order_flat_api",
+        output_dir=tmp_path / "pyi_build",
+    )
+    module = _import_extension(result.module_name, result.output_dir)
+    bridge = (result.output_dir / f"bind_c_{result.module_name}_wrapper.f90").read_text(encoding="utf-8")
+    compact_bridge = "".join(bridge.lower().split())
+
+    values = np.array([[1.0, 2.0, 3.0], [10.0, 20.0, 30.0]], dtype=np.float64, order="C")
+    result_values = np.zeros(values.shape[0], dtype=np.float64)
+
+    module.row_sums_c(np.int32(values.shape[0]), values, result_values)
+
+    np.testing.assert_allclose(result_values, [6.0, 60.0])
+    assert "values(*)" in compact_bridge
+    assert "values(*,3)" not in compact_bridge
+
+    with pytest.raises(TypeError, match=r"expected ordering \(C\)"):
+        module.row_sums_c(np.int32(values.shape[0]), np.asfortranarray(values), result_values)
+
+    strided = np.zeros((values.shape[0], values.shape[1] * 2), dtype=np.float64, order="C")[:, ::2]
+    with pytest.raises(TypeError, match=r"expected ordering \(C\)"):
+        module.row_sums_c(np.int32(values.shape[0]), strided, result_values)
+
+
+def test_compact_blas_like_folder_generates_one_external_entry_and_preserves_separate_objects(tmp_path: Path):
+    copied_sources = _copy_sources(BLAS_LIKE_SOURCES, tmp_path / "sources")
+    source_module, source_result = _build_source(copied_sources, tmp_path / "source_build")
+
+    x = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    y_source = np.array([10.0, 20.0, 30.0], dtype=np.float64)
+    source_module.daxpy_like(np.int32(x.size), np.float64(2.0), x, y_source)
+    np.testing.assert_allclose(y_source, [12.0, 24.0, 36.0])
+    source_dot = source_module.ddot_like(np.int32(x.size), x, y_source)
+
+    generated_module, generated_result, entry = _build_generated_contract(
+        copied_sources,
+        tmp_path,
+        extension_name=source_result.module_name,
+        contract_input=(tmp_path / "sources",),
+        expected_package=_generated_contract_fixture("blas_like"),
+    )
+
+    assert sorted(path.relative_to(entry.parent).as_posix() for path in entry.parent.rglob("*.pyi")) == ["__init__.pyi"]
+    text = entry.read_text(encoding="utf-8")
+    assert "@external\ndef daxpy_like(" in text
+    assert "@external\ndef ddot_like(" in text
+    assert generated_result.native_build_plan.to_dict()["link_items"] == [
+        {"kind": "object", "path": str(tmp_path / "native" / "daxpy_like.o")},
+        {"kind": "object", "path": str(tmp_path / "native" / "ddot_like.o")},
+    ]
+
+    y_generated = np.array([10.0, 20.0, 30.0], dtype=np.float64)
+    generated_module.daxpy_like(np.int32(x.size), np.float64(2.0), x, y_generated)
+    np.testing.assert_allclose(y_generated, y_source)
+    assert source_dot == generated_module.ddot_like(np.int32(x.size), x, y_generated)
+
+
+def test_package_entry_rejects_non_external_root_declaration_before_codegen(tmp_path: Path):
+    source = _copy_sources((FREE_EXTERNAL,), tmp_path / "sources")
+    entry = _generate_contract(source, tmp_path / "contracts", _generated_contract_fixture(FREE_EXTERNAL.stem))
+    entry.write_text(entry.read_text(encoding="utf-8").replace("@external\n", ""), encoding="utf-8")
+    native_objects = _compile_native_objects(source, tmp_path / "native")
+    build_dir = tmp_path / "pyi_build"
+
+    with pytest.raises(ValueError, match="Package entry contracts cannot contain native module declarations"):
+        build_pyi_extension(entry, native_objects=native_objects, output_dir=build_dir)
+
+    assert not build_dir.exists()
+
+
+def test_namespace_imported_module_rejects_external_marker_before_codegen(tmp_path: Path):
+    source = _copy_sources((BASIC_SOURCE,), tmp_path / "sources")
+    entry = _generate_contract(source, tmp_path / "contracts", _generated_contract_fixture(BASIC_SOURCE.stem))
+    leaf = entry.parent / "m1.pyi"
+    leaf.write_text(leaf.read_text(encoding="utf-8").replace("def add1", "@external\ndef add1"), encoding="utf-8")
+    native_objects = _compile_native_objects(source, tmp_path / "native")
+    build_dir = tmp_path / "pyi_build"
+
+    with pytest.raises(ValueError, match="cannot contain @external declarations"):
+        build_pyi_extension(
+            entry,
+            native_objects=native_objects,
+            native_include_dirs=[native_objects[0].parent],
+            output_dir=build_dir,
+        )
+
+    assert not build_dir.exists()

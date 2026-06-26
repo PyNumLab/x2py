@@ -31,13 +31,15 @@ from x2py.semantics.models import (
     SemanticImport,
     SemanticMethod,
     SemanticModule,
+    SemanticOrigin,
     SemanticFunction,
+    SemanticField,
     SemanticStorageContract,
     SemanticType,
 )
 
-WRAPPER_FEATURE_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper" / "feature_parity"
-OPERATOR_F90_SOURCE = WRAPPER_FEATURE_DATA / "operators" / "foperators_f90.f90"
+WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"
+OPERATOR_F90_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
 
 
 # ============================================================
@@ -93,6 +95,57 @@ end module
     assert "c: Annotated[Ptr(Float64), Intent('out')]" not in code
     assert 'Returns["c"' not in code
     assert ") -> Float64: ..." in code
+
+
+def test_fortran_generated_contracts_emit_python_name_and_bind_original_name():
+    module = SemanticModule(
+        name="math_mod",
+        functions=[
+            SemanticFunction(
+                "SQUARE_R4",
+                native_name="SQUARE_R4",
+                arguments=[SemanticArgument("X", SemanticType("Float32"))],
+                return_type=SemanticType("Float32"),
+                origin=SemanticOrigin(source_language="fortran", native_name="SQUARE_R4", native_scope="math_mod"),
+            )
+        ],
+        origin=SemanticOrigin(source_language="fortran", source_kind="module"),
+    )
+
+    code = emit_module(module, normalize_fortran_public_names=True)
+
+    assert '@bind("SQUARE_R4")\ndef square_r4(' in code
+
+
+def test_fortran_generated_contracts_reserve_colliding_public_names_by_namespace():
+    int32_type = SemanticType("Int32")
+    origin = SemanticOrigin(source_language="fortran", native_scope="naming_mod")
+    module = SemanticModule(
+        name="naming_mod",
+        classes=[
+            SemanticClass(
+                name="visible_t",
+                fields=[
+                    SemanticField("lambda", int32_type),
+                    SemanticField("lambda_", int32_type),
+                ],
+                origin=origin,
+            )
+        ],
+        functions=[
+            SemanticFunction("lambda", native_name="lambda", return_type=int32_type, origin=origin),
+            SemanticFunction("lambda_", native_name="lambda_", return_type=int32_type, origin=origin),
+        ],
+        origin=origin,
+    )
+
+    code = emit_module(module, normalize_fortran_public_names=True)
+
+    assert 'lambda_: Annotated[Int32, Name("lambda")]' in code
+    assert 'lambda__2: Annotated[Int32, Name("lambda_")]' in code
+    assert '@bind("lambda")\ndef lambda_() -> Int32: ...' in code
+    assert '@bind("lambda_")\ndef lambda__2() -> Int32: ...' in code
+    assert "def lambda__3" not in code
 
 
 def test_emit_rejects_unknown_semantic_type():
@@ -339,7 +392,8 @@ end module
     assert "A: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
     assert "Shape" not in code
     assert "x: Const(Float64[::Strided])" in code
-    assert "y: Annotated[Float64[::Strided], Intent('out')]" in code
+    assert "y: Float64[::Strided]" in code
+    assert "y: Annotated[Float64[::Strided], Intent('out')]" not in code
     assert 'Returns["y", Float64[::Strided]]' in code
 
 
@@ -925,6 +979,46 @@ def test_printer_emit_visitor_dispatches_semantic_models():
     assert str(unsupported.value) == "Unsupported semantic model for .pyi emission: <class 'object'>"
 
 
+def test_printer_emits_flat_dimension_for_assumed_size_arrays():
+    fortran_type = SemanticType(
+        "Float64",
+        dtype="Float64",
+        rank=2,
+        shape=["3", ":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(
+                rank=2,
+                shape=["3", ":"],
+                category="assumed_size",
+                source_shape=["3", "*"],
+                order="ORDER_F",
+                contiguous=True,
+            ),
+        ),
+    )
+    c_type = SemanticType(
+        "Float64",
+        dtype="Float64",
+        rank=2,
+        shape=[":", "3"],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(
+                rank=2,
+                shape=[":", "3"],
+                category="assumed_size",
+                source_shape=["*", "3"],
+                order="ORDER_C",
+                contiguous=True,
+            ),
+        ),
+    )
+
+    assert PyiPrinter().emit(fortran_type) == "Float64[3, Flat]"
+    assert PyiPrinter().emit(c_type) == "Annotated[Float64[Flat, 3], ORDER_C]"
+
+
 def test_emit_class_method_keeps_method_indentation():
     module = SemanticModule(
         name="method_mod",
@@ -1121,6 +1215,10 @@ def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_
     assert "def __radd__(" in code
     assert '@overload("assign_vector_real")' in code
     assert "def assign(" in code
+    assert "left: Annotated[Ptr(vector), Intent('out')]" not in code
+    assert "left: Ptr(vector)" in code
+    assert '-> Returns["left", Ptr(vector)]: ...' in code
+    assert "right: Ptr(Const(Float64))\n    ) -> vector: ..." in code
     assert '@overload("dot_vectors")' in code
     assert "def operator_dot(" in code
     assert '@overload("equivalent_vector_offset", generic="operator(.eqv.)")' in code

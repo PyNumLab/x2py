@@ -350,8 +350,18 @@ class Variable:
     intent : str, default: "in"
         Native intent metadata preserved for wrapper projection decisions.
 
+    projected_output : bool, default: False
+        True when a compact semantic contract projects this visible writable
+        argument into Python returns without preserving native ``intent(out)``.
+
     passes_by_value : bool, default: False
         True when a native scalar dummy has Fortran ``value`` ABI.
+
+    fortran_array_category : str, optional
+        Native Fortran array category preserved for ABI-sensitive declarations.
+
+    fortran_source_shape : tuple, optional
+        Native Fortran source dimensions preserved for ABI-sensitive declarations.
 
     ownership_decision : object, default: None
         Central ownership policy decision preserved from semantic lowering.
@@ -389,6 +399,8 @@ class Variable:
         "_class_type",
         "_cls_base",
         "_default_value",
+        "_fortran_array_category",
+        "_fortran_source_shape",
         "_intent",
         "_is_argument",
         "_is_optional",
@@ -399,6 +411,7 @@ class Variable:
         "_name",
         "_ownership_decision",
         "_passes_by_value",
+        "_projected_output",
         "_shape",
     )
     _attribute_nodes = ()
@@ -414,7 +427,10 @@ class Variable:
         is_private=False,
         intent="in",
         passes_by_value=False,
+        fortran_array_category=None,
+        fortran_source_shape=None,
         ownership_decision=None,
+        projected_output=False,
         assumed_rank=False,
         shape=None,
         cls_base=None,
@@ -456,7 +472,12 @@ class Variable:
         if not isinstance(passes_by_value, bool):
             raise TypeError("passes_by_value must be a boolean.")
         self._passes_by_value = passes_by_value
+        self._fortran_array_category = fortran_array_category
+        self._fortran_source_shape = tuple(fortran_source_shape or ())
         self._ownership_decision = ownership_decision
+        if not isinstance(projected_output, bool):
+            raise TypeError("projected_output must be a boolean.")
+        self._projected_output = projected_output
         if not isinstance(assumed_rank, bool):
             raise TypeError("assumed_rank must be a boolean.")
         self._assumed_rank = assumed_rank
@@ -616,6 +637,21 @@ class Variable:
     def passes_by_value(self):
         """True when the native scalar dummy uses Fortran ``value`` ABI."""
         return self._passes_by_value
+
+    @property
+    def projected_output(self):
+        """True when this visible writable argument is projected as a Python result."""
+        return self._projected_output
+
+    @property
+    def fortran_array_category(self):
+        """Native Fortran array category used by ABI-sensitive printers."""
+        return self._fortran_array_category
+
+    @property
+    def fortran_source_shape(self):
+        """Native Fortran source dimensions used by ABI-sensitive printers."""
+        return self._fortran_source_shape
 
     @property
     def ownership_decision(self):

@@ -1,0 +1,3 @@
+def add_one(
+    value: Ptr(Const(Int32))
+) -> Int32: ...

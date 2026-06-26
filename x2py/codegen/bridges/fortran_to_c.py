@@ -465,12 +465,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _function_imports(self, function):
         """Return direct imports required to call an external function."""
-        needs_import = (
-            function.is_external
-            and function.scope.get_python_name(function.name) != "__del__"
-            and not self._has_optional_arguments(function)
-        )
-        return [Import(function.name, target=(), mod=function)] if needs_import else []
+        return []
 
     def _visit_FunctionOverloadSet(self, expr):
         """
@@ -844,11 +839,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                     is_kwarg=expr.is_kwarg,
                 )
 
-                if getattr(func, "is_external", False) and not self._has_optional_arguments(func):
+                if self._uses_positional_native_call(func):
                     func_def_argument_dict["f_arg"] = FunctionCallArgument(func_def_argument_dict["f_arg"])
                 else:
                     func_def_argument_dict["f_arg"] = FunctionCallArgument(
-                        func_def_argument_dict["f_arg"], keyword=expr.name
+                        func_def_argument_dict["f_arg"],
+                        keyword=self._native_argument_keyword(func, expr),
                     )
                 return func_def_argument_dict
 
@@ -989,11 +985,36 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             scope=adapter_scope,
         )
         self._additional_functions.append(adapter)
+        f_arg = (
+            FunctionCallArgument(adapter)
+            if self._uses_positional_native_call(func)
+            else FunctionCallArgument(adapter, keyword=self._native_argument_keyword(func, expr))
+        )
         return {
             "c_arg": FunctionDefArgument(c_callback),
-            "f_arg": FunctionCallArgument(adapter, keyword=expr.name),
+            "f_arg": f_arg,
             "body": [],
         }
+
+    @staticmethod
+    def _uses_positional_native_call(func) -> bool:
+        """Return whether the native call should avoid Fortran keywords."""
+
+        return (
+            getattr(func, "is_external", False)
+            or any(isinstance(argument.var, FunctionAddress) for argument in getattr(func, "arguments", ()))
+        ) and not FortranToCBridgeGenerator._has_optional_arguments(func)
+
+    @staticmethod
+    def _native_argument_keyword(func, expr):
+        """Return the original native keyword for a generated argument."""
+
+        if getattr(func, "scope", None) is None:
+            return expr.name
+        try:
+            return func.scope.get_python_name(expr.name)
+        except RuntimeError:
+            return expr.name
 
     def _convert_callback_abi_argument(self, callback_name, native_var, adapter_var, c_scope, adapter_scope):
         """Dispatch one callback argument to its ABI converter."""
@@ -1220,6 +1241,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
             return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": arg_var, "body": body}
 
+        base_shape = [
+            scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_base_shape_{i + 1}", is_argument=True)
+            for i in range(rank)
+        ]
         arg_var = var.clone(
             collisionless_name,
             is_argument=False,
@@ -1227,13 +1252,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             memory_handling="alias",
             new_class=Variable,
         )
+        pointer_shape = base_shape[::-1] if order == "C" else base_shape
         scope.insert_variable(arg_var)
         scope.insert_variable(bind_var)
 
-        base_shape = [
-            scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_base_shape_{i + 1}", is_argument=True)
-            for i in range(rank)
-        ]
         stride = (
             [
                 scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_stride_{i + 1}", is_argument=True)
@@ -1251,7 +1273,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             else []
         )
 
-        body = [C_F_Pointer(bind_var, arg_var, base_shape[::-1] if order == "C" else base_shape)]
+        body = [C_F_Pointer(bind_var, arg_var, pointer_shape)]
 
         c_arg_var = Variable(
             BindCArrayType.get_new(rank, has_strides=allows_strides),
@@ -1512,7 +1534,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             return self._build_snapshot_copy_scalar_result(orig_var)
         name = orig_var.name
         self.scope.insert_symbol(name)
-        local_var = orig_var.clone(self.scope.get_expected_name(name), new_class=Variable, is_argument=False)
+        local_var = orig_var.clone(
+            self.scope.get_expected_name(name),
+            new_class=Variable,
+            is_argument=False,
+            is_optional=False,
+        )
         return {
             "body": [],
             "c_result": BindCVariable(local_var, orig_var),
@@ -1530,6 +1557,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
             memory_handling=memory_handling,
             is_argument=False,
+            is_optional=False,
         )
         # Allocatable is not returned so it must appear in local scope
         scope.insert_variable(local_var, name)
@@ -1575,6 +1603,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             memory_handling=memory_handling,
             shape=shape,
             is_argument=False,
+            is_optional=False,
         )
         scope.insert_variable(local_var, name)
 
@@ -1603,6 +1632,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
             memory_handling=memory_handling,
             is_argument=False,
+            is_optional=False,
         )
         scope.insert_variable(local_var, name)
 
@@ -1659,6 +1689,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
             is_argument=False,
             memory_handling="alias",
+            is_optional=False,
         )
         bind_var = Variable(BindCPointer(), scope.get_new_name(f"bound_{name}"), memory_handling="alias")
         copy_var = orig_var.clone(
@@ -1666,12 +1697,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
             is_argument=False,
             memory_handling="alias",
+            is_optional=False,
         )
         size_var = orig_var.clone(
             scope.get_new_name(f"{name}_element"),
             new_class=Variable,
             is_argument=False,
             memory_handling="stack",
+            is_optional=False,
         )
         for variable in (pointer_var, copy_var, size_var):
             scope.insert_variable(variable)
@@ -1859,6 +1892,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         if isinstance(func, FunctionOverloadSet):
             selected = func.point(args)
             native_name = func.native_name_for(selected)
+            args = self._positional_native_arguments(args)
         else:
             selected = None
             native_name = ""
@@ -1876,6 +1910,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             return [*body, *self._assumed_rank_dispatch(func, generated_args, results), *post_body]
 
         return [*body, *self._native_call_body(func, args, results), *post_body]
+
+    @staticmethod
+    def _positional_native_arguments(args):
+        """Return native call arguments without generated bridge keywords."""
+        return [FunctionCallArgument(arg.value) for arg in args]
 
     @staticmethod
     def _native_call_body(func, args, results):
@@ -1964,8 +2003,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """Handle allocatable function result helper for the current generation context."""
         helper_name = self.scope.get_new_name(f"x2py_collect_{result.name}")
         helper_scope = self.scope.new_child_scope(helper_name, "function")
-        value = result.clone(helper_scope.get_new_name(f"{result.name}_value"), new_class=Variable, is_argument=False)
-        target = result.clone(helper_scope.get_new_name(f"{result.name}_target"), new_class=Variable, is_argument=False)
+        value = result.clone(
+            helper_scope.get_new_name(f"{result.name}_value"),
+            new_class=Variable,
+            is_argument=False,
+            is_optional=False,
+        )
+        target = result.clone(
+            helper_scope.get_new_name(f"{result.name}_target"),
+            new_class=Variable,
+            is_argument=False,
+            is_optional=False,
+        )
         value_arg = FunctionDefArgument(value)
         value_arg.make_const()
         target_arg = FunctionDefArgument(target)

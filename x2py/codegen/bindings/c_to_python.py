@@ -662,8 +662,8 @@ class CPythonBindingGenerator(BindingGenerator):
                     IfSection(
                         Is(python_arg_objs[0], python_arg_objs[1]),
                         [
-                            Py_INCREF(Py_None),
-                            Return(Py_None),
+                            Py_INCREF(python_arg_objs[0]),
+                            Return(python_arg_objs[0]),
                         ],
                     )
                 )
@@ -689,13 +689,22 @@ class CPythonBindingGenerator(BindingGenerator):
 
         functions = []
         if_sections = []
+        returns_assignment_target = expr.native_name.casefold() == "assignment(=)" and len(python_arg_objs) == 2
+        assignment_result = (
+            self._new_python_object("assignment_result", is_temp=True) if returns_assignment_target else None
+        )
         for func, index in argument_type_flags.items():
             # Add an IfSection calling the appropriate function if the type_indicator matches the index
             wrapped_func = self._python_object_map[func]
+            section_body = (
+                self._assignment_dispatch_return_body(wrapped_func, python_arg_objs, assignment_result)
+                if assignment_result is not None
+                else [Return(wrapped_func(*python_arg_objs))]
+            )
             if_sections.append(
                 IfSection(
                     Eq(type_indicator, convert_to_literal(index)),
-                    [Return(wrapped_func(*python_arg_objs))],
+                    section_body,
                 )
             )
             functions.append(wrapped_func)
@@ -732,6 +741,16 @@ class CPythonBindingGenerator(BindingGenerator):
             self._python_object_map.pop(a)
 
         return PyFunctionOverloadSet(func_name, functions, dispatcher_func, type_check_func, expr)
+
+    def _assignment_dispatch_return_body(self, wrapped_func, python_arg_objs, result_var):
+        """Call a private assignment target and return the mutated left-hand object."""
+        return [
+            AliasAssign(result_var, wrapped_func(*python_arg_objs)),
+            If(IfSection(Is(result_var, NIL), [Return(self._error_exit_code)])),
+            Py_DECREF(result_var),
+            Py_INCREF(python_arg_objs[0]),
+            Return(python_arg_objs[0]),
+        ]
 
     def _visit_FunctionDef(self, expr):
         """
@@ -2913,7 +2932,11 @@ class CPythonBindingGenerator(BindingGenerator):
             arg.var
             for arg in original_func.arguments
             if not arg.bound_argument
-            and (getattr(arg.var, "intent", "in") == "out" or self._is_allocatable_replacement_argument(arg.var))
+            and (
+                getattr(arg.var, "intent", "in") == "out"
+                or self._is_projected_output_argument(arg.var)
+                or self._is_allocatable_replacement_argument(arg.var)
+            )
         )
         if not result_vars:
             result_vars = self._doc_result_vars(func)
@@ -4367,7 +4390,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 discarded_owned_items,
             )
             return native_index + 1
-        if getattr(orig_var, "intent", "in") != "out":
+        if getattr(orig_var, "intent", "in") != "out" and not self._is_projected_output_argument(orig_var):
             return native_index
         visible_object = visible_outputs.get(orig_var) or visible_outputs.get(output_name)
         if output_name in excluded:
@@ -4409,10 +4432,16 @@ class CPythonBindingGenerator(BindingGenerator):
         for argument in func.arguments:
             var = argument.var
             orig_var = getattr(var, "original_var", var)
-            if getattr(orig_var, "intent", "in") == "out":
+            if getattr(orig_var, "intent", "in") == "out" or self._is_projected_output_argument(orig_var):
                 outputs[orig_var] = self._python_object_map[argument]
                 outputs[getattr(orig_var, "name", None)] = self._python_object_map[argument]
         return outputs
+
+    @staticmethod
+    def _is_projected_output_argument(var) -> bool:
+        """Return whether a compact visible argument is explicitly projected."""
+        original = getattr(var, "original_var", var)
+        return bool(getattr(original, "projected_output", False))
 
     def _connect_pointer_targets(self, orig_var, python_res, funcdef, is_bind_c):
         """

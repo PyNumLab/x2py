@@ -57,54 +57,31 @@ contract output and build models stabilize first, feature parity builds on that
 foundation, editable policy follows unmodified parity, and library-scale tests
 exercise the completed build surface last.
 
-### Stage 4 — Shared parity harness and standalone procedures
-
-- [ ] Apply one parametrized imported-module fixture to every parity-eligible
-  wrapper feature. The same test function and assertion body are collected once
-  for `source` and once for `generated-pyi`.
-- [ ] Limit source-only and generated-`.pyi`-only tests to path-specific
-  properties, with each exception justified in the test name or a nearby
-  comment.
-- [ ] One fixed-form source containing one standalone procedure generates a
-  non-empty root fragment with `@external` and rebuilds equivalently.
-- [ ] One free-form source containing one standalone procedure has the same
-  `@external` generation and runtime parity.
-- [ ] One source containing several standalone procedures generates external
-  declarations for all of them and exposes each at the extension root.
-- [ ] `@external` makes the bridge emit an explicit interface and no module
-  `use`; a module procedure makes the bridge emit the correct `use <module>`.
-- [ ] `@external` composes with `@bind("native_name")`: the native external is
-  called while the wrapper declaration and root export may use different names.
-- [ ] A handwritten external `.pyi` plus native artifacts builds without source
-  and follows the same placement, binding, validation, and export rules.
-- [ ] Removing `@external` from a generated external declaration, adding it to a
-  module procedure, changing native scope, or moving a declaration between
-  module contracts fails during validation or readiness before code generation.
-
 ### Stage 5 — Full generated-contract runtime parity
 
-- [ ] Allocatable and pointer module variables round-trip their target,
+- [x] Allocatable and pointer module variables round-trip their target,
   lifetime, nullability, shape, and transfer contracts.
-- [ ] Generic interfaces and overload sets rebuild from `.pyi` with the same
+- [x] Generic interfaces and overload sets rebuild from `.pyi` with the same
   dispatch table, concrete target links, error messages, and Python-visible
   names as the source-driven build.
-- [ ] Derived-type fields, methods, inheritance metadata, constructors,
+- [x] Derived-type fields, methods, inheritance metadata, constructors,
   finalizers, borrowed children, and owned result behavior rebuild from `.pyi`
   without consulting the original source declarations.
-- [ ] Array dtype, rank, shape, order, stride, lower-bound, writeability,
+- [x] Array dtype, rank, shape, order, stride, lower-bound, writeability,
   alignment, byte-order, and zero-extent validation rebuild from `.pyi` with the
   same runtime failures and success cases.
-- [ ] Character kind, deferred/allocatable storage, fixed buffer, and
+- [x] Character kind, deferred/allocatable storage, fixed buffer, and
   copy-in/copy-out behavior rebuild from `.pyi` with the same Python string
   contract.
-- [ ] Runtime policies from `.pyi`, including `@hold_gil` and `@raises(...)`,
+- [x] Runtime policies from `.pyi`, including `@hold_gil` and `@raises(...)`,
   are honored by generated C bindings.
-- [ ] Callback contracts rebuild from `.pyi` with the same call-scoped lifetime,
+- [x] Callback contracts rebuild from `.pyi` with the same call-scoped lifetime,
   GIL handling, exception failure mode, array validation, and derived-type
   conversion behavior.
-- [ ] Every parity-eligible runtime fixture in `tests/wrapper` uses the shared
-  source/generated-contract assertion body and rebuilds without reparsing native
-  source.
+- [x] Every parity-eligible runtime fixture in `tests/wrapper` has a checked
+  generated `.pyi` package fixture under its consuming subject, uses the shared
+  source/generated-contract assertion body, and rebuilds without reparsing
+  native source.
 
 ### Stage 6 — Editable contract semantics
 
@@ -189,8 +166,6 @@ python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
 
 ### Stage 8 — Library-scale and mixed-bundle evidence
 
-- [ ] Several standalone-procedure files build one BLAS/LAPACK-style extension
-  from generated external fragments and a generated `__init__.pyi`.
 - [ ] Several contracts imported by one entry resolve from one archive or shared
   library, and one entry resolves from several objects and libraries.
 - [ ] Module procedures work with separately supplied `.mod` directories;
@@ -198,8 +173,8 @@ python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
 - [ ] A mixed bundle containing native modules and standalone external
   procedures exposes module members below their namespaces and externals at the
   extension root.
-- [ ] The BLAS/LAPACK-style path is tested independently with object files, a
-  static archive, a direct shared-library path, and `--native-library` plus
+- [ ] The BLAS/LAPACK-style path is tested independently with a static archive,
+  a direct shared-library path, and `--native-library` plus
   `--native-library-dir`.
 - [ ] Mixed object, archive, direct shared-library, and named-library inputs
   preserve dependency-safe link order and resolve every native symbol.
@@ -214,9 +189,11 @@ python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
 ### Stage 1 — Searchable Test Layout, Contract Output, And Fixtures
 
 Runtime wrapper tests are organized by stable subjects under
-`tests/wrapper/fortran/`: `contract_generation/`, `native_build/`,
-`multi_source/`, `standalone/`, `feature_parity/`, `editable_contracts/`,
-`parity_policy/`, and `library_scale/`.
+`tests/wrapper/fortran/`: `build_from_source/`, `build_from_pyi/`,
+`multiple_files/`, `external_routines/`, `real_libraries/`,
+`edit_pyi_contracts/`, `arrays/`, `scalars/`, `function_calls/`,
+`strings/`, `derived_types/`, `callbacks/`, `module_state/`,
+`runtime_behavior/`, `naming/`, and `layout_rules/`.
 
 - [x] Wrapper test modules live under the stable subject directories above,
   using descriptive filenames and subject README files. The index is
@@ -229,10 +206,16 @@ Runtime wrapper tests are organized by stable subjects under
   colocated source fixtures.
 - [x] Runtime `.pyi` contracts stay under the consuming subject's
   `contracts/<case>/` tree. Current checked fixtures include
-  `contract_generation/contracts/runtime_abi/generated/fruntime_abi_f90.pyi`,
-  `contract_generation/contracts/basic_subroutine/modified/flatten_m1.pyi`,
-  `contract_generation/contracts/basic_subroutine/modified/alias_increment.pyi`,
-  and `contract_generation/contracts/projection_metadata/invalid/incomplete_native_call.pyi`.
+  `build_from_pyi/contracts/runtime_abi/fruntime_abi_f90.pyi`,
+  `build_from_pyi/modified_contracts/basic_subroutine/flatten_m1.pyi`,
+  `build_from_pyi/modified_contracts/basic_subroutine/alias_increment.pyi`,
+  and `build_from_pyi/invalid_contracts/projection_metadata/incomplete_native_call.pyi`.
+- [x] Generated `.pyi` packages are checked fixtures. Runtime wrapper contract
+  packages live under
+  `tests/wrapper/fortran/<subject>/contracts/<case>/`; explicit
+  `--pyi --out` package-shape fixtures that do not compile wrappers live under
+  `tests/pyi/fixtures/wrapper_contracts/`. Refresh is explicit through
+  `WRAPPER_UPDATE_PYI_FIXTURES=1`.
 - [x] Modified runtime fixtures use `.pyi`, record their intentional difference
   in the fixture text, and have runtime assertions for both the changed export
   contract and unaffected native behavior.
@@ -241,9 +224,11 @@ Runtime wrapper tests are organized by stable subjects under
 - [x] `tests/pyi/fixtures/general/` remains the canonical exact `.pyi`
   generation-regression suite and is not used for compiled runtime contract
   fixtures.
+- [x] Explicit Fortran `--pyi --out` package-shape fixtures that do not compile
+  runtime wrappers live under `tests/pyi/fixtures/wrapper_contracts/`.
 - [x] `tests/wrapper/CHECKLIST_COVERAGE.md` maps roadmap subjects to exact test
   paths.
-- [x] `tests/wrapper/fortran/parity_policy/test_wrapper_guide_layout.py`
+- [x] `tests/wrapper/fortran/layout_rules/test_wrapper_guide_layout.py`
   enforces the subject tree, README fields, checklist routing, shared native
   fixture data, runtime contract placement, and stale-path rejection.
 - [x] Explicit Fortran `--pyi --out` output writes contract packages and rejects
@@ -305,6 +290,117 @@ sit directly under `PATH`.
   covering single-source packages, two-source/four-module packages,
   source-free wrapper builds, Python API parity builds, and modified entry
   export policy.
+
+### Stage 4 — Shared Parity Harness And Standalone Procedures
+
+Standalone external procedure parity now lives in
+`tests/wrapper/fortran/external_routines/test_external_procedures.py`. Generated
+external-only contract bundles keep one compact entry `.pyi`; native sources,
+objects, archives, and libraries remain separate build-plan facts.
+
+- [x] Standalone parity tests use the shared `source` / `generated-pyi`
+  parametrized fixture shape, so fixed-form, free-form, and multi-procedure
+  external cases share one assertion body per behavior.
+- [x] Source-only and generated-`.pyi`-only checks are limited to path-specific
+  properties such as exact generated contract text, bridge-source inspection,
+  and validation-before-codegen failures.
+- [x] One fixed-form source containing one standalone procedure generates a
+  non-empty root fragment with `@external` and rebuilds equivalently.
+- [x] One free-form source containing one standalone procedure has the same
+  `@external` generation and runtime parity.
+- [x] One source containing several standalone procedures generates external
+  declarations for all of them and exposes each at the extension root.
+- [x] Several file-level BLAS/LAPACK-style standalone sources can generate one
+  compact entry `.pyi` containing all external declarations while the native
+  build plan links the separated objects in caller order.
+- [x] `@external` makes the bridge emit an explicit interface and no module
+  `use`; a module procedure makes the bridge emit the correct `use <module>`.
+- [x] `@external` composes with `@bind("native_name")`: the native external is
+  called while the wrapper declaration and root export may use different names.
+- [x] A handwritten external `.pyi` plus native artifacts builds without source
+  and follows the same placement, binding, validation, and export rules.
+- [x] Removing `@external` from a generated package-entry declaration or adding
+  it to a declaration inside a child-namespace module contract fails during
+  validation before wrapper code generation.
+
+### Stage 5 — In-Progress Generated-Contract Runtime Parity Evidence
+
+- [x] The verified scalar baseline and legacy/F90 fmath array baseline run in
+  both `source` and `generated-pyi` modes through the same assertion bodies.
+  The generated contracts are compared against checked fixtures, the `.pyi`
+  build links only explicit native objects, and generated contracts encode
+  normalized Python public names with `@bind(...)` when the native Fortran name
+  differs. Scalar-kind, enum-like constant, `value`, and existing `bind(C)`
+  ABI cases also run from generated contracts with the same runtime assertions.
+- [x] Function-call parity covers optional arguments, hidden output arguments,
+  projected return ordering, nullable allocatable copy returns, and validation
+  failures in both `source` and `generated-pyi` modes through shared assertion
+  bodies. Generated `.pyi` builds clear Fortran `optional` attributes from
+  bridge-local result temporaries while preserving Python `None` behavior for
+  unallocated allocatables.
+- [x] Array parity covers dtype, rank, shape, order, stride, lower-bound,
+  writeability, byte-order, alignment, zero-extent validation, multidimensional
+  order/stride checks, assumed-rank runtime dispatch up to the supported rank
+  boundary, and Python-owned array results in both `source` and `generated-pyi`
+  modes through shared assertion bodies.
+- [x] Character parity covers fixed-length buffers, assumed-length strings,
+  deferred character results, copy-in/copy-out for mutable strings, optional
+  character arguments, Unicode round-trips, and embedded-NUL validation in both
+  `source` and `generated-pyi` modes. `.pyi` parser regressions keep visible
+  inout projected returns visible while preserving explicit output-only
+  projection.
+- [x] Derived-type parity covers fields, methods, type-bound root target
+  procedures, default/keyword constructors, finalizers, borrowed child
+  lifetime, scalar object boundaries, inheritance, polymorphic dispatch, and
+  pointer snapshot results in both `source` and `generated-pyi` modes. `.pyi`
+  parser regressions restore type-bound target metadata from class method
+  declarations.
+- [x] Callback parity covers scalar, array, and derived callback conversions,
+  call-scoped callback lifetime, GIL entry handling, reference cleanup, and
+  callback exception abort behavior in both `source` and `generated-pyi` modes.
+  `.pyi` parser regressions infer callback dimension argument names so callback
+  array result shapes remain explicit.
+- [x] Module-state parity covers scalar module attributes, parameter behavior,
+  saved native state shared across imports, allocatable module and derived-type
+  borrowed views, allocatable replacement/copy-return ownership, nullability,
+  and common-block encapsulation in both `source` and `generated-pyi` modes.
+- [x] Runtime behavior parity covers recursive native calls in both `source`
+  and `generated-pyi` modes, plus edited `.pyi` runtime policy decorators for
+  `@hold_gil` and `@raises(...)` using native object builds. OpenMP remains
+  source/makefile evidence until Stage 7 adds `.pyi` makefile/native-flag
+  replay.
+- [x] Naming and generic-interface parity covers public-name normalization,
+  visibility filtering, keyword/collision policy, public generic dispatch,
+  type-bound binding names, defined operators, comparisons, named operators,
+  and assignment behavior in both `source` and `generated-pyi` modes.
+  `.pyi` regressions keep class/member name reservations scoped separately,
+  import public native generics instead of private specific procedures, and
+  preserve keyword-normalized type-bound binding names.
+
+### Stage 8 — Library-Scale And Mixed-Bundle Evidence
+
+Real BLAS/LAPACK object-file evidence now lives in
+`tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py`.
+
+- [x] Several selected standalone-procedure files copied from the real
+  `tests/data/fortran/blas/` and `tests/data/fortran/lapack/` parser corpora
+  build one BLAS/LAPACK-style extension from one generated compact
+  `__init__.pyi`.
+- [x] The generated contract imports no module leaves, marks every selected
+  routine as `@external`, preserves assumed-size array ABI with `Flat`
+  dimensions, and builds from separated object files without reparsing native
+  source.
+- [x] The generated compact BLAS/LAPACK contract is compared against the
+  checked-in wrapper fixture under
+  `tests/wrapper/fortran/real_libraries/contracts/real_blas_lapack/`;
+  refresh is explicit through `WRAPPER_UPDATE_PYI_FIXTURES=1`.
+- [x] Runtime evidence imports every selected BLAS/LAPACK routine through the
+  normalized Python names and limits numerical checks to a few smoke calls:
+  `daxpy`, `ddot`, `dasum`, and `dlamrg`.
+- [x] Handwritten external-contract evidence covers C-order flat storage
+  (`Annotated[Float64[Flat, 3], ORDER_C]`) by validating a multidimensional
+  Python view while passing a rank-preserving bridge view to an assumed-size
+  native dummy.
 
 ### Immutable Native Contract
 
@@ -378,8 +474,10 @@ Make generated contracts complete and reproducible before composing them.
 - [x] Standalone fixed-form and free-form procedures emit non-empty `.pyi`
   contracts with explicit `@external` placement.
 - [x] General parser fixtures check in generated source-owned contract
-  directories under `tests/pyi/fixtures/general/`; runtime parity fixtures live
-  under `tests/wrapper/fortran/contract_generation/contracts/` as they are added.
+  directories under `tests/pyi/fixtures/general/`; explicit `--pyi --out`
+  package fixtures live under `tests/pyi/fixtures/wrapper_contracts/`; runtime
+  parity fixtures live under the consuming `tests/wrapper/fortran/<subject>/`
+  `contracts/` tree as they are added.
 - [x] The general fixture suite and runtime parity baseline compare regenerated
   `.pyi` text exactly with the checked-in contract, so generator drift is
   explicit in review.
@@ -455,7 +553,9 @@ not reparse source; the test name or a nearby comment must state that reason.
 Modified-contract tests remain separate when they intentionally assert a
 different public API or runtime contract.
 
-- [x] Store `.pyi` parity fixtures under `tests/wrapper/fortran/contract_generation/contracts/`.
+- [x] Store `.pyi` parity fixtures under the consuming wrapper subject, with
+  source-free native-object wrapper smoke coverage under
+  `tests/wrapper/fortran/build_from_pyi/contracts/`.
 - [x] Generate a `.pyi` from a source fixture, rebuild from the generated `.pyi`
   plus a native object, and compare runtime behavior with the source-driven
   build for the first callable-only fixture.

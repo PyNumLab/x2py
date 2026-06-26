@@ -38,7 +38,7 @@ The recipes reuse these checked fixtures:
 
 | Purpose | Repository fixture |
 | --- | --- |
-| Compiled Fortran wrapper and scalar call | `tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90` |
+| Compiled Fortran wrapper and scalar call | `tests/data/fortran/wrapper/fruntime_abi_f90.f90` |
 | Basic Fortran procedure | `tests/data/fortran/general/basic_subroutine.f90` |
 | Basic C functions, pointers, and arrays | `tests/data/c/general/math_api.h` |
 | Rich Fortran module, types, arrays, and visibility | `tests/data/fortran/general/modern_pyi_example.f90` |

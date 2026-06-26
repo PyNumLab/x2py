@@ -1,0 +1,123 @@
+"""Allocatable ``intent(inout)`` replacement and ownership tests."""
+
+import gc
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from tests.wrapper.fortran._support import (
+    WRAPPER_TEST_ROOT,
+    _build_source_or_generated_pyi_and_import,
+    wrapper_source,
+)
+
+ALLOCATABLE_INOUT_F90_SOURCE = wrapper_source("fallocatable_inout_f90.f90")
+CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
+
+
+def _allocatable_replacement_build_dir(tmp_path: Path, build_mode: str) -> Path:
+    if build_mode == "source":
+        return tmp_path / "source_build"
+    return tmp_path / "generated_pyi_build" / "pyi_build"
+
+
+def test_allocatable_inout_arrays_are_replaced_with_python_owned_results(
+    pyi_parity_build_mode: str,
+    tmp_path: Path,
+):
+    module = _build_source_or_generated_pyi_and_import(
+        ALLOCATABLE_INOUT_F90_SOURCE,
+        tmp_path,
+        {
+            "bind_c_fallocatable_inout_f90_wrapper.f90",
+            "fallocatable_inout_f90_wrapper.c",
+            "fallocatable_inout_f90_wrapper.h",
+        },
+        CONTRACT_FIXTURES / "fallocatable_inout_f90",
+        pyi_parity_build_mode,
+    )
+
+    assert "values : ndarray[float64] or None" in module.replace_values.__doc__
+    assert "May be passed as None for initially unallocated storage." in module.replace_values.__doc__
+    assert "Mutates: no; returns a replacement array or None" in module.replace_values.__doc__
+
+    allocated = module.replace_values(None, np.int32(1))
+    np.testing.assert_allclose(allocated, np.array([1.0, 2.0], dtype=np.float64))
+    assert allocated.base is not None
+
+    original = np.array([3.0, 4.0], dtype=np.float64)
+    replaced = module.replace_values(original, np.int32(1))
+    np.testing.assert_allclose(original, np.array([3.0, 4.0], dtype=np.float64))
+    np.testing.assert_allclose(replaced, np.array([13.0, 14.0], dtype=np.float64))
+
+    reallocated = module.replace_values(original, np.int32(3))
+    np.testing.assert_allclose(original, np.array([3.0, 4.0], dtype=np.float64))
+    np.testing.assert_allclose(reallocated, np.array([3.0, 6.0, 9.0], dtype=np.float64))
+
+    assert module.replace_values(reallocated, np.int32(0)) is None
+    assert module.replace_values(None, np.int32(0)) is None
+
+    del allocated, replaced, reallocated
+    gc.collect()
+
+    for mode in (1, 2, 0) * 5:
+        transient = module.replace_values(None, np.int32(mode))
+        del transient
+        gc.collect()
+
+    with pytest.raises(TypeError):
+        module.replace_values(np.array([1.0], dtype=np.float32), np.int32(1))
+    with pytest.raises(TypeError):
+        module.replace_values(np.array([[1.0]], dtype=np.float64), np.int32(1))
+
+
+@pytest.mark.skipif(shutil.which("valgrind") is None, reason="Valgrind is required for native ownership checks")
+def test_allocatable_replacement_has_no_native_memory_errors(pyi_parity_build_mode: str, tmp_path: Path):
+    _build_source_or_generated_pyi_and_import(
+        ALLOCATABLE_INOUT_F90_SOURCE,
+        tmp_path,
+        {
+            "bind_c_fallocatable_inout_f90_wrapper.f90",
+            "fallocatable_inout_f90_wrapper.c",
+            "fallocatable_inout_f90_wrapper.h",
+        },
+        CONTRACT_FIXTURES / "fallocatable_inout_f90",
+        pyi_parity_build_mode,
+    )
+    build_dir = _allocatable_replacement_build_dir(tmp_path, pyi_parity_build_mode)
+    script = """
+import gc
+import numpy as np
+import fallocatable_inout_f90 as module
+module = module.fallocatable_inout_f90
+
+for mode in (1, 2, 0) * 50:
+    value = module.replace_values(None, np.int32(mode))
+    del value
+gc.collect()
+"""
+    result = subprocess.run(
+        [
+            "valgrind",
+            "--quiet",
+            f"--suppressions={WRAPPER_TEST_ROOT / 'valgrind.supp'}",
+            "--error-exitcode=99",
+            "--leak-check=full",
+            "--show-leak-kinds=definite",
+            "--errors-for-leak-kinds=definite",
+            "--track-origins=yes",
+            sys.executable,
+            "-c",
+            script,
+        ],
+        cwd=build_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr

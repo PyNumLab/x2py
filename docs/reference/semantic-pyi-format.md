@@ -188,7 +188,7 @@ the generator does not add per-source directories.
 | One source containing several modules | `__init__.pyi` plus one flat leaf per native module |
 | Several ordered sources containing modules | one combined package with one `__init__.pyi` and one flat leaf per native module across all sources |
 | One fixed- or free-form source containing only standalone procedures | one `__init__.pyi` entry with `@external` on every procedure |
-| Several standalone-procedure sources, such as BLAS/LAPACK | one entry contract importing or containing organized external fragments |
+| Several standalone-procedure sources, such as BLAS/LAPACK | one compact `__init__.pyi` entry containing all generated `@external` declarations |
 | Mixed modules and standalone procedures | one entry contract containing standalone declarations and importing module leaves |
 
 For example, explicit output for `basic_subroutine.f90` containing module `m1`
@@ -250,19 +250,64 @@ The entry imports module leaves in source order. Native source order and native
 link order remain build-plan facts; the `.pyi` package records the Python API
 and native module topology.
 
-For a LAPACK-style project, the organized layout may be:
+For a BLAS/LAPACK-style folder containing only standalone procedures, generated
+output stays compact. Even when the native implementation remains split across
+several source files, explicit `--pyi --out contracts` emits one entry
+contract:
 
 ```text
-contracts/lapack/
-├── __init__.pyi
-└── externals/
-    ├── dgesv.pyi
-    ├── dgetrf.pyi
-    └── dgetrs.pyi
+contracts/
+└── __init__.pyi  # @external dgesv, @external dgetrf, @external dgetrs
 ```
 
-The entry is still the sole wrapper input. The `externals/` directory organizes
-contract fragments; its declarations appear only where the entry imports them.
+The entry is still the sole wrapper input. The native build plan remains
+separate: each original Fortran source may compile to its own object, or the
+procedures may come from one archive or shared library. This compact generated
+shape applies only to standalone `@external` procedures. If a bundle also
+contains native modules, those modules still generate one flat module leaf per
+native module and the entry imports those leaves.
+
+For legacy BLAS/LAPACK-style assumed-size arrays such as `DX(*)`, generated
+contracts use `Flat`:
+
+```python
+@external
+def DAXPY(
+    N: Ptr(Int32),
+    DA: Ptr(Float64),
+    DX: Float64[Flat],
+    INCX: Ptr(Int32),
+    DY: Float64[Flat],
+    INCY: Ptr(Int32),
+) -> None: ...
+```
+
+`Float64[3, Flat]` maps to `real :: a(3, *)`, and
+`Float64[3, 4, Flat]` maps to `real :: a(3, 4, *)`. The Python-visible flat
+dimension remains unconstrained, but the explicit Fortran interface generated
+from the `.pyi` uses `DX(*)`/`DY(*)` instead of assumed-shape descriptors.
+
+C-order flat storage can be expressed for native routines that consume a raw
+flat buffer while the Python contract validates a multidimensional C-contiguous
+view:
+
+```python
+from typing import Annotated
+
+@external
+def row_sums(
+    n: Ptr(Int32),
+    values: Annotated[Float64[Flat, 3], ORDER_C],
+    result: Float64[Flat],
+) -> None: ...
+```
+
+Here `values` is not a literal Fortran dummy declaration such as `real ::
+values(*, 3)`, which Fortran does not allow. It is a Python storage contract:
+the wrapper validates a C-contiguous `(n, 3)` view, constructs the corresponding
+rank-2 Fortran bridge view over the same storage, and passes it to the native
+assumed-size dummy. The native routine's `values(*)` dummy receives the
+flattened element sequence and interprets the elements in row-major order.
 
 ### Native Artifacts And Link Resolution
 
@@ -552,6 +597,9 @@ vector: Float64[:]
 fixed: Float64[3]
 matrix: Float64[n, m]
 strided: Float64[::Strided]
+flat: Float64[Flat]
+flat_matrix: Float64[3, Flat]
+c_flat_matrix: Annotated[Float64[Flat, 3], ORDER_C]
 rank_polymorphic: Float64[...]
 ```
 
@@ -564,7 +612,22 @@ Dimension entries have the following meaning:
 | `lower:upper` | range-like storage expression |
 | `::Strided` | axis accepts runtime stride |
 | `0:n:Strided` | range plus stride-aware axis |
+| `Flat` | edge-position flat contiguous storage dimension |
 | `...` | rank-polymorphic storage |
+
+`Flat` must appear exactly once at either edge of a concrete-rank array. Final
+`Flat` is Fortran-oriented flat storage: `Float64[3, Flat]` corresponds to
+`real :: a(3, *)`. Leading `Flat` is C-oriented flat storage and should be
+spelled with explicit `ORDER_C` in Fortran-facing contracts:
+`Annotated[Float64[Flat, 3], ORDER_C]`. It validates a C-contiguous Python
+view, constructs a rank-preserving bridge view over the same storage, and passes
+that view to the native assumed-size dummy. It does not imply an invalid
+Fortran declaration such as `real :: a(*, 3)`.
+
+The Python argument may provide more storage than the declared explicit
+dimensions describe, but the wrapper passes it to native code without a stride
+descriptor. Non-contiguous arrays in the required native layout must be rejected
+or copied into a contiguous temporary.
 
 Qualified names such as `foo.bar` are not accepted as dimension expressions.
 Use local constants or generated `Final[...]` names for shape symbols.
@@ -589,7 +652,7 @@ Generated canonical metadata:
 | `Allocatable` | Fortran allocatable array storage |
 | `Pointer` | Fortran pointer array storage |
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
-| `Intent("out")` | exact native argument is an output argument |
+| `Intent("out")` | exact native argument is an output argument when that fact changes wrapper behavior |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
 | `FortranTarget` | native storage has the Fortran `target` attribute needed for module zero-copy views |
@@ -746,6 +809,13 @@ Fortran scalar dummy arguments are generated as:
 | no `value`, `intent(inout)` | `Ptr(T)` |
 | `value` | direct `T` |
 | function result | direct return annotation |
+
+Visible non-allocatable array output buffers are compact by default. They are
+still passed to native code as writable arrays and projected with
+`Returns["name", T]`, but generated `.pyi` does not add `Intent("out")` because
+the native procedure owns the source-level discard-initial-value semantics. Use
+explicit `Intent("out")` in edited contracts only when output intent changes
+allocation, ownership, temporary, or copy/readback behavior.
 
 Loaded return forms:
 
@@ -926,18 +996,19 @@ explicit mutation:
 ```python
 @private
 def assign_vector_real(
-    left: Annotated[Ptr(vector), Intent("out")],
+    left: Ptr(vector),
     right: Ptr(Const(Float64)),
-) -> None: ...
+) -> Returns["left", Ptr(vector)]: ...
 
 class vector:
     @overload("assign_vector_real")
-    def assign(self, right: Ptr(Const(Float64))) -> None: ...
+    def assign(self, right: Ptr(Const(Float64))) -> vector: ...
 ```
 
 `lhs.assign(rhs)` invokes native `lhs = rhs`, mutates the existing wrapped
-object, preserves Python object identity, and returns `None`. It never replaces
-the Python variable. Assigning an object to itself is a no-op. A supported
+object, preserves Python object identity, and returns the same object. Both
+`lhs.assign(rhs)` and `lhs = lhs.assign(rhs)` are therefore valid. Assigning an
+object to itself is a no-op that returns the existing object. A supported
 specific must be a two-argument subroutine whose wrapped derived-type LHS has
 `intent(out)` or `intent(inout)` and whose RHS has `intent(in)`. Unsafe or
 unsupported forms are readiness blockers.

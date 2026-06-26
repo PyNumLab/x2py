@@ -1,0 +1,27 @@
+def plus_value(
+    n: Int32
+) -> Int32: ...
+
+def double_value(
+    n: Int32
+) -> Int32: ...
+
+def plus_reference(
+    n: Ptr(Const(Int32))
+) -> Int32: ...
+
+def scale_real(
+    x: Float64
+) -> Float64: ...
+
+def conjugate_value(
+    z: Complex128
+) -> Complex128: ...
+
+def invert_flag(
+    flag: Bool
+) -> Bool: ...
+
+def char_code(
+    ch: String[1]
+) -> Int32: ...

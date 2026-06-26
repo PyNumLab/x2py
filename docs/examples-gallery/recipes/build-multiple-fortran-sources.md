@@ -18,8 +18,8 @@ merged extension:
 
 ```bash
 python3 -m x2py \
-  tests/data/fortran/wrapper/multi_source/modules/first_api.f90 \
-  tests/data/fortran/wrapper/multi_source/modules/second_api.f90 \
+  tests/data/fortran/wrapper/first_api.f90 \
+  tests/data/fortran/wrapper/second_api.f90 \
   --wrap \
   --out-dir build/multi_api \
   --json
@@ -51,8 +51,8 @@ The same ordered source list can generate one combined semantic `.pyi` package:
 
 ```bash
 python3 -m x2py \
-  tests/data/fortran/wrapper/multi_source/modules/first_api.f90 \
-  tests/data/fortran/wrapper/multi_source/modules/second_api.f90 \
+  tests/data/fortran/wrapper/first_api.f90 \
+  tests/data/fortran/wrapper/second_api.f90 \
   --pyi \
   --out contracts/multi_api
 ```

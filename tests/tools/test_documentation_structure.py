@@ -201,6 +201,7 @@ SOURCE_NAVIGATION_TEST_TARGETS = [
     "tests/parser/test_preprocessing_cli.py",
     "tests/parser/test_preprocessor_and_execution_boundaries.py",
     "tests/pyi/",
+    "tests/pyi/test_contract_package_generation.py",
     "tests/pyi/test_pyi_fixture_suite.py",
     "tests/pyi/test_pyi_to_ir.py",
     "tests/semantics/",
@@ -214,9 +215,10 @@ SOURCE_NAVIGATION_TEST_TARGETS = [
     "tests/tools/test_documentation_examples.py",
     "tests/tools/test_documentation_structure.py",
     "tests/wrapper/fortran/",
-    "tests/wrapper/fortran/multi_source/test_multi_source_builds.py",
-    "tests/wrapper/fortran/native_build/test_build_modes.py",
-    "tests/wrapper/fortran/native_build/test_runtime_abi.py",
+    "tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py",
+    "tests/wrapper/fortran/multiple_files/test_multi_source_builds.py",
+    "tests/wrapper/fortran/build_from_source/test_build_modes.py",
+    "tests/wrapper/fortran/build_from_source/test_runtime_abi.py",
 ]
 PACKAGE_README_NAVIGATION_REFERENCES = [
     "docs/developer-guide/source-map.md",

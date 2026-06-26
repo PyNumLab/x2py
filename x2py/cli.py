@@ -128,7 +128,7 @@ def _expand_paths(paths: list[str]) -> list[Path]:
             expanded.extend(_collect_extensions(p))
         else:
             expanded.append(p)
-    return sorted(set(expanded))
+    return list(dict.fromkeys(expanded))
 
 
 def _expand_readiness_paths(paths: list[str]) -> list[Path]:
@@ -457,12 +457,24 @@ def _fortran_contract_payload(path: Path, modules, available_modules) -> dict[st
     native_modules = [module for module in modules if module.origin.source_kind == "module"]
     external_modules = [module for module in modules if module.origin.source_kind != "module"]
     root_modules = [module.name for module in native_modules]
-    emitted = emit_module_stubs(native_modules, available_modules=available_modules) if native_modules else {}
+    emitted = (
+        emit_module_stubs(
+            native_modules,
+            available_modules=available_modules,
+            normalize_fortran_public_names=True,
+        )
+        if native_modules
+        else {}
+    )
     module_stubs = {module.name: emitted.pop(module.name) for module in native_modules}
     dependencies = dict(emitted)
     external_text = []
     for module in external_modules:
-        external_stubs = emit_module_stubs([module], available_modules=available_modules)
+        external_stubs = emit_module_stubs(
+            [module],
+            available_modules=available_modules,
+            normalize_fortran_public_names=True,
+        )
         external_text.append(external_stubs.pop(module.name))
         for name, text in external_stubs.items():
             if name in dependencies and dependencies[name] != text:

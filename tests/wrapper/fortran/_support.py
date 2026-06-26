@@ -10,7 +10,9 @@ from types import ModuleType
 import numpy as np
 import pytest
 
+from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran.fmath_cases import fmath_cases
+from x2py import build_pyi_extension
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WRAPPER_TEST_ROOT = Path(__file__).resolve().parent
@@ -19,10 +21,12 @@ WRAPPER_FORTRAN_DATA = REPO_ROOT / "tests" / "data" / "fortran" / "wrapper"
 
 @cache
 def wrapper_source(filename: str) -> Path:
-    matches = tuple(sorted(WRAPPER_FORTRAN_DATA.rglob(filename)))
-    if len(matches) != 1:
-        raise FileNotFoundError(f"Expected one wrapper Fortran fixture named {filename!r}, found {len(matches)}")
-    return matches[0]
+    if Path(filename).name != filename:
+        raise FileNotFoundError(f"Wrapper Fortran fixtures are flat; expected a filename, got {filename!r}")
+    source = WRAPPER_FORTRAN_DATA / filename
+    if not source.is_file():
+        raise FileNotFoundError(f"Expected wrapper Fortran fixture {filename!r} under {WRAPPER_FORTRAN_DATA}")
+    return source
 
 
 def _assert_fmath_examples(module):
@@ -81,6 +85,101 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
         return _sole_native_module(importlib.import_module(module_name))
     finally:
         sys.path.remove(str(workdir))
+
+
+def _compiler() -> str:
+    compiler = shutil.which("gfortran")
+    if compiler is None:
+        pytest.skip("gfortran is required for Fortran wrapper runtime tests")
+    return compiler
+
+
+def _compile_native_object(source: Path, native_dir: Path) -> Path:
+    native_dir.mkdir(parents=True, exist_ok=True)
+    native_source = native_dir / source.name
+    shutil.copyfile(source, native_source)
+    native_object = native_dir / f"{source.stem}.o"
+    subprocess.run(
+        [
+            _compiler(),
+            "-fPIC",
+            "-c",
+            str(native_source),
+            "-o",
+            str(native_object),
+            "-J",
+            str(native_dir),
+            "-I",
+            str(native_dir),
+        ],
+        check=True,
+    )
+    return native_object
+
+
+def _generate_checked_pyi_contract(source: Path, package_dir: Path, expected_package: Path) -> Path:
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--pyi",
+            "--out",
+            str(package_dir),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert_generated_pyi_package_matches_fixture(package_dir, expected_package)
+    return package_dir / "__init__.pyi"
+
+
+def _import_from_build_dir(module_name: str, build_dir: Path):
+    sys.modules.pop(module_name, None)
+    sys.path.insert(0, str(build_dir))
+    try:
+        return importlib.import_module(module_name)
+    finally:
+        sys.path.remove(str(build_dir))
+
+
+def _build_generated_pyi_and_import(source_template: Path, workdir: Path, expected_contract_package: Path):
+    source_dir = workdir / "source"
+    source_dir.mkdir(parents=True)
+    source = source_dir / source_template.name
+    shutil.copyfile(source_template, source)
+
+    entry = _generate_checked_pyi_contract(source, workdir / "contracts" / source.stem, expected_contract_package)
+    native_object = _compile_native_object(source, workdir / "native")
+    result = build_pyi_extension(
+        entry,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=workdir / "pyi_build",
+    )
+
+    assert result.sources[0] == entry
+    assert source not in result.sources
+    assert result.native_build_plan.compilation_units == ()
+    assert result.native_build_plan.produced_objects == ()
+    assert result.native_build_plan.prebuilt_artifacts[0].path == native_object
+    return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+
+
+def _build_source_or_generated_pyi_and_import(
+    source_template: Path,
+    workdir: Path,
+    expected_generated_sources: set[str],
+    expected_contract_package: Path,
+    build_mode: str,
+):
+    if build_mode == "source":
+        source_build_dir = workdir / "source_build"
+        source_build_dir.mkdir(parents=True)
+        return _build_and_import(source_template, source_build_dir, expected_generated_sources)
+    return _build_generated_pyi_and_import(source_template, workdir / "generated_pyi_build", expected_contract_package)
 
 
 def _build_text_and_import(source_text: str, filename: str, workdir: Path, expected_generated_sources: set[str]):

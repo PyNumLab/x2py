@@ -15,7 +15,7 @@ steps.
 ## Generate The Build Files
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --makefile \
   --out-dir build/fruntime_abi \
   --json

@@ -5,7 +5,9 @@ from __future__ import annotations
 import ast
 from dataclasses import replace
 from itertools import product
+import keyword
 import numpy as np
+import re
 
 from x2py import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.ownership_policy import OwnershipContext, default_ownership_policy
@@ -39,6 +41,7 @@ from x2py.semantics import models
 from x2py.semantics.models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
+    PYI_PROJECTED_OUTPUT_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
 )
 
@@ -1012,10 +1015,12 @@ def _convert_semantic_module(node, scope, legacy, custom_types):
     generated_overload_sets = []
     python_exports = {}
     native_imports = []
+    overload_target_names = _pyi_overload_target_names(node)
     for item, converted in zip(class_items, classes, strict=True):
         python_exports[id(converted)] = _semantic_python_exports(item, converted, scope)
         if native_import := _pyi_native_import(item, converted):
             native_imports.append(native_import)
+        native_imports.extend(_pyi_class_overload_native_imports(item, converted))
     for item in node.functions:
         converted = semantic_ir_to_codegen_ast(
             item,
@@ -1031,7 +1036,7 @@ def _convert_semantic_module(node, scope, legacy, custom_types):
         else:
             funcs.append(converted)
         python_exports[id(converted)] = _semantic_python_exports(item, converted, scope)
-        if native_import := _pyi_native_import(item, converted):
+        if native_import := _pyi_native_import(item, converted, overload_target_names=overload_target_names):
             native_imports.append(native_import)
     overload_sets = [
         semantic_ir_to_codegen_ast(
@@ -1089,19 +1094,92 @@ def _semantic_python_exports(node, converted, scope) -> tuple[tuple[tuple[str, .
     )
 
 
-def _pyi_native_import(node, converted) -> Import | None:
+def _pyi_native_import(
+    node,
+    converted,
+    *,
+    overload_target_names: frozenset[str] = frozenset(),
+    native_name_filter=None,
+    preserve_native_alias: bool = False,
+) -> Import | None:
     if isinstance(node, models.ProcedureOverloadSet):
         if not node.procedures:
             return None
         origin = node.procedures[0].origin
-        native_name = node.name
+        native_names = _pyi_overload_native_names(node)
+        if native_name_filter is not None:
+            native_names = tuple(name for name in native_names if native_name_filter(name))
     else:
         origin = node.origin
         native_name = getattr(node, "native_name", None) or node.name
+        if (
+            isinstance(node, models.SemanticFunction)
+            and node.visibility == "private"
+            and {str(node.name), str(native_name)} & overload_target_names
+        ):
+            return None
+        native_names = (str(native_name),)
     if origin.native_scope is None:
         return None
-    target = AsName(converted, str(converted.name), source_name=str(native_name))
-    return Import(str(origin.native_scope), target=(target,))
+    if not native_names:
+        return None
+    targets = tuple(
+        AsName(
+            converted,
+            str(native_name) if preserve_native_alias else str(converted.name),
+            source_name=str(native_name),
+        )
+        for native_name in native_names
+    )
+    return Import(str(origin.native_scope), target=targets)
+
+
+def _pyi_overload_native_names(node: models.ProcedureOverloadSet) -> tuple[str, ...]:
+    names = {str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, node.name)) for procedure in node.procedures}
+    return tuple(sorted(names))
+
+
+def _pyi_overload_target_names(node: models.SemanticModule) -> frozenset[str]:
+    targets: set[str] = set()
+    for overload_set in _iter_semantic_overload_sets(node):
+        for procedure in overload_set.procedures:
+            for value in (
+                procedure.metadata.get(models.OVERLOAD_TARGET_METADATA),
+                procedure.name,
+                procedure.native_name,
+            ):
+                if value:
+                    targets.add(str(value))
+    return frozenset(targets)
+
+
+def _iter_semantic_overload_sets(node: models.SemanticModule | models.SemanticClass):
+    yield from node.overload_sets
+    for semantic_class in node.classes:
+        yield from _iter_semantic_overload_sets(semantic_class)
+
+
+def _pyi_class_overload_native_imports(semantic_class: models.SemanticClass, converted: ClassDef) -> list[Import]:
+    imports = []
+    converted_by_name = {str(overload_set.name): overload_set for overload_set in converted.overload_sets}
+    for overload_set in semantic_class.overload_sets:
+        converted_overload = converted_by_name.get(str(overload_set.name))
+        if converted_overload is None:
+            continue
+        native_import = _pyi_native_import(
+            overload_set,
+            converted_overload,
+            native_name_filter=_is_importable_class_generic,
+            preserve_native_alias=True,
+        )
+        if native_import is not None:
+            imports.append(native_import)
+    return imports
+
+
+def _is_importable_class_generic(native_name: str) -> bool:
+    compact = re.sub(r"\s+", "", native_name).casefold()
+    return compact.startswith("operator(") or compact == "assignment(=)"
 
 
 def _convert_procedure_overload_set(
@@ -1309,10 +1387,22 @@ def _convert_semantic_function(
             if node.metadata.get("fortran_bind_c")
             else None
         ),
-        type_bound_name=node.name if cls_base is not None else None,
+        type_bound_name=_semantic_type_bound_name(node, cls_base),
     )
     scope._locals["functions"][name] = func
     return func
+
+
+def _semantic_type_bound_name(node: models.SemanticFunction, cls_base: ClassDef | None) -> str | None:
+    """Return the native type-bound binding name for a class method call."""
+    if cls_base is None:
+        return None
+    name = str(node.name)
+    if isinstance(node, models.SemanticMethod) and node.metadata.get(models.PYI_BIND_TARGET_METADATA):
+        candidate = name[:-1] if name.endswith("_") else name
+        if keyword.iskeyword(candidate):
+            return candidate
+    return name
 
 
 def _convert_semantic_class(node, scope, legacy, custom_types, class_lookup, class_descendants, class_order):
@@ -1418,6 +1508,13 @@ def _semantic_variable_type_and_shape(semantic_type, scope, custom_types):
     return dtype, shape
 
 
+def _fortran_array_category_and_source_shape(semantic_type):
+    contract = _array_contract(semantic_type)
+    if contract is None:
+        return None, ()
+    return contract.category, tuple(contract.source_shape)
+
+
 def _semantic_variable_name(node, scope):
     try:
         return scope.get_expected_name(node.name)
@@ -1443,6 +1540,7 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
     dtype, shape = _semantic_variable_type_and_shape(semantic_type, scope, custom_types)
     name = _semantic_variable_name(node, scope)
     ownership_decision = _ownership_decision(semantic_type, _ownership_context_for_variable(node, scope))
+    fortran_array_category, fortran_source_shape = _fortran_array_category_and_source_shape(semantic_type)
     var = Variable(
         dtype,
         name,
@@ -1453,7 +1551,10 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
         is_optional=getattr(node, "optional", False),
         intent=getattr(node, "intent", "in"),
         passes_by_value=_passes_by_value(node),
+        fortran_array_category=fortran_array_category,
+        fortran_source_shape=fortran_source_shape,
         ownership_decision=ownership_decision,
+        projected_output=bool(node.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)),
         assumed_rank=_is_assumed_rank(semantic_type),
         cls_base=cls_base,
         default_value=node.default_value,

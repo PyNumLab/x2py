@@ -1,0 +1,17 @@
+# Callbacks
+
+Scope: immediate Python callbacks passed to Fortran, including scalar, array,
+and derived-type callback conversions and exception behavior.
+
+Focused pytest command: `python3 -m pytest -q tests/wrapper/fortran/callbacks`
+
+Native data path: `tests/data/fortran/wrapper/`.
+
+Contract fixtures: generated callback packages live under
+`contracts/<case>/` and are refreshed only with `WRAPPER_UPDATE_PYI_FIXTURES=1`.
+
+Roadmap items: Stage 5 generated-contract runtime parity for callback
+contracts, call-scoped lifetime, GIL handling, and conversion behavior.
+
+Tests: `test_array_callbacks.py`, `test_derived_callbacks.py`,
+`test_callback_generated_pyi_contracts.py`, `test_scalar_callbacks.py`.

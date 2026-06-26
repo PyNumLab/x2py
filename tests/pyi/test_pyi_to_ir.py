@@ -9,6 +9,7 @@ from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 from x2py.semantics.models import (
     ProjectionMapping,
     PYI_BIND_TARGET_METADATA,
+    PYI_PROJECTED_OUTPUT_METADATA,
     PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     PYI_USER_PRIVATE_METADATA,
     SemanticArgument,
@@ -192,6 +193,22 @@ def integrate(
     assert callback_type.dtype == "Callable"
     assert [arg.name for arg in callback_type.metadata["arguments"]] == ["sim_state", "Float64"]
     assert callback_type.metadata["return"].name == "Float64"
+
+
+def test_parse_pyi_text_infers_callback_dimension_argument_names():
+    module = parse_pyi_text(
+        """
+def apply_transform(
+    callback: Callable[[Ptr(Const(Int32)), Const(Float64[count])], Float64[count]]
+) -> None: ...
+""",
+        module_name="callbacks",
+    )
+
+    callback_type = module.functions[0].arguments[0].semantic_type
+    callback_arguments = callback_type.metadata["callback_arguments"]
+    assert [arg.name for arg in callback_arguments] == ["count", "arg_1"]
+    assert callback_type.metadata["return"].shape == ["count"]
 
 
 def test_parse_pyi_text_accepts_import_aliases():
@@ -947,6 +964,189 @@ def add(
     assert func.projection[2].result_position == 0
 
 
+def test_native_call_visible_inout_projection_keeps_argument_intent():
+    from_pyi = parse_pyi_text(
+        """
+@native_call([Arg(0)])
+def fixed_inout(
+    name: Ptr(String[8])
+) -> Returns["name", Ptr(String[8])]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert func.arguments[0].intent == "inout"
+    assert func.projection[0].intent == "inout"
+    assert func.projection[0].result_position == 0
+
+
+def test_native_call_visible_output_projection_keeps_explicit_output_intent():
+    from_pyi = parse_pyi_text(
+        """
+@native_call([Arg(0), Arg(1)])
+def fill(
+    n: Ptr(Const(Int32)),
+    values: Annotated[Float64[n], Intent("out")]
+) -> Returns["values", Float64[n]]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert func.arguments[1].intent == "out"
+    assert func.projection[1].intent == "out"
+    assert func.projection[1].result_position == 0
+
+
+def test_native_call_compact_visible_array_output_marks_projection_without_output_intent():
+    from_pyi = parse_pyi_text(
+        """
+@native_call([Arg(0), Arg(1)])
+def fill(
+    n: Ptr(Const(Int32)),
+    values: Float64[n]
+) -> Returns["values", Float64[n]]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert func.arguments[1].intent == "inout"
+    assert func.arguments[1].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
+    assert func.projection[1].intent == "inout"
+    assert func.projection[1].result_position == 0
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        from_pyi,
+        Scope(name=from_pyi.name, scope_type="module"),
+    )
+    assert codegen_module.funcs[0].arguments[1].var.intent == "inout"
+    assert codegen_module.funcs[0].arguments[1].var.projected_output is True
+
+
+def test_compact_assignment_overload_projects_visible_destination_without_output_intent():
+    from_pyi = parse_pyi_text(
+        """
+class vector:
+    value: Float64
+
+    @overload("assign_vector_real")
+    def assign(
+        self,
+        right: Ptr(Const(Float64))
+    ) -> vector: ...
+
+@private
+@native_call([Arg(0), Arg(1)])
+def assign_vector_real(
+    left: Ptr(vector),
+    right: Ptr(Const(Float64))
+) -> Returns["left", Ptr(vector)]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert func.arguments[0].intent == "inout"
+    assert func.arguments[0].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
+    assert func.projection[0].intent == "inout"
+    assert func.projection[0].result_position == 0
+    assert from_pyi.classes[0].overload_sets[0].procedures[0].metadata["overload_kind"] == "assignment"
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        from_pyi,
+        Scope(name=from_pyi.name, scope_type="module"),
+    )
+    assign = next(item for item in codegen_module.classes[0].overload_sets if item.name == "assign")
+    assert assign.functions[0].arguments[0].var.intent == "inout"
+    assert assign.functions[0].arguments[0].var.projected_output is True
+
+
+def test_type_bound_method_declarations_restore_root_target_metadata():
+    from_pyi = parse_pyi_text(
+        """
+class vector:
+    def scale(
+        self,
+        factor: Ptr(Const(Float64))
+    ) -> None: ...
+
+    @bind("shift_vector")
+    @native_call([Arg(0), Pass(), Arg(1)])
+    def shift(
+        self,
+        dx: Ptr(Const(Float64)),
+        dy: Ptr(Const(Float64))
+    ) -> None: ...
+
+def scale(
+    self: Annotated[Ptr(vector), Polymorphic],
+    factor: Ptr(Const(Float64))
+) -> None: ...
+
+def shift_vector(
+    dx: Ptr(Const(Float64)),
+    owner: Annotated[Ptr(vector), Polymorphic],
+    dy: Ptr(Const(Float64))
+) -> None: ...
+""",
+        module_name="edited",
+    )
+    functions = {func.name: func for func in from_pyi.functions}
+
+    assert functions["scale"].metadata["fortran_type_bound_target"] is True
+    assert functions["scale"].metadata["fortran_passed_object_name"] == "self"
+    assert functions["scale"].metadata["fortran_passed_object_position"] == 0
+    assert functions["shift_vector"].metadata["fortran_type_bound_target"] is True
+    assert functions["shift_vector"].metadata["fortran_passed_object_name"] == "owner"
+    assert functions["shift_vector"].metadata["fortran_passed_object_position"] == 1
+
+
+def test_pyi_codegen_imports_public_generic_not_private_specific_targets():
+    module = parse_pyi_text(
+        """
+@private
+def convert_integer(
+    value: Ptr(Const(Int32))
+) -> Int32: ...
+
+@overload("convert_integer")
+def convert(
+    value: Ptr(Const(Int32))
+) -> Int32: ...
+""",
+        module_name="foverloads_f90",
+    )
+
+    codegen_module = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    imported = {
+        (str(target.name), str(target.local_alias))
+        for native_import in codegen_module.imports
+        for target in native_import.target
+    }
+
+    assert ("convert", "convert") in imported
+    assert all("convert_integer" not in item for names in imported for item in names)
+
+
+def test_pyi_codegen_keyword_normalized_type_bound_method_uses_native_binding_name():
+    module = parse_pyi_text(
+        """
+class visible_t:
+    @bind("visible_from")
+    def from_(self) -> Int32: ...
+""",
+        module_name="fnaming_f90",
+    )
+
+    codegen_module = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    method = codegen_module.classes[0].methods_as_dict["from_"]
+
+    assert method.name == "visible_from"
+    assert method.type_bound_name == "from"
+
+
 def test_native_call_return_entry_preserves_optional_pointer_return():
     from_pyi = parse_pyi_text(
         """
@@ -1378,6 +1578,50 @@ def consume(
     assert all(not arg.semantic_type.constraints for arg in module.functions[0].arguments)
 
 
+def test_parse_pyi_text_accepts_flat_array_dimension():
+    module = parse_pyi_text(
+        """
+flat: Float64[Flat]
+matrix: Float64[3, Flat]
+tensor: Float64[3, 4, Flat]
+c_matrix: Annotated[Float64[Flat, 3], ORDER_C]
+c_tensor: Annotated[Float64[Flat, 3, 4], ORDER_C]
+""",
+        module_name="flat_arrays",
+    )
+
+    arrays = [variable.semantic_type.storage.array for variable in module.variables]
+    assert [variable.semantic_type.shape for variable in module.variables] == [
+        [":"],
+        ["3", ":"],
+        ["3", "4", ":"],
+        [":", "3"],
+        [":", "3", "4"],
+    ]
+    assert [array.category for array in arrays] == [
+        "assumed_size",
+        "assumed_size",
+        "assumed_size",
+        "assumed_size",
+        "assumed_size",
+    ]
+    assert [array.source_shape for array in arrays] == [
+        ["*"],
+        ["3", "*"],
+        ["3", "4", "*"],
+        ["*", "3"],
+        ["*", "3", "4"],
+    ]
+    assert [array.upper_bounds for array in arrays] == [
+        ["*"],
+        [None, "*"],
+        [None, None, "*"],
+        ["*", None],
+        ["*", None, None],
+    ]
+    assert [array.order for array in arrays] == [None, "ORDER_F", "ORDER_F", "ORDER_C", "ORDER_C"]
+
+
 def test_parse_pyi_text_preserves_extended_array_metadata_and_nested_selector():
     module = parse_pyi_text(
         """
@@ -1446,8 +1690,10 @@ nested_answer: Final[Final[Int32]]
     assert deep.storage.pointer_depth == 3
     assert deep.storage.read_only is True
     assert deep.storage.mutable is False
-    assert rank_any.storage.array.rank is None
-    assert rank_any.rank == 0
+    assert rank_any.storage.array.rank == 1
+    assert rank_any.storage.array.category == "assumed_rank"
+    assert rank_any.storage.array.source_shape == [".."]
+    assert rank_any.rank == 1
     assert strided.storage.array.contiguous is False
     assert computed.shape == ["size(xl)"]
     assert bounded.constraints == [
@@ -1529,6 +1775,22 @@ def helper(value: Int32) -> None: ...
         ),
         ("value: Annotated[Int32, Constant]\n", "Constant metadata is not supported; use Final[...]"),
         ("value: Annotated[Float64[:], Shape('n')]\n", "Shape metadata is not supported; put dimensions inside T[...]"),
+        (
+            "value: Float64[3, Flat, 4]\n",
+            "Flat must appear exactly once at the first or final concrete array dimension",
+        ),
+        (
+            "value: Float64[3, Flat, Flat]\n",
+            "Flat must appear exactly once at the first or final concrete array dimension",
+        ),
+        (
+            "value: Annotated[Float64[Flat, 3], ORDER_F]\n",
+            "ORDER_F conflicts with ORDER_C implied by Flat placement",
+        ),
+        (
+            "value: Annotated[Float64[3, Flat], ORDER_C]\n",
+            "ORDER_C conflicts with ORDER_F implied by Flat placement",
+        ),
         (
             "value: Annotated[Int32, Bounded(lower=1)]\n",
             "Constraint metadata expects positional arguments only: 'Bounded(lower=1)'",

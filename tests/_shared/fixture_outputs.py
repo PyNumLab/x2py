@@ -24,6 +24,7 @@ GENERAL_C_DIR = C_DATA_DIR / "general"
 SEMANTICS_FIXTURE_DIR = TESTS_DIR / "semantics" / "fixtures" / "general"
 SEMANTIC_READINESS_FIXTURE_PATH = TESTS_DIR / "semantics" / "fixtures" / "wrap_readiness_messages.json"
 PYI_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "general"
+PYI_WRAPPER_CONTRACT_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "wrapper_contracts"
 C_PYI_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "c" / "general"
 FORTRAN_SUFFIXES = {".f", ".f90", ".f95", ".f03", ".f08", ".for", ".f77", ".ftn"}
 C_SOURCE_SUFFIXES = {".c", ".h", ".i"}

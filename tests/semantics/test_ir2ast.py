@@ -16,9 +16,9 @@ from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
 
 
-WRAPPER_FEATURE_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper" / "feature_parity"
-FORTRAN_CLASS_SOURCE = WRAPPER_FEATURE_DATA / "derived_types" / "fclasses_f90.f90"
-FORTRAN_OPERATOR_SOURCE = WRAPPER_FEATURE_DATA / "operators" / "foperators_f90.f90"
+WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"
+FORTRAN_CLASS_SOURCE = WRAPPER_FORTRAN_DATA / "fclasses_f90.f90"
+FORTRAN_OPERATOR_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
 
 
 def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class():

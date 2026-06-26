@@ -13,7 +13,7 @@ importable Python extension from the command line.
 
 ## Input
 
-<!-- x2py-doc-source: tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->
 ```fortran
 module fruntime_abi_f90
 contains
@@ -28,7 +28,7 @@ end module fruntime_abi_f90
 ## Build
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --wrap \
   --out-dir build/fruntime_abi \
   --json
@@ -38,7 +38,7 @@ Recognizable Fortran sources default to `--wrap` when no inspection stage is
 selected, so this is equivalent:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```

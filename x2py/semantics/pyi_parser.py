@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.ownership_policy import set_ownership_metadata, set_pointer_policy_metadata
 
 from .models import (
@@ -16,6 +17,7 @@ from .models import (
     OVERLOAD_TARGET_METADATA,
     PYI_BIND_TARGET_METADATA,
     PYI_LOADED_METADATA,
+    PYI_PROJECTED_OUTPUT_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -127,6 +129,7 @@ class _PyiAstParser:
     def parse(self, tree: ast.Module) -> SemanticModule:
         _ModuleVisitor(self).visit(tree)
         self._resolve_overloads()
+        self._restore_type_bound_targets()
         return self.module
 
     def import_from(self, node: ast.ImportFrom) -> SemanticImport:
@@ -539,6 +542,35 @@ class _PyiAstParser:
                 )
             overload_set.procedures.append(candidate)
 
+    def _restore_type_bound_targets(self) -> None:
+        """Mark module procedures referenced by type-bound method declarations."""
+
+        by_name = {
+            target: function
+            for function in self.module.functions
+            for target in {function.name, function.native_name}
+            if target
+        }
+        for semantic_class in self._iter_classes(self.module.classes):
+            for method in semantic_class.methods:
+                if method.is_static or method.passed_object_position is None:
+                    continue
+                target = by_name.get(method.native_name or method.name)
+                if target is None:
+                    continue
+                passed_position = method.passed_object_position
+                if not 0 <= passed_position < len(target.arguments):
+                    continue
+                target.metadata["fortran_type_bound_target"] = True
+                target.metadata["fortran_passed_object_name"] = target.arguments[passed_position].name
+                target.metadata["fortran_passed_object_position"] = passed_position
+
+    @classmethod
+    def _iter_classes(cls, classes: list[SemanticClass]):
+        for semantic_class in classes:
+            yield semantic_class
+            yield from cls._iter_classes(semantic_class.classes)
+
     @staticmethod
     def _overload_set_name(owner: SemanticModule | SemanticClass, declaration_name: str) -> str:
         if isinstance(owner, SemanticModule):
@@ -598,7 +630,7 @@ class _PyiAstParser:
             if bound_position is None
             else [arg for index, arg in enumerate(candidate.arguments) if index != bound_position]
         )
-        self._validate_overload_signature(declaration, candidate, call_arguments)
+        self._validate_overload_signature(declaration, candidate, call_arguments, bound_position=bound_position)
         kind, native_name = self._class_overload_identity(
             declaration.name,
             bound_position,
@@ -618,12 +650,39 @@ class _PyiAstParser:
         declaration: SemanticFunction,
         target: SemanticFunction,
         call_arguments: list[SemanticArgument],
+        *,
+        bound_position: int | None = None,
     ) -> None:
-        if declaration.arguments != call_arguments or declaration.return_type != target.return_type:
-            raise ValueError(
-                f"Overload declaration {declaration.name!r} is incompatible with "
-                f"specific procedure {target.native_name or target.name!r}"
-            )
+        if declaration.arguments == call_arguments and (
+            declaration.return_type == target.return_type
+            or _PyiAstParser._matches_bound_projection_return(declaration, target, bound_position)
+        ):
+            return
+        raise ValueError(
+            f"Overload declaration {declaration.name!r} is incompatible with "
+            f"specific procedure {target.native_name or target.name!r}"
+        )
+
+    @staticmethod
+    def _matches_bound_projection_return(
+        declaration: SemanticFunction,
+        target: SemanticFunction,
+        bound_position: int | None,
+    ) -> bool:
+        if bound_position is None or declaration.return_type is None:
+            return False
+        if not 0 <= bound_position < len(target.arguments):
+            return False
+        if not any(
+            mapping.native_position == bound_position and mapping.result_position is not None
+            for mapping in target.projection
+        ):
+            return False
+        expected = deepcopy(target.arguments[bound_position].semantic_type)
+        if expected.rank == 0 and expected.storage is not None and expected.storage.kind == "reference":
+            expected.storage = None
+        expected.ownership = deepcopy(declaration.return_type.ownership)
+        return declaration.return_type == expected
 
     @staticmethod
     def _class_overload_bound_position(
@@ -965,13 +1024,22 @@ class _PyiAstParser:
         *,
         metadata: dict[str, object] | None = None,
     ) -> SemanticType:
-        rank = None if "..." in dims else len(dims)
+        dims, category, source_shape, lower_bounds, upper_bounds = _PyiAstParser._flat_array_dimensions(dims)
+        if dims == ["..."]:
+            category = "assumed_rank"
+            source_shape = [".."]
+
+        rank = 1 if category == "assumed_rank" else len(dims)
         array = SemanticArrayContract(
             rank=rank,
             shape=list(dims),
-            order="ORDER_C" if rank is not None and rank > 1 else None,
+            order=_PyiAstParser._array_order_for_dimensions(category, rank, source_shape),
             axes=["strided" if "Strided" in dim else "dense" for dim in dims],
             contiguous=not any("Strided" in dim for dim in dims),
+            category=category,
+            source_shape=source_shape,
+            lower_bounds=lower_bounds,
+            upper_bounds=upper_bounds,
         )
         storage = SemanticStorageContract(kind="array", array=array)
         return SemanticType(
@@ -983,6 +1051,36 @@ class _PyiAstParser:
             metadata=dict(metadata or {}),
             storage=storage,
         )
+
+    @staticmethod
+    def _flat_array_dimensions(
+        dims: list[str],
+    ) -> tuple[list[str], str | None, list[str], list[str | None], list[str | None]]:
+        if "Flat" not in dims:
+            return dims, None, [], [], []
+        if dims.count("Flat") != 1 or "..." in dims or dims.index("Flat") not in {0, len(dims) - 1}:
+            raise ValueError("Flat must appear exactly once at the first or final concrete array dimension")
+        source_shape = ["*" if dim == "Flat" else dim for dim in dims]
+        lower_bounds, upper_bounds = _PyiAstParser._bounds_from_source_shape(source_shape)
+        return [":" if dim == "Flat" else dim for dim in dims], "assumed_size", source_shape, lower_bounds, upper_bounds
+
+    @staticmethod
+    def _array_order_for_dimensions(
+        category: str | None,
+        rank: int | None,
+        source_shape: list[str],
+    ) -> str | None:
+        if rank is None or rank <= 1:
+            return None
+        if category == "assumed_size":
+            return _PyiAstParser._flat_array_order(source_shape, rank)
+        return "ORDER_C"
+
+    @staticmethod
+    def _flat_array_order(source_shape: list[str], rank: int | None) -> str | None:
+        if rank is None or rank <= 1 or "*" not in source_shape:
+            return None
+        return "ORDER_C" if source_shape.index("*") == 0 else "ORDER_F"
 
     def _character_type(self, node: ast.Subscript) -> SemanticType:
         items = self.subscript_items(node)
@@ -1094,6 +1192,9 @@ class _PyiAstParser:
     def _apply_metadata_name(self, semantic_type: SemanticType, name: str) -> bool:
         if name in {"ORDER_C", "ORDER_F", "ORDER_ANY"}:
             array = self._require_array_storage(semantic_type)
+            expected_order = self._flat_array_order(array.source_shape, array.rank)
+            if expected_order is not None and name != expected_order:
+                raise ValueError(f"{name} conflicts with {expected_order} implied by Flat placement")
             array.order = name
             return True
         if name == "Allocatable":
@@ -1279,15 +1380,58 @@ class _PyiAstParser:
         if not isinstance(raw_args, ast.List):
             raise ValueError(f"Callable arguments must be a list: {ast.unparse(node)!r}")
 
+        argument_types = [self.semantic_type(item) for item in raw_args.elts]
+        return_type = self.semantic_type(raw_return)
+        metadata = self._callback_metadata(argument_types, return_type)
+        metadata["callback_arguments"] = self._callback_arguments(argument_types, return_type)
         return SemanticType(
             name="Callable",
             dtype="Callable",
-            metadata=self._callback_metadata(
-                [self.semantic_type(item) for item in raw_args.elts],
-                self.semantic_type(raw_return),
-            ),
+            metadata=metadata,
             storage=self._callback_storage(),
         )
+
+    @classmethod
+    def _callback_arguments(
+        cls,
+        argument_types: list[SemanticType],
+        return_type: SemanticType,
+    ) -> list[SemanticArgument]:
+        shape_names = cls._callback_shape_names([*argument_types, return_type])
+        used_names: set[str] = set()
+        arguments = []
+        for index, semantic_type in enumerate(argument_types):
+            name = f"arg_{index}"
+            if cls._is_dimension_scalar_callback_type(semantic_type):
+                inferred_name = next((item for item in shape_names if item not in used_names), None)
+                if inferred_name is not None:
+                    name = inferred_name
+                    used_names.add(inferred_name)
+            arguments.append(SemanticArgument(name, semantic_type))
+        return arguments
+
+    @classmethod
+    def _callback_shape_names(cls, semantic_types: list[SemanticType]) -> list[str]:
+        names = []
+        for semantic_type in semantic_types:
+            for dimension in cls._semantic_shape_dimensions(semantic_type):
+                for name in re.findall(r"\b[A-Za-z_]\w*\b", str(dimension)):
+                    if name not in cls._non_dimension_subscription_names() and name not in names:
+                        names.append(name)
+        return names
+
+    @staticmethod
+    def _semantic_shape_dimensions(semantic_type: SemanticType) -> list[str]:
+        if semantic_type.shape:
+            return list(semantic_type.shape)
+        storage = semantic_type.storage
+        if storage is not None and storage.array is not None:
+            return list(storage.array.shape)
+        return []
+
+    @staticmethod
+    def _is_dimension_scalar_callback_type(semantic_type: SemanticType) -> bool:
+        return semantic_type.rank == 0 and str(semantic_type.name).startswith("Int")
 
     @staticmethod
     def _callback_metadata(arguments: list[SemanticType] | None, return_type: SemanticType) -> dict[str, object]:
@@ -1409,6 +1553,8 @@ class _PyiAstParser:
     def literal_default_value(node: ast.expr | None) -> str | None:
         if node is None or _PyiAstParser.default_marks_optional(node):
             return None
+        if isinstance(node, ast.Name):
+            return node.id
         return str(ast.literal_eval(node))
 
     @staticmethod
@@ -1546,8 +1692,26 @@ class _PyiAstParser:
                 else:
                     semantic_args.append(returned)
                 continue
-            existing.intent = "inout"
+            if existing.intent != "out":
+                existing.intent = "inout"
+            if _PyiAstParser._is_visible_storage_projection(existing):
+                existing.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
             existing.semantic_type.ownership.mutable = True
+
+    @staticmethod
+    def _is_visible_storage_projection(argument: SemanticArgument) -> bool:
+        storage = argument.semantic_type.storage
+        array = storage.array if storage is not None else None
+        if storage is None:
+            return False
+        if storage.kind == "array":
+            return bool(array is not None and not array.allocatable and not array.pointer)
+        return bool(
+            storage.kind == "reference"
+            and not storage.read_only
+            and storage.pointer_depth == 1
+            and argument.semantic_type.name not in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+        )
 
     @staticmethod
     def _apply_native_call_returns(
@@ -1611,8 +1775,6 @@ class _PyiAstParser:
             mapping.python_name = arg.name
             if not mapping.native_name:
                 mapping.native_name = arg.name
-            if arg.intent == "inout" and arg.name in return_positions:
-                arg.intent = "out"
             mapping.intent = arg.intent
             if arg.intent in {"out", "inout"} and mapping.result_position is None:
                 mapping.result_position = return_positions.get(arg.name)

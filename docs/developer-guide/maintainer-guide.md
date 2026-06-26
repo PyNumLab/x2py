@@ -207,10 +207,10 @@ implementation files.
 | `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
 | `.pyi` loading/editing | `x2py/semantics/pyi_parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
-| Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/test_multi_source_builds.py` |
+| Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
 | Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
 | Fortran-to-C bridge and CPython binding | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | `tests/wrapper/` subject suites |
-| Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/native_build/test_runtime_abi.py`, `tests/wrapper/fortran/native_build/test_build_modes.py` |
+| Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/tools/test_documentation_examples.py` |
 
@@ -263,14 +263,18 @@ Important implementation rules:
 
 - `Ptr(T)` and `Ptr(Const(T))` are storage contracts, not just pretty syntax.
 - Array subscriptions such as `Float64[n]` are semantic array contracts.
-- `Annotated[..., ORDER_F]`, `ORDER_ANY`, `Allocatable`, `Pointer`, and
-  `Intent("out")` are metadata on the semantic storage contract.
+- `Annotated[..., ORDER_F]`, `ORDER_ANY`, `Allocatable`, and `Pointer` are
+  metadata on the semantic storage contract. `Intent("out")` is emitted only
+  where output intent changes wrapper behavior; compact visible array outputs
+  and visible derived-type assignment destinations are represented by writable
+  storage plus `Returns["name", T]`.
 - `Final[T]` is the public constant spelling. Do not reintroduce
   `Constant` as user-facing `.pyi` syntax.
 - `@native_call` is projection metadata. Use it only when the Python-visible
   signature intentionally differs from the native signature.
-- Generated stubs should describe exact native contracts unless semantic IR
-  explicitly carries projection metadata.
+- Generated stubs should preserve behavior-changing native contracts while
+  staying compact; exact source intent that does not change execution can stay
+  in semantic IR instead of the printed `.pyi`.
 
 When changing `.pyi` syntax:
 
@@ -746,7 +750,7 @@ work even though the Fortran wrapper internally emits C source.
 Runtime verification belongs in `tests/wrapper`. The subject index in
 [`tests/wrapper/fortran/README.md`](../../tests/wrapper/fortran/README.md) maps generated behavior
 to compiled/imported tests. Build-mode changes should at least cover
-`test_build_modes.py`, `multi_source/test_multi_source_builds.py`, and
+`test_build_modes.py`, `multiple_files/test_multi_source_builds.py`, and
 the affected runtime subject test.
 
 ### Parser Model Internals
@@ -845,7 +849,7 @@ coverage only when the public contract changes.
 | `.pyi` tests | Editable contract loader/printer behavior | `tests/pyi/test_pyi_to_ir.py`, `tests/semantics/test_pyi_printer.py` |
 | Readiness tests | User-facing blocker and wrappability decisions | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_c_semantic_readiness.py` |
 | CLI tests | User commands, output routing, diagnostics | `tests/parser/test_cli.py`, `tests/parser/test_preprocessing_cli.py` |
-| Wrapper build tests | Artifact placement, direct/Makefile modes, multi-source ordering | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/` |
+| Wrapper build tests | Artifact placement, direct/Makefile modes, multi-source ordering | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/` |
 | Wrapper runtime tests | Imported extension behavior, ownership, lifetime, and failures | `tests/wrapper/` subject suites indexed by `tests/wrapper/fortran/README.md` |
 | Property/fuzz tests | Broad parser robustness invariants | `tests/property/test_parser_properties.py`, `tests/property/test_semantic_properties.py` |
 

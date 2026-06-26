@@ -54,8 +54,8 @@ from x2py.semantics.models import (
     SemanticVariable,
 )
 
-WRAPPER_FEATURE_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper" / "feature_parity"
-OPERATOR_F90_SOURCE = WRAPPER_FEATURE_DATA / "operators" / "foperators_f90.f90"
+WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"
+OPERATOR_F90_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
 
 
 # ============================================================

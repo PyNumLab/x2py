@@ -763,10 +763,11 @@ class Scope:
         """Create a low-level symbol and map it to a reserved Python public name."""
         raw_public_name = current_name if python_name is None else python_name
         public_name = self.reserve_public_name(raw_public_name, object_type=object_type, owner=owner)
+        symbol_object_type = "variable" if object_type in {"argument", "field"} else object_type
         symbol = self.get_new_name(
             current_name if current_name is not None else public_name,
             is_temp=is_temp,
-            object_type=object_type,
+            object_type=symbol_object_type,
         )
         self._original_symbol[symbol] = public_name
         return symbol

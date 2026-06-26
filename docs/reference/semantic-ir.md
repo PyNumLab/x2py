@@ -392,11 +392,12 @@ use `Annotated[T[...], Constraint, ...]`.
   contract chosen explicitly by an edited interface or later projection.
 - `Allocatable` for a Fortran allocatable array.
 - `Pointer` for a Fortran pointer array.
-- `Intent("out")` when a visible exact-native argument has source intent
-  `out`; `intent(inout)` is the default writable reference/array spelling and
-  does not need metadata. Immutable Python-visible values can still use
-  replacement projection, where the argument remains visible and a
-  `Returns["name", T]` item carries the post-call value.
+- `Intent("out")` when output intent changes wrapper behavior, such as scalar
+  reference output, hidden output, allocation, ownership, temporary, or
+  copy/readback policy. Visible non-allocatable array output buffers and
+  visible derived-type assignment destinations can omit the marker in compact
+  generated `.pyi`; `Returns["name", T]` plus writable storage is enough to
+  preserve the runtime behavior.
 
 Plain multidimensional array notation is C-oriented (`ORDER_C`) by default.
 Under the current Fortran generation policy, every multidimensional Fortran

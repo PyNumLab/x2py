@@ -279,6 +279,7 @@ def _pyi_contract_bundle(
     sorted_paths = tuple(sorted(discovered))
     loaded_modules = load_pyi_modules(sorted_paths)
     modules_by_path = dict(zip(sorted_paths, loaded_modules, strict=True))
+    _validate_pyi_bundle_placement(entry, modules_by_path)
     _apply_pyi_python_exports(entry, modules_by_path)
     leaves = [path for path in sorted_paths if _module_has_native_declarations(modules_by_path[path])]
     if not leaves:
@@ -289,6 +290,70 @@ def _pyi_contract_bundle(
         paths=(entry, *sorted(discovered - {entry})),
         modules=tuple(modules_by_path[path] for path in leaves),
     )
+
+
+def _validate_pyi_bundle_placement(entry: Path, modules_by_path: dict[Path, SemanticModule]) -> None:
+    """Reject root/module placement edits that contradict the file graph."""
+    entry_module = modules_by_path[entry]
+    if entry.name == "__init__.pyi" and _module_has_native_declarations(entry_module):
+        invalid = [
+            declaration.name
+            for declaration in _module_declarations(entry_module)
+            if not _declaration_is_external(declaration)
+        ]
+        if invalid:
+            raise ValueError(
+                "Package entry contracts cannot contain native module declarations; "
+                "import module leaves or mark standalone procedures with @external. "
+                f"Invalid declaration: {invalid[0]}"
+            )
+
+    namespace_imports = _namespace_imported_pyi_paths(entry, modules_by_path)
+    for path in namespace_imports:
+        module = modules_by_path[path]
+        invalid = [
+            declaration.name for declaration in _module_declarations(module) if _declaration_is_external(declaration)
+        ]
+        if invalid:
+            raise ValueError(
+                "A contract imported as a Python child namespace cannot contain @external declarations; "
+                "keep standalone procedures in the entry contract or import external fragments by name. "
+                f"Invalid declaration: {invalid[0]} in {path}"
+            )
+
+
+def _declaration_is_external(declaration: object) -> bool:
+    if isinstance(declaration, ProcedureOverloadSet):
+        return bool(declaration.procedures) and all(_declaration_is_external(item) for item in declaration.procedures)
+    if isinstance(declaration, SemanticFunction):
+        return declaration.origin.source_language == "fortran" and declaration.origin.native_scope is None
+    return False
+
+
+def _namespace_imported_pyi_paths(entry: Path, modules_by_path: dict[Path, SemanticModule]) -> set[Path]:
+    namespace_imports: set[Path] = set()
+    pending = [entry]
+    seen: set[Path] = set()
+    while pending:
+        path = pending.pop()
+        if path in seen:
+            continue
+        seen.add(path)
+        module = modules_by_path[path]
+        for semantic_import in module.imports:
+            if not isinstance(semantic_import, SemanticImport) or not semantic_import.module.startswith("."):
+                continue
+            if semantic_import.module.strip("."):
+                dependency = _relative_import_path(path, semantic_import.module, semantic_import.module.lstrip("."))
+                pending.append(dependency)
+                continue
+            for item in semantic_import.items:
+                if item.source == "*":
+                    continue
+                dependency = _relative_import_path(path, semantic_import.module, item.source)
+                namespace_imports.add(dependency)
+                pending.append(dependency)
+    return namespace_imports
 
 
 def _discover_pyi_imports(root: Path) -> tuple[Path, ...]:

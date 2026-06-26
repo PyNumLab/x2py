@@ -1,0 +1,3 @@
+def deep_func(
+    value: Ptr(Const(Int32))
+) -> Int32: ...

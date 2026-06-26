@@ -1683,10 +1683,10 @@ class FortranToIRConverter:
                         native_name=mapping.native_name,
                         native_position=native_position,
                         python_position=python_position,
-                        result_position=None,
+                        result_position=0,
                         value_kind=mapping.value_kind,
                         value=mapping.value,
-                        intent=mapping.intent,
+                        intent="inout",
                     )
                 )
                 python_position += 1
