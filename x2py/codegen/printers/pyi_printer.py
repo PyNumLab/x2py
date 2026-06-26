@@ -7,7 +7,7 @@ import json
 import keyword
 import re
 
-from x2py.naming.public import PublicNamePolicy
+from x2py.naming import NamingPolicy
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_FIELDS, POINTER_POLICY_METADATA
 from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.semantics.models import (
@@ -54,23 +54,23 @@ class PyiPrinter:
     def __init__(self, *, normalize_fortran_public_names: bool = False):
         """Configure whether source-generated Fortran contracts use Python public names."""
         self._normalize_fortran_public_names = normalize_fortran_public_names
-        self._public_name_policy = PublicNamePolicy()
+        self._naming_policy = NamingPolicy()
         self._public_namespace: tuple[str, ...] = ()
         self._reserved_public_names: dict[tuple[tuple[str, ...], str, object], str] = {}
 
     def emit(self, node) -> str:
         """Emit the supported semantic model passed by the caller."""
         if self._normalize_fortran_public_names and isinstance(node, SemanticModule):
-            previous_policy = self._public_name_policy
+            previous_policy = self._naming_policy
             previous_namespace = self._public_namespace
             previous_reserved = self._reserved_public_names
-            self._public_name_policy = PublicNamePolicy()
+            self._naming_policy = NamingPolicy()
             self._public_namespace = ()
             self._reserved_public_names = {}
             try:
                 return self._visit(node)
             finally:
-                self._public_name_policy = previous_policy
+                self._naming_policy = previous_policy
                 self._public_namespace = previous_namespace
                 self._reserved_public_names = previous_reserved
         return self._visit(node)
@@ -943,7 +943,7 @@ class PyiPrinter:
         reserved = self._reserved_public_names.get(key)
         if reserved is not None:
             return reserved
-        public_name = self._public_name_policy.reserve(
+        public_name = self._naming_policy.reserve_public_name(
             self._public_namespace,
             raw_name,
             category=category,

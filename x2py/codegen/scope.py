@@ -11,8 +11,25 @@ from .models.core import (
     IndexedElement,
     Variable,
 )
-from x2py.naming.pythonnameclashchecker import PythonNameClashChecker
+from x2py.naming import NamingPolicy
+from x2py.naming import generated_symbol_rules
 from x2py.utilities.strings import create_incremented_string
+
+
+def _resolve_scope_naming_state(parent_scope, naming_policy, public_namespace, symbol_language):
+    """Return inherited naming policy, public namespace, and symbol language."""
+    if naming_policy is None and parent_scope is not None:
+        naming_policy = parent_scope.naming_policy
+    if naming_policy is None:
+        naming_policy = NamingPolicy()
+    if public_namespace is None and parent_scope is not None:
+        public_namespace = parent_scope.public_namespace
+    if symbol_language is None and parent_scope is not None:
+        symbol_language = parent_scope.symbol_language
+    if symbol_language is None:
+        symbol_language = "python"
+    generated_symbol_rules(symbol_language)
+    return naming_policy, tuple(public_namespace or ()), symbol_language.casefold()
 
 
 class Scope:
@@ -51,12 +68,21 @@ class Scope:
         A dictionary which maps indexed tuple elements to variables representing those
         elements. This argument should only be used after the semantic stage.
 
+    naming_policy : NamingPolicy, optional
+        Shared policy used for public Python names and generated target-language
+        symbols. Child scopes inherit this from their parent.
+
+    public_namespace : tuple[str, ...], optional
+        Namespace key used when reserving public Python names.
+
+    symbol_language : str, optional
+        Target language used when reserving generated symbols.
+
     scope_type : str
         The type of the scope being created [module, function, class, loop, program].
     """
 
     allow_loop_scoping = False
-    name_clash_checker = PythonNameClashChecker()
     __slots__ = (
         "_dotted_symbols",
         "_dummy_counter",
@@ -65,12 +91,13 @@ class Scope:
         "_locals",
         "_loops",
         "_name",
+        "_naming_policy",
         "_original_symbol",
         "_parent_scope",
-        "_public_name_policy",
         "_public_namespace",
         "_scope_type",
         "_sons_scopes",
+        "_symbol_language",
         "_symbol_prefix",
         "_temporary_variables",
         "_used_symbols",
@@ -95,8 +122,9 @@ class Scope:
         parent_scope=None,
         used_symbols=None,
         original_symbols=None,
-        public_name_policy=None,
+        naming_policy=None,
         public_namespace=None,
+        symbol_language=None,
         symbolic_aliases=None,
         scope_type,
     ):
@@ -124,12 +152,12 @@ class Scope:
 
         self._used_symbols = used_symbols or {}
         self._original_symbol = original_symbols or {}
-        if public_name_policy is None and parent_scope is not None:
-            public_name_policy = parent_scope.public_name_policy
-        if public_namespace is None and parent_scope is not None:
-            public_namespace = parent_scope.public_namespace
-        self._public_name_policy = public_name_policy
-        self._public_namespace = tuple(public_namespace or ())
+        self._naming_policy, self._public_namespace, self._symbol_language = _resolve_scope_naming_state(
+            parent_scope,
+            naming_policy,
+            public_namespace,
+            symbol_language,
+        )
 
         self._dummy_counter = 0
 
@@ -181,14 +209,19 @@ class Scope:
         return child
 
     @property
-    def public_name_policy(self):
-        """Policy used to reserve Python-visible wrapper names."""
-        return self._public_name_policy
+    def naming_policy(self):
+        """Policy used to reserve public names and generated symbols."""
+        return self._naming_policy
 
     @property
     def public_namespace(self):
         """Namespace key used for public wrapper name reservations."""
         return self._public_namespace
+
+    @property
+    def symbol_language(self):
+        """Target language used for generated-symbol reservations."""
+        return self._symbol_language
 
     def child_public_namespace(self, *parts):
         """Return a child public namespace below the current scope."""
@@ -539,9 +572,10 @@ class Scope:
         if not self.allow_loop_scoping and self.is_loop:
             return self.parent_scope.insert_symbol(symbol)
         if symbol not in self._used_symbols:
-            collisionless_name = self.name_clash_checker.get_collisionless_name(
+            collisionless_name = self._naming_policy.generated_symbol(
                 symbol,
                 self.all_used_symbols,
+                language=self._symbol_language,
                 prefix=self._symbol_prefix,
                 context=object_type,
                 parent_context=self._scope_type,
@@ -573,7 +607,11 @@ class Scope:
 
         assert python_symbol not in self._used_symbols
 
-        if self.name_clash_checker.has_clash(low_level_symbol, self.all_used_symbols):
+        if self._naming_policy.has_generated_symbol_clash(
+            low_level_symbol,
+            self.all_used_symbols,
+            language=self._symbol_language,
+        ):
             raise ValueError("Low-level name conflicts with name already in use.")
 
         self._used_symbols[python_symbol] = low_level_symbol
@@ -708,7 +746,11 @@ class Scope:
         Symbol
             The new name which will be printed in the code.
         """
-        if current_name is not None and not self.name_clash_checker.has_clash(current_name, self.all_python_symbols):
+        if current_name is not None and not self._naming_policy.has_generated_symbol_clash(
+            current_name,
+            self.all_python_symbols,
+            language=self._symbol_language,
+        ):
             new_name = Symbol(current_name, is_temp=is_temp)
             return self.insert_symbol(new_name, object_type=object_type)
 
@@ -720,7 +762,7 @@ class Scope:
                 self.all_used_symbols,
                 prefix=current_name,
                 counter=self._dummy_counter,
-                name_clash_checker=self.name_clash_checker,
+                naming_rules=generated_symbol_rules(self._symbol_language),
             )
         else:
             if is_temp is None:
@@ -728,9 +770,10 @@ class Scope:
             # When a name is suggested, try to stick to it
             new_name, _ = create_incremented_string(self.all_used_symbols, prefix=current_name)
 
-        collisionless_name = self.name_clash_checker.get_collisionless_name(
+        collisionless_name = self._naming_policy.generated_symbol(
             new_name,
             self.all_used_symbols,
+            language=self._symbol_language,
             prefix=self._symbol_prefix,
             context=object_type,
             parent_context=self._scope_type,
@@ -742,9 +785,7 @@ class Scope:
 
     def reserve_public_name(self, raw_name, *, object_type="variable", owner=None):
         """Reserve a Python-visible name in this scope's public namespace."""
-        if self._public_name_policy is None:
-            return str(raw_name)
-        return self._public_name_policy.reserve(
+        return self._naming_policy.reserve_public_name(
             self._public_namespace,
             raw_name,
             category=object_type,

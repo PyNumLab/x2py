@@ -1,14 +1,19 @@
-"""
-Module containing all classes which handle name collision rules
-for different languages.
-"""
+"""Naming policy for public APIs and generated target-language symbols."""
 
-from .cnameclashchecker import CNameClashChecker
-from .fortrannameclashchecker import FortranNameClashChecker
-from .pythonnameclashchecker import PythonNameClashChecker
+from .policy import (
+    GeneratedSymbolRules,
+    NamingPolicy,
+    NormalizedPublicName,
+    PublicNameRecord,
+    generated_symbol_rules,
+    normalize_public_name,
+)
 
-name_clash_checkers = {
-    "fortran": FortranNameClashChecker(),
-    "c": CNameClashChecker(),
-    "python": PythonNameClashChecker(),
-}
+__all__ = (
+    "GeneratedSymbolRules",
+    "NamingPolicy",
+    "NormalizedPublicName",
+    "PublicNameRecord",
+    "generated_symbol_rules",
+    "normalize_public_name",
+)

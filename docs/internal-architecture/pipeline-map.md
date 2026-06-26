@@ -45,6 +45,76 @@ CLI request
 | Printing | `x2py/codegen/printers/` | generated ASTs | wrapper source files | generated build artifacts and wrapper tests |
 | Compile and link | `x2py/compiling/` | user objects, wrapper sources, runtime support | shared library | wrapper runtime tests |
 
+## Concept Ownership Rules
+
+The pipeline keeps separate concepts for contract facts, policy decisions,
+generated implementation, and emitted source. Similar names across layers do
+not mean those classes should be merged.
+
+| Concept family | Owner | What belongs there | What must stay out |
+| --- | --- | --- | --- |
+| Parser facts | parser packages | Source syntax, native declaration structure, source locations, and parser diagnostics | Wrapper policy, Python API projection, generated names, and compile/link decisions |
+| Semantic IR | `x2py/semantics/models.py` and source-to-IR converters | Language-neutral contract facts: public names, native identities, source origins, visibility, type/storage/intent facts, module/class/function/variable structure, and metadata that must survive `.pyi` round trips | Generated bodies, temporaries, target-language scopes, include/import mechanics, CPython calls, and printer-only syntax |
+| Readiness and ownership policy | `x2py/semantics/readiness.py`, `x2py/ownership_policy.py`, and lowering checks | Support blockers and policy choices for ownership, lifetime, output projection, replacement, and ABI safety | Raw parser syntax and backend-specific statement trees |
+| Core codegen AST | `x2py/codegen/models/` and `x2py/semantics/ir2ast.py` outputs | The implementation plan after a semantic contract is accepted: generated functions, variables as storage locations, statements, expressions, control flow, temporaries, scopes, and imports/includes | Source-contract authority, `.pyi` persistence, and readiness-only facts |
+| Backend codegen AST | `x2py/codegen/bridges/`, `x2py/codegen/bindings/`, and backend API helpers | Fortran bridge nodes, C/CPython binding nodes, target ABI/API calls, and backend-specific adapter structure | Language-neutral semantic meaning |
+| Printers and compilation | `x2py/codegen/printers/`, `x2py/compiling/`, and wrapper orchestration | Text emission, generated artifact layout, compiler commands, native objects, libraries, include directories, and link inputs | Semantic support decisions and generated-AST rewriting policy |
+| Naming policy | `x2py/naming/` | Shared public-name and generated-symbol decisions for Python, C, and Fortran targets | Semantic IR ownership or codegen tree ownership |
+
+Use these rules when adding a new notion:
+
+- Put it in semantic IR when the fact changes the user-visible or native
+  contract, must be preserved in `.pyi`, is needed for source-free wrapper
+  replay, or is required before readiness can decide support.
+- Put it in readiness or ownership policy when it is a safety decision rather
+  than a source fact: for example borrowed versus copied data, visible versus
+  hidden native outputs, replacement rules, destructor ownership, or unsupported
+  ABI combinations.
+- Put it in codegen when it exists because emitted wrapper code needs it:
+  generated bodies, temporaries, low-level storage variables, scopes, imports,
+  includes, bridge calls, CPython API calls, cleanup paths, and target-language
+  expressions.
+- Put it in compiling or wrapping when it describes build inputs or build
+  execution: sources, objects, libraries, library directories, include
+  directories, compiler flags, link items, runtime support files, and generated
+  artifact paths.
+- Put it in naming when the same source symbol needs stable Python, C, or
+  Fortran spellings, reserved-word handling, or collision-free generated names.
+  The naming layer is a shared policy service, not a semantic model and not a
+  codegen AST node.
+
+Merge or move concepts only when their invariants match:
+
+- Merge a shared object only when it has the same meaning and lifetime in every
+  layer and carries no generated implementation state. Small immutable value
+  objects such as identity, origin, scalar-kind descriptors, or naming-policy
+  results are candidates.
+- Move a codegen concept into semantics only when it can be represented without
+  a generated body, temporary, scope, include, or target-language expression and
+  the fact is needed for `.pyi`, readiness, or source-free replay.
+- Move a semantic concept into codegen only when it does not change the public
+  contract, native contract, readiness, or `.pyi` representation and exists only
+  to print or compile wrapper code.
+- Keep concepts split when they share a word but not an invariant. A semantic
+  function is a callable contract; a codegen function is an emitted body. A
+  semantic variable is a public/native value contract; a codegen variable is a
+  storage location in generated code. A semantic datatype is an API/ABI fact; a
+  codegen datatype can be a concrete Fortran, C, CPython, NumPy, or bridge
+  representation.
+
+Examples:
+
+- `@bind` and a native procedure name belong to semantic identity. The bridge
+  symbol used to call it belongs to codegen naming and lowering.
+- `@raises`, `@hold_gil`, output projection, and ownership metadata belong to
+  semantic policy/readiness. The generated CPython error checks, GIL calls, and
+  cleanup statements belong to codegen.
+- Python keyword avoidance for a public name, such as a native `def` routine,
+  belongs to naming policy. The chosen public spelling is stored where the
+  contract needs it, while target-specific helper symbols stay generated.
+- Codegen `Scope`, `FunctionDef`, body statements, temporaries, decorators,
+  includes, and backend datatypes stay out of `x2py/semantics/models.py`.
+
 ## Stage Maintenance Map
 
 | Stage family | First files to read | Source navigation owner |

@@ -313,8 +313,9 @@ class CPythonBindingGenerator(BindingGenerator):
             name=original_mod_name,
             used_symbols=scope.local_used_symbols.copy(),
             original_symbols=scope.python_names.copy(),
-            public_name_policy=scope.public_name_policy,
+            naming_policy=scope.naming_policy,
             public_namespace=scope.public_namespace,
+            symbol_language=self.start_language,
             scope_type="module",
         )
         self.scope = mod_scope
@@ -1437,6 +1438,8 @@ class CPythonBindingGenerator(BindingGenerator):
                         name=expr.source_module.name,
                         used_symbols=expr.source_module.scope.local_used_symbols.copy(),
                         original_symbols=expr.source_module.scope.python_names.copy(),
+                        naming_policy=self.scope.naming_policy,
+                        symbol_language=self.scope.symbol_language,
                         scope_type="module",
                     )
                 name = t.scope.get_python_name(t.name)
@@ -1447,7 +1450,12 @@ class CPythonBindingGenerator(BindingGenerator):
                     t,
                     struct_name,
                     type_name,
-                    Scope(name=name, scope_type="class"),
+                    Scope(
+                        name=name,
+                        naming_policy=self.scope.naming_policy,
+                        symbol_language=self.scope.symbol_language,
+                        scope_type="class",
+                    ),
                     class_type=dtype,
                 )
                 self._python_object_map[t] = wrapped_class
@@ -1457,7 +1465,12 @@ class CPythonBindingGenerator(BindingGenerator):
 
         if import_wrapper:
             wrapper_name = f"{expr.source}_wrapper"
-            mod_spoof_scope = Scope(name=expr.source_module.name, scope_type="module")
+            mod_spoof_scope = Scope(
+                name=expr.source_module.name,
+                naming_policy=self.scope.naming_policy,
+                symbol_language=self.scope.symbol_language,
+                scope_type="module",
+            )
             mod_import_func = FunctionDef(
                 mod_spoof_scope.get_new_name("import"),
                 (),

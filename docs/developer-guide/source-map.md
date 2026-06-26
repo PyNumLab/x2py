@@ -58,7 +58,7 @@ change crosses ownership boundaries.
 | `x2py/semantics/` | Language-neutral semantic IR, source-to-IR conversion, `.pyi` loading, readiness, and codegen lowering | `models.py`, `fortran2ir.py`, `c2ir.py`, `pyi_parser.py`, `readiness.py`, `ir2ast.py` | `tests/semantics/`, `tests/pyi/`, `docs/reference/semantic-ir.md`, `docs/reference/semantic-pyi-format.md` |
 | `x2py/codegen/` | Codegen AST, bridge and binding generation, printers, and semantic `.pyi` printing | `models/`, `bridges/fortran_to_c.py`, `bindings/c_to_python.py`, `printers/`, `binding_pipeline.py` | `tests/wrapper/`, `tests/semantics/test_pyi_printer.py`, `docs/user-guide/fortran-wrapper.md` |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, shared-library linking, and runtime support installation | `basic.py`, `compilers.py`, `python_wrapper.py`, `runtime_support.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/build_from_source/test_runtime_abi.py` |
-| `x2py/naming/` | Python, C, and Fortran name collision policies | `public.py`, `*nameclashchecker.py` | naming, visibility, and wrapper runtime tests |
+| `x2py/naming/` | Unified public-name and generated-symbol policy for Python, C, and Fortran targets | `policy.py` | naming, visibility, and wrapper runtime tests |
 | `x2py/stdlib/` | Native runtime support files copied into generated wrapper builds | `x2py_runtime/` | wrapper runtime tests |
 | `x2py/utilities/` | Small shared Python utilities | `metaclasses.py`, `strings.py` | tests that exercise callers |
 
@@ -100,7 +100,7 @@ update this table, the package README files, and the mechanical checks in
 | `x2py/compiling/compilers.py` | Compiler command execution and tool lookup. |
 | `x2py/compiling/python_wrapper.py` | Generated wrapper compilation and shared-library linking. |
 | `x2py/compiling/runtime_support.py` | Runtime support installation for generated wrappers. |
-| `x2py/naming/public.py` | Public wrapper name policy. |
+| `x2py/naming/policy.py` | Public wrapper names and generated target-language symbols. |
 | `x2py/stdlib/` | Runtime support payload copied into generated builds. |
 
 ## Layer-To-Layer Route

@@ -16,6 +16,6 @@ Contract fixtures: generated package expectations live under
 under `handwritten_contracts/<case>/`.
 
 Roadmap items: Stage 1 subject routing, Stage 4 standalone procedure parity,
-and Stage 8 flat-buffer external-contract evidence.
+and completed flat-buffer external-contract evidence.
 
 Tests: `test_external_procedures.py`.

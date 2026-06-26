@@ -29,7 +29,7 @@ def random_string(n):
 
 
 # ==============================================================================
-def create_incremented_string(forbidden_exprs, prefix="Dummy", counter=1, name_clash_checker=None):
+def create_incremented_string(forbidden_exprs, prefix="Dummy", counter=1, naming_rules=None):
     """
     Create a new unique string by incrementing a prefix.
 
@@ -51,9 +51,9 @@ def create_incremented_string(forbidden_exprs, prefix="Dummy", counter=1, name_c
         The prefix used to begin the string.
     counter : int
         The expected value of the next name.
-    name_clash_checker : x2py.naming.languagenameclashchecker.LanguageNameClashChecker
-        A class instance providing access to a `has_clash` function which determines
-        if names clash in a given language.
+    naming_rules : object, optional
+        An object providing a `has_clash` function which determines if names
+        clash in a target language.
 
     Returns
     -------
@@ -70,8 +70,8 @@ def create_incremented_string(forbidden_exprs, prefix="Dummy", counter=1, name_c
     name_format = "{prefix}_{counter:0=" + str(nDigits) + "d}"
     name = name_format.format(prefix=prefix, counter=counter)
     counter += 1
-    if name_clash_checker:
-        while name_clash_checker.has_clash(name, forbidden_exprs):
+    if naming_rules:
+        while naming_rules.has_clash(name, forbidden_exprs):
             name = name_format.format(prefix=prefix, counter=counter)
             counter += 1
     else:

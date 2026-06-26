@@ -8,8 +8,6 @@ to expose generated code to Python.
 from pathlib import Path
 
 from .models.core import ModuleHeader
-from x2py.naming import name_clash_checkers
-from .scope import Scope
 from .printers.cpythoncode import CPythonCodePrinter
 from .printers.fcode import FCodePrinter
 from .bindings.c_to_python import CPythonBindingGenerator
@@ -67,7 +65,6 @@ class BindingPipeline:
         sharedlib_dirpath : str
             The folder where the generated .so file will be located.
         """
-        current_name_clash_checker = Scope.name_clash_checker
         ast = self._ast
         for Step in self._pipeline_steps:
             if self._verbose:
@@ -76,13 +73,10 @@ class BindingPipeline:
                     self._name,
                 )
 
-            Scope.name_clash_checker = name_clash_checkers[Step.start_language.lower()]
             step = Step(sharedlib_dirpath, verbose=self._verbose)
 
             ast = step.generate(ast)
             self._generated_asts.append(ast)
-
-        Scope.name_clash_checker = current_name_clash_checker
 
     def write(self, dirpath):
         """

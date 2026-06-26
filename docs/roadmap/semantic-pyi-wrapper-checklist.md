@@ -58,52 +58,6 @@ foundation, replayable native build manifests and library-scale bundles prove
 the source-free build surface, and editable policy is reserved for the final
 stage.
 
-### Stage 5 — Full generated-contract runtime parity
-
-- [x] Allocatable and pointer module variables round-trip their target,
-  lifetime, nullability, shape, and transfer contracts.
-- [x] Generic interfaces and overload sets rebuild from `.pyi` with the same
-  dispatch table, concrete target links, error messages, and Python-visible
-  names as the source-driven build.
-- [x] Derived-type fields, methods, inheritance metadata, constructors,
-  finalizers, borrowed children, and owned result behavior rebuild from `.pyi`
-  without consulting the original source declarations.
-- [x] Array dtype, rank, shape, order, stride, lower-bound, writeability,
-  alignment, byte-order, and zero-extent validation rebuild from `.pyi` with the
-  same runtime failures and success cases.
-- [x] Character kind, deferred/allocatable storage, fixed buffer, and
-  copy-in/copy-out behavior rebuild from `.pyi` with the same Python string
-  contract.
-- [x] Runtime policies from `.pyi`, including `@hold_gil` and `@raises(...)`,
-  are honored by generated C bindings.
-- [x] Callback contracts rebuild from `.pyi` with the same call-scoped lifetime,
-  GIL handling, exception failure mode, array validation, and derived-type
-  conversion behavior.
-- [x] Every parity-eligible runtime fixture in `tests/wrapper` has a checked
-  generated `.pyi` package fixture under its consuming subject, uses the shared
-  source/generated-contract assertion body, and rebuilds without reparsing
-  native source.
-
-### Stage 7 — Library-scale and mixed-bundle evidence
-
-- [ ] Several contracts imported by one entry resolve from one archive or shared
-  library, and one entry resolves from several objects and libraries.
-- [ ] Module procedures work with separately supplied `.mod` directories;
-  standalone `@external` procedures work without `.mod` inputs.
-- [ ] A mixed bundle containing native modules and standalone external
-  procedures exposes module members below their namespaces and externals at the
-  extension root.
-- [ ] The BLAS/LAPACK-style path is tested independently with a static archive,
-  a direct shared-library path, and `--native-library` plus
-  `--native-library-dir`.
-- [ ] Mixed object, archive, direct shared-library, and named-library inputs
-  preserve dependency-safe link order and resolve every native symbol.
-- [ ] Static archive dependency order, repeated archives or linker groups for
-  cyclic dependencies, and required transitive libraries have runtime tests.
-- [ ] Missing symbols, duplicate definitions, incompatible artifacts, missing
-  `.mod` files, and unavailable dependent shared libraries produce direct
-  diagnostics without any source fallback.
-
 ### Stage 8 — Editable contract semantics
 
 This stage is intentionally last: edited Python-facing contracts should build
@@ -268,7 +222,7 @@ objects, archives, and libraries remain separate build-plan facts.
   it to a declaration inside a child-namespace module contract fails during
   validation before wrapper code generation.
 
-### Stage 5 — In-Progress Generated-Contract Runtime Parity Evidence
+### Stage 5 — Full Generated-Contract Runtime Parity
 
 - [x] The verified scalar baseline and legacy/F90 fmath array baseline run in
   both `source` and `generated-pyi` modes through the same assertion bodies.
@@ -364,8 +318,10 @@ surface evidence lives in `tests/parser/test_cli.py`.
 
 ### Stage 7 — Library-Scale And Mixed-Bundle Evidence
 
-Real BLAS/LAPACK object-file evidence now lives in
-`tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py`.
+Real BLAS/LAPACK artifact-shape evidence lives in
+`tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py`. Native
+bundle, order, transitive-library, and failure-path evidence lives in
+`tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py`.
 
 - [x] Several selected standalone-procedure files copied from the real
   `tests/data/fortran/blas/` and `tests/data/fortran/lapack/` parser corpora
@@ -373,8 +329,9 @@ Real BLAS/LAPACK object-file evidence now lives in
   `__init__.pyi`.
 - [x] The generated contract imports no module leaves, marks every selected
   routine as `@external`, preserves assumed-size array ABI with `Flat`
-  dimensions, and builds from separated object files without reparsing native
-  source.
+  dimensions, and builds from separated object files, one static archive, one
+  direct shared library, or `--native-library` plus `--native-library-dir`
+  without reparsing native source.
 - [x] The generated compact BLAS/LAPACK contract is compared against the
   checked-in wrapper fixture under
   `tests/wrapper/fortran/real_libraries/contracts/real_blas_lapack/`;
@@ -386,6 +343,23 @@ Real BLAS/LAPACK object-file evidence now lives in
   (`Annotated[Float64[Flat, 3], ORDER_C]`) by validating a multidimensional
   Python view while passing a rank-preserving bridge view to an assumed-size
   native dummy.
+- [x] Several contracts imported by one entry resolve from one static archive
+  and one direct shared library while preserving child module namespaces.
+- [x] Module procedures build with separately supplied `.mod` directories, while
+  standalone `@external` procedures build without module search inputs.
+- [x] A mixed bundle containing native modules and standalone external
+  procedures exposes module members below child namespaces and standalone
+  externals at the extension root.
+- [x] Mixed object, archive, direct shared-library, and named-library inputs
+  preserve dependency-safe link order in `NativeBuildPlan` and resolve all
+  runtime symbols.
+- [x] Static archive dependency order, GNU linker archive groups for cyclic
+  archive dependencies, and required transitive named libraries have runtime
+  tests.
+- [x] Missing symbols, duplicate native definitions, incompatible artifacts,
+  missing `.mod` directories, and unavailable dependent shared libraries report
+  native linker/compiler/loader diagnostics without falling back to source
+  reparsing.
 
 ### Immutable Native Contract
 

@@ -1600,6 +1600,7 @@ python3 -m x2py --build-manifest build/solver/x2py-build.json --wrap
 Runtime tests: [`test_multi_source_builds.py`](../../tests/wrapper/fortran/multiple_files/test_multi_source_builds.py),
 [`test_external_procedures.py`](../../tests/wrapper/fortran/external_routines/test_external_procedures.py),
 [`test_real_blas_lapack.py`](../../tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py),
+[`test_stage7_native_bundles.py`](../../tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py),
 [`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py), and
 [`test_compiler_verbose.py`](../../tests/wrapper/fortran/build_from_source/test_compiler_verbose.py).
 

@@ -22,7 +22,7 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | `x2py/codegen/` | Codegen AST models, Fortran bridge generation, CPython binding generation, and printers. |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, runtime support installation, and linking. |
 | `x2py/stdlib/` | Native runtime support copied into generated wrapper builds. |
-| `x2py/naming/` | Collision and public-name policies. |
+| `x2py/naming/` | Unified public-name and generated-symbol policy. |
 | `x2py/utilities/` | Small shared Python utilities. |
 
 The major source packages have local README files under `x2py/` for

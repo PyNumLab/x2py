@@ -18,7 +18,7 @@ from x2py.compiling.compilers import Compiler, get_condaless_search_path
 from x2py.compiling.python_wrapper import create_shared_library
 from x2py.fortran_parser.parser import parse_fortran_project
 from x2py.fortran_type_probe import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
-from x2py.naming.public import PublicNamePolicy
+from x2py.naming import NamingPolicy
 from x2py.preprocessing import PreprocessingConfig, preprocess_source
 from x2py.semantics.fortran2ir import (
     collect_fortran_type_storage_requirements,
@@ -1322,7 +1322,7 @@ def build_fortran_extension(
     scope = Scope(
         name=module.name,
         scope_type="module",
-        public_name_policy=PublicNamePolicy(strict=strict_wrapper_names),
+        naming_policy=NamingPolicy(strict_public_names=strict_wrapper_names),
         public_namespace=(module.name.casefold(),),
     )
     codegen_ast = semantic_ir_to_codegen_ast(module, scope)
@@ -1455,7 +1455,7 @@ def build_pyi_extension(
     scope = Scope(
         name=module.name,
         scope_type="module",
-        public_name_policy=PublicNamePolicy(strict=strict_wrapper_names),
+        naming_policy=NamingPolicy(strict_public_names=strict_wrapper_names),
         public_namespace=(module.name.casefold(),),
     )
     codegen_ast = semantic_ir_to_codegen_ast(module, scope)

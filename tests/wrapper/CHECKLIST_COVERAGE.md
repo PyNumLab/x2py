@@ -57,11 +57,16 @@ modules are searchable without relying on old flat filenames.
 | Runtime behavior contracts rebuild from generated or edited `.pyi` fixtures with the same recursion/reentrancy behavior, `@hold_gil` GIL policy, `@raises(...)` status projection, and generated wrapper policy code as source-backed builds | `runtime_behavior/test_runtime_recursion.py::test_recursive_native_runtime_calls`, `runtime_behavior/test_runtime_policies.py::test_pyi_runtime_policies_release_gil_and_project_native_errors`, `runtime_behavior/test_runtime_policies.py::test_compiled_runtime_policies_release_gil_and_project_native_errors`, `runtime_behavior/test_openmp_runtime.py::test_openmp_enabled_procedure_builds_with_explicit_gnu_flags` |
 | Naming and generic-interface contracts rebuild from generated `.pyi` fixtures with the same public-name normalization, visibility filtering, keyword/collision policy, public generic dispatch, type-bound binding names, defined operators, comparisons, named operators, and assignment behavior as source builds | `naming/test_visibility_naming.py::test_visibility_and_default_python_name_fixing_policy`, `naming/test_generic_interfaces.py::test_fortran_generic_interfaces_dispatch_in_generated_c_extension`, `naming/test_generic_interfaces.py::test_fixed_form_fortran_generic_interface_dispatches_in_generated_c_extension`, `naming/test_defined_operators.py::test_fortran_defined_operators_and_assignment_dispatch_in_generated_c_extension`, `tests/semantics/test_pyi_printer.py::test_fortran_generated_contracts_reserve_colliding_public_names_by_namespace`, `tests/pyi/test_pyi_to_ir.py::test_pyi_codegen_imports_public_generic_not_private_specific_targets`, `tests/pyi/test_pyi_to_ir.py::test_pyi_codegen_keyword_normalized_type_bound_method_uses_native_binding_name` |
 
-## Stage 8 — Library-Scale And Mixed-Bundle Evidence
+## Stage 7 — Library-Scale And Mixed-Bundle Evidence
 
 | Roadmap item | Evidence |
 | --- | --- |
-| Real BLAS/LAPACK standalone routines generate one compact external entry contract, match the checked-in `.pyi` fixture, and import from object files | `real_libraries/test_real_blas_lapack.py::test_real_blas_lapack_folder_generates_compact_contract_and_importable_wrapper` |
+| Real BLAS/LAPACK standalone routines generate one compact external entry contract, match the checked-in `.pyi` fixture, and import from object files, one archive, one direct shared library, and a named library with `--native-library-dir` | `real_libraries/test_real_blas_lapack.py::test_real_blas_lapack_folder_generates_compact_contract_and_importable_wrapper` |
+| Several contracts imported by one entry resolve from one archive or one shared library while preserving child module namespaces | `real_libraries/test_stage7_native_bundles.py::test_imported_contracts_resolve_from_one_archive_or_shared_library` |
+| Module procedures use separately supplied `.mod` directories while standalone `@external` procedures need no module search inputs | `real_libraries/test_stage7_native_bundles.py::test_mixed_module_external_bundle_resolves_all_native_input_kinds`, `real_libraries/test_stage7_native_bundles.py::test_missing_module_directory_reports_compile_error` |
+| Mixed native modules and standalone externals expose modules below namespaces and externals at the root while object, archive, direct shared-library, and named-library link items preserve order | `real_libraries/test_stage7_native_bundles.py::test_mixed_module_external_bundle_resolves_all_native_input_kinds` |
+| Static archive dependency order, linker archive groups, and required transitive named libraries resolve at runtime | `real_libraries/test_stage7_native_bundles.py::test_static_archive_dependency_order_resolves_transitive_library`, `real_libraries/test_stage7_native_bundles.py::test_static_archive_groups_resolve_cyclic_archive_dependencies`, `real_libraries/test_stage7_native_bundles.py::test_required_transitive_named_library_resolves_runtime_symbol` |
+| Missing symbols, duplicate definitions, incompatible artifacts, missing `.mod` directories, and unavailable dependent shared libraries report native diagnostics without source fallback | `real_libraries/test_stage7_native_bundles.py::test_missing_symbol_reports_native_link_or_loader_error`, `real_libraries/test_stage7_native_bundles.py::test_duplicate_native_definitions_report_linker_error`, `real_libraries/test_stage7_native_bundles.py::test_incompatible_native_artifact_reports_linker_error`, `real_libraries/test_stage7_native_bundles.py::test_missing_module_directory_reports_compile_error`, `real_libraries/test_stage7_native_bundles.py::test_unavailable_dependent_shared_library_reports_loader_error` |
 
 ## Build From Source
 
@@ -86,6 +91,7 @@ modules are searchable without relying on old flat filenames.
 ## Real Libraries
 
 - `real_libraries/test_real_blas_lapack.py`
+- `real_libraries/test_stage7_native_bundles.py`
 
 ## Edit `.pyi` Contracts
 

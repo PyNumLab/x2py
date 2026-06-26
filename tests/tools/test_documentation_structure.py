@@ -166,7 +166,7 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/compiling/compilers.py",
     "x2py/compiling/python_wrapper.py",
     "x2py/compiling/runtime_support.py",
-    "x2py/naming/public.py",
+    "x2py/naming/policy.py",
     "x2py/stdlib/",
 ]
 SOURCE_NAVIGATION_PUBLIC_DOCS = [

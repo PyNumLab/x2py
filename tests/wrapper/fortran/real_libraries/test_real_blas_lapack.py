@@ -29,6 +29,13 @@ def _compiler() -> str:
     return compiler
 
 
+def _archiver() -> str:
+    archiver = shutil.which("ar")
+    if archiver is None:
+        pytest.skip("ar is required for real BLAS/LAPACK archive wrapper tests")
+    return archiver
+
+
 def _copy_real_library_sources(workdir: Path) -> tuple[Path, ...]:
     source_root = workdir / "sources"
     sources = []
@@ -87,6 +94,21 @@ def _compile_native_objects(sources: tuple[Path, ...], native_dir: Path) -> tupl
     return tuple(objects)
 
 
+def _archive_objects(path: Path, objects: tuple[Path, ...]) -> Path:
+    subprocess.run([_archiver(), "rcs", str(path), *(str(obj) for obj in objects)], check=True)
+    return path
+
+
+def _shared_library(path: Path, objects: tuple[Path, ...]) -> Path:
+    subprocess.run(
+        [_compiler(), "-shared", "-o", str(path), *(str(obj) for obj in objects)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return path
+
+
 def _import_extension(module_name: str, build_dir: Path):
     sys.modules.pop(module_name, None)
     sys.path.insert(0, str(build_dir))
@@ -96,17 +118,38 @@ def _import_extension(module_name: str, build_dir: Path):
         sys.path.remove(str(build_dir))
 
 
-def test_real_blas_lapack_folder_generates_compact_contract_and_importable_wrapper(tmp_path: Path):
+@pytest.mark.parametrize("native_shape", ["objects", "archive", "shared_library", "named_library"])
+def test_real_blas_lapack_folder_generates_compact_contract_and_importable_wrapper(
+    tmp_path: Path,
+    native_shape: str,
+):
     sources = _copy_real_library_sources(tmp_path)
     entry = _generate_contract(tmp_path / "sources", tmp_path / "contracts")
     native_objects = _compile_native_objects(sources, tmp_path / "native")
+    if native_shape == "objects":
+        native_kwargs = {"native_objects": native_objects}
+        expected_link_items = [{"kind": "object", "path": str(native_object)} for native_object in native_objects]
+    elif native_shape == "archive":
+        archive = _archive_objects(tmp_path / "native" / "libreal_blas_lapack.a", native_objects)
+        native_kwargs = {"native_objects": [archive]}
+        expected_link_items = [{"kind": "archive", "path": str(archive)}]
+    elif native_shape == "shared_library":
+        shared = _shared_library(tmp_path / "native" / "libreal_blas_lapack.so", native_objects)
+        native_kwargs = {"native_objects": [shared]}
+        expected_link_items = [{"kind": "shared_library", "path": str(shared)}]
+    else:
+        named = _shared_library(tmp_path / "native" / "libreal_blas_lapack.so", native_objects)
+        native_kwargs = {
+            "native_libraries": ["real_blas_lapack"],
+            "native_library_dirs": [named.parent],
+        }
+        expected_link_items = [{"kind": "named_library", "name": "real_blas_lapack"}]
 
     result = build_pyi_extension(
         entry,
-        native_objects=native_objects,
-        native_include_dirs=[native_objects[0].parent],
         extension_name="real_blas_lapack",
         output_dir=tmp_path / "build",
+        **native_kwargs,
     )
     module = _import_extension(result.module_name, result.output_dir)
 
@@ -124,9 +167,10 @@ def test_real_blas_lapack_folder_generates_compact_contract_and_importable_wrapp
     assert "REAL(F64), INTENT(INOUT) :: DX(*)" in bridge
     assert "REAL(F64), INTENT(INOUT) :: DY(*)" in bridge
     assert "INTEGER(I32), INTENT(INOUT) :: INDEX(*)" in bridge
-    assert result.native_build_plan.to_dict()["link_items"] == [
-        {"kind": "object", "path": str(native_object)} for native_object in native_objects
-    ]
+    native_plan = result.native_build_plan.to_dict()
+    assert native_plan["link_items"] == expected_link_items
+    assert native_plan["compilation_units"] == []
+    assert native_plan["module_dirs"] == []
     assert [name for name in EXPECTED_ROUTINES if hasattr(module, name)] == list(EXPECTED_ROUTINES)
 
     x = np.array([1.0, 2.0, 3.0], dtype=np.float64)

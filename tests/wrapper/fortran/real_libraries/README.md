@@ -17,7 +17,7 @@ packages after a reviewed contract change. Future modified, handwritten, and
 invalid library-scale contracts should use sibling roots such as
 `modified_contracts/<case>/`.
 
-Roadmap items: Stage 1 subject routing and Stage 8 library-scale and
+Roadmap items: Stage 1 subject routing and Stage 7 library-scale and
 mixed-bundle evidence.
 
-Tests: `test_real_blas_lapack.py`.
+Tests: `test_real_blas_lapack.py`, `test_stage7_native_bundles.py`.

@@ -174,8 +174,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             name=f"bind_c_{expr.name}",
             used_symbols=scope.local_used_symbols.copy(),
             original_symbols=scope.python_names.copy(),
-            public_name_policy=scope.public_name_policy,
+            naming_policy=scope.naming_policy,
             public_namespace=scope.public_namespace,
+            symbol_language=self.start_language,
             scope_type="module",
         )
         name = mod_scope.get_new_name(f"bind_c_{expr.name}")
