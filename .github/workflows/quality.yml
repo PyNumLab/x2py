@@ -130,13 +130,10 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
         shard:
-          - parser
-          - semantics-pyi
-          - wrapper-basic
-          - wrapper-state-types
-          - wrapper-pyi-layout
-          - wrapper-real
-          - tools
+          - regular
+          - real-blas
+          - real-lapack
+          - real-native-bundles
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -182,44 +179,44 @@ jobs:
           X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR: ${{ github.workspace }}/${{ env.X2PY_REAL_LIBRARY_NATIVE_CACHE_PATH }}
         run: |
           case "${{ matrix.shard }}" in
-            parser)
-              test_paths=(tests/parser tests/property)
-              ;;
-            semantics-pyi)
-              test_paths=(tests/semantics tests/pyi tests/test_naming_policy.py)
-              ;;
-            wrapper-basic)
+            regular)
               test_paths=(
+                tests/parser
+                tests/property
+                tests/semantics
+                tests/pyi
+                tests/tools
+                tests/benchmarks
+                tests/test_naming_policy.py
                 tests/wrapper/fortran/arrays
+                tests/wrapper/fortran/build_from_pyi
+                tests/wrapper/fortran/build_from_source
                 tests/wrapper/fortran/callbacks
+                tests/wrapper/fortran/derived_types
+                tests/wrapper/fortran/edit_pyi_contracts
                 tests/wrapper/fortran/external_routines
                 tests/wrapper/fortran/function_calls
+                tests/wrapper/fortran/layout_rules
+                tests/wrapper/fortran/module_state
+                tests/wrapper/fortran/multiple_files
+                tests/wrapper/fortran/naming
                 tests/wrapper/fortran/runtime_behavior
                 tests/wrapper/fortran/scalars
                 tests/wrapper/fortran/strings
               )
               ;;
-            wrapper-state-types)
+            real-blas)
               test_paths=(
-                tests/wrapper/fortran/build_from_source
-                tests/wrapper/fortran/derived_types
-                tests/wrapper/fortran/module_state
-                tests/wrapper/fortran/multiple_files
-                tests/wrapper/fortran/naming
+                "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[blas]"
               )
               ;;
-            wrapper-pyi-layout)
+            real-lapack)
               test_paths=(
-                tests/wrapper/fortran/build_from_pyi
-                tests/wrapper/fortran/edit_pyi_contracts
-                tests/wrapper/fortran/layout_rules
+                "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[lapack]"
               )
               ;;
-            wrapper-real)
-              test_paths=(tests/wrapper/fortran/real_libraries)
-              ;;
-            tools)
-              test_paths=(tests/tools tests/benchmarks)
+            real-native-bundles)
+              test_paths=(tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py)
               ;;
             *)
               echo "Unknown test shard: ${{ matrix.shard }}" >&2

@@ -67,7 +67,9 @@ python -m coverage report
 For subprocess coverage investigations, mirror that command shape before
 deciding a fix. A plain local coverage run can miss subprocess data.
 GitHub Actions runs the same suite as path shards across the supported Python
-matrix. Python 3.12 shards collect coverage data, then a dedicated coverage job
+matrix. Most tests run in one regular shard; real-library wrapper coverage is
+split into BLAS, LAPACK, and native-bundle shards because those tests dominate
+runtime. Python 3.12 shards collect coverage data, then a dedicated coverage job
 combines those artifacts and enforces the coverage threshold.
 
 Reproduce an order-dependent failure from the stable CI seed:
