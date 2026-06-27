@@ -16,11 +16,13 @@ compilation runs in parallel after required module sources are compiled; set
 Runtime smoke assertions call selected routines from the fully wrapped modules;
 they do not build a selected-procedure wrapper.
 
-GitHub Actions restores this cache with a key that includes the runner OS,
-runner architecture, `gfortran` version, and source content hash. Native object
-files are reusable only for the same platform/compiler/source combination; a
-different runner image, compiler, architecture, or BLAS/LAPACK fixture content
-gets a separate rebuildable cache entry.
+GitHub Actions pins the real-library jobs to `ubuntu-24.04` with `gfortran-13`,
+warms this cache in a pre-matrix job, and then restores it in each Python
+matrix job. The key includes the runner OS, runner architecture, pinned
+`gfortran` version, source content hash, and native cache helper code. Native
+object files are reusable only for the same platform/compiler/source
+combination; a different runner image, compiler, architecture, or BLAS/LAPACK
+fixture content gets a separate rebuildable cache entry.
 
 Contract fixtures: full generated BLAS and LAPACK packages are compared against
 checked-in expected packages under `contracts/blas/` and `contracts/lapack/`.
