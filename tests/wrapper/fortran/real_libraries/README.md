@@ -5,12 +5,26 @@ bundles, and large multi-contract native link plans.
 
 Focused pytest command: `python3 -m pytest -q tests/wrapper/fortran/real_libraries`
 
-Native data path: `tests/data/fortran/wrapper/`, with selected real BLAS and
-LAPACK routines copied from the parser corpus into the flat wrapper-owned
-fixture corpus.
+Native data path: full library contract and runtime coverage reads
+`tests/data/fortran/blas/` and `tests/data/fortran/lapack/` directly. Full
+native BLAS/LAPACK object files are compiled once into
+`.pytest_cache/x2py/real-library-native`, archived once, and linked once into
+the shared libraries reused by repeated wrapper test runs. Set
+`X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR` to move this cache, including in CI. Object
+compilation runs in parallel after required module sources are compiled; set
+`X2PY_REAL_LIBRARY_NATIVE_JOBS` to override the default bounded worker count.
+Runtime smoke assertions call selected routines from the fully wrapped modules;
+they do not build a selected-procedure wrapper.
 
-Contract fixtures: generated compact contracts are compared against checked-in
-expected packages under `contracts/<case>/`. Use
+GitHub Actions restores this cache with a key that includes the runner OS,
+runner architecture, `gfortran` version, and source content hash. Native object
+files are reusable only for the same platform/compiler/source combination; a
+different runner image, compiler, architecture, or BLAS/LAPACK fixture content
+gets a separate rebuildable cache entry.
+
+Contract fixtures: full generated BLAS and LAPACK packages are compared against
+checked-in expected packages under `contracts/blas/` and `contracts/lapack/`.
+Use
 `WRAPPER_UPDATE_PYI_FIXTURES=1 python3 -m pytest -q
 tests/wrapper/fortran/real_libraries` to intentionally refresh those expected
 packages after a reviewed contract change. Future modified, handwritten, and

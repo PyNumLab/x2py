@@ -286,10 +286,10 @@ end module array_contract_mod
 
     assert _blocker_codes(report) >= {
         "fortran_assumed_type_policy_missing",
-        "fortran_character_array_unsupported",
         "fortran_derived_type_array_policy_missing",
         "fortran_array_rank_unsupported",
     }
+    assert "fortran_character_array_unsupported" not in _blocker_codes(report)
     assert "fortran_assumed_rank_policy_missing" not in _blocker_codes(report)
 
 

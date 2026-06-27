@@ -306,6 +306,7 @@ numpy_cdouble_type = Variable(CNativeInt(), name="NPY_CDOUBLE")
 numpy_clongdouble_type = Variable(CNativeInt(), name="NPY_CLONGDOUBLE")
 
 numpy_dtype_registry = {
+    CharType(): numpy_byte_type,
     NumpyBoolType(): numpy_bool_type,
     NumpyInt8Type(): numpy_byte_type,
     NumpyInt16Type(): numpy_short_type,

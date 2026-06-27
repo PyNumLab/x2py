@@ -2160,13 +2160,14 @@ def collect_semantic_compile_time_requirements(
 
     for var, ctx in _iter_fortran_variable_contexts(parsed):
         expression = var.symbolic_value if var.symbolic_value is not None else var.value
-        if var.is_parameter and var.value is None and expression:
+        parameter_base_type = str(var.base_type or "").lower()
+        if var.is_parameter and parameter_base_type == "integer" and var.value is None and expression:
             resolved = _resolve_compile_time_text(expression, values)
             supplied_by_symbol = values.get(var.name.lower())
             if supplied_by_symbol is None and resolved == expression:
                 add_requirement("parameter_value", ctx, expression=expression)
 
-        base_type = str(var.base_type or "").lower()
+        base_type = parameter_base_type
         if base_type not in {"integer", "real", "complex", "logical", "character"} or not var.kind:
             continue
         kind_key = converter._semantic_kind_key(var)

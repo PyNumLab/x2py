@@ -382,6 +382,53 @@ def _c_semantic_report(
     return _semantic_payload_for_converted_files(converted_files)
 
 
+def _parse_fortran_source_files(
+    paths: list[Path],
+    preprocessing: PreprocessingConfig,
+):
+    """Parse Fortran sources and resolve cross-file module parameters."""
+    parser = FortranParser()
+    parsed_files = []
+    for path in paths:
+        code, _preprocessing_recipe = _fortran_source_for_path(path, preprocessing)
+        parsed_files.append((path, parser.visit_file(code, filename=str(path))))
+
+    if len(parsed_files) > 1:
+        _resolve_fortran_project_parameters(parser, [parsed for _path, parsed in parsed_files])
+    return parsed_files
+
+
+def _resolve_fortran_project_parameters(parser: FortranParser, parsed_files) -> None:
+    """Apply project-wide parameter facts without enforcing global symbols."""
+    module_params: dict[str, dict[str, str]] = {}
+    for parsed_file in parsed_files:
+        if parsed_file.source is not None:
+            module_params.update(parser._collect_module_parameters(parsed_file.source, parsed_file.filename))
+
+    seen_procedures: set[int] = set()
+    for parsed_file in parsed_files:
+        for proc in parsed_file.procedures:
+            if id(proc) not in seen_procedures:
+                parser._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                seen_procedures.add(id(proc))
+        for module in parsed_file.modules:
+            parser._resolve_module_variable_kinds(module, module_params)
+            for proc in module.procedures:
+                if id(proc) not in seen_procedures:
+                    parser._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                    seen_procedures.add(id(proc))
+        for submodule in parsed_file.submodules:
+            parser._resolve_module_variable_kinds(submodule, module_params)
+            for proc in submodule.procedures:
+                if id(proc) not in seen_procedures:
+                    parser._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
+                    seen_procedures.add(id(proc))
+        for program in parsed_file.programs:
+            parser._resolve_module_variable_kinds(program, module_params)
+        for block_data in parsed_file.block_data_units:
+            parser._resolve_module_variable_kinds(block_data, module_params)
+
+
 def _fortran_semantic_report(
     paths: list[str],
     preprocessing: PreprocessingConfig,
@@ -393,12 +440,7 @@ def _fortran_semantic_report(
 ) -> dict[str, dict]:
     from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 
-    parser = FortranParser()
-    parsed_files = []
-    for p in _expand_paths(paths):
-        code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        fobj = parser.visit_file(code, filename=str(p))
-        parsed_files.append((p, fobj))
+    parsed_files = _parse_fortran_source_files(_expand_paths(paths), preprocessing)
     wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
     converted_files = []
     probe_options = _fortran_probe_options(
@@ -585,13 +627,9 @@ def _wrap_readiness_report(
         out.update(_pyi_readiness_report(paths))
         return out
 
-    parser = FortranParser()
     expanded_paths = [path for path in _expand_readiness_paths(paths) if path.suffix.lower() != ".pyi"]
-    parsed_files = {}
-    for p in expanded_paths:
-        code, _preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        parsed_files[p] = parser.visit_file(code, filename=str(p))
-    wrapped_derived_types = _fortran_wrapped_derived_types(parsed_files.values())
+    parsed_files = _parse_fortran_source_files(expanded_paths, preprocessing)
+    wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
 
     probe_options = _fortran_probe_options(
         report=fortran_type_report,
@@ -599,8 +637,7 @@ def _wrap_readiness_report(
         cache_dir=fortran_type_probe_cache_dir,
         refresh=refresh_fortran_type_probe,
     )
-    for p in expanded_paths:
-        parsed = parsed_files[p]
+    for p, parsed in parsed_files:
         compile_time_values = _fortran_compile_time_values(parsed, preprocessing, **probe_options)
         type_facts = _fortran_type_facts(
             parsed,

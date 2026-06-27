@@ -539,6 +539,35 @@ end module explicit_mod
     assert "-> Float64: ..." in leaf_text
 
 
+def test_cli_pyi_out_directory_resolves_renamed_project_kind(tmp_path: Path):
+    (tmp_path / "precision.f90").write_text(
+        """module precision_mod
+  integer, parameter :: word = 4
+  integer, parameter :: wp = word * 2
+end module precision_mod
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "solver.f90").write_text(
+        """subroutine consume(x)
+  use precision_mod, only: local_wp => wp
+  real(kind=local_wp), intent(inout) :: x(*)
+end subroutine consume
+""",
+        encoding="utf-8",
+    )
+    out = tmp_path / "contracts"
+
+    cmd = [sys.executable, "-m", "x2py", str(tmp_path), "--language", "fortran", "--pyi", "--out", str(out)]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    assert result.stdout == ""
+    text = (out / "__init__.pyi").read_text(encoding="utf-8")
+    assert "def consume(" in text
+    assert "x: Float64[Flat]" in text
+    assert "local_wp" not in text
+
+
 def test_cli_rejects_conflicting_json_and_pyi_out_from_inline_code(tmp_path: Path):
     f90 = tmp_path / "conflict.f90"
     f90.write_text(

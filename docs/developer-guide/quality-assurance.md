@@ -202,6 +202,17 @@ reports advisory/manual.
 issues, Ruff formatting drift, Vulture unused test parameters, and the
 too-strict Radon policy.
 
+**Native artifact cache:** the Quality workflow restores
+`.pytest_cache/x2py/real-library-native` before the pytest coverage run and sets
+`X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR` to that path. This cache holds the full
+BLAS/LAPACK object files, archives, and shared libraries used by the
+real-library wrapper tests. Cache keys include the runner OS, runner
+architecture, `gfortran` version, and BLAS/LAPACK source content. Native object
+files are not portable across different platforms, compilers, compiler flags, or
+source revisions; a key change intentionally rebuilds them. Cold object builds
+compile independent sources in parallel after required module sources; set
+`X2PY_REAL_LIBRARY_NATIVE_JOBS` to override the bounded worker count.
+
 **Decision:** keep. Review scheduled results and record actionable failures
 until fixed.
 

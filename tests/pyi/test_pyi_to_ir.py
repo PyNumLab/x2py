@@ -901,6 +901,26 @@ def add(
     assert [arg.name for arg in func.arguments] == ["a", "b"]
 
 
+def test_parse_pyi_text_preserves_explicit_array_source_dimensions():
+    module = parse_pyi_text(
+        """
+def apply(
+    A: Annotated[Float64[LDA, N], ORDER_F],
+    work: Float64[::Strided],
+    scratch: Float64[:]
+) -> None: ...
+""",
+        module_name="explicit_dims",
+    )
+
+    args = {arg.name: arg.semantic_type.storage.array for arg in module.functions[0].arguments}
+    assert args["A"].source_shape == ["LDA", "N"]
+    assert args["A"].lower_bounds == [None, None]
+    assert args["A"].upper_bounds == [None, None]
+    assert args["work"].source_shape == []
+    assert args["scratch"].source_shape == []
+
+
 def test_native_call_preserves_unnamed_output_argument_position():
     from_pyi = parse_pyi_text(
         """

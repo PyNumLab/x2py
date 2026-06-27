@@ -1901,6 +1901,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             lhs, rhs = func.native_arguments(selected, args)
             return [*body, Assign(lhs.value, rhs.value), *post_body]
 
+        if getattr(func, "is_external", False):
+            args = self._positional_native_arguments(args)
+
         selected_func = selected or func
         if len(results) == 1 and self._uses_allocatable_function_result_helper(selected_func, results[0]):
             helper = self._allocatable_function_result_helper(results[0])

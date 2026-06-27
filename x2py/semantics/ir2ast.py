@@ -29,6 +29,7 @@ from x2py.codegen.models.core import (
     Variable,
 )
 from x2py.codegen.models.datatypes import (
+    CharType,
     DataTypeFactory,
     FinalType,
     NIL,
@@ -617,10 +618,6 @@ def _polymorphic_dispatch_variants(
     return tuple(variants)
 
 
-def _is_character_array(semantic_type: models.SemanticType | None) -> bool:
-    return bool(semantic_type is not None and semantic_type.rank > 0 and semantic_type.name == "String")
-
-
 def _is_derived_type_array(semantic_type: models.SemanticType | None) -> bool:
     return bool(
         semantic_type is not None
@@ -646,8 +643,6 @@ def _raise_for_unsupported_array_contracts_in_type(
             f"{owner} uses assumed-type type(*), which needs an explicit dtype and descriptor policy "
             "before wrapper generation"
         )
-    if _is_character_array(semantic_type):
-        raise ValueError(f"{owner} is an array of character values, which is not supported by wrapper generation")
     if _is_derived_type_array(semantic_type):
         raise ValueError(
             f"{owner} is an array of derived type values, which needs explicit layout and ownership policy"
@@ -1496,6 +1491,8 @@ def _semantic_variable_type_and_shape(semantic_type, scope, custom_types):
     if _is_constant(semantic_type):
         dtype = FinalType.get_new(dtype)
     if rank > 0:
+        if isinstance(dtype, StringType):
+            dtype = CharType()
         dtype = NumpyNDArrayType.get_new(
             dtype,
             rank,

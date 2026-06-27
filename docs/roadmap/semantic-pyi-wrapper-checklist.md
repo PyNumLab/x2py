@@ -97,8 +97,10 @@ Runtime wrapper tests are organized by stable subjects under
 - [x] Wrapper test modules live under the stable subject directories above,
   using descriptive filenames and subject README files. The index is
   `tests/wrapper/fortran/README.md`.
-- [x] Native wrapper source fixtures live under the shared
-  `tests/data/fortran/wrapper/` corpus. The wrapper test tree contains no
+- [x] Native wrapper source fixtures live under shared `tests/data/fortran/`
+  corpora: ordinary wrapper fixtures use `tests/data/fortran/wrapper/`, and
+  real-library evidence reads `tests/data/fortran/blas/` and
+  `tests/data/fortran/lapack/` directly. The wrapper test tree contains no
   Fortran source files.
 - [x] Runtime wrapper tests resolve native fixtures through
   `tests/wrapper/fortran/_support.py`, so moved tests no longer depend on
@@ -323,22 +325,26 @@ Real BLAS/LAPACK artifact-shape evidence lives in
 bundle, order, transitive-library, and failure-path evidence lives in
 `tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py`.
 
-- [x] Several selected standalone-procedure files copied from the real
-  `tests/data/fortran/blas/` and `tests/data/fortran/lapack/` parser corpora
-  build one BLAS/LAPACK-style extension from one generated compact
-  `__init__.pyi`.
-- [x] The generated contract imports no module leaves, marks every selected
-  routine as `@external`, preserves assumed-size array ABI with `Flat`
-  dimensions, and builds from separated object files, one static archive, one
-  direct shared library, or `--native-library` plus `--native-library-dir`
-  without reparsing native source.
-- [x] The generated compact BLAS/LAPACK contract is compared against the
-  checked-in wrapper fixture under
-  `tests/wrapper/fortran/real_libraries/contracts/real_blas_lapack/`;
-  refresh is explicit through `WRAPPER_UPDATE_PYI_FIXTURES=1`.
-- [x] Runtime evidence imports every selected BLAS/LAPACK routine through the
-  normalized Python names and limits numerical checks to a few smoke calls:
-  `daxpy`, `ddot`, `dasum`, and `dlamrg`.
+- [x] Full real BLAS and LAPACK source corpora under `tests/data/fortran/blas/`
+  and `tests/data/fortran/lapack/` each generate a checked, importable
+  contract package.
+- [x] The full generated BLAS and LAPACK contracts are compared against checked
+  wrapper fixtures under `tests/wrapper/fortran/real_libraries/contracts/blas/`
+  and `tests/wrapper/fortran/real_libraries/contracts/lapack/`; refresh is
+  explicit through `WRAPPER_UPDATE_PYI_FIXTURES=1`.
+- [x] The full-library evidence builds each full root procedure contract with
+  `build_pyi_extension`, links it against a cached full native shared library,
+  imports every generated root procedure through the normalized Python names,
+  and checks that source stems and known generated helper declarations line up
+  with the shared native corpora.
+- [x] Full native BLAS/LAPACK object files are compiled once into a deterministic
+  `.pytest_cache/x2py/real-library-native` cache, archived once, and linked once
+  into the shared libraries reused by repeated wrapper test runs; CI can move
+  the cache with `X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR`, and cold object builds
+  compile independent sources in parallel after required module sources.
+- [x] Selected runtime smoke calls run against the fully wrapped BLAS/LAPACK
+  modules and check NumPy-style behavior for `daxpy`, `ddot`, `dasum`, `dscal`,
+  and `dlamrg`.
 - [x] Handwritten external-contract evidence covers C-order flat storage
   (`Annotated[Float64[Flat, 3], ORDER_C]`) by validating a multidimensional
   Python view while passing a rank-preserving bridge view to an assumed-size

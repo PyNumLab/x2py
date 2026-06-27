@@ -105,7 +105,7 @@ iso_c_binding_shortcut_mapping = {
     "C_FLOAT_COMPLEX": "c32",
     "C_DOUBLE_COMPLEX": "c64",
     "C_LONG_DOUBLE_COMPLEX": "c128",
-    "C_BOOL": "b1",
+    "C_BOOL": "x2py_b1",
 }
 
 inc_keyword = (
@@ -1266,7 +1266,7 @@ class FCodePrinter(CodePrinter):
         result_vars = [var for var in func.scope.collect_all_tuple_elements(func.results.var) if var]
         is_function = len(result_vars) == 1
         func_type = "function" if is_function else "subroutine"
-        lines = [f"{func_type} {self._visit(func.name)}({args})", "import"]
+        lines = [f"{func_type} {self._visit(func.name)}({args})", "import", "implicit none"]
         if is_function:
             lines.append(self._visit(Declare(result_vars[0].clone(str(func.name)))).rstrip())
         for arg in func.arguments:
@@ -1304,13 +1304,13 @@ class FCodePrinter(CodePrinter):
     def _external_interface_argument_dimensions(self, var):
         """Return dimensions for an external interface without changing native ABI."""
         source_shape = tuple(getattr(var, "fortran_source_shape", ()) or ())
-        if getattr(var, "fortran_array_category", None) == "assumed_size" and source_shape:
+        if source_shape:
             if var.rank > 1 and str(source_shape[0]).strip() == "*":
                 return ["*"]
             dimensions = []
             for index, item in enumerate(var.alloc_shape):
                 source_dim = str(source_shape[index]).strip() if index < len(source_shape) else ""
-                if source_dim == "*" or source_dim.endswith(":*"):
+                if source_dim:
                     dimensions.append(source_dim)
                 elif item is None:
                     dimensions.append("*" if index == var.rank - 1 else ":")

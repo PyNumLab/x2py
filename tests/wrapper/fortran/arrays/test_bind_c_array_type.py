@@ -125,3 +125,21 @@ def test_fortran_visiter_visits_array_slice_with_inclusive_stop():
     printer.set_scope(Scope(name="f", scope_type="function"))
     printer._kind = lambda expr: "i32"
     assert printer._visit(element) == ("values(1_i32:upper + 1_i32 - 1_i32:stride)")
+
+
+def test_external_interface_preserves_multidimensional_assumed_size_source_shape():
+    array_type = NumpyNDArrayType.get_new(NumpyFloat64Type(), 2, "F")
+    array = Variable(
+        array_type,
+        "A",
+        memory_handling="alias",
+        intent="inout",
+        fortran_array_category="assumed_size",
+        fortran_source_shape=("LDA", "*"),
+        is_argument=True,
+    )
+
+    printer = FCodePrinter("test.f90", verbose=0)
+    printer._kind = lambda expr: "f64"
+
+    assert printer._external_interface_argument_declaration(array) == "real(f64), intent(inout) :: A(LDA, *)"

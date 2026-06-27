@@ -1018,6 +1018,25 @@ def test_printer_emits_flat_dimension_for_assumed_size_arrays():
     assert PyiPrinter().emit(fortran_type) == "Float64[3, Flat]"
     assert PyiPrinter().emit(c_type) == "Annotated[Float64[Flat, 3], ORDER_C]"
 
+    lower_bound_assumed_size = SemanticType(
+        "Float64",
+        dtype="Float64",
+        rank=1,
+        shape=[":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(
+                rank=1,
+                shape=[":"],
+                category="assumed_size",
+                source_shape=["0:*"],
+                order="ORDER_F",
+                contiguous=True,
+            ),
+        ),
+    )
+    assert PyiPrinter().emit(lower_bound_assumed_size) == 'Annotated[Float64[Flat], SourceDims("0:*")]'
+
 
 def test_emit_class_method_keeps_method_indentation():
     module = SemanticModule(

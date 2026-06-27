@@ -1057,7 +1057,9 @@ class _PyiAstParser:
         dims: list[str],
     ) -> tuple[list[str], str | None, list[str], list[str | None], list[str | None]]:
         if "Flat" not in dims:
-            return dims, None, [], [], []
+            source_shape = [] if any(dim in {":", "..."} or "Strided" in dim for dim in dims) else list(dims)
+            lower_bounds, upper_bounds = _PyiAstParser._bounds_from_source_shape(source_shape)
+            return dims, None, source_shape, lower_bounds, upper_bounds
         if dims.count("Flat") != 1 or "..." in dims or dims.index("Flat") not in {0, len(dims) - 1}:
             raise ValueError("Flat must appear exactly once at the first or final concrete array dimension")
         source_shape = ["*" if dim == "Flat" else dim for dim in dims]

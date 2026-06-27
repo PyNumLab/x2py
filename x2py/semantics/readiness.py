@@ -674,15 +674,7 @@ class _SemanticReadinessChecker:
                 unit=unit,
                 unit_kind=unit_kind,
             )
-        if semantic_type.name == "String":
-            self._add_blocker(
-                "fortran_character_array_unsupported",
-                "Fortran arrays of character values are not supported by wrapper generation.",
-                {"owner": owner, "item": item},
-                unit=unit,
-                unit_kind=unit_kind,
-            )
-        elif semantic_type.name not in _BUILTIN_TYPES and not _is_external_type_ref(semantic_type):
+        if semantic_type.name not in _BUILTIN_TYPES and not _is_external_type_ref(semantic_type):
             self._add_blocker(
                 "fortran_derived_type_array_policy_missing",
                 "Fortran arrays of derived type values need explicit layout and ownership policy.",

@@ -521,7 +521,7 @@ contains
   end subroutine inspect
 end module character_array_mod
 """,
-            "array of character",
+            None,
         ),
         (
             """
@@ -553,11 +553,17 @@ end module high_rank_mod
 def test_unsupported_remaining_array_contracts_raise_before_codegen(source, match):
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match=match):
+    if match is None:
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),
         )
+    else:
+        with pytest.raises(ValueError, match=match):
+            semantic_ir_to_codegen_ast(
+                semantic_module,
+                Scope(name=semantic_module.name, scope_type="module"),
+            )
 
 
 def test_assumed_rank_numeric_array_arguments_lower_with_dispatch_marker():

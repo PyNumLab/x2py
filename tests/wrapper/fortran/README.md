@@ -1,8 +1,10 @@
 # Fortran Wrapper Test Index
 
 Fortran runtime wrapper tests are grouped by plain workflow and behavior names.
-Native Fortran source fixtures live in `tests/data/fortran/wrapper/`; runtime
-semantic `.pyi` contracts stay beside the tests that consume them.
+Most native Fortran source fixtures live in `tests/data/fortran/wrapper/`; the
+real-library subject reads the shared BLAS and LAPACK corpora from
+`tests/data/fortran/blas/` and `tests/data/fortran/lapack/`. Runtime semantic
+`.pyi` contracts stay beside the tests that consume them.
 
 Generated `.pyi` packages used as runtime wrapper contracts are checked
 fixtures. A test that runs `x2py --pyi` for a wrapper runtime scenario compares

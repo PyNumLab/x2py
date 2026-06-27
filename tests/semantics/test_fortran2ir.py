@@ -982,6 +982,27 @@ def test_semantic_compile_time_requirements_cover_all_parser_contexts():
             FortranFile(
                 variables=[
                     FortranVariable(
+                        name="half",
+                        base_type="real",
+                        is_parameter=True,
+                        symbolic_value="0.5_sp",
+                    ),
+                    FortranVariable(
+                        name="czero",
+                        base_type="complex",
+                        is_parameter=True,
+                        symbolic_value="(0.0_sp, 0.0_sp)",
+                    ),
+                ]
+            )
+        )
+        == []
+    )
+    assert (
+        collect_semantic_compile_time_requirements(
+            FortranFile(
+                variables=[
+                    FortranVariable(
                         name="provided",
                         base_type="integer",
                         is_parameter=True,

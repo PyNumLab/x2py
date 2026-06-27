@@ -305,12 +305,23 @@ class PyiPrinter:
     ) -> list[str]:
         """Handle array dimensions for the current generation context."""
         if array is not None and array.category == "assumed_size" and array.source_shape:
-            shape = ["Flat" if str(dim).strip() == "*" else dim for dim in array.source_shape]
+            shape = [PyiPrinter._assumed_size_array_dimension(dim) for dim in array.source_shape]
         else:
             shape = list(array.shape if array is not None and array.shape else semantic_type.shape)
         if not shape and semantic_type.rank > 0:
             shape = [":" for _ in range(semantic_type.rank)]
         return [PyiPrinter._canonical_array_dimension(dim) for dim in shape]
+
+    @staticmethod
+    def _assumed_size_array_dimension(dimension: object) -> str:
+        text = str(dimension).strip()
+        if text == "*":
+            return "Flat"
+        if ":" in text:
+            _lower, upper = text.split(":", 1)
+            if upper.strip() == "*":
+                return "Flat"
+        return text
 
     @staticmethod
     def _canonical_array_dimension(dimension: object) -> str:
@@ -337,7 +348,23 @@ class PyiPrinter:
             metadata.append("Allocatable")
         if array.pointer:
             metadata.append("Pointer")
+        if PyiPrinter._requires_source_dims_metadata(array):
+            args = ", ".join(json.dumps(str(dim)) for dim in array.source_shape)
+            metadata.append(f"SourceDims({args})")
         return metadata
+
+    @staticmethod
+    def _requires_source_dims_metadata(array: SemanticArrayContract) -> bool:
+        if array.category != "assumed_size" or not array.source_shape:
+            return False
+        for dim in array.source_shape:
+            text = str(dim).strip()
+            if ":" not in text:
+                continue
+            lower, upper = text.split(":", 1)
+            if upper.strip() == "*" and lower.strip() not in {"", "1"}:
+                return True
+        return False
 
     @staticmethod
     def _is_c_order_flat_array(array: SemanticArrayContract) -> bool:
@@ -347,7 +374,7 @@ class PyiPrinter:
             and array.rank is not None
             and array.rank > 1
             and bool(array.source_shape)
-            and str(array.source_shape[0]).strip() == "*"
+            and PyiPrinter._assumed_size_array_dimension(array.source_shape[0]) == "Flat"
         )
 
     @staticmethod
