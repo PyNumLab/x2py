@@ -163,18 +163,18 @@ python3 -m x2py path/to/module.pyi \
   --out-dir build/module
 ```
 
-`--native-fortran-source` accepts one or more native implementation sources
+`--native-fortran-sources` accepts one or more native implementation sources
 that x2py should compile without using them as semantic input.
-`--native-fortran-flag` applies to those native source compile commands; group
+`--native-fortran-flags` applies to those native source compile commands; group
 dash-prefixed compiler flags with the equals form, such as
-`--native-fortran-flag="-O3 -fopenmp"`. `--native-objects` accepts one or more
+`--native-fortran-flags="-O3 -fopenmp"`. `--native-objects` accepts one or more
 ordered object, static archive, or shared library paths. Named libraries use
 `--native-library NAME [NAME ...]` and `--native-library-dir DIR [DIR ...]`.
 If you pass already-prefixed names, group them with the equals form, for example
 `--native-library="-lblas -llapack"`.
 The latter is passed as both a link search path and a runtime search path. At
 least one native implementation input is required.
-Use `--native-fortran-source` when x2py should compile the implementation and
+Use `--native-fortran-sources` when x2py should compile the implementation and
 `--native-objects` when objects, archives, or shared libraries are already built.
 
 Semantic `.pyi` Makefile mode writes `<out-dir>/x2py-build.json` first and then
@@ -184,8 +184,8 @@ replayed directly:
 ```bash
 python3 -m x2py contracts/module.pyi \
   --wrap \
-  --native-fortran-source native/module.f90 \
-  --native-fortran-flag="-O3 -fopenmp" \
+  --native-fortran-sources native/module.f90 \
+  --native-fortran-flags="-O3 -fopenmp" \
   --out-dir build/module \
   --makefile \
   --json
@@ -1589,7 +1589,7 @@ For semantic `.pyi` builds, Makefile mode writes `x2py-build.json` before
 ```bash
 python3 -m x2py contracts/solver.pyi \
   --wrap \
-  --native-fortran-source native/solver.f90 \
+  --native-fortran-sources native/solver.f90 \
   --out-dir build/solver \
   --makefile \
   --json

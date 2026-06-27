@@ -118,8 +118,8 @@ only when native implementation inputs are supplied explicitly.
 | `--makefile` | Generates wrapper sources and a GNU Make build without compiling. |
 | `--strict-wrapper-names` | Rejects Python wrapper names that require escaping or collision suffixes. |
 | `--build-manifest PATH` | Replays a saved semantic `.pyi` wrapper build manifest. Combine with `--wrap` to build or `--makefile` to regenerate the Makefile. |
-| `--native-fortran-source PATH [PATH ...]` | Compiles one or more native Fortran implementation sources for a `.pyi` wrapper build without using them as semantic inputs. |
-| `--native-fortran-flag FLAG [FLAG ...]` | Adds one or more Fortran compiler flags to each `--native-fortran-source` compile command. |
+| `--native-fortran-sources PATH [PATH ...]` | Compiles one or more native Fortran implementation sources for a `.pyi` wrapper build without using them as semantic inputs. |
+| `--native-fortran-flags FLAG [FLAG ...]` | Adds one or more Fortran compiler flags to each source passed with `--native-fortran-sources`. |
 | `--native-objects PATH [PATH ...]` | Links one or more native object, static archive, or shared library paths into a `.pyi` wrapper build. |
 | `--native-library NAME [NAME ...]` | Links one or more native libraries into a `.pyi` wrapper build, passed as `-lNAME` unless already prefixed. |
 | `--native-link-item KIND:VALUE [KIND:VALUE ...]` | Adds one or more ordered link items for `.pyi` builds. `KIND` is `object`, `archive`, `shared-library`, `library`, or `arg`. |
@@ -131,12 +131,12 @@ Important boundaries:
 - `--wrap` is mutually exclusive with `--parse`, `--semantics`, `--pyi`, and
   `--wrap-readiness`.
 - `.pyi` wrapper builds require at least one native implementation input such
-  as `--native-fortran-source`, `--native-objects`, `--native-library`, or
+  as `--native-fortran-sources`, `--native-objects`, `--native-library`, or
   `--native-link-item`.
 - Native input options accept one or more values per occurrence and may also be
   repeated. x2py preserves the supplied source, artifact, and link-item order.
   For compiler flags or prefixed library names that start with `-`, group them
-  with the equals form, for example `--native-fortran-flag="-O3 -fopenmp"` or
+  with the equals form, for example `--native-fortran-flags="-O3 -fopenmp"` or
   `--native-library="-lblas -llapack"`.
 - In `.pyi` Makefile mode, x2py writes `<out-dir>/x2py-build.json` first and
   generates `<out-dir>/Makefile.x2py` from that manifest.
@@ -177,7 +177,7 @@ and for semantic `.pyi` builds the normalized replay `manifest`.
 | Check edited `.pyi` readiness | `python3 -m x2py path/to/module.pyi --wrap-readiness --json` |
 | Build a Fortran wrapper | `python3 -m x2py path/to/file.f` |
 | Generate an editable Makefile | `python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build` |
-| Generate a `.pyi` replay manifest and Makefile | `python3 -m x2py contracts/module.pyi --wrap --native-fortran-source native/module.f90 --out-dir build --makefile --json` |
+| Generate a `.pyi` replay manifest and Makefile | `python3 -m x2py contracts/module.pyi --wrap --native-fortran-sources native/module.f90 --out-dir build --makefile --json` |
 | Replay a `.pyi` manifest | `python3 -m x2py --build-manifest build/x2py-build.json --wrap` |
 
 ## Related pages

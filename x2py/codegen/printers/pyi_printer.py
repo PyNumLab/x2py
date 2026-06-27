@@ -314,6 +314,7 @@ class PyiPrinter:
 
     @staticmethod
     def _assumed_size_array_dimension(dimension: object) -> str:
+        """Map assumed-size Fortran dimensions to the `.pyi` Flat marker."""
         text = str(dimension).strip()
         if text == "*":
             return "Flat"
@@ -355,6 +356,7 @@ class PyiPrinter:
 
     @staticmethod
     def _requires_source_dims_metadata(array: SemanticArrayContract) -> bool:
+        """Return whether lower-bound assumed-size details need metadata."""
         if array.category != "assumed_size" or not array.source_shape:
             return False
         for dim in array.source_shape:

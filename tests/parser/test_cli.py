@@ -1244,10 +1244,10 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
             "x2py",
             str(contract),
             "--wrap",
-            "--native-fortran-source",
+            "--native-fortran-sources",
             "source_one.f90",
             "source_two.f90",
-            "--native-fortran-flag=-O2 -g0",
+            "--native-fortran-flags=-O2 -g0",
             "--native-objects",
             "one.o",
             "two.a",
@@ -1305,7 +1305,7 @@ def test_cli_native_fortran_flags_split_grouped_shell_words():
 
 
 def test_cli_native_fortran_flags_reject_malformed_grouped_value():
-    with pytest.raises(ValueError, match="Invalid --native-fortran-flag value"):
+    with pytest.raises(ValueError, match="Invalid --native-fortran-flags value"):
         x2py_cli._cli_native_fortran_flags(["'-O2"])
 
 
@@ -2120,8 +2120,8 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         ("wrapper builds", ("--makefile",)),
         ("wrapper builds", ("--strict-wrapper-names",)),
         ("wrapper builds", ("--build-manifest",)),
-        ("wrapper builds", ("--native-fortran-source",)),
-        ("wrapper builds", ("--native-fortran-flag",)),
+        ("wrapper builds", ("--native-fortran-sources",)),
+        ("wrapper builds", ("--native-fortran-flags",)),
         ("wrapper builds", ("--native-objects",)),
         ("wrapper builds", ("--native-library",)),
         ("wrapper builds", ("--native-link-item",)),
@@ -2167,19 +2167,19 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         "metavar": "PATH",
         "help": "Native object, static archive, or shared library paths linked into a .pyi wrapper build",
     }
-    assert arguments_by_name["--native-fortran-source"] == {
+    assert arguments_by_name["--native-fortran-sources"] == {
         "dest": "native_fortran_sources",
         "action": "extend",
         "nargs": "+",
         "metavar": "PATH",
         "help": "Native Fortran implementation source paths compiled for a .pyi wrapper build",
     }
-    assert arguments_by_name["--native-fortran-flag"] == {
+    assert arguments_by_name["--native-fortran-flags"] == {
         "dest": "native_fortran_flags",
         "action": "extend",
         "nargs": "+",
         "metavar": "FLAG",
-        "help": "Fortran compiler flags applied to each --native-fortran-source input",
+        "help": "Fortran compiler flags applied to each source passed with --native-fortran-sources",
     }
     assert arguments_by_name["--native-library"] == {
         "dest": "native_libraries",

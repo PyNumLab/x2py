@@ -40,7 +40,7 @@ python3 -m x2py path/to/module.pyi \
   --out-dir build/module
 ```
 
-At least one `--native-objects` path, `--native-fortran-source`,
+At least one `--native-objects` path, `--native-fortran-sources`,
 `--native-library`, or `--native-link-item` is required. Native input options
 accept one or more values per occurrence. Native source is not reparsed during
 `.pyi`-driven wrapper generation.

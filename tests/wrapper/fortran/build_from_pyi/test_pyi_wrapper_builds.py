@@ -198,7 +198,7 @@ def test_pyi_cli_requires_a_native_link_input(tmp_path: Path):
     )
 
     assert result.returncode == 2
-    assert "--wrap from .pyi requires --native-fortran-source" in result.stderr
+    assert "--wrap from .pyi requires --native-fortran-sources" in result.stderr
 
 
 @pytest.mark.skipif(
@@ -217,9 +217,9 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
             "x2py",
             str(PYI_FIXTURE),
             "--wrap",
-            "--native-fortran-source",
+            "--native-fortran-sources",
             str(native_source),
-            "--native-fortran-flag=-O2 -g0",
+            "--native-fortran-flags=-O2 -g0",
             "--out-dir",
             str(build_dir),
             "--makefile",

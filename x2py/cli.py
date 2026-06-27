@@ -958,7 +958,7 @@ def _validate_pyi_wrap_options(args: argparse.Namespace, parser: argparse.Argume
         or getattr(args, "native_link_items", None)
     ):
         parser.error(
-            "--wrap from .pyi requires --native-fortran-source, --native-objects, "
+            "--wrap from .pyi requires --native-fortran-sources, --native-objects, "
             "--native-library, or --native-link-item"
         )
 
@@ -1139,7 +1139,7 @@ def _cli_native_fortran_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
         try:
             flags.extend(shlex.split(raw))
         except ValueError as exc:
-            raise ValueError(f"Invalid --native-fortran-flag value {raw!r}: {exc}") from exc
+            raise ValueError(f"Invalid --native-fortran-flags value {raw!r}: {exc}") from exc
     return tuple(flags)
 
 
@@ -1753,7 +1753,7 @@ def main() -> int:
         help="Replay a saved semantic .pyi wrapper build manifest",
     )
     wrapper_group.add_argument(
-        "--native-fortran-source",
+        "--native-fortran-sources",
         dest="native_fortran_sources",
         action="extend",
         nargs="+",
@@ -1761,12 +1761,12 @@ def main() -> int:
         help="Native Fortran implementation source paths compiled for a .pyi wrapper build",
     )
     wrapper_group.add_argument(
-        "--native-fortran-flag",
+        "--native-fortran-flags",
         dest="native_fortran_flags",
         action="extend",
         nargs="+",
         metavar="FLAG",
-        help="Fortran compiler flags applied to each --native-fortran-source input",
+        help="Fortran compiler flags applied to each source passed with --native-fortran-sources",
     )
     wrapper_group.add_argument(
         "--native-objects",

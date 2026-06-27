@@ -31,8 +31,8 @@ mode with explicit native inputs:
 ```bash
 python3 -m x2py contracts/fruntime_abi_f90.pyi \
   --wrap \
-  --native-fortran-source native/fruntime_abi_f90.f90 \
-  --native-fortran-flag="-O3 -fopenmp" \
+  --native-fortran-sources native/fruntime_abi_f90.f90 \
+  --native-fortran-flags="-O3 -fopenmp" \
   --out-dir build/fruntime_abi \
   --makefile \
   --json

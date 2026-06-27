@@ -1187,22 +1187,14 @@
       "blockers": []
     },
     "blas/xerbla_array.f": {
-      "wrappable": false,
+      "wrappable": true,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [
-        "Fortran arrays of character values are not supported by wrapper generation."
-      ],
-      "blockers": [
-        {
-          "code": "fortran_character_array_unsupported",
-          "message": "Fortran arrays of character values are not supported by wrapper generation.",
-          "n_items": 1
-        }
-      ]
+      "messages": [],
+      "blockers": []
     },
     "blas/zaxpy.f": {
       "wrappable": true,
@@ -12109,22 +12101,14 @@
       "blockers": []
     },
     "lapack/iparmq.f": {
-      "wrappable": false,
+      "wrappable": true,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [
-        "Fortran arrays of character values are not supported by wrapper generation."
-      ],
-      "blockers": [
-        {
-          "code": "fortran_character_array_unsupported",
-          "message": "Fortran arrays of character values are not supported by wrapper generation.",
-          "n_items": 2
-        }
-      ]
+      "messages": [],
+      "blockers": []
     },
     "lapack/izmax1.f": {
       "wrappable": true,
@@ -17235,22 +17219,14 @@
       "blockers": []
     },
     "lapack/xerbla_array.f": {
-      "wrappable": false,
+      "wrappable": true,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 1,
       "n_classes": 0,
       "n_variables": 0,
-      "messages": [
-        "Fortran arrays of character values are not supported by wrapper generation."
-      ],
-      "blockers": [
-        {
-          "code": "fortran_character_array_unsupported",
-          "message": "Fortran arrays of character values are not supported by wrapper generation.",
-          "n_items": 1
-        }
-      ]
+      "messages": [],
+      "blockers": []
     },
     "lapack/zbbcsd.f": {
       "wrappable": true,
@@ -22710,19 +22686,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some shape expressions refer to symbols not supplied by the semantic interface.",
-        "Fortran arrays of character values are not supported by wrapper generation."
+        "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",
           "n_items": 560
-        },
-        {
-          "code": "fortran_character_array_unsupported",
-          "message": "Fortran arrays of character values are not supported by wrapper generation.",
-          "n_items": 14
         }
       ]
     },
@@ -26332,15 +26302,9 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Fortran arrays of character values are not supported by wrapper generation.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
-        {
-          "code": "fortran_character_array_unsupported",
-          "message": "Fortran arrays of character values are not supported by wrapper generation.",
-          "n_items": 1
-        },
         {
           "code": "unresolved_shape_symbols",
           "message": "Some shape expressions refer to symbols not supplied by the semantic interface.",

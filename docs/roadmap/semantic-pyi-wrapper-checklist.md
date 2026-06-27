@@ -293,11 +293,11 @@ surface evidence lives in `tests/parser/test_cli.py`.
   identity, output policy, compiler configuration, native compilation units,
   and ordered native link plan as separate fields. Manifest-relative paths are
   resolved relative to the manifest during replay.
-- [x] Grouped or repeated `--native-fortran-source` inputs compile native
+- [x] Grouped or repeated `--native-fortran-sources` inputs compile native
   implementation sources in caller order without using them to reconstruct the
   Python API. Produced objects and module files are recorded in
   `NativeBuildPlan` and used by the extension link.
-- [x] Grouped or repeated `--native-fortran-flag` inputs are recorded in the
+- [x] Grouped or repeated `--native-fortran-flags` inputs are recorded in the
   manifest and in each native compilation unit while x2py still emits its
   required compiler flags, including position-independent code.
 - [x] Native sources, prebuilt objects, archives, direct shared libraries, named
