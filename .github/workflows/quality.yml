@@ -119,17 +119,24 @@ jobs:
           key: real-library-native-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-cache-facts.outputs.gfortran_hash }}-${{ hashFiles('tests/data/fortran/blas/**', 'tests/data/fortran/lapack/**', 'tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py', 'tools/warm_real_library_native_cache.py') }}
 
   test:
-    name: Tests (Python ${{ matrix.python-version }})
+    name: Tests (Python ${{ matrix.python-version }}, ${{ matrix.shard }})
     if: ${{ !inputs.static_analysis_only }}
     needs: [static-analysis, real-library-native-cache]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
+        shard:
+          - parser
+          - semantics-pyi
+          - wrapper-basic
+          - wrapper-state-types
+          - wrapper-pyi-layout
+          - wrapper-real
+          - tools
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -168,20 +175,107 @@ jobs:
           restore-keys: |
             real-library-native-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-cache-facts.outputs.gfortran_hash }}-
       - name: Run tests
+        shell: bash
         env:
           PYTHONPATH: .
-          COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
           HYPOTHESIS_PROFILE: ci
           X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR: ${{ github.workspace }}/${{ env.X2PY_REAL_LIBRARY_NATIVE_CACHE_PATH }}
-        run: python -m coverage run -m pytest -q --randomly-seed=1
+        run: |
+          case "${{ matrix.shard }}" in
+            parser)
+              test_paths=(tests/parser tests/property)
+              ;;
+            semantics-pyi)
+              test_paths=(tests/semantics tests/pyi tests/test_naming_policy.py)
+              ;;
+            wrapper-basic)
+              test_paths=(
+                tests/wrapper/fortran/arrays
+                tests/wrapper/fortran/callbacks
+                tests/wrapper/fortran/external_routines
+                tests/wrapper/fortran/function_calls
+                tests/wrapper/fortran/runtime_behavior
+                tests/wrapper/fortran/scalars
+                tests/wrapper/fortran/strings
+              )
+              ;;
+            wrapper-state-types)
+              test_paths=(
+                tests/wrapper/fortran/build_from_source
+                tests/wrapper/fortran/derived_types
+                tests/wrapper/fortran/module_state
+                tests/wrapper/fortran/multiple_files
+                tests/wrapper/fortran/naming
+              )
+              ;;
+            wrapper-pyi-layout)
+              test_paths=(
+                tests/wrapper/fortran/build_from_pyi
+                tests/wrapper/fortran/edit_pyi_contracts
+                tests/wrapper/fortran/layout_rules
+              )
+              ;;
+            wrapper-real)
+              test_paths=(tests/wrapper/fortran/real_libraries)
+              ;;
+            tools)
+              test_paths=(tests/tools tests/benchmarks)
+              ;;
+            *)
+              echo "Unknown test shard: ${{ matrix.shard }}" >&2
+              exit 2
+              ;;
+          esac
+
+          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
+            COVERAGE_PROCESS_START="${{ github.workspace }}/pyproject.toml" \
+              python -m coverage run -m pytest -q --randomly-seed=1 "${test_paths[@]}"
+          else
+            python -m pytest -q --randomly-seed=1 "${test_paths[@]}"
+          fi
+      - name: Upload coverage data
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.shard }}
+          path: .coverage.*
+          include-hidden-files: true
+          if-no-files-found: error
+
+  coverage-report:
+    name: Coverage Report
+    if: ${{ !inputs.static_analysis_only }}
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install coverage dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[qa]"
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage-artifacts
+          merge-multiple: true
       - name: Combine coverage data
-        run: python -m coverage combine
+        run: python -m coverage combine coverage-artifacts
       - name: Report coverage
         run: python -m coverage report
       - name: Emit coverage XML
         run: python -m coverage xml -o coverage.xml
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v6
         with:
           files: ./coverage.xml
