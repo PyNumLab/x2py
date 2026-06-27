@@ -2,7 +2,7 @@ name: Quality
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches:
       - main
@@ -11,6 +11,11 @@ on:
     inputs:
       static_analysis_only:
         description: Skip the pytest matrix after static analysis.
+        required: false
+        type: boolean
+        default: false
+      coverage:
+        description: Run the Python 3.12 tests under coverage and publish coverage results.
         required: false
         type: boolean
         default: false
@@ -119,7 +124,7 @@ jobs:
           key: real-library-native-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-cache-facts.outputs.gfortran_hash }}-${{ hashFiles('tests/data/fortran/blas/**', 'tests/data/fortran/lapack/**', 'tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py', 'tools/warm_real_library_native_cache.py') }}
 
   test:
-    name: Tests (Python ${{ matrix.python-version }}, ${{ matrix.shard }})
+    name: Tests (Python ${{ matrix.python-version }})
     if: ${{ !inputs.static_analysis_only }}
     needs: [static-analysis, real-library-native-cache]
     runs-on: ubuntu-24.04
@@ -129,11 +134,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
-        shard:
-          - regular
-          - real-blas
-          - real-lapack
-          - real-native-bundles
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -176,72 +176,58 @@ jobs:
         env:
           PYTHONPATH: .
           HYPOTHESIS_PROFILE: ci
+          X2PY_COVERAGE_REQUESTED: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-coverage')) || (github.event_name == 'workflow_call' && inputs.coverage) }}
           X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR: ${{ github.workspace }}/${{ env.X2PY_REAL_LIBRARY_NATIVE_CACHE_PATH }}
         run: |
-          case "${{ matrix.shard }}" in
-            regular)
-              test_paths=(
-                tests/parser
-                tests/property
-                tests/semantics
-                tests/pyi
-                tests/tools
-                tests/benchmarks
-                tests/test_naming_policy.py
-                tests/wrapper/fortran/arrays
-                tests/wrapper/fortran/build_from_pyi
-                tests/wrapper/fortran/build_from_source
-                tests/wrapper/fortran/callbacks
-                tests/wrapper/fortran/derived_types
-                tests/wrapper/fortran/edit_pyi_contracts
-                tests/wrapper/fortran/external_routines
-                tests/wrapper/fortran/function_calls
-                tests/wrapper/fortran/layout_rules
-                tests/wrapper/fortran/module_state
-                tests/wrapper/fortran/multiple_files
-                tests/wrapper/fortran/naming
-                tests/wrapper/fortran/runtime_behavior
-                tests/wrapper/fortran/scalars
-                tests/wrapper/fortran/strings
-              )
-              ;;
-            real-blas)
-              test_paths=(
-                "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[blas]"
-              )
-              ;;
-            real-lapack)
-              test_paths=(
-                "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[lapack]"
-              )
-              ;;
-            real-native-bundles)
-              test_paths=(tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py)
-              ;;
-            *)
-              echo "Unknown test shard: ${{ matrix.shard }}" >&2
-              exit 2
-              ;;
-          esac
-
           if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
+            test_paths=(tests)
+          else
+            test_paths=(
+              tests/parser
+              tests/property
+              tests/semantics
+              tests/pyi
+              tests/tools
+              tests/benchmarks
+              tests/test_naming_policy.py
+              tests/wrapper/fortran/arrays
+              tests/wrapper/fortran/build_from_pyi
+              tests/wrapper/fortran/build_from_source
+              tests/wrapper/fortran/callbacks
+              tests/wrapper/fortran/derived_types
+              tests/wrapper/fortran/edit_pyi_contracts
+              tests/wrapper/fortran/external_routines
+              tests/wrapper/fortran/function_calls
+              tests/wrapper/fortran/layout_rules
+              tests/wrapper/fortran/module_state
+              tests/wrapper/fortran/multiple_files
+              tests/wrapper/fortran/naming
+              tests/wrapper/fortran/runtime_behavior
+              tests/wrapper/fortran/scalars
+              tests/wrapper/fortran/strings
+              "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[blas]"
+              tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py
+            )
+          fi
+
+          if [[ "${{ matrix.python-version }}" == "3.12" && "$X2PY_COVERAGE_REQUESTED" == "true" ]]; then
             COVERAGE_PROCESS_START="${{ github.workspace }}/pyproject.toml" \
               python -m coverage run -m pytest -q --randomly-seed=1 "${test_paths[@]}"
           else
             python -m pytest -q --randomly-seed=1 "${test_paths[@]}"
           fi
       - name: Upload coverage data
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.12' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-coverage')) || (github.event_name == 'workflow_call' && inputs.coverage))
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.shard }}
+          name: coverage-py312
           path: .coverage.*
           include-hidden-files: true
           if-no-files-found: error
 
   coverage-report:
     name: Coverage Report
-    if: ${{ !inputs.static_analysis_only }}
+    if: ${{ !inputs.static_analysis_only && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-coverage')) || (github.event_name == 'workflow_call' && inputs.coverage)) }}
     needs: test
     runs-on: ubuntu-24.04
     permissions:

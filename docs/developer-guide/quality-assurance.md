@@ -22,7 +22,8 @@ rollout work. Mutation testing and pre-commit are not part of the active stack.
 
 | Cadence | Tools |
 | --- | --- |
-| Pull request and protected-branch push | pytest, coverage.py, stable-seed pytest-randomly, Ruff, Bandit, Vulture, staged Radon policy |
+| Pull request and protected-branch push | pytest, stable-seed pytest-randomly, Ruff, Bandit, Vulture, staged Radon policy |
+| Main-branch push and requested coverage run | coverage.py report from the Python 3.12 test job |
 | Weekly and manual dispatch | `Fuzz` workflow with Hypothesis fuzz profile |
 | Manual triage | Full Radon reports and low-severity Bandit review |
 | Annual dependency review | Dependency vulnerability audit outside the routine per-change gate |
@@ -53,7 +54,7 @@ python -m ruff check .
 python -m ruff format .
 ```
 
-CI-shaped local test and coverage run:
+CI-shaped local coverage run:
 
 ```bash
 HYPOTHESIS_PROFILE=ci \
@@ -66,11 +67,13 @@ python -m coverage report
 
 For subprocess coverage investigations, mirror that command shape before
 deciding a fix. A plain local coverage run can miss subprocess data.
-GitHub Actions runs the same suite as path shards across the supported Python
-matrix. Most tests run in one regular shard; real-library wrapper coverage is
-split into BLAS, LAPACK, and native-bundle shards because those tests dominate
-runtime. Python 3.12 shards collect coverage data, then a dedicated coverage job
-combines those artifacts and enforces the coverage threshold.
+GitHub Actions runs ordinary PR tests without coverage overhead. Python 3.10
+and 3.11 run the regular suite, BLAS real-library wrapper test, and native
+bundle tests; the full LAPACK real-library wrapper test runs only on Python
+3.12. Pushes to `main` always run the Python 3.12 test job under coverage and
+publish the coverage report. Add the `run-coverage` PR label, or pass
+`coverage: true` to the reusable workflow, to request the same coverage gate
+outside the main branch.
 
 Reproduce an order-dependent failure from the stable CI seed:
 
@@ -212,12 +215,12 @@ too-strict Radon policy.
 **Native artifact cache:** the Quality workflow pins the test runner to
 `ubuntu-24.04`, installs `gfortran-13`, and warms
 `.pytest_cache/x2py/real-library-native` in a dedicated pre-matrix job. The
-Python matrix restores that exact cache before each pytest shard and sets
-`X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR` to the restored path. Python 3.12 shards
-collect coverage data; a final coverage job combines those shard artifacts and
-uploads the XML report. This cache holds the full BLAS/LAPACK object files,
-archives, and shared libraries used by the real-library wrapper tests. Cache
-keys include the runner OS, runner
+Python matrix restores that exact cache before pytest and sets
+`X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR` to the restored path. Requested coverage
+runs collect Python 3.12 coverage data; a final coverage job combines that
+artifact and uploads the XML report. This cache holds the full BLAS/LAPACK
+object files, archives, and shared libraries used by the real-library wrapper
+tests. Cache keys include the runner OS, runner
 architecture, pinned `gfortran` version, BLAS/LAPACK source content, and native
 cache helper code. Native object files are not portable across different
 platforms, compilers, compiler flags, or source revisions; a key change
