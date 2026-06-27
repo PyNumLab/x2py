@@ -701,7 +701,8 @@ Generated `.pyi` signatures and NumPy-style docstrings use the same projection.
 Python-visible argument, such as caller-provided output storage. Hidden outputs
 use ordinary return annotations; allocatable outputs include `None`.
 
-Runtime tests: [`test_output_arguments.py`](../../tests/wrapper/fortran/function_calls/test_output_arguments.py).
+Runtime tests: [`test_output_arguments.py`](../../tests/wrapper/fortran/function_calls/test_output_arguments.py),
+[`test_native_call_examples.py`](../../tests/wrapper/fortran/function_calls/test_native_call_examples.py).
 
 ## Optional Arguments
 
@@ -1917,6 +1918,7 @@ by [`test_source_generated_pyi_contracts.py`](../../tests/wrapper/fortran/build_
 [`test_array_generated_pyi_contracts.py`](../../tests/wrapper/fortran/arrays/test_array_generated_pyi_contracts.py),
 [`test_scalar_generated_pyi_contracts.py`](../../tests/wrapper/fortran/scalars/test_scalar_generated_pyi_contracts.py),
 [`test_function_call_generated_pyi_contracts.py`](../../tests/wrapper/fortran/function_calls/test_function_call_generated_pyi_contracts.py),
+[`test_native_call_examples.py`](../../tests/wrapper/fortran/function_calls/test_native_call_examples.py),
 [`test_string_generated_pyi_contracts.py`](../../tests/wrapper/fortran/strings/test_string_generated_pyi_contracts.py),
 [`test_derived_type_generated_pyi_contracts.py`](../../tests/wrapper/fortran/derived_types/test_derived_type_generated_pyi_contracts.py),
 [`test_callback_generated_pyi_contracts.py`](../../tests/wrapper/fortran/callbacks/test_callback_generated_pyi_contracts.py),

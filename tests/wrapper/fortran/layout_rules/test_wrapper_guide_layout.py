@@ -54,6 +54,7 @@ SUBJECT_TEST_MODULES = {
     ),
     "function_calls": (
         "test_function_call_generated_pyi_contracts.py",
+        "test_native_call_examples.py",
         "test_optional_arguments.py",
         "test_output_arguments.py",
     ),

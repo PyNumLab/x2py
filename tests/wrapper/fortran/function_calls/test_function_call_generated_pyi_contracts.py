@@ -18,6 +18,7 @@ CASES = (
     source_contract_case(CONTRACT_ROOT, "foptional_fixed.f"),
     source_contract_case(CONTRACT_ROOT, "foptional_f90.f90"),
     source_contract_case(CONTRACT_ROOT, "foutputs_f90.f90"),
+    source_contract_case(CONTRACT_ROOT, "fnative_call_examples_f90.f90"),
 )
 
 
