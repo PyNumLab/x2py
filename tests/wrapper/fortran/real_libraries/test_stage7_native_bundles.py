@@ -416,7 +416,7 @@ def test_duplicate_native_definitions_report_linker_error(tmp_path: Path):
         entry=_simple_external_contract("duplicate_entry"),
     )
 
-    with pytest.raises(RuntimeError, match="multiple definition|duplicate"):
+    with pytest.raises(RuntimeError, match=r"multiple definition|duplicate"):
         build_pyi_extension(
             entry,
             native_objects=[first, second],
@@ -434,7 +434,7 @@ def test_incompatible_native_artifact_reports_linker_error(tmp_path: Path):
         entry=_simple_external_contract("invalid_artifact"),
     )
 
-    with pytest.raises(RuntimeError, match="file format|file not recognized|invalid"):
+    with pytest.raises(RuntimeError, match=r"file format|file not recognized|invalid"):
         build_pyi_extension(
             entry,
             native_objects=[invalid_object],
@@ -470,7 +470,7 @@ end module missing_mod
         leaves={"missing_mod": "def value_plus_one(\n    value: Ptr(Const(Int32))\n) -> Int32: ...\n"},
     )
 
-    with pytest.raises(RuntimeError, match="missing_mod.mod|Cannot open module file"):
+    with pytest.raises(RuntimeError, match=r"missing_mod.mod|Cannot open module file"):
         build_pyi_extension(
             entry,
             native_objects=[module_object],
@@ -524,7 +524,7 @@ end function unavailable_entry
     )
     helper_library.unlink()
 
-    with pytest.raises(ImportError, match="stage7missingdep|cannot open shared object file"):
+    with pytest.raises(ImportError, match=r"stage7missingdep|cannot open shared object file"):
         _import_from_build(result)
     assert result.native_build_plan.to_dict()["link_items"] == [
         {"kind": "shared_library", "path": str(dependent_library)}

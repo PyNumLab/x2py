@@ -33,12 +33,14 @@ Install the package plus the QA toolchain:
 
 ```bash
 python -m pip install -e ".[qa]"
+python tools/check_static_analysis_versions.py
 ```
 
 If your shell only exposes `python3`, use:
 
 ```bash
 python3 -m pip install -e ".[qa]"
+python3 tools/check_static_analysis_versions.py
 ```
 
 ## Local Commands
@@ -47,8 +49,8 @@ Fast inner loop:
 
 ```bash
 pytest -q
-ruff check .
-ruff format .
+python -m ruff check .
+python -m ruff format .
 ```
 
 CI-shaped test and coverage run:
@@ -81,16 +83,16 @@ HYPOTHESIS_PROFILE=fuzz pytest -q -m fuzz --hypothesis-show-statistics
 Run security checks:
 
 ```bash
-bandit -c pyproject.toml -r x2py --severity-level medium --confidence-level medium
+python -m bandit -c pyproject.toml -r x2py --severity-level medium --confidence-level medium
 ```
 
 Run dead-code and complexity checks:
 
 ```bash
-vulture
+python -m vulture
 python3 tools/check_radon_policy.py --base-ref "$(git merge-base origin/main HEAD)"
-radon cc x2py -n C -s --total-average
-radon mi x2py -s
+python -m radon cc x2py -n C -s --total-average
+python -m radon mi x2py -s
 ```
 
 The Radon policy check is blocking. It prevents the reviewed C-or-worse hotspot
