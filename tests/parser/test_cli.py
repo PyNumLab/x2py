@@ -64,6 +64,9 @@ def _main_args(**overrides):
         "native_include_dirs": None,
         "extension_name": None,
         "strict_wrapper_names": False,
+        "wrapper_compiler_debug": False,
+        "wrapper_fortran_flags": None,
+        "wrapper_c_flags": None,
         "semantics": False,
         "pyi": False,
         "json": False,
@@ -1265,6 +1268,9 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
             "--native-include-dir",
             "mods",
             "vendor/mods",
+            "--wrapper-compiler-debug",
+            "--wrapper-fortran-flags=-fno-range-check -g0",
+            "--wrapper-c-flags=-O0 -g0",
             "--out-dir",
             str(build_dir),
             "--json",
@@ -1292,6 +1298,9 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
     ]
     assert active_args.native_library_dirs == ["lib", "vendor/lib"]
     assert active_args.native_include_dirs == ["mods", "vendor/mods"]
+    assert active_args.wrapper_compiler_debug is True
+    assert active_args.wrapper_fortran_flags == ["-fno-range-check -g0"]
+    assert active_args.wrapper_c_flags == ["-O0 -g0"]
     payload = json.loads(capsys.readouterr().out)
     assert payload["module_name"] == "module"
 
@@ -1304,9 +1313,23 @@ def test_cli_native_fortran_flags_split_grouped_shell_words():
     )
 
 
+def test_cli_wrapper_flags_split_grouped_shell_words():
+    assert x2py_cli._cli_wrapper_fortran_flags(["-O0 -g", "-DNAME='value with spaces'"]) == (
+        "-O0",
+        "-g",
+        "-DNAME=value with spaces",
+    )
+    assert x2py_cli._cli_wrapper_c_flags(["-O1 -g0"]) == ("-O1", "-g0")
+
+
 def test_cli_native_fortran_flags_reject_malformed_grouped_value():
     with pytest.raises(ValueError, match="Invalid --native-fortran-flags value"):
         x2py_cli._cli_native_fortran_flags(["'-O2"])
+
+
+def test_cli_wrapper_flags_reject_malformed_grouped_value():
+    with pytest.raises(ValueError, match="Invalid --wrapper-c-flags value"):
+        x2py_cli._cli_wrapper_c_flags(["'-O0"])
 
 
 def test_cli_native_libraries_split_grouped_prefixed_names():
@@ -2119,6 +2142,9 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         ("wrapper builds", ("--wrap",)),
         ("wrapper builds", ("--makefile",)),
         ("wrapper builds", ("--strict-wrapper-names",)),
+        ("wrapper builds", ("--wrapper-compiler-debug",)),
+        ("wrapper builds", ("--wrapper-fortran-flags",)),
+        ("wrapper builds", ("--wrapper-c-flags",)),
         ("wrapper builds", ("--build-manifest",)),
         ("wrapper builds", ("--native-fortran-sources",)),
         ("wrapper builds", ("--native-fortran-flags",)),
@@ -2180,6 +2206,24 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         "nargs": "+",
         "metavar": "FLAG",
         "help": "Fortran compiler flags applied to each source passed with --native-fortran-sources",
+    }
+    assert arguments_by_name["--wrapper-compiler-debug"] == {
+        "action": "store_true",
+        "help": "Use the compiler debug profile for direct wrapper builds instead of the default release profile",
+    }
+    assert arguments_by_name["--wrapper-fortran-flags"] == {
+        "dest": "wrapper_fortran_flags",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "FLAG",
+        "help": "Fortran compiler flags appended to generated wrapper bridge compilation commands",
+    }
+    assert arguments_by_name["--wrapper-c-flags"] == {
+        "dest": "wrapper_c_flags",
+        "action": "extend",
+        "nargs": "+",
+        "metavar": "FLAG",
+        "help": "C compiler flags appended to generated CPython wrapper compilation commands",
     }
     assert arguments_by_name["--native-library"] == {
         "dest": "native_libraries",

@@ -15,6 +15,12 @@ from x2py.codegen.binding_pipeline import BindingPipeline
 __all__ = ["create_shared_library"]
 
 
+def _print_verbose_timing(verbose, label, elapsed):
+    """Print one elapsed build-stage timing when verbose output is enabled."""
+    if verbose:
+        print(f">> Timing :: {label}: {elapsed:.3f}s")
+
+
 # ==============================================================================
 def create_shared_library(
     codegen,
@@ -95,17 +101,19 @@ def create_shared_library(
     #               Wrap code
     # -------------------------------------------
 
-    start_wrapper_creation = time.time()
+    start_wrapper_creation = time.perf_counter()
     gen.generate(os.path.dirname(x2py_dirpath))
-    timings["Wrapper creation"] = time.time() - start_wrapper_creation
+    timings["Wrapper creation"] = time.perf_counter() - start_wrapper_creation
+    _print_verbose_timing(verbose, "Wrapper creation", timings["Wrapper creation"])
 
     # -------------------------------------------
     #           Print wrapper code
     # -------------------------------------------
 
-    start_wrapper_printing = time.time()
+    start_wrapper_printing = time.perf_counter()
     wrapper_files = gen.write(x2py_dirpath)
-    timings["Wrapper printing"] = time.time() - start_wrapper_printing
+    timings["Wrapper printing"] = time.perf_counter() - start_wrapper_printing
+    _print_verbose_timing(verbose, "Wrapper printing", timings["Wrapper printing"])
 
     printed_languages = gen.generated_languages
 
@@ -154,7 +162,7 @@ def create_shared_library(
     #               Compile code
     # -------------------------------------------
 
-    start_compile_wrapper = time.time()
+    start_compile_wrapper = time.perf_counter()
     for obj, wrapper_language in zip(wrapper_compile_objs, printed_languages, strict=True):
         compiler.compile_module(
             compile_obj=obj,
@@ -171,7 +179,8 @@ def create_shared_library(
         verbose=verbose,
     )
 
-    timings["Wrapper compilation"] = time.time() - start_compile_wrapper
+    timings["Wrapper compilation"] = time.perf_counter() - start_compile_wrapper
+    _print_verbose_timing(verbose, "Wrapper compilation", timings["Wrapper compilation"])
 
     # Return absolute path of shared library
     return sharedlib_filepath, timings

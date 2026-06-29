@@ -970,6 +970,14 @@ def _native_link_options_used(args: argparse.Namespace) -> bool:
     )
 
 
+def _wrapper_compile_options_used(args: argparse.Namespace) -> bool:
+    return bool(
+        getattr(args, "wrapper_compiler_debug", False)
+        or getattr(args, "wrapper_fortran_flags", None)
+        or getattr(args, "wrapper_c_flags", None)
+    )
+
+
 def _stage_defaults_to_wrap(args: argparse.Namespace) -> bool:
     return bool(
         args.language == "fortran"
@@ -1034,6 +1042,8 @@ def _validate_manifest_wrap_options(args: argparse.Namespace, parser: argparse.A
         parser.error("--build-manifest replays the saved entry contract; do not pass positional inputs")
     if _native_link_options_used(args):
         parser.error("--build-manifest replays saved native inputs; do not pass native build flags")
+    if _wrapper_compile_options_used(args):
+        parser.error("--build-manifest replays saved wrapper compiler flags")
 
 
 def _validate_source_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -1197,7 +1207,7 @@ def _cli_native_link_items(raw_items: list[str] | None) -> tuple[dict[str, objec
     return tuple(parsed)
 
 
-def _cli_native_fortran_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
+def _cli_compiler_flags(raw_flags: list[str] | None, *, option_name: str) -> tuple[str, ...]:
     if not raw_flags:
         return ()
     flags = []
@@ -1205,8 +1215,20 @@ def _cli_native_fortran_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
         try:
             flags.extend(shlex.split(raw))
         except ValueError as exc:
-            raise ValueError(f"Invalid --native-fortran-flags value {raw!r}: {exc}") from exc
+            raise ValueError(f"Invalid {option_name} value {raw!r}: {exc}") from exc
     return tuple(flags)
+
+
+def _cli_native_fortran_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
+    return _cli_compiler_flags(raw_flags, option_name="--native-fortran-flags")
+
+
+def _cli_wrapper_fortran_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
+    return _cli_compiler_flags(raw_flags, option_name="--wrapper-fortran-flags")
+
+
+def _cli_wrapper_c_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
+    return _cli_compiler_flags(raw_flags, option_name="--wrapper-c-flags")
 
 
 def _cli_native_libraries(raw_libraries: list[str] | None) -> tuple[str, ...]:
@@ -1311,6 +1333,9 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
             strict_wrapper_names=getattr(args, "strict_wrapper_names", False),
             makefile=getattr(args, "makefile", False),
             verbose=1 if getattr(args, "verbose", False) else 0,
+            wrapper_compiler_debug=getattr(args, "wrapper_compiler_debug", False),
+            wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
+            wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
         )
 
     return build_fortran_extension(
@@ -1324,6 +1349,9 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
         refresh_fortran_type_probe=getattr(args, "refresh_fortran_type_probe", False),
         makefile=getattr(args, "makefile", False),
         verbose=1 if getattr(args, "verbose", False) else 0,
+        wrapper_compiler_debug=getattr(args, "wrapper_compiler_debug", False),
+        wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
+        wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
     )
 
 
@@ -1812,6 +1840,27 @@ def main() -> int:
         "--strict-wrapper-names",
         action="store_true",
         help="Reject Python wrapper names that require escaping or collision suffixes",
+    )
+    wrapper_group.add_argument(
+        "--wrapper-compiler-debug",
+        action="store_true",
+        help="Use the compiler debug profile for direct wrapper builds instead of the default release profile",
+    )
+    wrapper_group.add_argument(
+        "--wrapper-fortran-flags",
+        dest="wrapper_fortran_flags",
+        action="extend",
+        nargs="+",
+        metavar="FLAG",
+        help="Fortran compiler flags appended to generated wrapper bridge compilation commands",
+    )
+    wrapper_group.add_argument(
+        "--wrapper-c-flags",
+        dest="wrapper_c_flags",
+        action="extend",
+        nargs="+",
+        metavar="FLAG",
+        help="C compiler flags appended to generated CPython wrapper compilation commands",
     )
     wrapper_group.add_argument(
         "--build-manifest",

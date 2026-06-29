@@ -220,8 +220,18 @@ Runtime tests: [`test_pyi_wrapper_builds.py`](../../tests/wrapper/fortran/build_
 [`test_policy_dispatch_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py).
 
 Use `--verbose` to execute a build while printing every exact, shell-escaped
-compiler and linker command. Use `--makefile` to generate an editable
-`Makefile.x2py` without compiling. These modes are mutually exclusive.
+compiler and linker command. Verbose builds also print elapsed time for each
+compiler/linker command and for the wrapper creation, printing, and compilation
+stages. Use `--makefile` to generate an editable `Makefile.x2py` without
+compiling. These modes are mutually exclusive.
+
+Direct wrapper builds use the compiler release profile by default, so generated
+wrapper sources compile with optimization flags and without debug flags. Use
+`--wrapper-compiler-debug` to select the compiler debug profile instead. Use
+`--wrapper-fortran-flags` for the generated Fortran bridge and
+`--wrapper-c-flags` for the generated CPython wrapper source; user flags are
+appended after x2py defaults, so they can override optimization choices such as
+`-O3`.
 
 The equivalent Python entrypoint returns structured artifact paths:
 

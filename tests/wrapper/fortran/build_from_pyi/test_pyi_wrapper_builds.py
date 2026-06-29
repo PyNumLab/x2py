@@ -220,6 +220,9 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
             "--native-fortran-sources",
             str(native_source),
             "--native-fortran-flags=-O2 -g0",
+            "--wrapper-compiler-debug",
+            "--wrapper-fortran-flags=-fno-range-check -g0",
+            "--wrapper-c-flags=-O0 -g0",
             "--out-dir",
             str(build_dir),
             "--makefile",
@@ -242,11 +245,16 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
     assert manifest["schema_version"] == 1
     assert manifest["build_kind"] == "pyi-wrapper"
     assert manifest["compiler"]["fortran_flags"] == ["-O2", "-g0"]
+    assert manifest["compiler"]["wrapper_compiler_debug"] is True
+    assert manifest["compiler"]["wrapper_fortran_flags"] == ["-fno-range-check", "-g0"]
+    assert manifest["compiler"]["wrapper_c_flags"] == ["-O0", "-g0"]
     assert manifest["entry_contract"].endswith("fruntime_abi_f90.pyi")
     assert [item["kind"] for item in manifest["native_build_plan"]["link_items"]] == ["object"]
     assert manifest["native_build_plan"]["compilation_units"][0]["source"].endswith(native_source.name)
     assert "-O2" in makefile_text
     assert "-g0" in makefile_text
+    assert "-fno-range-check" in makefile_text
+    assert "-O0" in makefile_text
     assert "x2py-build.json" in makefile_text
     assert str(PYI_FIXTURE) in makefile_text
     assert not Path(payload["shared_library"]).exists()

@@ -153,7 +153,10 @@ Important boundaries:
 | `--json` | Prints JSON to stdout for inspection stages and wrapper build results. |
 | `--out [PATH]` | Writes stage output. For Fortran `--pyi`, `PATH` is the generated contract package directory. |
 | `--out-dir DIR` | Selects the wrapper build output directory. |
-| `--verbose` | Prints wrapper compiler commands and build steps. |
+| `--verbose` | Prints wrapper compiler commands, build steps, and elapsed time for each compiler/linker command and wrapper stage. |
+| `--wrapper-compiler-debug` | Uses the compiler debug profile for direct wrapper builds instead of the default release profile. |
+| `--wrapper-fortran-flags FLAG...` | Appends flags to generated Fortran bridge compilation commands. |
+| `--wrapper-c-flags FLAG...` | Appends flags to generated CPython wrapper compilation commands. |
 | `--no-color` | Disables ANSI color in parse diagnostics. |
 | `--debug`, `--debug-traceback` | Re-raises parser errors so Python prints a traceback. |
 

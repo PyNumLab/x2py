@@ -10,6 +10,7 @@ import platform
 import shlex
 import shutil
 import subprocess
+import time
 import warnings
 
 from .default_compilers import available_compilers, vendors
@@ -197,7 +198,8 @@ class Compiler:
         list[str]
             A list containing the flags.
         """
-        flags = list(flags)
+        user_flags = list(flags)
+        flags = []
 
         if self._debug:
             flags.extend(self._language_info.get("debug_flags", ()))
@@ -211,9 +213,19 @@ class Compiler:
         #    flags.extend(self._language_info.get('standard_flags',()))
 
         for a in extra_compilation_tools:
-            flags.extend(self._language_info.get(a, {}).get("flags", ()))
+            tool_flags = self._language_info.get(a, {}).get("flags", ())
+            if a == "python":
+                tool_flags = self._without_python_profile_flags(tool_flags)
+            flags.extend(tool_flags)
+
+        flags.extend(user_flags)
 
         return flags
+
+    @staticmethod
+    def _without_python_profile_flags(flags):
+        """Drop Python sysconfig optimization/debug flags in favor of x2py's profile."""
+        return [flag for flag in flags if not (flag.startswith("-O") or flag.startswith("-g") or flag == "-DNDEBUG")]
 
     def _get_property(self, key, properties=(), extra_compilation_tools=()):
         """
@@ -579,11 +591,15 @@ class Compiler:
         if verbose:
             print(shlex.join(cmd))
 
+        start_time = time.perf_counter()
         with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True) as p:
             out, err = p.communicate()
+        elapsed = time.perf_counter() - start_time
 
         if verbose and out:
             print(out)
+        if verbose:
+            print(f">> Command completed in {elapsed:.3f}s")
         if p.returncode != 0:
             err_msg = "Failed to build module"
             err_msg += "\n" + err

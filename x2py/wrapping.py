@@ -213,9 +213,14 @@ def _fortran_source_for_pipeline(path: Path, preprocessing: PreprocessingConfig)
     return path.read_text(encoding="utf-8")
 
 
-def _new_gnu_compiler(*, execute_commands: bool = True) -> Compiler:
+def _compiler_flags(flags: Iterable[str] | None) -> tuple[str, ...]:
+    """Normalize caller-supplied compiler flags."""
+    return tuple(str(flag) for flag in (flags or ()))
+
+
+def _new_gnu_compiler(*, execute_commands: bool = True, debug: bool = False) -> Compiler:
     Compiler.acceptable_bin_paths = get_condaless_search_path("verbose")
-    return Compiler("GNU", debug=True, execute_commands=execute_commands)
+    return Compiler("GNU", debug=debug, execute_commands=execute_commands)
 
 
 def _expected_generated_files(
@@ -913,6 +918,9 @@ def _pyi_build_manifest(
     strict_wrapper_names: bool,
     requested_extension_name: str | None,
     native_fortran_flags: tuple[str, ...],
+    wrapper_compiler_debug: bool,
+    wrapper_fortran_flags: tuple[str, ...],
+    wrapper_c_flags: tuple[str, ...],
     native_build_plan: NativeBuildPlan,
     manifest_dir: Path,
 ) -> dict[str, object]:
@@ -933,6 +941,9 @@ def _pyi_build_manifest(
         "compiler": {
             "vendor": "GNU",
             "fortran_flags": list(native_fortran_flags),
+            "wrapper_compiler_debug": wrapper_compiler_debug,
+            "wrapper_fortran_flags": list(wrapper_fortran_flags),
+            "wrapper_c_flags": list(wrapper_c_flags),
             "position_independent_code": True,
         },
         "native_build_plan": _manifest_native_plan(native_build_plan, base=manifest_dir),
@@ -970,6 +981,13 @@ def _manifest_string_list(section: dict[str, object], key: str) -> tuple[str, ..
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         raise ValueError(f"Wrapper build manifest field {key!r} must be a list of strings")
     return tuple(value)
+
+
+def _manifest_bool(section: dict[str, object], key: str, *, default: bool = False) -> bool:
+    value = section.get(key, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"Wrapper build manifest field {key!r} must be a boolean")
+    return value
 
 
 def _manifest_path_list(section: dict[str, object], key: str, *, base: Path) -> tuple[Path, ...]:
@@ -1278,6 +1296,9 @@ def build_fortran_extension(
     refresh_fortran_type_probe: bool = False,
     makefile: bool = False,
     verbose: bool | int = False,
+    wrapper_compiler_debug: bool = False,
+    wrapper_fortran_flags: Iterable[str] | None = None,
+    wrapper_c_flags: Iterable[str] | None = None,
 ) -> WrapperBuildResult:
     """Build one extension, or generate its Makefile, from ordered sources."""
 
@@ -1330,7 +1351,9 @@ def build_fortran_extension(
     codegen_ast = semantic_ir_to_codegen_ast(module, scope)
     module_name = str(codegen_ast.scope.get_python_name(codegen_ast.name))
 
-    compiler = _new_gnu_compiler(execute_commands=not makefile)
+    wrapper_fortran_flags = _compiler_flags(wrapper_fortran_flags)
+    wrapper_c_flags = _compiler_flags(wrapper_c_flags)
+    compiler = _new_gnu_compiler(execute_commands=not makefile, debug=wrapper_compiler_debug)
     source_objects = tuple(
         _source_compile_object(source_path, output_path, object_stem=object_stem)
         for source_path, object_stem in zip(source_paths, _source_object_stems(source_paths), strict=True)
@@ -1352,13 +1375,14 @@ def build_fortran_extension(
     module_obj = CompileObj(
         file_name=module_name,
         folder=str(output_path),
+        flags=wrapper_fortran_flags,
         has_target_file=False,
     )
     shared_library, _timings = create_shared_library(
         codegen,
         module_obj,
         language="fortran",
-        wrapper_flags="",
+        wrapper_flags=wrapper_c_flags,
         x2py_dirpath=str(output_path),
         output_dirpath=str(shared_library_output_path),
         compiler=compiler,
@@ -1424,6 +1448,9 @@ def build_pyi_extension(
     makefile: bool = False,
     verbose: bool | int = False,
     complete_native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None = None,
+    wrapper_compiler_debug: bool = False,
+    wrapper_fortran_flags: Iterable[str] | None = None,
+    wrapper_c_flags: Iterable[str] | None = None,
 ) -> WrapperBuildResult:
     """Build one extension from one entry `.pyi` and native link inputs."""
 
@@ -1447,6 +1474,8 @@ def build_pyi_extension(
     output_path = Path(output_dir) if output_dir is not None else primary_contract.parent / _DEFAULT_BUILD_DIR_NAME
     shared_library_output_path = Path(output_dir) if output_dir is not None else primary_contract.parent
     output_path.mkdir(parents=True, exist_ok=True)
+    wrapper_fortran_flags = _compiler_flags(wrapper_fortran_flags)
+    wrapper_c_flags = _compiler_flags(wrapper_c_flags)
 
     modules = list(bundle.modules)
     validate_pyi_native_contract(modules)
@@ -1483,7 +1512,7 @@ def build_pyi_extension(
         module_dir=output_path if native_source_objects else None,
     )
     _validate_native_link_paths(native_build_plan)
-    compiler = _new_gnu_compiler(execute_commands=not makefile)
+    compiler = _new_gnu_compiler(execute_commands=not makefile, debug=wrapper_compiler_debug)
     for source_obj in native_source_objects:
         compiler.compile_module(
             source_obj,
@@ -1496,6 +1525,7 @@ def build_pyi_extension(
     module_obj = CompileObj(
         file_name=module_name,
         folder=str(output_path),
+        flags=wrapper_fortran_flags,
         has_target_file=False,
         include=include_dirs,
         libdir=native_inputs.library_dirs,
@@ -1505,7 +1535,7 @@ def build_pyi_extension(
         codegen,
         module_obj,
         language="fortran",
-        wrapper_flags="",
+        wrapper_flags=wrapper_c_flags,
         x2py_dirpath=str(output_path),
         output_dirpath=str(shared_library_output_path),
         compiler=compiler,
@@ -1523,6 +1553,9 @@ def build_pyi_extension(
         strict_wrapper_names=strict_wrapper_names,
         requested_extension_name=extension_name,
         native_fortran_flags=native_inputs.source_flags,
+        wrapper_compiler_debug=wrapper_compiler_debug,
+        wrapper_fortran_flags=wrapper_fortran_flags,
+        wrapper_c_flags=wrapper_c_flags,
         native_build_plan=native_build_plan,
         manifest_dir=output_path,
     )
@@ -1619,6 +1652,9 @@ def build_pyi_extension_from_manifest(
         strict_wrapper_names=strict_wrapper_names,
         makefile=makefile,
         verbose=verbose,
+        wrapper_compiler_debug=_manifest_bool(compiler_section, "wrapper_compiler_debug"),
+        wrapper_fortran_flags=_manifest_string_list(compiler_section, "wrapper_fortran_flags"),
+        wrapper_c_flags=_manifest_string_list(compiler_section, "wrapper_c_flags"),
         complete_native_link_items=_manifest_link_items(native_section, base=base),
     )
     recorded_contracts = tuple(

@@ -2,6 +2,7 @@
 
 import importlib
 import json
+import shlex
 import shutil
 import subprocess
 import sys
@@ -42,7 +43,16 @@ def test_verbose_mode_prints_full_direct_build_commands(tmp_path: Path):
     assert any(str(source) in line and "-c" in line for line in command_lines)
     assert any("bind_c_verbose_api_wrapper.f90" in line and "-c" in line for line in command_lines)
     assert any("verbose_api_wrapper.c" in line and "-c" in line for line in command_lines)
+    c_wrapper_command = next(line for line in command_lines if "verbose_api_wrapper.c" in line and "-c" in line)
+    c_wrapper_parts = shlex.split(c_wrapper_command)
+    assert "-O3" in c_wrapper_parts
+    assert "-DNDEBUG" in c_wrapper_parts
+    assert "-g" not in c_wrapper_parts
     assert any("-shared" in line and "verbose_api" in line for line in command_lines)
+    assert any(line.startswith(">> Command completed in ") for line in command_lines)
+    assert any(line.startswith(">> Timing :: Wrapper creation: ") for line in command_lines)
+    assert any(line.startswith(">> Timing :: Wrapper printing: ") for line in command_lines)
+    assert any(line.startswith(">> Timing :: Wrapper compilation: ") for line in command_lines)
     assert "Built extension:" in result.stdout
 
 
