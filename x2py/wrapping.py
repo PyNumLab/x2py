@@ -38,8 +38,9 @@ from x2py.semantics.models import (
     SemanticModule,
     SemanticVariable,
 )
-from x2py.semantics.pyi_parser import load_pyi_file, load_pyi_modules
 from x2py.semantics.native_contract import validate_pyi_native_contract
+from x2py.semantics.policy_completion import complete_semantic_policies
+from x2py.semantics.pyi2ir import load_pyi_file, load_pyi_modules
 
 
 _DEFAULT_BUILD_DIR_NAME = "__x2py__"
@@ -1319,6 +1320,7 @@ def build_fortran_extension(
     )
     _apply_source_python_exports(modules)
     module = _merge_wrapper_modules(modules, name=primary_source.stem)
+    complete_semantic_policies(module)
     scope = Scope(
         name=module.name,
         scope_type="module",
@@ -1452,6 +1454,7 @@ def build_pyi_extension(
     if not requested_name.isidentifier():
         raise ValueError(f"Extension name must be a valid Python identifier: {requested_name!r}")
     module = _merge_wrapper_modules(modules, name=requested_name)
+    complete_semantic_policies(module)
     scope = Scope(
         name=module.name,
         scope_type="module",

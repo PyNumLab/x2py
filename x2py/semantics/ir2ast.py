@@ -10,7 +10,6 @@ import numpy as np
 import re
 
 from x2py import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
-from x2py.ownership_policy import OwnershipContext, default_ownership_policy
 from x2py.codegen.models.core import (
     Add,
     AsName,
@@ -42,6 +41,7 @@ from x2py.semantics import models
 from x2py.semantics.models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
+    PYI_NATIVE_PROJECTION_METADATA,
     PYI_PROJECTED_OUTPUT_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
 )
@@ -215,18 +215,31 @@ def _semantic_class_descendants(classes: list[models.SemanticClass]) -> dict[str
     return {base_name: collect(base_name) for base_name in direct}
 
 
-def _ownership_decision(semantic_type: models.SemanticType, context: OwnershipContext):
-    return default_ownership_policy.decide_semantic_type(semantic_type, context)
+def _missing_completed_policy(owner: str) -> ValueError:
+    return ValueError(
+        f"{owner} is missing completed ownership policy; run complete_semantic_policies before ir2ast lowering"
+    )
 
 
-def _ownership_context_for_variable(node: models.SemanticVariable, scope) -> OwnershipContext:
-    if isinstance(node, models.SemanticField):
-        return OwnershipContext.field()
-    if isinstance(node, models.SemanticArgument):
-        return OwnershipContext.argument(node.intent)
-    if getattr(scope, "_scope_type", None) == "module":
-        return OwnershipContext.module_variable()
-    return OwnershipContext(location="value", intent=getattr(node, "intent", "in"))
+def _variable_ownership_decision(variable: models.SemanticVariable):
+    decision = variable.metadata.get(models.RESOLVED_OWNERSHIP_POLICY_METADATA)
+    if decision is None:
+        raise _missing_completed_policy(f"Variable {variable.name!r}")
+    return decision
+
+
+def _function_return_ownership_decision(function: models.SemanticFunction):
+    decision = function.metadata.get(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA)
+    if decision is None:
+        raise _missing_completed_policy(f"Function {function.name!r} result")
+    return decision
+
+
+def _type_ownership_decision(owner: str, semantic_type: models.SemanticType):
+    decision = semantic_type.metadata.get(models.RESOLVED_OWNERSHIP_POLICY_METADATA)
+    if decision is None:
+        raise _missing_completed_policy(owner)
+    return decision
 
 
 def _passes_by_value(node: models.SemanticVariable) -> bool:
@@ -274,6 +287,7 @@ def _callback_result_variable(
     scope,
     custom_types: dict[str, object] | None,
 ) -> Variable:
+    ownership_decision = _type_ownership_decision(f"Callback result {name!r}", semantic_type)
     dtype = _codegen_type(semantic_type.dtype, custom_types)
     if semantic_type.rank > 0:
         dtype = NumpyNDArrayType.get_new(
@@ -287,8 +301,9 @@ def _callback_result_variable(
         dtype,
         name,
         shape=shape,
-        memory_handling=_ownership_decision(semantic_type, OwnershipContext.result()).memory_handling,
+        memory_handling=ownership_decision.storage_mode.value,
         intent="out",
+        ownership_decision=ownership_decision,
     )
     scope.insert_variable(result, name=name)
     return result
@@ -368,7 +383,14 @@ def _pyi_bound_constructor_self(
 ) -> Variable | None:
     if cls_base is None or node.name != "__init__" or not node.metadata.get(models.PYI_BIND_TARGET_METADATA):
         return None
-    self_var = Variable(cls_base.class_type, func_scope.get_new_name("self"), cls_base=cls_base)
+    self_policy = cls_base.decorators[models.RESOLVED_CLASS_SELF_POLICY_METADATA]
+    self_var = Variable(
+        cls_base.class_type,
+        func_scope.get_new_name("self"),
+        cls_base=cls_base,
+        memory_handling=self_policy.boundary_storage_mode.value,
+        ownership_decision=self_policy,
+    )
     func_scope.insert_variable(self_var)
     return self_var
 
@@ -695,8 +717,7 @@ def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticMod
 
 def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> None:
     for argument in node.arguments:
-        context = OwnershipContext.argument(argument.intent)
-        decision = _ownership_decision(argument.semantic_type, context)
+        decision = _variable_ownership_decision(argument)
         if _is_pointer(argument.semantic_type) and decision.is_blocked:
             raise ValueError(
                 f"Function {node.name!r} has pointer {argument.intent} argument {argument.name!r}, "
@@ -706,12 +727,8 @@ def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> Non
 
 def _raise_for_blocked_ownership_policy(
     owner: str,
-    semantic_type: models.SemanticType | None,
-    context: OwnershipContext,
+    decision,
 ) -> None:
-    if semantic_type is None:
-        return
-    decision = _ownership_decision(semantic_type, context)
     if decision.is_blocked:
         raise ValueError(f"{owner} cannot be wrapped safely: {decision.blocker or decision.reason}")
 
@@ -864,22 +881,20 @@ def _raise_for_blocked_ownership_contracts_in_function(node: models.SemanticFunc
     for argument in node.arguments:
         _raise_for_blocked_ownership_policy(
             f"Function {node.name!r} argument {argument.name!r}",
-            argument.semantic_type,
-            OwnershipContext.argument(argument.intent),
+            _variable_ownership_decision(argument),
         )
-    _raise_for_blocked_ownership_policy(
-        f"Function {node.name!r} result",
-        node.return_type,
-        OwnershipContext.result(),
-    )
+    if node.return_type is not None:
+        _raise_for_blocked_ownership_policy(
+            f"Function {node.name!r} result",
+            _function_return_ownership_decision(node),
+        )
 
 
 def _raise_for_blocked_ownership_contracts_in_class(node: models.SemanticClass) -> None:
     for field in node.fields:
         _raise_for_blocked_ownership_policy(
             f"Class {node.name!r} field {field.name!r}",
-            field.semantic_type,
-            OwnershipContext.field(),
+            _variable_ownership_decision(field),
         )
 
 
@@ -887,8 +902,7 @@ def _raise_for_blocked_ownership_contracts(node: models.SemanticModule) -> None:
     for variable in node.variables:
         _raise_for_blocked_ownership_policy(
             f"Module variable {variable.name!r}",
-            variable.semantic_type,
-            OwnershipContext.module_variable(),
+            _variable_ownership_decision(variable),
         )
     for semantic_class in node.classes:
         _raise_for_blocked_ownership_contracts_in_class(semantic_class)
@@ -1261,12 +1275,12 @@ def _semantic_function_result(node, func_scope, custom_types):
         result_shape = _codegen_array_shape(node.return_type, func_scope)
     else:
         result_shape = None
-    result_ownership = _ownership_decision(node.return_type, OwnershipContext.result())
+    result_ownership = _function_return_ownership_decision(node)
     result_var = Variable(
         return_dtype,
         node.name,
         shape=result_shape,
-        memory_handling=result_ownership.memory_handling,
+        memory_handling=result_ownership.storage_mode.value,
         intent="out",
         ownership_decision=result_ownership,
     )
@@ -1287,6 +1301,8 @@ def _semantic_function_name(node, scope, native_name):
 
 def _semantic_function_decorators(node):
     decorators = {}
+    if node.projection:
+        decorators[PYI_NATIVE_PROJECTION_METADATA] = True
     if node.metadata.get(models.RUNTIME_HOLD_GIL_METADATA):
         decorators[models.RUNTIME_HOLD_GIL_METADATA] = True
     if isinstance(status_policy := node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA), dict):
@@ -1429,6 +1445,10 @@ def _convert_semantic_class(node, scope, legacy, custom_types, class_lookup, cla
     decorators = {}
     if node.origin.metadata.get(models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
         decorators[models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
+    decorators[models.RESOLVED_CLASS_INSTANCE_POLICY_METADATA] = node.metadata[
+        models.RESOLVED_CLASS_INSTANCE_POLICY_METADATA
+    ]
+    decorators[models.RESOLVED_CLASS_SELF_POLICY_METADATA] = node.metadata[models.RESOLVED_CLASS_SELF_POLICY_METADATA]
     cls = ClassDef(
         name,
         attributes=attributes,
@@ -1536,13 +1556,13 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
     semantic_type = node.semantic_type
     dtype, shape = _semantic_variable_type_and_shape(semantic_type, scope, custom_types)
     name = _semantic_variable_name(node, scope)
-    ownership_decision = _ownership_decision(semantic_type, _ownership_context_for_variable(node, scope))
+    ownership_decision = _variable_ownership_decision(node)
     fortran_array_category, fortran_source_shape = _fortran_array_category_and_source_shape(semantic_type)
     var = Variable(
         dtype,
         name,
         shape=shape,
-        memory_handling=ownership_decision.memory_handling,
+        memory_handling=ownership_decision.storage_mode.value,
         is_private=node.visibility == "private",
         is_target=bool(semantic_type.metadata.get("fortran_target")),
         is_optional=getattr(node, "optional", False),
@@ -1550,7 +1570,9 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
         passes_by_value=_passes_by_value(node),
         fortran_array_category=fortran_array_category,
         fortran_source_shape=fortran_source_shape,
+        getter_ownership_decision=node.metadata.get(models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA),
         ownership_decision=ownership_decision,
+        setter_ownership_decision=node.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA),
         projected_output=bool(node.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)),
         assumed_rank=_is_assumed_rank(semantic_type),
         cls_base=cls_base,

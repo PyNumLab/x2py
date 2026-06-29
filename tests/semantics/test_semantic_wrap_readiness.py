@@ -9,6 +9,8 @@ from x2py import parse_fortran_file
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
+    POLICY_COMPLETION_PREPARED_METADATA,
+    RESOLVED_OWNERSHIP_POLICY_METADATA,
     SemanticArrayContract,
     SemanticArgument,
     SemanticClass,
@@ -22,7 +24,7 @@ from x2py.semantics.models import (
     SemanticStorageContract,
     SemanticType,
 )
-from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.pyi2ir import parse_pyi_text
 from x2py.semantics.readiness import (
     _SemanticTypeIndex,
     _constant_names,
@@ -49,6 +51,25 @@ def _readiness_from_pyi(source: str):
 
 def _blocker_codes(report: dict) -> set[str]:
     return {blocker["code"] for blocker in report["wrappability_blockers"]}
+
+
+def test_readiness_completes_policy_before_blocker_checks():
+    module = SemanticModule(
+        name="policy_ready",
+        functions=[
+            SemanticFunction(
+                "scale",
+                arguments=[SemanticArgument("values", SemanticType("Float64", dtype="Float64", rank=1))],
+            )
+        ],
+    )
+
+    report = assess_semantic_wrap_readiness(module)
+
+    assert report["wrappable"] is True
+    assert module.metadata[POLICY_COMPLETION_PREPARED_METADATA] is True
+    decision = module.functions[0].arguments[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert decision.transfer.value == "call_local"
 
 
 def _write_ready_fortran(path: Path) -> Path:

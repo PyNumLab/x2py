@@ -12,6 +12,8 @@ from x2py.semantics.models import (
     PYI_PROJECTED_OUTPUT_METADATA,
     PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     PYI_USER_PRIVATE_METADATA,
+    PYTHON_VALUE_IMMUTABLE,
+    PYTHON_VALUE_MUTABILITY_METADATA,
     SemanticArgument,
     SemanticConstraint,
     SemanticField,
@@ -22,7 +24,7 @@ from x2py.semantics.models import (
     SemanticType,
     SemanticVariable,
 )
-from x2py.semantics.pyi_parser import (
+from x2py.semantics.pyi2ir import (
     _PyiAstParser,
     _node_text,
     convert_pyi_to_ir,
@@ -30,8 +32,10 @@ from x2py.semantics.pyi_parser import (
     load_pyi_modules,
     parse_pyi_text,
 )
-from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
+from x2py.semantics.pyi_parser import parse_pyi_text as parse_pyi_ast_text
+from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.native_contract import native_contract_issues
+from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.codegen.bindings.c_to_python import CPythonBindingGenerator
 from x2py.codegen.printers.pyi_printer import emit_module
@@ -47,6 +51,12 @@ _ALL_FORTRAN_PYI_COMPARE_FIXTURES = sorted(
     for path in (FORTRAN_DATA_DIR / dirname).rglob("*")
     if path.is_file() and path.suffix.lower() in FORTRAN_SUFFIXES
 )
+
+
+def semantic_ir_to_codegen_ast(node, *args, **kwargs):
+    if isinstance(node, SemanticModule):
+        complete_semantic_policies(node)
+    return _semantic_ir_to_codegen_ast(node, *args, **kwargs)
 
 
 def _sample_pyi_compare_fixtures(paths: list[Path]) -> list[Path]:
@@ -72,6 +82,14 @@ def _sample_pyi_compare_fixtures(paths: list[Path]) -> list[Path]:
 
 
 FORTRAN_PYI_COMPARE_FIXTURES = _sample_pyi_compare_fixtures(_ALL_FORTRAN_PYI_COMPARE_FIXTURES)
+
+
+def test_pyi_parser_returns_python_ast_only():
+    tree = parse_pyi_ast_text("def scale(value: Float64) -> Float64: ...\n", filename="scale.pyi")
+
+    assert isinstance(tree, ast.Module)
+    assert isinstance(tree.body[0], ast.FunctionDef)
+    assert tree.body[0].name == "scale"
 
 
 def _semantic_modules_for_source(path: Path):
@@ -106,6 +124,38 @@ read_only_pointer: Ptr(Const(Float64))
     assert callback.semantic_type.name == "Callable"
     assert pointer.semantic_type.storage.kind == "reference"
     assert read_only_pointer.semantic_type.storage.mutable is False
+
+
+def test_parse_pyi_text_preserves_immutable_python_value_metadata():
+    module = parse_pyi_text(
+        """
+def scale(
+    values: Annotated[Float64[:], Immutable]
+) -> Returns["values", Float64[:]]: ...
+""",
+        module_name="immutable_values",
+    )
+
+    values = module.functions[0].arguments[0].semantic_type
+    assert values.metadata[PYTHON_VALUE_MUTABILITY_METADATA] == PYTHON_VALUE_IMMUTABLE
+
+    emitted = emit_module(module)
+    assert "Immutable" in emitted
+    reparsed = parse_pyi_text(emitted, module_name="immutable_values")
+    reparsed_values = reparsed.functions[0].arguments[0].semantic_type
+    assert reparsed_values.metadata[PYTHON_VALUE_MUTABILITY_METADATA] == PYTHON_VALUE_IMMUTABLE
+
+
+def test_parse_pyi_text_rejects_immutable_writable_borrowed_view_argument():
+    with pytest.raises(ValueError, match="Immutable values cannot request"):
+        parse_pyi_text(
+            """
+def normalize(
+    values: Annotated[Float64[:], Immutable, Transfer("borrowed_view")]
+) -> None: ...
+""",
+            module_name="invalid_immutable_view",
+        )
 
 
 def test_parse_pyi_text_allows_user_modified_stub():
@@ -392,6 +442,14 @@ def test_load_pyi_file_and_modules_forward_module_name_encoding_and_filename(tmp
     with pytest.raises(SyntaxError) as error:
         load_pyi_file(invalid_path)
     assert error.value.filename == str(invalid_path)
+
+    semantic_invalid_path = tmp_path / "semantic_invalid.pyi"
+    semantic_invalid_path.write_text("def f(x) -> None: ...\n", encoding="utf-8")
+    with pytest.raises(ValueError) as semantic_error:
+        load_pyi_file(semantic_invalid_path)
+    message = str(semantic_error.value)
+    assert message.startswith(f"{semantic_invalid_path}: ")
+    assert "Expected typed argument: 'x'" in message
 
 
 def test_convert_pyi_to_ir_and_import_parser_edge_cases():
@@ -984,7 +1042,7 @@ def add(
     assert func.projection[2].result_position == 0
 
 
-def test_native_call_visible_inout_projection_keeps_argument_intent():
+def test_native_call_projected_inout_keeps_argument_intent():
     from_pyi = parse_pyi_text(
         """
 @native_call([Arg(0)])
@@ -1001,7 +1059,7 @@ def fixed_inout(
     assert func.projection[0].result_position == 0
 
 
-def test_native_call_visible_output_projection_keeps_explicit_output_intent():
+def test_native_call_projected_output_keeps_explicit_output_intent():
     from_pyi = parse_pyi_text(
         """
 @native_call([Arg(0), Arg(1)])
@@ -1019,7 +1077,7 @@ def fill(
     assert func.projection[1].result_position == 0
 
 
-def test_native_call_compact_visible_array_output_marks_projection_without_output_intent():
+def test_native_call_compact_array_output_marks_projection_without_output_intent():
     from_pyi = parse_pyi_text(
         """
 @native_call([Arg(0), Arg(1)])
@@ -1043,6 +1101,23 @@ def fill(
     )
     assert codegen_module.funcs[0].arguments[1].var.intent == "inout"
     assert codegen_module.funcs[0].arguments[1].var.projected_output is True
+
+
+def test_native_order_outputs_do_not_get_projected_without_native_call():
+    from_pyi = parse_pyi_text(
+        """
+def solve(
+    x: Ptr(Const(Float64)),
+    status: Annotated[Ptr(Int32), Intent("out")]
+) -> tuple[Float64, Returns["message", String]]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert [arg.name for arg in func.arguments] == ["x", "status", "message"]
+    assert PYI_PROJECTED_OUTPUT_METADATA not in func.arguments[1].metadata
+    assert func.arguments[2].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
 
 
 def test_compact_assignment_overload_projects_visible_destination_without_output_intent():

@@ -9,14 +9,18 @@ from functools import reduce
 from typing import ClassVar
 
 from x2py.ownership_policy import (
+    AssignmentMode,
     CodegenAction,
-    OwnershipActionDispatcher,
-    codegen_action_for_variable,
+    ObjectKind,
+    PolicyActionDispatcher,
+    StorageMode,
     ownership_decision_for_codegen_variable,
 )
 from x2py.semantics.models import (
     INTERNAL_MODULE_VARIABLE_ACCESS_METADATA,
     INTERNAL_MODULE_VARIABLE_NAME_METADATA,
+    RESOLVED_CLASS_INSTANCE_POLICY_METADATA,
+    RESOLVED_CLASS_SELF_POLICY_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
 )
 
@@ -75,7 +79,6 @@ from ..models.datatypes import (
     NumpyInt64Type,
     TupleType,
     NIL,
-    StringType,
     cast_to,
     convert_to_literal,
 )
@@ -101,8 +104,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     - result conversion helpers;
     - shared predicates and low-level builders.
 
-    Datatype conversion is an explicit second dispatch dimension. Model-node
-    dispatch remains exclusively owned by ``_visit``.
+    Contract-value conversion dispatches only from the completed post-IR object
+    kind and codegen action. Model-node dispatch remains exclusively owned by
+    ``_visit``.
 
     Parameters
     ----------
@@ -114,25 +118,92 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     target_language = "C"
     start_language = "Fortran"
-    _ARGUMENT_CONVERTERS: ClassVar[dict[type, str]] = {
-        FixedSizeNumericType: "_convert_numeric_argument",
-        CustomDataType: "_convert_custom_type_argument",
-        NumpyNDArrayType: "_convert_array_argument",
-        StringType: "_convert_string_argument",
-    }
-    _RESULT_CONVERTERS: ClassVar[dict[type, str]] = {
-        FixedSizeNumericType: "_convert_scalar_result",
-        CustomDataType: "_convert_custom_type_result",
-        NumpyNDArrayType: "_convert_array_result",
-        StringType: "_convert_string_result",
-    }
-    _NDARRAY_RESULT_DISPATCHER = OwnershipActionDispatcher(
+    _ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
-            CodegenAction.SNAPSHOT_COPY_ARRAY: "_build_snapshot_copy_array_result",
-            CodegenAction.BORROWED_VIEW: "_build_borrowed_array_result",
-            CodegenAction.COPY_RETURN_ARRAY: "_build_copy_return_array_result",
-        },
-        "_build_default_array_result",
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_numeric_argument",
+            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_numeric_argument",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_numeric_argument",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_numeric_argument",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_numeric_copy_in_out_argument",
+            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_string_argument",
+            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_string_argument",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_string_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_array_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_array_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_array_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_array_copy_in_out_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_custom_type_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_custom_type_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_custom_type_argument",
+        }
+    )
+    _RESULT_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_convert_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_convert_scalar_result",
+            (ObjectKind.STRING, CodegenAction.COPY_OUT): "_convert_string_result",
+            (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_convert_string_result",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_string_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_convert_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_convert_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_convert_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_convert_array_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_owned_custom_type_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_convert_owned_custom_type_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_convert_borrowed_custom_type_result",
+        }
+    )
+    _REPLACEMENT_RESULT_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_build_scalar_replacement_result",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_build_string_replacement_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_build_array_replacement_result",
+        }
+    )
+    _NDARRAY_RESULT_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_build_snapshot_copy_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_build_borrowed_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_build_copy_return_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_build_copy_return_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_build_copy_return_array_result",
+        }
+    )
+    _FIELD_ASSIGNMENT_BY_POLICY: ClassVar[dict[AssignmentMode, type]] = {
+        AssignmentMode.VALUE_COPY: Assign,
+        AssignmentMode.ALIAS: AliasAssign,
+    }
+    _MODULE_VARIABLE_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_scalar_module_variable",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_array_module_variable",
+        }
+    )
+    _COPY_RETURN_ARRAY_BY_STORAGE: ClassVar[dict[StorageMode, str]] = {
+        StorageMode.STACK: "_build_stack_copy_return_array_result",
+        StorageMode.HEAP: "_build_heap_copy_return_array_result",
+    }
+    _CALLBACK_ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_callback_scalar_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_callback_array_input_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_array_inout_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_callback_array_output_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_callback_derived_input_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_derived_inout_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_callback_derived_output_argument",
+        }
+    )
+    _CALLBACK_RESULT_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_callback_scalar_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_convert_callback_array_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_callback_derived_result",
+        }
     )
 
     # ------------------------------------------------------------------
@@ -418,7 +489,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """Convert one function argument and its optional projected result."""
         if isinstance(argument.var, FunctionAddress):
             return self._convert_argument(argument, function), None
-        if not argument.bound_argument and self._is_hidden_output_argument(argument.var):
+        decision = ownership_decision_for_codegen_variable(argument.var)
+        if not argument.bound_argument and decision.codegen_action is CodegenAction.HIDDEN_OUTPUT:
             result = self._convert_result(argument.var, function.scope)
             self._additional_exprs.extend(result["body"])
             generated = {
@@ -430,12 +502,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         generated = self._convert_argument(argument, function)
         if argument.bound_argument:
             return generated, None
-        if self._is_allocatable_replacement_argument(argument.var):
-            result = self._build_allocatable_replacement_result(argument.var, generated["f_arg"].value)
+        if decision.codegen_action is CodegenAction.COPY_IN_OUT:
+            result = self._REPLACEMENT_RESULT_DISPATCHER.dispatch(self, argument.var, generated)
             self._additional_exprs.extend(result["body"])
             return generated, result
-        if self._is_string_replacement_argument(argument.var):
-            return generated, self._build_string_replacement_result(argument.var, generated)
         return generated, None
 
     def _convert_function_result(self, function):
@@ -521,53 +591,56 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """
         if isinstance(expr.class_type, FinalType):
             return expr.clone(expr.name, new_class=BindCModuleConstant)
-        if isinstance(expr.class_type, FixedSizeNumericType):
-            return self._scalar_module_variable(expr)
-        if isinstance(expr.class_type, NumpyNDArrayType):
-            scope = self.scope
-            func_name = scope.get_new_name("bind_c_" + expr.name.lower())
-            func_scope = scope.new_child_scope(func_name, "function")
-            mod = get_enclosing_module(expr)
-            assert mod is not None
-            func_scope.imports["variables"][expr.name] = expr
+        return self._MODULE_VARIABLE_POLICY_DISPATCHER.dispatch(self, expr)
 
-            # Create the data pointer
-            self.scope = func_scope
-            result = self._get_bind_c_array(expr.name, expr, expr.shape, pointer_target=True)
-            if expr.memory_handling == "heap":
-                unallocated_body = [
-                    Assign(result["bind_var"], NIL),
-                    *[
-                        Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
-                        for shape_var in result["shape_vars"]
-                    ],
-                ]
-                result["body"] = [
-                    If(
-                        IfSection(
-                            ArrayAllocated(expr),
-                            result["body"],
-                        ),
-                        IfSection(convert_to_literal(True), unallocated_body),
-                    )
-                ]
-            self.exit_scope()
-            func = BindCFunctionDef(
-                name=func_name,
-                body=result["body"],
-                arguments=[],
-                results=FunctionDefResult(result["c_result"]),
-                imports=self._module_variable_imports(expr),
-                scope=func_scope,
-                original_function=expr,
-            )
-            return expr.clone(
-                expr.name,
-                new_class=BindCArrayVariable,
-                wrapper_function=func,
-                original_variable=expr,
-            )
-        raise NotImplementedError(f"Objects of type {expr.class_type} cannot be wrapped yet")
+    def _array_module_variable(self, expr, decision):
+        """Build a borrowed module-array accessor from completed policy."""
+        getter_policy = expr.getter_ownership_decision
+        if getter_policy is None:
+            raise ValueError(f"Module variable {expr.name!r} is missing completed getter policy")
+        scope = self.scope
+        func_name = scope.get_new_name("bind_c_" + expr.name.lower())
+        func_scope = scope.new_child_scope(func_name, "function")
+        mod = get_enclosing_module(expr)
+        assert mod is not None
+        func_scope.imports["variables"][expr.name] = expr
+        self.scope = func_scope
+        getter_value = expr.clone(
+            expr.name,
+            ownership_decision=getter_policy,
+            memory_handling=getter_policy.storage_mode.value,
+        )
+        result = self._get_bind_c_array(expr.name, getter_value, expr.shape, pointer_target=True)
+        if decision.nullable:
+            unallocated_body = [
+                Assign(result["bind_var"], NIL),
+                *[
+                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
+                    for shape_var in result["shape_vars"]
+                ],
+            ]
+            result["body"] = [
+                If(
+                    IfSection(ArrayAllocated(expr), result["body"]),
+                    IfSection(convert_to_literal(True), unallocated_body),
+                )
+            ]
+        self.exit_scope()
+        func = BindCFunctionDef(
+            name=func_name,
+            body=result["body"],
+            arguments=[],
+            results=FunctionDefResult(result["c_result"]),
+            imports=self._module_variable_imports(expr),
+            scope=func_scope,
+            original_function=expr,
+        )
+        return expr.clone(
+            expr.name,
+            new_class=BindCArrayVariable,
+            wrapper_function=func,
+            original_variable=expr,
+        )
 
     def _visit_DottedVariable(self, expr):
         """
@@ -588,6 +661,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             the class attribute to C.
         """
         lhs = expr.lhs
+        decision = ownership_decision_for_codegen_variable(expr)
+        getter_policy = expr.getter_ownership_decision
+        setter_policy = expr.setter_ownership_decision
+        if getter_policy is None or setter_policy is None:
+            raise ValueError(f"Field {expr.name!r} is missing completed accessor policy")
         class_dtype = lhs.dtype
         # ----------------------------------------------------------------------------------
         #                        Create getter
@@ -596,7 +674,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         getter_scope = self.scope.new_child_scope(getter_name, "function")
         self.scope = getter_scope
         self.scope.insert_symbol(expr.name)
-        getter_result_info = self._convert_result(expr, lhs.cls_base.scope)
+        getter_value = expr.clone(
+            expr.name,
+            lhs=expr.lhs,
+            ownership_decision=getter_policy,
+            memory_handling=getter_policy.storage_mode.value,
+        )
+        getter_result_info = self._convert_result(getter_value, lhs.cls_base.scope)
         getter_result = getter_result_info["c_result"]
 
         getter_arg_generator = self._convert_argument(FunctionDefArgument(lhs, bound_argument=True), expr)
@@ -608,7 +692,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         attrib = expr.clone(expr.name, lhs=self_obj)
         obj = self.scope.find(expr.name)
         # Cast the C variable into a Python variable
-        if expr.rank > 0 and expr.memory_handling == "heap":
+        if expr.rank > 0 and decision.nullable:
             unallocated_body = [
                 Assign(getter_result_info["bind_var"], NIL),
                 *[
@@ -643,21 +727,40 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             scope=getter_scope,
         )
 
-        # ----------------------------------------------------------------------------------
-        #                        Create setter
-        # ----------------------------------------------------------------------------------
-        setter_name = self.scope.get_new_name(f"{class_dtype.name}_{expr.name}_setter".lower())
+        setter = (
+            None
+            if setter_policy.assignment_mode is AssignmentMode.NONE
+            else self._build_field_setter(expr, lhs, setter_policy)
+        )
+        return BindCClassProperty(
+            lhs.cls_base.scope.get_python_name(expr.name),
+            getter,
+            setter,
+            lhs.dtype,
+            getter_policy=getter_policy,
+            setter_policy=setter_policy,
+        )
+
+    def _build_field_setter(self, expr, lhs, setter_policy):
+        """Build one field setter from completed storage and setter policies."""
+        setter_name = self.scope.get_new_name(f"{lhs.dtype.name}_{expr.name}_setter".lower())
         setter_scope = self.scope.new_child_scope(setter_name, "function")
         self.scope = setter_scope
         self.scope.insert_symbol(expr.name)
+        setter_value = expr.clone(
+            expr.name,
+            lhs=expr.lhs,
+            intent="in",
+            memory_handling=setter_policy.storage_mode.value,
+            ownership_decision=setter_policy,
+        )
 
         setter_arg_generators = (
             self._convert_argument(FunctionDefArgument(lhs, bound_argument=True), expr),
-            self._convert_argument(FunctionDefArgument(expr), expr),
+            self._convert_argument(FunctionDefArgument(setter_value), expr),
         )
         setter_args = (setter_arg_generators[0]["c_arg"], setter_arg_generators[1]["c_arg"])
-        if expr.is_alias:
-            setter_args[1].persistent_target = True
+        setter_args[1].persistent_target = setter_policy.assignment_mode is AssignmentMode.ALIAS
 
         self_obj = setter_arg_generators[0]["f_arg"].value
         set_val = setter_arg_generators[1]["f_arg"].value
@@ -665,21 +768,22 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         setter_body = setter_arg_generators[0]["body"] + setter_arg_generators[1]["body"]
 
         attrib = expr.clone(expr.name, lhs=self_obj)
-        # Cast the C variable into a Python variable
-        if expr.memory_handling == "alias":
-            setter_body.append(AliasAssign(attrib, set_val))
-        else:
-            setter_body.append(Assign(attrib, set_val))
+        try:
+            assignment = self._FIELD_ASSIGNMENT_BY_POLICY[setter_policy.assignment_mode]
+        except KeyError:
+            raise ValueError(
+                f"No field setter assignment for completed policy {setter_policy.assignment_mode.value!r}"
+            ) from None
+        setter_body.append(assignment(attrib, set_val))
         self.exit_scope()
 
-        setter = BindCFunctionDef(
+        return BindCFunctionDef(
             setter_name,
             setter_args,
             setter_body,
             original_function=expr,
             scope=setter_scope,
         )
-        return BindCClassProperty(lhs.cls_base.scope.get_python_name(expr.name), getter, setter, lhs.dtype)
 
     def _visit_ClassDef(self, expr):
         """
@@ -698,6 +802,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             The wrapped class.
         """
         name = expr.name
+        instance_policy = expr.decorators[RESOLVED_CLASS_INSTANCE_POLICY_METADATA]
+        self_policy = expr.decorators[RESOLVED_CLASS_SELF_POLICY_METADATA]
         func_name = self.scope.get_new_name(f"{name}_bind_c_alloc".lower())
         func_scope = self.scope.new_child_scope(func_name, "function")
 
@@ -706,7 +812,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             expr.class_type,
             func_scope.get_new_name(f"{name}_obj"),
             cls_base=expr,
-            memory_handling="alias",
+            memory_handling=instance_policy.boundary_storage_mode.value,
+            ownership_decision=instance_policy,
         )
         func_scope.insert_variable(local_var)
 
@@ -746,7 +853,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             scope.local_used_symbols["__del__"] = del_name
             scope.python_names[del_name] = "__del__"
             argument = FunctionDefArgument(
-                Variable(expr.class_type, scope.get_new_name("self"), cls_base=expr),
+                Variable(
+                    expr.class_type,
+                    scope.get_new_name("self"),
+                    cls_base=expr,
+                    memory_handling=self_policy.boundary_storage_mode.value,
+                    ownership_decision=self_policy,
+                ),
                 bound_argument=True,
             )
             scope.insert_variable(argument.var)
@@ -772,7 +885,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         ]
 
         # Pseudo-self variable is useful for pre-defined attributes which are not DottedVariables
-        pseudo_self = Variable(expr.class_type, "self", cls_base=expr)
+        pseudo_self = Variable(
+            expr.class_type,
+            "self",
+            cls_base=expr,
+            memory_handling=self_policy.boundary_storage_mode.value,
+            ownership_decision=self_policy,
+        )
         properties = [
             self._visit(
                 v if isinstance(v, DottedVariable) else v.clone(v.name, new_class=DottedVariable, lhs=pseudo_self)
@@ -820,37 +939,29 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         var = expr.var
         if isinstance(var, FunctionAddress):
             return self._convert_callback_argument(expr, func)
-        class_type = var.class_type
+        func_def_argument_dict = self._ARGUMENT_POLICY_DISPATCHER.dispatch(self, var, func)
+        new_var = func_def_argument_dict["c_arg"]
+        func_def_argument_dict["c_arg"] = FunctionDefArgument(
+            new_var,
+            value=expr.value,
+            posonly=expr.is_posonly,
+            kwonly=expr.is_kwonly,
+            annotation=expr.annotation,
+            bound_argument=expr.bound_argument,
+            bound_argument_position=expr.bound_argument_position,
+            persistent_target=expr.persistent_target,
+            is_vararg=expr.is_vararg,
+            is_kwarg=expr.is_kwarg,
+        )
 
-        for cls in type(class_type).__mro__:
-            converter_name = self._ARGUMENT_CONVERTERS.get(cls)
-            if converter_name is not None:
-                func_def_argument_dict = getattr(self, converter_name)(var, func)
-                new_var = func_def_argument_dict["c_arg"]
-                func_def_argument_dict["c_arg"] = FunctionDefArgument(
-                    new_var,
-                    value=expr.value,
-                    posonly=expr.is_posonly,
-                    kwonly=expr.is_kwonly,
-                    annotation=expr.annotation,
-                    bound_argument=expr.bound_argument,
-                    bound_argument_position=expr.bound_argument_position,
-                    persistent_target=expr.persistent_target,
-                    is_vararg=expr.is_vararg,
-                    is_kwarg=expr.is_kwarg,
-                )
-
-                if self._uses_positional_native_call(func):
-                    func_def_argument_dict["f_arg"] = FunctionCallArgument(func_def_argument_dict["f_arg"])
-                else:
-                    func_def_argument_dict["f_arg"] = FunctionCallArgument(
-                        func_def_argument_dict["f_arg"],
-                        keyword=self._native_argument_keyword(func, expr),
-                    )
-                return func_def_argument_dict
-
-        # Unknown object, we raise an error.
-        raise NotImplementedError(f"Wrapping function arguments is not implemented for type {class_type}.")
+        if self._uses_positional_native_call(func):
+            func_def_argument_dict["f_arg"] = FunctionCallArgument(func_def_argument_dict["f_arg"])
+        else:
+            func_def_argument_dict["f_arg"] = FunctionCallArgument(
+                func_def_argument_dict["f_arg"],
+                keyword=self._native_argument_keyword(func, expr),
+            )
+        return func_def_argument_dict
 
     def _convert_callback_argument(self, expr, func):
         """Lower one immediate-call dummy procedure to a C callback plus a Fortran adapter."""
@@ -909,30 +1020,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
             adapter_scope.insert_variable(adapter_result_var)
             adapter_result = FunctionDefResult(adapter_result_var)
-            if isinstance(native_result.class_type, FixedSizeNumericType):
-                c_result_var = native_result.clone(
-                    c_scope.get_new_name(f"{callback_name}_result"),
-                    new_class=Variable,
-                    is_argument=False,
-                    memory_handling="stack",
-                )
-                c_scope.insert_variable(c_result_var)
-                c_result = FunctionDefResult(c_result_var)
-                abi_result = {"kind": "scalar", "native": native_result, "abi": c_result_var}
-            elif isinstance(native_result.class_type, NumpyNDArrayType | CustomDataType):
-                if native_result.rank > 0 and any(item is None for item in native_result.alloc_shape):
-                    raise ValueError(f"Callback {callback_name!r} array result must have an explicit shape")
-                c_result_var = Variable(
-                    BindCPointer(),
-                    c_scope.get_new_name(f"{callback_name}_result_data"),
-                    memory_handling="stack",
-                )
-                c_scope.insert_variable(c_result_var)
-                c_result = FunctionDefResult(c_result_var)
-                kind = "array" if native_result.rank > 0 else "derived"
-                abi_result = {"kind": kind, "native": native_result, "abi": c_result_var}
-            else:
-                raise ValueError(f"Callback {callback_name!r} result uses unsupported type {native_result.class_type}")
+            converted_result = self._CALLBACK_RESULT_POLICY_DISPATCHER.dispatch(
+                self,
+                native_result,
+                callback_name,
+                c_scope,
+                adapter_result_var,
+            )
+            c_result = converted_result["c_result"]
+            abi_result = converted_result["abi"]
 
         c_callback = FunctionAddress(
             c_name,
@@ -1019,25 +1115,76 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _convert_callback_abi_argument(self, callback_name, native_var, adapter_var, c_scope, adapter_scope):
         """Dispatch one callback argument to its ABI converter."""
-        if isinstance(native_var.class_type, FixedSizeNumericType):
-            return self._convert_callback_scalar_argument(callback_name, native_var, adapter_var, c_scope)
-        if isinstance(native_var.class_type, NumpyNDArrayType):
-            return self._convert_callback_pointer_argument(
-                native_var, adapter_var, c_scope, adapter_scope, is_array=True
-            )
-        if isinstance(native_var.class_type, CustomDataType):
-            return self._convert_callback_pointer_argument(
-                native_var, adapter_var, c_scope, adapter_scope, is_array=False
-            )
-        raise ValueError(
-            f"Callback {callback_name!r} argument {native_var.name!s} uses unsupported type {native_var.class_type}"
+        return self._CALLBACK_ARGUMENT_POLICY_DISPATCHER.dispatch(
+            self,
+            native_var,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
         )
 
     @staticmethod
-    def _convert_callback_scalar_argument(callback_name, native_var, adapter_var, c_scope):
+    def _convert_callback_scalar_result(native_result, decision, callback_name, c_scope, _adapter_result):
+        """Build the C ABI result for a scalar callback result."""
+        c_result_var = native_result.clone(
+            c_scope.get_new_name(f"{callback_name}_result"),
+            new_class=Variable,
+            is_argument=False,
+            memory_handling=decision.boundary_storage_mode.value,
+        )
+        c_scope.insert_variable(c_result_var)
+        return {
+            "c_result": FunctionDefResult(c_result_var),
+            "abi": {"kind": "scalar", "native": native_result, "abi": c_result_var},
+        }
+
+    def _convert_callback_array_result(self, native_result, decision, callback_name, c_scope, adapter_result):
+        """Build the pointer ABI for an array callback result."""
+        if any(item is None for item in adapter_result.alloc_shape):
+            raise ValueError(f"Callback {callback_name!r} array result must have an explicit shape")
+        return self._convert_callback_pointer_result(
+            native_result,
+            decision,
+            callback_name,
+            c_scope,
+            kind="array",
+        )
+
+    def _convert_callback_derived_result(self, native_result, decision, callback_name, c_scope, _adapter_result):
+        """Build the pointer ABI for a derived callback result."""
+        return self._convert_callback_pointer_result(
+            native_result,
+            decision,
+            callback_name,
+            c_scope,
+            kind="derived",
+        )
+
+    @staticmethod
+    def _convert_callback_pointer_result(native_result, _decision, callback_name, c_scope, *, kind):
+        """Represent an array or derived callback result with one C pointer."""
+        c_result_var = Variable(
+            BindCPointer(),
+            c_scope.get_new_name(f"{callback_name}_result_data"),
+            memory_handling="stack",
+        )
+        c_scope.insert_variable(c_result_var)
+        return {
+            "c_result": FunctionDefResult(c_result_var),
+            "abi": {"kind": kind, "native": native_result, "abi": c_result_var},
+        }
+
+    @staticmethod
+    def _convert_callback_scalar_argument(
+        native_var,
+        _decision,
+        _callback_name,
+        adapter_var,
+        c_scope,
+        _adapter_scope,
+    ):
         """Convert a scalar callback argument to its interoperable ABI."""
-        if getattr(native_var, "intent", "in") != "in":
-            raise ValueError(f"Callback {callback_name!r} scalar argument {native_var.name!s} must have intent(in)")
         c_var = native_var.clone(
             str(native_var.name),
             new_class=Variable,
@@ -1053,6 +1200,102 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "post_body": [],
             "abi": {"kind": "scalar", "native": native_var, "abi": (c_var,)},
         }
+
+    def _convert_callback_array_input_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Copy an array callback input into adapter-visible pointer storage."""
+        return self._convert_callback_pointer_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            is_array=True,
+            copy_in=True,
+            copy_out=False,
+        )
+
+    def _convert_callback_array_inout_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Copy an array callback argument into and out of pointer storage."""
+        return self._convert_callback_pointer_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            is_array=True,
+            copy_in=True,
+            copy_out=True,
+        )
+
+    def _convert_callback_array_output_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Copy an array callback output from adapter pointer storage."""
+        return self._convert_callback_pointer_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            is_array=True,
+            copy_in=False,
+            copy_out=True,
+        )
+
+    def _convert_callback_derived_input_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Copy a derived callback input into adapter-visible pointer storage."""
+        return self._convert_callback_pointer_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            is_array=False,
+            copy_in=True,
+            copy_out=False,
+        )
+
+    def _convert_callback_derived_inout_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Copy a derived callback argument into and out of pointer storage."""
+        return self._convert_callback_pointer_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            is_array=False,
+            copy_in=True,
+            copy_out=True,
+        )
+
+    def _convert_callback_derived_output_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Copy a derived callback output from adapter pointer storage."""
+        return self._convert_callback_pointer_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            is_array=False,
+            copy_in=False,
+            copy_out=True,
+        )
 
     @staticmethod
     def _callback_pointer_storage(native_var, adapter_var, adapter_scope):
@@ -1073,7 +1316,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         adapter_scope.insert_variable(callback_storage)
         return data_value, callback_storage
 
-    def _convert_callback_pointer_argument(self, native_var, adapter_var, c_scope, adapter_scope, *, is_array):
+    def _convert_callback_pointer_argument(
+        self,
+        native_var,
+        _decision,
+        _callback_name,
+        adapter_var,
+        c_scope,
+        adapter_scope,
+        *,
+        is_array,
+        copy_in,
+        copy_out,
+    ):
         """Convert an array or derived callback argument to pointer ABI data."""
         data = Variable(
             BindCPointer(),
@@ -1086,10 +1341,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         data_value, callback_storage = self._callback_pointer_storage(native_var, adapter_var, adapter_scope)
         body = []
         post_body = []
-        if getattr(native_var, "intent", "in") != "out":
+        if copy_in:
             body.append(Assign(callback_storage, adapter_var))
         body.append(CLocFunc(callback_storage, data_value))
-        if getattr(native_var, "intent", "in") != "in":
+        if copy_out:
             post_body.append(Assign(adapter_var, callback_storage))
         shape_arguments = [
             ArrayShapeElement(callback_storage, convert_to_literal(index)) for index in range(native_var.rank)
@@ -1122,14 +1377,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             c_scope.insert_variable(dimension)
         return dimensions
 
-    def _convert_numeric_argument(self, var, func):
+    def _convert_numeric_argument(self, var, decision, func):
         """Convert numeric argument for the current wrapper."""
         name = var.name
         self.scope.insert_symbol(name)
         collisionless_name = self.scope.get_expected_name(name)
         needs_pointer_bridge = var.is_optional or (
-            codegen_action_for_variable(var) is CodegenAction.CALL_LOCAL_INPUT and var.memory_handling == "alias"
+            decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT and decision.storage_mode is StorageMode.ALIAS
         )
+        needs_pointer_bridge |= decision.codegen_action is CodegenAction.IDENTITY_OUTPUT
         if needs_pointer_bridge:
             f_arg = var.clone(
                 collisionless_name,
@@ -1153,7 +1409,35 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope.insert_variable(f_arg)
         return {"c_arg": BindCVariable(new_var, var), "f_arg": f_arg, "body": body}
 
-    def _convert_custom_type_argument(self, var, func):
+    def _convert_numeric_copy_in_out_argument(self, var, decision, func):
+        """Copy an immutable Python scalar into mutable native call storage."""
+        name = var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        input_var = var.clone(
+            scope.get_expected_name(name),
+            new_class=Variable,
+            is_argument=True,
+            is_optional=False,
+            intent="in",
+            memory_handling=StorageMode.STACK.value,
+        )
+        local_var = var.clone(
+            scope.get_new_name(f"{name}_mutable"),
+            new_class=Variable,
+            is_argument=False,
+            is_optional=False,
+            memory_handling=decision.boundary_storage_mode.value,
+        )
+        scope.insert_variable(input_var)
+        scope.insert_variable(local_var)
+        return {
+            "c_arg": BindCVariable(input_var, var),
+            "f_arg": local_var,
+            "body": [Assign(local_var, input_var)],
+        }
+
+    def _convert_custom_type_argument(self, var, decision, func):
         """Convert custom type argument for the current wrapper."""
         name = var.name
         self.scope.insert_symbol(name)
@@ -1163,7 +1447,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
             is_argument=False,
             is_optional=False,
-            memory_handling="alias",
+            memory_handling=decision.boundary_storage_mode.value,
         )
         new_var = Variable(
             BindCPointer(),
@@ -1176,7 +1460,73 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope.insert_variable(f_arg)
         return {"c_arg": BindCVariable(new_var, var), "f_arg": f_arg, "body": body}
 
-    def _convert_array_argument(self, var, func):
+    def _convert_array_copy_in_out_argument(self, var, decision, func):
+        """Copy an immutable Python array into mutable native call storage."""
+        name = var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        rank = var.rank
+        base_shape = [
+            scope.get_temporary_variable(
+                NumpyInt64Type(),
+                name=f"{name}_base_shape_{index + 1}",
+                is_argument=True,
+            )
+            for index in range(rank)
+        ]
+        bind_var = Variable(
+            BindCPointer(),
+            scope.get_new_name(f"bound_{name}"),
+            is_argument=True,
+            is_optional=False,
+            memory_handling=StorageMode.ALIAS.value,
+        )
+        input_var = var.clone(
+            scope.get_new_name(f"{name}_input"),
+            is_argument=False,
+            is_optional=False,
+            memory_handling=StorageMode.ALIAS.value,
+            new_class=Variable,
+        )
+        local_var = var.clone(
+            scope.get_expected_name(name),
+            is_argument=False,
+            is_optional=False,
+            memory_handling=decision.storage_mode.value,
+            shape=tuple(base_shape),
+            new_class=Variable,
+        )
+        for item in (bind_var, input_var, local_var):
+            scope.insert_variable(item)
+
+        prepare_local = []
+        if decision.storage_mode is StorageMode.HEAP:
+            prepare_local.append(Allocate(local_var, shape=tuple(base_shape), status="unallocated"))
+        prepare_local.append(Assign(local_var, input_var))
+        pointer_shape = base_shape[::-1] if var.order == "C" else base_shape
+        body = [
+            If(
+                IfSection(
+                    IsNot(bind_var, NIL),
+                    [C_F_Pointer(bind_var, input_var, pointer_shape), *prepare_local],
+                )
+            )
+        ]
+        c_arg_var = Variable(
+            BindCArrayType.get_new(rank, has_strides=False),
+            scope.get_new_name(),
+            is_argument=True,
+            shape=(convert_to_literal(rank + 1),),
+        )
+        scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
+        for index, shape_var in enumerate(base_shape):
+            scope.insert_symbolic_alias(
+                IndexedElement(c_arg_var, convert_to_literal(index + 1)),
+                shape_var,
+            )
+        return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": local_var, "body": body}
+
+    def _convert_array_argument(self, var, decision, func):
         """Convert array argument for the current wrapper."""
         name = var.name
         scope = self.scope
@@ -1195,52 +1545,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         if self._is_assumed_rank_array(var):
             return self._convert_assumed_rank_array_argument(var, collisionless_name, bind_var)
-
-        if self._is_allocatable_replacement_argument(var):
-            arg_var = var.clone(
-                collisionless_name,
-                is_argument=False,
-                is_optional=False,
-                memory_handling="heap",
-                new_class=Variable,
-            )
-            input_var = var.clone(
-                scope.get_new_name(f"{name}_input"),
-                is_argument=False,
-                is_optional=False,
-                memory_handling="alias",
-                new_class=Variable,
-            )
-            scope.insert_variable(arg_var)
-            scope.insert_variable(input_var)
-            scope.insert_variable(bind_var)
-            base_shape = [
-                scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_base_shape_{i + 1}", is_argument=True)
-                for i in range(rank)
-            ]
-            body = [
-                If(
-                    IfSection(
-                        IsNot(bind_var, NIL),
-                        [
-                            C_F_Pointer(bind_var, input_var, base_shape[::-1] if order == "C" else base_shape),
-                            Allocate(arg_var, shape=tuple(base_shape), status="unallocated"),
-                            Assign(arg_var, input_var),
-                        ],
-                    )
-                )
-            ]
-            c_arg_var = Variable(
-                BindCArrayType.get_new(rank, has_strides=False),
-                scope.get_new_name(),
-                is_argument=True,
-                shape=(convert_to_literal(rank + 1),),
-            )
-            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
-            for i, s in enumerate(base_shape):
-                scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + 1)), s)
-
-            return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": arg_var, "body": body}
 
         base_shape = [
             scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_base_shape_{i + 1}", is_argument=True)
@@ -1382,14 +1686,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             },
         }
 
-    def _convert_string_argument(self, var, func):
+    def _convert_string_argument(self, var, decision, func):
         """Convert string argument for the current wrapper."""
         name = var.name
         scope = self.scope
         scope.insert_symbol(name)
         collisionless_name = scope.get_expected_name(name)
         rank = var.rank
-        pointer_type = BindCPointer() if getattr(var, "intent", "in") == "inout" else FinalType.get_new(BindCPointer())
+        pointer_type = BindCPointer() if decision.mutates_native else FinalType.get_new(BindCPointer())
         bind_var = Variable(
             pointer_type,
             scope.get_new_name(f"bound_{name}"),
@@ -1453,11 +1757,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         post_body = []
         absent_body = []
         result_bind_var = None
-        if getattr(var, "intent", "in") == "inout":
+        if decision.codegen_action is CodegenAction.COPY_IN_OUT:
             result_bind_var = Variable(
                 BindCPointer(),
                 scope.get_new_name(f"returned_{name}"),
                 memory_handling="alias",
+                ownership_decision=var.ownership_decision,
             )
             payload_slice = IndexedElement(array_var, Slice(None, buffer_extent))
             post_body = [
@@ -1519,19 +1824,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             - f_result: The Variable which should be used in a FunctionCall to collect the results
                     from the Fortran function.
         """
-        class_type = orig_var.class_type
+        return self._RESULT_POLICY_DISPATCHER.dispatch(self, orig_var, orig_func_scope)
 
-        for cls in type(class_type).__mro__:
-            converter_name = self._RESULT_CONVERTERS.get(cls)
-            if converter_name is not None:
-                return getattr(self, converter_name)(orig_var, orig_func_scope)
-
-        # Unknown object, we raise an error.
-        raise NotImplementedError(f"Wrapping function results is not implemented for type {class_type}.")
-
-    def _convert_scalar_result(self, orig_var, orig_func_scope):
+    def _convert_scalar_result(self, orig_var, decision, orig_func_scope):
         """Convert scalar result for the current wrapper."""
-        if codegen_action_for_variable(orig_var) is CodegenAction.SNAPSHOT_COPY_SCALAR:
+        if decision.codegen_action is CodegenAction.SNAPSHOT_COPY:
             return self._build_snapshot_copy_scalar_result(orig_var)
         name = orig_var.name
         self.scope.insert_symbol(name)
@@ -1547,12 +1844,30 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_result": local_var,
         }
 
-    def _convert_custom_type_result(self, orig_var, orig_func_scope):
-        """Convert custom type result for the current wrapper."""
+    def _convert_owned_custom_type_result(self, orig_var, decision, orig_func_scope):
+        """Convert an owned custom result through native value storage."""
+        return self._convert_custom_type_result(
+            orig_var,
+            decision,
+            orig_func_scope,
+            decision.storage_mode,
+        )
+
+    def _convert_borrowed_custom_type_result(self, orig_var, decision, orig_func_scope):
+        """Convert a borrowed custom result through alias boundary storage."""
+        return self._convert_custom_type_result(
+            orig_var,
+            decision,
+            orig_func_scope,
+            decision.boundary_storage_mode,
+        )
+
+    def _convert_custom_type_result(self, orig_var, decision, orig_func_scope, local_storage_mode):
+        """Build the concrete custom result representation selected by policy."""
         name = orig_var.name
         scope = self.scope
         scope.insert_symbol(name)
-        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
+        memory_handling = local_storage_mode.value
         local_var = orig_var.clone(
             scope.get_expected_name(name),
             new_class=Variable,
@@ -1566,7 +1881,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         # Create the C-compatible data pointer
         bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
 
-        if isinstance(orig_var, DottedVariable) or orig_var.is_alias:
+        if decision.codegen_action is CodegenAction.BORROWED_VIEW:
             ptr_var = orig_var
             body = [CLocFunc(ptr_var, bind_var)]
         else:
@@ -1588,12 +1903,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_result": local_var,
         }
 
-    def _convert_array_result(self, orig_var, orig_func_scope):
+    def _convert_array_result(self, orig_var, decision, orig_func_scope):
         """Convert array result for the current wrapper."""
         name = orig_var.name
         scope = self.scope
         scope.insert_symbol(name)
-        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
+        memory_handling = decision.boundary_storage_mode.value
 
         shape = orig_var.shape if memory_handling == "stack" else None
 
@@ -1613,19 +1928,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             orig_var,
             name,
             local_var,
-            memory_handling,
         )
 
         result["f_result"] = local_var
 
         return result
 
-    def _convert_string_result(self, orig_var, orig_func_scope):
+    def _convert_string_result(self, orig_var, decision, orig_func_scope):
         """Convert string result for the current wrapper."""
         name = orig_var.name
         scope = self.scope
         scope.insert_symbol(name)
-        memory_handling = "alias" if isinstance(orig_var, DottedVariable) else orig_var.memory_handling
+        memory_handling = decision.boundary_storage_mode.value
 
         # Allocatable is not returned so it must appear in local scope
         local_var = orig_var.clone(
@@ -1730,61 +2044,34 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_result": pointer_var,
         }
 
-    def _build_snapshot_copy_array_result(self, orig_var, decision, name, local_var, memory_handling):
+    def _build_snapshot_copy_array_result(self, orig_var, _decision, name, local_var):
         """Build snapshot copy array result nodes."""
         return self._get_pointer_snapshot_bind_c_array(name, orig_var, local_var)
 
-    def _build_borrowed_array_result(self, orig_var, decision, name, local_var, memory_handling):
+    def _build_borrowed_array_result(self, orig_var, _decision, name, local_var):
         """Build borrowed array result nodes."""
         return self._get_bind_c_array(name, orig_var, local_var.shape, local_var)
 
-    def _build_copy_return_array_result(self, orig_var, decision, name, local_var, memory_handling):
-        """Build copy return array result nodes."""
-        copy_shape = (
-            tuple(ArrayShapeElement(local_var, convert_to_literal(i)) for i in range(local_var.rank))
-            if memory_handling == "heap"
-            else local_var.shape
-        )
-        result = self._get_bind_c_array(name, orig_var, copy_shape)
+    def _build_copy_return_array_result(self, orig_var, decision, name, local_var):
+        """Dispatch copy-return emission from completed boundary storage."""
+        try:
+            handler_name = self._COPY_RETURN_ARRAY_BY_STORAGE[decision.boundary_storage_mode]
+        except KeyError:
+            raise ValueError(
+                f"No array copy-return handler for completed storage {decision.boundary_storage_mode.value!r}"
+            ) from None
+        return getattr(self, handler_name)(orig_var, decision, name, local_var)
 
-        result["body"].append(
-            If(
-                IfSection(
-                    IsNot(result["bind_var"], NIL),
-                    [Assign(result["f_array"], local_var)],
-                )
-            )
-        )
-        if memory_handling == "heap":
-            allocated_body = [*result["body"], Deallocate(local_var)]
-            unallocated_body = [
-                Assign(result["bind_var"], NIL),
-                *[
-                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
-                    for shape_var in result["shape_vars"]
-                ],
-            ]
-            result["body"] = [
-                If(
-                    IfSection(ArrayAllocated(local_var), allocated_body),
-                    IfSection(convert_to_literal(True), unallocated_body),
-                )
-            ]
+    def _build_stack_copy_return_array_result(self, orig_var, _decision, name, local_var):
+        """Copy a fixed-shape native result into Python-owned storage."""
+        result = self._get_bind_c_array(name, orig_var, local_var.shape)
+        result["body"].append(If(IfSection(IsNot(result["bind_var"], NIL), [Assign(result["f_array"], local_var)])))
         return result
 
-    def _build_default_array_result(self, orig_var, decision, name, local_var, memory_handling):
-        """Build default array result nodes."""
-        if orig_var.is_alias or isinstance(orig_var, DottedVariable):
-            return self._build_borrowed_array_result(orig_var, decision, name, local_var, memory_handling)
-        return self._build_copy_return_array_result(orig_var, decision, name, local_var, memory_handling)
-
-    def _build_allocatable_replacement_result(self, orig_var, local_var):
-        """Build allocatable replacement result nodes."""
-        result = self._get_bind_c_array(
-            orig_var.name,
-            orig_var,
-            tuple(ArrayShapeElement(local_var, convert_to_literal(i)) for i in range(local_var.rank)),
-        )
+    def _build_heap_copy_return_array_result(self, orig_var, _decision, name, local_var):
+        """Copy an allocated native result and release its native storage."""
+        copy_shape = tuple(ArrayShapeElement(local_var, convert_to_literal(index)) for index in range(local_var.rank))
+        result = self._get_bind_c_array(name, orig_var, copy_shape)
         result["body"].append(
             If(
                 IfSection(
@@ -1804,11 +2091,59 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 IfSection(convert_to_literal(True), unallocated_body),
             )
         ]
+        return result
+
+    @staticmethod
+    def _build_scalar_replacement_result(orig_var, decision, generated_arg):
+        """Return the mutable native scalar temporary as a replacement value."""
+        local_var = generated_arg["f_arg"].value
+        return {
+            "c_result": BindCVariable(local_var, orig_var),
+            "body": [],
+            "f_result": local_var,
+        }
+
+    def _build_array_replacement_result(self, orig_var, decision, generated_arg):
+        """Copy a mutable native array temporary into Python-owned result storage."""
+        local_var = generated_arg["f_arg"].value
+        result_shape = (
+            tuple(ArrayShapeElement(local_var, convert_to_literal(index)) for index in range(local_var.rank))
+            if decision.storage_mode is StorageMode.HEAP
+            else local_var.shape
+        )
+        result = self._get_bind_c_array(
+            orig_var.name,
+            orig_var,
+            result_shape,
+        )
+        result["body"].append(
+            If(
+                IfSection(
+                    IsNot(result["bind_var"], NIL),
+                    [Assign(result["f_array"], local_var)],
+                )
+            )
+        )
+        if decision.storage_mode is StorageMode.HEAP:
+            allocated_body = [*result["body"], Deallocate(local_var)]
+            unallocated_body = [
+                Assign(result["bind_var"], NIL),
+                *[
+                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
+                    for shape_var in result["shape_vars"]
+                ],
+            ]
+            result["body"] = [
+                If(
+                    IfSection(ArrayAllocated(local_var), allocated_body),
+                    IfSection(convert_to_literal(True), unallocated_body),
+                )
+            ]
         result["f_result"] = local_var
         return result
 
     @staticmethod
-    def _build_string_replacement_result(orig_var, generated_arg):
+    def _build_string_replacement_result(orig_var, decision, generated_arg):
         """Build string replacement result nodes."""
         return {
             "c_result": BindCVariable(generated_arg["result_bind_var"], orig_var),
@@ -2080,57 +2415,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
 
     @staticmethod
-    def _is_allocatable_copy_return_argument(var):
-        """Return whether is allocatable copy return argument."""
-        decision = ownership_decision_for_codegen_variable(var)
-        return bool(
-            var.is_ndarray
-            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
-            and decision.memory_handling == "heap"
-            and getattr(var, "intent", "in") == "out"
-        )
-
-    @staticmethod
-    def _is_allocatable_replacement_argument(var):
-        """Return whether is allocatable replacement argument."""
-        decision = ownership_decision_for_codegen_variable(var)
-        return bool(
-            var.is_ndarray
-            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
-            and decision.memory_handling == "heap"
-            and getattr(var, "intent", "in") == "inout"
-        )
-
-    @staticmethod
-    def _is_string_replacement_argument(var):
-        """Return whether is string replacement argument."""
-        return bool(isinstance(var.class_type, StringType) and getattr(var, "intent", "in") == "inout")
-
-    @staticmethod
     def _is_allocatable_copy_return_result(var):
         """Return whether is allocatable copy return result."""
         decision = ownership_decision_for_codegen_variable(var)
         return bool(
             var.is_ndarray
-            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
-            and decision.memory_handling == "heap"
+            and decision.codegen_action is CodegenAction.COPY_OUT
+            and decision.storage_mode is StorageMode.HEAP
         )
 
     @staticmethod
     def _is_assumed_rank_array(var):
         """Return whether is assumed rank array."""
         return bool(getattr(var, "assumed_rank", False) and var.is_ndarray)
-
-    @classmethod
-    def _is_hidden_output_argument(cls, var):
-        """Return whether is hidden output argument."""
-        if getattr(var, "intent", "in") != "out":
-            return False
-        return (
-            (var.rank == 0 and isinstance(var.class_type, FixedSizeNumericType | CustomDataType))
-            or (isinstance(var.class_type, StringType) and var.memory_handling == "stack")
-            or cls._is_allocatable_copy_return_argument(var)
-        )
 
     def _pack_function_results(self, result_infos):
         """Handle pack function results for the current generation context."""
@@ -2162,7 +2459,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             owner=f"module variable accessor {public_name}",
         )
 
-    def _scalar_module_variable(self, expr):
+    def _scalar_module_variable(self, expr, _decision):
         """Handle scalar module variable for the current generation context."""
         getter = self._scalar_module_getter(expr)
         setter = self._scalar_module_setter(expr)
@@ -2175,6 +2472,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _scalar_module_getter(self, expr):
         """Handle scalar module getter for the current generation context."""
+        getter_policy = expr.getter_ownership_decision
+        if getter_policy is None:
+            raise ValueError(f"Module variable {expr.name!r} is missing completed getter policy")
         scope = self.scope
         public_name = f"get_{expr.name}"
         original_name = self._generated_module_function_name(public_name)
@@ -2185,7 +2485,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             func_scope.get_new_name(f"{expr.name}_value"),
             is_argument=False,
             is_optional=False,
-            memory_handling="stack",
+            memory_handling=getter_policy.storage_mode.value,
+            ownership_decision=getter_policy,
             new_class=Variable,
         )
         func_scope.insert_variable(result)
@@ -2196,7 +2497,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             f"{expr.name}_value",
             is_argument=False,
             is_optional=False,
-            memory_handling="stack",
+            memory_handling=getter_policy.storage_mode.value,
+            ownership_decision=getter_policy,
             new_class=Variable,
         )
         original_function = FunctionDef(
@@ -2223,6 +2525,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _scalar_module_setter(self, expr):
         """Handle scalar module setter for the current generation context."""
+        setter_policy = expr.setter_ownership_decision
+        if setter_policy is None:
+            raise ValueError(f"Module variable {expr.name!r} is missing completed setter policy")
         scope = self.scope
         public_name = f"set_{expr.name}"
         original_name = self._generated_module_function_name(public_name)
@@ -2233,7 +2538,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             func_scope.get_new_name("value"),
             is_argument=True,
             is_optional=False,
-            memory_handling="stack",
+            memory_handling=setter_policy.storage_mode.value,
+            ownership_decision=setter_policy,
             new_class=Variable,
         )
         func_scope.insert_variable(value)
@@ -2244,7 +2550,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "value",
             is_argument=True,
             is_optional=False,
-            memory_handling="stack",
+            memory_handling=setter_policy.storage_mode.value,
+            ownership_decision=setter_policy,
             new_class=Variable,
         )
         original_function = FunctionDef(
@@ -2417,7 +2724,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         if pointer_target:
             pointer_source = orig_var
-            if orig_var.memory_handling == "heap":
+            if ownership_decision_for_codegen_variable(orig_var).storage_mode is StorageMode.HEAP:
                 pointer_source = IndexedElement(
                     orig_var,
                     *(convert_to_literal(1) for _ in range(rank)),

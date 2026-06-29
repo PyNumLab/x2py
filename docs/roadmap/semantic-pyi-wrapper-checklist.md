@@ -79,9 +79,40 @@ and 7.
 - [ ] Function and method contracts express validation, coercion, ownership,
   lifetime, shape, and error-status projection policy consumed by readiness and
   wrapper generation.
+- [ ] `Ownership(...)`, `Transfer(...)`, and `Destruction(...)` policy metadata
+  are the single editable `.pyi` source for ownership, boundary movement, and
+  release behavior. Every transfer and destruction mode documented in
+  [Semantic `.pyi` format](../reference/semantic-pyi-format.md#ownership-transfer-and-destruction-policies)
+  has matching diagnostics and wrapper-generation behavior.
 - [ ] Contradictory or incomplete edited contracts fail during readiness or
   wrapper generation with precise diagnostics instead of silently falling back
   to source-derived behavior.
+
+#### Policy-driven bridge and binding generation
+
+- [ ] Complete every contract value's object kind, ownership, transfer,
+  destruction, mutability/writeback, nullability, result projection, and storage
+  mode (`stack`, `heap`, or `alias`) in the single post-IR policy stage before
+  readiness or `ir2ast.py`.
+- [ ] Represent bridge/binding behavior with backend-neutral completed actions,
+  including call-local input, in-place mutation, identity output, hidden output,
+  copy-in/copy-out replacement, snapshot copy, borrowed view, wrapper instance,
+  and blocker actions.
+- [ ] Replace bridge argument and result policy branches with strict dispatch
+  tables keyed by completed object kind and action, with one small named method
+  per supported behavior and no policy fallback.
+- [ ] Replace binding argument, result, projection, and release-policy branches
+  with the same strict completed-policy dispatch model.
+- [ ] Remove bridge/binding inference from datatype, `intent`, dotted-variable
+  shape, `is_alias`, or local `memory_handling` checks wherever the condition is
+  deciding semantic behavior rather than implementing an already-selected code
+  block.
+- [ ] Implement `Immutable` writable arguments as policy-selected mutable native
+  temporaries: copy in for `intent(inout)`, copy out only when replacement is
+  projected, and never mutate the original Python-visible value.
+- [ ] Add structural tests that every supported object-kind/action pair has a
+  named bridge and binding handler, plus runtime modified-`.pyi` evidence for
+  immutable scalar, string, array, and supported derived-type behavior.
 
 ## Completed evidence
 
@@ -366,6 +397,60 @@ bundle, order, transitive-library, and failure-path evidence lives in
   missing `.mod` directories, and unavailable dependent shared libraries report
   native linker/compiler/loader diagnostics without falling back to source
   reparsing.
+
+### Stage 8 — Editable Contract Semantics
+
+- [x] Editable native-order contracts can omit `@native_call` when every native
+  dummy argument remains visible in native order. Scalar `intent(out)` dummies
+  are writable arguments supplied by the caller, array output slots stay
+  visible where mutable storage exists, fixed-length string identity calls can
+  return `None` even though ordinary Python `str` mutation is not observable,
+  function results remain ordinary return values, and derived-type output
+  dummies update the supplied wrapper object. Runtime evidence lives in
+  `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py`.
+- [x] Ownership, transfer, and destruction policy is completed after full
+  signatures are known and before readiness or `ir2ast.py`. The shared post-IR
+  entrypoint is `complete_semantic_policies(...)` in
+  `x2py/semantics/policy_completion.py`; direct ownership subpasses stay behind
+  that entrypoint. Readiness and lowering consume completed policy metadata
+  instead of recomputing policy from raw datatypes. Evidence:
+  `tests/semantics/test_ownership_policy.py`,
+  `tests/semantics/test_ir2ast.py`,
+  `tests/semantics/test_semantic_wrap_readiness.py`,
+  and `x2py/semantics/README.md`.
+- [x] `.pyi` parsing and `.pyi` semantic conversion are separate stages:
+  `x2py/semantics/pyi_parser.py` parses text/files to Python AST, and
+  `x2py/semantics/pyi2ir.py` converts that AST into `SemanticModule` objects
+  before semantic policy completion runs. Evidence:
+  `tests/pyi/test_pyi_to_ir.py::test_pyi_parser_returns_python_ast_only`,
+  `x2py/semantics/README.md`, and
+  `docs/internal-architecture/pipeline-map.md`.
+- [x] Risky-but-explicit identity contracts document their exact behavior
+  instead of being silently healed. Fixed-length `String[n]` `intent(inout)`
+  identity calls may return `None` with no observable Python mutation when the
+  caller passes an immutable `str`; Python-visible replacement requires an
+  explicit projected return contract. Evidence:
+  `docs/reference/semantic-pyi-format.md` and
+  `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py`.
+- [x] Contradictory policy metadata fails before lowering. In particular,
+  `Immutable` means replace-only Python value semantics, while
+  `Transfer("borrowed_view")` means no-copy shared storage; combining them on a
+  writable native argument reports a direct `.pyi` contract error. Evidence:
+  `docs/reference/semantic-pyi-format.md` and
+  `tests/pyi/test_pyi_to_ir.py::test_parse_pyi_text_rejects_immutable_writable_borrowed_view_argument`.
+- [x] Edited-contract misuse has a documented diagnostic model: loader errors,
+  structural contract errors, readiness blockers, and native artifact failures
+  are separated, and diagnostics identify the contract path, declaration,
+  invalid fact, and expected form where that information is available. File
+  loader semantic errors prefix messages with the `.pyi` contract path while
+  syntax errors keep Python's filename field. Evidence:
+  `docs/reference/semantic-pyi-format.md` and
+  `tests/pyi/test_pyi_to_ir.py::test_load_pyi_file_and_modules_forward_module_name_encoding_and_filename`.
+- [x] A modified module `.pyi` can remove a public function and hide public
+  declarations with `@private` or `private[...]` while preserving unaffected
+  runtime behavior. Evidence:
+  `tests/wrapper/fortran/edit_pyi_contracts/test_visibility_contracts.py` and
+  `tests/wrapper/fortran/edit_pyi_contracts/modified_contracts/module_variables_visibility/`.
 
 ### Immutable Native Contract
 

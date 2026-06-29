@@ -205,7 +205,8 @@ implementation files.
 | Fortran to semantic IR | `x2py/semantics/fortran2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_fortran2ir.py` |
 | C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_c2ir.py`, `tests/semantics/test_c_semantic_readiness.py` |
 | `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
-| `.pyi` loading/editing | `x2py/semantics/pyi_parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
+| `.pyi` parsing/loading/editing | `x2py/semantics/pyi_parser.py`, `x2py/semantics/pyi2ir.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
+| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/ownership_policy.py` | `tests/semantics/test_ownership_policy.py`, `tests/semantics/test_ir2ast.py` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
 | Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
 | Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
@@ -256,8 +257,11 @@ module-level function only to preserve an old internal call path.
 
 ### `.pyi` Contract Internals
 
-User-visible `.pyi` syntax is parsed by `x2py/semantics/pyi_parser.py` and printed
-by `x2py/codegen/printers/pyi_printer.py`. Both operate on `x2py/semantics/models.py`.
+User-visible `.pyi` syntax is first parsed to Python AST by
+`x2py/semantics/pyi_parser.py`, converted to semantic IR by
+`x2py/semantics/pyi2ir.py`, and printed by
+`x2py/codegen/printers/pyi_printer.py`. The converter and printer operate on
+`x2py/semantics/models.py`.
 
 Important implementation rules:
 
@@ -593,8 +597,10 @@ CLI `.pyi` readiness:
 
 ```text
 .pyi path(s) or directory
-  -> load_pyi_modules(...)
+  -> x2py/semantics/pyi_parser.py
+  -> x2py/semantics/pyi2ir.py load_pyi_modules(...)
   -> SemanticModule list
+  -> x2py/semantics/policy_completion.py
   -> assess_semantic_wrap_readiness(...)
 ```
 
@@ -625,9 +631,8 @@ report = assess_semantic_wrap_readiness(modules, source="interfaces")
 
 Use the `.pyi` helpers by input shape:
 
-- `parse_pyi_text(source, module_name=...)` for inline text.
-- `convert_pyi_to_ir(source, module_name=...)` as the compatibility alias for
-  inline text.
+- `parse_pyi_text(source, module_name=...)` from `pyi2ir.py` for inline text.
+- `convert_pyi_to_ir(source, module_name=...)` from `pyi2ir.py` for inline text.
 - `load_pyi_file(path, module_name=...)` for one file.
 - `load_pyi_modules(paths_or_directory)` for a set of interfaces that may
   reference each other.
@@ -742,6 +747,13 @@ implementation sources. `--makefile` records the compiler/linker plan without
 executing it; for `.pyi` builds, `x2py-build.json` is written first and
 `Makefile.x2py` is projected from that manifest.
 
+Generated `bind_c_<module>` Fortran bridges are a C ABI implementation detail,
+not a Fortran-use API. They therefore do not emit a default `private` statement
+or one `public :: ...` line per generated wrapper procedure. Python exposure is
+owned by the C extension method table; the bridge only marks the allocator
+interface name `c_malloc` private to avoid exporting that helper through Fortran
+module use association.
+
 The current runtime build surface is Fortran-focused. Edited `.pyi` files can
 drive `.pyi` wrapper builds when the caller supplies explicit native artifacts,
 but full generated-contract parity is still tracked in the roadmap. User C
@@ -804,7 +816,10 @@ from `x2py/semantics/models.py`.
   promotes them into semantic IR; local bindings are not emitted into `.pyi` or
   treated as wrapper interface items by default.
 - `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
-- `x2py/semantics/pyi_parser.py` loads edited contracts back into semantic IR.
+- `x2py/semantics/pyi_parser.py` parses edited contracts to Python AST.
+- `x2py/semantics/pyi2ir.py` loads edited contracts back into semantic IR.
+- `x2py/semantics/policy_completion.py` completes semantic policies after
+  C/Fortran/`.pyi` conversion and before readiness or lowering.
 - `x2py/semantics/native_contract.py` validates immutable native scope, ABI,
   placement, type, callback, and projection facts before source-free codegen.
 - `x2py/semantics/readiness.py` decides whether that IR is complete enough for
@@ -1013,7 +1028,8 @@ PYTHONPATH=. pytest -q tests/semantics/test_pyi_printer.py tests/pyi/test_pyi_to
 Example target: add a new `Annotated[...]` metadata item or projection helper.
 
 1. Add loader tests in `tests/pyi/test_pyi_to_ir.py`.
-2. Update `x2py/semantics/pyi_parser.py`.
+2. Update `x2py/semantics/pyi2ir.py`. Update `x2py/semantics/pyi_parser.py`
+   only when the raw Python AST parsing boundary changes.
 3. Add printer tests in `tests/semantics/test_pyi_printer.py`.
 4. Update `x2py/codegen/printers/pyi_printer.py`.
 5. Update semantic models in `x2py/semantics/models.py` only if the IR needs a new

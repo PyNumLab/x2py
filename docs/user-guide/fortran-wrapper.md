@@ -194,11 +194,30 @@ python3 -m x2py --build-manifest build/module/x2py-build.json --wrap
 python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
 ```
 
+Edited `.pyi` contracts may expose the native call shape directly. If every
+native dummy argument stays visible in native order, no `@native_call` decorator
+is required. Scalar `intent(out)` slots are caller-supplied mutable storage, so
+pass a 0-D NumPy array with the declared dtype instead of expecting a projected
+Python return. Fixed-length string identity calls can also return `None`; when
+the caller passes an ordinary Python `str`, native in-place character mutation
+is not observable in Python.
+
+Edited contracts may also remove public declarations or mark declarations with
+`@private` / `private[...]`; removed or private declarations are omitted from
+the generated Python API while unaffected public declarations keep their runtime
+behavior.
+
+Misuse handling, diagnostic categories, and risky explicit-contract behavior are
+documented in [Semantic `.pyi` format](../reference/semantic-pyi-format.md).
+
 The parity checklist is maintained in
 [Semantic `.pyi` wrapper checklist](../roadmap/semantic-pyi-wrapper-checklist.md).
 
 Runtime tests: [`test_pyi_wrapper_builds.py`](../../tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py),
-[`test_contract_package_runtime.py`](../../tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py).
+[`test_contract_package_runtime.py`](../../tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py),
+[`test_native_order_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py),
+[`test_visibility_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_visibility_contracts.py), and
+[`test_policy_dispatch_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py).
 
 Use `--verbose` to execute a build while printing every exact, shell-escaped
 compiler and linker command. Use `--makefile` to generate an editable
@@ -499,6 +518,10 @@ Metadata describes policy; it does not create backend support. Pointer metadata,
 for example, must still provide the required shape, nullability, target owner,
 lifetime, and release facts, and it cannot enable an unimplemented borrowed-view
 or reassociation path.
+
+The canonical `.pyi` spellings and examples for every `Transfer(...)` and
+`Destruction(...)` mode are documented in
+[Semantic `.pyi` format](../reference/semantic-pyi-format.md#ownership-transfer-and-destruction-policies).
 
 ## Scalar Calls And Verified Baseline
 

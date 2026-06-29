@@ -151,6 +151,8 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/semantics/fortran2ir.py",
     "x2py/semantics/c2ir.py",
     "x2py/semantics/pyi_parser.py",
+    "x2py/semantics/pyi2ir.py",
+    "x2py/semantics/policy_completion.py",
     "x2py/semantics/readiness.py",
     "x2py/semantics/ir2ast.py",
     "x2py/codegen/binding_pipeline.py",

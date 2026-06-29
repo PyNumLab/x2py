@@ -12,13 +12,51 @@ from x2py.codegen.models.datatypes import (
     NumpyNDArrayType,
 )
 from x2py.codegen.scope import Scope
+from x2py.ownership_policy import CodegenAction
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
-from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
+from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
+from x2py.semantics.models import SemanticModule
+from x2py.semantics.policy_completion import complete_semantic_policies
+from x2py.semantics.pyi2ir import parse_pyi_text
 
 
 WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"
 FORTRAN_CLASS_SOURCE = WRAPPER_FORTRAN_DATA / "fclasses_f90.f90"
 FORTRAN_OPERATOR_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
+
+
+def semantic_ir_to_codegen_ast(node, *args, **kwargs):
+    if isinstance(node, SemanticModule):
+        complete_semantic_policies(node)
+    return _semantic_ir_to_codegen_ast(node, *args, **kwargs)
+
+
+def test_ir_lowering_requires_completed_ownership_policy():
+    module = parse_pyi_text(
+        """
+def scale(values: Float64[:]) -> None: ...
+""",
+        module_name="raw_policy",
+    )
+
+    with pytest.raises(ValueError, match="missing completed ownership policy"):
+        _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+
+
+def test_immutable_writable_arguments_lower_with_completed_copy_in_out_policy():
+    module = parse_pyi_text(
+        """
+def normalize(
+    values: Annotated[Float64[:], Immutable]
+) -> Returns["values", Float64[:]]: ...
+""",
+        module_name="immutable_values",
+    )
+
+    lowered = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    values = lowered.funcs[0].arguments[0].var
+
+    assert values.ownership_decision.codegen_action is CodegenAction.COPY_IN_OUT
 
 
 def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class():

@@ -3058,7 +3058,7 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
     monkeypatch.setattr(x2py_cli, "_fortran_source_for_path", source)
     monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
     monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
-    monkeypatch.setattr("x2py.semantics.fortran2ir.fortran_file_to_semantic_modules", convert)
+    monkeypatch.setattr(x2py_cli, "fortran_file_to_semantic_modules", convert)
     monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 

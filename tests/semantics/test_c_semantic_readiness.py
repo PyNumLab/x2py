@@ -67,7 +67,7 @@ def test_c_semantic_readiness_reports_callback_policy_required():
 
 
 def test_completed_pyi_callback_policy_can_make_c_api_semantically_ready():
-    from x2py.semantics.pyi_parser import parse_pyi_text
+    from x2py.semantics.pyi2ir import parse_pyi_text
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
     module = parse_pyi_text(

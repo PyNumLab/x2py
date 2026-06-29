@@ -1,9 +1,10 @@
-"""Central ownership policy decisions for generated wrappers.
+"""Complete wrapper boundary and storage policy before codegen lowering.
 
-The wrapper generators still lower memory through the historical
-``stack``/``heap``/``alias`` hints.  This module owns the higher-level policy
-that decides who owns a value, how ownership crosses the Python/native
-boundary, and which low-level hint the existing generators should use.
+This module decides ownership, transfer, destruction, writeback, projection,
+nullability, release responsibility, codegen action, and both contract-value
+and boundary ``stack``/``heap``/``alias`` storage modes. Bridge and binding
+generators consume these decisions through strict dispatch and do not
+reconstruct policy from codegen datatypes.
 """
 
 from __future__ import annotations
@@ -28,6 +29,9 @@ POINTER_POLICY_FIELDS = (
     "aliasing",
     "mutability",
 )
+PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
+PYTHON_VALUE_IMMUTABLE = "immutable"
+PYI_PROJECTED_OUTPUT_METADATA = "pyi_projected_output"
 
 
 class ObjectKind(str, Enum):
@@ -35,8 +39,6 @@ class ObjectKind(str, Enum):
     STRING = "string"
     NUMPY_ARRAY = "numpy_array"
     DERIVED_TYPE = "derived_type"
-    MODULE_VARIABLE = "module_variable"
-    DERIVED_FIELD = "derived_field"
 
 
 class OwnershipOwner(str, Enum):
@@ -69,31 +71,86 @@ class DestructionPolicy(str, Enum):
     BLOCKED = "blocked"
 
 
+class StorageMode(str, Enum):
+    STACK = "stack"
+    HEAP = "heap"
+    ALIAS = "alias"
+
+
 class CodegenAction(str, Enum):
     DIRECT_VALUE = "direct_value"
     CALL_LOCAL_INPUT = "call_local_input"
     IN_PLACE_ARGUMENT = "in_place_argument"
-    COPY_RETURN_ARRAY = "copy_return_array"
-    SNAPSHOT_COPY_ARRAY = "snapshot_copy_array"
-    SNAPSHOT_COPY_SCALAR = "snapshot_copy_scalar"
+    IDENTITY_OUTPUT = "identity_output"
+    HIDDEN_OUTPUT = "hidden_output"
+    COPY_IN_OUT = "copy_in_out"
+    COPY_OUT = "copy_out"
+    SNAPSHOT_COPY = "snapshot_copy"
     BORROWED_VIEW = "borrowed_view"
     WRAPPER_INSTANCE = "wrapper_instance"
     BLOCKED = "blocked"
 
 
+class AssignmentMode(str, Enum):
+    NONE = "none"
+    VALUE_COPY = "value_copy"
+    ALIAS = "alias"
+
+
+class SetterAction(str, Enum):
+    WRITE_THROUGH = "write_through"
+    REJECT_REPLACEMENT = "reject_replacement"
+    OMIT = "omit"
+
+
 @dataclass(frozen=True)
-class OwnershipActionDispatcher:
-    handlers: Mapping[CodegenAction, str]
-    default_handler: str
+class PolicyActionDispatcher:
+    handlers: Mapping[tuple[ObjectKind, CodegenAction], str]
+
+    def handler_name_for_decision(self, decision: OwnershipDecision, name: str) -> str:
+        key = (decision.kind, decision.codegen_action)
+        try:
+            return self.handlers[key]
+        except KeyError:
+            raise ValueError(
+                f"No policy codegen handler for {name!r}: {decision.kind.value}/{decision.codegen_action.value}"
+            ) from None
 
     def handler_name(self, var: Any) -> tuple[OwnershipDecision, str]:
         decision = ownership_decision_for_codegen_variable(var)
-        return decision, self.handlers.get(decision.codegen_action, self.default_handler)
+        name = str(getattr(var, "name", type(var).__name__))
+        return decision, self.handler_name_for_decision(decision, name)
 
     def dispatch(self, target: Any, var: Any, *args: Any, **kwargs: Any) -> Any:
         decision, handler_name = self.handler_name(var)
         handler = getattr(target, handler_name)
         return handler(var, decision, *args, **kwargs)
+
+    def dispatch_decision(
+        self,
+        target: Any,
+        subject: Any,
+        decision: OwnershipDecision,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Dispatch an accessor or nested policy stored beside its subject."""
+        name = str(getattr(subject, "name", getattr(subject, "python_name", type(subject).__name__)))
+        handler = getattr(target, self.handler_name_for_decision(decision, name))
+        return handler(subject, decision, *args, **kwargs)
+
+
+@dataclass(frozen=True)
+class SetterActionDispatcher:
+    handlers: Mapping[SetterAction, str]
+
+    def dispatch(self, target: Any, subject: Any, decision: OwnershipDecision, *args: Any) -> Any:
+        try:
+            handler_name = self.handlers[decision.setter_action]
+        except KeyError:
+            name = str(getattr(subject, "name", getattr(subject, "python_name", type(subject).__name__)))
+            raise ValueError(f"No setter handler for {name!r}: {decision.setter_action.value}") from None
+        return getattr(target, handler_name)(subject, decision, *args)
 
 
 _STANDARD_SCALAR_TYPES = frozenset(
@@ -135,8 +192,8 @@ _CODEGEN_ACTION_BY_TRANSFER = {
     TransferMode.BY_VALUE: CodegenAction.DIRECT_VALUE,
     TransferMode.CALL_LOCAL: CodegenAction.CALL_LOCAL_INPUT,
     TransferMode.IN_PLACE: CodegenAction.IN_PLACE_ARGUMENT,
-    TransferMode.COPY_RETURN: CodegenAction.COPY_RETURN_ARRAY,
-    TransferMode.SNAPSHOT_COPY: CodegenAction.SNAPSHOT_COPY_ARRAY,
+    TransferMode.COPY_RETURN: CodegenAction.COPY_OUT,
+    TransferMode.SNAPSHOT_COPY: CodegenAction.SNAPSHOT_COPY,
     TransferMode.BORROWED_VIEW: CodegenAction.BORROWED_VIEW,
     TransferMode.WRAPPER_INSTANCE: CodegenAction.WRAPPER_INSTANCE,
     TransferMode.BLOCKED: CodegenAction.BLOCKED,
@@ -151,14 +208,28 @@ class OwnershipContext:
     is_argument: bool = False
     is_field: bool = False
     is_module_variable: bool = False
+    projects_result: bool = False
+    python_visible: bool = True
 
     @classmethod
     def result(cls) -> OwnershipContext:
         return cls(location="result", intent="out", is_result=True)
 
     @classmethod
-    def argument(cls, intent: str) -> OwnershipContext:
-        return cls(location="argument", intent=str(intent).lower(), is_argument=True)
+    def argument(
+        cls,
+        intent: str,
+        *,
+        projects_result: bool = False,
+        python_visible: bool = True,
+    ) -> OwnershipContext:
+        return cls(
+            location="argument",
+            intent=str(intent).lower(),
+            is_argument=True,
+            projects_result=projects_result,
+            python_visible=python_visible,
+        )
 
     @classmethod
     def field(cls) -> OwnershipContext:
@@ -169,16 +240,41 @@ class OwnershipContext:
         return cls(location="module_variable", intent="in", is_module_variable=True)
 
 
+def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipContext:
+    """Build full-signature policy context for one semantic argument."""
+    projection = tuple(getattr(function, "projection", ()))
+    argument_name = str(getattr(argument, "name", "")).casefold()
+    mapping = next(
+        (item for item in projection if str(getattr(item, "native_name", "")).casefold() == argument_name),
+        None,
+    )
+    metadata = getattr(argument, "metadata", {}) or {}
+    projects_result = bool(metadata.get(PYI_PROJECTED_OUTPUT_METADATA))
+    projects_result |= mapping is not None and getattr(mapping, "result_position", None) is not None
+    python_visible = mapping is None or getattr(mapping, "python_position", None) is not None
+    return OwnershipContext.argument(
+        getattr(argument, "intent", "in"),
+        projects_result=projects_result,
+        python_visible=python_visible,
+    )
+
+
 @dataclass(frozen=True)
 class OwnershipDecision:
     kind: ObjectKind
     owner: OwnershipOwner
     transfer: TransferMode
     destruction: DestructionPolicy
-    memory_handling: str = "stack"
+    storage_mode: StorageMode = StorageMode.STACK
+    boundary_storage_mode: StorageMode | None = None
+    codegen_action: CodegenAction = CodegenAction.BLOCKED
     nullable: bool = False
     borrowed: bool = False
     mutates_native: bool = False
+    projects_result: bool = False
+    python_visible: bool = True
+    assignment_mode: AssignmentMode = AssignmentMode.NONE
+    setter_action: SetterAction = SetterAction.OMIT
     blocker: str | None = None
     reason: str = ""
 
@@ -194,12 +290,6 @@ class OwnershipDecision:
     def is_copy_return(self) -> bool:
         return self.transfer in {TransferMode.COPY_RETURN, TransferMode.SNAPSHOT_COPY}
 
-    @property
-    def codegen_action(self) -> CodegenAction:
-        if self.transfer is TransferMode.SNAPSHOT_COPY and self.kind is ObjectKind.SCALAR:
-            return CodegenAction.SNAPSHOT_COPY_SCALAR
-        return _CODEGEN_ACTION_BY_TRANSFER[self.transfer]
-
 
 @dataclass(frozen=True)
 class _StorageFacts:
@@ -207,11 +297,8 @@ class _StorageFacts:
     name: str
     allocatable: bool = False
     pointer: bool = False
-    fortran_target: bool = False
-    fortran_allocatable: bool = False
     is_ndarray: bool = False
     is_string: bool = False
-    is_dotted: bool = False
     is_custom: bool = False
     metadata: Mapping[str, Any] | None = None
 
@@ -228,8 +315,6 @@ class OwnershipPolicyResolver:
             ObjectKind.STRING: self._string_decision,
             ObjectKind.NUMPY_ARRAY: self._array_decision,
             ObjectKind.DERIVED_TYPE: self._derived_type_decision,
-            ObjectKind.MODULE_VARIABLE: self._module_variable_decision,
-            ObjectKind.DERIVED_FIELD: self._derived_field_decision,
         }
         if handlers:
             self._handlers.update(handlers)
@@ -237,7 +322,16 @@ class OwnershipPolicyResolver:
     def decide_semantic_type(self, semantic_type: Any, context: OwnershipContext) -> OwnershipDecision:
         facts = self._semantic_facts(semantic_type)
         decision = self._apply_overrides(self._decide(facts, context), facts)
-        return self._validate_pointer_decision(decision, facts, context)
+        decision = self._validate_pointer_decision(decision, facts, context)
+        decision = self._complete_immutable_policy(decision, facts, context)
+        decision = self._validate_result_projection(decision, context)
+        return replace(
+            decision,
+            boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
+            codegen_action=self._codegen_action(decision, context),
+            projects_result=context.projects_result,
+            python_visible=context.python_visible,
+        )
 
     def decide_semantic_variable(
         self,
@@ -247,12 +341,47 @@ class OwnershipPolicyResolver:
         actual_context = context or self._semantic_variable_context(variable)
         return self.decide_semantic_type(variable.semantic_type, actual_context)
 
+    def decide_semantic_getter(
+        self,
+        variable: Any,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
+        """Decide the value exposed by a field or module-variable getter."""
+        storage = self.decide_semantic_variable(variable, context)
+        if storage.is_blocked or storage.kind in {ObjectKind.NUMPY_ARRAY, ObjectKind.DERIVED_TYPE}:
+            return storage
+        return self.decide_semantic_type(variable.semantic_type, OwnershipContext.result())
+
+    def decide_semantic_setter(
+        self,
+        variable: Any,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
+        """Decide setter availability and its incoming value conversion."""
+        storage = self.decide_semantic_variable(variable, context)
+        if storage.is_blocked:
+            return replace(
+                storage,
+                assignment_mode=AssignmentMode.NONE,
+                setter_action=SetterAction.OMIT,
+            )
+        incoming = self.decide_semantic_type(variable.semantic_type, OwnershipContext.argument("in"))
+        return replace(
+            incoming,
+            assignment_mode=(
+                AssignmentMode.ALIAS if storage.storage_mode is StorageMode.ALIAS else AssignmentMode.VALUE_COPY
+            ),
+            setter_action=(
+                SetterAction.WRITE_THROUGH if storage.kind is ObjectKind.SCALAR else SetterAction.REJECT_REPLACEMENT
+            ),
+        )
+
     def decide_semantic_function(self, function: Any, prefix: str = "") -> dict[str, OwnershipDecision]:
         name = f"{prefix}{function.name}"
         decisions = {
             f"{name}.{argument.name}": self.decide_semantic_variable(
                 argument,
-                OwnershipContext.argument(getattr(argument, "intent", "in")),
+                ownership_context_for_argument(function, argument),
             )
             for argument in getattr(function, "arguments", ())
         }
@@ -292,31 +421,15 @@ class OwnershipPolicyResolver:
                 decisions.update(self.decide_semantic_function(procedure, prefix=f"{overload_name}."))
         return decisions
 
-    def decide_codegen_variable(
-        self,
-        var: Any,
-        context: OwnershipContext | None = None,
-    ) -> OwnershipDecision:
-        explicit = getattr(var, "ownership_decision", None)
-        if isinstance(explicit, OwnershipDecision):
-            return explicit
-        facts = self._codegen_facts(var)
-        actual_context = context or self._codegen_context(var)
-        decision = self._apply_overrides(self._decide(facts, actual_context), facts)
-        return self._validate_pointer_decision(decision, facts, actual_context)
-
-    def memory_handling_for_semantic_type(self, semantic_type: Any, context: OwnershipContext) -> str:
-        return self.decide_semantic_type(semantic_type, context).memory_handling
-
     def _decide(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_module_variable:
+            return self._module_variable_decision(facts, context)
+        if context.is_field:
+            return self._derived_field_decision(facts, context)
         kind = self._kind(facts, context)
         return self._handlers[kind](facts, context)
 
     def _kind(self, facts: _StorageFacts, context: OwnershipContext) -> ObjectKind:
-        if context.is_module_variable:
-            return ObjectKind.MODULE_VARIABLE
-        if context.is_field:
-            return ObjectKind.DERIVED_FIELD
         if facts.rank > 0 or facts.is_ndarray:
             return ObjectKind.NUMPY_ARRAY
         if facts.is_string:
@@ -328,12 +441,30 @@ class OwnershipPolicyResolver:
     def _scalar_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if facts.pointer:
             return self._pointer_scalar_decision(facts, context)
-        if context.is_result or context.intent == "out":
+        if context.is_result:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
                 OwnershipOwner.PYTHON,
                 TransferMode.BY_VALUE,
                 DestructionPolicy.PYTHON_REFCOUNT,
+                reason="scalar output is returned as a Python value",
+            )
+        if context.intent == "out":
+            if not context.projects_result:
+                return OwnershipDecision(
+                    ObjectKind.SCALAR,
+                    OwnershipOwner.CALLER,
+                    TransferMode.IN_PLACE,
+                    DestructionPolicy.CALLER,
+                    mutates_native=True,
+                    reason="identity scalar output writes caller-provided storage",
+                )
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.BY_VALUE,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
                 reason="scalar output is returned as a Python value",
             )
         if context.intent == "inout":
@@ -361,7 +492,7 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.PYTHON,
                 TransferMode.SNAPSHOT_COPY,
                 DestructionPolicy.PYTHON_REFCOUNT,
-                memory_handling="alias",
+                storage_mode=StorageMode.ALIAS,
                 nullable=True,
                 reason="pointer scalar result is copied into a detached Python value",
             )
@@ -371,7 +502,7 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.UNKNOWN,
                 TransferMode.BLOCKED,
                 DestructionPolicy.BLOCKED,
-                memory_handling="alias",
+                storage_mode=StorageMode.ALIAS,
                 nullable=True,
                 blocker=f"pointer scalar {context.location} owner, lifetime, and reassociation policy are unknown",
                 reason="pointer scalar output needs explicit policy metadata",
@@ -381,12 +512,12 @@ class OwnershipPolicyResolver:
             OwnershipOwner.CALLER,
             TransferMode.CALL_LOCAL,
             DestructionPolicy.CALL_LOCAL,
-            memory_handling="alias",
+            storage_mode=StorageMode.ALIAS,
             reason="pointer scalar input is associated with a wrapper temporary only for the call",
         )
 
     def _string_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
-        if context.is_result or context.intent == "out":
+        if context.is_result:
             return OwnershipDecision(
                 ObjectKind.STRING,
                 OwnershipOwner.PYTHON,
@@ -394,15 +525,49 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="string output is copied into a Python string",
             )
-        if context.intent == "inout":
+        if context.intent == "out":
+            if not context.projects_result:
+                return OwnershipDecision(
+                    ObjectKind.STRING,
+                    OwnershipOwner.TEMPORARY,
+                    TransferMode.CALL_LOCAL,
+                    DestructionPolicy.CALL_LOCAL,
+                    mutates_native=True,
+                    reason="identity string output uses temporary storage and discards native mutation",
+                )
             return OwnershipDecision(
                 ObjectKind.STRING,
                 OwnershipOwner.PYTHON,
                 TransferMode.COPY_RETURN,
                 DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
+                reason="string output is copied into a Python string",
+            )
+        if context.intent == "inout":
+            if not context.projects_result:
+                return OwnershipDecision(
+                    ObjectKind.STRING,
+                    OwnershipOwner.TEMPORARY,
+                    TransferMode.CALL_LOCAL,
+                    DestructionPolicy.CALL_LOCAL,
+                    mutates_native=True,
+                    reason="string inout uses a mutable call-local copy and discards native mutation",
+                )
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
                 reason="immutable Python strings use copy-in/copy-out replacement for inout",
             )
-        return self._scalar_decision(facts, context)
+        return OwnershipDecision(
+            ObjectKind.STRING,
+            OwnershipOwner.CALLER,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.NONE,
+            reason="string input is converted for the call only",
+        )
 
     def _array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if facts.pointer:
@@ -441,7 +606,8 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.WRAPPER,
                 TransferMode.BORROWED_VIEW,
                 DestructionPolicy.WRAPPER_DEALLOC,
-                memory_handling="heap",
+                storage_mode=StorageMode.HEAP,
+                boundary_storage_mode=StorageMode.ALIAS,
                 nullable=True,
                 borrowed=True,
                 reason="allocatable field storage is owned by the containing wrapper instance",
@@ -452,7 +618,8 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.NATIVE,
                 TransferMode.BORROWED_VIEW,
                 DestructionPolicy.NATIVE_OWNER,
-                memory_handling="heap",
+                storage_mode=StorageMode.HEAP,
+                boundary_storage_mode=StorageMode.ALIAS,
                 nullable=True,
                 borrowed=True,
                 reason="allocatable module storage is owned by the Fortran module",
@@ -463,7 +630,7 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.PYTHON,
                 TransferMode.COPY_RETURN,
                 DestructionPolicy.PYTHON_REFCOUNT,
-                memory_handling="heap",
+                storage_mode=StorageMode.HEAP,
                 nullable=True,
                 reason="allocatable array output is copied before native storage is released",
             )
@@ -472,7 +639,7 @@ class OwnershipPolicyResolver:
             OwnershipOwner.CALLER,
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
-            memory_handling="heap",
+            storage_mode=StorageMode.HEAP,
             nullable=True,
             reason="allocatable array input is associated only for the call",
         )
@@ -484,7 +651,7 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.UNKNOWN,
                 TransferMode.BLOCKED,
                 DestructionPolicy.BLOCKED,
-                memory_handling="alias",
+                storage_mode=StorageMode.ALIAS,
                 nullable=True,
                 blocker="pointer array owner, lifetime, shape, and release policy are unknown",
                 reason="persistent pointer arrays need explicit policy metadata",
@@ -495,7 +662,7 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.PYTHON,
                 TransferMode.SNAPSHOT_COPY,
                 DestructionPolicy.PYTHON_REFCOUNT,
-                memory_handling="alias",
+                storage_mode=StorageMode.ALIAS,
                 nullable=True,
                 reason="pointer array result is copied into Python-owned NumPy storage",
             )
@@ -505,7 +672,7 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.UNKNOWN,
                 TransferMode.BLOCKED,
                 DestructionPolicy.BLOCKED,
-                memory_handling="alias",
+                storage_mode=StorageMode.ALIAS,
                 nullable=True,
                 blocker=f"pointer array {context.intent} reassociation policy is unknown",
                 reason="pointer array dummy reassociation needs explicit policy metadata",
@@ -515,18 +682,30 @@ class OwnershipPolicyResolver:
             OwnershipOwner.CALLER,
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
-            memory_handling="alias",
+            storage_mode=StorageMode.ALIAS,
             reason="pointer input is associated with caller storage only for the call",
         )
 
     def _derived_type_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
-        if context.is_result or context.intent == "out":
+        if context.is_result or (context.intent == "out" and context.projects_result and not context.python_visible):
             return OwnershipDecision(
                 ObjectKind.DERIVED_TYPE,
                 OwnershipOwner.WRAPPER,
                 TransferMode.WRAPPER_INSTANCE,
                 DestructionPolicy.WRAPPER_DEALLOC,
+                storage_mode=StorageMode.STACK,
+                boundary_storage_mode=StorageMode.ALIAS,
                 reason="derived output is represented by a wrapper-owned native instance",
+            )
+        if context.intent == "out":
+            return OwnershipDecision(
+                ObjectKind.DERIVED_TYPE,
+                OwnershipOwner.WRAPPER,
+                TransferMode.IN_PLACE,
+                DestructionPolicy.WRAPPER_DEALLOC,
+                storage_mode=StorageMode.ALIAS,
+                mutates_native=True,
+                reason="identity derived output mutates the supplied wrapper instance",
             )
         if context.intent == "inout":
             return OwnershipDecision(
@@ -534,6 +713,7 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.WRAPPER,
                 TransferMode.IN_PLACE,
                 DestructionPolicy.WRAPPER_DEALLOC,
+                storage_mode=StorageMode.ALIAS,
                 mutates_native=True,
                 reason="derived inout mutates the wrapper-owned native instance",
             )
@@ -542,6 +722,7 @@ class OwnershipPolicyResolver:
             OwnershipOwner.WRAPPER,
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
+            storage_mode=StorageMode.ALIAS,
             reason="derived input is passed through its existing wrapper",
         )
 
@@ -554,11 +735,11 @@ class OwnershipPolicyResolver:
             if facts.allocatable:
                 return self._allocatable_array_decision(facts, context)
         return OwnershipDecision(
-            ObjectKind.MODULE_VARIABLE,
+            self._kind(facts, OwnershipContext()),
             OwnershipOwner.NATIVE,
             TransferMode.BORROWED_VIEW,
             DestructionPolicy.NATIVE_OWNER,
-            memory_handling="alias" if facts.rank > 0 else "stack",
+            storage_mode=StorageMode.ALIAS if facts.rank > 0 else StorageMode.STACK,
             borrowed=True,
             reason="module variable storage is owned by native module state",
         )
@@ -572,18 +753,22 @@ class OwnershipPolicyResolver:
             if facts.allocatable:
                 return self._allocatable_array_decision(facts, context)
             return OwnershipDecision(
-                ObjectKind.DERIVED_FIELD,
+                ObjectKind.NUMPY_ARRAY,
                 OwnershipOwner.WRAPPER,
                 TransferMode.BORROWED_VIEW,
                 DestructionPolicy.WRAPPER_DEALLOC,
+                storage_mode=StorageMode.STACK,
+                boundary_storage_mode=StorageMode.ALIAS,
                 borrowed=True,
                 reason="array field storage is part of the containing wrapper instance",
             )
         return OwnershipDecision(
-            ObjectKind.DERIVED_FIELD,
+            self._kind(facts, OwnershipContext()),
             OwnershipOwner.WRAPPER,
             TransferMode.BORROWED_VIEW,
             DestructionPolicy.WRAPPER_DEALLOC,
+            storage_mode=StorageMode.STACK,
+            boundary_storage_mode=StorageMode.ALIAS if facts.is_custom else StorageMode.STACK,
             borrowed=True,
             reason="field storage is part of the containing wrapper instance",
         )
@@ -604,14 +789,14 @@ class OwnershipPolicyResolver:
                 owner=OwnershipOwner.UNKNOWN,
                 transfer=TransferMode.BLOCKED,
                 destruction=DestructionPolicy.BLOCKED,
-                memory_handling="alias",
+                storage_mode=StorageMode.ALIAS,
                 nullable=bool(raw.get("nullable", True)),
                 borrowed=False,
                 blocker="borrowed pointer views need native-owner retention and stale-view invalidation",
                 reason="borrowed pointer views are not implemented",
             )
         destruction = self._enum_value(DestructionPolicy, raw.get("destruction"), decision.destruction)
-        memory_handling = self._memory_for_override(facts, transfer, decision.memory_handling)
+        storage_mode = self._storage_for_override(facts, transfer, decision.storage_mode)
         nullable = bool(raw.get("nullable", decision.nullable))
         borrowed = transfer is TransferMode.BORROWED_VIEW or bool(raw.get("borrowed", decision.borrowed))
         blocker = None if transfer is not TransferMode.BLOCKED else decision.blocker or "blocked by ownership policy"
@@ -620,7 +805,7 @@ class OwnershipPolicyResolver:
             owner=owner,
             transfer=transfer,
             destruction=destruction,
-            memory_handling=memory_handling,
+            storage_mode=storage_mode,
             nullable=nullable,
             borrowed=borrowed,
             blocker=blocker,
@@ -657,6 +842,98 @@ class OwnershipPolicyResolver:
         )
 
     @staticmethod
+    def _complete_immutable_policy(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
+        metadata = facts.metadata or {}
+        if metadata.get(PYTHON_VALUE_MUTABILITY_METADATA) != PYTHON_VALUE_IMMUTABLE:
+            return decision
+        if not context.is_argument or context.intent not in {"out", "inout"} or decision.is_blocked:
+            return decision
+
+        raw_policy = metadata.get(OWNERSHIP_POLICY_METADATA)
+        explicit_transfer = raw_policy.get("transfer") if isinstance(raw_policy, Mapping) else None
+        if explicit_transfer is None and context.projects_result:
+            decision = replace(
+                decision,
+                owner=OwnershipOwner.PYTHON,
+                transfer=TransferMode.COPY_RETURN,
+                destruction=DestructionPolicy.PYTHON_REFCOUNT,
+                borrowed=False,
+                mutates_native=True,
+                reason="immutable writable value uses a mutable native temporary and replacement return",
+            )
+
+        if decision.transfer is TransferMode.COPY_RETURN and context.projects_result:
+            return replace(
+                decision,
+                owner=OwnershipOwner.PYTHON,
+                destruction=DestructionPolicy.PYTHON_REFCOUNT,
+                borrowed=False,
+                mutates_native=True,
+            )
+        if decision.transfer is TransferMode.CALL_LOCAL:
+            return replace(
+                decision,
+                owner=OwnershipOwner.TEMPORARY,
+                destruction=DestructionPolicy.CALL_LOCAL,
+                borrowed=False,
+                mutates_native=True,
+                reason="immutable writable value uses a call-local copy and discards native mutation",
+            )
+
+        return replace(
+            decision,
+            owner=OwnershipOwner.UNKNOWN,
+            transfer=TransferMode.BLOCKED,
+            destruction=DestructionPolicy.BLOCKED,
+            borrowed=False,
+            blocker=(
+                "immutable writable values require a projected copy_return replacement "
+                "or explicit call_local discarded mutation"
+            ),
+            reason="immutable writeback policy is incomplete or contradictory",
+        )
+
+    @staticmethod
+    def _validate_result_projection(
+        decision: OwnershipDecision,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
+        if (
+            decision.is_blocked
+            or not context.is_argument
+            or decision.transfer is not TransferMode.COPY_RETURN
+            or context.projects_result
+        ):
+            return decision
+        return replace(
+            decision,
+            owner=OwnershipOwner.UNKNOWN,
+            transfer=TransferMode.BLOCKED,
+            destruction=DestructionPolicy.BLOCKED,
+            borrowed=False,
+            blocker="copy_return argument policy requires an explicit projected result",
+            reason="argument replacement has no Python result projection",
+        )
+
+    @staticmethod
+    def _codegen_action(decision: OwnershipDecision, context: OwnershipContext) -> CodegenAction:
+        if decision.is_blocked:
+            return CodegenAction.BLOCKED
+        if context.is_argument and context.intent == "out":
+            if not context.projects_result:
+                return CodegenAction.IDENTITY_OUTPUT
+            if context.python_visible and decision.transfer is TransferMode.IN_PLACE:
+                return CodegenAction.IDENTITY_OUTPUT
+            return CodegenAction.HIDDEN_OUTPUT
+        if context.is_argument and context.intent == "inout" and decision.transfer is TransferMode.COPY_RETURN:
+            return CodegenAction.COPY_IN_OUT
+        return _CODEGEN_ACTION_BY_TRANSFER[decision.transfer]
+
+    @staticmethod
     def _enum_value(enum_type: type[Enum], value: object, default: Any) -> Any:
         if value is None:
             return default
@@ -667,13 +944,17 @@ class OwnershipPolicyResolver:
             raise ValueError(f"Unsupported ownership policy value {value!r}; expected one of: {allowed}") from exc
 
     @staticmethod
-    def _memory_for_override(facts: _StorageFacts, transfer: TransferMode, default: str) -> str:
+    def _storage_for_override(
+        facts: _StorageFacts,
+        transfer: TransferMode,
+        default: StorageMode,
+    ) -> StorageMode:
         if facts.pointer:
-            return "alias"
+            return StorageMode.ALIAS
         if facts.allocatable:
-            return "heap"
+            return StorageMode.HEAP
         if transfer is TransferMode.BORROWED_VIEW and (facts.rank > 0 or facts.is_ndarray):
-            return "alias"
+            return StorageMode.ALIAS
         return default
 
     @staticmethod
@@ -690,44 +971,10 @@ class OwnershipPolicyResolver:
             name=name,
             allocatable=bool(getattr(array, "allocatable", False)),
             pointer=bool(getattr(array, "pointer", False) or metadata.get("fortran_pointer")),
-            fortran_target=bool(metadata.get("fortran_target")),
-            fortran_allocatable=bool(metadata.get("fortran_allocatable")),
             is_string=is_string,
             is_custom=is_custom,
             metadata=metadata,
         )
-
-    @staticmethod
-    def _codegen_facts(var: Any) -> _StorageFacts:
-        memory_handling = str(getattr(var, "memory_handling", "stack"))
-        name = str(getattr(var, "name", ""))
-        class_type = getattr(var, "class_type", None)
-        class_name = type(class_type).__name__
-        is_ndarray = bool(getattr(var, "is_ndarray", False))
-        is_string = class_name == "StringType" or str(class_type) == "String"
-        is_custom = class_name == "CustomDataType" or getattr(var, "cls_base", None) is not None
-        return _StorageFacts(
-            rank=int(getattr(var, "rank", 0) or 0),
-            name=name,
-            allocatable=memory_handling == "heap" and is_ndarray,
-            pointer=memory_handling == "alias" and is_ndarray,
-            is_ndarray=is_ndarray,
-            is_string=is_string,
-            is_dotted=type(var).__name__ == "DottedVariable",
-            is_custom=is_custom,
-            metadata={},
-        )
-
-    @staticmethod
-    def _codegen_context(var: Any) -> OwnershipContext:
-        if type(var).__name__ == "DottedVariable":
-            return OwnershipContext.field()
-        intent = str(getattr(var, "intent", "in")).lower()
-        if intent == "out":
-            return OwnershipContext.result()
-        if bool(getattr(var, "is_argument", False)):
-            return OwnershipContext.argument(intent)
-        return OwnershipContext(location="value", intent=intent)
 
     @staticmethod
     def _semantic_variable_context(variable: Any) -> OwnershipContext:
@@ -782,7 +1029,14 @@ default_ownership_policy = OwnershipPolicyResolver()
 
 
 def ownership_decision_for_codegen_variable(var: Any) -> OwnershipDecision:
-    return default_ownership_policy.decide_codegen_variable(var)
+    decision = getattr(var, "ownership_decision", None)
+    if decision is None:
+        name = getattr(var, "name", type(var).__name__)
+        raise ValueError(
+            f"Codegen variable {name!r} is missing completed ownership policy; "
+            "run complete_semantic_policies before ir2ast lowering"
+        )
+    return decision
 
 
 def codegen_action_for_variable(var: Any) -> CodegenAction:

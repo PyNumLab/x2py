@@ -598,17 +598,41 @@ class BindCClassProperty:
         The type of the class to which the attribute belongs.
     docstring : Literal, optional
         The docstring of the property.
+    getter_policy : object, optional
+        Completed policy for the getter result.
+    setter_policy : object, optional
+        Completed policy for setter availability and conversion.
     """
 
-    __slots__ = ("_class_type", "_docstring", "_getter", "_python_name", "_setter")
+    __slots__ = (
+        "_class_type",
+        "_docstring",
+        "_getter",
+        "_getter_policy",
+        "_python_name",
+        "_setter",
+        "_setter_policy",
+    )
     _attribute_nodes = ("_getter", "_setter")
 
-    def __init__(self, python_name, getter, setter, class_type, docstring=None):
+    def __init__(
+        self,
+        python_name,
+        getter,
+        setter,
+        class_type,
+        docstring=None,
+        *,
+        getter_policy=None,
+        setter_policy=None,
+    ):
         assert isinstance(getter, BindCFunctionDef)
         assert isinstance(setter, BindCFunctionDef) or setter is None
         self._python_name = python_name
         self._getter = getter
         self._setter = setter
+        self._getter_policy = getter_policy
+        self._setter_policy = setter_policy
         self._class_type = class_type
         self._docstring = docstring
         init_model_object(self)
@@ -624,6 +648,11 @@ class BindCClassProperty:
         return self._getter
 
     @property
+    def getter_policy(self):
+        """Return the completed policy for reading this property."""
+        return self._getter_policy
+
+    @property
     def setter(self):
         """
         The BindCFunctionDef describing the setter function.
@@ -632,6 +661,11 @@ class BindCClassProperty:
         the value of the property.
         """
         return self._setter
+
+    @property
+    def setter_policy(self):
+        """Return the completed policy for writing this property."""
+        return self._setter_policy
 
     @property
     def class_type(self):

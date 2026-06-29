@@ -20,6 +20,8 @@ from x2py.semantics.models import (
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
+    PYTHON_VALUE_IMMUTABLE,
+    PYTHON_VALUE_MUTABILITY_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
     ProjectionMapping,
@@ -392,6 +394,8 @@ class PyiPrinter:
             metadata.append("FortranAllocatable")
         if semantic_type.metadata.get("fortran_target"):
             metadata.append("FortranTarget")
+        if semantic_type.metadata.get(PYTHON_VALUE_MUTABILITY_METADATA) == PYTHON_VALUE_IMMUTABLE:
+            metadata.append("Immutable")
         pointer_association = semantic_type.metadata.get("fortran_pointer_association")
         if pointer_association is not None:
             metadata.append(f"PointerAssociation({json.dumps(str(pointer_association))})")

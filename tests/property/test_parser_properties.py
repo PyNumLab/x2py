@@ -19,7 +19,7 @@ import x2py.preprocessing as preprocessing
 from x2py.c_parser import CParseError, parse_c_file
 from x2py.c_parser.lexer import split_top_level_c_source, top_level_split
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
-from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.pyi2ir import parse_pyi_text
 from x2py.codegen.printers.pyi_printer import emit_module_stubs
 from x2py import FortranParseError, parse_fortran_file
 from x2py.preprocessing import PreprocessingConfig, preprocess_source

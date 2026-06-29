@@ -366,6 +366,12 @@ class Variable:
     ownership_decision : object, default: None
         Central ownership policy decision preserved from semantic lowering.
 
+    getter_ownership_decision : object, default: None
+        Completed policy used when this field or module variable is read.
+
+    setter_ownership_decision : object, default: None
+        Completed policy used when this field is assigned through a generated setter.
+
     shape : tuple, default: None
         The shape of the array. A tuple whose elements indicate the number of elements along
         each of the dimensions of an array. The elements of the tuple should be None or model objects.
@@ -401,6 +407,7 @@ class Variable:
         "_default_value",
         "_fortran_array_category",
         "_fortran_source_shape",
+        "_getter_ownership_decision",
         "_intent",
         "_is_argument",
         "_is_optional",
@@ -412,6 +419,7 @@ class Variable:
         "_ownership_decision",
         "_passes_by_value",
         "_projected_output",
+        "_setter_ownership_decision",
         "_shape",
     )
     _attribute_nodes = ()
@@ -429,7 +437,9 @@ class Variable:
         passes_by_value=False,
         fortran_array_category=None,
         fortran_source_shape=None,
+        getter_ownership_decision=None,
         ownership_decision=None,
+        setter_ownership_decision=None,
         projected_output=False,
         assumed_rank=False,
         shape=None,
@@ -474,7 +484,9 @@ class Variable:
         self._passes_by_value = passes_by_value
         self._fortran_array_category = fortran_array_category
         self._fortran_source_shape = tuple(fortran_source_shape or ())
+        self._getter_ownership_decision = getter_ownership_decision
         self._ownership_decision = ownership_decision
+        self._setter_ownership_decision = setter_ownership_decision
         if not isinstance(projected_output, bool):
             raise TypeError("projected_output must be a boolean.")
         self._projected_output = projected_output
@@ -657,6 +669,16 @@ class Variable:
     def ownership_decision(self):
         """Central ownership policy decision for this variable."""
         return self._ownership_decision
+
+    @property
+    def getter_ownership_decision(self):
+        """Completed policy used by a generated getter."""
+        return self._getter_ownership_decision
+
+    @property
+    def setter_ownership_decision(self):
+        """Completed ownership policy used by a generated field setter."""
+        return self._setter_ownership_decision
 
     @property
     def assumed_rank(self):

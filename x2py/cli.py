@@ -5,7 +5,8 @@ import json
 import os
 import shlex
 import sys
-from dataclasses import asdict, fields, is_dataclass
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, fields, is_dataclass
 from pathlib import Path
 
 from x2py.c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
@@ -16,7 +17,7 @@ from x2py.fortran_parser.models import FortranParseError
 from x2py.fortran_parser.parser import FortranParser
 from x2py.semantics.c2ir import c_project_to_semantic_modules
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
-from x2py.semantics.pyi_parser import load_pyi_modules
+from x2py.semantics.pyi2ir import load_pyi_modules
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.c_type_probe import (
     CStandardTypeProbeError,
@@ -341,6 +342,78 @@ def _fortran_probe_options(
     return options
 
 
+@dataclass(frozen=True)
+class _SemanticPipelineContext:
+    paths: list[str]
+    source_paths: tuple[Path, ...]
+    preprocessing: PreprocessingConfig
+    include_contract_paths: bool = False
+    c_standard_type_report: dict[str, object] | None = None
+    fortran_type_report: FortranTypeProbeReport | None = None
+    fortran_type_probe_runner: list[str] | None = None
+    fortran_type_probe_cache_dir: str | None = None
+    refresh_fortran_type_probe: bool = False
+
+
+@dataclass(frozen=True)
+class _ParsedSemanticSources:
+    source_paths: tuple[Path, ...]
+    parsed: object
+
+
+@dataclass(frozen=True)
+class _SourceSemanticPipeline:
+    parser: Callable[[_SemanticPipelineContext], _ParsedSemanticSources]
+    converter_to_ir: Callable[[_ParsedSemanticSources, _SemanticPipelineContext], list[tuple[Path, list[object]]]]
+
+
+def _source_paths_for_semantic_pipeline(
+    paths: list[str],
+    *,
+    language: str,
+    include_contract_paths: bool,
+) -> tuple[Path, ...]:
+    if language == "c":
+        expanded = expand_c_paths(paths)
+    elif include_contract_paths:
+        expanded = _expand_readiness_paths(paths)
+    else:
+        expanded = _expand_paths(paths)
+    return tuple(path for path in expanded if path.suffix.lower() != ".pyi")
+
+
+def _converted_semantic_files(
+    paths: list[str],
+    preprocessing: PreprocessingConfig,
+    *,
+    language: str,
+    include_contract_paths: bool = False,
+    c_standard_type_report: dict[str, object] | None = None,
+    fortran_type_report: FortranTypeProbeReport | None = None,
+    fortran_type_probe_runner: list[str] | None = None,
+    fortran_type_probe_cache_dir: str | None = None,
+    refresh_fortran_type_probe: bool = False,
+) -> list[tuple[Path, list[object]]]:
+    context = _SemanticPipelineContext(
+        paths=paths,
+        source_paths=_source_paths_for_semantic_pipeline(
+            paths,
+            language=language,
+            include_contract_paths=include_contract_paths,
+        ),
+        preprocessing=preprocessing,
+        include_contract_paths=include_contract_paths,
+        c_standard_type_report=c_standard_type_report,
+        fortran_type_report=fortran_type_report,
+        fortran_type_probe_runner=fortran_type_probe_runner,
+        fortran_type_probe_cache_dir=fortran_type_probe_cache_dir,
+        refresh_fortran_type_probe=refresh_fortran_type_probe,
+    )
+    pipeline = _SOURCE_SEMANTIC_PIPELINES[language]
+    parsed = pipeline.parser(context)
+    return pipeline.converter_to_ir(parsed, context)
+
+
 def _semantic_report(
     paths: list[str],
     preprocessing: PreprocessingConfig | None = None,
@@ -353,32 +426,16 @@ def _semantic_report(
     refresh_fortran_type_probe: bool = False,
 ) -> dict[str, dict]:
     preprocessing = preprocessing or PreprocessingConfig()
-    if language == "c":
-        return _c_semantic_report(paths, preprocessing, c_standard_type_report=c_standard_type_report)
-    return _fortran_semantic_report(
+    converted_files = _converted_semantic_files(
         paths,
         preprocessing,
+        language=language,
+        c_standard_type_report=c_standard_type_report,
         fortran_type_report=fortran_type_report,
         fortran_type_probe_runner=fortran_type_probe_runner,
         fortran_type_probe_cache_dir=fortran_type_probe_cache_dir,
         refresh_fortran_type_probe=refresh_fortran_type_probe,
     )
-
-
-def _c_semantic_report(
-    paths: list[str],
-    preprocessing: PreprocessingConfig,
-    *,
-    c_standard_type_report: dict[str, object] | None,
-) -> dict[str, dict]:
-    if c_standard_type_report is None:
-        c_standard_type_report = _c_standard_type_report(preprocessing)
-    project = _parse_c_project(paths, preprocessing)
-    modules_by_source = {
-        module.origin.native_name: [module]
-        for module in _convert_c_project(project, c_standard_type_report=c_standard_type_report)
-    }
-    converted_files = [(path, modules_by_source[str(path)]) for path in expand_c_paths(paths)]
     return _semantic_payload_for_converted_files(converted_files)
 
 
@@ -429,31 +486,61 @@ def _resolve_fortran_project_parameters(parser: FortranParser, parsed_files) -> 
             parser._resolve_module_variable_kinds(block_data, module_params)
 
 
-def _fortran_semantic_report(
-    paths: list[str],
-    preprocessing: PreprocessingConfig,
-    *,
-    fortran_type_report: FortranTypeProbeReport | None,
-    fortran_type_probe_runner: list[str] | None,
-    fortran_type_probe_cache_dir: str | None,
-    refresh_fortran_type_probe: bool,
-) -> dict[str, dict]:
-    from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
-
-    parsed_files = _parse_fortran_source_files(_expand_paths(paths), preprocessing)
-    wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
-    converted_files = []
-    probe_options = _fortran_probe_options(
-        report=fortran_type_report,
-        runner=fortran_type_probe_runner,
-        cache_dir=fortran_type_probe_cache_dir,
-        refresh=refresh_fortran_type_probe,
+def _parse_c_semantic_sources(context: _SemanticPipelineContext) -> _ParsedSemanticSources:
+    if not context.source_paths:
+        return _ParsedSemanticSources(context.source_paths, None)
+    parse_paths = [str(path) for path in context.source_paths] if context.include_contract_paths else context.paths
+    return _ParsedSemanticSources(
+        context.source_paths,
+        _parse_c_project(parse_paths, context.preprocessing),
     )
+
+
+def _convert_c_semantic_sources(
+    parsed_sources: _ParsedSemanticSources,
+    context: _SemanticPipelineContext,
+) -> list[tuple[Path, list[object]]]:
+    if parsed_sources.parsed is None:
+        return []
+    c_standard_type_report = context.c_standard_type_report
+    if c_standard_type_report is None:
+        c_standard_type_report = _c_standard_type_report(context.preprocessing)
+    modules_by_source = {
+        module.origin.native_name: [module]
+        for module in _convert_c_project(parsed_sources.parsed, c_standard_type_report=c_standard_type_report)
+    }
+    return [(path, modules_by_source[str(path)]) for path in parsed_sources.source_paths]
+
+
+def _parse_fortran_semantic_sources(context: _SemanticPipelineContext) -> _ParsedSemanticSources:
+    if not context.source_paths:
+        return _ParsedSemanticSources(context.source_paths, [])
+    return _ParsedSemanticSources(
+        context.source_paths,
+        _parse_fortran_source_files(list(context.source_paths), context.preprocessing),
+    )
+
+
+def _convert_fortran_semantic_sources(
+    parsed_sources: _ParsedSemanticSources,
+    context: _SemanticPipelineContext,
+) -> list[tuple[Path, list[object]]]:
+    parsed_files = list(parsed_sources.parsed)
+    if not parsed_files:
+        return []
+    wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
+    probe_options = _fortran_probe_options(
+        report=context.fortran_type_report,
+        runner=context.fortran_type_probe_runner,
+        cache_dir=context.fortran_type_probe_cache_dir,
+        refresh=context.refresh_fortran_type_probe,
+    )
+    converted_files = []
     for p, fobj in parsed_files:
-        compile_time_values = _fortran_compile_time_values(fobj, preprocessing, **probe_options)
+        compile_time_values = _fortran_compile_time_values(fobj, context.preprocessing, **probe_options)
         type_facts = _fortran_type_facts(
             fobj,
-            preprocessing,
+            context.preprocessing,
             compile_time_values=compile_time_values,
             **probe_options,
         )
@@ -465,7 +552,19 @@ def _fortran_semantic_report(
             **({"type_facts": type_facts} if type_facts is not None else {}),
         )
         converted_files.append((p, modules))
-    return _semantic_payload_for_converted_files(converted_files)
+    return converted_files
+
+
+_SOURCE_SEMANTIC_PIPELINES = {
+    "c": _SourceSemanticPipeline(
+        parser=_parse_c_semantic_sources,
+        converter_to_ir=_convert_c_semantic_sources,
+    ),
+    "fortran": _SourceSemanticPipeline(
+        parser=_parse_fortran_semantic_sources,
+        converter_to_ir=_convert_fortran_semantic_sources,
+    ),
+}
 
 
 def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
@@ -606,58 +705,25 @@ def _wrap_readiness_report(
     refresh_fortran_type_probe: bool = False,
 ) -> dict[str, dict]:
     preprocessing = preprocessing or PreprocessingConfig()
-    out: dict[str, dict] = {}
-    if language == "c":
-        c_paths = [path for path in expand_c_paths(paths) if path.suffix.lower() != ".pyi"]
-        if c_paths:
-            if c_standard_type_report is None:
-                c_standard_type_report = _c_standard_type_report(preprocessing)
-            project = _parse_c_project([str(path) for path in c_paths], preprocessing)
-            converted_files = {
-                module.origin.native_name: [module]
-                for module in _convert_c_project(project, c_standard_type_report=c_standard_type_report)
-            }
-            for p in c_paths:
-                modules = converted_files[str(p)]
-                out[str(p)] = {
-                    "source_kind": "c",
-                    "semantic_modules": [asdict(module) for module in modules],
-                    "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
-                }
-        out.update(_pyi_readiness_report(paths))
-        return out
-
-    expanded_paths = [path for path in _expand_readiness_paths(paths) if path.suffix.lower() != ".pyi"]
-    parsed_files = _parse_fortran_source_files(expanded_paths, preprocessing)
-    wrapped_derived_types = _fortran_wrapped_derived_types(fobj for _p, fobj in parsed_files)
-
-    probe_options = _fortran_probe_options(
-        report=fortran_type_report,
-        runner=fortran_type_probe_runner,
-        cache_dir=fortran_type_probe_cache_dir,
-        refresh=refresh_fortran_type_probe,
+    converted_files = _converted_semantic_files(
+        paths,
+        preprocessing,
+        language=language,
+        include_contract_paths=True,
+        c_standard_type_report=c_standard_type_report,
+        fortran_type_report=fortran_type_report,
+        fortran_type_probe_runner=fortran_type_probe_runner,
+        fortran_type_probe_cache_dir=fortran_type_probe_cache_dir,
+        refresh_fortran_type_probe=refresh_fortran_type_probe,
     )
-    for p, parsed in parsed_files:
-        compile_time_values = _fortran_compile_time_values(parsed, preprocessing, **probe_options)
-        type_facts = _fortran_type_facts(
-            parsed,
-            preprocessing,
-            compile_time_values=compile_time_values,
-            **probe_options,
-        )
-        modules = fortran_file_to_semantic_modules(
-            parsed,
-            standalone_module_name=p.stem,
-            compile_time_values=compile_time_values,
-            wrapped_derived_types=wrapped_derived_types,
-            **({"type_facts": type_facts} if type_facts is not None else {}),
-        )
-
-        out[str(p)] = {
-            "source_kind": "fortran",
+    out = {
+        str(path): {
+            "source_kind": language,
             "semantic_modules": [asdict(module) for module in modules],
-            "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(p)),
+            "wrap_readiness": assess_semantic_wrap_readiness(modules, source=str(path)),
         }
+        for path, modules in converted_files
+    }
     out.update(_pyi_readiness_report(paths))
     return out
 

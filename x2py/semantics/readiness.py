@@ -4,10 +4,10 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
-from x2py.ownership_policy import OwnershipContext, default_ownership_policy
-
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
+    RESOLVED_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     SemanticArgument,
     SemanticClass,
     SemanticFunction,
@@ -18,10 +18,15 @@ from .models import (
     SemanticVariable,
 )
 from .native_contract import native_contract_issues
-from .pyi_parser import load_pyi_modules
+from .policy_completion import complete_semantic_policies
+from .pyi2ir import load_pyi_modules
 
 
-__all__ = ("assess_pyi_wrap_readiness", "assess_semantic_wrap_readiness")
+__all__ = (
+    "assess_prepared_semantic_wrap_readiness",
+    "assess_pyi_wrap_readiness",
+    "assess_semantic_wrap_readiness",
+)
 
 
 _BUILTIN_TYPES = frozenset(
@@ -98,11 +103,27 @@ def assess_semantic_wrap_readiness(
     source: str | list[str] | None = None,
     require_native_contract: bool = False,
 ) -> dict:
-    """Assess whether semantic IR is complete enough to drive wrapping.
+    """Complete semantic policies, then assess whether IR can drive wrapping.
 
     The parser is intentionally not consulted here. Once a user edits a .pyi
     interface, this semantic check treats that interface as the source of truth.
     """
+    modules = complete_semantic_policies(semantic_ir)
+    return assess_prepared_semantic_wrap_readiness(
+        modules,
+        source=source,
+        require_native_contract=require_native_contract,
+    )
+
+
+def assess_prepared_semantic_wrap_readiness(
+    semantic_ir: SemanticModule | Iterable[SemanticModule],
+    *,
+    source: str | list[str] | None = None,
+    require_native_contract: bool = False,
+) -> dict:
+    """Assess policy-completed semantic IR without rerunning policy completion."""
+
     modules = list(semantic_ir) if not isinstance(semantic_ir, SemanticModule) else [semantic_ir]
     checker = _SemanticReadinessChecker(modules, require_native_contract=require_native_contract)
     return checker.assess(source=source)
@@ -222,8 +243,7 @@ class _SemanticReadinessChecker:
                     unit_kind="variable",
                 )
             self._check_ownership_policy(
-                var.semantic_type,
-                context=OwnershipContext.module_variable(),
+                var.metadata.get(RESOLVED_OWNERSHIP_POLICY_METADATA),
                 owner=f"{module.name}.{var.name}",
                 item=var.name,
                 unit=f"{module.name}.{var.name}",
@@ -308,8 +328,7 @@ class _SemanticReadinessChecker:
 
         for field in cls.fields:
             self._check_ownership_policy(
-                field.semantic_type,
-                context=OwnershipContext.field(),
+                field.metadata.get(RESOLVED_OWNERSHIP_POLICY_METADATA),
                 owner=f"{module.name}.{cls.name}.{field.name}",
                 item=field.name,
                 unit=f"{module.name}.{cls.name}",
@@ -392,7 +411,7 @@ class _SemanticReadinessChecker:
                     unit=unit,
                     unit_kind=unit_kind,
                 )
-            if self._is_unsupported_pointer_output(arg.semantic_type, arg.intent):
+            if self._is_unsupported_pointer_output(arg):
                 self._add_blocker(
                     "fortran_pointer_output_policy_missing",
                     "Fortran pointer output arguments need explicit ownership, lifetime, shape, contiguity, and deallocation policy before they can be wrapped safely.",
@@ -406,8 +425,7 @@ class _SemanticReadinessChecker:
                 )
             else:
                 self._check_ownership_policy(
-                    arg.semantic_type,
-                    context=OwnershipContext.argument(arg.intent),
+                    arg.metadata.get(RESOLVED_OWNERSHIP_POLICY_METADATA),
                     owner=owner,
                     item=arg.name,
                     unit=unit,
@@ -431,8 +449,7 @@ class _SemanticReadinessChecker:
                 unit_kind=unit_kind,
             )
         self._check_ownership_policy(
-            func.return_type,
-            context=OwnershipContext.result(),
+            func.metadata.get(RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA),
             owner=owner,
             item="return",
             unit=unit,
@@ -617,17 +634,15 @@ class _SemanticReadinessChecker:
 
     def _check_ownership_policy(
         self,
-        semantic_type: SemanticType | None,
+        decision,
         *,
-        context: OwnershipContext,
         owner: str,
         item: str,
         unit: str,
         unit_kind: str,
     ) -> None:
-        if semantic_type is None:
+        if decision is None:
             return
-        decision = default_ownership_policy.decide_semantic_type(semantic_type, context)
         if not decision.is_blocked:
             return
         self._add_blocker(
@@ -693,13 +708,12 @@ class _SemanticReadinessChecker:
         )
 
     @classmethod
-    def _is_unsupported_pointer_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
-        if not cls._is_pointer(semantic_type):
+    def _is_unsupported_pointer_output(cls, argument: SemanticArgument) -> bool:
+        if not cls._is_pointer(argument.semantic_type):
             return False
-        decision = default_ownership_policy.decide_semantic_type(
-            semantic_type,
-            OwnershipContext.argument(intent),
-        )
+        decision = argument.metadata.get(RESOLVED_OWNERSHIP_POLICY_METADATA)
+        if decision is None:
+            return False
         return decision.is_blocked
 
     @staticmethod

@@ -25,7 +25,7 @@ from x2py.semantics.models import (
     SemanticStorageContract,
     SemanticType,
 )
-from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.pyi2ir import parse_pyi_text
 from x2py.codegen.printers.pyi_printer import emit_module
 from x2py import parse_fortran_file
 

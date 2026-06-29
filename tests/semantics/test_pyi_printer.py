@@ -12,8 +12,8 @@ from x2py.semantics.fortran2ir import (
     fortran_module_to_semantic_module,
 )
 
-from x2py.semantics.pyi_parser import parse_pyi_text
-from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
+from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.codegen.printers.pyi_printer import (
     emit_module,
     emit_module_stubs,
@@ -37,6 +37,7 @@ from x2py.semantics.models import (
     SemanticStorageContract,
     SemanticType,
 )
+from x2py.semantics.policy_completion import complete_semantic_policies
 
 WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"
 OPERATOR_F90_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
@@ -45,6 +46,12 @@ OPERATOR_F90_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
 # ============================================================
 # Helpers
 # ============================================================
+
+
+def semantic_ir_to_codegen_ast(node, *args, **kwargs):
+    if isinstance(node, SemanticModule):
+        complete_semantic_policies(node)
+    return _semantic_ir_to_codegen_ast(node, *args, **kwargs)
 
 
 def test_x2py_public_api_exports_module_stub_emitter():

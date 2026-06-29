@@ -36,7 +36,11 @@ SUBJECT_TEST_MODULES = {
     "multiple_files": ("test_multi_source_builds.py",),
     "external_routines": ("test_external_procedures.py",),
     "real_libraries": ("test_real_blas_lapack.py", "test_stage7_native_bundles.py"),
-    "edit_pyi_contracts": (),
+    "edit_pyi_contracts": (
+        "test_native_order_contracts.py",
+        "test_policy_dispatch_contracts.py",
+        "test_visibility_contracts.py",
+    ),
     "arrays": (
         "test_array_contracts.py",
         "test_array_results.py",

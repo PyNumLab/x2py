@@ -21,8 +21,11 @@ CLI request
   -> compiler preprocessing
   -> Fortran parser project model
   -> Fortran target kind/storage probes
-  -> semantic IR and readiness blockers
-  -> codegen AST and ownership policy
+  -> semantic IR
+  -> semantic policy completion
+       -> ownership/transfer/destruction policy completion
+  -> readiness blockers
+  -> codegen AST
   -> generated Fortran bind(C) bridge
   -> generated C/CPython binding
   -> native compile, runtime support install, and link
@@ -38,8 +41,9 @@ CLI request
 | Parser project model | `x2py/fortran_parser/parser.py` | preprocessed Fortran source | parser project with modules, procedures, types, visibility | Fortran parser fixture tests |
 | Target probes | `x2py/fortran_type_probe.py` | semantic type requirements and compiler flags | resolved kind/storage facts | Fortran type probe tests |
 | Semantic IR | `x2py/semantics/fortran2ir.py` | parser project and target facts | `SemanticModule` objects | semantic Fortran tests |
-| Readiness | `x2py/semantics/readiness.py` | semantic modules | blockers and support status | readiness tests and fixtures |
-| Codegen lowering | `x2py/semantics/ir2ast.py`, `x2py/ownership_policy.py` | semantic modules | codegen AST with policy decisions | `tests/semantics/test_ir2ast.py`, wrapper tests |
+| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/ownership_policy.py` | full semantic modules with signatures and `.pyi` overrides | semantic modules annotated with completed ownership, transfer, and destruction decisions | ownership-policy, readiness, and lowering tests |
+| Readiness | `x2py/semantics/readiness.py` | prepared semantic modules | blockers and support status | readiness tests and fixtures |
+| Codegen lowering | `x2py/semantics/ir2ast.py` | policy-completed semantic modules | codegen AST consuming completed policy decisions | `tests/semantics/test_ir2ast.py`, wrapper tests |
 | Bridge generation | `x2py/codegen/bridges/fortran_to_c.py` | codegen AST | Fortran bind(C) bridge AST | wrapper runtime tests |
 | Binding generation | `x2py/codegen/bindings/c_to_python.py` | bridge-facing AST | C/CPython extension AST | wrapper runtime tests |
 | Printing | `x2py/codegen/printers/` | generated ASTs | wrapper source files | generated build artifacts and wrapper tests |
@@ -55,7 +59,7 @@ not mean those classes should be merged.
 | --- | --- | --- | --- |
 | Parser facts | parser packages | Source syntax, native declaration structure, source locations, and parser diagnostics | Wrapper policy, Python API projection, generated names, and compile/link decisions |
 | Semantic IR | `x2py/semantics/models.py` and source-to-IR converters | Language-neutral contract facts: public names, native identities, source origins, visibility, type/storage/intent facts, module/class/function/variable structure, and metadata that must survive `.pyi` round trips | Generated bodies, temporaries, target-language scopes, include/import mechanics, CPython calls, and printer-only syntax |
-| Readiness and ownership policy | `x2py/semantics/readiness.py`, `x2py/ownership_policy.py`, and lowering checks | Support blockers and policy choices for ownership, lifetime, output projection, replacement, and ABI safety | Raw parser syntax and backend-specific statement trees |
+| Readiness and ownership policy | `x2py/semantics/readiness.py`, `x2py/semantics/policy_completion.py`, and `x2py/ownership_policy.py` | Semantic policy completion, support blockers, and policy choices for ownership, lifetime, output projection, replacement, and ABI safety | Raw parser syntax, backend-specific statement trees, and hidden lowering-time policy decisions |
 | Core codegen AST | `x2py/codegen/models/` and `x2py/semantics/ir2ast.py` outputs | The implementation plan after a semantic contract is accepted: generated functions, variables as storage locations, statements, expressions, control flow, temporaries, scopes, and imports/includes | Source-contract authority, `.pyi` persistence, and readiness-only facts |
 | Backend codegen AST | `x2py/codegen/bridges/`, `x2py/codegen/bindings/`, and backend API helpers | Fortran bridge nodes, C/CPython binding nodes, target ABI/API calls, and backend-specific adapter structure | Language-neutral semantic meaning |
 | Printers and compilation | `x2py/codegen/printers/`, `x2py/compiling/`, and wrapper orchestration | Text emission, generated artifact layout, compiler commands, native objects, libraries, include directories, and link inputs | Semantic support decisions and generated-AST rewriting policy |
@@ -66,10 +70,11 @@ Use these rules when adding a new notion:
 - Put it in semantic IR when the fact changes the user-visible or native
   contract, must be preserved in `.pyi`, is needed for source-free wrapper
   replay, or is required before readiness can decide support.
-- Put it in readiness or ownership policy when it is a safety decision rather
+- Put it in semantic policy completion, readiness, or ownership policy when it is a safety decision rather
   than a source fact: for example borrowed versus copied data, visible versus
   hidden native outputs, replacement rules, destructor ownership, or unsupported
-  ABI combinations.
+  ABI combinations. If the decision depends on full signature context, complete
+  it in `policy_completion.py` before readiness or `ir2ast.py`.
 - Put it in codegen when it exists because emitted wrapper code needs it:
   generated bodies, temporaries, low-level storage variables, scopes, imports,
   includes, bridge calls, CPython API calls, cleanup paths, and target-language
@@ -122,10 +127,10 @@ Examples:
 | CLI and output routing | `x2py/cli.py`, parser CLI helpers | `docs/developer-guide/source-map.md`, `docs/developer-guide/feature-to-code-map.md` |
 | Source loading and preprocessing | `x2py/preprocessing.py` | `docs/developer-guide/source-map.md`, parser references |
 | Parser facts | `x2py/c_parser/parser.py`, `x2py/fortran_parser/parser.py` | parser package README files and parser references |
-| Semantic conversion | `x2py/semantics/fortran2ir.py`, `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `docs/reference/semantic-ir.md` |
-| Editable semantic contracts | `x2py/semantics/pyi_parser.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/reference/semantic-pyi-format.md` |
+| Semantic conversion | `x2py/semantics/fortran2ir.py`, `x2py/semantics/c2ir.py`, `x2py/semantics/pyi2ir.py`, `x2py/semantics/models.py` | `docs/reference/semantic-ir.md` |
+| Editable semantic contracts | `x2py/semantics/pyi_parser.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/reference/semantic-pyi-format.md` |
 | Readiness | `x2py/semantics/readiness.py` | `docs/reference/diagnostic-codes.md` |
-| Wrapper policy and lowering | `x2py/semantics/ir2ast.py`, `x2py/ownership_policy.py` | `docs/user-guide/fortran-wrapper.md`, ownership docs |
+| Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/ownership_policy.py`, `x2py/semantics/ir2ast.py` | `docs/user-guide/fortran-wrapper.md`, ownership docs |
 | Bridge and binding generation | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | codegen package README and wrapper generation docs |
 | Native build | `x2py/compiling/python_wrapper.py`, `x2py/compiling/runtime_support.py` | compiling package README and build-system docs |
 
@@ -138,6 +143,9 @@ the Python API.
 ```text
 .pyi contract
   -> x2py/semantics/pyi_parser.py
+  -> x2py/semantics/pyi2ir.py
+  -> x2py/semantics/native_contract.py
+  -> x2py/semantics/policy_completion.py
   -> x2py/semantics/readiness.py
   -> x2py/semantics/ir2ast.py
   -> bridge, binding, compile, and link pipeline
@@ -145,7 +153,62 @@ the Python API.
 
 The `.pyi` path must preserve native ABI facts in the semantic contract. Missing
 native build inputs or contradictory contract facts fail before bridge emission
-or native compilation.
+or native compilation. Ownership, transfer, and destruction policy is completed
+from the full `.pyi` signature before lowering; `ir2ast.py` consumes that
+completed policy and must not invent a different one.
+
+## Shared Semantic Policy Boundary
+
+C parser facts, Fortran parser facts, and semantic `.pyi` contracts all converge
+on `SemanticModule` objects before ownership policy is decided. Semantic policy
+completion fills in ownership, transfer, destruction, mutability/writeback,
+nullability, storage mode (`stack`, `heap`, or `alias`), and codegen-action
+decisions from the full semantic signature. Field and module-variable accessors
+also receive separate completed getter, native assignment, and Python setter
+exposure decisions; codegen does not derive accessor behavior from datatype or
+storage representation:
+
+```text
+C parser -> x2py/semantics/c2ir.py
+Fortran parser -> x2py/semantics/fortran2ir.py
+.pyi parser -> x2py/semantics/pyi_parser.py -> x2py/semantics/pyi2ir.py
+  -> SemanticModule objects
+  -> x2py/semantics/policy_completion.py
+  -> readiness and lowering
+```
+
+`pyi_parser.py` is intentionally small: it reads `.pyi` text or files and
+returns Python AST. Semantic interpretation belongs to `pyi2ir.py`, matching
+the source-parser-to-IR split used by C and Fortran. Readiness and `ir2ast.py`
+consume completed policy decisions. They must not
+reconstruct policy from a raw datatype such as `Float64[:]`; that datatype is
+only meaningful after the surrounding argument, result, field, or module-variable
+context is known. The C source path currently uses this shared boundary for
+semantic reports and readiness; the implemented source-free wrapper backend is
+Fortran-focused.
+
+The completed decision is also the only semantic input to bridge and binding
+behavior selection. Each backend owns an explicit dispatch table keyed by the
+completed object kind and codegen action. A selected leaf method may construct
+backend-local helper variables, but it must not choose ownership, writeback,
+nullability, release responsibility, or `stack`/`heap`/`alias` placement for the
+contract value. Missing dispatch combinations are errors; there is no datatype-
+based policy fallback in bridge or binding generation.
+
+CLI source inspection uses a compact language dispatch table for the source
+portion of this route:
+
+```text
+pipeline = SOURCE_SEMANTIC_PIPELINES[language]
+parsed = pipeline.parser(...)
+semantic_modules = pipeline.converter_to_ir(parsed, ...)
+semantic_modules -> semantic policy completion -> readiness or lowering
+```
+
+Per-language parser/converter entries may still perform target-specific
+preprocessing or ABI/kind probes, but ownership, transfer, destruction,
+mutability, nullability, projection, and lifetime decisions must stay out of
+those entries and flow through semantic policy completion after IR exists.
 
 ## Inspection-Only Pipeline
 

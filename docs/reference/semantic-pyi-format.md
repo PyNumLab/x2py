@@ -39,6 +39,81 @@ The scalar dtype mapping behind these names is documented in
 [Semantic IR reference](semantic-ir.md). Wrapper-policy gaps are tracked in
 [Wrapper design notes](../design/wrapper-design-notes.md).
 
+## Misuse, Diagnostics And Risk
+
+Semantic `.pyi` files are ordinary Python syntax, so a user can write many
+things that are syntactically valid but not meaningful to x2py. The wrapper
+build accepts only the documented semantic subset. Unsupported syntax, unknown
+metadata, missing native facts, contradictory projection metadata, and unsupported
+runtime policy must never be ignored and must never trigger a hidden fallback to
+native-source parsing.
+
+Failures should happen at the earliest layer that has enough information:
+
+- **Stub-shape errors** fail while loading the `.pyi`: unsupported decorators,
+  ordinary function bodies, untyped parameters, invalid `Annotated` metadata,
+  unknown semantic types, missing relative imports, import cycles, or conflicting
+  exports.
+- **Structural contract errors** fail during semantic validation or readiness:
+  incomplete `@native_call` mappings, duplicate native argument positions,
+  missing or incompatible `@bind` / `@overload` targets, public declarations that
+  expose private types, or native-placement facts that contradict the contract
+  file shape.
+- **Unsupported policy** fails as a readiness or lowering blocker: ownership,
+  lifetime, replacement, pointer reassociation, callback lifetime, coercion, or
+  allocation behavior that x2py cannot yet express safely.
+- **Native artifact mismatches** fail during compile, link, import, or runtime
+  execution. x2py can validate the `.pyi` contract structure; it cannot prove
+  that an arbitrary caller-supplied object, archive, or shared library implements
+  the declared ABI.
+
+Actionable diagnostics should name the contract path when available, the
+declaration or import being processed, the invalid fact, and the expected
+documented form. When x2py can continue only by guessing, it should report an
+error or blocker instead of guessing.
+
+When a `.pyi` file is loaded from disk, syntax diagnostics use Python's filename
+field and semantic loader diagnostics prefix the message with the contract path.
+Inline helper calls such as `parse_pyi_text(...)` do not invent a path; pass a
+`filename=` when inline syntax diagnostics need source provenance.
+
+Some edited contracts intentionally request a lower-level native identity call.
+Those are not misuse if they are structurally complete, but the Python behavior
+is exactly the behavior declared in the `.pyi`. For example, an identity
+fixed-length `String[n]` `intent(inout)` argument can return `None`; if the
+caller passed an ordinary Python `str`, native mutation happened in temporary
+native storage and is not observable in Python. To request Python-visible
+replacement behavior, write a projected return contract such as
+`Returns["name", Ptr(String[n])]` with the required `@native_call` metadata.
+
+Future unsafe, coercion, or copy/readback modes must be explicit `.pyi` metadata.
+x2py must not infer them from malformed syntax or from a declaration that merely
+looks risky.
+
+`Immutable` marks a Python-visible value as replace-only: native code may write a
+temporary representation, but the caller's Python object must not be mutated in
+place. `Transfer("borrowed_view")` requests no-copy shared storage. Combining
+`Immutable` with a writable borrowed view is contradictory and fails while
+loading the `.pyi` contract:
+
+```python
+def normalize(
+    values: Annotated[Float64[:], Immutable, Transfer("borrowed_view")]
+) -> None: ...
+```
+
+The diagnostic tells the user to choose one contract: remove `Immutable` for an
+in-place no-copy view, or keep `Immutable` and use a projected replacement return
+such as `Returns["values", Float64[:]]`.
+
+`Immutable` is a post-IR policy input, not a bridge heuristic. For writable
+native intent, policy completion must choose either copy-in/copy-out replacement
+or an explicit call-local copy whose native mutation is discarded. A replacement
+requires a projected return such as `Returns["values", Float64[:]]`; the bridge
+and binding then emit the already-selected action without reconsidering the
+datatype, mutability, ownership, or storage mode. Unsupported combinations block
+before `ir2ast.py`.
+
 ## File Shape
 
 Loaded files support imports, classes, enums, variables and stub functions:
@@ -654,6 +729,7 @@ Generated canonical metadata:
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
 | `FortranTarget` | native storage has the Fortran `target` attribute needed for module zero-copy views |
+| `Immutable` | Python-visible value must not be mutated in place; writable native calls require a completed copy-in/copy-out replacement policy or an explicit call-local discarded-mutation policy |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
 | `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
 | `Destruction("python_refcount" | "wrapper_dealloc" | "native_owner" | "caller" | "call_local" | "none" | "blocked")` | explicit destruction override for the wrapper ownership policy |
@@ -675,11 +751,66 @@ Other positional `Annotated` helpers are preserved as semantic constraints:
 value: Annotated[Int32, Bounded(1, 8), Finite]
 ```
 
-Ownership metadata is consumed by the centralized wrapper ownership policy. Use
-it only when the native source facts are more precise than the generated default.
+### Ownership, Transfer, And Destruction Policies
+
+Ownership metadata is consumed by the centralized wrapper ownership policy.
+These annotations are the editable contract for how a value crosses the Python
+boundary and who eventually releases the storage:
+
+- `Ownership("...")` says who owns the value or native storage.
+- `Transfer("...")` says how that value crosses the Python/native boundary.
+- `Destruction("...")` says where the owned storage is released.
+
+`Transfer(...)` is intentionally the canonical spelling for borrowed views. A
+borrowed view is one transfer mode among copies, call-local temporaries, in-place
+mutation, wrapper-owned instances, and explicit blockers. Grouping them under
+`Transfer(...)` keeps mutually exclusive boundary behaviors visible in the same
+place instead of hiding them behind unrelated helper names.
+
+These annotations are policy requests, not permission to skip validation. The
+backend still verifies that the requested owner, transfer mode, lifetime, shape,
+and destruction policy are implemented for the object kind and native context.
+Unsupported or contradictory policy must fail before bridge lowering instead of
+falling back to source-derived behavior.
+
+Transfer modes:
+
+| Transfer mode | Meaning | Usual destruction policy | Example |
+| --- | --- | --- | --- |
+| `Transfer("by_value")` | A scalar value crosses as a Python value; no shared native storage is exposed. | `Destruction("python_refcount")` for the returned Python object. | `def count() -> Annotated[Int32, Ownership("python"), Transfer("by_value"), Destruction("python_refcount")]: ...` |
+| `Transfer("call_local")` | The wrapper creates or associates storage only for one native call. Python does not receive persistent native storage. | `Destruction("call_local")` for bridge temporaries, or `Destruction("none")` when no generated storage is owned. | `def use_value(value: Annotated[Ptr(Float64), Ownership("temporary"), Transfer("call_local"), Destruction("call_local")]) -> None: ...` |
+| `Transfer("in_place")` | Native code writes through caller-provided mutable Python storage. The same Python object observes the mutation. | `Destruction("caller")`; x2py must not free caller storage. | `def scale(values: Annotated[Float64[:], Ownership("caller"), Transfer("in_place"), Destruction("caller")]) -> None: ...` |
+| `Transfer("copy_return")` | Native output is copied or read back into a fresh Python-visible return value. The original Python object is not mutated unless separately declared. | `Destruction("python_refcount")` after Python owns the copy. | `def read_values() -> Annotated[Float64[:], Ownership("python"), Transfer("copy_return"), Destruction("python_refcount")]: ...` |
+| `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. | `Destruction("python_refcount")` for the snapshot. | `def current_pointer() -> Annotated[Float64[:], Pointer, Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")] | None: ...` |
+| `Transfer("borrowed_view")` | Python receives a no-copy view of storage owned somewhere else. Writes may mutate that storage when the value is mutable and the backend supports writable views. | Usually `Destruction("native_owner")` or `Destruction("wrapper_dealloc")`; Python does not free the borrowed target. | `module_values: Annotated[Float64[:], Allocatable, FortranTarget, Ownership("native"), Transfer("borrowed_view"), Destruction("native_owner")] | None` |
+| `Transfer("wrapper_instance")` | Python receives a wrapper object that owns or controls a native instance. | `Destruction("wrapper_dealloc")`. | `def make_state() -> Annotated[state, Ownership("wrapper"), Transfer("wrapper_instance"), Destruction("wrapper_dealloc")]: ...` |
+| `Transfer("blocked")` | The contract intentionally has no safe lowering with the current policy facts. Wrapper generation must stop. | `Destruction("blocked")`. | `def reassociate(values: Annotated[Float64[:], Pointer, Ownership("unknown"), Transfer("blocked"), Destruction("blocked")]) -> None: ...` |
+
+Destruction policies:
+
+| Destruction policy | Where storage is released |
+| --- | --- |
+| `Destruction("python_refcount")` | Python, NumPy, or a generated base capsule releases the Python-owned copy when references are gone. |
+| `Destruction("wrapper_dealloc")` | The generated wrapper deallocator releases the native instance or storage owned by that wrapper. |
+| `Destruction("native_owner")` | Native module state or an external native owner releases the storage; Python only borrows it. |
+| `Destruction("caller")` | The Python caller owns the object passed into the wrapper; x2py may mutate it but must not destroy it. |
+| `Destruction("call_local")` | The generated bridge releases the temporary before the wrapped call returns. |
+| `Destruction("none")` | No persistent owned storage is created by x2py for this boundary value. This is not a claim that no native storage exists. |
+| `Destruction("blocked")` | Release ownership is unknown, contradictory, or unimplemented, so wrapper generation must stop. |
+
+Contradictions are contract errors, not implementation choices. For example,
+`Immutable` says the Python-visible value must not be mutated in place, while
+`Transfer("borrowed_view")` says Python sees shared no-copy storage. Combining
+them for a writable native argument is invalid because the wrapper cannot both
+preserve immutability and expose a writable shared view. The user must choose one
+contract: remove `Immutable` for in-place borrowed mutation, or keep `Immutable`
+and request an explicit replacement return such as `Returns["values",
+Float64[:]]`.
+
 `PointerPolicy` is keyword-only and requires all ten keys. Its string values are
 preserved verbatim so project-specific owner and release names can be expressed;
-the backend still validates whether the requested transfer is implemented.
+the backend still validates whether the requested transfer and destruction path
+are implemented.
 
 ```python
 value: Annotated[
@@ -798,6 +929,15 @@ exact native argument topology. An identity call needs no `@native_call`.
 Whenever the Python signature hides, inserts, or reorders a native argument,
 the generated declaration includes `@native_call`.
 
+Edited contracts may also choose the identity native call directly. When every
+native dummy argument remains visible in native order, output scalar dummies are
+ordinary writable arguments instead of projected Python returns, and the
+declaration does not need `@native_call`. Callers pass mutable storage, such as
+a 0-D NumPy array with the declared dtype, for scalar output slots.
+If a caller chooses identity form for a fixed-length `String[n]` argument while
+passing an ordinary Python `str`, any native mutation is made to a temporary
+native buffer and is not observable after a `None` return.
+
 Fortran scalar dummy arguments are generated as:
 
 | Source argument | Generated semantic form |
@@ -846,6 +986,20 @@ def solve(
 Python result order and the hidden output's native name and type. A function
 result is Python result slot zero; projected output arguments follow it in
 native argument order.
+
+The same native routine can be edited into an identity call without projection:
+
+```python
+def solve(
+    a: Ptr(Const(Float64)),
+    status: Annotated[Ptr(Int32), Intent("out")],
+    b: Ptr(Const(Float64)),
+) -> None: ...
+```
+
+This form exposes the native argument order directly. Python callers allocate
+`status` and inspect it after the call; x2py does not synthesize a return value
+for that output slot.
 
 Class methods use the same stub form. An untyped leading `self` is allowed in a
 method and is not treated as a native argument.
@@ -1130,6 +1284,11 @@ label: String[8]
 Wrapper generation may synthesize native getter and setter bridge functions to
 implement Python attribute reads and writes. Those functions are internal: they
 are absent from the `.pyi` and are not exported as Python-callable procedures.
+The post-IR policy stage separately decides the getter result policy, native
+setter assignment mode, and Python setter exposure before `ir2ast.py`. A native
+value-copy setter can therefore exist for ABI use while Python replacement is
+explicitly rejected, as for allocatable or derived fields. Bridge and binding
+generation only dispatch those completed accessor decisions.
 
 Fortran `parameter` declarations are emitted as `Final[...]` constants when
 their literal value can be represented in `.pyi`:

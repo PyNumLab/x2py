@@ -204,7 +204,7 @@ class FCodePrinter(CodePrinter):
         # ...
 
         has_routines = bool(funcs_to_visit or expr.classes or expr.overload_sets)
-        private = "private\n" if has_routines else ""
+        private = "" if isinstance(expr, BindCModule) else "private\n" if has_routines else ""
         contains = "contains\n" if has_routines else ""
         imports += "".join(self._visit(i) for i in self._additional_imports.values())
         imports = self._constant_imports() + imports
@@ -260,6 +260,8 @@ class FCodePrinter(CodePrinter):
     @staticmethod
     def _module_public_declarations(module, functions):
         """Render public declarations for module-visible symbols."""
+        if isinstance(module, BindCModule):
+            return "private :: c_malloc\n"
         names = chain(
             (class_def.name for class_def in module.classes),
             (function.name for function in functions if not function.is_private and function.is_semantic),

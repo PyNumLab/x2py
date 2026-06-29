@@ -5,21 +5,30 @@ from x2py.codegen.bridges.fortran_to_c import FortranToCBridgeGenerator
 from x2py.codegen.printers.pyi_printer import PyiPrinter
 from x2py.codegen.scope import Scope
 from x2py.ownership_policy import (
+    AssignmentMode,
     CodegenAction,
     DestructionPolicy,
     ObjectKind,
-    OwnershipActionDispatcher,
     OwnershipContext,
     OwnershipDecision,
     OwnershipOwner,
     OwnershipPolicyResolver,
+    PolicyActionDispatcher,
+    SetterAction,
+    StorageMode,
     TransferMode,
     codegen_action_for_variable,
     default_ownership_policy,
     set_ownership_metadata,
 )
-from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
+from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import (
+    POLICY_COMPLETION_PREPARED_METADATA,
+    RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
+    ProjectionMapping,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
@@ -30,11 +39,18 @@ from x2py.semantics.models import (
     SemanticType,
     SemanticVariable,
 )
-from x2py.semantics.pyi_parser import parse_pyi_text
+from x2py.semantics.policy_completion import complete_semantic_policies
+from x2py.semantics.pyi2ir import parse_pyi_text
 
 
 def _scalar_type(name: str = "Int32") -> SemanticType:
     return SemanticType(name=name, dtype=name)
+
+
+def semantic_ir_to_codegen_ast(node, *args, **kwargs):
+    if isinstance(node, SemanticModule):
+        complete_semantic_policies(node)
+    return _semantic_ir_to_codegen_ast(node, *args, **kwargs)
 
 
 def _string_type() -> SemanticType:
@@ -81,7 +97,10 @@ def test_default_policy_decisions_cover_public_object_kinds():
     assert string.owner is OwnershipOwner.PYTHON
     assert string.transfer is TransferMode.COPY_RETURN
 
-    string_replacement = resolver.decide_semantic_type(_string_type(), OwnershipContext.argument("inout"))
+    string_replacement = resolver.decide_semantic_type(
+        _string_type(),
+        OwnershipContext.argument("inout", projects_result=True),
+    )
     assert string_replacement.owner is OwnershipOwner.PYTHON
     assert string_replacement.transfer is TransferMode.COPY_RETURN
     assert "immutable Python strings" in string_replacement.reason
@@ -89,15 +108,22 @@ def test_default_policy_decisions_cover_public_object_kinds():
     caller_array = resolver.decide_semantic_type(_array_type(), OwnershipContext.argument("out"))
     assert caller_array.owner is OwnershipOwner.CALLER
     assert caller_array.transfer is TransferMode.IN_PLACE
-    assert caller_array.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
+    assert caller_array.codegen_action is CodegenAction.IDENTITY_OUTPUT
+
+    projected_caller_array = resolver.decide_semantic_type(
+        _array_type(),
+        OwnershipContext.argument("out", projects_result=True, python_visible=True),
+    )
+    assert projected_caller_array.transfer is TransferMode.IN_PLACE
+    assert projected_caller_array.codegen_action is CodegenAction.IDENTITY_OUTPUT
 
     allocatable_output = resolver.decide_semantic_type(
         _array_type(allocatable=True),
-        OwnershipContext.argument("out"),
+        OwnershipContext.argument("out", projects_result=True, python_visible=False),
     )
     assert allocatable_output.owner is OwnershipOwner.PYTHON
     assert allocatable_output.transfer is TransferMode.COPY_RETURN
-    assert allocatable_output.memory_handling == "heap"
+    assert allocatable_output.storage_mode is StorageMode.HEAP
     assert allocatable_output.nullable is True
 
     module_allocatable = resolver.decide_semantic_type(
@@ -111,6 +137,20 @@ def test_default_policy_decisions_cover_public_object_kinds():
     derived_output = resolver.decide_semantic_type(_derived_type(), OwnershipContext.result())
     assert derived_output.owner is OwnershipOwner.WRAPPER
     assert derived_output.transfer is TransferMode.WRAPPER_INSTANCE
+
+    projected_derived_output = resolver.decide_semantic_type(
+        _derived_type(),
+        OwnershipContext.argument("out", projects_result=True, python_visible=True),
+    )
+    assert projected_derived_output.transfer is TransferMode.IN_PLACE
+    assert projected_derived_output.codegen_action is CodegenAction.IDENTITY_OUTPUT
+
+    hidden_derived_output = resolver.decide_semantic_type(
+        _derived_type(),
+        OwnershipContext.argument("out", projects_result=True, python_visible=False),
+    )
+    assert hidden_derived_output.transfer is TransferMode.WRAPPER_INSTANCE
+    assert hidden_derived_output.codegen_action is CodegenAction.HIDDEN_OUTPUT
 
     derived_field = resolver.decide_semantic_type(_derived_type(), OwnershipContext.field())
     assert derived_field.owner is OwnershipOwner.WRAPPER
@@ -127,7 +167,7 @@ def test_allocatable_array_field_is_wrapper_owned_borrowed_view():
     assert decision.owner is OwnershipOwner.WRAPPER
     assert decision.transfer is TransferMode.BORROWED_VIEW
     assert decision.destruction is DestructionPolicy.WRAPPER_DEALLOC
-    assert decision.memory_handling == "heap"
+    assert decision.storage_mode is StorageMode.HEAP
     assert decision.borrowed is True
     assert decision.nullable is True
 
@@ -161,43 +201,100 @@ def test_codegen_action_dispatcher_routes_policy_actions_to_named_methods():
             OwnershipOwner.PYTHON,
             TransferMode.SNAPSHOT_COPY,
             DestructionPolicy.PYTHON_REFCOUNT,
+            storage_mode=StorageMode.ALIAS,
+            codegen_action=CodegenAction.SNAPSHOT_COPY,
         )
 
     class Target:
         def snapshot(self, var, decision, marker):
             return marker, var.rank, decision.codegen_action
 
-        def default(self, var, decision, marker):
-            return "default", marker
-
-    dispatcher = OwnershipActionDispatcher(
-        {CodegenAction.SNAPSHOT_COPY_ARRAY: "snapshot"},
-        "default",
+    dispatcher = PolicyActionDispatcher(
+        {(ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "snapshot"},
     )
 
     assert dispatcher.dispatch(Target(), FakeVar(), "seen") == (
         "seen",
         1,
-        CodegenAction.SNAPSHOT_COPY_ARRAY,
+        CodegenAction.SNAPSHOT_COPY,
     )
 
 
+def test_codegen_action_dispatcher_rejects_missing_policy_pairs():
+    class FakeVar:
+        ownership_decision = OwnershipDecision(
+            ObjectKind.STRING,
+            OwnershipOwner.TEMPORARY,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.CALL_LOCAL,
+            codegen_action=CodegenAction.CALL_LOCAL_INPUT,
+        )
+
+    dispatcher = PolicyActionDispatcher({})
+
+    with pytest.raises(ValueError, match="string/call_local_input"):
+        dispatcher.handler_name(FakeVar())
+
+
 def test_bridge_and_binding_generators_expose_ownership_action_maps():
-    assert CPythonBindingGenerator._RESULT_DETAIL_DISPATCHER.handlers == {
-        CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_detail_lines",
-        CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_detail_lines",
-    }
-    assert CPythonBindingGenerator._RESULT_NOTE_DISPATCHER.handlers == {
-        CodegenAction.COPY_RETURN_ARRAY: "_copy_return_result_notes",
-        CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_notes",
-        CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_notes",
-        CodegenAction.BORROWED_VIEW: "_borrowed_view_result_notes",
-    }
+    assert (
+        CPythonBindingGenerator._RESULT_DETAIL_DISPATCHER.handlers[
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY)
+        ]
+        == "_snapshot_copy_result_detail_lines"
+    )
+    assert (
+        CPythonBindingGenerator._RESULT_NOTE_DISPATCHER.handlers[(ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT)]
+        == "_copy_return_result_notes"
+    )
     assert FortranToCBridgeGenerator._NDARRAY_RESULT_DISPATCHER.handlers == {
-        CodegenAction.SNAPSHOT_COPY_ARRAY: "_build_snapshot_copy_array_result",
-        CodegenAction.BORROWED_VIEW: "_build_borrowed_array_result",
-        CodegenAction.COPY_RETURN_ARRAY: "_build_copy_return_array_result",
+        (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_build_snapshot_copy_array_result",
+        (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_build_borrowed_array_result",
+        (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_build_copy_return_array_result",
+        (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_build_copy_return_array_result",
+        (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_build_copy_return_array_result",
     }
+    dispatchers = (
+        (FortranToCBridgeGenerator, "_ARGUMENT_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_RESULT_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_REPLACEMENT_RESULT_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_NDARRAY_RESULT_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_MODULE_VARIABLE_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_CALLBACK_ARGUMENT_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_CALLBACK_RESULT_POLICY_DISPATCHER"),
+        (CPythonBindingGenerator, "_ARGUMENT_POLICY_DISPATCHER"),
+        (CPythonBindingGenerator, "_ARGUMENT_DETAIL_DISPATCHER"),
+        (CPythonBindingGenerator, "_RESULT_POLICY_DISPATCHER"),
+        (CPythonBindingGenerator, "_RESULT_DETAIL_DISPATCHER"),
+        (CPythonBindingGenerator, "_RESULT_NOTE_DISPATCHER"),
+        (CPythonBindingGenerator, "_PROPERTY_SETTER_POLICY_DISPATCHER"),
+        (CPythonBindingGenerator, "_BORROWED_GETTER_POLICY_DISPATCHER"),
+    )
+    for generator, dispatcher_name in dispatchers:
+        dispatcher = getattr(generator, dispatcher_name)
+        assert dispatcher.handlers
+        assert all(hasattr(generator, handler_name) for handler_name in dispatcher.handlers.values())
+
+
+def test_immutable_replacement_policy_is_complete_before_ir_lowering():
+    module = parse_pyi_text(
+        """
+def normalize(
+    values: Annotated[Float64[:], Immutable]
+) -> Returns["values", Float64[:]]: ...
+""",
+        module_name="immutable_values",
+    )
+
+    complete_semantic_policies(module)
+
+    decision = module.functions[0].arguments[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert decision.kind is ObjectKind.NUMPY_ARRAY
+    assert decision.codegen_action is CodegenAction.COPY_IN_OUT
+    assert decision.storage_mode is StorageMode.STACK
+    assert decision.boundary_storage_mode is StorageMode.STACK
+    assert decision.projects_result is True
+    assert decision.python_visible is True
 
 
 def test_pyi_policy_metadata_changes_pointer_field_behavior_and_round_trips():
@@ -237,7 +334,7 @@ class box:
     field_type = module.classes[0].fields[0].semantic_type
     parsed = default_ownership_policy.decide_semantic_type(field_type, OwnershipContext.field())
     assert parsed.transfer is TransferMode.SNAPSHOT_COPY
-    assert parsed.codegen_action is CodegenAction.SNAPSHOT_COPY_ARRAY
+    assert parsed.codegen_action is CodegenAction.SNAPSHOT_COPY
 
     emitted = PyiPrinter().emit(field_type)
     assert 'Ownership("python")' in emitted
@@ -357,7 +454,7 @@ def test_recursive_module_policy_map_includes_nested_fields_and_functions():
     assert decisions["geometry.build.return"].transfer is TransferMode.COPY_RETURN
 
 
-def test_ir_lowering_attaches_policy_decisions_used_by_codegen_dispatch():
+def test_policy_completion_attaches_decisions_before_ir_lowering():
     module = SemanticModule(
         name="generated_policy",
         variables=[
@@ -377,9 +474,41 @@ def test_ir_lowering_attaches_policy_decisions_used_by_codegen_dispatch():
                 "replace",
                 arguments=[SemanticArgument("values", _array_type(allocatable=True), intent="inout")],
                 return_type=None,
+                projection=[
+                    ProjectionMapping(
+                        python_name="values",
+                        native_name="values",
+                        native_position=0,
+                        python_position=0,
+                        result_position=0,
+                        intent="inout",
+                    )
+                ],
             )
         ],
     )
+
+    complete_semantic_policies(module)
+
+    assert module.metadata[POLICY_COMPLETION_PREPARED_METADATA] is True
+    assert module.variables[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA].owner is OwnershipOwner.NATIVE
+    module_setter = module.variables[0].metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    assert module_setter.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert module_setter.setter_action is SetterAction.REJECT_REPLACEMENT
+    assert (
+        module.variables[0].metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA].codegen_action
+        is CodegenAction.BORROWED_VIEW
+    )
+    assert module.classes[0].fields[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA].owner is OwnershipOwner.WRAPPER
+    assert (
+        module.classes[0].fields[0].metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA].codegen_action
+        is CodegenAction.CALL_LOCAL_INPUT
+    )
+    assert (
+        module.functions[0].arguments[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA].transfer
+        is TransferMode.COPY_RETURN
+    )
+    assert RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA not in module.functions[0].metadata
 
     codegen_module = semantic_ir_to_codegen_ast(
         module,
@@ -391,6 +520,31 @@ def test_ir_lowering_attaches_policy_decisions_used_by_codegen_dispatch():
     arg_var = codegen_module.funcs[0].arguments[0].var
 
     assert module_var.ownership_decision.owner is OwnershipOwner.NATIVE
+    assert module_var.getter_ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
+    assert module_var.setter_ownership_decision.assignment_mode is AssignmentMode.VALUE_COPY
+    assert module_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
     assert field_var.ownership_decision.owner is OwnershipOwner.WRAPPER
+    assert field_var.getter_ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
+    assert field_var.setter_ownership_decision.assignment_mode is AssignmentMode.VALUE_COPY
+    assert field_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
     assert arg_var.ownership_decision.owner is OwnershipOwner.PYTHON
-    assert codegen_action_for_variable(arg_var) is CodegenAction.COPY_RETURN_ARRAY
+    assert codegen_action_for_variable(arg_var) is CodegenAction.COPY_IN_OUT
+
+
+def test_scalar_accessor_policies_are_complete_before_ir_lowering():
+    module = SemanticModule(
+        name="state",
+        variables=[SemanticVariable("counter", _scalar_type())],
+        classes=[SemanticClass("point", fields=[SemanticField("x", _scalar_type())])],
+    )
+
+    complete_semantic_policies(module)
+
+    for variable in (module.variables[0], module.classes[0].fields[0]):
+        getter = variable.metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA]
+        setter = variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+        assert getter.codegen_action is CodegenAction.DIRECT_VALUE
+        assert getter.storage_mode is StorageMode.STACK
+        assert setter.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+        assert setter.assignment_mode is AssignmentMode.VALUE_COPY
+        assert setter.setter_action is SetterAction.WRITE_THROUGH

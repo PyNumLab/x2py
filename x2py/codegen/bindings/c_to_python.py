@@ -4,12 +4,15 @@ which creates an interface exposing C code to Python.
 """
 
 import ast
-from typing import ClassVar
 
 from x2py.ownership_policy import (
     CodegenAction,
-    OwnershipActionDispatcher,
-    codegen_action_for_variable,
+    DestructionPolicy,
+    ObjectKind,
+    PolicyActionDispatcher,
+    SetterAction,
+    SetterActionDispatcher,
+    StorageMode,
     ownership_decision_for_codegen_variable,
 )
 from x2py.semantics.models import (
@@ -119,7 +122,6 @@ from ..models.datatypes import (
     CustomDataType,
     DataTypeFactory,
     FinalType,
-    FixedSizeType,
     FixedSizeNumericType,
     NumpyBoolType,
     PrimitiveComplexType,
@@ -239,35 +241,125 @@ class CPythonBindingGenerator(BindingGenerator):
 
     target_language = "Python"
     start_language = "C"
-    _ARGUMENT_CONVERTERS: ClassVar[dict[type, str]] = {
-        FixedSizeType: "_convert_scalar_argument",
-        CustomDataType: "_convert_custom_type_argument",
-        NumpyNDArrayType: "_convert_array_argument",
-        StringType: "_convert_string_argument",
-    }
-    _RESULT_CONVERTERS: ClassVar[dict[type, str]] = {
-        BindCResultTupleType: "_convert_result_tuple",
-        BindCArrayType: "_convert_bind_c_array_result",
-        FixedSizeType: "_convert_scalar_result",
-        CustomDataType: "_convert_custom_type_result",
-        NumpyNDArrayType: "_convert_array_result",
-        StringType: "_convert_string_result",
-    }
-    _RESULT_DETAIL_DISPATCHER = OwnershipActionDispatcher(
+    _ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
-            CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_detail_lines",
-            CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_detail_lines",
-        },
-        "_default_result_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_scalar_argument",
+            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_scalar_argument",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_scalar_argument",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_scalar_argument",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_scalar_argument",
+            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_string_argument",
+            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_string_argument",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_string_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_array_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_array_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_array_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_array_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_custom_type_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_custom_type_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_custom_type_argument",
+        }
     )
-    _RESULT_NOTE_DISPATCHER = OwnershipActionDispatcher(
+    _ARGUMENT_DETAIL_DISPATCHER = PolicyActionDispatcher(
         {
-            CodegenAction.COPY_RETURN_ARRAY: "_copy_return_result_notes",
-            CodegenAction.SNAPSHOT_COPY_ARRAY: "_snapshot_copy_result_notes",
-            CodegenAction.SNAPSHOT_COPY_SCALAR: "_snapshot_copy_result_notes",
-            CodegenAction.BORROWED_VIEW: "_borrowed_view_result_notes",
-        },
-        "_empty_result_notes",
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_direct_argument_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_call_local_argument_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_in_place_argument_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_identity_output_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_replacement_value_detail_lines",
+            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_call_local_argument_detail_lines",
+            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_discarded_identity_output_detail_lines",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_replacement_value_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_call_local_argument_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_in_place_argument_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_identity_output_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_replacement_array_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_call_local_argument_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_in_place_argument_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_identity_output_detail_lines",
+        }
+    )
+    _RESULT_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_policy_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_policy_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_policy_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_convert_policy_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_convert_policy_scalar_result",
+            (ObjectKind.STRING, CodegenAction.COPY_OUT): "_convert_policy_string_result",
+            (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_convert_policy_string_result",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_policy_string_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_convert_policy_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_convert_policy_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_policy_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_convert_policy_array_result",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_convert_policy_array_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_policy_custom_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_convert_policy_custom_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_convert_policy_custom_result",
+        }
+    )
+    _RESULT_DETAIL_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_default_result_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_default_result_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_default_result_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_default_result_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_snapshot_copy_result_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_default_result_detail_lines",
+            (ObjectKind.STRING, CodegenAction.COPY_OUT): "_default_result_detail_lines",
+            (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_default_result_detail_lines",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_default_result_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_default_result_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_default_result_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_default_result_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_default_result_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_default_result_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_snapshot_copy_result_detail_lines",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_default_result_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_default_result_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_default_result_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_default_result_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_default_result_detail_lines",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_default_result_detail_lines",
+        }
+    )
+    _RESULT_NOTE_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_empty_result_notes",
+            (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_empty_result_notes",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_empty_result_notes",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_empty_result_notes",
+            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_snapshot_copy_result_notes",
+            (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_empty_result_notes",
+            (ObjectKind.STRING, CodegenAction.COPY_OUT): "_empty_result_notes",
+            (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_empty_result_notes",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_empty_result_notes",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_copy_return_result_notes",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_copy_return_result_notes",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_copy_return_result_notes",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_empty_result_notes",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_empty_result_notes",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_snapshot_copy_result_notes",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_borrowed_view_result_notes",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_empty_result_notes",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_empty_result_notes",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_empty_result_notes",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_empty_result_notes",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_empty_result_notes",
+        }
+    )
+    _PROPERTY_SETTER_POLICY_DISPATCHER = SetterActionDispatcher(
+        {
+            SetterAction.WRITE_THROUGH: "_build_writable_property_setter",
+            SetterAction.REJECT_REPLACEMENT: "_build_blocked_property_setter",
+        }
+    )
+    _BORROWED_GETTER_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_incref_borrowed_array_getter",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_incref_borrowed_custom_getter",
+        }
     )
 
     # ------------------------------------------------------------------
@@ -435,7 +527,8 @@ class CPythonBindingGenerator(BindingGenerator):
     def _append_allocatable_variable_getters(self, expr, funcs, python_exports):
         """Add heap-backed module array getters to callable wrappers."""
         for variable in expr.variable_wrappers:
-            if variable.memory_handling != "heap":
+            decision = ownership_decision_for_codegen_variable(variable)
+            if decision.storage_mode is not StorageMode.HEAP:
                 continue
             getter = self._get_allocatable_module_array_getter(variable)
             funcs.append(getter)
@@ -1042,6 +1135,7 @@ class CPythonBindingGenerator(BindingGenerator):
 
         # Collect the function which casts from a Python object to a C object
         arg_extraction = self._convert_argument(orig_var, collect_arg, bound_argument, is_bind_c_argument)
+        decision = ownership_decision_for_codegen_variable(orig_var)
 
         body = []
         cast = arg_extraction["body"]
@@ -1062,7 +1156,7 @@ class CPythonBindingGenerator(BindingGenerator):
                     body.insert(0, Assign(arg_var, default_val))
 
         # Create any necessary type checks and errors
-        nullable_replacement = self._is_allocatable_replacement_argument(orig_var)
+        nullable_replacement = bool(decision.codegen_action is CodegenAction.COPY_IN_OUT and decision.nullable)
         if expr.has_default:
             check_func, err = self._get_type_check_condition(
                 collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
@@ -1098,6 +1192,8 @@ class CPythonBindingGenerator(BindingGenerator):
                     )
                 )
             )
+        elif decision.codegen_action is CodegenAction.IDENTITY_OUTPUT and decision.kind is ObjectKind.SCALAR:
+            body.extend(cast)
         elif not (in_overload_set or bound_argument):
             check_func, err = self._get_type_check_condition(
                 collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
@@ -1162,8 +1258,8 @@ class CPythonBindingGenerator(BindingGenerator):
         py_equiv = self._new_python_object(f"{v.name}_obj", dtype=v.dtype)
         self._python_object_map[expr] = py_equiv
 
-        release_memory = False
         decision = ownership_decision_for_codegen_variable(expr)
+        release_memory = decision.destruction is DestructionPolicy.PYTHON_REFCOUNT
         unallocated_guard = self._return_none_if_unallocated(data_var) if decision.nullable else []
         # Save the ndarray to vars_to_wrap to be handled as if it came from C
         return [
@@ -1248,9 +1344,18 @@ class CPythonBindingGenerator(BindingGenerator):
 
         call = self._call_wrapped_function(expr.getter, (class_obj,), c_results)
 
-        if isinstance(expr.getter.original_function, DottedVariable):
+        if expr.getter_policy is not None:
             wrapped_var = expr.getter.original_function
-            res_wrapper.extend(self._incref_return_pointer(getter_args[0], getter_result, wrapped_var))
+            if expr.getter_policy.borrowed:
+                res_wrapper.extend(
+                    self._BORROWED_GETTER_POLICY_DISPATCHER.dispatch_decision(
+                        self,
+                        wrapped_var,
+                        expr.getter_policy,
+                        getter_args[0],
+                        getter_result,
+                    )
+                )
         else:
             wrapped_var = expr.getter.original_function.results.var
 
@@ -1267,76 +1372,85 @@ class CPythonBindingGenerator(BindingGenerator):
             scope=getter_scope,
         )
 
-        # ----------------------------------------------------------------------------------
-        #                        Create setter
-        # ----------------------------------------------------------------------------------
-        if expr.setter:
-            self._error_exit_code = convert_to_literal(-1, dtype=CNativeInt())
-            setter_name = self.scope.get_new_name(f"{class_type.name}_{name}_setter", object_type="wrapper")
-            setter_scope = self.scope.new_child_scope(setter_name, "function")
-            self.scope = setter_scope
-
-            original_args = expr.setter.arguments
-            f_wrapped_args = expr.setter.arguments
-
-            self_arg = original_args[0]
-            set_val_arg = original_args[1]
-            for a in f_wrapped_args:
-                self.scope.insert_symbol(a.var.name)
-            self.scope.insert_symbol(self_arg.var.original_var.name)
-            self.scope.insert_symbol(set_val_arg.var.original_var.name)
-
-            setter_args = [
-                self._new_python_object("self_obj", dtype=class_type),
-                self._new_python_object(f"{name}_obj"),
-                setter_scope.get_temporary_variable(VoidType(), memory_handling="alias"),
-            ]
-            setter_result = FunctionDefResult(setter_scope.get_temporary_variable(CNativeInt()))
-
-            self._python_object_map[self_arg] = setter_args[0]
-            self._python_object_map[set_val_arg] = setter_args[1]
-
-            if isinstance(wrapped_var.class_type, FixedSizeNumericType) or wrapped_var.is_alias:
-                wrapped_args = [self._visit(a) for a in original_args]
-                arg_code = [line for arg in wrapped_args for line in arg["body"]]
-                func_call_args = [ca for a in wrapped_args for ca in a["args"]]
-
-                setter_body = [
-                    *arg_code,
-                    expr.setter(*func_call_args),
-                    *self._save_referenced_objects(expr.setter, setter_args),
-                    Return(convert_to_literal(0, dtype=CNativeInt())),
-                ]
-            else:
-                setter_body = [
-                    PyErr_SetString(
-                        PyAttributeError,
-                        CStrStr(convert_to_literal("Can't reallocate memory via Python interface.")),
-                    ),
-                    Return(self._error_exit_code),
-                ]
-            self.exit_scope()
-
-            args = [FunctionDefArgument(a) for a in setter_args]
-            setter = PyFunctionDef(
-                setter_name,
-                args,
-                setter_body,
-                setter_result,
-                original_function=expr,
-                scope=setter_scope,
-            )
-        else:
-            setter = None
+        setter = (
+            self._build_policy_property_setter(expr, class_type, name)
+            if expr.setter_policy is not None and expr.setter_policy.setter_action is not SetterAction.OMIT
+            else None
+        )
 
         self._error_exit_code = NIL
 
         docstring = convert_to_literal(
             "\n".join(expr.docstring.comments)
             if expr.docstring
-            else self._attribute_docstring(expr.python_name, wrapped_var)
+            else self._attribute_docstring(
+                expr.python_name,
+                wrapped_var,
+                expr.getter_policy,
+                expr.setter_policy,
+            )
         )
         return PyGetSetDefElement(expr.python_name, getter, setter, CStrStr(docstring))
+
+    def _build_policy_property_setter(self, expr, class_type, name):
+        """Build a writable or rejecting setter from completed accessor policy."""
+        self._error_exit_code = convert_to_literal(-1, dtype=CNativeInt())
+        setter_name = self.scope.get_new_name(f"{class_type.name}_{name}_setter", object_type="wrapper")
+        setter_scope = self.scope.new_child_scope(setter_name, "function")
+        self.scope = setter_scope
+        setter_args = [
+            self._new_python_object("self_obj", dtype=class_type),
+            self._new_python_object(f"{name}_obj"),
+            setter_scope.get_temporary_variable(VoidType(), memory_handling="alias"),
+        ]
+        setter_body = self._PROPERTY_SETTER_POLICY_DISPATCHER.dispatch(
+            self,
+            expr,
+            expr.setter_policy,
+            setter_args,
+        )
+        setter_result = FunctionDefResult(setter_scope.get_temporary_variable(CNativeInt()))
+        self.exit_scope()
+        return PyFunctionDef(
+            setter_name,
+            [FunctionDefArgument(arg) for arg in setter_args],
+            setter_body,
+            setter_result,
+            original_function=expr,
+            scope=setter_scope,
+        )
+
+    def _build_writable_property_setter(self, expr, _decision, setter_args):
+        """Build a property setter which calls the completed native setter."""
+        if expr.setter is None:
+            raise ValueError(f"Writable property {expr.python_name!r} has no generated native setter")
+        original_args = expr.setter.arguments
+        self_arg, set_val_arg = original_args
+        for argument in original_args:
+            self.scope.insert_symbol(argument.var.name)
+        self.scope.insert_symbol(self_arg.var.original_var.name)
+        self.scope.insert_symbol(set_val_arg.var.original_var.name)
+        self._python_object_map[self_arg] = setter_args[0]
+        self._python_object_map[set_val_arg] = setter_args[1]
+        wrapped_args = [self._visit(argument) for argument in original_args]
+        arg_code = [line for argument in wrapped_args for line in argument["body"]]
+        func_call_args = [converted for argument in wrapped_args for converted in argument["args"]]
+        return [
+            *arg_code,
+            expr.setter(*func_call_args),
+            *self._save_referenced_objects(expr.setter, setter_args),
+            Return(convert_to_literal(0, dtype=CNativeInt())),
+        ]
+
+    def _build_blocked_property_setter(self, _expr, _decision, _setter_args):
+        """Build the stable Python error for a policy-blocked property write."""
+        return [
+            PyErr_SetString(
+                PyAttributeError,
+                CStrStr(convert_to_literal("Can't reallocate memory via Python interface.")),
+            ),
+            Return(self._error_exit_code),
+        ]
 
     def _visit_ClassDef(self, expr):
         """
@@ -1528,23 +1642,25 @@ class CPythonBindingGenerator(BindingGenerator):
         dict
             A dictionary describing the objects necessary to access the argument.
         """
-        class_type = orig_var.class_type
+        return self._ARGUMENT_POLICY_DISPATCHER.dispatch(
+            self,
+            orig_var,
+            collect_arg,
+            bound_argument,
+            is_bind_c_argument,
+            arg_var=arg_var,
+        )
 
-        for cls in type(class_type).__mro__:
-            converter_name = self._ARGUMENT_CONVERTERS.get(cls)
-            if converter_name is not None:
-                return getattr(self, converter_name)(
-                    orig_var,
-                    collect_arg,
-                    bound_argument,
-                    is_bind_c_argument,
-                    arg_var=arg_var,
-                )
-
-        # Unknown object, we raise an error.
-        raise NotImplementedError(f"Wrapping function arguments is not implemented for type {class_type}.")
-
-    def _convert_scalar_argument(self, orig_var, collect_arg, bound_argument, is_bind_c_argument, *, arg_var=None):
+    def _convert_scalar_argument(
+        self,
+        orig_var,
+        decision,
+        collect_arg,
+        bound_argument,
+        is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
         """
         Extract the C-compatible scalar FunctionDefArgument from the PythonObject.
 
@@ -1593,8 +1709,8 @@ class CPythonBindingGenerator(BindingGenerator):
             }
             if (
                 is_bind_c_argument
-                and codegen_action_for_variable(orig_var) is CodegenAction.CALL_LOCAL_INPUT
-                and orig_var.memory_handling == "alias"
+                and decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+                and decision.storage_mode is StorageMode.ALIAS
             ):
                 kwargs["memory_handling"] = "stack"
             elif getattr(orig_var, "is_optional", False):
@@ -1604,6 +1720,9 @@ class CPythonBindingGenerator(BindingGenerator):
                 **kwargs,
             )
             self.scope.insert_variable(arg_var, orig_var.name)
+
+        if decision.codegen_action is CodegenAction.IDENTITY_OUTPUT:
+            return self._convert_identity_scalar_output_argument(orig_var, decision, collect_arg, arg_var)
 
         dtype = orig_var.dtype
         try:
@@ -1630,7 +1749,37 @@ class CPythonBindingGenerator(BindingGenerator):
 
         return {"body": body, "args": [arg_var]}
 
-    def _convert_custom_type_argument(self, orig_var, collect_arg, bound_argument, is_bind_c_argument, *, arg_var=None):
+    def _convert_identity_scalar_output_argument(self, orig_var, decision, collect_arg, arg_var):
+        """Use a writable 0-D NumPy array as storage for an identity scalar output."""
+        try:
+            type_ref = numpy_dtype_registry[orig_var.dtype]
+        except KeyError:
+            raise TypeError(f"Can't check the type of identity output {orig_var.dtype}") from None
+        pyarray = PointerCast(collect_arg, Variable(NumpyArrayObjectType(), "_", memory_handling="alias"))
+        check = pyarray_check(
+            CStrStr(convert_to_literal(orig_var.name)),
+            collect_arg,
+            type_ref,
+            convert_to_literal(0),
+            no_order_check,
+            convert_to_literal(False),
+        )
+        data_value = PointerCast(PyArray_DATA(ObjectAddress(pyarray)), arg_var)
+        body = [If(IfSection(Not(check), [Return(self._error_exit_code)]))]
+        body.extend(self._array_access_validation(orig_var, decision, collect_arg))
+        clean_up = [Assign(data_value, arg_var)]
+        return {"body": body, "args": [arg_var], "clean_up": clean_up}
+
+    def _convert_custom_type_argument(
+        self,
+        orig_var,
+        decision,
+        collect_arg,
+        bound_argument,
+        is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
         """
         Extract the C-compatible class FunctionDefArgument from the PythonObject.
 
@@ -1668,8 +1817,10 @@ class CPythonBindingGenerator(BindingGenerator):
             A dictionary describing the objects necessary to access the argument.
         """
         if arg_var is None:
-            kwargs = {"is_argument": False}
-            kwargs["memory_handling"] = "alias"
+            kwargs = {
+                "is_argument": False,
+                "memory_handling": decision.boundary_storage_mode.value,
+            }
             if is_bind_c_argument:
                 kwargs["class_type"] = VoidType()
 
@@ -1701,7 +1852,16 @@ class CPythonBindingGenerator(BindingGenerator):
         cast.append(AliasAssign(arg_var, cast_c_res))
         return {"body": cast, "args": [arg_var]}
 
-    def _convert_array_argument(self, orig_var, collect_arg, bound_argument, is_bind_c_argument, *, arg_var=None):
+    def _convert_array_argument(
+        self,
+        orig_var,
+        decision,
+        collect_arg,
+        bound_argument,
+        is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
         """
         Extract the C-compatible NumPy array FunctionDefArgument from the PythonObject.
 
@@ -1749,7 +1909,7 @@ class CPythonBindingGenerator(BindingGenerator):
         ubound_elems = [IndexedElement(ubounds, i) for i in range(descriptor_rank)]
         args = [parts["data"], *shape_elems, *stride_elems]
         body.extend(self._array_shape_validation(orig_var, shape_elems))
-        body.extend(self._array_access_validation(orig_var, collect_arg))
+        body.extend(self._array_access_validation(orig_var, decision, collect_arg))
         default_body = (
             [AliasAssign(parts["data"], NIL)]
             + ([Assign(parts["rank"], 0)] if parts["rank"] is not None else [])
@@ -1840,7 +2000,16 @@ class CPythonBindingGenerator(BindingGenerator):
             collect_arg = optional_arg_var
         return {"body": body, "args": [collect_arg], "default_init": default_body}
 
-    def _convert_string_argument(self, orig_var, collect_arg, bound_argument, is_bind_c_argument, *, arg_var=None):
+    def _convert_string_argument(
+        self,
+        orig_var,
+        decision,
+        collect_arg,
+        bound_argument,
+        is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
         """
         Extract the C-compatible string FunctionDefArgument from the PythonObject.
 
@@ -1880,7 +2049,8 @@ class CPythonBindingGenerator(BindingGenerator):
         assert bound_argument is False
 
         if is_bind_c_argument:
-            writable = self._is_string_replacement_argument(orig_var)
+            writable = decision.mutates_native
+            projected_replacement = decision.codegen_action is CodegenAction.COPY_IN_OUT
             if arg_var is not None:
                 raise NotImplementedError("Reusing an existing Bind-C string descriptor is not supported.")
             data_var, size_var, arg_var = self._bind_c_string_arg_parts(orig_var, writable=writable)
@@ -1922,6 +2092,12 @@ class CPythonBindingGenerator(BindingGenerator):
                 body.extend([Assign(ObjectAddress(data_var), ObjectAddress(source_var)), Assign(size_var, source_size)])
 
             default_init = [Assign(ObjectAddress(data_var), NIL), Assign(size_var, 0)]
+            clean_up = []
+            if writable and not projected_replacement:
+                if getattr(orig_var, "is_optional", False):
+                    clean_up.append(If(IfSection(IsNot(data_var, NIL), [Deallocate(data_var)])))
+                else:
+                    clean_up.append(Deallocate(data_var))
         else:
             if arg_var is None:
                 kwargs = {"new_class": Variable, "is_argument": False}
@@ -1944,8 +2120,9 @@ class CPythonBindingGenerator(BindingGenerator):
                     memory_handling="stack",
                 )
                 body.insert(0, AliasAssign(arg_var, memory_var))
+            clean_up = []
 
-        return {"body": body, "args": [arg_var], "default_init": default_init}
+        return {"body": body, "args": [arg_var], "default_init": default_init, "clean_up": clean_up}
 
     def _convert_result(self, orig_var, is_bind_c, funcdef=None):
         """
@@ -1981,16 +2158,36 @@ class CPythonBindingGenerator(BindingGenerator):
             return {"c_results": [], "py_result": Py_None, "body": []}
 
         class_type = orig_var.original_var.class_type if isinstance(orig_var, BindCVariable) else orig_var.class_type
+        if isinstance(class_type, BindCResultTupleType):
+            return self._convert_result_tuple(orig_var, is_bind_c, funcdef)
+        original = getattr(orig_var, "original_var", orig_var)
+        return self._RESULT_POLICY_DISPATCHER.dispatch(
+            self,
+            original,
+            orig_var,
+            is_bind_c,
+            funcdef,
+        )
 
-        for cls in type(class_type).__mro__:
-            converter_name = self._RESULT_CONVERTERS.get(cls)
-            if converter_name is not None:
-                return getattr(self, converter_name)(orig_var, is_bind_c, funcdef)
+    def _convert_policy_custom_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
+        """Emit the completed custom-value result behavior."""
+        return self._convert_custom_type_result(wrapped_var, is_bind_c, funcdef, decision)
 
-        # Unknown object, we raise an error.
-        raise NotImplementedError(f"Wrapping function results is not implemented for type {class_type}.")
+    def _convert_policy_scalar_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
+        """Emit the completed scalar result behavior."""
+        return self._convert_scalar_result(wrapped_var, is_bind_c, funcdef, decision)
 
-    def _convert_custom_type_result(self, wrapped_var, is_bind_c, funcdef):
+    def _convert_policy_array_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
+        """Emit the completed array result behavior for its concrete ABI representation."""
+        if isinstance(getattr(wrapped_var, "class_type", None), BindCArrayType):
+            return self._convert_bind_c_array_result(wrapped_var, funcdef, decision=decision)
+        return self._convert_array_result(wrapped_var, is_bind_c, funcdef, decision)
+
+    def _convert_policy_string_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
+        """Emit the completed string result behavior."""
+        return self._convert_string_result(wrapped_var, is_bind_c, funcdef, decision)
+
+    def _convert_custom_type_result(self, wrapped_var, is_bind_c, funcdef, decision):
         """
         Get the code which translates a `Variable` containing a class instance to a PyObject.
 
@@ -2014,13 +2211,7 @@ class CPythonBindingGenerator(BindingGenerator):
         orig_var = getattr(wrapped_var, "original_var", wrapped_var)
         name = orig_var.name
         python_res = self._new_python_object(f"{name}_obj", orig_var.dtype)
-        original_function = getattr(funcdef, "original_function", None)
-        is_alias = (
-            orig_var.is_alias
-            or isinstance(orig_var, DottedVariable)
-            or isinstance(wrapped_var, DottedVariable)
-            or isinstance(original_function, DottedVariable)
-        )
+        is_alias = decision.borrowed
         setup = self._allocate_class_instance(python_res, python_res.cls_base.scope, is_alias)
         if is_bind_c:
             c_res = orig_var.clone(
@@ -2053,7 +2244,7 @@ class CPythonBindingGenerator(BindingGenerator):
             "setup": setup,
         }
 
-    def _convert_scalar_result(self, orig_var, is_bind_c, funcdef):
+    def _convert_scalar_result(self, orig_var, is_bind_c, funcdef, decision):
         """
         Get the code which translates a `Variable` containing a scalar to a PyObject.
 
@@ -2074,7 +2265,7 @@ class CPythonBindingGenerator(BindingGenerator):
         dict
             A dictionary describing the objects necessary to collect the result.
         """
-        if codegen_action_for_variable(orig_var) is CodegenAction.SNAPSHOT_COPY_SCALAR:
+        if decision.codegen_action is CodegenAction.SNAPSHOT_COPY:
             return self._build_snapshot_copy_scalar_result(orig_var)
         name = getattr(orig_var, "name", "tmp")
         py_res = self._new_python_object(f"{name}_obj", orig_var.dtype)
@@ -2096,7 +2287,7 @@ class CPythonBindingGenerator(BindingGenerator):
             ],
         }
 
-    def _convert_array_result(self, orig_var, is_bind_c, funcdef):
+    def _convert_array_result(self, orig_var, is_bind_c, funcdef, decision):
         """
         Get the code which translates a `Variable` containing an array to a PyObject.
 
@@ -2118,17 +2309,14 @@ class CPythonBindingGenerator(BindingGenerator):
             A dictionary describing the objects necessary to collect the result.
         """
         if is_bind_c:
-            return self._convert_bind_c_array_result(orig_var, funcdef)
+            return self._convert_bind_c_array_result(orig_var, funcdef, decision=decision)
         name = self.scope.get_new_name(orig_var.name)
         py_res = self._new_python_object(f"{name}_obj", orig_var.dtype)
         c_res = orig_var.clone(name, is_argument=False, memory_handling="alias")
         typenum = numpy_dtype_registry[orig_var.dtype]
         data_var = DottedVariable(VoidType(), "data", memory_handling="alias", lhs=c_res)
         shape_var = DottedVariable(NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True), "shape", lhs=c_res)
-        release_memory = False
-        if funcdef:
-            arg_targets = funcdef.result_pointer_map.get(orig_var, ())
-            release_memory = len(arg_targets) == 0 and not isinstance(orig_var, DottedVariable)
+        release_memory = decision.destruction is DestructionPolicy.PYTHON_REFCOUNT
         body = [
             AliasAssign(
                 py_res,
@@ -2162,7 +2350,12 @@ class CPythonBindingGenerator(BindingGenerator):
         for index in range(len(tuple_var.class_type)):
             element = funcdef.scope.collect_tuple_element(IndexedElement(tuple_var, index))
             if isinstance(getattr(element, "class_type", None), BindCArrayType):
-                result = self._convert_bind_c_array_result(element, funcdef, tuple_item=True)
+                result = self._convert_bind_c_array_result(
+                    element,
+                    funcdef,
+                    tuple_item=True,
+                    decision=ownership_decision_for_codegen_variable(element.original_var),
+                )
             else:
                 result = self._convert_result(element, is_bind_c, funcdef)
             item_c_results = result["c_results"]
@@ -2185,7 +2378,7 @@ class CPythonBindingGenerator(BindingGenerator):
             "result_bindings": result_bindings,
         }
 
-    def _convert_bind_c_array_result(self, wrapped_var, funcdef, *, tuple_item=False):
+    def _convert_bind_c_array_result(self, wrapped_var, funcdef, *, tuple_item=False, decision):
         """
         Get the code which translates a `Variable` containing an array to a PyObject.
 
@@ -2221,10 +2414,7 @@ class CPythonBindingGenerator(BindingGenerator):
         self.scope.insert_variable(data_var)
         self.scope.insert_variable(shape_var)
 
-        release_memory = False
-        if funcdef:
-            arg_targets = funcdef.result_pointer_map.get(orig_var, ())
-            release_memory = len(arg_targets) == 0 and not isinstance(orig_var, DottedVariable)
+        release_memory = decision.destruction is DestructionPolicy.PYTHON_REFCOUNT
 
         array_to_python = AliasAssign(
             py_res,
@@ -2239,7 +2429,7 @@ class CPythonBindingGenerator(BindingGenerator):
         )
         shape_vars = [IndexedElement(shape_var, i) for i in range(orig_var.rank)]
         body = [array_to_python]
-        if getattr(orig_var, "memory_handling", None) == "heap" or self._is_pointer_snapshot_result(orig_var):
+        if decision.nullable:
             if tuple_item:
                 body = [
                     self._set_none_if_unallocated(data_var, py_res, shape_vars),
@@ -2261,7 +2451,7 @@ class CPythonBindingGenerator(BindingGenerator):
             "body": body,
         }
 
-    def _convert_string_result(self, wrapped_var, is_bind_c, funcdef):
+    def _convert_string_result(self, wrapped_var, is_bind_c, funcdef, decision):
         """Convert string result for the current wrapper."""
         orig_var = getattr(wrapped_var, "original_var", wrapped_var)
         name = getattr(orig_var, "name", "tmp")
@@ -2496,7 +2686,10 @@ class CPythonBindingGenerator(BindingGenerator):
         """Install generated module-variable descriptors on export modules."""
         body = []
         for variable in expr.variables:
-            if variable.is_private or (isinstance(variable, BindCArrayVariable) and variable.memory_handling == "heap"):
+            decision = ownership_decision_for_codegen_variable(variable)
+            if variable.is_private or (
+                isinstance(variable, BindCArrayVariable) and decision.storage_mode is StorageMode.HEAP
+            ):
                 continue
             body.extend(self._visit(variable))
             wrapped_variable = self._python_object_map[variable]
@@ -2709,12 +2902,12 @@ class CPythonBindingGenerator(BindingGenerator):
         can_be_none = (
             getattr(arg.var, "is_optional", False)
             or getattr(var, "is_optional", False)
-            or self._is_allocatable_replacement_argument(var)
+            or self._is_nullable_replacement_argument(var)
         )
         header = f"{self._doc_argument_name(arg)} : {self._type_doc(var, include_none=can_be_none)}"
         details = self._argument_detail_lines(var)
         if can_be_none:
-            if self._is_allocatable_replacement_argument(var):
+            if self._is_nullable_replacement_argument(var):
                 details.append("    May be passed as None for initially unallocated storage.")
             else:
                 details.append("    May be omitted or passed as None.")
@@ -2730,19 +2923,51 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _argument_detail_lines(self, var):
         """Handle argument detail lines for the current generation context."""
-        intent = getattr(var, "intent", "in")
         lines = self._value_detail_lines(var)
-        lines.append(f"    Intent: {intent}")
-        if intent == "out":
-            lines.append("    Mutates: fills in-place")
-            if getattr(var, "rank", 0):
-                lines.append("    Initial contents are ignored.")
-        elif intent == "inout":
-            if self._is_allocatable_replacement_argument(var):
-                lines.append("    Mutates: no; returns a replacement array or None")
-            else:
-                lines.append("    Mutates: yes")
+        lines.append(f"    Intent: {getattr(var, 'intent', 'in')}")
+        lines.extend(self._ARGUMENT_DETAIL_DISPATCHER.dispatch(self, var))
         return lines
+
+    @staticmethod
+    def _direct_argument_detail_lines(_var, _decision):
+        """Return documentation details for a direct scalar value."""
+        return []
+
+    @staticmethod
+    def _call_local_argument_detail_lines(_var, decision):
+        """Describe whether call-local native mutation is discarded."""
+        if decision.mutates_native:
+            return ["    Mutates: no; native mutation is discarded"]
+        return []
+
+    @staticmethod
+    def _in_place_argument_detail_lines(_var, _decision):
+        """Describe an input/output argument that mutates caller storage."""
+        return ["    Mutates: yes"]
+
+    @staticmethod
+    def _identity_output_detail_lines(var, _decision):
+        """Describe an output that fills and returns caller storage."""
+        lines = ["    Mutates: fills in-place"]
+        if var.rank:
+            lines.append("    Initial contents are ignored.")
+        return lines
+
+    @staticmethod
+    def _discarded_identity_output_detail_lines(_var, _decision):
+        """Describe an immutable output whose call-local mutation is discarded."""
+        return ["    Mutates: no; native mutation is discarded"]
+
+    @staticmethod
+    def _replacement_value_detail_lines(_var, _decision):
+        """Describe immutable scalar or string replacement semantics."""
+        return ["    Mutates: no; returns a replacement value"]
+
+    @staticmethod
+    def _replacement_array_detail_lines(_var, decision):
+        """Describe immutable array replacement and nullability semantics."""
+        suffix = " or None" if decision.nullable else ""
+        return [f"    Mutates: no; returns a replacement array{suffix}"]
 
     def _result_detail_lines(self, var):
         """Handle result detail lines for the current generation context."""
@@ -2871,18 +3096,10 @@ class CPythonBindingGenerator(BindingGenerator):
         return decision.nullable
 
     @staticmethod
-    def _is_pointer_snapshot_result(var):
-        """Return whether is pointer snapshot result."""
-        return codegen_action_for_variable(var) is CodegenAction.SNAPSHOT_COPY_ARRAY
-
-    @staticmethod
-    def _is_allocatable_replacement_argument(var):
-        """Return whether is allocatable replacement argument."""
-        return bool(
-            getattr(var, "is_ndarray", False)
-            and codegen_action_for_variable(var) is CodegenAction.COPY_RETURN_ARRAY
-            and getattr(var, "intent", "in") == "inout"
-        )
+    def _is_nullable_replacement_argument(var):
+        """Return whether a completed replacement accepts initially absent storage."""
+        decision = ownership_decision_for_codegen_variable(var)
+        return bool(decision.codegen_action is CodegenAction.COPY_IN_OUT and decision.nullable)
 
     @staticmethod
     def _is_allocatable_copy_return_result(var):
@@ -2890,8 +3107,9 @@ class CPythonBindingGenerator(BindingGenerator):
         decision = ownership_decision_for_codegen_variable(var)
         return bool(
             getattr(var, "is_ndarray", False)
-            and decision.codegen_action is CodegenAction.COPY_RETURN_ARRAY
-            and decision.memory_handling == "heap"
+            and decision.codegen_action
+            in {CodegenAction.COPY_OUT, CodegenAction.HIDDEN_OUTPUT, CodegenAction.COPY_IN_OUT}
+            and decision.storage_mode is StorageMode.HEAP
         )
 
     @staticmethod
@@ -2945,11 +3163,8 @@ class CPythonBindingGenerator(BindingGenerator):
             arg.var
             for arg in original_func.arguments
             if not arg.bound_argument
-            and (
-                getattr(arg.var, "intent", "in") == "out"
-                or self._is_projected_output_argument(arg.var)
-                or self._is_allocatable_replacement_argument(arg.var)
-            )
+            and not isinstance(arg.var, FunctionAddress)
+            and ownership_decision_for_codegen_variable(arg.var).projects_result
         )
         if not result_vars:
             result_vars = self._doc_result_vars(func)
@@ -3006,16 +3221,16 @@ class CPythonBindingGenerator(BindingGenerator):
             return attribute.python_name, self._doc_original_var(original.results.var)
         return str(attribute.name), self._doc_original_var(attribute)
 
-    def _attribute_docstring(self, name, var):
+    def _attribute_docstring(self, name, var, getter_policy, setter_policy):
         """Handle attribute docstring for the current generation context."""
         var = self._doc_original_var(var)
         lines = [
             f"{name} : {self._type_doc(var, include_none=self._may_return_none(var))}",
             *self._borrowed_detail_lines(var),
         ]
-        if not var.rank:
+        if setter_policy is not None and setter_policy.setter_action is SetterAction.WRITE_THROUGH:
             lines.append("    Assigning writes through the generated setter when available.")
-        elif var.memory_handling in {"heap", "alias"}:
+        if getter_policy is not None and getter_policy.borrowed:
             lines.extend(["", "Notes", "-----", *self._borrowed_view_notes()])
         return "\n".join(lines)
 
@@ -3589,61 +3804,35 @@ class CPythonBindingGenerator(BindingGenerator):
                 )
         return body
 
-    def _incref_return_pointer(self, ref_obj, return_var, orig_var):
-        """
-        Get the code necessary to return an object which references another.
-
-        Get the code necessary to return an object which references another Python object. This is necessary when
-        wrapping functions (or getters) which return pointers (e.g. attributes of a class). For these objects the
-        target must not be deallocated before the returned object is no longer needed. For arrays this is achieved
-        using PyArray_SetBaseObject, to save the reference. For class instances the self instance is added to the
-        list of referenced objects saved in the returned class.
-
-        Parameters
-        ----------
-        ref_obj : Variable
-            A variable representing the class instance which must not be deallocated too early.
-        return_var : Variable
-            The variable which will be returned from the function.
-        orig_var : Variable
-            The variable which will be returned from the function as it appeared in the original code.
-
-        Returns
-        -------
-        list[model object]
-            Any nodes which must be printed to increase reference counts.
-        """
-        if isinstance(orig_var.class_type, NumpyNDArrayType):
-            save_ref_call = PyArray_SetBaseObject(
-                ObjectAddress(PointerCast(return_var, PyArray_SetBaseObject.arguments[0].var)),
-                ObjectAddress(PointerCast(ref_obj, PyArray_SetBaseObject.arguments[1].var)),
-            )
-            return [
-                Py_INCREF(ref_obj),
-                If(
-                    IfSection(
-                        Lt(save_ref_call, convert_to_literal(0, dtype=CNativeInt())),
-                        [Return(self._error_exit_code)],
-                    )
-                ),
-            ]
-        if isinstance(orig_var.dtype, CustomDataType):
-            ref_attribute = return_var.cls_base.scope.find("referenced_objects", "variables", raise_if_missing=True)
-            ref_list = ref_attribute.clone(ref_attribute.name, new_class=DottedVariable, lhs=return_var)
-            save_ref_call = PyList_Append(ref_list, ObjectAddress(PointerCast(ref_obj, ref_list)))
-            return [
-                If(
-                    IfSection(
-                        Lt(save_ref_call, convert_to_literal(0, dtype=CNativeInt())),
-                        [Return(self._error_exit_code)],
-                    )
-                )
-            ]
-        if isinstance(orig_var.class_type, FixedSizeNumericType):
-            return []
-        raise NotImplementedError(
-            f"Unsure how to preserve references for attribute of type {type(orig_var.class_type)}"
+    def _incref_borrowed_array_getter(self, _orig_var, _decision, ref_obj, return_var):
+        """Retain the owner of an array returned by a borrowed getter."""
+        save_ref_call = PyArray_SetBaseObject(
+            ObjectAddress(PointerCast(return_var, PyArray_SetBaseObject.arguments[0].var)),
+            ObjectAddress(PointerCast(ref_obj, PyArray_SetBaseObject.arguments[1].var)),
         )
+        return [
+            Py_INCREF(ref_obj),
+            If(
+                IfSection(
+                    Lt(save_ref_call, convert_to_literal(0, dtype=CNativeInt())),
+                    [Return(self._error_exit_code)],
+                )
+            ),
+        ]
+
+    def _incref_borrowed_custom_getter(self, _orig_var, _decision, ref_obj, return_var):
+        """Retain the owner of a derived value returned by a borrowed getter."""
+        ref_attribute = return_var.cls_base.scope.find("referenced_objects", "variables", raise_if_missing=True)
+        ref_list = ref_attribute.clone(ref_attribute.name, new_class=DottedVariable, lhs=return_var)
+        save_ref_call = PyList_Append(ref_list, ObjectAddress(PointerCast(ref_obj, ref_list)))
+        return [
+            If(
+                IfSection(
+                    Lt(save_ref_call, convert_to_literal(0, dtype=CNativeInt())),
+                    [Return(self._error_exit_code)],
+                )
+            )
+        ]
 
     def _add_object_to_mod(self, module_var, obj, name, initialised):
         """
@@ -3894,10 +4083,7 @@ class CPythonBindingGenerator(BindingGenerator):
         source_property = getattr(setter, "original_function", None)
         if not isinstance(source_property, BindCClassProperty):
             return None
-        original = getattr(source_property.getter, "original_function", None)
-        if not isinstance(original, DottedVariable):
-            return None
-        if original.rank != 0 or not isinstance(original.class_type, FixedSizeNumericType):
+        if source_property.setter_policy.setter_action is not SetterAction.WRITE_THROUGH:
             return None
         return prop
 
@@ -4313,7 +4499,7 @@ class CPythonBindingGenerator(BindingGenerator):
             discarded_owned_items,
         )
 
-        visible_outputs = self._visible_output_argument_objects(func)
+        projected_argument_objects = self._projected_argument_objects(func)
         for argument in original_func.arguments:
             native_index = self._project_argument_return(
                 argument,
@@ -4321,7 +4507,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 native_py_results,
                 native_owned_results,
                 excluded,
-                visible_outputs,
+                projected_argument_objects,
                 output_items,
                 output_owned,
                 discarded_owned_items,
@@ -4379,7 +4565,7 @@ class CPythonBindingGenerator(BindingGenerator):
         native_py_results,
         native_owned_results,
         excluded,
-        visible_outputs,
+        projected_argument_objects,
         output_items,
         output_owned,
         discarded_owned_items,
@@ -4389,9 +4575,8 @@ class CPythonBindingGenerator(BindingGenerator):
         if isinstance(orig_var, FunctionAddress) or argument.bound_argument:
             return native_index
         output_name = getattr(orig_var, "name", None)
-        replacement = self._is_allocatable_replacement_argument(orig_var)
-        replacement |= self._is_string_replacement_argument(orig_var) and native_index < len(native_py_results)
-        if replacement:
+        decision = ownership_decision_for_codegen_variable(orig_var)
+        if decision.codegen_action is CodegenAction.COPY_IN_OUT:
             self._append_projected_native_result(
                 native_index,
                 output_name,
@@ -4403,9 +4588,9 @@ class CPythonBindingGenerator(BindingGenerator):
                 discarded_owned_items,
             )
             return native_index + 1
-        if getattr(orig_var, "intent", "in") != "out" and not self._is_projected_output_argument(orig_var):
+        if not decision.projects_result:
             return native_index
-        visible_object = visible_outputs.get(orig_var) or visible_outputs.get(output_name)
+        visible_object = projected_argument_objects.get(orig_var) or projected_argument_objects.get(output_name)
         if output_name in excluded:
             if visible_object is None:
                 if native_owned_results[native_index]:
@@ -4439,22 +4624,22 @@ class CPythonBindingGenerator(BindingGenerator):
         body.extend(Py_DECREF(item) for item, owned in zip(output_items, output_owned, strict=False) if owned)
         return {"body": body, "result": tuple_result, "owned_result": True}
 
-    def _visible_output_argument_objects(self, func):
-        """Handle visible output argument objects for the current generation context."""
+    def _projected_argument_objects(self, func):
+        """Return Python argument objects that are also projected as results."""
         outputs = {}
         for argument in func.arguments:
             var = argument.var
             orig_var = getattr(var, "original_var", var)
-            if getattr(orig_var, "intent", "in") == "out" or self._is_projected_output_argument(orig_var):
+            if isinstance(orig_var, FunctionAddress):
+                continue
+            decision = ownership_decision_for_codegen_variable(orig_var)
+            if decision.projects_result and decision.codegen_action in {
+                CodegenAction.IDENTITY_OUTPUT,
+                CodegenAction.IN_PLACE_ARGUMENT,
+            }:
                 outputs[orig_var] = self._python_object_map[argument]
                 outputs[getattr(orig_var, "name", None)] = self._python_object_map[argument]
         return outputs
-
-    @staticmethod
-    def _is_projected_output_argument(var) -> bool:
-        """Return whether a compact visible argument is explicitly projected."""
-        original = getattr(var, "original_var", var)
-        return bool(getattr(original, "projected_output", False))
 
     def _connect_pointer_targets(self, orig_var, python_res, funcdef, is_bind_c):
         """
@@ -4639,7 +4824,7 @@ class CPythonBindingGenerator(BindingGenerator):
             )
         return checks
 
-    def _array_access_validation(self, orig_var, collect_arg):
+    def _array_access_validation(self, orig_var, decision, collect_arg):
         """Handle array access validation for the current generation context."""
         pyarray = PointerCast(collect_arg, Variable(NumpyArrayObjectType(), "_", memory_handling="alias"))
         checks = [
@@ -4653,7 +4838,10 @@ class CPythonBindingGenerator(BindingGenerator):
                 f"Argument {orig_var.name} must be aligned",
             ),
         ]
-        if getattr(orig_var, "intent", "in") in {"out", "inout"}:
+        if decision.codegen_action in {
+            CodegenAction.IN_PLACE_ARGUMENT,
+            CodegenAction.IDENTITY_OUTPUT,
+        }:
             checks.append(
                 self._array_flag_validation(
                     pyarray,
@@ -4686,11 +4874,6 @@ class CPythonBindingGenerator(BindingGenerator):
                 ],
             )
         )
-
-    @staticmethod
-    def _is_string_replacement_argument(var):
-        """Return whether is string replacement argument."""
-        return isinstance(var.class_type, StringType) and getattr(var, "intent", "in") == "inout"
 
     def _bind_c_string_arg_parts(self, orig_var, *, writable):
         """Handle bind c string arg parts for the current generation context."""

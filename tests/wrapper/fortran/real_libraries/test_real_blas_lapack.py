@@ -19,7 +19,7 @@ from tests._shared.fixture_outputs import FORTRAN_SUFFIXES
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran._support import REPO_ROOT
 from x2py import build_pyi_extension
-from x2py.semantics.pyi_parser import load_pyi_modules
+from x2py.semantics.pyi2ir import load_pyi_modules
 
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 FORTRAN_LIBRARY_ROOT = REPO_ROOT / "tests" / "data" / "fortran"
@@ -394,6 +394,12 @@ def test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_li
     assert native_plan["module_dirs"] == []
 
     if library == "blas":
+        bridge = (result.output_dir / "bind_c_full_blas_wrapper.f90").read_text(encoding="utf-8").lower()
+        assert "use full_blas_interfaces" not in bridge
+        assert "subroutine daxpy(" in bridge
+        assert "private\n" not in bridge
+        assert "private :: c_malloc" in bridge
+        assert "public :: bind_c_daxpy" not in bridge
         _assert_blas_runtime_smoke(module)
     else:
         _assert_lapack_runtime_smoke(module)
