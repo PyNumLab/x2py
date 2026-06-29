@@ -2,7 +2,7 @@
 title: Fortran Wrapper Guide
 audience: users, advanced users
 prerequisites: first wrapped module, NumPy basics
-related: user-guide/index.md, language-support/index.md
+related: user-guide/index.md, editing-semantic-pyi-contracts.md, language-support/index.md
 status: maintained
 ---
 
@@ -144,7 +144,10 @@ Fortran and C wrapper sources remain build artifacts; users do not edit them to
 change the Python API.
 
 The semantic `.pyi` described in [Semantic `.pyi` format](../reference/semantic-pyi-format.md) is the
-editable semantic contract and readiness surface. The normal CLI build is
+editable semantic contract and readiness surface. The supported edit workflow,
+including removal, addition, call projection, ownership, and destruction, is
+documented in [Editing semantic `.pyi` contracts](editing-semantic-pyi-contracts.md).
+The normal CLI build is
 source-driven: `--wrap` accepts Fortran sources and cannot be combined with
 `--pyi`. For the implemented `.pyi` subset, `--wrap` can instead accept a
 semantic `.pyi` file and native build artifacts such as `.o`, `.a`, or `.so`
@@ -208,7 +211,8 @@ the generated Python API while unaffected public declarations keep their runtime
 behavior.
 
 Misuse handling, diagnostic categories, and risky explicit-contract behavior are
-documented in [Semantic `.pyi` format](../reference/semantic-pyi-format.md).
+documented in [Editing semantic `.pyi` contracts](editing-semantic-pyi-contracts.md)
+and the [semantic `.pyi` format reference](../reference/semantic-pyi-format.md).
 
 The parity checklist is maintained in
 [Semantic `.pyi` wrapper checklist](../roadmap/semantic-pyi-wrapper-checklist.md).
@@ -216,6 +220,8 @@ The parity checklist is maintained in
 Runtime tests: [`test_pyi_wrapper_builds.py`](../../tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py),
 [`test_contract_package_runtime.py`](../../tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py),
 [`test_native_order_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py),
+[`test_ownership_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py),
+[`test_surface_edit_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_surface_edit_contracts.py),
 [`test_visibility_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_visibility_contracts.py), and
 [`test_policy_dispatch_contracts.py`](../../tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py).
 

@@ -8,6 +8,10 @@ status: maintained
 
 # Semantic `.pyi` Format
 
+For the supported edit workflow and runtime consequences of changing a
+contract, including ownership and destruction examples, see
+[Editing semantic `.pyi` contracts](../user-guide/editing-semantic-pyi-contracts.md).
+
 Semantic `.pyi` files are x2py's editable wrapper contract. They are valid
 Python stub files, but they are not meant to be clean static-type-checker stubs.
 They preserve native type, storage, ownership, shape and visibility facts that a
@@ -830,9 +834,9 @@ value: Annotated[
     ),
 ]
 ```
-For example, a pointer array can be made a Python-owned snapshot only when the
-stub also supplies enough shape, nullability, lifetime, and release facts for
-the backend path being enabled.
+For example, a pointer array function result can be made a Python-owned
+snapshot only when the stub also supplies enough shape, nullability, lifetime,
+and release facts for the backend path being enabled.
 
 `Final[T]` is the only public constant spelling. Do not use
 `Annotated[T, Constant]` or `T[Constant]`.
@@ -1047,18 +1051,28 @@ in one overload set, and the public declaration must agree with the concrete
 call signature and return type. Missing, duplicate, ambiguous, and incompatible
 links are deterministic errors.
 
+When a module-level Python overload group is renamed, `generic=` preserves the
+native Fortran generic name:
+
+```python
+@overload("convert_integer", generic="convert")
+def convert_number(value: Ptr(Const(Int32))) -> Int32: ...
+```
+
 Python method names recover the native generic for ordinary operators. When
-two distinct Fortran generics share one Python method, the decorator carries
-the otherwise unrecoverable spelling:
+two distinct Fortran generics share one Python method, the decorator also
+carries the otherwise unrecoverable operator spelling:
 
 ```python
 @overload("equivalent_values", generic="operator(.eqv.)")
 def __eq__(self, other: value) -> Bool: ...
 ```
 
-The optional `generic=` argument is restricted to a compatible operator or
-assignment generic. It is currently emitted for `.eqv.` and `.neqv.`, which
-would otherwise be indistinguishable from `operator(==)` and `operator(/=)`.
+For module overloads, the optional `generic=` argument names the native generic
+when it differs from the Python overload-set name. For class methods it is
+restricted to a compatible operator or assignment generic. It is emitted for
+`.eqv.` and `.neqv.`, which would otherwise be indistinguishable from
+`operator(==)` and `operator(/=)`.
 
 The generated C extension exposes one callable for each generic name. It
 dispatches before conversion using the wrapped scalar dtype, array element
@@ -1431,6 +1445,11 @@ Loaded but usually not generated from source today:
 | generic `Annotated` constraints | preserved semantic constraints |
 | additional `@native_call` and `Returns[...]` edits | projection metadata beyond generated output mappings |
 | source-provenance array helpers | compatibility loading for older or edited stubs |
+
+Generic constraints are not silently treated as runtime checks. Fortran wrapper
+readiness reports `fortran_runtime_constraints_unsupported` until a named
+constraint has an implemented validator. Semantic coercions similarly report
+`fortran_runtime_coercions_unsupported` until a conversion action exists.
 
 ## Rejected Or Not Yet Supported
 

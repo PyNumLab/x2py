@@ -13,6 +13,8 @@ from x2py.ownership_policy import (
     CodegenAction,
     ObjectKind,
     PolicyActionDispatcher,
+    SetterAction,
+    SetterActionDispatcher,
     StorageMode,
     ownership_decision_for_codegen_variable,
 )
@@ -120,14 +122,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     start_language = "Fortran"
     _ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
-            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_numeric_argument",
-            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_numeric_argument",
-            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_numeric_argument",
-            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_numeric_argument",
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_numeric_direct_argument",
+            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_numeric_call_local_argument",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_numeric_direct_argument",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_numeric_identity_output_argument",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_numeric_copy_in_out_argument",
-            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_string_argument",
-            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_string_argument",
-            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_string_argument",
+            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_string_call_argument",
+            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_string_call_argument",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_string_copy_in_out_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_array_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_array_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_array_argument",
@@ -142,7 +144,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_scalar_result",
-            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_convert_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_convert_snapshot_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_convert_scalar_result",
             (ObjectKind.STRING, CodegenAction.COPY_OUT): "_convert_string_result",
             (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_convert_string_result",
@@ -155,6 +157,29 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_owned_custom_type_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_convert_owned_custom_type_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_convert_borrowed_custom_type_result",
+        }
+    )
+    _FUNCTION_ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_visible_function_argument",
+            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
+            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
+            (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
+            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
+            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
+            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
+            (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
         }
     )
     _REPLACEMENT_RESULT_DISPATCHER = PolicyActionDispatcher(
@@ -173,10 +198,34 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_build_copy_return_array_result",
         }
     )
+    _ALLOCATABLE_RESULT_HELPER_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_uses_heap_allocatable_result_helper",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_skips_allocatable_result_helper",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_skips_allocatable_result_helper",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_skips_allocatable_result_helper",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_skips_allocatable_result_helper",
+        }
+    )
     _FIELD_ASSIGNMENT_BY_POLICY: ClassVar[dict[AssignmentMode, type]] = {
         AssignmentMode.VALUE_COPY: Assign,
         AssignmentMode.ALIAS: AliasAssign,
     }
+    _FIELD_SETTER_POLICY_DISPATCHER = SetterActionDispatcher(
+        {
+            SetterAction.WRITE_THROUGH: "_build_field_setter",
+            SetterAction.REJECT_REPLACEMENT: "_skip_field_setter",
+            SetterAction.OMIT: "_skip_field_setter",
+        }
+    )
+    _FIELD_GETTER_POLICY_DISPATCHER = PolicyActionDispatcher(
+        {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_append_value_field_getter",
+            (ObjectKind.STRING, CodegenAction.COPY_OUT): "_append_value_field_getter",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_append_borrowed_array_field_getter",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_append_alias_field_getter",
+        }
+    )
     _MODULE_VARIABLE_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_scalar_module_variable",
@@ -489,24 +538,37 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """Convert one function argument and its optional projected result."""
         if isinstance(argument.var, FunctionAddress):
             return self._convert_argument(argument, function), None
-        decision = ownership_decision_for_codegen_variable(argument.var)
-        if not argument.bound_argument and decision.codegen_action is CodegenAction.HIDDEN_OUTPUT:
-            result = self._convert_result(argument.var, function.scope)
-            self._additional_exprs.extend(result["body"])
-            generated = {
-                "c_arg": None,
-                "f_arg": FunctionCallArgument(result["f_result"], keyword=argument.var.name),
-                "body": [],
-            }
-            return generated, result
+        return self._FUNCTION_ARGUMENT_POLICY_DISPATCHER.dispatch(
+            self,
+            argument.var,
+            argument,
+            function,
+        )
+
+    def _convert_visible_function_argument(self, _var, _decision, argument, function):
+        """Convert an ordinary Python-visible native argument."""
         generated = self._convert_argument(argument, function)
-        if argument.bound_argument:
-            return generated, None
-        if decision.codegen_action is CodegenAction.COPY_IN_OUT:
-            result = self._REPLACEMENT_RESULT_DISPATCHER.dispatch(self, argument.var, generated)
-            self._additional_exprs.extend(result["body"])
-            return generated, result
         return generated, None
+
+    def _convert_replacement_function_argument(self, _var, _decision, argument, function):
+        """Convert one visible argument and collect its replacement result."""
+        generated = self._convert_argument(argument, function)
+        result = self._REPLACEMENT_RESULT_DISPATCHER.dispatch(self, argument.var, generated)
+        self._additional_exprs.extend(result["body"])
+        return generated, result
+
+    def _convert_hidden_function_argument(self, _var, _decision, argument, function):
+        """Create native output storage for a Python-hidden argument."""
+        if argument.bound_argument:
+            raise ValueError(f"Bound argument {argument.var.name!r} cannot be a hidden output")
+        result = self._convert_result(argument.var, function.scope)
+        self._additional_exprs.extend(result["body"])
+        generated = {
+            "c_arg": None,
+            "f_arg": FunctionCallArgument(result["f_result"], keyword=argument.var.name),
+            "body": [],
+        }
+        return generated, result
 
     def _convert_function_result(self, function):
         """Convert the explicit function result into bridge result metadata."""
@@ -661,7 +723,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             the class attribute to C.
         """
         lhs = expr.lhs
-        decision = ownership_decision_for_codegen_variable(expr)
         getter_policy = expr.getter_ownership_decision
         setter_policy = expr.setter_ownership_decision
         if getter_policy is None or setter_policy is None:
@@ -691,30 +752,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         attrib = expr.clone(expr.name, lhs=self_obj)
         obj = self.scope.find(expr.name)
-        # Cast the C variable into a Python variable
-        if expr.rank > 0 and decision.nullable:
-            unallocated_body = [
-                Assign(getter_result_info["bind_var"], NIL),
-                *[
-                    Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
-                    for shape_var in getter_result_info["shape_vars"]
-                ],
-            ]
-            getter_body.append(
-                If(
-                    IfSection(
-                        ArrayAllocated(attrib),
-                        [AliasAssign(obj, attrib), *getter_result_info["body"]],
-                    ),
-                    IfSection(convert_to_literal(True), unallocated_body),
-                )
-            )
-        elif expr.rank > 0 or isinstance(expr.dtype, CustomDataType):
-            getter_body.append(AliasAssign(obj, attrib))
-            getter_body.extend(getter_result_info["body"])
-        else:
-            getter_body.append(Assign(getter_result_info["f_result"], attrib))
-            getter_body.extend(getter_result_info["body"])
+        self._FIELD_GETTER_POLICY_DISPATCHER.dispatch_decision(
+            self,
+            expr,
+            getter_policy,
+            attrib,
+            obj,
+            getter_result_info,
+            getter_body,
+        )
         self._additional_exprs.clear()
         self.exit_scope()
 
@@ -727,11 +773,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             scope=getter_scope,
         )
 
-        setter = (
-            None
-            if setter_policy.assignment_mode is AssignmentMode.NONE
-            else self._build_field_setter(expr, lhs, setter_policy)
-        )
+        setter = self._FIELD_SETTER_POLICY_DISPATCHER.dispatch(self, expr, setter_policy, lhs)
         return BindCClassProperty(
             lhs.cls_base.scope.get_python_name(expr.name),
             getter,
@@ -741,7 +783,45 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             setter_policy=setter_policy,
         )
 
-    def _build_field_setter(self, expr, lhs, setter_policy):
+    @staticmethod
+    def _skip_field_setter(_expr, _setter_policy, _lhs):
+        """Omit native setter emission when policy exposes no write-through path."""
+
+    @staticmethod
+    def _append_value_field_getter(_expr, _getter_policy, attrib, _obj, getter_result_info, getter_body):
+        """Copy a scalar-like field getter value into the C-visible result."""
+        getter_body.append(Assign(getter_result_info["f_result"], attrib))
+        getter_body.extend(getter_result_info["body"])
+
+    @staticmethod
+    def _append_alias_field_getter(_expr, _getter_policy, attrib, obj, getter_result_info, getter_body):
+        """Alias a borrowed field getter target before result conversion."""
+        getter_body.append(AliasAssign(obj, attrib))
+        getter_body.extend(getter_result_info["body"])
+
+    def _append_borrowed_array_field_getter(self, expr, getter_policy, attrib, obj, getter_result_info, getter_body):
+        """Alias a borrowed array field and handle nullable allocatable storage."""
+        if not getter_policy.nullable:
+            self._append_alias_field_getter(expr, getter_policy, attrib, obj, getter_result_info, getter_body)
+            return
+        unallocated_body = [
+            Assign(getter_result_info["bind_var"], NIL),
+            *[
+                Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type()))
+                for shape_var in getter_result_info["shape_vars"]
+            ],
+        ]
+        getter_body.append(
+            If(
+                IfSection(
+                    ArrayAllocated(attrib),
+                    [AliasAssign(obj, attrib), *getter_result_info["body"]],
+                ),
+                IfSection(convert_to_literal(True), unallocated_body),
+            )
+        )
+
+    def _build_field_setter(self, expr, setter_policy, lhs):
         """Build one field setter from completed storage and setter policies."""
         setter_name = self.scope.get_new_name(f"{lhs.dtype.name}_{expr.name}_setter".lower())
         setter_scope = self.scope.new_child_scope(setter_name, "function")
@@ -907,6 +987,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             attributes=properties_getters + properties,
             docstring=expr.docstring,
             class_type=expr.class_type,
+            decorators=expr.decorators,
             superclasses=expr.superclasses,
         )
 
@@ -1377,15 +1458,24 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             c_scope.insert_variable(dimension)
         return dimensions
 
-    def _convert_numeric_argument(self, var, decision, func):
-        """Convert numeric argument for the current wrapper."""
+    def _convert_numeric_direct_argument(self, var, decision, func):
+        """Convert a direct or in-place numeric argument."""
+        return self._build_numeric_argument(var, decision, needs_pointer_bridge=var.is_optional)
+
+    def _convert_numeric_call_local_argument(self, var, decision, func):
+        """Convert a call-local numeric argument through its completed storage mode."""
+        needs_pointer_bridge = var.is_optional or decision.storage_mode is StorageMode.ALIAS
+        return self._build_numeric_argument(var, decision, needs_pointer_bridge=needs_pointer_bridge)
+
+    def _convert_numeric_identity_output_argument(self, var, decision, func):
+        """Convert caller-supplied writable scalar output storage."""
+        return self._build_numeric_argument(var, decision, needs_pointer_bridge=True)
+
+    def _build_numeric_argument(self, var, decision, *, needs_pointer_bridge):
+        """Build the numeric bridge representation selected by policy dispatch."""
         name = var.name
         self.scope.insert_symbol(name)
         collisionless_name = self.scope.get_expected_name(name)
-        needs_pointer_bridge = var.is_optional or (
-            decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT and decision.storage_mode is StorageMode.ALIAS
-        )
-        needs_pointer_bridge |= decision.codegen_action is CodegenAction.IDENTITY_OUTPUT
         if needs_pointer_bridge:
             f_arg = var.clone(
                 collisionless_name,
@@ -1686,8 +1776,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             },
         }
 
-    def _convert_string_argument(self, var, decision, func):
-        """Convert string argument for the current wrapper."""
+    def _convert_string_call_argument(self, var, decision, func):
+        """Convert a call-local or identity string without replacement copy-back."""
+        return self._build_string_argument(var, decision, copy_back=False)
+
+    def _convert_string_copy_in_out_argument(self, var, decision, func):
+        """Convert an immutable string and copy native mutation into a replacement."""
+        return self._build_string_argument(var, decision, copy_back=True)
+
+    def _build_string_argument(self, var, decision, *, copy_back):
+        """Build string argument storage selected by strict policy dispatch."""
         name = var.name
         scope = self.scope
         scope.insert_symbol(name)
@@ -1757,7 +1855,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         post_body = []
         absent_body = []
         result_bind_var = None
-        if decision.codegen_action is CodegenAction.COPY_IN_OUT:
+        if copy_back:
             result_bind_var = Variable(
                 BindCPointer(),
                 scope.get_new_name(f"returned_{name}"),
@@ -1828,8 +1926,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _convert_scalar_result(self, orig_var, decision, orig_func_scope):
         """Convert scalar result for the current wrapper."""
-        if decision.codegen_action is CodegenAction.SNAPSHOT_COPY:
-            return self._build_snapshot_copy_scalar_result(orig_var)
         name = orig_var.name
         self.scope.insert_symbol(name)
         local_var = orig_var.clone(
@@ -1844,6 +1940,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "f_result": local_var,
         }
 
+    def _convert_snapshot_scalar_result(self, orig_var, decision, orig_func_scope):
+        """Copy a pointer scalar result into detached Python-visible storage."""
+        return self._build_snapshot_copy_scalar_result(orig_var)
+
     def _convert_owned_custom_type_result(self, orig_var, decision, orig_func_scope):
         """Convert an owned custom result through native value storage."""
         return self._convert_custom_type_result(
@@ -1851,6 +1951,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             decision,
             orig_func_scope,
             decision.storage_mode,
+            borrowed=False,
         )
 
     def _convert_borrowed_custom_type_result(self, orig_var, decision, orig_func_scope):
@@ -1860,9 +1961,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             decision,
             orig_func_scope,
             decision.boundary_storage_mode,
+            borrowed=True,
         )
 
-    def _convert_custom_type_result(self, orig_var, decision, orig_func_scope, local_storage_mode):
+    def _convert_custom_type_result(
+        self,
+        orig_var,
+        decision,
+        orig_func_scope,
+        local_storage_mode,
+        *,
+        borrowed,
+    ):
         """Build the concrete custom result representation selected by policy."""
         name = orig_var.name
         scope = self.scope
@@ -1881,7 +1991,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         # Create the C-compatible data pointer
         bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
 
-        if decision.codegen_action is CodegenAction.BORROWED_VIEW:
+        if borrowed:
             ptr_var = orig_var
             body = [CLocFunc(ptr_var, bind_var)]
         else:
@@ -2418,11 +2528,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     def _is_allocatable_copy_return_result(var):
         """Return whether is allocatable copy return result."""
         decision = ownership_decision_for_codegen_variable(var)
-        return bool(
-            var.is_ndarray
-            and decision.codegen_action is CodegenAction.COPY_OUT
-            and decision.storage_mode is StorageMode.HEAP
+        return FortranToCBridgeGenerator._ALLOCATABLE_RESULT_HELPER_DISPATCHER.dispatch_decision(
+            FortranToCBridgeGenerator, var, decision
         )
+
+    @staticmethod
+    def _uses_heap_allocatable_result_helper(var, decision):
+        """Return whether a copy-return array result needs allocatable helper collection."""
+        return decision.storage_mode is StorageMode.HEAP
+
+    @staticmethod
+    def _skips_allocatable_result_helper(_var, _decision):
+        """Return whether a non-copy-return array result skips allocatable helper collection."""
+        return False
 
     @staticmethod
     def _is_assumed_rank_array(var):

@@ -615,6 +615,31 @@ class state:
     assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
 
 
+def test_parse_pyi_text_self_only_generated_constructor_keeps_default_initializer():
+    module = parse_pyi_text(
+        """
+class state:
+    def __init__(self) -> None: ...
+
+    values: Annotated[Float64[:], Allocatable]
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert cls.origin.source_language == "fortran"
+    assert PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA not in cls.origin.metadata
+    assert cls.methods == []
+    assert "    def __init__(self) -> None: ..." in emit_module(module)
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+    codegen_cls = codegen_module.classes[0]
+    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is False
+
+
 def test_parse_pyi_text_bound_constructor_replaces_generated_keyword_initializer():
     module = parse_pyi_text(
         """
@@ -767,6 +792,25 @@ def convert(value: Int32) -> Int32: ...
         ("convert", ["convert_integer"])
     ]
     assert module.overload_sets[0].procedures[0].metadata["overload_target"] == "convert_integer"
+
+
+def test_parse_pyi_text_renames_module_generic_and_round_trips_native_name():
+    module = parse_pyi_text(
+        """
+@bind("convert")
+def convert_integer(value: Int32) -> Int32: ...
+
+@overload("convert_integer", generic="convert")
+def convert_number(value: Int32) -> Int32: ...
+""",
+        module_name="generic_mod",
+    )
+
+    overload = module.overload_sets[0]
+    assert overload.name == "convert_number"
+    assert overload.procedures[0].metadata["fortran_generic_name"] == "convert"
+    emitted = emit_module(module)
+    assert '@overload("convert_integer", generic="convert")' in emitted
 
 
 @pytest.mark.parametrize(

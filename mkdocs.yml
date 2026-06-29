@@ -7,6 +7,7 @@ nav:
   - User Guide:
       - Overview: user-guide/index.md
       - Fortran Wrapper Guide: user-guide/fortran-wrapper.md
+      - Editing Semantic .pyi Contracts: user-guide/editing-semantic-pyi-contracts.md
   - Tutorials:
       - Overview: tutorials/index.md
       - Basic Wrapper Tutorial: tutorials/basic-wrapper.md

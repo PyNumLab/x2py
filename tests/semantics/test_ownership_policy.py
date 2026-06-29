@@ -244,6 +244,30 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         == "_snapshot_copy_result_detail_lines"
     )
     assert (
+        CPythonBindingGenerator._RESULT_POLICY_DISPATCHER.handlers[(ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY)]
+        == "_convert_snapshot_policy_scalar_result"
+    )
+    assert (
+        CPythonBindingGenerator._ARGUMENT_POLICY_DISPATCHER.handlers[(ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT)]
+        == "_convert_identity_scalar_argument"
+    )
+    assert (
+        CPythonBindingGenerator._ARGUMENT_POLICY_DISPATCHER.handlers[(ObjectKind.STRING, CodegenAction.COPY_IN_OUT)]
+        == "_convert_replacement_string_argument"
+    )
+    assert (
+        CPythonBindingGenerator._ARGUMENT_CAST_GUARD_DISPATCHER.handlers[
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT)
+        ]
+        == "_append_unchecked_argument_cast"
+    )
+    assert (
+        CPythonBindingGenerator._ARGUMENT_CAST_GUARD_DISPATCHER.handlers[
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT)
+        ]
+        == "_append_replacement_argument_cast"
+    )
+    assert (
         CPythonBindingGenerator._RESULT_NOTE_DISPATCHER.handlers[(ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT)]
         == "_copy_return_result_notes"
     )
@@ -254,26 +278,90 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_build_copy_return_array_result",
         (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_build_copy_return_array_result",
     }
+    assert (
+        FortranToCBridgeGenerator._ALLOCATABLE_RESULT_HELPER_DISPATCHER.handlers[
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT)
+        ]
+        == "_uses_heap_allocatable_result_helper"
+    )
     dispatchers = (
         (FortranToCBridgeGenerator, "_ARGUMENT_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_FUNCTION_ARGUMENT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_RESULT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_REPLACEMENT_RESULT_DISPATCHER"),
         (FortranToCBridgeGenerator, "_NDARRAY_RESULT_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_ALLOCATABLE_RESULT_HELPER_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_FIELD_SETTER_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_FIELD_GETTER_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_MODULE_VARIABLE_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_ARGUMENT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_RESULT_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_ARGUMENT_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_ARGUMENT_DETAIL_DISPATCHER"),
+        (CPythonBindingGenerator, "_ARGUMENT_CAST_GUARD_DISPATCHER"),
         (CPythonBindingGenerator, "_RESULT_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_RESULT_DETAIL_DISPATCHER"),
         (CPythonBindingGenerator, "_RESULT_NOTE_DISPATCHER"),
         (CPythonBindingGenerator, "_PROPERTY_SETTER_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_BORROWED_GETTER_POLICY_DISPATCHER"),
+        (CPythonBindingGenerator, "_ARGUMENT_RETURN_PROJECTION_DISPATCHER"),
+        (CPythonBindingGenerator, "_PROJECTED_ARGUMENT_OBJECT_DISPATCHER"),
+        (CPythonBindingGenerator, "_ARRAY_ACCESS_VALIDATION_DISPATCHER"),
+        (CPythonBindingGenerator, "_ARRAY_RELEASE_POLICY_DISPATCHER"),
     )
     for generator, dispatcher_name in dispatchers:
         dispatcher = getattr(generator, dispatcher_name)
         assert dispatcher.handlers
         assert all(hasattr(generator, handler_name) for handler_name in dispatcher.handlers.values())
+
+    assert (
+        FortranToCBridgeGenerator._ARGUMENT_POLICY_DISPATCHER.handlers.keys()
+        == CPythonBindingGenerator._ARGUMENT_POLICY_DISPATCHER.handlers.keys()
+    )
+    assert (
+        FortranToCBridgeGenerator._RESULT_POLICY_DISPATCHER.handlers.keys()
+        == CPythonBindingGenerator._RESULT_POLICY_DISPATCHER.handlers.keys()
+    )
+    assert (
+        CPythonBindingGenerator._ARGUMENT_RETURN_PROJECTION_DISPATCHER.handlers[
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT, True)
+        ]
+        == "_project_native_argument_return"
+    )
+    assert (
+        CPythonBindingGenerator._PROJECTED_ARGUMENT_OBJECT_DISPATCHER.handlers[
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT, True)
+        ]
+        == "_record_projected_argument_object"
+    )
+    assert (
+        CPythonBindingGenerator._ARRAY_ACCESS_VALIDATION_DISPATCHER.handlers[
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT)
+        ]
+        == "_writable_array_access_validation"
+    )
+    assert (
+        FortranToCBridgeGenerator._FIELD_SETTER_POLICY_DISPATCHER.handlers[SetterAction.WRITE_THROUGH]
+        == "_build_field_setter"
+    )
+    assert (
+        FortranToCBridgeGenerator._FIELD_SETTER_POLICY_DISPATCHER.handlers[SetterAction.REJECT_REPLACEMENT]
+        == "_skip_field_setter"
+    )
+    assert (
+        FortranToCBridgeGenerator._FIELD_GETTER_POLICY_DISPATCHER.handlers[
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW)
+        ]
+        == "_append_borrowed_array_field_getter"
+    )
+    assert (
+        CPythonBindingGenerator._ARRAY_RELEASE_POLICY_DISPATCHER.handlers[DestructionPolicy.PYTHON_REFCOUNT]
+        == "_release_python_owned_array_memory"
+    )
+    assert (
+        CPythonBindingGenerator._ARRAY_RELEASE_POLICY_DISPATCHER.handlers[DestructionPolicy.BLOCKED]
+        == "_blocked_array_release_policy"
+    )
 
 
 def test_immutable_replacement_policy_is_complete_before_ir_lowering():
@@ -297,7 +385,159 @@ def normalize(
     assert decision.python_visible is True
 
 
-def test_pyi_policy_metadata_changes_pointer_field_behavior_and_round_trips():
+def test_immutable_derived_output_selects_wrapper_instance_and_inout_blocks():
+    semantic_type = _derived_type("point")
+    semantic_type.metadata["python_value_mutability"] = "immutable"
+
+    output = default_ownership_policy.decide_semantic_type(
+        semantic_type,
+        OwnershipContext.argument("out", projects_result=True, python_visible=True),
+    )
+    assert output.owner is OwnershipOwner.WRAPPER
+    assert output.transfer is TransferMode.WRAPPER_INSTANCE
+    assert output.destruction is DestructionPolicy.WRAPPER_DEALLOC
+    assert output.codegen_action is CodegenAction.HIDDEN_OUTPUT
+
+    inout = default_ownership_policy.decide_semantic_type(
+        semantic_type,
+        OwnershipContext.argument("inout", projects_result=True, python_visible=True),
+    )
+    assert inout.is_blocked
+    assert inout.blocker == "immutable derived inout replacement is not implemented"
+
+
+@pytest.mark.parametrize(
+    ("owner", "transfer", "destruction", "context"),
+    [
+        ("python", "copy_return", "python_refcount", OwnershipContext.result()),
+        ("python", "snapshot_copy", "python_refcount", OwnershipContext.result()),
+        ("caller", "call_local", "none", OwnershipContext.argument("in")),
+        ("caller", "in_place", "caller", OwnershipContext.argument("inout")),
+        ("native", "borrowed_view", "native_owner", OwnershipContext.module_variable()),
+        ("wrapper", "borrowed_view", "wrapper_dealloc", OwnershipContext.field()),
+        ("temporary", "call_local", "call_local", OwnershipContext.argument("in")),
+    ],
+)
+def test_explicit_supported_ownership_triples_remain_codegen_ready(
+    owner: str,
+    transfer: str,
+    destruction: str,
+    context: OwnershipContext,
+):
+    metadata: dict[str, object] = {}
+    set_ownership_metadata(
+        metadata,
+        owner=owner,
+        transfer=transfer,
+        destruction=destruction,
+    )
+
+    decision = default_ownership_policy.decide_semantic_type(
+        _array_type(metadata=metadata),
+        context,
+    )
+
+    assert decision.owner.value == owner
+    assert decision.transfer.value == transfer
+    assert decision.destruction.value == destruction
+    assert not decision.is_blocked
+
+
+@pytest.mark.parametrize(
+    ("owner", "transfer", "destruction"),
+    [
+        ("native", "copy_return", "native_owner"),
+        ("native", "borrowed_view", "python_refcount"),
+        ("python", "copy_return", "native_owner"),
+        ("python", "borrowed_view", "python_refcount"),
+        ("wrapper", "wrapper_instance", "python_refcount"),
+    ],
+)
+def test_contradictory_ownership_triples_fail_closed(
+    owner: str,
+    transfer: str,
+    destruction: str,
+):
+    metadata: dict[str, object] = {}
+    set_ownership_metadata(
+        metadata,
+        owner=owner,
+        transfer=transfer,
+        destruction=destruction,
+    )
+
+    decision = default_ownership_policy.decide_semantic_type(
+        _array_type(metadata=metadata),
+        OwnershipContext.result(),
+    )
+
+    assert decision.is_blocked
+    assert decision.owner is OwnershipOwner.UNKNOWN
+    assert decision.transfer is TransferMode.BLOCKED
+    assert decision.destruction is DestructionPolicy.BLOCKED
+    assert f"{owner}/{transfer}/{destruction}" in decision.blocker
+
+
+def test_explicit_blocked_policy_normalizes_all_lifetime_axes():
+    metadata: dict[str, object] = {}
+    set_ownership_metadata(
+        metadata,
+        owner="native",
+        transfer="blocked",
+        destruction="native_owner",
+    )
+
+    decision = default_ownership_policy.decide_semantic_type(
+        _array_type(metadata=metadata),
+        OwnershipContext.result(),
+    )
+
+    assert decision.owner is OwnershipOwner.UNKNOWN
+    assert decision.transfer is TransferMode.BLOCKED
+    assert decision.destruction is DestructionPolicy.BLOCKED
+    assert decision.codegen_action is CodegenAction.BLOCKED
+
+
+def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
+    cases = [
+        ("by_value", _scalar_type(), OwnershipContext.result()),
+        ("call_local_none", _scalar_type(), OwnershipContext.argument("in")),
+        ("call_local_cleanup", _string_type(), OwnershipContext.argument("out")),
+        ("caller_in_place", _array_type(), OwnershipContext.argument("inout")),
+        ("copy_return", _array_type(), OwnershipContext.result()),
+        ("snapshot_copy", _array_type(pointer=True), OwnershipContext.result()),
+        (
+            "native_borrowed_view",
+            _array_type(allocatable=True, metadata={"fortran_target": True}),
+            OwnershipContext.module_variable(),
+        ),
+        ("wrapper_borrowed_view", _array_type(allocatable=True), OwnershipContext.field()),
+        ("wrapper_instance", _derived_type(), OwnershipContext.result()),
+        ("wrapper_in_place", _derived_type(), OwnershipContext.argument("inout")),
+        ("blocked", _array_type(pointer=True), OwnershipContext.argument("out")),
+    ]
+
+    decisions = [
+        default_ownership_policy.decide_semantic_type(semantic_type, context)
+        for _label, semantic_type, context in cases
+    ]
+    transfer_modes = {decision.transfer for decision in decisions}
+    destruction_modes = {decision.destruction for decision in decisions}
+
+    assert transfer_modes == set(TransferMode)
+    assert destruction_modes == set(DestructionPolicy)
+
+    for label, decision in zip((case[0] for case in cases), decisions, strict=True):
+        if decision.transfer is TransferMode.BLOCKED:
+            assert decision.is_blocked, label
+            assert decision.codegen_action is CodegenAction.BLOCKED, label
+            assert decision.blocker, label
+        else:
+            assert not decision.is_blocked, label
+            assert decision.codegen_action is not CodegenAction.BLOCKED, label
+
+
+def test_pyi_policy_metadata_round_trips_pointer_snapshot_and_blocks_getters():
     blocked_type = _array_type(pointer=True)
     blocked = default_ownership_policy.decide_semantic_type(blocked_type, OwnershipContext.field())
     assert blocked.is_blocked
@@ -313,10 +553,14 @@ def test_pyi_policy_metadata_changes_pointer_field_behavior_and_round_trips():
         _array_type(pointer=True, metadata=metadata),
         OwnershipContext.field(),
     )
-    assert overridden.owner is OwnershipOwner.PYTHON
-    assert overridden.transfer is TransferMode.SNAPSHOT_COPY
-    assert overridden.destruction is DestructionPolicy.PYTHON_REFCOUNT
-    assert not overridden.is_blocked
+    assert overridden.is_blocked
+    assert overridden.blocker == "pointer array field and module snapshot accessors are not implemented"
+    module_overridden = default_ownership_policy.decide_semantic_type(
+        _array_type(pointer=True, metadata=metadata),
+        OwnershipContext.module_variable(),
+    )
+    assert module_overridden.is_blocked
+    assert module_overridden.blocker == "pointer array field and module snapshot accessors are not implemented"
 
     module = parse_pyi_text(
         """
@@ -333,8 +577,13 @@ class box:
     )
     field_type = module.classes[0].fields[0].semantic_type
     parsed = default_ownership_policy.decide_semantic_type(field_type, OwnershipContext.field())
-    assert parsed.transfer is TransferMode.SNAPSHOT_COPY
-    assert parsed.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert parsed.is_blocked
+
+    result = default_ownership_policy.decide_semantic_type(field_type, OwnershipContext.result())
+    assert result.owner is OwnershipOwner.PYTHON
+    assert result.transfer is TransferMode.SNAPSHOT_COPY
+    assert result.destruction is DestructionPolicy.PYTHON_REFCOUNT
+    assert result.codegen_action is CodegenAction.SNAPSHOT_COPY
 
     emitted = PyiPrinter().emit(field_type)
     assert 'Ownership("python")' in emitted
@@ -548,3 +797,44 @@ def test_scalar_accessor_policies_are_complete_before_ir_lowering():
         assert setter.codegen_action is CodegenAction.CALL_LOCAL_INPUT
         assert setter.assignment_mode is AssignmentMode.VALUE_COPY
         assert setter.setter_action is SetterAction.WRITE_THROUGH
+
+
+def test_derived_field_setter_policy_uses_value_copy_write_through():
+    module = SemanticModule(
+        name="layout",
+        classes=[
+            SemanticClass("point"),
+            SemanticClass("tagged_point", fields=[SemanticField("position", _derived_type("point"))]),
+        ],
+    )
+
+    complete_semantic_policies(module)
+
+    setter = module.classes[1].fields[0].metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    assert setter.kind is ObjectKind.DERIVED_TYPE
+    assert setter.assignment_mode is AssignmentMode.VALUE_COPY
+    assert setter.setter_action is SetterAction.WRITE_THROUGH
+
+
+def test_explicit_borrowed_derived_field_setter_rejects_replacement():
+    child_type = _derived_type("child")
+    set_ownership_metadata(
+        child_type.metadata,
+        owner="wrapper",
+        transfer="borrowed_view",
+        destruction="wrapper_dealloc",
+    )
+    module = SemanticModule(
+        name="finalizer",
+        classes=[
+            SemanticClass("child"),
+            SemanticClass("parent", fields=[SemanticField("value", child_type)]),
+        ],
+    )
+
+    complete_semantic_policies(module)
+
+    setter = module.classes[1].fields[0].metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    assert setter.kind is ObjectKind.DERIVED_TYPE
+    assert setter.transfer is TransferMode.BORROWED_VIEW
+    assert setter.setter_action is SetterAction.REJECT_REPLACEMENT

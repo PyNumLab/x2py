@@ -619,16 +619,14 @@ class _PyiAstParser:
     ) -> SemanticFunction:
         candidate = deepcopy(target)
         candidate.visibility = declaration.visibility
-        candidate.metadata[OVERLOAD_TARGET_METADATA] = target.native_name or target.name
+        candidate.metadata[OVERLOAD_TARGET_METADATA] = target.name
         for key in (RUNTIME_HOLD_GIL_METADATA, RUNTIME_STATUS_ERROR_METADATA):
             if key in declaration.metadata:
                 candidate.metadata[key] = deepcopy(declaration.metadata[key])
 
         if isinstance(owner, SemanticModule):
-            if generic_name is not None:
-                raise ValueError("overload generic is only valid for class operator and assignment declarations")
             self._validate_overload_signature(declaration, candidate, list(candidate.arguments))
-            candidate.metadata[FORTRAN_GENERIC_NAME_METADATA] = declaration.name
+            candidate.metadata[FORTRAN_GENERIC_NAME_METADATA] = generic_name or declaration.name
             candidate.metadata[OVERLOAD_KIND_METADATA] = "generic"
             return candidate
 
@@ -1726,7 +1724,10 @@ class _PyiAstParser:
                 continue
             if existing.intent != "out":
                 existing.intent = "inout"
-            if _PyiAstParser._is_visible_storage_projection(existing):
+            immutable_replacement = (
+                existing.semantic_type.metadata.get(PYTHON_VALUE_MUTABILITY_METADATA) == PYTHON_VALUE_IMMUTABLE
+            )
+            if immutable_replacement or _PyiAstParser._is_visible_storage_projection(existing):
                 existing.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
             existing.semantic_type.ownership.mutable = True
 
@@ -1878,6 +1879,18 @@ class _ClassBodyVisitor(ast.NodeVisitor):
     @staticmethod
     def _is_generated_constructor(node: ast.FunctionDef) -> bool:
         args = node.args
+        if (
+            node.name == "__init__"
+            and len(args.args) == 1
+            and args.args[0].arg == "self"
+            and args.args[0].annotation is None
+            and not args.defaults
+            and not args.kwonlyargs
+            and not args.vararg
+            and not args.kwarg
+            and not args.posonlyargs
+        ):
+            return True
         return (
             node.name == "__init__"
             and len(args.args) == 1

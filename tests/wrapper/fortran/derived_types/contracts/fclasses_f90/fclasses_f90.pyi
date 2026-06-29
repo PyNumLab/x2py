@@ -25,6 +25,8 @@ class vector:
     def magnitude(self) -> Float64: ...
 
 class vector_store:
+    def __init__(self) -> None: ...
+
     values: Annotated[Float64[:], Allocatable]
     matrix: Annotated[Float64[:, :], ORDER_F, Allocatable]
 

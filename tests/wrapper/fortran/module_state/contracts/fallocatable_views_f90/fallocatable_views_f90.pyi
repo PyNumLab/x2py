@@ -1,4 +1,6 @@
 class buffer:
+    def __init__(self) -> None: ...
+
     values: Annotated[Float64[:], Allocatable]
 
     def allocate_values(

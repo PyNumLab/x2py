@@ -579,6 +579,13 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+        self._check_runtime_validation_policy(
+            semantic_type,
+            owner=owner,
+            item=item,
+            unit=unit,
+            unit_kind=unit_kind,
+        )
         if self._is_assumed_type(semantic_type):
             self._add_blocker(
                 "fortran_assumed_type_policy_missing",
@@ -631,6 +638,43 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+
+    def _check_runtime_validation_policy(
+        self,
+        semantic_type: SemanticType,
+        *,
+        owner: str,
+        item: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        constraints = sorted(
+            {constraint.name for constraint in semantic_type.constraints if constraint.name != "Constant"}
+        )
+        if constraints:
+            self._add_blocker(
+                "fortran_runtime_constraints_unsupported",
+                "Generic semantic constraints do not yet have Fortran wrapper runtime validators.",
+                {
+                    "owner": owner,
+                    "item": item,
+                    "constraints": constraints,
+                },
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+        if semantic_type.coercions:
+            self._add_blocker(
+                "fortran_runtime_coercions_unsupported",
+                "Semantic coercions do not yet have Fortran wrapper conversion actions.",
+                {
+                    "owner": owner,
+                    "item": item,
+                    "coercions": [coercion.source_type for coercion in semantic_type.coercions],
+                },
+                unit=unit,
+                unit_kind=unit_kind,
+            )
 
     def _check_ownership_policy(
         self,

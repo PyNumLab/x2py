@@ -141,6 +141,27 @@ class PolicyActionDispatcher:
 
 
 @dataclass(frozen=True)
+class PolicyProjectionDispatcher:
+    handlers: Mapping[tuple[ObjectKind, CodegenAction, bool], str]
+
+    def handler_name_for_decision(self, decision: OwnershipDecision, name: str) -> str:
+        key = (decision.kind, decision.codegen_action, decision.projects_result)
+        try:
+            return self.handlers[key]
+        except KeyError:
+            raise ValueError(
+                f"No projection handler for {name!r}: "
+                f"{decision.kind.value}/{decision.codegen_action.value}/projects_result={decision.projects_result}"
+            ) from None
+
+    def dispatch(self, target: Any, var: Any, *args: Any, **kwargs: Any) -> Any:
+        decision = ownership_decision_for_codegen_variable(var)
+        name = str(getattr(var, "name", type(var).__name__))
+        handler = getattr(target, self.handler_name_for_decision(decision, name))
+        return handler(var, decision, *args, **kwargs)
+
+
+@dataclass(frozen=True)
 class SetterActionDispatcher:
     handlers: Mapping[SetterAction, str]
 
@@ -150,6 +171,19 @@ class SetterActionDispatcher:
         except KeyError:
             name = str(getattr(subject, "name", getattr(subject, "python_name", type(subject).__name__)))
             raise ValueError(f"No setter handler for {name!r}: {decision.setter_action.value}") from None
+        return getattr(target, handler_name)(subject, decision, *args)
+
+
+@dataclass(frozen=True)
+class DestructionPolicyDispatcher:
+    handlers: Mapping[DestructionPolicy, str]
+
+    def dispatch(self, target: Any, subject: Any, decision: OwnershipDecision, *args: Any) -> Any:
+        try:
+            handler_name = self.handlers[decision.destruction]
+        except KeyError:
+            name = str(getattr(subject, "name", getattr(subject, "python_name", type(subject).__name__)))
+            raise ValueError(f"No release handler for {name!r}: {decision.destruction.value}") from None
         return getattr(target, handler_name)(subject, decision, *args)
 
 
@@ -197,6 +231,20 @@ _CODEGEN_ACTION_BY_TRANSFER = {
     TransferMode.BORROWED_VIEW: CodegenAction.BORROWED_VIEW,
     TransferMode.WRAPPER_INSTANCE: CodegenAction.WRAPPER_INSTANCE,
     TransferMode.BLOCKED: CodegenAction.BLOCKED,
+}
+
+_VALID_DESTRUCTION_BY_OWNER_TRANSFER = {
+    (OwnershipOwner.PYTHON, TransferMode.BY_VALUE): frozenset({DestructionPolicy.PYTHON_REFCOUNT}),
+    (OwnershipOwner.PYTHON, TransferMode.COPY_RETURN): frozenset({DestructionPolicy.PYTHON_REFCOUNT}),
+    (OwnershipOwner.PYTHON, TransferMode.SNAPSHOT_COPY): frozenset({DestructionPolicy.PYTHON_REFCOUNT}),
+    (OwnershipOwner.CALLER, TransferMode.CALL_LOCAL): frozenset({DestructionPolicy.NONE, DestructionPolicy.CALL_LOCAL}),
+    (OwnershipOwner.CALLER, TransferMode.IN_PLACE): frozenset({DestructionPolicy.CALLER}),
+    (OwnershipOwner.NATIVE, TransferMode.BORROWED_VIEW): frozenset({DestructionPolicy.NATIVE_OWNER}),
+    (OwnershipOwner.WRAPPER, TransferMode.CALL_LOCAL): frozenset({DestructionPolicy.NONE}),
+    (OwnershipOwner.WRAPPER, TransferMode.IN_PLACE): frozenset({DestructionPolicy.WRAPPER_DEALLOC}),
+    (OwnershipOwner.WRAPPER, TransferMode.BORROWED_VIEW): frozenset({DestructionPolicy.WRAPPER_DEALLOC}),
+    (OwnershipOwner.WRAPPER, TransferMode.WRAPPER_INSTANCE): frozenset({DestructionPolicy.WRAPPER_DEALLOC}),
+    (OwnershipOwner.TEMPORARY, TransferMode.CALL_LOCAL): frozenset({DestructionPolicy.CALL_LOCAL}),
 }
 
 
@@ -325,6 +373,7 @@ class OwnershipPolicyResolver:
         decision = self._validate_pointer_decision(decision, facts, context)
         decision = self._complete_immutable_policy(decision, facts, context)
         decision = self._validate_result_projection(decision, context)
+        decision = self._validate_policy_combination(decision)
         return replace(
             decision,
             boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
@@ -371,10 +420,17 @@ class OwnershipPolicyResolver:
             assignment_mode=(
                 AssignmentMode.ALIAS if storage.storage_mode is StorageMode.ALIAS else AssignmentMode.VALUE_COPY
             ),
-            setter_action=(
-                SetterAction.WRITE_THROUGH if storage.kind is ObjectKind.SCALAR else SetterAction.REJECT_REPLACEMENT
-            ),
+            setter_action=self._setter_action(storage, incoming),
         )
+
+    @staticmethod
+    def _setter_action(storage: OwnershipDecision, incoming: OwnershipDecision) -> SetterAction:
+        """Select Python property setter exposure from completed storage and input policy."""
+        if storage.kind is ObjectKind.SCALAR:
+            return SetterAction.WRITE_THROUGH
+        if storage.kind is ObjectKind.DERIVED_TYPE and incoming.transfer is TransferMode.CALL_LOCAL:
+            return SetterAction.WRITE_THROUGH
+        return SetterAction.REJECT_REPLACEMENT
 
     def decide_semantic_function(self, function: Any, prefix: str = "") -> dict[str, OwnershipDecision]:
         name = f"{prefix}{function.name}"
@@ -823,6 +879,8 @@ class OwnershipPolicyResolver:
         blocker = None
         if context.is_argument and context.intent in {"out", "inout"}:
             blocker = "pointer output and reassociation code generation is not implemented"
+        elif facts.rank > 0 and (context.is_field or context.is_module_variable):
+            blocker = "pointer array field and module snapshot accessors are not implemented"
         elif facts.rank == 0 and (context.is_field or context.is_module_variable):
             blocker = "scalar pointer field and module accessors are not implemented"
         elif context.is_result and decision.transfer is not TransferMode.SNAPSHOT_COPY:
@@ -852,6 +910,29 @@ class OwnershipPolicyResolver:
             return decision
         if not context.is_argument or context.intent not in {"out", "inout"} or decision.is_blocked:
             return decision
+
+        if facts.is_custom:
+            if context.intent == "out" and context.projects_result:
+                return replace(
+                    decision,
+                    owner=OwnershipOwner.WRAPPER,
+                    transfer=TransferMode.WRAPPER_INSTANCE,
+                    destruction=DestructionPolicy.WRAPPER_DEALLOC,
+                    storage_mode=StorageMode.STACK,
+                    boundary_storage_mode=StorageMode.ALIAS,
+                    borrowed=False,
+                    mutates_native=True,
+                    reason="immutable derived output uses a new wrapper-owned native instance",
+                )
+            return replace(
+                decision,
+                owner=OwnershipOwner.UNKNOWN,
+                transfer=TransferMode.BLOCKED,
+                destruction=DestructionPolicy.BLOCKED,
+                borrowed=False,
+                blocker="immutable derived inout replacement is not implemented",
+                reason="derived replacement needs an explicit native copy/finalization policy",
+            )
 
         raw_policy = metadata.get(OWNERSHIP_POLICY_METADATA)
         explicit_transfer = raw_policy.get("transfer") if isinstance(raw_policy, Mapping) else None
@@ -917,6 +998,39 @@ class OwnershipPolicyResolver:
             borrowed=False,
             blocker="copy_return argument policy requires an explicit projected result",
             reason="argument replacement has no Python result projection",
+        )
+
+    @staticmethod
+    def _validate_policy_combination(decision: OwnershipDecision) -> OwnershipDecision:
+        """Reject owner, transfer, and destruction triples with no implemented lifetime."""
+        if decision.is_blocked:
+            return replace(
+                decision,
+                owner=OwnershipOwner.UNKNOWN,
+                transfer=TransferMode.BLOCKED,
+                destruction=DestructionPolicy.BLOCKED,
+                borrowed=False,
+                blocker=decision.blocker or "blocked by ownership policy",
+            )
+
+        allowed = _VALID_DESTRUCTION_BY_OWNER_TRANSFER.get((decision.owner, decision.transfer))
+        if allowed is not None and decision.destruction in allowed:
+            return decision
+
+        expected = (
+            "no supported destruction policy"
+            if allowed is None
+            else "expected " + " or ".join(sorted(policy.value for policy in allowed))
+        )
+        triple = f"{decision.owner.value}/{decision.transfer.value}/{decision.destruction.value}"
+        return replace(
+            decision,
+            owner=OwnershipOwner.UNKNOWN,
+            transfer=TransferMode.BLOCKED,
+            destruction=DestructionPolicy.BLOCKED,
+            borrowed=False,
+            blocker=f"ownership policy {triple} is contradictory or unsupported; {expected}",
+            reason="ownership, boundary transfer, and release responsibility must form a supported triple",
         )
 
     @staticmethod

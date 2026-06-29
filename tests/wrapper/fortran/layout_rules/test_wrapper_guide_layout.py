@@ -38,7 +38,9 @@ SUBJECT_TEST_MODULES = {
     "real_libraries": ("test_real_blas_lapack.py", "test_stage7_native_bundles.py"),
     "edit_pyi_contracts": (
         "test_native_order_contracts.py",
+        "test_ownership_contracts.py",
         "test_policy_dispatch_contracts.py",
+        "test_surface_edit_contracts.py",
         "test_visibility_contracts.py",
     ),
     "arrays": (

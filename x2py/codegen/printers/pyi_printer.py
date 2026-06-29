@@ -195,7 +195,7 @@ class PyiPrinter:
                     name_owner=("overload", overload_set.name),
                 )
                 indent = ""
-            generic = self._overload_generic_argument(candidate)
+            generic = self._overload_generic_argument(candidate, overload_set.name)
             definitions.append(f'{indent}@overload("{target}"{generic})\n{definition}')
         return "\n\n".join(definitions)
 
@@ -586,11 +586,13 @@ class PyiPrinter:
         )
 
     @staticmethod
-    def _overload_generic_argument(procedure: SemanticFunction) -> str:
+    def _overload_generic_argument(procedure: SemanticFunction, public_name: str) -> str:
         """Handle overload generic argument for the current generation context."""
+        generic_name = str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, ""))
+        if procedure.metadata.get(OVERLOAD_KIND_METADATA) == "generic":
+            return "" if generic_name == public_name else f', generic="{generic_name}"'
         if procedure.metadata.get(OVERLOAD_KIND_METADATA) not in {"operator", "comparison"}:
             return ""
-        generic_name = str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, ""))
         if re.sub(r"\s+", "", generic_name).casefold() not in {
             "operator(.eqv.)",
             "operator(.neqv.)",
@@ -680,6 +682,8 @@ class PyiPrinter:
         arguments = [
             self._constructor_argument(field) for field in cls.fields if self._constructor_accepts_field(field)
         ]
+        if not arguments and cls.fields:
+            return "    def __init__(self) -> None: ..."
         if not arguments:
             return ""
         return self._emit_callable(

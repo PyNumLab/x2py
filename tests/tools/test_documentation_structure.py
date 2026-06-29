@@ -184,6 +184,7 @@ SOURCE_NAVIGATION_PUBLIC_DOCS = [
     "docs/examples-gallery/recipes/inspect-fortran-api.md",
     "docs/examples-gallery/recipes/semantic-pyi-contracts.md",
     "docs/user-guide/fortran-wrapper.md",
+    "docs/user-guide/editing-semantic-pyi-contracts.md",
     "docs/reference/cli-commands.md",
     "docs/reference/diagnostic-codes.md",
     "docs/reference/python-api.md",

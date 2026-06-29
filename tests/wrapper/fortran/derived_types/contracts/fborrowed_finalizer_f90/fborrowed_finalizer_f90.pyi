@@ -3,6 +3,8 @@ class child:
     pass
 
 class parent:
+    def __init__(self) -> None: ...
+
     value: child
 
 def get_final_count() -> Int32: ...

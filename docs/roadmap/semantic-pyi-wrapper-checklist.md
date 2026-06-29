@@ -52,67 +52,10 @@ evidence section instead of leaving completed and incomplete work interleaved.
 
 ## Remaining implementation queue
 
-Only unfinished work belongs in this section. The ordering is intentional:
-contract output and build models stabilize first, feature parity builds on that
-foundation, replayable native build manifests and library-scale bundles prove
-the source-free build surface, and editable policy is reserved for the final
-stage.
-
-### Stage 8 — Editable contract semantics
-
-This stage is intentionally last: edited Python-facing contracts should build
-on the replayable native-input and library-scale surfaces proven by Stages 6
-and 7.
-
-- [ ] Every editable wrapper feature has a modified `.pyi` fixture and a third
-  build whose runtime assertions prove the intentional contract change.
-- [ ] Removing a public function, method, variable, constructor, overload
-  candidate, or class member from `.pyi` removes it from the generated Python
-  API.
-- [ ] Marking a declaration `@private` or `private[...]` keeps it available as a
-  wrapper input when needed internally but hides it from the public Python
-  surface.
-- [ ] User-private declarations remain printable and loadable, while ordinary
-  source-private declarations remain omitted from generated `.pyi` files.
-- [ ] `@bind(...)`, `@overload(...)`, and `@native_call(...)` express renamed or
-  projected native calls without source reparsing.
-- [ ] Function and method contracts express validation, coercion, ownership,
-  lifetime, shape, and error-status projection policy consumed by readiness and
-  wrapper generation.
-- [ ] `Ownership(...)`, `Transfer(...)`, and `Destruction(...)` policy metadata
-  are the single editable `.pyi` source for ownership, boundary movement, and
-  release behavior. Every transfer and destruction mode documented in
-  [Semantic `.pyi` format](../reference/semantic-pyi-format.md#ownership-transfer-and-destruction-policies)
-  has matching diagnostics and wrapper-generation behavior.
-- [ ] Contradictory or incomplete edited contracts fail during readiness or
-  wrapper generation with precise diagnostics instead of silently falling back
-  to source-derived behavior.
-
-#### Policy-driven bridge and binding generation
-
-- [ ] Complete every contract value's object kind, ownership, transfer,
-  destruction, mutability/writeback, nullability, result projection, and storage
-  mode (`stack`, `heap`, or `alias`) in the single post-IR policy stage before
-  readiness or `ir2ast.py`.
-- [ ] Represent bridge/binding behavior with backend-neutral completed actions,
-  including call-local input, in-place mutation, identity output, hidden output,
-  copy-in/copy-out replacement, snapshot copy, borrowed view, wrapper instance,
-  and blocker actions.
-- [ ] Replace bridge argument and result policy branches with strict dispatch
-  tables keyed by completed object kind and action, with one small named method
-  per supported behavior and no policy fallback.
-- [ ] Replace binding argument, result, projection, and release-policy branches
-  with the same strict completed-policy dispatch model.
-- [ ] Remove bridge/binding inference from datatype, `intent`, dotted-variable
-  shape, `is_alias`, or local `memory_handling` checks wherever the condition is
-  deciding semantic behavior rather than implementing an already-selected code
-  block.
-- [ ] Implement `Immutable` writable arguments as policy-selected mutable native
-  temporaries: copy in for `intent(inout)`, copy out only when replacement is
-  projected, and never mutate the original Python-visible value.
-- [ ] Add structural tests that every supported object-kind/action pair has a
-  named bridge and binding handler, plus runtime modified-`.pyi` evidence for
-  immutable scalar, string, array, and supported derived-type behavior.
+Only unfinished work belongs in this section. No Stage 8 implementation items
+are currently open. When a new editable-contract gap is found, add it here with
+the exact missing runtime fixture, diagnostic, or policy-dispatch evidence
+before starting implementation.
 
 ## Completed evidence
 
@@ -451,6 +394,121 @@ bundle, order, transitive-library, and failure-path evidence lives in
   runtime behavior. Evidence:
   `tests/wrapper/fortran/edit_pyi_contracts/test_visibility_contracts.py` and
   `tests/wrapper/fortran/edit_pyi_contracts/modified_contracts/module_variables_visibility/`.
+- [x] A dedicated user guide documents the supported editable contract surface,
+  including what users may remove, hide, add, rename, project, validate, make
+  immutable, and declare as ownership/lifetime policy. It separates editable
+  wrapper policy from native ABI facts and records the failure layers for
+  edited contracts. Evidence:
+  `docs/user-guide/editing-semantic-pyi-contracts.md`,
+  `docs/user-guide/fortran-wrapper.md`, and
+  `tests/tools/test_documentation_structure.py`.
+- [x] Edited contracts can remove a class, method, generated constructor, class
+  member, and individual overload candidate from the Python API. They can also
+  add renamed `@bind(...)` declarations and a renamed module overload group
+  without reparsing native source. Evidence:
+  `tests/wrapper/fortran/edit_pyi_contracts/test_surface_edit_contracts.py`,
+  `tests/wrapper/fortran/edit_pyi_contracts/modified_contracts/foverloads_pruned_surface/`,
+  `tests/wrapper/fortran/edit_pyi_contracts/modified_contracts/foverloads_without_constructor_member/`,
+  and
+  `tests/wrapper/fortran/edit_pyi_contracts/modified_contracts/foverloads_added_bindings/`.
+- [x] Module overload groups can be renamed while preserving the native generic
+  name with `@overload("specific", generic="native_generic")`, and the printer
+  round-trips that metadata. Evidence:
+  `tests/pyi/test_pyi_to_ir.py::test_parse_pyi_text_renames_module_generic_and_round_trips_native_name`
+  and `docs/reference/semantic-pyi-format.md`.
+- [x] Explicit owner, transfer, and destruction triples are validated as a
+  complete lifetime policy instead of independent switches. Supported triples
+  remain codegen-ready; contradictory triples normalize to a blocked policy and
+  fail before bridge source is emitted. Evidence:
+  `tests/semantics/test_ownership_policy.py::test_explicit_supported_ownership_triples_remain_codegen_ready`,
+  `tests/semantics/test_ownership_policy.py::test_contradictory_ownership_triples_fail_closed`,
+  `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_contradictory_ownership_contract_fails_before_bridge_generation`,
+  and
+  `tests/wrapper/fortran/edit_pyi_contracts/invalid_contracts/contradictory_ownership/`.
+- [x] Every ownership transfer mode and destruction responsibility documented
+  in
+  [Semantic `.pyi` format](../reference/semantic-pyi-format.md#ownership-transfer-and-destruction-policies)
+  resolves during policy completion to either a concrete codegen action or a
+  fail-closed blocker. Evidence:
+  `tests/semantics/test_ownership_policy.py::test_documented_transfer_and_destruction_modes_resolve_or_fail_closed`.
+- [x] One editable ownership fixture proves three lifetimes for the same
+  rank-one `Float64` array concept: native-owned borrowed module storage,
+  wrapper-owned borrowed component storage, and Python/NumPy-owned copy-return
+  storage. A second fixture proves wrapper-owned borrowed children retain the
+  owner and finalize exactly once. Evidence:
+  `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py`,
+  `tests/wrapper/fortran/edit_pyi_contracts/modified_contracts/fallocatable_views_explicit_ownership/`,
+  and
+  `tests/wrapper/fortran/edit_pyi_contracts/modified_contracts/fborrowed_finalizer_explicit_ownership/`.
+- [x] `Immutable` writable scalar, string, array, and supported derived-type
+  output contracts use policy-selected mutable native temporaries, return
+  replacements, and do not mutate the original Python-visible value. Immutable
+  derived `intent(inout)` replacement remains blocked until a copy/finalization
+  policy exists. Evidence:
+  `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_immutable_scalar_string_array_and_derived_policies_return_replacements`
+  and
+  `tests/semantics/test_ownership_policy.py::test_immutable_derived_output_selects_wrapper_instance_and_inout_blocks`.
+- [x] Generic `Annotated` constraints and semantic coercions are not silently
+  accepted as runtime validation. Fortran wrapper readiness reports direct
+  blockers until named validators or conversion actions exist. Evidence:
+  `tests/semantics/test_semantic_wrap_readiness.py::test_readiness_blocks_generic_constraints_that_have_no_runtime_validator`
+  and `docs/reference/semantic-pyi-format.md`.
+- [x] Bridge-side function-argument conversion now dispatches projected hidden
+  outputs and copy-in/copy-out replacements through completed object-kind/action
+  policy. Numeric scalar, string replacement, scalar snapshot result, and
+  custom-result paths use named handlers instead of selecting behavior from raw
+  action checks inside the shared implementation block. Allocatable array
+  result-helper eligibility also dispatches from completed result policy instead
+  of checking `COPY_OUT` locally. Evidence:
+  `x2py/codegen/bridges/fortran_to_c.py` and
+  `tests/semantics/test_ownership_policy.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
+- [x] Binding-side projected argument returns now dispatch through completed
+  object-kind/action/projection policy. Native replacement outputs, hidden
+  outputs, Python-visible in-place returns, and non-projected arguments each use
+  named handlers instead of local action/projection branches in the result
+  packing loop. Array/scalar writable-access validation also dispatches from the
+  selected policy action instead of checking the action inside the shared
+  validator, and scalar snapshot-copy results have a dedicated binding result
+  handler. Scalar argument conversion now dispatches direct, call-local, and
+  identity-output cases into named methods before reaching shared casting code;
+  string call-local, identity, and replacement arguments likewise select their
+  cleanup/return behavior before reaching shared conversion code. Function
+  argument cast guards now dispatch replacement-nullability setup, scalar
+  identity-output validation, and ordinary checked casts through named handlers.
+  Bridge field setter emission also dispatches from completed `SetterAction`
+  policy, so rejected or omitted property setters no longer infer native setter
+  generation from assignment/storage details. Binding-side NumPy release flags
+  dispatch from completed destruction policy instead of comparing release
+  ownership at each result-wrapping site.
+  Evidence:
+  `x2py/codegen/bindings/c_to_python.py` and
+  `tests/semantics/test_ownership_policy.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
+- [x] The currently documented editable-contract surface has direct modified
+  runtime evidence or focused semantic/readiness evidence: removal and hiding,
+  added and renamed bindings, overload pruning and renamed overload groups,
+  native-order identity calls without `@native_call`, immutable replacement,
+  ownership triples, pointer-policy blockers, runtime constraints, `@raises`,
+  `@hold_gil`, and native-artifact failures. Evidence:
+  `docs/user-guide/editing-semantic-pyi-contracts.md`,
+  `tests/wrapper/fortran/edit_pyi_contracts/`,
+  `tests/semantics/test_semantic_wrap_readiness.py`,
+  `tests/wrapper/fortran/runtime_behavior/test_runtime_policy_decorators.py`,
+  `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py`, and
+  `tests/wrapper/CHECKLIST_COVERAGE.md`.
+- [x] The remaining Stage 8 bridge and binding policy dispatch audit is closed
+  for the current supported surface. Bridge field getters and setters dispatch
+  from completed getter/setter policy, derived value-copy setters are selected
+  by policy, explicit borrowed derived fields reject replacement setters, and
+  pointer module-variable or field snapshot accessors fail closed before
+  lowering. Remaining rank, datatype, `is_alias`, and storage checks in bridge
+  and binding code are local emitted-code, ABI, documentation, or object-model
+  mechanics rather than semantic policy selection. Evidence:
+  `x2py/ownership_policy.py`,
+  `x2py/codegen/bridges/fortran_to_c.py`,
+  `x2py/codegen/bindings/c_to_python.py`,
+  `tests/semantics/test_ownership_policy.py`,
+  `tests/wrapper/fortran/derived_types/test_derived_layout.py`, and
+  `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py`.
 
 ### Immutable Native Contract
 

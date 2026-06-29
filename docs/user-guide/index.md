@@ -2,7 +2,7 @@
 title: User Guide
 audience: users
 prerequisites: getting started
-related: fortran-wrapper.md, ../language-support/index.md
+related: fortran-wrapper.md, editing-semantic-pyi-contracts.md, ../language-support/index.md
 status: planned-documentation
 ---
 
@@ -15,6 +15,7 @@ practices, and related topics.
 ## Workflow Topics
 
 - [Fortran wrapper guide](fortran-wrapper.md)
+- [Editing semantic `.pyi` contracts](editing-semantic-pyi-contracts.md)
 - [Wrapping functions](wrapping-functions.md)
 - [Wrapping subroutines](wrapping-subroutines.md)
 - [Wrapping modules](wrapping-modules.md)

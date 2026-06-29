@@ -72,6 +72,25 @@ def test_readiness_completes_policy_before_blocker_checks():
     assert decision.transfer.value == "call_local"
 
 
+def test_readiness_blocks_generic_constraints_that_have_no_runtime_validator():
+    report = _readiness_from_pyi(
+        """
+def solve(value: Annotated[Int32, Bounded(1, 8), Finite]) -> Int32: ...
+"""
+    )
+
+    blocker = next(
+        item for item in report["wrappability_blockers"] if item["code"] == "fortran_runtime_constraints_unsupported"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "solver.solve.value",
+            "item": "value",
+            "constraints": ["Bounded", "Finite"],
+        }
+    ]
+
+
 def _write_ready_fortran(path: Path) -> Path:
     path.write_text(
         """module m
