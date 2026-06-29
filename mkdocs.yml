@@ -3,7 +3,14 @@ docs_dir: docs
 nav:
   - Home: index.md
   - Documentation Architecture: documentation-architecture.md
-  - Getting Started: getting-started/index.md
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Verification: getting-started/verification.md
+      - First Project: getting-started/first-project.md
+      - First Wrapped Function: getting-started/first-wrapped-function.md
+      - First Wrapped Module: getting-started/first-wrapped-module.md
+      - Common Beginner Workflow: getting-started/beginner-workflow.md
   - User Guide:
       - Overview: user-guide/index.md
       - Fortran Wrapper Guide: user-guide/fortran-wrapper.md
@@ -49,6 +56,7 @@ nav:
   - Roadmap:
       - Overview: roadmap/index.md
       - Semantic .pyi Wrapper Checklist: roadmap/semantic-pyi-wrapper-checklist.md
+      - Documentation Content Checklist: roadmap/documentation-content-checklist.md
   - FAQ: faq/index.md
   - Troubleshooting: troubleshooting/index.md
   - Changelog: changelog/index.md

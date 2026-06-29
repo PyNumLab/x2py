@@ -33,7 +33,8 @@ overview. Contribution and pull-request requirements remain in
 
 ## Site-Ready Documentation Areas
 
-- [Getting started](getting-started/index.md)
+- [Getting started](getting-started/index.md): maintained installation,
+  verification, first-project, function, module, and rebuild workflows
 - [User guide](user-guide/index.md)
 - [Tutorials](tutorials/index.md)
 - [Examples gallery](examples-gallery/index.md)
@@ -53,6 +54,7 @@ overview. Contribution and pull-request requirements remain in
 - [Semantic IR reference](reference/semantic-ir.md)
 - [Semantic `.pyi` format](reference/semantic-pyi-format.md)
 - [Semantic `.pyi` wrapper checklist](roadmap/semantic-pyi-wrapper-checklist.md)
+- [Documentation content checklist](roadmap/documentation-content-checklist.md)
 - [Diagnostic code registry](reference/diagnostic-codes.md)
 - [Fortran wrapper guide](user-guide/fortran-wrapper.md): supported Python API, examples,
   ownership, lifetime, naming, concurrency, and current limitations

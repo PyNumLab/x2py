@@ -2,7 +2,7 @@
 title: Roadmap
 audience: users, contributors, maintainers
 prerequisites: language support
-related: ../language-support/planned-features.md, semantic-pyi-wrapper-checklist.md
+related: ../language-support/planned-features.md, semantic-pyi-wrapper-checklist.md, documentation-content-checklist.md
 status: active-roadmap
 ---
 
@@ -14,6 +14,7 @@ ideas, and long-term vision.
 ## Planned Features
 
 - [Semantic `.pyi` wrapper checklist](semantic-pyi-wrapper-checklist.md)
+- [Documentation content checklist](documentation-content-checklist.md)
 - TODO: Populate from accepted roadmap issues and maintained checklists.
 
 ## In-Progress Features

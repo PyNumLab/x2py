@@ -1,28 +1,69 @@
 ---
 title: Getting Started
 audience: users
-prerequisites: none
-related: ../index.md, ../tutorials/basic-wrapper.md, ../user-guide/index.md
-status: planned-documentation
+prerequisites: repository checkout
+related: installation.md, verification.md, ../tutorials/basic-wrapper.md
+status: maintained
 ---
 
 # Getting Started
 
-This section will become the beginner path from installation to the first
-working wrapper.
+This section takes you from a source checkout to an imported Python extension.
+The shortest supported path wraps Fortran source with the GNU compiler
+toolchain. C parsing and interface inspection are available, but runtime
+wrapping of user-supplied C code is not implemented yet.
 
-## Pages
+## Beginner Path
 
-- [Installation](installation.md)
-- [Verification](verification.md)
-- [First project](first-project.md)
-- [First wrapped function](first-wrapped-function.md)
-- [First wrapped module](first-wrapped-module.md)
-- [Common beginner workflow](beginner-workflow.md)
+Follow these pages in order:
 
-## TODO
+1. [Install x2py and its native prerequisites](installation.md).
+2. [Verify Python, NumPy, the CLI, and the compilers](verification.md).
+3. [Create a minimal project](first-project.md).
+4. [Build and call a scalar function](first-wrapped-function.md).
+5. [Work with a Fortran module and its saved state](first-wrapped-module.md).
+6. [Use the normal edit, inspect, build, test, and rebuild loop](beginner-workflow.md).
 
-- TODO: Promote the verified beginner commands from `../tutorials/basic-wrapper.md` into this
-  section without duplicating unsupported behavior.
-- TODO: Add platform-specific installation links after the supported packaging
-  story is finalized.
+The [basic wrapper tutorial](../tutorials/basic-wrapper.md) combines inspection,
+semantic `.pyi` generation, readiness, compilation, and import into one longer
+walkthrough. Use the pages here when you need one step at a time.
+
+## What You Will Build
+
+The checked beginner example exposes a Fortran function as an importable
+CPython extension:
+
+```python
+import numpy as np
+
+from fruntime_abi_f90 import fruntime_abi_f90
+
+result = fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5))
+assert result == np.float64(7.5)
+```
+
+Contained Fortran modules are Python child modules. The extension above is
+`fruntime_abi_f90`, and its contained native module is available as
+`fruntime_abi_f90.fruntime_abi_f90`.
+
+## Current Boundary
+
+- Python 3.10 or newer is required; CI currently verifies 3.10, 3.11, and 3.12.
+- Runtime wrapper builds use GNU Fortran and C compilers, Python development
+  headers, and NumPy headers.
+- The verified platform is Ubuntu Linux with `gfortran-13`. Other compilers and
+  operating systems need their own ABI validation.
+- Exact NumPy scalar dtypes and array contracts are part of the generated API.
+- A readiness result of `Wrappable: yes` describes the semantic contract; it
+  does not create a C-input runtime backend.
+
+Check the [language feature matrix](../language-support/feature-matrix.md) before
+depending on an advanced construct. Installation, compiler, build, and import
+failures are routed through [Troubleshooting](../troubleshooting/index.md).
+
+## Evidence
+
+The commands and result used in this section are checked by
+[`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py)
+and the runtime build by
+[`test_runtime_abi.py`](../../tests/wrapper/fortran/build_from_source/test_runtime_abi.py).

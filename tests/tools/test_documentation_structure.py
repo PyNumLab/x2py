@@ -17,6 +17,7 @@ DOCS_ROOT = ROOT / "docs"
 FEATURE_MATRIX_PATH = DOCS_ROOT / "language-support/feature-matrix.md"
 CLI_REFERENCE_PATH = DOCS_ROOT / "reference/cli-commands.md"
 PYTHON_API_REFERENCE_PATH = DOCS_ROOT / "reference/python-api.md"
+DOCUMENTATION_CHECKLIST_PATH = DOCS_ROOT / "roadmap/documentation-content-checklist.md"
 DOC_PATHS = sorted(path for path in DOCS_ROOT.rglob("*.md") if "old_docs" not in path.parts)
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
 REQUIRED_METADATA = {"title", "audience", "prerequisites", "related", "status"}
@@ -52,6 +53,20 @@ REQUIRED_REFERENCE_PAGES = [
     "reference/semantic-ir.md",
     "reference/semantic-pyi-format.md",
     "reference/diagnostic-codes.md",
+]
+REQUIRED_ROADMAP_PAGES = [
+    "roadmap/index.md",
+    "roadmap/semantic-pyi-wrapper-checklist.md",
+    "roadmap/documentation-content-checklist.md",
+]
+REQUIRED_GETTING_STARTED_PAGES = [
+    "getting-started/index.md",
+    "getting-started/installation.md",
+    "getting-started/verification.md",
+    "getting-started/first-project.md",
+    "getting-started/first-wrapped-function.md",
+    "getting-started/first-wrapped-module.md",
+    "getting-started/beginner-workflow.md",
 ]
 CLI_HELP_GROUP_HEADINGS = [
     "input selection:",
@@ -441,6 +456,36 @@ def test_required_reference_page_exists(relative_path: str) -> None:
 def test_reference_page_is_in_site_navigation(relative_path: str) -> None:
     site_configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
     assert relative_path in site_configuration
+
+
+@pytest.mark.parametrize("relative_path", REQUIRED_ROADMAP_PAGES)
+def test_required_roadmap_page_exists(relative_path: str) -> None:
+    assert (DOCS_ROOT / relative_path).is_file()
+
+
+@pytest.mark.parametrize("relative_path", REQUIRED_ROADMAP_PAGES)
+def test_roadmap_page_is_in_site_navigation(relative_path: str) -> None:
+    site_configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    assert relative_path in site_configuration
+
+
+@pytest.mark.parametrize("relative_path", REQUIRED_GETTING_STARTED_PAGES)
+def test_required_getting_started_page_is_maintained_and_navigable(relative_path: str) -> None:
+    path = DOCS_ROOT / relative_path
+    assert path.is_file()
+    metadata, body = _front_matter(path)
+    assert metadata["status"] == "maintained"
+    assert relative_path in (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    for target in MARKDOWN_LINK.findall(body):
+        if target.startswith(("http://", "https://")):
+            continue
+        assert (path.parent / target).resolve().exists(), f"{relative_path}: missing link target {target}"
+
+
+@pytest.mark.parametrize("relative_path", REQUIRED_GETTING_STARTED_PAGES)
+def test_getting_started_page_is_completed_in_documentation_checklist(relative_path: str) -> None:
+    checklist = DOCUMENTATION_CHECKLIST_PATH.read_text(encoding="utf-8")
+    assert f"- [x] `docs/{relative_path}`" in checklist
 
 
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)
