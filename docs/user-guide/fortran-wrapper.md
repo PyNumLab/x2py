@@ -1202,7 +1202,10 @@ Runtime tests: [`test_inheritance.py`](../../tests/wrapper/fortran/derived_types
 Native allocation runs Fortran default component initialization. Unless an
 edited `.pyi` chooses another constructor contract, x2py generates a
 keyword-only Python initializer for public rank-0 numeric, logical, and complex
-components. Omitted keywords preserve the native initialized value.
+components. Omitted keywords preserve the native initialized value. When a
+generated class has fields but none are eligible constructor keywords, its
+contract instead contains `def __init__(self) -> None: ...` so default
+construction remains explicit.
 
 ```fortran
 type :: settings
@@ -1223,9 +1226,9 @@ derived components are not automatic constructor keywords.
 
 ### Edited Constructor Contracts
 
-Removing the generated `__init__(self, *, ...)` declaration from an edited
-`.pyi` suppresses that constructor; x2py does not regenerate it. To use one
-concrete native initializer, bind `__init__` to another same-class method:
+Removing either generated `__init__` form from an edited `.pyi` suppresses
+public construction; x2py does not regenerate it. To use one concrete native
+initializer, bind `__init__` to another same-class method:
 
 ```python
 class settings:

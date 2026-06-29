@@ -11,6 +11,8 @@ class particle:
     position: Float64[3]
 
 class vector3:
+    def __init__(self) -> None: ...
+
     values: Float64[3]
 
 counter: Int32

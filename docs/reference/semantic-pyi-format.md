@@ -1230,11 +1230,17 @@ class state:
     scale: Float64 = 2.5
 ```
 
+If a generated class has fields but none can be constructor keywords, the stub
+emits the self-only form `def __init__(self) -> None: ...`. This declaration
+keeps native default construction explicit in the editable contract; arrays,
+allocatables, pointers, characters, and derived-type fields still do not become
+constructor arguments.
+
 An edited stub controls whether that generated constructor remains part of the
-Python surface. If the generated `__init__(self, *, ...)` declaration is
-removed, wrapper generation must not recreate the keyword constructor. A class
-left without any `__init__` keeps only native allocation and has no Python
-initializer arguments.
+Python surface. If either generated `__init__` form is removed, wrapper
+generation must not recreate it. A class left without any `__init__` has no
+public Python constructor; native allocation remains an internal wrapper
+operation only.
 
 An edited stub may instead replace the generated field-keyword constructor by
 binding `__init__` to one concrete class method with

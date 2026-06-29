@@ -125,10 +125,11 @@ This rule applies to top-level functions, module variables, classes, methods,
 fields, constructors, and individual overload declarations. x2py does not
 recreate a deleted declaration from native source.
 
-For a generated derived-type constructor, removing the generated keyword-only
-`__init__(self, *, ...)` declaration also suppresses that constructor. Native
-allocation may still exist internally, but the deleted public constructor is
-not regenerated.
+Generated derived types use `__init__(self, *, ...)` when they have eligible
+scalar field keywords and `__init__(self)` when they support only native
+default construction. Removing either generated declaration suppresses public
+construction. Native allocation may still exist internally, but the deleted
+public constructor is not regenerated.
 
 ### Hide a declaration but keep it available internally
 
