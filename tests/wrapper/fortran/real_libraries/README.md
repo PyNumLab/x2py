@@ -16,6 +16,11 @@ compilation runs in parallel after required module sources are compiled; set
 Runtime smoke assertions call selected routines from the fully wrapped modules;
 they do not build a selected-procedure wrapper.
 
+The full BLAS/LAPACK wrapper builds use `-O0 -g0` for generated wrapper C and
+Fortran bridge compilation. These jobs validate large wrapper generation and
+import/runtime behavior; they are not runtime-performance benchmarks, so the
+fast compile override keeps CI focused on wrapper correctness.
+
 GitHub Actions pins the real-library jobs to `ubuntu-24.04` with `gfortran-13`,
 warms this cache in a pre-matrix job, and then restores it in each Python
 matrix job. The key includes the runner OS, runner architecture, pinned

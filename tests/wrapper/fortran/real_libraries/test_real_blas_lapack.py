@@ -29,6 +29,7 @@ DEFAULT_NATIVE_CACHE_ROOT = REPO_ROOT / ".pytest_cache" / "x2py" / "real-library
 NATIVE_CACHE_VERSION = "full-library-v3"
 NATIVE_MODULE_SOURCE_STEMS = {"la_constants", "la_xisnan"}
 DEFAULT_NATIVE_COMPILE_JOB_LIMIT = 8
+FULL_LIBRARY_WRAPPER_FLAGS = ("-O0", "-g0")
 FULL_LIBRARY_CASES = {
     "blas": {
         "root_function_count": 155,
@@ -383,6 +384,8 @@ def test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_li
         extension_name=f"full_{library}",
         output_dir=tmp_path / "build" / library,
         native_objects=[shared],
+        wrapper_fortran_flags=FULL_LIBRARY_WRAPPER_FLAGS,
+        wrapper_c_flags=FULL_LIBRARY_WRAPPER_FLAGS,
     )
     module = _import_extension(result.module_name, result.output_dir, lazy=library == "lapack")
 
@@ -392,6 +395,9 @@ def test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_li
     assert native_plan["link_items"] == [{"kind": "shared_library", "path": str(shared)}]
     assert native_plan["compilation_units"] == []
     assert native_plan["module_dirs"] == []
+    assert result.manifest is not None
+    assert result.manifest["compiler"]["wrapper_fortran_flags"] == list(FULL_LIBRARY_WRAPPER_FLAGS)
+    assert result.manifest["compiler"]["wrapper_c_flags"] == list(FULL_LIBRARY_WRAPPER_FLAGS)
 
     if library == "blas":
         bridge = (result.output_dir / "bind_c_full_blas_wrapper.f90").read_text(encoding="utf-8").lower()
