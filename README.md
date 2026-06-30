@@ -525,13 +525,13 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 ## Documentation
 
-- [Documentation landing](docs/index.md): draft entry point for the future
-  documentation website.
+- [Documentation](docs/index.md): browse getting-started guides, tutorials,
+  examples, reference material, language support, and troubleshooting.
 - [Getting started](docs/getting-started/index.md): installation, verification,
-  first project, first wrapped function, module procedures, and the normal
+  first project, standalone procedures, modules, and the normal
   rebuild workflow.
-- [Documentation architecture](docs/documentation-architecture.md): site-ready
-  directory tree, page metadata contract, and maturity roadmap.
+- [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported Fortran
+  workflow from source inspection to an imported extension.
 - [Examples cookbook](docs/examples-gallery/verified-cookbook.md): checked Fortran wrapper builds and
   calls, inspection commands, compiler recipes, and Python API examples.
 - [Fortran wrapper guide](docs/user-guide/fortran-wrapper.md): generated Python behavior,
@@ -539,8 +539,6 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
   limitations.
 - [Developer guide](docs/developer-guide/maintainer-guide.md): implementation ownership,
   parser references, testing, fixtures, and change workflows.
-- [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported Fortran
-  workflow from source inspection to an imported extension.
 
 <!-- X2PY_C_DOCS_START
 - [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported user workflow,
