@@ -4,17 +4,17 @@ b: Final[Int32] = 3
 
 c: Final[Int32] = 2
 
-p_add: Final[Int32] = a + b
+p_add: Final[Int32] = 11
 
-p_sub: Final[Int32] = a - b
+p_sub: Final[Int32] = 5
 
-p_mul: Final[Int32] = b * c
+p_mul: Final[Int32] = 6
 
-p_div: Final[Int32] = a / c
+p_div: Final[Int32] = 4
 
-p_pow: Final[Int32] = c ** b
+p_pow: Final[Int32] = 8
 
-p_mix: Final[Int32] = (a + b) * c - 1
+p_mix: Final[Int32] = 21
 
 def all_exprs(
     x1: Int32[p_add],

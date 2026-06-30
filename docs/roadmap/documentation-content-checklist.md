@@ -48,28 +48,11 @@ Only unfinished documentation content belongs here. When a page is filled, move
 the item to completed content evidence and update the page status in the same
 change.
 
-### Project Entry And Site Shell
-
-- [ ] `docs/index.md`: replace the draft landing page with the current project
-  promise, supported workflow entry points, installation links, support matrix
-  links, limitation links, and a clear path to first successful wrapper build.
-- [ ] `docs/documentation-architecture.md`: resolve the remaining generator and
-  migration TODOs, then turn the page into the maintained documentation contract.
-- [ ] `docs/tutorials/index.md`: explain which tutorials are maintained and which
-  are planned, with expected prerequisites and runtime cost.
-- [ ] `docs/examples-gallery/index.md`: split verified cookbook recipes from
-  planned larger examples and state the evidence required for each example.
-- [ ] `docs/design/index.md`: explain which design documents are accepted
-  architecture and which are placeholders.
-- [ ] `docs/internal-architecture/index.md`: route maintainers to pipeline,
-  semantic pass, runtime, type-system, ownership, and symbol-table pages.
-- [ ] `docs/contributing/index.md`: route contributors to contribution,
-  pull-request, review, and coding-standard pages.
-
-<!-- X2PY_C_DOCS_START
-- [ ] `docs/user-guide/index.md`: group user guides by workflow and separate
-  current Fortran wrapper support from future C-input wrapper support.
-X2PY_C_DOCS_END -->
+The queue is ordered by execution priority and dependency. Complete current
+user workflows and their supporting references first. Leave larger example
+investments and site-publication decisions until the underlying content is
+stable. Within each section, work from foundational pages toward dependent or
+more specialized pages.
 
 ### User Guide
 
@@ -85,6 +68,11 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/user-guide/arrays.md`: document dtype mapping, rank and shape
   validation, contiguity, stride support, zero-sized arrays, order requirements,
   and NumPy error messages.
+- [ ] `docs/user-guide/optional-arguments.md`: document Python call syntax,
+  omitted arguments, defaults, unsupported optional combinations, and diagnostics.
+- [ ] `docs/user-guide/generic-interfaces.md`: document named generic overloads,
+  type-bound overloads, ambiguity handling, operator dispatch, and generated
+  `.pyi` overload stubs.
 - [ ] `docs/user-guide/allocatable-arrays.md`: document allocatable results,
   borrowed module or component views, replacement semantics, null or unallocated
   state, and ownership limits.
@@ -94,20 +82,15 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/user-guide/wrapping-derived-types.md`: document generated classes,
   constructors, fields, methods, finalizers, opaque layouts, accessor-only
   behavior, and unsupported polymorphic forms.
-- [ ] `docs/user-guide/callbacks.md`: document immediate callback arguments,
-  callback signatures, exception behavior, lifetime limits, GIL expectations,
-  and unsupported persistent procedure pointers.
-- [ ] `docs/user-guide/generic-interfaces.md`: document named generic overloads,
-  type-bound overloads, ambiguity handling, operator dispatch, and generated
-  `.pyi` overload stubs.
-- [ ] `docs/user-guide/optional-arguments.md`: document Python call syntax,
-  omitted arguments, defaults, unsupported optional combinations, and diagnostics.
-- [ ] `docs/user-guide/enumerations.md`: document generated constants or enum
-  shapes, supported Fortran enum forms, unsupported forms, and type-checking
-  expectations.
 - [ ] `docs/user-guide/memory-management.md`: document ownership transfer,
   borrowed views, destructor responsibility, finalization, release limits, and
   the policy-completion source of truth.
+- [ ] `docs/user-guide/callbacks.md`: document immediate callback arguments,
+  callback signatures, exception behavior, lifetime limits, GIL expectations,
+  and unsupported persistent procedure pointers.
+- [ ] `docs/user-guide/enumerations.md`: document generated constants or enum
+  shapes, supported Fortran enum forms, unsupported forms, and type-checking
+  expectations.
 - [ ] `docs/user-guide/error-handling.md`: document wrapper validation errors,
   native failure projection, diagnostics, traceback behavior, and cleanup
   guarantees.
@@ -117,39 +100,20 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/user-guide/distribution.md`: document what can be distributed today,
   native dependency constraints, platform caveats, and what remains future work.
 
-### Tutorials And Examples
+### Reference Material
 
-- [ ] `docs/tutorials/numerical-solver.md`: add a fast checked solver fixture,
-  build command, Python call, expected numeric output, and validation notes.
-- [ ] `docs/tutorials/scientific-library.md`: document a small multi-routine
-  library workflow, package shape, generated `.pyi` review, and regression
-  checks.
-- [ ] `docs/tutorials/modern-fortran-project.md`: document modules, derived
-  types, arrays, constructors, and limitations using checked modern Fortran
-  examples.
-- [ ] `docs/tutorials/large-fortran-codebase.md`: document source ordering,
-  dependency strategy, generated contract review, staged verification, and
-  current limits for automatic dependency discovery.
-- [ ] `docs/tutorials/packaging.md`: document packaging a generated extension,
-  native artifacts, wheel limitations, and reproducible build notes.
-- [ ] `docs/examples-gallery/blas-wrapper.md`: add the minimal BLAS-style
-  runtime example or document the external dependency, with build, import, and
-  numerical assertions.
-- [ ] `docs/examples-gallery/lapack-wrapper.md`: document the LAPACK example as
-  CI-owned by default, including why local runs are optional and what evidence CI
-  supplies.
-- [ ] `docs/examples-gallery/openmp-example.md`: document supported OpenMP path,
-  required compiler flags, runtime environment variables, and fallback behavior.
-- [ ] `docs/examples-gallery/object-oriented-fortran.md`: document classes,
-  type-bound procedures, construction, finalization, and unsupported object
-  model features with checked output.
-- [ ] `docs/examples-gallery/ode-solver.md`: add a compact checked ODE fixture,
-  expected result tolerance, and failure troubleshooting.
-- [ ] `docs/examples-gallery/cfd-mini-example.md`: define a small enough fixture,
-  supported array contracts, build command, and runtime validation.
-- [ ] `docs/examples-gallery/mpi-example.md`: keep this page explicitly
-  not-yet-implemented until MPI build, runtime, and distribution constraints have
-  real evidence.
+- [ ] `docs/reference/generated-functions.md`: document generated function and
+  subroutine signatures, output projection, validation errors, and overload
+  representation.
+- [ ] `docs/reference/generated-modules.md`: document generated module package
+  shape, module-level functions, variables, constants, hidden native names, and
+  import rules.
+- [ ] `docs/reference/generated-classes.md`: document generated class surfaces,
+  constructors, fields, methods, finalizers, ownership metadata, and unsupported
+  class shapes.
+- [ ] `docs/reference/configuration-files.md`: document public configuration
+  files only after their stable contract exists, including build manifests,
+  generated makefiles, coverage config, and docs tooling config.
 
 ### Troubleshooting, FAQ, And Releases
 
@@ -177,21 +141,6 @@ X2PY_C_DOCS_END -->
   supported languages, C-input future work, generated files, editable contracts,
   unsupported features, and where to report bugs.
 X2PY_C_DOCS_END -->
-
-### Reference Material
-
-- [ ] `docs/reference/configuration-files.md`: document public configuration
-  files only after their stable contract exists, including build manifests,
-  generated makefiles, coverage config, and docs tooling config.
-- [ ] `docs/reference/generated-modules.md`: document generated module package
-  shape, module-level functions, variables, constants, hidden native names, and
-  import rules.
-- [ ] `docs/reference/generated-functions.md`: document generated function and
-  subroutine signatures, output projection, validation errors, and overload
-  representation.
-- [ ] `docs/reference/generated-classes.md`: document generated class surfaces,
-  constructors, fields, methods, finalizers, ownership metadata, and unsupported
-  class shapes.
 
 ### Developer And Contributor Guides
 
@@ -281,6 +230,63 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/design/cpython-integration.md`: document CPython API usage, NumPy
   C API integration, extension module layout, reference ownership, and error
   propagation.
+X2PY_C_DOCS_END -->
+
+### Tutorials And Examples
+
+- [ ] `docs/tutorials/numerical-solver.md`: add a fast checked solver fixture,
+  build command, Python call, expected numeric output, and validation notes.
+- [ ] `docs/tutorials/scientific-library.md`: document a small multi-routine
+  library workflow, package shape, generated `.pyi` review, and regression
+  checks.
+- [ ] `docs/tutorials/modern-fortran-project.md`: document modules, derived
+  types, arrays, constructors, and limitations using checked modern Fortran
+  examples.
+- [ ] `docs/tutorials/large-fortran-codebase.md`: document source ordering,
+  dependency strategy, generated contract review, staged verification, and
+  current limits for automatic dependency discovery.
+- [ ] `docs/tutorials/packaging.md`: document packaging a generated extension,
+  native artifacts, wheel limitations, and reproducible build notes.
+- [ ] `docs/examples-gallery/blas-wrapper.md`: add the minimal BLAS-style
+  runtime example or document the external dependency, with build, import, and
+  numerical assertions.
+- [ ] `docs/examples-gallery/lapack-wrapper.md`: document the LAPACK example as
+  CI-owned by default, including why local runs are optional and what evidence CI
+  supplies.
+- [ ] `docs/examples-gallery/openmp-example.md`: document supported OpenMP path,
+  required compiler flags, runtime environment variables, and fallback behavior.
+- [ ] `docs/examples-gallery/object-oriented-fortran.md`: document classes,
+  type-bound procedures, construction, finalization, and unsupported object
+  model features with checked output.
+- [ ] `docs/examples-gallery/ode-solver.md`: add a compact checked ODE fixture,
+  expected result tolerance, and failure troubleshooting.
+- [ ] `docs/examples-gallery/cfd-mini-example.md`: define a small enough fixture,
+  supported array contracts, build command, and runtime validation.
+- [ ] `docs/examples-gallery/mpi-example.md`: keep this page explicitly
+  not-yet-implemented until MPI build, runtime, and distribution constraints have
+  real evidence.
+
+### Project Entry And Site Shell
+
+- [ ] `docs/index.md`: replace the draft landing page with the current project
+  promise, supported workflow entry points, installation links, support matrix
+  links, limitation links, and a clear path to first successful wrapper build.
+- [ ] `docs/documentation-architecture.md`: resolve the remaining generator and
+  migration TODOs, then turn the page into the maintained documentation contract.
+- [ ] `docs/tutorials/index.md`: explain which tutorials are maintained and which
+  are planned, with expected prerequisites and runtime cost.
+- [ ] `docs/examples-gallery/index.md`: split verified cookbook recipes from
+  planned larger examples and state the evidence required for each example.
+- [ ] `docs/design/index.md`: explain which design documents are accepted
+  architecture and which are placeholders.
+- [ ] `docs/internal-architecture/index.md`: route maintainers to pipeline,
+  semantic pass, runtime, type-system, ownership, and symbol-table pages.
+- [ ] `docs/contributing/index.md`: route contributors to contribution,
+  pull-request, review, and coding-standard pages.
+
+<!-- X2PY_C_DOCS_START
+- [ ] `docs/user-guide/index.md`: group user guides by workflow and separate
+  current Fortran wrapper support from future C-input wrapper support.
 X2PY_C_DOCS_END -->
 
 ## Completed Content Evidence
