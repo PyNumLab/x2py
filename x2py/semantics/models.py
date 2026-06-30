@@ -344,6 +344,7 @@ RESOLVED_CLASS_INSTANCE_POLICY_METADATA = "resolved_class_instance_policy"
 RESOLVED_CLASS_SELF_POLICY_METADATA = "resolved_class_self_policy"
 RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA = "resolved_getter_ownership_policy"
 RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA = "resolved_setter_ownership_policy"
+RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA = "resolved_module_variable_initializer"
 PYTHON_STATIC_METADATA = "python_static"
 
 

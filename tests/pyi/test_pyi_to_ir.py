@@ -193,6 +193,31 @@ def touch(
     assert module.functions[0].arguments[0].intent == "inout"
 
 
+def test_parse_pyi_text_accepts_mutable_module_literal_defaults():
+    source = """counter: Int32 = 41
+scale: Float64 = 2.5
+label: String[8] = "ready"
+"""
+
+    module = parse_pyi_text(source, module_name="runtime_state")
+
+    assert [variable.default_value for variable in module.variables[:2]] == ["41", "2.5"]
+    assert ast.literal_eval(module.variables[2].default_value) == "ready"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "counter: Int32 = f(42)\n",
+        "counter: Int32 = x + 1\n",
+        "counter: Int32 = SOME_NAME\n",
+    ],
+)
+def test_parse_pyi_text_rejects_mutable_module_expression_defaults(source):
+    with pytest.raises(ValueError, match="Mutable defaults must be literal values"):
+        parse_pyi_text(source, module_name="runtime_state")
+
+
 def test_parse_pyi_text_round_trips_enum_like_integer_constants():
     source = """STATUS_OK: Final[Int] = 0
 STATUS_NEXT: Final[Int] = STATUS_OK + 1

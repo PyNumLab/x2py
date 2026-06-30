@@ -1557,6 +1557,11 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
     dtype, shape = _semantic_variable_type_and_shape(semantic_type, scope, custom_types)
     name = _semantic_variable_name(node, scope)
     ownership_decision = _variable_ownership_decision(node)
+    default_value = (
+        node.default_value
+        if _is_constant(semantic_type)
+        else node.metadata.get(models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA)
+    )
     fortran_array_category, fortran_source_shape = _fortran_array_category_and_source_shape(semantic_type)
     var = Variable(
         dtype,
@@ -1576,7 +1581,7 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
         projected_output=bool(node.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)),
         assumed_rank=_is_assumed_rank(semantic_type),
         cls_base=cls_base,
-        default_value=node.default_value,
+        default_value=default_value,
     )
     scope.insert_variable(var, name=node.name)
     return var

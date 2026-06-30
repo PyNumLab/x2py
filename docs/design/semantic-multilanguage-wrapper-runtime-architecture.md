@@ -78,6 +78,7 @@ The system separates:
 | Runtime coercions | conversion registry and coercion graph |
 | Runtime validation | constraint checks on adapted values |
 | Validation contracts | reusable preconditions, postconditions, and invariants |
+| Initializer contracts | import-time initialization of native state through extension hooks |
 | Native ABI | backend adapters |
 | Source parsing | optional helper |
 
@@ -494,6 +495,60 @@ Contracts are higher-level than constraints. A constraint can say `b` has shape 
 
 ---
 
+## Runtime Initializer Contracts
+
+Runtime initializer contracts describe how mutable native state is initialized when a generated extension module is imported.
+
+They are separate from constants. A `Final[...]` declaration records an immutable API value, while an initializer contract writes a value into mutable native storage through the completed setter policy.
+
+The implemented minimal slice is literal defaults on mutable module variables:
+
+```python
+counter: Int32 = 41
+```
+
+That form can be lowered to a typed value and assigned through the generated extension setter after the native module is initialized.
+
+The longer-term contract is more general. An initializer expression may be executable Python:
+
+```python
+from .init_hooks import initial_counter, runtime_scale
+
+counter: Int32 = initial_counter(seed=41)
+scale: Float64 = 1.0 + runtime_scale()
+```
+
+Executable initializer contracts should run at the generated extension level, not by translating Python expressions into equivalent native bridge code. The extension can import Python modules, call Python hook functions, call generated Python wrappers if needed, convert the final result to the declared semantic type, and assign it through the generated setter for the native variable.
+
+Initializer contracts complement validation contracts:
+
+* initializers run during extension import
+* preconditions run before a wrapped function call
+* postconditions run after a wrapped function call
+* invariants may be checked after initialization and after later mutations
+
+Import-time initializer pipeline:
+
+```text
+Create extension module
+    ↓
+Install generated functions and properties
+    ↓
+Import requested Python hook modules
+    ↓
+Evaluate initializer expressions
+    ↓
+Convert initializer results to semantic types
+    ↓
+Assign through generated native setters
+    ↓
+Expose initialized module
+```
+
+Because executable initializers are user Python, their side effects, environment dependencies, import cycles, and exceptions belong to the user contract. If an initializer raises, extension import should fail with a diagnostic attached to the semantic declaration being initialized.
+
+---
+
 ## Important Concept Separation
 
 The architecture separates:
@@ -504,6 +559,7 @@ The architecture separates:
 | Coercion | how another type becomes it |
 | Constraint | local requirements on an adapted value |
 | Validation contract | API-level preconditions, postconditions, invariants, and aliasing rules |
+| Initializer contract | import-time native-state initialization through generated setters |
 | Backend adapter | semantic object → ABI representation |
 
 This separation is fundamental.
@@ -1011,9 +1067,10 @@ This allows:
 * Attach validation failures to source parameters and semantic declarations.
 * Run validation after coercion and before backend adaptation.
 
-### Phase 4: Runtime Validation Contracts
+### Phase 4: Runtime Contracts
 
 * Add reusable contract declarations for preconditions, postconditions, invariants, aliasing, mutation, and ownership.
+* Add initializer contracts for import-time native-state setup through generated extension setters.
 * Support named contract registration and inline contracts in the semantic interface.
 * Validate cross-argument relationships such as matching dimensions, shared devices, non-overlapping buffers, and stable object invariants.
 * Include contract traces in diagnostics.
@@ -1045,6 +1102,7 @@ The final system becomes:
 * a semantic coercion engine
 * a runtime validation engine
 * a runtime validation contract system
+* an extension-level initializer contract system
 * a modern replacement for old wrapper systems
 
 The key innovation is:
@@ -1064,11 +1122,13 @@ The architecture is built around:
 ```text
 Semantic API
         ↓
+Contract layer
+        ├─ Initializer contracts at extension import
+        └─ Validation contracts around wrapped calls
+        ↓
 Coercions
         ↓
 Constraints
-        ↓
-Validation contracts
         ↓
 Semantic runtime objects
         ↓
@@ -1085,6 +1145,7 @@ The project focuses on:
 * runtime coercion
 * runtime validation
 * runtime validation contracts
+* extension-level initializer contracts
 * scientific computing
 * extensibility
 * high performance

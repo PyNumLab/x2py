@@ -214,6 +214,14 @@ assert not hasattr(module_state_flat, "saved_counter")
 assert not hasattr(module_state_flat, "next_local")
 ```
 
+Both exported variable names route to the same native `counter` storage, but
+they are not required to be the same Python object:
+
+```python
+assert module_state_flat.counter == module_state_flat.current_count
+# Do not rely on: module_state_flat.counter is module_state_flat.current_count
+```
+
 These edits reshape Python exports only; they are not native ABI changes. Keep
 the leaf contract as the source of native facts, and use
 [Editing Semantic .pyi Contracts](../user-guide/editing-semantic-pyi-contracts.md)
@@ -236,6 +244,27 @@ def scaled_counter() -> Float64: ...
 
 def next_local() -> Int32: ...
 ```
+
+A literal default on a mutable scalar module variable is an import-time native
+initializer. For example, editing the leaf to:
+
+```python
+counter: Int32 = 41
+```
+
+keeps `counter` writable, but sets the native module storage when the extension
+is imported:
+
+```python
+assert module_state_flat.counter == np.int32(41)
+assert module_state_flat.summarize() == np.int32(53)
+
+module_state_flat.counter = np.int32(5)
+assert module_state_flat.summarize() == np.int32(17)
+```
+
+x2py applies that value through the generated native setter. The initializer
+must be a literal value, not a Python call or expression.
 
 Support boundaries for module state and other Fortran constructs are maintained
 in the [language feature matrix](../language-support/feature-matrix.md).

@@ -507,6 +507,14 @@ This exposes `library.solver` and `library.update_second`, not
 `library.module1` or `library.update`. The bridge still imports native module
 `module1` and still calls native procedure `module2.update`.
 
+An alias creates another public Python binding to the same native declaration;
+it does not promise Python object identity between exported names. For module
+variables, every exported name routes to the same native storage, so writes
+through one name are visible through the others, but each read may return a new
+Python object. For functions, each exported name calls the same native
+procedure; introspection such as `__name__` and `repr()` may report the public
+alias name.
+
 Standalone procedures are explicitly re-exported at the extension root:
 
 ```python
@@ -609,9 +617,11 @@ from .m1 import *
 The first form creates child namespace `m2`, the second exports only `f`, and
 the third explicitly flattens all public names. Repeating the same export is
 idempotent, and the same declaration may be exported under its original name and
-one or more aliases when each export is requested explicitly. Missing relative
-imports, relative-import cycles, and conflicting exports fail before code
-generation and identify the participating contract paths.
+one or more aliases when each export is requested explicitly. These aliases
+share the same native target or storage, but `is` identity between Python
+attributes is not part of the contract. Missing relative imports,
+relative-import cycles, and conflicting exports fail before code generation and
+identify the participating contract paths.
 
 For wrapper builds, the entry export policy also defines the generated Python
 extension binding surface. Declarations in imported leaf files that are not
@@ -1359,6 +1369,21 @@ setter assignment mode, and Python setter exposure before `ir2ast.py`. A native
 value-copy setter can therefore exist for ABI use while Python replacement is
 explicitly rejected, as for allocatable or derived fields. Bridge and binding
 generation only dispatch those completed accessor decisions.
+
+A mutable scalar module variable may include a literal default in an edited
+`.pyi` contract:
+
+```python
+counter: Int32 = 41
+```
+
+The default is an import-time native initializer, not a `Final` constant. When
+the extension module is imported, x2py applies the value through the completed
+native setter policy. Later reads and writes still use the current native module
+storage. This initializer form is only for scalar module variables with a
+write-through setter; non-scalar or read-only declarations remain explicit
+readiness/code-generation blockers instead of falling back to a copied Python
+value.
 
 Fortran `parameter` declarations are emitted as `Final[...]` constants when
 their literal value can be represented in `.pyi`:

@@ -1581,9 +1581,11 @@ class _PyiAstParser:
     def literal_default_value(node: ast.expr | None) -> str | None:
         if node is None or _PyiAstParser.default_marks_optional(node):
             return None
-        if isinstance(node, ast.Name):
-            return node.id
-        return str(ast.literal_eval(node))
+        try:
+            ast.literal_eval(node)
+        except (ValueError, SyntaxError):
+            raise ValueError(f"Mutable defaults must be literal values: {ast.unparse(node)!r}") from None
+        return ast.unparse(node)
 
     @staticmethod
     def assignment_default_value(node: ast.expr | None, semantic_type: SemanticType) -> str | None:

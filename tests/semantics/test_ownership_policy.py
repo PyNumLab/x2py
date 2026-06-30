@@ -27,6 +27,7 @@ from x2py.semantics.models import (
     PYTHON_EXPORTS_METADATA,
     PYTHON_EXPORTS_PREPARED_METADATA,
     RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
@@ -836,6 +837,19 @@ def test_scalar_accessor_policies_are_complete_before_ir_lowering():
         assert setter.codegen_action is CodegenAction.CALL_LOCAL_INPUT
         assert setter.assignment_mode is AssignmentMode.VALUE_COPY
         assert setter.setter_action is SetterAction.WRITE_THROUGH
+
+
+def test_module_variable_initializer_policy_is_complete_before_ir_lowering():
+    module = SemanticModule(
+        name="state",
+        variables=[SemanticVariable("counter", _scalar_type(), default_value="41")],
+    )
+
+    complete_semantic_policies(module)
+
+    variable = module.variables[0]
+    assert variable.metadata[RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA] == "41"
+    assert variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA].setter_action is SetterAction.WRITE_THROUGH
 
 
 def test_derived_field_setter_policy_uses_value_copy_write_through():

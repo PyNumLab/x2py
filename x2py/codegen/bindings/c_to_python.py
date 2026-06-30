@@ -2931,6 +2931,7 @@ class CPythonBindingGenerator(BindingGenerator):
         # Call the initialisation function
         if expr.init_func:
             body.append(expr.init_func())
+        body.extend(self._initialise_module_variable_defaults(expr))
 
         body.extend(self._add_classes_to_modules(expr, module_var, namespace_modules, initialised))
         body.extend(self._add_variables_to_modules(expr, module_var, namespace_modules, initialised))
@@ -2940,6 +2941,32 @@ class CPythonBindingGenerator(BindingGenerator):
         self.exit_scope()
 
         return PyModInitFunc(func_name, body, [API_var], func_scope)
+
+    def _initialise_module_variable_defaults(self, expr):
+        """Apply literal `.pyi` defaults to native module storage on import."""
+        setters = self._module_variable_native_setters(expr)
+        body = []
+        for variable in expr.original_module.variables:
+            if variable.is_private or variable.default_value is None or isinstance(variable.class_type, FinalType):
+                continue
+            setter = setters.get(str(variable.name))
+            if setter is None:
+                raise ValueError(f"Module variable {variable.name!r} has a resolved initializer but no native setter")
+            body.append(setter(self._module_literal_value(variable)))
+        return body
+
+    @staticmethod
+    def _module_variable_native_setters(expr):
+        """Return generated bind-C setters keyed by source module-variable name."""
+        setters = {}
+        for function in expr.funcs:
+            decorators = getattr(getattr(function, "original_function", None), "decorators", {})
+            if decorators.get(INTERNAL_MODULE_VARIABLE_ACCESS_METADATA) != "set":
+                continue
+            variable_name = decorators.get(INTERNAL_MODULE_VARIABLE_NAME_METADATA)
+            if isinstance(variable_name, str):
+                setters[variable_name] = function
+        return setters
 
     def _create_namespace_modules(self, namespace_module_defs, root_module, initialised):
         """Create nested Python module objects and register them on parents."""
@@ -5092,11 +5119,11 @@ class CPythonBindingGenerator(BindingGenerator):
     # --------------------------------------------------------------------------------------------------------------------------------------------
 
     @staticmethod
-    def _module_constant_literal(expr):
-        """Handle module constant literal for the current generation context."""
+    def _module_literal_value(expr):
+        """Convert a semantic `.pyi` literal into a typed codegen literal."""
         value = expr.default_value
         if value is None:
-            raise ValueError(f"Module constant {expr.name} needs a literal value before wrapper generation")
+            raise ValueError(f"Module value {expr.name} needs a literal value before wrapper generation")
         dtype = expr.class_type.underlying_type if isinstance(expr.class_type, FinalType) else expr.class_type
         text = str(value).strip()
         if isinstance(dtype, NumpyBoolType):
@@ -5111,6 +5138,8 @@ class CPythonBindingGenerator(BindingGenerator):
             parts = ast.literal_eval(text.replace("d", "e").replace("D", "E"))
             return convert_to_literal(complex(parts[0], parts[1]), dtype=dtype)
         raise TypeError(f"No Python constant conversion registered for {expr.class_type}")
+
+    _module_constant_literal = _module_literal_value
 
     def _get_allocatable_module_array_getter(self, expr):
         """Return allocatable module array getter."""

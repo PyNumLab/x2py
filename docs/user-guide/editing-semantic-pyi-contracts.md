@@ -170,6 +170,27 @@ def convert(value: Int32) -> Int32: ...
 Calls that no longer match a remaining candidate raise `TypeError`. Do not keep
 an empty overload declaration as an absence marker; remove it.
 
+## Editing Module Variable Initializers
+
+A mutable scalar module variable may include a literal default:
+
+```python
+counter: Int32 = 41
+```
+
+For wrapper builds, that value is applied to native module storage during
+extension import by calling the generated native setter. The variable remains
+writable after import; later reads and writes still use the current native
+storage. This form accepts literal values only. Calls, names, and expressions
+such as `f(42)`, `x + 1`, or `SOME_NAME` are rejected for mutable module
+variables.
+
+Use `Final[...]` for true constants:
+
+```python
+nmax: Final[Int32] = 12
+```
+
 ## Adding And Renaming Declarations
 
 ### Add a contained procedure already present in a native module
@@ -555,8 +576,12 @@ Python package; they do not rename native modules or infer object files.
 Supported relative imports include module imports, selective declaration
 imports, wildcard flattening, and `as` aliases. Repeating the same export is
 idempotent, and exporting both the original name and an alias is allowed when
-both exports are explicit. Conflicting exports to the same Python name, missing
-relative files, and import cycles fail while the contract graph is loaded.
+both exports are explicit. Alias exports share the same native target or
+storage, but they do not promise Python object identity: module-variable reads
+may return distinct Python objects with the same current value, and function
+introspection may show the alias name. Conflicting exports to the same Python
+name, missing relative files, and import cycles fail while the contract graph is
+loaded.
 Only declarations reachable from the entry export policy are emitted as public
 Python extension bindings; omitted leaf declarations are not wrapped just
 because their leaf file was discovered.

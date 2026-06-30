@@ -6,6 +6,7 @@ from collections.abc import Iterable
 
 from x2py.ownership_policy import (
     OwnershipContext,
+    SetterAction,
     default_ownership_policy,
     ownership_context_for_argument,
 )
@@ -72,6 +73,7 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
     for variable in module.variables:
         _complete_variable(variable, OwnershipContext.module_variable())
         _complete_accessor_policies(variable, OwnershipContext.module_variable())
+        _complete_module_variable_initializer(variable)
     for semantic_class in module.classes:
         _complete_class(semantic_class)
     for function in module.functions:
@@ -127,6 +129,28 @@ def _complete_accessor_policies(variable: models.SemanticVariable, context: Owne
     variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = (
         default_ownership_policy.decide_semantic_setter(variable, context)
     )
+
+
+def _complete_module_variable_initializer(variable: models.SemanticVariable) -> None:
+    variable.metadata.pop(models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA, None)
+    if variable.default_value is None or _is_constant(variable):
+        return
+    setter = variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    if variable.semantic_type.rank != 0:
+        raise ValueError(
+            f"Module variable {variable.name!r} has an initializer, but only scalar module variables support "
+            "import-time native initialization"
+        )
+    if setter.setter_action is not SetterAction.WRITE_THROUGH:
+        raise ValueError(
+            f"Module variable {variable.name!r} has an initializer, but its completed setter policy is "
+            f"{setter.setter_action.value!r}"
+        )
+    variable.metadata[models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA] = variable.default_value
+
+
+def _is_constant(variable: models.SemanticVariable) -> bool:
+    return any(constraint.name == "Constant" for constraint in variable.semantic_type.constraints)
 
 
 def _complete_callable_policy(semantic_type: models.SemanticType) -> None:

@@ -509,6 +509,33 @@ def test_reduced_entry_generates_only_reachable_module_variable_bindings(tmp_pat
     assert "bind_c_set_scale" not in generated_text
 
 
+def test_mutable_module_variable_default_initializes_native_storage(tmp_path: Path):
+    root = _generate_pyi(MODULE_VARIABLE_SOURCE, tmp_path / "contracts", MODULE_VARIABLES_GENERATED)
+    leaf = root.parent / "fmodule_vars_f90.pyi"
+    leaf.write_text(
+        leaf.read_text(encoding="utf-8").replace("counter: Int32", "counter: Int32 = 41"),
+        encoding="utf-8",
+    )
+    root.write_text(
+        "\n".join(
+            [
+                "from .fmodule_vars_f90 import counter",
+                "from .fmodule_vars_f90 import summarize",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    native_object = _compile_native_object(MODULE_VARIABLE_SOURCE, tmp_path / "native")
+
+    module, _payload = _build_pyi_cli(root, native_object, tmp_path / "pyi_build")
+
+    assert module.counter == np.int32(41)
+    assert module.summarize() == np.int32(53)
+    module.counter = np.int32(5)
+    assert module.summarize() == np.int32(17)
+
+
 def test_entry_rejects_colliding_wildcard_exports(tmp_path: Path):
     entry = tmp_path / "api.pyi"
     first = tmp_path / "first.pyi"
