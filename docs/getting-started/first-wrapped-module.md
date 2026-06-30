@@ -12,12 +12,48 @@ A Fortran module becomes a child Python module inside the extension. Public
 procedures and supported public state appear on that child; private native
 names and internal getter/setter hooks do not.
 
-## Build The Checked Module-State Fixture
+## Source
 
-From the repository root:
+Create `fmodule_vars_f90.f90` with this module:
+
+<!-- x2py-doc-source: tests/data/fortran/wrapper/fmodule_vars_f90.f90 -->
+```fortran
+module fmodule_vars_f90
+  implicit none
+  private
+  public :: nmax, counter, scale, saved_counter
+  public :: summarize, scaled_counter, next_local
+
+  integer(4), parameter :: nmax = 12
+  integer(4) :: counter = 3
+  real(8) :: scale = 1.5d0
+  integer(4), save :: saved_counter = 6
+  integer(4) :: hidden_counter = 17
+
+contains
+  integer(4) function summarize() result(value)
+    value = counter + nmax
+  end function summarize
+
+  real(8) function scaled_counter() result(value)
+    value = real(counter, 8) * scale
+  end function scaled_counter
+
+  integer(4) function next_local() result(value)
+    integer(4), save :: local_counter = 0
+
+    local_counter = local_counter + 1
+    value = local_counter
+  end function next_local
+end module fmodule_vars_f90
+```
+
+## Build
+
+From the directory containing `fmodule_vars_f90.f90`:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fmodule_vars_f90.f90 \
+python3 -m x2py fmodule_vars_f90.f90 \
   --wrap \
   --out-dir build/first-module \
   --json
@@ -88,19 +124,35 @@ assert module.next_local() == np.int32(2)
 Use `--pyi` to inspect names and types before building:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fmodule_vars_f90.f90 --pyi
+python3 -m x2py fmodule_vars_f90.f90 --pyi
 ```
 
-## Current Limitations
+The generated package entry preserves the module namespace:
 
-- Common-block procedure state is supported through procedures, but direct
-  common-block variable exposure is not the public module-variable path.
-- Allocatable module arrays have separate borrowing and lifetime rules; read
-  [Allocatable Arrays](../user-guide/allocatable-arrays.md) before retaining a
-  view across native reallocation.
-- Exact dtype and ownership rules still apply to assignments.
-- Unsupported module constructs remain listed in the
-  [feature matrix](../language-support/feature-matrix.md).
+```python
+from . import fmodule_vars_f90
+```
+
+The generated module contract is:
+
+```python
+nmax: Final[Int32] = 12
+
+counter: Int32
+
+scale: Float64
+
+saved_counter: Int32
+
+def summarize() -> Int32: ...
+
+def scaled_counter() -> Float64: ...
+
+def next_local() -> Int32: ...
+```
+
+Support boundaries for module state and other Fortran constructs are maintained
+in the [language feature matrix](../language-support/feature-matrix.md).
 
 If the extension imports but a name is absent, inspect the generated `.pyi`,
 check native visibility, and use [Runtime Issues](../troubleshooting/runtime-issues.md).

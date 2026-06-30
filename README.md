@@ -30,9 +30,7 @@ prints the CLI usage with input selection, inspection stages, wrapper builds,
 and output options.
 
 The default user-facing action for a single Fortran source is to build a Python
-extension. This checked input source exists at
-`tests/data/fortran/wrapper/scale.f90`; copy it into your working directory
-as `scale.f90` before running the commands below:
+extension. Create `scale.f90` with this input:
 
 <!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
 ```fortran

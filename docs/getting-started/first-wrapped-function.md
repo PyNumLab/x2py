@@ -13,8 +13,7 @@ NumPy dtypes required by its native contract.
 
 ## Source
 
-Use the repository fixture below, or place the same standalone function in your
-project.
+Create `scale.f90` with this standalone function:
 
 <!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
 ```fortran
@@ -30,10 +29,10 @@ The generated Python call accepts two `numpy.float64` values and returns a
 
 ## Build
 
-From the repository root:
+From the directory containing `scale.f90`:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/scale.f90 \
+python3 -m x2py scale.f90 \
   --wrap \
   --out-dir build/first-function \
   --json
@@ -65,7 +64,7 @@ The checked call returns `numpy.float64(7.5)`.
 Before compiling, print the semantic contract:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/scale.f90 --pyi
+python3 -m x2py scale.f90 --pyi
 ```
 
 The generated declaration is:
