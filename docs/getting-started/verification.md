@@ -26,32 +26,22 @@ interpreter. The third proves that the module entrypoint is installed.
 
 ## 2. Verify The Inspection Path
 
-Create `basic_subroutine.f90` with this module:
+Use the `scale.f90` input created in the
+[README Quick Start](../../README.md#quick-start).
 
-<!-- x2py-doc-source: tests/data/fortran/general/basic_subroutine.f90 -->
-```fortran
-module m1
-contains
-subroutine add1(n, x)
-  integer, intent(in) :: n
-  real(kind=8), intent(inout), dimension(n) :: x
-end subroutine add1
-end module m1
-```
-
-From the directory containing `basic_subroutine.f90`, inspect readiness without
+From the directory containing `scale.f90`, inspect readiness without
 compiling a wrapper:
 
 ```bash
-python3 -m x2py basic_subroutine.f90 --wrap-readiness
+python3 -m x2py scale.f90 --wrap-readiness
 ```
 
 The readiness output should look like:
 
 ```text
-File: basic_subroutine.f90
+File: scale.f90
   Source: fortran
-  Semantic modules: m1
+  Semantic modules: scale
   Wrappable: yes
   Public functions: 1
   Public classes: 0
@@ -77,18 +67,7 @@ gcc &#45;&#45;version
 ```
 X2PY_C_DOCS_END -->
 
-Create `scale.f90` with this standalone function:
-
-<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
-```fortran
-real(8) function scale(value, factor) result(output)
-  real(8), intent(in) :: value
-  real(8), intent(in) :: factor
-  output = value * factor
-end function scale
-```
-
-From the directory containing `scale.f90`, build it into a dedicated directory:
+From the same directory, build `scale.f90` into a dedicated directory:
 
 ```bash
 python3 -m x2py scale.f90 \
@@ -172,7 +151,7 @@ the full GitHub Actions matrix is the final cross-version evidence.
 
 ## Evidence
 
-The displayed source inputs are checked against repository fixtures by
+The linked `scale.f90` input is checked against the repository fixture by
 [`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py).
 Native artifact placement and runtime calls are checked by
 [`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py)
