@@ -283,7 +283,7 @@ User-visible `.pyi` syntax is first parsed to Python AST by
 
 Important implementation rules:
 
-- `Ptr(T)` and `Ptr(Const(T))` are storage contracts, not just pretty syntax.
+- `Ref(T)` and `Ref(Const(T))` are storage contracts, not just pretty syntax.
 - Array subscriptions such as `Float64[n]` are semantic array contracts.
 - `Annotated[..., ORDER_F]`, `ORDER_ANY`, `Allocatable`, and `Pointer` are
   metadata on the semantic storage contract. `Intent("out")` is emitted only
@@ -956,7 +956,7 @@ loader and printer currently support `Arg`, `Return`, `Const`, `Len`,
 Fortran contracts use it when outputs make the Python-visible argument order
 differ from native order. `Pass()` preserves the hidden passed object when a
 type-bound method also needs such a projection. They do not currently
-implement future wrapper projection helpers such as `Ptr(Arg(...))`, `As[...]`,
+implement future wrapper projection helpers such as `Ref(Arg(...))`, `As[...]`,
 status-return policy, ownership conversion, or coercion execution.
 
 The test ownership is:

@@ -77,10 +77,17 @@ summarize the currently verified Fortran wrapper mappings.
 The relevant generated declarations have this shape:
 
 ```python
-def add_one(value: Ptr(Const(Int32))) -> Int32: ...
-def double(value: Ptr(Const(Float64))) -> Float64: ...
-def conjugate_value(value: Ptr(Const(Complex128))) -> Complex128: ...
-def invert(flag: Ptr(Const(Bool))) -> Bool: ...
+@native_call([Ref(Arg(0))])
+def add_one(value: Const(Int32)) -> Int32: ...
+
+@native_call([Ref(Arg(0))])
+def double(value: Const(Float64)) -> Float64: ...
+
+@native_call([Ref(Arg(0))])
+def conjugate_value(value: Const(Complex128)) -> Complex128: ...
+
+@native_call([Ref(Arg(0))])
+def invert(flag: Const(Bool)) -> Bool: ...
 ```
 
 Import the child module and call it with matching values:
@@ -119,10 +126,15 @@ native storage instead of silently narrowing it.
 
 ## Scalar Values And Native Storage
 
-A bare semantic type is a value. `Ptr(T)` means native reference-backed
-storage, and `Const(T)` means the native target is read-only through this call.
-The generated declarations for `numeric_types.f90` above demonstrate both
-`Ptr` and `Const`.
+A bare semantic type is a Python-visible value. `Const(T)` is the read-only
+value form. `Ref(Arg(...))` in `@native_call` means x2py passes the
+Python-visible value through native reference-backed storage. The generated
+declarations for `numeric_types.f90` above demonstrate both value annotations
+and native pointer projection.
+
+`Ref(T)` remains the visible annotation when the Python API itself exposes
+pointer-like or writable reference-backed storage. Edited native-order
+contracts can use that lower-level form directly.
 
 These annotations describe the native contract, not implicit Python
 conversions. Use exact NumPy scalar types where the generated call requires

@@ -1,7 +1,9 @@
+@native_call([Ref(Arg(0))])
 def factorial(
-    n: Ptr(Const(Int32))
+    n: Const(Int32)
 ) -> Int32: ...
 
+@native_call([Ref(Arg(0))])
 def add_one(
-    n: Ptr(Const(Int32))
+    n: Const(Int32)
 ) -> Int32: ...

@@ -63,15 +63,17 @@ The generated declaration is:
 
 ```python
 @external
+@native_call([Ref(Arg(0)), Ref(Arg(1))])
 def scale(
-    value: Ptr(Const(Float64)),
-    factor: Ptr(Const(Float64))
+    value: Const(Float64),
+    factor: Const(Float64)
 ) -> Float64: ...
 ```
 
-The contract describes `value` and `factor` as pointers to constant `Float64`
-values and the function result as `Float64`. The semantic `.pyi` is a native
-contract, not an ordinary pure-Python type stub. Read
+The contract describes `value` and `factor` as read-only `Float64` values at
+the Python boundary. The `@native_call` decorator records that the native call
+receives reference-backed storage for those values. The semantic `.pyi` is a
+native contract, not an ordinary pure-Python type stub. Read
 [Semantic .pyi Format](../reference/semantic-pyi-format.md) before editing it.
 
 ## Failure Mode: Wrong Scalar Type

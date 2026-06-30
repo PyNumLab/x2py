@@ -164,7 +164,7 @@ Expected output:
 ```python
 File: tests/data/fortran/general/basic_subroutine.f90
 def add1(
-    n: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
     x: Float64[n]
 ) -> None: ...
 ```
@@ -362,8 +362,8 @@ def scale(
 
 def dot(
     n: Int,
-    x: Ptr(Const(Float64)),
-    y: Ptr(Const(Float64))
+    x: Ref(Const(Float64)),
+    y: Ref(Const(Float64))
 ) -> Float64: ...
 
 def fill_identity3(

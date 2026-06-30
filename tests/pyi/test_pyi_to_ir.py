@@ -108,8 +108,8 @@ import typing
 public_value: Int32
 bounded: Final[Annotated[Int32, Bounded(1, 8)]]
 callback: typing.Callable
-pointer: Ptr(Float64)
-read_only_pointer: Ptr(Const(Float64))
+pointer: Ref(Float64)
+read_only_pointer: Ref(Const(Float64))
 """,
         module_name="dispatch",
     )
@@ -274,7 +274,7 @@ def test_parse_pyi_text_infers_callback_dimension_argument_names():
     module = parse_pyi_text(
         """
 def apply_transform(
-    callback: Callable[[Ptr(Const(Int32)), Const(Float64[count])], Float64[count]]
+    callback: Callable[[Ref(Const(Int32)), Const(Float64[count])], Float64[count]]
 ) -> None: ...
 """,
         module_name="callbacks",
@@ -363,9 +363,9 @@ from types_mod import particle
 
 answer: Int32
 
-def create_particle() -> Ptr(particle): ...
+def create_particle() -> Ref(particle): ...
 
-def move(p: Annotated[Ptr(particle), CompatibleHandle]) -> None: ...
+def move(p: Annotated[Ref(particle), CompatibleHandle]) -> None: ...
 """,
         encoding="utf-8",
     )
@@ -414,7 +414,7 @@ def test_load_pyi_modules_preserves_dotted_module_names_from_directory(tmp_path:
         """
 from shared.types_mod import particle
 
-def move(p: Ptr(particle)) -> None: ...
+def move(p: Ref(particle)) -> None: ...
 """,
         encoding="utf-8",
     )
@@ -565,9 +565,9 @@ class state:
         """
 @private
 def init_state(
-    self: Ptr(state),
-    seed: Ptr(Const(Int32)),
-    scale: Ptr(Const(Float64)) = ...
+    self: Ref(state),
+    seed: Ref(Const(Int32)),
+    scale: Ref(Const(Float64)) = ...
 ) -> None: ...
 
 class state:
@@ -581,8 +581,8 @@ class state:
     @overload("init_state")
     def __init__(
         self,
-        seed: Ptr(Const(Int32)),
-        scale: Ptr(Const(Float64)) = ...
+        seed: Ref(Const(Int32)),
+        scale: Ref(Const(Float64)) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -672,15 +672,15 @@ class state:
     @private
     def init_state(
         self,
-        seed: Ptr(Const(Int32)),
-        scale: Ptr(Const(Float64)) = ...
+        seed: Ref(Const(Int32)),
+        scale: Ref(Const(Float64)) = ...
     ) -> None: ...
 
     @bind("init_state")
     def __init__(
         self,
-        seed: Ptr(Const(Int32)),
-        scale: Ptr(Const(Float64)) = ...
+        seed: Ref(Const(Int32)),
+        scale: Ref(Const(Float64)) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -989,6 +989,28 @@ def make_value(
     assert func.arguments[0].intent == "in"
 
 
+def test_native_call_pointer_argument_projection_restores_native_reference_storage():
+    module = parse_pyi_text(
+        """
+@native_call([Ref(Arg(0))])
+def add_one(value: Const(Int32)) -> Int32: ...
+""",
+        module_name="scalar_refs",
+    )
+
+    function = module.functions[0]
+    value = function.arguments[0]
+
+    assert value.semantic_type.name == "Int32"
+    assert value.semantic_type.storage.kind == "reference"
+    assert value.semantic_type.storage.read_only is True
+    assert function.projection[0].value_kind == "ptr"
+    assert function.projection[0].value == {"kind": "arg", "position": 0}
+    assert emit_module(module).strip() == (
+        "@native_call([Ref(Arg(0))])\ndef add_one(\n    value: Const(Int32)\n) -> Int32: ..."
+    )
+
+
 def test_function_equality_treats_argument_names_as_placeholders():
     left = parse_pyi_text(
         """
@@ -1116,8 +1138,8 @@ def test_native_call_projected_inout_keeps_argument_intent():
         """
 @native_call([Arg(0)])
 def fixed_inout(
-    name: Ptr(String[8])
-) -> Returns["name", Ptr(String[8])]: ...
+    name: Ref(String[8])
+) -> Returns["name", Ref(String[8])]: ...
 """,
         module_name="edited",
     )
@@ -1133,7 +1155,7 @@ def test_native_call_projected_output_keeps_explicit_output_intent():
         """
 @native_call([Arg(0), Arg(1)])
 def fill(
-    n: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
     values: Annotated[Float64[n], Intent("out")]
 ) -> Returns["values", Float64[n]]: ...
 """,
@@ -1151,7 +1173,7 @@ def test_native_call_compact_array_output_marks_projection_without_output_intent
         """
 @native_call([Arg(0), Arg(1)])
 def fill(
-    n: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
     values: Float64[n]
 ) -> Returns["values", Float64[n]]: ...
 """,
@@ -1176,8 +1198,8 @@ def test_native_order_outputs_do_not_get_projected_without_native_call():
     from_pyi = parse_pyi_text(
         """
 def solve(
-    x: Ptr(Const(Float64)),
-    status: Annotated[Ptr(Int32), Intent("out")]
+    x: Ref(Const(Float64)),
+    status: Annotated[Ref(Int32), Intent("out")]
 ) -> tuple[Float64, Returns["message", String]]: ...
 """,
         module_name="edited",
@@ -1198,15 +1220,15 @@ class vector:
     @overload("assign_vector_real")
     def assign(
         self,
-        right: Ptr(Const(Float64))
+        right: Ref(Const(Float64))
     ) -> vector: ...
 
 @private
 @native_call([Arg(0), Arg(1)])
 def assign_vector_real(
-    left: Ptr(vector),
-    right: Ptr(Const(Float64))
-) -> Returns["left", Ptr(vector)]: ...
+    left: Ref(vector),
+    right: Ref(Const(Float64))
+) -> Returns["left", Ref(vector)]: ...
 """,
         module_name="edited",
     )
@@ -1233,26 +1255,26 @@ def test_type_bound_method_declarations_restore_root_target_metadata():
 class vector:
     def scale(
         self,
-        factor: Ptr(Const(Float64))
+        factor: Ref(Const(Float64))
     ) -> None: ...
 
     @bind("shift_vector")
     @native_call([Arg(0), Pass(), Arg(1)])
     def shift(
         self,
-        dx: Ptr(Const(Float64)),
-        dy: Ptr(Const(Float64))
+        dx: Ref(Const(Float64)),
+        dy: Ref(Const(Float64))
     ) -> None: ...
 
 def scale(
-    self: Annotated[Ptr(vector), Polymorphic],
-    factor: Ptr(Const(Float64))
+    self: Annotated[Ref(vector), Polymorphic],
+    factor: Ref(Const(Float64))
 ) -> None: ...
 
 def shift_vector(
-    dx: Ptr(Const(Float64)),
-    owner: Annotated[Ptr(vector), Polymorphic],
-    dy: Ptr(Const(Float64))
+    dx: Ref(Const(Float64)),
+    owner: Annotated[Ref(vector), Polymorphic],
+    dy: Ref(Const(Float64))
 ) -> None: ...
 """,
         module_name="edited",
@@ -1272,12 +1294,12 @@ def test_pyi_codegen_imports_public_generic_not_private_specific_targets():
         """
 @private
 def convert_integer(
-    value: Ptr(Const(Int32))
+    value: Ref(Const(Int32))
 ) -> Int32: ...
 
 @overload("convert_integer")
 def convert(
-    value: Ptr(Const(Int32))
+    value: Ref(Const(Int32))
 ) -> Int32: ...
 """,
         module_name="foverloads_f90",
@@ -1316,8 +1338,8 @@ def test_native_call_return_entry_preserves_optional_pointer_return():
         """
 @native_call([Arg(0), Return("status", 0)])
 def maybe_status(
-    base: Ptr(Const(Int32))
-) -> Ptr(Int32) | None: ...
+    base: Ref(Const(Int32))
+) -> Ref(Int32) | None: ...
 """,
         module_name="edited",
     )
@@ -1338,8 +1360,8 @@ def test_native_call_later_return_entry_preserves_native_position_and_name():
 @native_call([Arg(0), Return("status", 1), Arg(1)])
 def fill(
     values: Annotated[Float64[n], Intent("out")],
-    n: Ptr(Int32)
-) -> tuple[Returns["values", Float64[n]], Ptr(Int32)]: ...
+    n: Ref(Int32)
+) -> tuple[Returns["values", Float64[n]], Ref(Int32)]: ...
 """,
         module_name="edited",
     )
@@ -1712,7 +1734,7 @@ end module solver_mod
     pyi = "\n\n".join(emit_module(module) for module in modules)
     reparsed = parse_pyi_text(pyi, module_name="solver_mod")
 
-    assert "@native_call([Arg(0), Return('x', 0), Arg(1)])" in pyi
+    assert "@native_call([Ref(Arg(0)), Return('x', 0), Ref(Arg(1))])" in pyi
     func = reparsed.functions[0]
     assert func.name == "solve"
     assert [arg.name for arg in func.arguments] == ["a", "x", "b"]
@@ -1791,7 +1813,7 @@ def test_parse_pyi_text_preserves_extended_array_metadata_and_nested_selector():
         """
 value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
 nested: Float64[:, :][rank, kind]
-name: Annotated[Ptr(String[16]), FortranAllocatable]
+name: Annotated[Ref(String[16]), FortranAllocatable]
 
 def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
 """,
@@ -1828,7 +1850,7 @@ plain_callback: Callable
 qualified_callback: typing.Callable
 opaque_callback: Callable[..., Float64]
 constant: Const(Int32)
-deep: Ptr[3](Const(Float64))
+deep: Ref[3](Const(Float64))
 rank_any: Float64[...]
 strided: Float64[0:n:Strided]
 computed: Float64[size(xl)]
@@ -1908,8 +1930,8 @@ def helper(value: Int32) -> None: ...
     "source, message",
     [
         ("value: Const(Int32, Float64)\n", "Const type expects one argument: 'Const(Int32, Float64)'"),
-        ("value: Ptr(Int32, Float64)\n", "Ptr type expects one argument: 'Ptr(Int32, Float64)'"),
-        ("value: Ptr[1](Int32)\n", "Ptr[1](...) is invalid; use Ptr(...)"),
+        ("value: Ref(Int32, Float64)\n", "Ref type expects one argument: 'Ref(Int32, Float64)'"),
+        ("value: Ref[1](Int32)\n", "Ref[1](...) is invalid; use Ref(...)"),
         ("value: Callable[Int32]\n", "Callable expects argument types and a return type: 'Callable[Int32]'"),
         ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list: 'Callable[Int32, Float64]'"),
         (
@@ -1983,7 +2005,7 @@ def test_pyi_parser_internal_projection_helpers_preserve_native_names():
     return_type, returned_values = parser.return_projection(
         ast.parse("tuple[Float64, Returns['extra', Int32, Optional], Returns['other', Float64]]", mode="eval").body
     )
-    pointer = parser.semantic_type(ast.parse("Ptr(Float64)", mode="eval").body)
+    pointer = parser.semantic_type(ast.parse("Ref(Float64)", mode="eval").body)
     returned = SemanticArgument("result", SemanticType("Float64"), intent="out", metadata={"return_position": 1})
     mapping = ProjectionMapping(native_name="native_result", result_position=1, intent="out")
     _, values = parser._apply_native_call_returns(None, [returned], [mapping])
@@ -2096,11 +2118,11 @@ end module solver_mod
     )
     generated = emit_module(fortran_file_to_semantic_modules(parsed)[0])
     constrained = generated.replace(
-        "Ptr(Const(Float64))",
-        "Annotated[Ptr(Const(Float64)), Finite]",
+        "Const(Float64)",
+        "Annotated[Const(Float64), Finite]",
         1,
     )
-    changed_abi = generated.replace("Ptr(Const(Float64))", "Ptr(Const(Int32))", 1)
+    changed_abi = generated.replace("Const(Float64)", "Const(Int32)", 1)
 
     assert native_contract_issues(parse_pyi_text(constrained, module_name="solver_mod")) == []
     assert native_contract_issues(parse_pyi_text(changed_abi, module_name="solver_mod")) == []

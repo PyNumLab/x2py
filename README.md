@@ -118,8 +118,8 @@ Expected contract (`contracts/__init__.pyi`):
 ```python
 @external
 def scale(
-    value: Ptr(Const(Float64)),
-    factor: Ptr(Const(Float64))
+    value: Ref(Const(Float64)),
+    factor: Ref(Const(Float64))
 ) -> Float64: ...
 ```
 
@@ -276,8 +276,8 @@ File: scale.f90
 Root contract: scale/scale.pyi
 @external
 def scale(
-    value: Ptr(Const(Float64)),
-    factor: Ptr(Const(Float64))
+    value: Ref(Const(Float64)),
+    factor: Ref(Const(Float64))
 ) -> Float64: ...
 ```
 

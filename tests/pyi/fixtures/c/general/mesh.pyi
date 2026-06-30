@@ -4,23 +4,23 @@ class node(CStruct):
 
 class mesh(CStruct):
     nnodes: SizeT
-    nodes: Ptr(node)
+    nodes: Ref(node)
 
 def node_move(
-    node: Ptr(node),
+    node: Ref(node),
     delta: Const(Float64[3])
 ) -> None: ...
 
 def mesh_init(
-    mesh: Ptr(mesh),
+    mesh: Ref(mesh),
     nnodes: SizeT
 ) -> Int: ...
 
 def mesh_clear(
-    mesh: Ptr(mesh)
+    mesh: Ref(mesh)
 ) -> None: ...
 
 def mesh_node_at(
-    mesh: Ptr(mesh),
+    mesh: Ref(mesh),
     index: SizeT
-) -> Ptr(node): ...
+) -> Ref(node): ...

@@ -16,10 +16,10 @@ def checksum2_strided(
     checksum: Float64[1]
 ) -> Returns["checksum", Float64[1]]: ...
 
-@native_call([Arg(0), Arg(1), Arg(2), Arg(3)])
+@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2), Arg(3)])
 def scale2_explicit(
-    rows: Ptr(Const(Int32)),
-    cols: Ptr(Const(Int32)),
+    rows: Const(Int32),
+    cols: Const(Int32),
     a: Annotated[Const(Float64[rows, cols]), ORDER_F],
     out: Annotated[Float64[rows, cols], ORDER_F]
 ) -> Returns["out", Annotated[Float64[rows, cols], ORDER_F]]: ...

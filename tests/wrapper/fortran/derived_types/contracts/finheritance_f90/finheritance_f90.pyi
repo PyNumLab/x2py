@@ -11,9 +11,10 @@ class base_shape:
     def area(self) -> Float64: ...
 
     @bind("base_set_size")
+    @native_call([Pass(), Ref(Arg(0))])
     def set_size(
         self,
-        value: Ptr(Const(Float64))
+        value: Const(Float64)
     ) -> None: ...
 
 class circle(base_shape):
@@ -41,22 +42,23 @@ class box(base_shape):
     def area(self) -> Float64: ...
 
 def base_area(
-    self: Annotated[Ptr(Const(base_shape)), Polymorphic]
+    self: Annotated[Ref(Const(base_shape)), Polymorphic]
 ) -> Float64: ...
 
+@native_call([Arg(0), Ref(Arg(1))])
 def base_set_size(
-    self: Annotated[Ptr(base_shape), Polymorphic],
-    value: Ptr(Const(Float64))
+    self: Annotated[Ref(base_shape), Polymorphic],
+    value: Const(Float64)
 ) -> None: ...
 
 def circle_area(
-    self: Annotated[Ptr(Const(circle)), Polymorphic]
+    self: Annotated[Ref(Const(circle)), Polymorphic]
 ) -> Float64: ...
 
 def box_area(
-    self: Annotated[Ptr(Const(box)), Polymorphic]
+    self: Annotated[Ref(Const(box)), Polymorphic]
 ) -> Float64: ...
 
 def describe_shape(
-    item: Annotated[Ptr(Const(base_shape)), Polymorphic]
+    item: Annotated[Ref(Const(base_shape)), Polymorphic]
 ) -> Float64: ...

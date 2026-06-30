@@ -18,48 +18,54 @@ same_name_c: Complex64
 same_name_s: String[8]
 
 def do_work_i(
-    same_name: Ptr(Int32)
+    same_name: Ref(Int32)
 ) -> None: ...
 
+@native_call([Ref(Arg(0))])
 def do_work_r(
-    same_name: Ptr(Const(Float32))
+    same_name: Const(Float32)
 ) -> None: ...
 
+@native_call([Ref(Arg(0))])
 def do_work_l(
-    same_name: Ptr(Const(Bool))
+    same_name: Const(Bool)
 ) -> None: ...
 
 def host_one(
-    same_name: Ptr(Int32)
+    same_name: Ref(Int32)
 ) -> None: ...
 
 def host_two(
-    same_name: Ptr(Float32)
+    same_name: Ref(Float32)
 ) -> None: ...
 
+@native_call([Ref(Arg(0))])
 def convert_to_complex(
-    same_name: Ptr(Const(Int32))
+    same_name: Const(Int32)
 ) -> Complex64: ...
 
+@native_call([Ref(Arg(0))])
 def convert_to_char(
-    same_name: Ptr(Const(Float32))
+    same_name: Const(Float32)
 ) -> String[16]: ...
 
 def convert_to_logical(
-    same_name: Ptr(Const(String))
+    same_name: Ref(Const(String))
 ) -> Bool: ...
 
 @overload("do_work_i")
 def do_work(
-    same_name: Ptr(Int32)
+    same_name: Ref(Int32)
 ) -> None: ...
 
 @overload("do_work_r")
+@native_call([Ref(Arg(0))])
 def do_work(
-    same_name: Ptr(Const(Float32))
+    same_name: Const(Float32)
 ) -> None: ...
 
 @overload("do_work_l")
+@native_call([Ref(Arg(0))])
 def do_work(
-    same_name: Ptr(Const(Bool))
+    same_name: Const(Bool)
 ) -> None: ...

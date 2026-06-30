@@ -12,43 +12,43 @@ class summary_point:
     code: Int32
 
 def scalar_status(
-    base: Ptr(Const(Int32)),
-    status: Annotated[Ptr(Int32), Intent("out")]
+    base: Ref(Const(Int32)),
+    status: Annotated[Ref(Int32), Intent("out")]
 ) -> None: ...
 
 def fill_vector(
-    n: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
     values: Annotated[Float64[n], Intent("out")]
 ) -> None: ...
 
 def shift_matrix(
-    n: Ptr(Const(Int32)),
-    m: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
+    m: Ref(Const(Int32)),
     values: Annotated[Const(Float64[n, m]), ORDER_F],
     out: Annotated[Float64[n, m], ORDER_F, Intent("out")]
 ) -> None: ...
 
 def scale_with_status(
     values: Float64[::Strided],
-    status: Annotated[Ptr(Int32), Intent("out")]
+    status: Annotated[Ref(Int32), Intent("out")]
 ) -> None: ...
 
 def fixed_inout(
-    label: Ptr(String[8])
+    label: Ref(String[8])
 ) -> None: ...
 
 def make_label(
-    label: Annotated[Ptr(String[6]), Intent("out")]
+    label: Annotated[Ref(String[6]), Intent("out")]
 ) -> None: ...
 
 def summarize_mixed(
-    n: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
     values: Annotated[Float64[n], Intent("out")],
-    status: Annotated[Ptr(Int32), Intent("out")],
-    label: Annotated[Ptr(String[6]), Intent("out")]
+    status: Annotated[Ref(Int32), Intent("out")],
+    label: Annotated[Ref(String[6]), Intent("out")]
 ) -> Float64: ...
 
 def make_point(
-    scale: Ptr(Const(Int32)),
+    scale: Ref(Const(Int32)),
     point: Annotated[summary_point, Intent("out")]
 ) -> None: ...

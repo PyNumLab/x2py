@@ -1,19 +1,23 @@
 @private
+@native_call([Ref(Arg(0))])
 def convert_integer(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...
 
 @private
+@native_call([Ref(Arg(0))])
 def convert_real(
-    value: Ptr(Const(Float64))
+    value: Const(Float64)
 ) -> Float64: ...
 
 @overload("convert_integer")
+@native_call([Ref(Arg(0))])
 def convert(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...
 
 @overload("convert_real")
+@native_call([Ref(Arg(0))])
 def convert(
-    value: Ptr(Const(Float64))
+    value: Const(Float64)
 ) -> Float64: ...

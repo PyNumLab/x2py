@@ -1685,7 +1685,7 @@ class FortranToIRConverter:
                         python_position=python_position,
                         result_position=0,
                         value_kind=mapping.value_kind,
-                        value=mapping.value,
+                        value=deepcopy(mapping.value),
                         intent="inout",
                     )
                 )
@@ -1700,7 +1700,7 @@ class FortranToIRConverter:
                     python_position=None if is_hidden else python_position,
                     result_position=mapping.result_position,
                     value_kind=mapping.value_kind,
-                    value=mapping.value,
+                    value=deepcopy(mapping.value),
                     intent=mapping.intent,
                 )
             )

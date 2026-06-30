@@ -11,7 +11,7 @@ modern_counter: Int
 hidden_scale: private[Float64] = 1.0
 
 def init_particle(
-    p: Ptr(modern_particle),
+    p: Ref(modern_particle),
     pid: Int,
     mass: Float64,
     x: Float64,
@@ -20,7 +20,7 @@ def init_particle(
 ) -> None: ...
 
 def kinetic_energy(
-    p: Ptr(modern_particle),
+    p: Ref(modern_particle),
     vx: Float64,
     vy: Float64,
     vz: Float64
@@ -42,5 +42,5 @@ def fill_identity3_modern(
 ) -> None: ...
 
 def normalize_particle(
-    p: Ptr(modern_particle)
+    p: Ref(modern_particle)
 ) -> None: ...

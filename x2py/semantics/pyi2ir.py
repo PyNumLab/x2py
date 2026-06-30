@@ -342,7 +342,9 @@ class _PyiAstParser:
                 mapping.native_name = mapping.native_name or "self"
                 mapping.intent = "inout"
             elif mapping.python_position is not None and mapping.python_position >= passed_position:
+                old_position = mapping.python_position
                 mapping.python_position += 1
+                _PyiAstParser._shift_pointer_argument_value(mapping, old_position, mapping.python_position)
 
     def ann_assign(
         self,
@@ -814,6 +816,9 @@ class _PyiAstParser:
         if node.keywords:
             raise ValueError(f"{self.required_name(node.func)} expects positional arguments only")
 
+        if self._is_ref_call(node):
+            return self.native_pointer_projection_entry(node, native_position)
+
         helper = self.required_name(node.func)
         if helper == "Arg":
             if len(node.args) != 1:
@@ -877,6 +882,24 @@ class _PyiAstParser:
             )
 
         raise ValueError(f"Unsupported native_call projection entry: {helper}")
+
+    def native_pointer_projection_entry(self, node: ast.Call, native_position: int) -> ProjectionMapping:
+        if len(node.args) != 1:
+            raise ValueError("Ref projection expects one Arg(...), Return(...), or Work(...) reference")
+        if self._ref_depth(node.func) != 1:
+            raise ValueError("native_call reference projection only supports Ref(...)")
+        value = self.native_value_ref(node.args[0])
+        mapping = ProjectionMapping(
+            native_position=native_position,
+            value_kind="ptr",
+            value=value,
+        )
+        if value["kind"] == "arg":
+            mapping.python_position = int(value["position"])
+        elif value["kind"] == "return":
+            mapping.result_position = int(value["position"])
+            mapping.intent = "out"
+        return mapping
 
     def native_shape_projection_entry(
         self,
@@ -952,7 +975,7 @@ class _PyiAstParser:
             return self.callable_type(node)
         if isinstance(node, ast.Call) and self.matches_name(node.func, "Const"):
             return self._const_type(node)
-        if isinstance(node, ast.Call) and self._is_ptr_call(node):
+        if isinstance(node, ast.Call) and self._is_ref_call(node):
             return self._pointer_type(node)
 
         if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
@@ -989,8 +1012,8 @@ class _PyiAstParser:
 
     def _pointer_type(self, node: ast.Call) -> SemanticType:
         if len(node.args) != 1 or node.keywords:
-            raise ValueError(f"Ptr type expects one argument: {ast.unparse(node)!r}")
-        pointer_depth = self._ptr_depth(node.func)
+            raise ValueError(f"Ref type expects one argument: {ast.unparse(node)!r}")
+        pointer_depth = self._ref_depth(node.func)
         pointee = self.semantic_type(node.args[0])
         read_only = pointee.storage.read_only if pointee.storage is not None else False
         pointee.storage = SemanticStorageContract(
@@ -1314,17 +1337,17 @@ class _PyiAstParser:
         return str(value).lower() if value is not None else default
 
     @staticmethod
-    def _is_ptr_call(node: ast.Call) -> bool:
-        return _PyiAstParser.matches_name(node.func, "Ptr") or (
-            isinstance(node.func, ast.Subscript) and _PyiAstParser.matches_name(node.func.value, "Ptr")
+    def _is_ref_call(node: ast.Call) -> bool:
+        return _PyiAstParser.matches_name(node.func, "Ref") or (
+            isinstance(node.func, ast.Subscript) and _PyiAstParser.matches_name(node.func.value, "Ref")
         )
 
     @staticmethod
-    def _ptr_depth(node: ast.AST) -> int:
+    def _ref_depth(node: ast.AST) -> int:
         if isinstance(node, ast.Subscript):
             depth = int(ast.literal_eval(node.slice))
             if depth <= 1:
-                raise ValueError("Ptr[1](...) is invalid; use Ptr(...)")
+                raise ValueError("Ref[1](...) is invalid; use Ref(...)")
             return depth
         return 1
 
@@ -1807,12 +1830,40 @@ class _PyiAstParser:
             if not 0 <= mapping.python_position < len(semantic_args):
                 raise ValueError(f"native_call argument position is out of range: {mapping.python_position}")
             arg = semantic_args[mapping.python_position]
+            if mapping.value_kind == "ptr":
+                _PyiAstParser._apply_pointer_argument_projection(arg)
             mapping.python_name = arg.name
             if not mapping.native_name:
                 mapping.native_name = arg.name
             mapping.intent = arg.intent
             if arg.intent in {"out", "inout"} and mapping.result_position is None:
                 mapping.result_position = return_positions.get(arg.name)
+
+    @staticmethod
+    def _apply_pointer_argument_projection(arg: SemanticArgument) -> None:
+        semantic_type = arg.semantic_type
+        if semantic_type.rank != 0:
+            raise ValueError(f"Ref(Arg(...)) projection for {arg.name!r} requires a scalar argument")
+        storage = semantic_type.storage
+        read_only = str(arg.intent).lower() == "in" or bool(storage is not None and storage.read_only)
+        semantic_type.storage = SemanticStorageContract(
+            kind="reference",
+            read_only=read_only,
+            mutable=not read_only,
+            pointer_depth=1,
+        )
+        semantic_type.ownership.mutable = not read_only
+
+    @staticmethod
+    def _shift_pointer_argument_value(
+        mapping: ProjectionMapping,
+        old_position: int,
+        new_position: int,
+    ) -> None:
+        if mapping.value_kind != "ptr" or not isinstance(mapping.value, dict):
+            return
+        if mapping.value.get("kind") == "arg" and mapping.value.get("position") == old_position:
+            mapping.value["position"] = new_position
 
     def return_items(self, node: ast.expr) -> list[ast.expr]:
         if self.is_subscript_of(node, "tuple") or self.is_subscript_of(node, "Tuple"):

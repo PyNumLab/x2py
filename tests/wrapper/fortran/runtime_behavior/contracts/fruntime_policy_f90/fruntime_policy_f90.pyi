@@ -2,7 +2,7 @@ def pause_for_one_second() -> None: ...
 
 def pause_with_gil() -> None: ...
 
-@native_call([Arg(0), Return('status', 0), Return('message', 1)])
+@native_call([Ref(Arg(0)), Return('status', 0), Return('message', 1)])
 def solve(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> tuple[Int32, String[32]]: ...

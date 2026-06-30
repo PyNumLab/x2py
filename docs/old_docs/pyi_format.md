@@ -53,7 +53,7 @@ class particle:
     mass: Float64
 
 def scale(
-    n: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
     values: Float64[n],
 ) -> None: ...
 ```
@@ -87,7 +87,7 @@ Fortran module:
 
 ```python
 # module1.pyi
-def update(value: Ptr(Float64)) -> None: ...
+def update(value: Ref(Float64)) -> None: ...
 ```
 
 The generated Fortran bridge imports the procedure from its retained native
@@ -379,11 +379,11 @@ Bare types are direct values:
 def dot(a: Float64, b: Float64) -> Float64: ...
 ```
 
-`Ptr(T)` represents native pointer-backed or reference storage:
+`Ref(T)` represents native pointer-backed or reference storage:
 
 ```python
-def update(value: Ptr(Float64)) -> None: ...
-def inspect(value: Ptr(Const(Int32))) -> None: ...
+def update(value: Ref(Float64)) -> None: ...
+def inspect(value: Ref(Const(Int32))) -> None: ...
 ```
 
 `Const(T)` marks the wrapped storage read-only. For a pointer this means a
@@ -392,11 +392,11 @@ read-only pointee. For an array it means read-only array storage.
 Pointer depth is explicit for low-level pointer graphs:
 
 ```python
-handle: Ptr[2](OpaqueHandle)
-argv: Ptr[3](Const(Int8))
+handle: Ref[2](OpaqueHandle)
+argv: Ref[3](Const(Int8))
 ```
 
-`Ptr[1](T)` is invalid; use `Ptr(T)`.
+`Ref[1](T)` is invalid; use `Ref(T)`.
 
 Array storage uses NumPy-style subscriptions:
 
@@ -429,7 +429,7 @@ Use local constants or generated `Final[...]` names for shape symbols.
 ```python
 def fill(
     a: Annotated[Float64[:, :], ORDER_F],
-    out: Annotated[Ptr(Float64), Intent("out")],
+    out: Annotated[Ref(Float64), Intent("out")],
 ) -> None: ...
 ```
 
@@ -578,7 +578,7 @@ class particle(Opaque):
 # physics.pyi
 from types_mod import particle
 
-def move(p: Ptr(particle)) -> None: ...
+def move(p: Ref(particle)) -> None: ...
 ```
 
 If the owner stub is later edited to include fields, the import is reconciled as
@@ -594,9 +594,9 @@ Fortran scalar dummy arguments are generated as:
 
 | Source argument | Generated semantic form |
 | --- | --- |
-| no `value`, `intent(in)` | `Ptr(Const(T))` |
-| no `value`, `intent(out)` | `Annotated[Ptr(T), Intent("out")]` |
-| no `value`, `intent(inout)` | `Ptr(T)` |
+| no `value`, `intent(in)` | `Ref(Const(T))` |
+| no `value`, `intent(out)` | `Annotated[Ref(T), Intent("out")]` |
+| no `value`, `intent(inout)` | `Ref(T)` |
 | `value` | direct `T` |
 | function result | direct return annotation |
 
@@ -628,23 +628,23 @@ from `typing`.
 
 ```python
 @private
-def convert_integer(value: Ptr(Const(Int32))) -> Int32: ...
+def convert_integer(value: Ref(Const(Int32))) -> Int32: ...
 
 @private
-def convert_real(value: Ptr(Const(Float64))) -> Float64: ...
+def convert_real(value: Ref(Const(Float64))) -> Float64: ...
 
 @overload("convert_integer")
-def convert(value: Ptr(Const(Int32))) -> Int32: ...
+def convert(value: Ref(Const(Int32))) -> Int32: ...
 
 @overload("convert_real")
-def convert(value: Ptr(Const(Float64))) -> Float64: ...
+def convert(value: Ref(Const(Float64))) -> Float64: ...
 
 class accumulator:
     @overload("accumulator_add_integer")
-    def add(self, value: Ptr(Const(Int32))) -> None: ...
+    def add(self, value: Ref(Const(Int32))) -> None: ...
 
     @overload("accumulator_add_real")
-    def add(self, value: Ptr(Const(Float64))) -> None: ...
+    def add(self, value: Ref(Const(Float64))) -> None: ...
 ```
 
 Concrete specifics that remain in a stub are ordinary functions with their
@@ -702,17 +702,17 @@ method call:
 
 ```python
 @private
-def add_vector_real(left: Ptr(Const(vector)), right: Ptr(Const(Float64))) -> vector: ...
+def add_vector_real(left: Ref(Const(vector)), right: Ref(Const(Float64))) -> vector: ...
 
 @private
-def add_real_vector(left: Ptr(Const(Float64)), right: Ptr(Const(vector))) -> vector: ...
+def add_real_vector(left: Ref(Const(Float64)), right: Ref(Const(vector))) -> vector: ...
 
 class vector:
     @overload("add_vector_real")
-    def __add__(self, right: Ptr(Const(Float64))) -> vector: ...
+    def __add__(self, right: Ref(Const(Float64))) -> vector: ...
 
     @overload("add_real_vector")
-    def __radd__(self, left: Ptr(Const(Float64))) -> vector: ...
+    def __radd__(self, left: Ref(Const(Float64))) -> vector: ...
 ```
 
 Operand positions are fixed:
@@ -763,13 +763,13 @@ explicit mutation:
 ```python
 @private
 def assign_vector_real(
-    left: Annotated[Ptr(vector), Intent("out")],
-    right: Ptr(Const(Float64)),
+    left: Annotated[Ref(vector), Intent("out")],
+    right: Ref(Const(Float64)),
 ) -> None: ...
 
 class vector:
     @overload("assign_vector_real")
-    def assign(self, right: Ptr(Const(Float64))) -> None: ...
+    def assign(self, right: Ref(Const(Float64))) -> None: ...
 ```
 
 `lhs.assign(rhs)` invokes native `lhs = rhs`, mutates the existing wrapped
@@ -853,15 +853,15 @@ class state:
     @private
     def init_state(
         self,
-        seed: Ptr(Const(Int32)),
-        scale: Ptr(Const(Float64)) = ...
+        seed: Ref(Const(Int32)),
+        scale: Ref(Const(Float64)) = ...
     ) -> None: ...
 
     @bind("init_state")
     def __init__(
         self,
-        seed: Ptr(Const(Int32)),
-        scale: Ptr(Const(Float64)) = ...
+        seed: Ref(Const(Int32)),
+        scale: Ref(Const(Float64)) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -1012,7 +1012,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Fortran intrinsic scalars | compiler-aware semantic dtype names |
 | C primitive scalars | compiler-probed semantic dtype names when a target report is supplied |
 | Functions/subroutines | exact native argument order and direct return type |
-| Fortran scalar references | `Ptr(Const(T))`, `Ptr(T)`, `Intent("out")` |
+| Fortran scalar references | `Ref(Const(T))`, `Ref(T)`, `Intent("out")` |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
 | Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
@@ -1032,7 +1032,7 @@ Loaded but usually not generated from source today:
 | Area | Loaded behavior |
 | --- | --- |
 | `Callable[[...], ...]` | complete callback/procedure signature metadata |
-| `Ptr[n](T)` for `n > 1` | direct low-level pointer topology |
+| `Ref[n](T)` for `n > 1` | direct low-level pointer topology |
 | `ORDER_ANY` | edited orientation-independent array contract |
 | generic `Annotated` constraints | preserved semantic constraints |
 | `@native_call` and `Returns[...]` | projection metadata |
@@ -1045,7 +1045,7 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - `Unknown` semantic types.
 - `Constant` or `Shape` as `Annotated` metadata.
 - non-dimensional subscriptions such as `Float64[ORDER_F]`.
-- `Ptr[1](T)`.
+- `Ref[1](T)`.
 - untyped callable parameters.
 - positional-only, keyword-only, vararg or kwarg function parameters, except
   for the generated derived-type constructor shape.

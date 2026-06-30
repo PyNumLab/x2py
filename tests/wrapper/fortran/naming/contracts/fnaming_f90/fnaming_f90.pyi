@@ -15,13 +15,15 @@ class visible_t:
 value: Int32
 
 @bind("lambda")
+@native_call([Ref(Arg(0))])
 def lambda_(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...
 
 @bind("lambda_")
+@native_call([Ref(Arg(0))])
 def lambda__2(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...
 
 def get_value() -> Int32: ...

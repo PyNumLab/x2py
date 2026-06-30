@@ -1,4 +1,5 @@
 @external
+@native_call([Ref(Arg(0))])
 def free_square(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...

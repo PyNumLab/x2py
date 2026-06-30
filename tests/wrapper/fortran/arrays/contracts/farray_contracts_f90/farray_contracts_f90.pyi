@@ -1,10 +1,12 @@
+@native_call([Ref(Arg(0)), Arg(1)])
 def sum_assumed_size(
-    n: Ptr(Const(Int32)),
+    n: Const(Int32),
     values: Const(Float64[Flat])
 ) -> Float64: ...
 
+@native_call([Ref(Arg(0)), Arg(1)])
 def scale_lower(
-    n: Ptr(Const(Int32)),
+    n: Const(Int32),
     values: Float64[n - 1 - 0 + 1]
 ) -> None: ...
 

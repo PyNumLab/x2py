@@ -1,3 +1,4 @@
+@native_call([Ref(Arg(0))])
 def shared_value(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...

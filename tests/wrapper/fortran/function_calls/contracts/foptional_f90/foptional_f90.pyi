@@ -7,26 +7,28 @@ class sample:
 
     value: Int32
 
+@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2), Arg(3), Arg(4)])
 def summarize(
-    required: Ptr(Const(Int32)),
-    scale: Ptr(Const(Int32)) = ...,
+    required: Const(Int32),
+    scale: Const(Int32) = ...,
     values: Const(Float64[::Strided]) = ...,
-    label: Ptr(Const(String)) = ...,
-    item: Ptr(Const(sample)) = ...
+    label: Ref(Const(String)) = ...,
+    item: Ref(Const(sample)) = ...
 ) -> Int32: ...
 
+@native_call([Arg(0), Ref(Arg(1))])
 def mutate_optional(
     values: Float64[::Strided] = ...,
-    amount: Ptr(Const(Float64)) = ...
+    amount: Const(Float64) = ...
 ) -> None: ...
 
-@native_call([Arg(0), Arg(1)])
+@native_call([Ref(Arg(0)), Arg(1)])
 def fill_optional(
-    n: Ptr(Const(Int32)),
+    n: Const(Int32),
     values: Float64[::Strided] = ...
 ) -> Returns["values", Float64[::Strided], Optional]: ...
 
-@native_call([Arg(0), Return('status', 1)])
+@native_call([Ref(Arg(0)), Return('status', 1)])
 def optional_status(
-    base: Ptr(Const(Int32))
+    base: Const(Int32)
 ) -> tuple[Int32, Int32 | None]: ...

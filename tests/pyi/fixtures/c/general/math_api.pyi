@@ -9,10 +9,11 @@ def scale(
     x: Float64[1]
 ) -> None: ...
 
+@native_call([Arg(0), Ref(Arg(1)), Ref(Arg(2))])
 def dot(
     n: Int,
-    x: Ptr(Const(Float64)),
-    y: Ptr(Const(Float64))
+    x: Const(Float64),
+    y: Const(Float64)
 ) -> Float64: ...
 
 def fill_identity3(

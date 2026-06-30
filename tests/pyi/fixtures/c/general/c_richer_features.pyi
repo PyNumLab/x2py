@@ -20,21 +20,21 @@ X2PY_STATUS_ERROR: Final[Int] = -1
 def x2py_slow_path() -> Int: ...
 
 def x2py_sort(
-    items: Ptr(Any),
+    items: Ref(Any),
     count: SizeT,
     item_size: SizeT,
     compare: CFunctionPointer
 ) -> Int: ...
 
 def x2py_register_callback(
-    context: Ptr(x2py_context),
+    context: Ref(x2py_context),
     callback: CFunctionPointer,
-    userdata: Ptr(Any)
+    userdata: Ref(Any)
 ) -> Int: ...
 
 def x2py_status_message(
     status: Int
-) -> Ptr(Const(Int8)): ...
+) -> Ref(Const(Int8)): ...
 
 def x2py_fill_matrix(
     rows: SizeT,

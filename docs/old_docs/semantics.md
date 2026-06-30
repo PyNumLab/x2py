@@ -288,7 +288,7 @@ policy is documented in the datatype mapping section above.
 - Object-like numeric macros become `Final`-style `SemanticVariable` entries through
   the `Constant` constraint.
 - Struct definitions become `SemanticClass` entries. Incomplete structs become
-  opaque classes and may be used through direct `Ptr(...)` identity contracts.
+  opaque classes and may be used through direct `Ref(...)` identity contracts.
 - Explicit multi-header conversion resolves a struct to the header that defines
   it. Other generated stubs import that owner class instead of emitting
   duplicate definitions.
@@ -362,15 +362,15 @@ def dot_value(a: Float64, b: Float64) -> Float64: ...
 Native reference and pointer-backed storage is explicit:
 
 ```python
-def inspect(value: Ptr(Const(Int32))) -> None: ...
-def update(value: Ptr(Float64)) -> None: ...
+def inspect(value: Ref(Const(Int32))) -> None: ...
+def update(value: Ref(Float64)) -> None: ...
 ```
 
 Array storage uses NumPy-style subscriptions. The dimensions inside `T[...]`
 are the storage contract:
 
 ```python
-def scale(n: Ptr(Const(Int32)), x: Float64[n]) -> None: ...
+def scale(n: Ref(Const(Int32)), x: Float64[n]) -> None: ...
 def matrix(a: Annotated[Const(Float64[n, m]), ORDER_F]) -> None: ...
 def assumed(x: Annotated[Float64[::Strided, ::Strided], ORDER_F]) -> None: ...
 ```
@@ -422,8 +422,8 @@ values.
 
 Fortran scalar dummy arguments are represented as follows:
 
-- Scalar dummy without `value`, `intent(in)`: `Ptr(Const(T))`.
-- Scalar dummy without `value`, `intent(out)` or `intent(inout)`: `Ptr(T)`.
+- Scalar dummy without `value`, `intent(in)`: `Ref(Const(T))`.
+- Scalar dummy without `value`, `intent(out)` or `intent(inout)`: `Ref(T)`.
 - Scalar dummy with `value`: direct `T`.
 - Function result: direct return annotation.
 
@@ -440,8 +440,8 @@ end subroutine
 ```python
 def update(
     scale: Float64,
-    value: Ptr(Float64),
-    result: Annotated[Ptr(Float64), Intent("out")]
+    value: Ref(Float64),
+    result: Annotated[Ref(Float64), Intent("out")]
 ) -> None: ...
 ```
 
@@ -487,11 +487,11 @@ Explicit-shape and adjustable arrays use shaped storage. Multidimensional
 Fortran-contiguous storage carries `ORDER_F`; vectors omit order metadata:
 
 ```python
-def scale(n: Ptr(Const(Int32)), x: Float64[n]) -> None: ...
+def scale(n: Ref(Const(Int32)), x: Float64[n]) -> None: ...
 
 def apply(
-    n: Ptr(Const(Int32)),
-    m: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
+    m: Ref(Const(Int32)),
     a: Annotated[Const(Float64[n, m]), ORDER_F],
 ) -> None: ...
 ```
@@ -505,7 +505,7 @@ unknown rank:
 def legacy(values: Float64[:]) -> None: ...
 
 def legacy_matrix(
-    n: Ptr(Const(Int32)),
+    n: Ref(Const(Int32)),
     a: Annotated[Float64[n, :], ORDER_F]
 ) -> None: ...
 ```
@@ -614,8 +614,8 @@ The Fortran converter does not automatically generate a projected interface.
 The loader and printer retain explicit projection mappings for edited semantic
 stubs, including `@native_call` entries formed from `Arg`, `Return`, `Const`,
 `Len`, `IsPresent`, `Work` and `.shape[...]`, plus `Returns[...]`. The
-pointer/reference adaptation examples below (`Ptr(Arg(...))` and
-`Ptr(Return(...))`), `As[...]`, `.strides[...]`, coercion policy and
+pointer/reference adaptation examples below (`Ref(Arg(...))` and
+`Ref(Return(...))`), `As[...]`, `.strides[...]`, coercion policy and
 validation contracts describe extensions required for the fuller Pythonic
 projection; they are not currently accepted or emitted by this path.
 
@@ -630,7 +630,7 @@ caller-supplied storage:
 
 ```python
 # Implemented exact form.
-def advance(value: Ptr(Float64)) -> None: ...
+def advance(value: Ref(Float64)) -> None: ...
 ```
 
 A future Pythonic form may create writable temporary storage, perform the
@@ -638,7 +638,7 @@ native call and read the updated value back as a Python result:
 
 ```python
 # Projected form, not currently implemented.
-@native_call([Ptr(Arg(0))])
+@native_call([Ref(Arg(0))])
 def advance(value: Float64) -> Returns["value", Float64]: ...
 ```
 
@@ -647,10 +647,10 @@ reference with its preserved source intent:
 
 ```python
 # Implemented exact form.
-def get_count(result: Annotated[Ptr(Int32), Intent("out")]) -> None: ...
+def get_count(result: Annotated[Ref(Int32), Intent("out")]) -> None: ...
 
 # Projected form, not currently implemented.
-@native_call([Ptr(Return(0))])
+@native_call([Ref(Return(0))])
 def get_count() -> Int32: ...
 ```
 
@@ -695,7 +695,7 @@ Coercions and constraints serve different purposes:
   mutability, device residence, alignment or ownership.
 
 The exact notation already records native-facing local constraints, including
-`Ptr(Const(T))`, `Const(T[...])`, dimensions, `ORDER_F`, `ORDER_ANY`,
+`Ref(Const(T))`, `Const(T[...])`, dimensions, `ORDER_F`, `ORDER_ANY`,
 `Allocatable` and `Pointer`. A projected API may add allowed conversion
 policy, for example a future `From(np.ndarray, copy=True)` spelling, but it
 cannot silently weaken the exact native contract.
@@ -806,7 +806,7 @@ The importing module references that owner rather than re-exporting the type:
 # physics.pyi
 from types_mod import particle
 
-def move(p: Ptr(particle)) -> None: ...
+def move(p: Ref(particle)) -> None: ...
 ```
 
 `emit_module_stubs(...)` produces the complete stub mapping. `load_pyi_modules`
@@ -842,7 +842,7 @@ starter exact-contract stubs from that model. Remaining C work includes:
   present in exact contracts.
 
 Future C conversion should use the same notation: by-value scalars as bare
-types, unrefined pointers as `Ptr(T)` or `Ptr(Const(T))`, and array notation
+types, unrefined pointers as `Ref(T)` or `Ref(Const(T))`, and array notation
 only when a real array storage contract is known.
 
 ## Design Proposal: Self-Contained C Semantic `.pyi` Runtime Contract
@@ -893,8 +893,8 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
    direct C return, or `None` for native `void`.
 5. A C pointer parameter is never silently represented by a plain immutable
    Python scalar. The caller supplies pointer-backed storage.
-6. A bare numeric pointer uses `Ptr(T)` for writable storage and
-   `Ptr(Const(T))` for read-only storage. For an API known to use that pointer
+6. A bare numeric pointer uses `Ref(T)` for writable storage and
+   `Ref(Const(T))` for read-only storage. For an API known to use that pointer
    as a scalar reference, callers conventionally pass matching
    zero-dimensional NumPy storage. Numeric pointer parameters with a recorded
    array shape contract use `T[dimension-specs]` or `T[...]`. All these
@@ -923,7 +923,7 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
 9. `Const(...)` is the canonical spelling for a read-only C pointee/storage
    contract.
 10. Pointer graphs such as `T **` and deeper are not inferred from NumPy
-    arrays. They are represented directly as `Ptr[n](T)` and require the
+    arrays. They are represented directly as `Ref[n](T)` and require the
     caller to supply a compatible low-level native pointer object.
 11. Functions requiring hidden outputs, generated lengths, Python string
     conversion, handle conversion, callback thunks, status-to-exception
@@ -982,7 +982,7 @@ No decorator is needed or accepted for these identity calls.
 A numeric NumPy storage annotation means the caller supplies memory whose data
 address is passed directly to C. C ordinary pointer parameters contain no
 rank, extent or stride descriptor. Therefore a native `double *values` with no
-additional array contract is represented exactly as `Ptr(Float64)`;
+additional array contract is represented exactly as `Ref(Float64)`;
 dimensioned forms are used only when the C declaration, documented API
 contract, or completed semantic stub provides those constraints.
 A generated Fortran intermediary that prepares Fortran dummy arguments is a
@@ -991,8 +991,8 @@ described in this document.
 
 | Semantic annotation | Python caller supplies | Native parameter |
 | --- | --- | --- |
-| `Ptr(T)` | compatible writable native pointer-backed storage; a zero-dimensional NumPy array is the scalar-reference convention | `T *` |
-| `Ptr(Const(T))` | compatible native pointer-backed storage under a read-only pointee contract | `const T *` |
+| `Ref(T)` | compatible writable native pointer-backed storage; a zero-dimensional NumPy array is the scalar-reference convention | `T *` |
+| `Ref(Const(T))` | compatible native pointer-backed storage under a read-only pointee contract | `const T *` |
 | `Int[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `int *` |
 | `Const(Int[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const int *` |
 | `Float64[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `double *` |
@@ -1019,13 +1019,13 @@ expresses an explicit NumPy-style half-open range. It has the same size as
 `Float64[n]` in this simple zero-based case, but retains range semantics for
 forms with a lower bound or step.
 
-`Ptr(T)` and `Ptr(Const(T))` preserve an unrefined one-level C pointer. For a
+`Ref(T)` and `Ref(Const(T))` preserve an unrefined one-level C pointer. For a
 known primitive scalar-reference API, the canonical NumPy value is a
 zero-dimensional array, as shown below. `T[dimension-specs]` and `T[...]`
 with an optional rank selector are NumPy-backed array-pointer spellings once
 an array contract is known. A shape-bearing array annotation already
 represents pointer-backed array storage; do not additionally wrap it in
-`Ptr(...)`.
+`Ref(...)`.
 
 For multidimensional storage, order is orthogonal to rank, dimensions and
 stride capability. `Annotated[Float64[:, :], ORDER_F]` denotes a rank-two
@@ -1085,7 +1085,7 @@ units; converting between them is an explicit later mapping decision.
 
 #### 5.2 Pointer Depth And Opaque Pointers
 
-`Ptr(...)` expresses native pointer depth directly. For a one-level pointer,
+`Ref(...)` expresses native pointer depth directly. For a one-level pointer,
 it preserves the native address form without inventing rank or shape. A known
 primitive scalar-reference use may be supplied with zero-dimensional NumPy
 storage. For an opaque argument or a direct pointer return, it represents a
@@ -1093,24 +1093,24 @@ typed low-level native pointer object:
 
 | Semantic annotation | Native parameter |
 | --- | --- |
-| `Ptr(T)` | `T *`; writable unrefined one-level pointer storage |
-| `Ptr(Const(T))` | `const T *`; read-only unrefined one-level pointer storage |
-| `Ptr[2](T)` | `T **` direct low-level pointer object |
-| `Ptr[2](Const(T))` | `const T **` direct low-level pointer object |
-| `Ptr[n](T)` | `T` followed by exactly `n` native pointer layers, `n >= 2` |
+| `Ref(T)` | `T *`; writable unrefined one-level pointer storage |
+| `Ref(Const(T))` | `const T *`; read-only unrefined one-level pointer storage |
+| `Ref[2](T)` | `T **` direct low-level pointer object |
+| `Ref[2](Const(T))` | `const T **` direct low-level pointer object |
+| `Ref[n](T)` | `T` followed by exactly `n` native pointer layers, `n >= 2` |
 
-`Ptr(x)` is the only canonical depth-one spelling. `Ptr[1](x)` is invalid.
+`Ref(x)` is the only canonical depth-one spelling. `Ref[1](x)` is invalid.
 
 For array storage whose dimensions are known, use an array form such as
-`Int[n]` or `Float64[:, :]` rather than `Ptr(Int)` or `Ptr(Float64)`. When
+`Int[n]` or `Float64[:, :]` rather than `Ref(Int)` or `Ref(Float64)`. When
 the only available C fact is a data pointer with no rank or extent contract,
-retain `Ptr(T)`. `Ptr[n](T)` is necessary for pointer graphs and for low-level
+retain `Ref(T)`. `Ref[n](T)` is necessary for pointer graphs and for low-level
 pointer values that are not represented by a shaped NumPy storage contract.
 
 A direct pointer object carries a typed native address. Passing or returning
 it does not imply allocation, copying, ownership or automatic destruction.
 For example, a raw pointer returned by one native function can be passed to a
-second native function under matching `Ptr(...)` annotations. Pointer-object
+second native function under matching `Ref(...)` annotations. Pointer-object
 construction/allocation helpers are runtime API work, not additional
 information required in a semantic function signature.
 
@@ -1124,8 +1124,8 @@ void read_count(const int *value);
 Phase 1 interface:
 
 ```python
-def increment(value: Ptr(Int)) -> None: ...
-def read_count(value: Ptr(Const(Int))) -> None: ...
+def increment(value: Ref(Int)) -> None: ...
+def read_count(value: Ref(Const(Int))) -> None: ...
 ```
 
 Python use is intentionally storage-oriented:
@@ -1167,7 +1167,7 @@ void get_values(int n, double *out);
 Phase 1 interface:
 
 ```python
-def get_count(out: Ptr(Int)) -> None: ...
+def get_count(out: Ref(Int)) -> None: ...
 def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
 
@@ -1199,7 +1199,7 @@ void process_raw(double *values);
 ```
 
 ```python
-def process_raw(values: Ptr(Float64)) -> None: ...
+def process_raw(values: Ref(Float64)) -> None: ...
 ```
 
 Once the semantic interface records valid array contracts, it may use:
@@ -1277,8 +1277,8 @@ extent/stride values; it does not create a pointer graph. Their exact
 low-level Phase 1 interfaces are:
 
 ```python
-def use_rows(rows: Ptr[2](Int)) -> None: ...
-def update_value(value: Ptr[5](Int)) -> None: ...
+def use_rows(rows: Ref[2](Int)) -> None: ...
+def update_value(value: Ref[5](Int)) -> None: ...
 ```
 
 The caller supplies an x2py-compatible native pointer object with the declared
@@ -1335,8 +1335,8 @@ struct context *context_current(void);
 class context(Opaque):
     pass
 
-def raw_values() -> Ptr(Float64): ...
-def context_current() -> Ptr(context): ...
+def raw_values() -> Ref(Float64): ...
+def context_current() -> Ref(context): ...
 ```
 
 If a returned pointer is exposed immediately as NumPy storage, shape and
@@ -1377,7 +1377,7 @@ void c_increment(int *value);
 def add(a: Int, b: Int) -> Int: ...
 
 @bind("c_increment")
-def increment(value: Ptr(Int)) -> None: ...
+def increment(value: Ref(Int)) -> None: ...
 ```
 
 `@bind` changes only which exported symbol is loaded. It does not synthesize
@@ -1415,9 +1415,9 @@ int context_run(struct context *ctx);
 class context(Opaque):
     pass
 
-def context_create() -> Ptr(context): ...
-def context_destroy(ctx: Ptr(context)) -> None: ...
-def context_run(ctx: Ptr(context)) -> Int: ...
+def context_create() -> Ref(context): ...
+def context_destroy(ctx: Ref(context)) -> None: ...
+def context_run(ctx: Ref(context)) -> Int: ...
 ```
 
 This is C-like identity behavior: Python receives and passes the native pointer
@@ -1444,9 +1444,9 @@ Excluded from the proposed Phase 1:
 
 | Desired behavior | Example C shape | Later mechanism |
 | --- | --- | --- |
-| Pass a Python scalar through a native pointer | `void increment(int *value)` exposed as `value = increment(value)` | `@native_call([Ptr(Arg(0))])` plus readback |
+| Pass a Python scalar through a native pointer | `void increment(int *value)` exposed as `value = increment(value)` | `@native_call([Ref(Arg(0))])` plus readback |
 | Generate a hidden length | `double sum(size_t n, const double *x)` exposed as `sum(x)` | `Arg(0).shape[0]` in `@native_call` |
-| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Ptr(Return(...))` in `@native_call` |
+| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Ref(Return(...))` in `@native_call` |
 | Convert native status to exception | `int create(...);` with hidden status | `Status[...]` and `Check(...)` |
 | Wrap a raw opaque pointer with ownership behavior | `struct ctx *` / `struct ctx **` | handle and lifetime policy |
 | Convert Python strings to C strings | `const char *` from `str` | text encoding/termination policy |
@@ -1464,14 +1464,14 @@ unsupported behavior instead of silently changing the interface.
 | Code | Condition |
 | --- | --- |
 | `c_non_identity_call_unsupported` | A declaration or semantic interface requires synthesized, omitted, reordered or transformed parameters/results. |
-| `c_pointer_object_mismatch` | A `Ptr(T)` argument lacks compatible native pointer-backed storage, or a multi-level pointer argument lacks the declared native pointer topology. |
-| `c_numpy_pointer_return_policy_required` | A native pointer return is exposed as a shaped NumPy result without implemented lifetime handling or explicit required metadata; a direct raw `Ptr(T)` return remains identity behavior. |
+| `c_pointer_object_mismatch` | A `Ref(T)` argument lacks compatible native pointer-backed storage, or a multi-level pointer argument lacks the declared native pointer topology. |
+| `c_numpy_pointer_return_policy_required` | A native pointer return is exposed as a shaped NumPy result without implemented lifetime handling or explicit required metadata; a direct raw `Ref(T)` return remains identity behavior. |
 | `c_numpy_dtype_mismatch` | Supplied NumPy storage does not have the exact semantic native element dtype. |
 | `c_numpy_rank_mismatch` | Supplied NumPy storage does not satisfy declared rank or fixed-shape constraints. |
 | `c_numpy_contiguity_required` | An unqualified dense C-contiguous array annotation receives non-contiguous storage. |
 | `c_numpy_stride_mapping_required` | A Pythonic interface hides native stride parameters required for stride-aware storage without an explicit mapping such as `Arg(0).strides[1]`. |
 | `c_numpy_writeability_required` | A mutable native pointer receives read-only NumPy storage. |
-| `c_opaque_handle_conversion_unsupported` | A raw opaque pointer is requested as an owning/high-level Python handle rather than direct `Ptr(context)` identity. |
+| `c_opaque_handle_conversion_unsupported` | A raw opaque pointer is requested as an owning/high-level Python handle rather than direct `Ref(context)` identity. |
 | `c_string_conversion_unsupported` | A Python string conversion is requested. |
 | `c_callback_unsupported` | A Python callback-to-native-function-pointer mapping is requested. |
 | `c_union_unsupported` | A callable interface includes an unsupported union. |
@@ -1483,7 +1483,7 @@ unsupported behavior instead of silently changing the interface.
 The proposed Phase 1 implementation would need to:
 
 1. Parse scalar annotations and direct `None`/scalar return annotations.
-2. Parse unrefined one-level pointer forms `Ptr(T)` and `Ptr(Const(T))`, and
+2. Parse unrefined one-level pointer forms `Ref(T)` and `Ref(Const(T))`, and
    accept matching pointer-backed storage; known scalar-reference uses must
    support the zero-dimensional NumPy convention.
 3. Parse numeric array storage forms: `T[:]`, `Const(T[:])`, `T[:, :]`,
@@ -1492,7 +1492,7 @@ The proposed Phase 1 implementation would need to:
    forms such as `T[...]`, `T[...][1:4]`, and `T[...][1, 2, 5]`.
 4. Lower each supported one-level scalar-reference or array-storage
    annotation to exactly one native pointer of its leaf type.
-5. Parse and lower direct pointer forms `Ptr[n](T)` as exactly `n` native
+5. Parse and lower direct pointer forms `Ref[n](T)` as exactly `n` native
    pointer layers, accepting compatible low-level native pointer objects at
    runtime.
 6. Validate NumPy dtype, rank, fixed dimensions, explicit layout/stride
@@ -1534,7 +1534,7 @@ void increment(int *value);
 ```
 
 ```python
-def increment(value: Ptr(Int)) -> None: ...
+def increment(value: Ref(Int)) -> None: ...
 ```
 
 Tests must verify that a writable zero-dimensional NumPy array is passed by
@@ -1548,7 +1548,7 @@ void read_count(const int *value);
 ```
 
 ```python
-def read_count(value: Ptr(Const(Int))) -> None: ...
+def read_count(value: Ref(Const(Int))) -> None: ...
 ```
 
 Tests must verify matching scalar storage/input acceptance and exact native
@@ -1575,7 +1575,7 @@ void get_values(int n, double *out);
 ```
 
 ```python
-def get_count(out: Ptr(Int)) -> None: ...
+def get_count(out: Ref(Int)) -> None: ...
 def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
 
@@ -1608,8 +1608,8 @@ void update_value(int *****value);
 ```
 
 ```python
-def use_rows(rows: Ptr[2](Int)) -> None: ...
-def update_value(value: Ptr[5](Int)) -> None: ...
+def use_rows(rows: Ref[2](Int)) -> None: ...
+def update_value(value: Ref[5](Int)) -> None: ...
 ```
 
 Tests must verify exact pointer depth in the parsed ABI contract and that
@@ -1628,8 +1628,8 @@ void context_destroy(struct context *ctx);
 class context(Opaque):
     pass
 
-def context_create() -> Ptr(context): ...
-def context_destroy(ctx: Ptr(context)) -> None: ...
+def context_create() -> Ref(context): ...
+def context_destroy(ctx: Ref(context)) -> None: ...
 ```
 
 Tests must verify that the returned raw native pointer object is accepted by
@@ -1656,14 +1656,14 @@ The Phase 1 parser or readiness checker must reject a runnable interface using
 later transformation syntax such as:
 
 ```python
-@native_call([Ptr(Arg(0))])
+@native_call([Ref(Arg(0))])
 def increment(value: Int) -> Returns["value", Int]: ...
 ```
 
 The proposed Phase 1 spelling for the same C function is:
 
 ```python
-def increment(value: Ptr(Int)) -> None: ...
+def increment(value: Ref(Int)) -> None: ...
 ```
 
 ### 14. Phase 2: Pythonic Adaptations After Identity Works
@@ -1674,11 +1674,11 @@ C parameter lists. The settled design direction is:
 
 ```python
 # C: void increment(int *value);
-@native_call([Ptr(Arg(0))])
+@native_call([Ref(Arg(0))])
 def increment_value(value: Int) -> Returns["value", Int]: ...
 
 # C: void get_count(int *out);
-@native_call([Ptr(Return(0))])
+@native_call([Ref(Return(0))])
 def get_count() -> Int: ...
 
 # C: double sum_values(size_t n, const double *values);
@@ -1695,7 +1695,7 @@ def get_values(n: Int) -> Float64[n]: ...
 
 # C: int context_create(struct context **out);
 @native_call(
-    [Ptr(Return(0))],
+    [Ref(Return(0))],
     returns=Status[Int, Check(success=0, raises=RuntimeError)],
 )
 def context_create() -> Annotated[context, Owned, FreeWith("context_destroy")]: ...
@@ -1723,9 +1723,9 @@ The following decisions do not block the identity-call implementation:
 3. Callback policies beyond the basic future design direction.
 4. Convenience construction of pointer rows from nested Python sequences and
    other high-level builders for `T **` and deeper graphs. Direct
-   `Ptr[n](T)` pointer objects are already Phase 1 identity values.
+   `Ref[n](T)` pointer objects are already Phase 1 identity values.
 5. Converting native pointer returns into NumPy views beyond explicitly shaped,
-   explicitly owned or borrowed storage. Returning direct `Ptr(T)` objects is
+   explicitly owned or borrowed storage. Returning direct `Ref(T)` objects is
    already identity behavior.
 6. Automatic derivation of hidden layout/stride arguments and packing or
    copy-back for storage the native routine does not accept directly.

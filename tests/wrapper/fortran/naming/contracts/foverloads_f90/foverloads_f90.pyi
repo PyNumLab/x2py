@@ -9,28 +9,32 @@ class accumulator:
 
     @private
     @bind("accumulator_add_integer")
+    @native_call([Pass(), Ref(Arg(0))])
     def add_integer(
         self,
-        value: Ptr(Const(Int32))
+        value: Const(Int32)
     ) -> None: ...
 
     @private
     @bind("accumulator_add_real")
+    @native_call([Pass(), Ref(Arg(0))])
     def add_real(
         self,
-        value: Ptr(Const(Float64))
+        value: Const(Float64)
     ) -> None: ...
 
     @overload("accumulator_add_integer")
+    @native_call([Pass(), Ref(Arg(0))])
     def add(
         self,
-        value: Ptr(Const(Int32))
+        value: Const(Int32)
     ) -> None: ...
 
     @overload("accumulator_add_real")
+    @native_call([Pass(), Ref(Arg(0))])
     def add(
         self,
-        value: Ptr(Const(Float64))
+        value: Const(Float64)
     ) -> None: ...
 
 class sample:
@@ -43,23 +47,27 @@ class sample:
     value: Float64 = 0.0
 
 @private
+@native_call([Ref(Arg(0))])
 def convert_integer(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...
 
 @private
+@native_call([Ref(Arg(0))])
 def convert_real(
-    value: Ptr(Const(Float64))
+    value: Const(Float64)
 ) -> Float64: ...
 
 @private
+@native_call([Ref(Arg(0))])
 def convert_complex(
-    value: Ptr(Const(Complex128))
+    value: Const(Complex128)
 ) -> Complex128: ...
 
 @private
+@native_call([Ref(Arg(0))])
 def summarize_scalar(
-    value: Ptr(Const(Float64))
+    value: Const(Float64)
 ) -> Float64: ...
 
 @private
@@ -69,44 +77,50 @@ def summarize_vector(
 
 @private
 def inspect_accumulator(
-    value: Ptr(Const(accumulator))
+    value: Ref(Const(accumulator))
 ) -> Float64: ...
 
 @private
 def inspect_sample(
-    value: Ptr(Const(sample))
+    value: Ref(Const(sample))
 ) -> Float64: ...
 
 @private
+@native_call([Arg(0), Ref(Arg(1))])
 def accumulator_add_integer(
-    self: Annotated[Ptr(accumulator), Polymorphic],
-    value: Ptr(Const(Int32))
+    self: Annotated[Ref(accumulator), Polymorphic],
+    value: Const(Int32)
 ) -> None: ...
 
 @private
+@native_call([Arg(0), Ref(Arg(1))])
 def accumulator_add_real(
-    self: Annotated[Ptr(accumulator), Polymorphic],
-    value: Ptr(Const(Float64))
+    self: Annotated[Ref(accumulator), Polymorphic],
+    value: Const(Float64)
 ) -> None: ...
 
 @overload("convert_integer")
+@native_call([Ref(Arg(0))])
 def convert(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...
 
 @overload("convert_real")
+@native_call([Ref(Arg(0))])
 def convert(
-    value: Ptr(Const(Float64))
+    value: Const(Float64)
 ) -> Float64: ...
 
 @overload("convert_complex")
+@native_call([Ref(Arg(0))])
 def convert(
-    value: Ptr(Const(Complex128))
+    value: Const(Complex128)
 ) -> Complex128: ...
 
 @overload("summarize_scalar")
+@native_call([Ref(Arg(0))])
 def summarize(
-    value: Ptr(Const(Float64))
+    value: Const(Float64)
 ) -> Float64: ...
 
 @overload("summarize_vector")
@@ -116,10 +130,10 @@ def summarize(
 
 @overload("inspect_accumulator")
 def inspect(
-    value: Ptr(Const(accumulator))
+    value: Ref(Const(accumulator))
 ) -> Float64: ...
 
 @overload("inspect_sample")
 def inspect(
-    value: Ptr(Const(sample))
+    value: Ref(Const(sample))
 ) -> Float64: ...

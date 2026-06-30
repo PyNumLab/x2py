@@ -257,7 +257,8 @@ An edited class may bind `__init__` to one concrete native initializer:
 ```python
 class state:
     @bind("init_state")
-    def __init__(self, size: Ptr(Const(Int32))) -> None: ...
+    @native_call([Pass(), Ref(Arg(0))])
+    def __init__(self, size: Const(Int32)) -> None: ...
 ```
 
 The generated field-keyword constructor and a bound native initializer are
@@ -272,8 +273,8 @@ does not need `@native_call`:
 
 ```python
 def scalar_status(
-    base: Ptr(Const(Int32)),
-    status: Annotated[Ptr(Int32), Intent("out")],
+    base: Ref(Const(Int32)),
+    status: Annotated[Ref(Int32), Intent("out")],
 ) -> None: ...
 ```
 
@@ -299,9 +300,9 @@ the native call needs hidden output storage, reordered arguments, constants,
 lengths, presence flags, shapes, or work buffers:
 
 ```python
-@native_call([Arg(0), Return("status", 0)])
+@native_call([Ref(Arg(0)), Return("status", 0)])
 def scalar_status(
-    base: Ptr(Const(Int32)),
+    base: Const(Int32),
 ) -> Returns["status", Int32]: ...
 ```
 
@@ -318,7 +319,7 @@ or an explicit call-local discarded-mutation policy:
 ```python
 def scale_with_status(
     values: Annotated[Float64[:], Immutable],
-    status: Annotated[Ptr(Int32), Intent("out")],
+    status: Annotated[Ref(Int32), Intent("out")],
 ) -> Returns["values", Float64[:]]: ...
 ```
 
@@ -484,9 +485,9 @@ wrapper allocates instance -> component allocates -> NumPy view retains wrapper
 #### NumPy-owned copy
 
 ```python
-@native_call([Arg(0), Return("values", 0)])
+@native_call([Ref(Arg(0)), Return("values", 0)])
 def build_values(
-    n: Ptr(Const(Int32)),
+    n: Const(Int32),
 ) -> Annotated[
     Float64[:],
     Allocatable,

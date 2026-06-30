@@ -1,3 +1,4 @@
+@native_call([Ref(Arg(0))])
 def add_one(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> Int32: ...

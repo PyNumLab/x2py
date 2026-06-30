@@ -9,5 +9,5 @@ class particle:
     x: Float64[3]
 
 def touch(
-    p: Ptr(particle)
+    p: Ref(particle)
 ) -> None: ...

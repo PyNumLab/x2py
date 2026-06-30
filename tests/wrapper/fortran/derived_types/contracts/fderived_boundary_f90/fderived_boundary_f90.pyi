@@ -20,31 +20,33 @@ class holder:
     scale: Float64
 
 def point_sum(
-    p: Ptr(Const(point))
+    p: Ref(Const(point))
 ) -> Float64: ...
 
+@native_call([Arg(0), Ref(Arg(1)), Ref(Arg(2))])
 def move_point(
-    p: Ptr(point),
-    dx: Ptr(Const(Float64)),
-    dy: Ptr(Const(Float64))
+    p: Ref(point),
+    dx: Const(Float64),
+    dy: Const(Float64)
 ) -> None: ...
 
-@native_call([Return('p', 0), Arg(0), Arg(1)])
+@native_call([Return('p', 0), Ref(Arg(0)), Ref(Arg(1))])
 def make_point_out(
-    x: Ptr(Const(Float64)),
-    y: Ptr(Const(Float64))
+    x: Const(Float64),
+    y: Const(Float64)
 ) -> point: ...
 
+@native_call([Ref(Arg(0)), Ref(Arg(1))])
 def make_point(
-    x: Ptr(Const(Float64)),
-    y: Ptr(Const(Float64))
+    x: Const(Float64),
+    y: Const(Float64)
 ) -> point: ...
 
 def set_holder_origin(
-    h: Ptr(holder),
-    p: Ptr(Const(point))
+    h: Ref(holder),
+    p: Ref(Const(point))
 ) -> None: ...
 
 def holder_origin_x(
-    h: Ptr(Const(holder))
+    h: Ref(Const(holder))
 ) -> Float64: ...

@@ -35,6 +35,7 @@ from x2py.semantics.models import (
     SemanticImportItem,
     SemanticMethod,
     SemanticModule,
+    SemanticStorageContract,
     SemanticType,
     SemanticVariable,
     _iter_module_semantic_types,
@@ -270,8 +271,8 @@ class PyiPrinter:
             if storage.read_only:
                 target = f"Const({target})"
             if storage.pointer_depth > 1:
-                return f"Ptr[{storage.pointer_depth}]({target})"
-            return f"Ptr({target})"
+                return f"Ref[{storage.pointer_depth}]({target})"
+            return f"Ref({target})"
         if storage.kind == "array":
             return self._emit_array_type(semantic_type)
         return base_type
@@ -503,11 +504,63 @@ class PyiPrinter:
     def _emit_call_argument(self, func: SemanticFunction, arg: SemanticArgument) -> str:
         """Emit a callable argument with compact output metadata when possible."""
         name = self._parameter_target(arg.name)
+        emitted_arg = self._projected_scalar_reference_argument(func, arg)
         return self._emit_typed_name(
             name,
-            arg,
+            emitted_arg,
             original_name=arg.name if name != arg.name else None,
             omit_output_intent=self._can_omit_visible_projected_output_intent(func, arg),
+        )
+
+    @classmethod
+    def _projected_scalar_reference_argument(
+        cls,
+        func: SemanticFunction,
+        arg: SemanticArgument,
+    ) -> SemanticArgument:
+        """Return the Python-visible value form for projected scalar references."""
+        if not cls._uses_scalar_reference_projection(func, arg):
+            return arg
+        emitted_arg = deepcopy(arg)
+        emitted_arg.semantic_type.storage = SemanticStorageContract(
+            kind="value",
+            read_only=True,
+            mutable=False,
+        )
+        emitted_arg.semantic_type.ownership.mutable = False
+        return emitted_arg
+
+    @classmethod
+    def _uses_scalar_reference_projection(cls, func: SemanticFunction, arg: SemanticArgument) -> bool:
+        """Return whether `arg` is emitted as a value plus `Ref(Arg(...))`."""
+        if not cls._is_read_only_scalar_reference(arg.semantic_type):
+            return False
+        if str(getattr(arg, "intent", "in")).lower() != "in":
+            return False
+        return any(cls._mapping_projects_argument(mapping, arg) for mapping in func.projection)
+
+    @staticmethod
+    def _is_read_only_scalar_reference(semantic_type: SemanticType) -> bool:
+        """Return whether semantic type is a Python-value scalar passed by native reference."""
+        storage = semantic_type.storage
+        return bool(
+            semantic_type.rank == 0
+            and semantic_type.name != "String"
+            and semantic_type.dtype in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+            and storage is not None
+            and storage.kind == "reference"
+            and storage.read_only
+            and storage.pointer_depth == 1
+        )
+
+    @staticmethod
+    def _mapping_projects_argument(mapping: ProjectionMapping, arg: SemanticArgument) -> bool:
+        """Return whether a projection mapping consumes `arg` as a Python argument."""
+        return bool(
+            mapping.native_position is not None
+            and mapping.python_position is not None
+            and (mapping.python_name or mapping.native_name) == arg.name
+            and mapping.result_position is None
         )
 
     @staticmethod
@@ -1045,7 +1098,7 @@ class PyiPrinter:
     def _pyi_projection(func: SemanticFunction) -> list[ProjectionMapping]:
         """Return projection metadata adjusted for bound instance methods."""
         if not isinstance(func, SemanticMethod) or func.is_static or func.passed_object_position is None:
-            return func.projection
+            return PyiPrinter._with_scalar_reference_projections(func, deepcopy(func.projection))
         passed_position = func.passed_object_position
         projected = deepcopy(func.projection)
         if not projected:
@@ -1065,8 +1118,43 @@ class PyiPrinter:
                 mapping.value_kind = "pass"
                 continue
             if mapping.python_position is not None and mapping.python_position > passed_position:
+                old_position = mapping.python_position
                 mapping.python_position -= 1
-        return projected
+                PyiPrinter._shift_pointer_argument_value(mapping, old_position, mapping.python_position)
+        return PyiPrinter._with_scalar_reference_projections(func, projected)
+
+    @staticmethod
+    def _shift_pointer_argument_value(
+        mapping: ProjectionMapping,
+        old_position: int,
+        new_position: int,
+    ) -> None:
+        """Keep `Ref(Arg(...))` value refs aligned with shifted method arguments."""
+        if mapping.value_kind != "ptr" or not isinstance(mapping.value, dict):
+            return
+        if mapping.value.get("kind") == "arg" and mapping.value.get("position") == old_position:
+            mapping.value["position"] = new_position
+
+    @staticmethod
+    def _with_scalar_reference_projections(
+        func: SemanticFunction,
+        projection: list[ProjectionMapping],
+    ) -> list[ProjectionMapping]:
+        """Mark scalar reference input mappings as explicit native reference projections."""
+        by_name = {arg.name: arg for arg in func.arguments}
+        for mapping in projection:
+            if mapping.value_kind:
+                continue
+            if mapping.python_position is None:
+                continue
+            arg = by_name.get(mapping.python_name or mapping.native_name)
+            if arg is None:
+                continue
+            if not PyiPrinter._uses_scalar_reference_projection(func, arg):
+                continue
+            mapping.value_kind = "ptr"
+            mapping.value = {"kind": "arg", "position": mapping.python_position}
+        return projection
 
     @staticmethod
     def _raises(policy: dict[str, object]) -> str:
@@ -1112,6 +1200,8 @@ class PyiPrinter:
     @staticmethod
     def _native_projection_value(mapping: ProjectionMapping) -> str:
         """Handle native projection value for the current generation context."""
+        if mapping.value_kind == "ptr":
+            return f"Ref({PyiPrinter._native_value_ref(mapping.value)})"
         if mapping.value_kind == "const":
             return f"Const({mapping.value!r})"
         if mapping.value_kind == "len":
@@ -1143,9 +1233,10 @@ class PyiPrinter:
         """Return whether requires native call."""
         if isinstance(func, SemanticMethod) and not func.is_static and func.passed_object_position not in {None, 0}:
             return True
+        projection = PyiPrinter._with_scalar_reference_projections(func, deepcopy(func.projection))
         return any(
             PyiPrinter._requires_explicit_projection_mapping(mapping)
-            for mapping in func.projection
+            for mapping in projection
             if not PyiPrinter._is_assignment_passed_object_return(func, mapping)
         )
 
@@ -1164,6 +1255,8 @@ class PyiPrinter:
     @staticmethod
     def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
         """Return whether requires explicit projection mapping."""
+        if mapping.value_kind:
+            return True
         if mapping.intent == "inout":
             return mapping.result_position is not None or mapping.python_position != mapping.native_position
         if mapping.intent == "out" and mapping.result_position is not None:

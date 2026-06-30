@@ -1,4 +1,4 @@
 @external
 def add_one(
-    value: Ptr(Int32)
+    value: Ref(Int32)
 ) -> Int32: ...

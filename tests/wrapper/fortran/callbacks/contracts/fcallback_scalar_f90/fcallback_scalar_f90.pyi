@@ -1,14 +1,17 @@
+@native_call([Arg(0), Ref(Arg(1))])
 def apply_scalar(
-    callback: Callable[[Ptr(Const(Float64))], Float64],
-    value: Ptr(Const(Float64))
+    callback: Callable[[Ref(Const(Float64))], Float64],
+    value: Const(Float64)
 ) -> Float64: ...
 
+@native_call([Arg(0), Ref(Arg(1))])
 def apply_explicit(
-    callback: Callable[[Ptr(Const(Float64))], Float64],
-    value: Ptr(Const(Float64))
+    callback: Callable[[Ref(Const(Float64))], Float64],
+    value: Const(Float64)
 ) -> Float64: ...
 
+@native_call([Arg(0), Ref(Arg(1))])
 def call_notify(
-    callback: Callable[[Ptr(Const(Float64))], None],
-    value: Ptr(Const(Float64))
+    callback: Callable[[Ref(Const(Float64))], None],
+    value: Const(Float64)
 ) -> None: ...

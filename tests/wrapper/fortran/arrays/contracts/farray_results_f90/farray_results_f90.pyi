@@ -1,18 +1,21 @@
 def fixed_vector() -> Float64[3]: ...
 
+@native_call([Ref(Arg(0))])
 def automatic_vector(
-    n: Ptr(Const(Int32))
+    n: Const(Int32)
 ) -> Float64[n]: ...
 
+@native_call([Ref(Arg(0)), Ref(Arg(1))])
 def automatic_matrix(
-    rows: Ptr(Const(Int32)),
-    cols: Ptr(Const(Int32))
+    rows: Const(Int32),
+    cols: Const(Int32)
 ) -> Annotated[Float64[rows - 1 - 0 + 1, cols + 1 - 2 + 1], ORDER_F]: ...
 
+@native_call([Ref(Arg(0)), Ref(Arg(1)), Ref(Arg(2))])
 def rank3_cube(
-    n1: Ptr(Const(Int32)),
-    n2: Ptr(Const(Int32)),
-    n3: Ptr(Const(Int32))
+    n1: Const(Int32),
+    n2: Const(Int32),
+    n3: Const(Int32)
 ) -> Annotated[Float64[n1, n2, n3], ORDER_F]: ...
 
 def rank1_result() -> Float64[2]: ...
@@ -49,6 +52,7 @@ def zero_vector() -> Float64[0]: ...
 
 def zero_alloc_vector() -> Annotated[Float64[:], Allocatable]: ...
 
+@native_call([Ref(Arg(0))])
 def maybe_alloc_vector(
-    n: Ptr(Const(Int32))
+    n: Const(Int32)
 ) -> Annotated[Float64[:], Allocatable]: ...

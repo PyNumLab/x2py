@@ -12,20 +12,20 @@ class summary_point:
     code: Int32
 
 def scalar_status(
-    base: Ptr(Const(Int32)),
-    status: Annotated[Ptr(Int32), Intent("out"), Immutable]
+    base: Ref(Const(Int32)),
+    status: Annotated[Ref(Int32), Intent("out"), Immutable]
 ) -> Returns["status", Int32]: ...
 
 def fixed_inout(
-    label: Annotated[Ptr(String[8]), Immutable]
+    label: Annotated[Ref(String[8]), Immutable]
 ) -> Returns["label", String[8]]: ...
 
 def scale_with_status(
     values: Annotated[Float64[:], Immutable],
-    status: Annotated[Ptr(Int32), Intent("out")]
+    status: Annotated[Ref(Int32), Intent("out")]
 ) -> Returns["values", Float64[:]]: ...
 
 def make_point(
-    scale: Ptr(Const(Int32)),
+    scale: Ref(Const(Int32)),
     point: Annotated[summary_point, Intent("out"), Immutable]
 ) -> Returns["point", summary_point]: ...

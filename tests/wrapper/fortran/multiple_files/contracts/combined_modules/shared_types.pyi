@@ -7,6 +7,7 @@ class box:
 
     value: Int32
 
+@native_call([Ref(Arg(0))])
 def make_box(
-    value: Ptr(Const(Int32))
+    value: Const(Int32)
 ) -> box: ...

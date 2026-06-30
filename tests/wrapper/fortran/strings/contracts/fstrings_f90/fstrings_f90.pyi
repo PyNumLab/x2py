@@ -1,29 +1,29 @@
 def char_code_default(
-    c: Ptr(Const(String[1]))
+    c: Ref(Const(String[1]))
 ) -> Int32: ...
 
 def char_code_len1(
-    c: Ptr(Const(String[1]))
+    c: Ref(Const(String[1]))
 ) -> Int32: ...
 
 def char_code_kind1(
-    c: Ptr(Const(String[1]))
+    c: Ref(Const(String[1]))
 ) -> Int32: ...
 
 def char_code_c_char(
-    c: Ptr(Const(String[1]))
+    c: Ref(Const(String[1]))
 ) -> Int32: ...
 
 def string_len_fixed(
-    text: Ptr(Const(String[8]))
+    text: Ref(Const(String[8]))
 ) -> Int32: ...
 
 def string_len_assumed(
-    text: Ptr(Const(String))
+    text: Ref(Const(String))
 ) -> Int32: ...
 
 def string_len_c_char(
-    text: Ptr(Const(String[8]))
+    text: Ref(Const(String[8]))
 ) -> Int32: ...
 
 def char_result_default() -> String[1]: ...
@@ -37,5 +37,5 @@ def string_result_padded() -> String[8]: ...
 def string_result_c_char() -> String[8]: ...
 
 def string_result_deferred(
-    text: Ptr(Const(String))
+    text: Ref(Const(String))
 ) -> Annotated[String, FortranAllocatable]: ...

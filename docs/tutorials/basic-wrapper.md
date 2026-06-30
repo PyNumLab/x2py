@@ -136,15 +136,16 @@ Root contract: basic_subroutine/basic_subroutine.pyi
 from . import m1
 
 Module contract: m1.pyi
+@native_call([Ref(Arg(0)), Arg(1)])
 def add1(
-    n: Ptr(Const(Int32)),
+    n: Const(Int32),
     x: Float64[n]
 ) -> None: ...
 ```
 
 Read this as the native boundary x2py must preserve:
 
-- `n` is a read-only integer reference.
+- `n` is a read-only integer value in Python and a native reference argument.
 - `x` is a writable rank-one `Float64` array whose size is described by `n`.
 - The subroutine returns `None` because it mutates the caller-provided array.
 
