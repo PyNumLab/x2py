@@ -188,9 +188,34 @@ from .module_state import summarize
 
 That edited entry exposes `counter`, `current_count`, and `summarize` at the
 extension root, while `scale`, `scaled_counter`, `saved_counter`, and
-`next_local` stay out of the generated wrapper surface. These edits reshape
-Python exports only; they are not native ABI changes. Keep the leaf contract as
-the source of native facts, and use
+`next_local` stay out of the generated wrapper surface. After rebuilding that
+entry contract with the same command, importing the shared library looks like
+this:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/module-state-flat")
+import module_state_flat
+
+assert module_state_flat.counter == np.int32(3)
+assert module_state_flat.current_count == np.int32(3)
+assert module_state_flat.summarize() == np.int32(15)
+
+module_state_flat.current_count = np.int32(9)
+assert module_state_flat.counter == np.int32(9)
+assert module_state_flat.summarize() == np.int32(21)
+
+assert not hasattr(module_state_flat, "scale")
+assert not hasattr(module_state_flat, "scaled_counter")
+assert not hasattr(module_state_flat, "saved_counter")
+assert not hasattr(module_state_flat, "next_local")
+```
+
+These edits reshape Python exports only; they are not native ABI changes. Keep
+the leaf contract as the source of native facts, and use
 [Editing Semantic .pyi Contracts](../user-guide/editing-semantic-pyi-contracts.md)
 when you are ready to edit the generated contract package.
 
