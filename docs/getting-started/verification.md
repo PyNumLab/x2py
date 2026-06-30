@@ -26,18 +26,21 @@ interpreter. The third proves that the module entrypoint is installed.
 
 ## 2. Verify The Inspection Path
 
-This checked command parses a repository fixture without compiling a wrapper:
+Use the small module from
+[Basic Wrapper: inspect a small Fortran source](../tutorials/basic-wrapper.md#step-1-inspect-a-small-fortran-source)
+and save it as `basic_subroutine.f90`.
 
-<!-- x2py-doc-test: exact -->
+From the directory containing `basic_subroutine.f90`, inspect readiness without
+compiling a wrapper:
+
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+python3 -m x2py basic_subroutine.f90 --wrap-readiness
 ```
 
-Expected output:
+The readiness output should look like:
 
-<!-- x2py-doc-test-output -->
 ```text
-File: tests/data/fortran/general/basic_subroutine.f90
+File: basic_subroutine.f90
   Source: fortran
   Semantic modules: m1
   Wrappable: yes
@@ -65,10 +68,14 @@ gcc &#45;&#45;version
 ```
 X2PY_C_DOCS_END -->
 
-Then build the checked scalar fixture into a dedicated directory:
+Use the standalone function from
+[First Wrapped Function: source](first-wrapped-function.md#source) and save it
+as `scale.f90`.
+
+From the directory containing `scale.f90`, build it into a dedicated directory:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/scale.f90 \
+python3 -m x2py scale.f90 \
   --wrap \
   --out-dir build/verify \
   --json
@@ -96,7 +103,7 @@ import numpy as np
 from x2py import build_fortran_extension
 
 build = build_fortran_extension(
-    "tests/data/fortran/wrapper/scale.f90",
+    "scale.f90",
     output_dir="build/verify",
 )
 spec = spec_from_file_location(build.module_name, build.shared_library)
@@ -116,7 +123,7 @@ from pathlib import Path
 from x2py import build_fortran_extension
 
 build = build_fortran_extension(
-    "tests/data/fortran/wrapper/scale.f90",
+    "scale.f90",
     output_dir="build/verify",
 )
 
@@ -149,7 +156,7 @@ the full GitHub Actions matrix is the final cross-version evidence.
 
 ## Evidence
 
-The readiness output is executed by
+The linked source inputs are checked against repository fixtures by
 [`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py).
 Native artifact placement and runtime calls are checked by
 [`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py)
