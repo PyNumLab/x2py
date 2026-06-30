@@ -523,25 +523,39 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         "python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90",
         fortran_block_index,
     )
+    source_build_tree_index = quick_start.index("build/fruntime_abi/", source_build_command_index)
     pyi_generation_command_index = quick_start.index(
         "python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \\\n  --pyi",
-        source_build_command_index,
+        source_build_tree_index,
+    )
+    pyi_contract_tree_index = quick_start.index(
+        "contracts/\n  __init__.pyi\n  fruntime_abi_f90.pyi", pyi_generation_command_index
+    )
+    pyi_contract_body_index = quick_start.index(
+        "def scale(\n    value: Ptr(Const(Float64)),\n    factor: Ptr(Const(Float64))\n) -> Float64: ...",
+        pyi_contract_tree_index,
     )
     pyi_build_command_index = quick_start.index(
         "python3 -m x2py contracts/fruntime_abi_f90.pyi",
-        pyi_generation_command_index,
+        pyi_contract_body_index,
     )
     native_source_argument_index = quick_start.index(
         "--native-fortran-sources tests/data/fortran/wrapper/fruntime_abi_f90.f90",
         pyi_build_command_index,
     )
+    pyi_build_tree_index = quick_start.index("build/fruntime_abi_from_pyi/", native_source_argument_index)
+    runtime_output_index = quick_start.index("7.5", pyi_build_tree_index)
 
     assert source_index < fortran_block_index < source_build_command_index
-    assert source_build_command_index < pyi_generation_command_index < pyi_build_command_index
-    assert pyi_build_command_index < native_source_argument_index
+    assert source_build_command_index < source_build_tree_index < pyi_generation_command_index
+    assert pyi_generation_command_index < pyi_contract_tree_index < pyi_contract_body_index
+    assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index
+    assert native_source_argument_index < pyi_build_tree_index < runtime_output_index
     assert "python3 -m x2py solver.f90" not in quick_start
     assert "python3 -m x2py fruntime_abi_f90.f90" not in quick_start
     assert "solver.f90" not in readme
+    assert "add1" not in readme
+    assert "tests/data/fortran/general/basic_subroutine.f90" not in readme
     assert "contracts/basic_subroutine/basic_subroutine.pyi" not in readme
 
 

@@ -25,6 +25,10 @@ python3 -m pip install -e .
 python3 -m x2py --help
 ```
 
+Expected result: the install command completes successfully, and `--help`
+prints the CLI usage with input selection, inspection stages, wrapper builds,
+and output options.
+
 The default user-facing action for a single Fortran source is to build a Python
 extension. This checked input source is
 `tests/data/fortran/wrapper/fruntime_abi_f90.f90`:
@@ -49,12 +53,39 @@ python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --json
 ```
 
+The build directory will include the shared library and generated wrapper
+sources:
+
+```text
+build/fruntime_abi/
+  fruntime_abi_f90.<extension-suffix>
+  generated-wrapper sources
+  x2py_runtime/
+```
+
 Generate the semantic `.pyi` contract for the same source:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --pyi \
   --out contracts
+```
+
+The command writes the contract package:
+
+```text
+contracts/
+  __init__.pyi
+  fruntime_abi_f90.pyi
+```
+
+Expected contract (`contracts/fruntime_abi_f90.pyi`):
+
+```python
+def scale(
+    value: Ptr(Const(Float64)),
+    factor: Ptr(Const(Float64))
+) -> Float64: ...
 ```
 
 Then build the shared library from that `.pyi` contract and the same native
@@ -66,6 +97,15 @@ python3 -m x2py contracts/fruntime_abi_f90.pyi \
   --native-fortran-sources tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi_from_pyi \
   --json
+```
+
+The `.pyi` build produces the same importable extension shape:
+
+```text
+build/fruntime_abi_from_pyi/
+  fruntime_abi_f90.<extension-suffix>
+  generated-wrapper sources
+  x2py_runtime/
 ```
 
 Import either generated extension and call it with the exact NumPy scalar dtype
@@ -81,6 +121,12 @@ sys.path.insert(0, "build/fruntime_abi")
 import fruntime_abi_f90
 
 print(fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
+```
+
+It prints:
+
+```text
+7.5
 ```
 
 The runtime wrapper mechanism is:
@@ -140,68 +186,69 @@ X2PY_C_DOCS_END -->
 
 ### Fortran
 
-Recognizable Fortran files do not require an explicit language. Parse the
-checked basic-subroutine fixture:
+Recognizable Fortran files do not require an explicit language. Parse the same
+checked source used in the Quick Start:
 
-Input (`tests/data/fortran/general/basic_subroutine.f90`):
+Input (`tests/data/fortran/wrapper/fruntime_abi_f90.f90`):
 
-<!-- x2py-doc-source: tests/data/fortran/general/basic_subroutine.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->
 ```fortran
-module m1
+module fruntime_abi_f90
 contains
-subroutine add1(n, x)
-  integer, intent(in) :: n
-  real(kind=8), intent(inout), dimension(n) :: x
-end subroutine add1
-end module m1
+  real(8) function scale(value, factor) result(output)
+    real(8), intent(in) :: value
+    real(8), intent(in) :: factor
+    output = value * factor
+  end function scale
+end module fruntime_abi_f90
 ```
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --parse
 ```
 
 <!-- x2py-doc-test-output -->
 ```text
-File: tests/data/fortran/general/basic_subroutine.f90
+File: tests/data/fortran/wrapper/fruntime_abi_f90.f90
   Modules: 1
-    - module m1 (vars=0, uses=0)
+    - module fruntime_abi_f90 (vars=0, uses=0)
       Procedures: 1
-        - subroutine add1(n:integer[0], x:real(8)[1])
+        - function scale(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
 ```
 
 Generate its editable `.pyi` contract:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --pyi
 ```
 
 <!-- x2py-doc-test-output -->
 ```python
-File: tests/data/fortran/general/basic_subroutine.f90
-Root contract: basic_subroutine/basic_subroutine.pyi
-from . import m1
+File: tests/data/fortran/wrapper/fruntime_abi_f90.f90
+Root contract: fruntime_abi_f90/__init__.pyi
+from . import fruntime_abi_f90
 
-Module contract: m1.pyi
-def add1(
-    n: Ptr(Const(Int32)),
-    x: Float64[n]
-) -> None: ...
+Module contract: fruntime_abi_f90.pyi
+def scale(
+    value: Ptr(Const(Float64)),
+    factor: Ptr(Const(Float64))
+) -> Float64: ...
 ```
 
 Check semantic readiness:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --wrap-readiness
 ```
 
 <!-- x2py-doc-test-output -->
 ```text
-File: tests/data/fortran/general/basic_subroutine.f90
+File: tests/data/fortran/wrapper/fruntime_abi_f90.f90
   Source: fortran
-  Semantic modules: m1
+  Semantic modules: fruntime_abi_f90
   Wrappable: yes
   Public functions: 1
   Public classes: 0
@@ -213,9 +260,12 @@ Write a draft interface, edit it when source facts are not enough, then check
 the edited contract:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi --out contracts
-python3 -m x2py contracts/m1.pyi --wrap-readiness
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --pyi --out contracts
+python3 -m x2py contracts/fruntime_abi_f90.pyi --wrap-readiness
 ```
+
+Expected result: the first command writes `contracts/fruntime_abi_f90.pyi`; the
+second command reports the same `Wrappable: yes` readiness result shown above.
 
 <!-- X2PY_C_DOCS_START
 ### C
@@ -311,10 +361,13 @@ directories, definitions, language standard, and target flags when inspecting
 or building a real source tree:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse \
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --parse \
   --compiler gfortran \
   --std f2018
 ```
+
+Expected result: the command prints the same parser report shape shown in the
+Fortran inspection example, with preprocessing routed through `gfortran`.
 
 For a real project, replace the checked input path with your source path and
 add the project's include directories, definitions, and target flags.
