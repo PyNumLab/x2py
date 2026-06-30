@@ -67,8 +67,7 @@ import numpy as np
 sys.path.insert(0, "build/scale_api")
 import scale_api
 
-module = scale_api.fruntime_abi_f90
-result = module.scale(np.float64(3.0), np.float64(2.5))
+result = scale_api.scale(np.float64(3.0), np.float64(2.5))
 assert result == np.float64(7.5)
 ```
 
@@ -117,7 +116,7 @@ editing:
 
 ```bash
 python3 -m x2py src/scale_api.f90 --pyi --out contracts
-python3 -m x2py contracts/scale_api/scale_api.pyi --wrap-readiness
+python3 -m x2py contracts/__init__.pyi --wrap-readiness
 ```
 
 Source-driven `--wrap` and source-driven `--pyi` are separate commands. A

@@ -13,18 +13,16 @@ NumPy dtypes required by its native contract.
 
 ## Source
 
-Use the repository fixture below, or place the same module in your project.
+Use the repository fixture below, or place the same standalone function in your
+project.
 
-<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
 ```fortran
-module fruntime_abi_f90
-contains
-  real(8) function scale(value, factor) result(output)
-    real(8), intent(in) :: value
-    real(8), intent(in) :: factor
-    output = value * factor
-  end function scale
-end module fruntime_abi_f90
+real(8) function scale(value, factor) result(output)
+  real(8), intent(in) :: value
+  real(8), intent(in) :: factor
+  output = value * factor
+end function scale
 ```
 
 The generated Python call accepts two `numpy.float64` values and returns a
@@ -35,14 +33,14 @@ The generated Python call accepts two `numpy.float64` values and returns a
 From the repository root:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/scale.f90 \
   --wrap \
   --out-dir build/first-function \
   --json
 ```
 
-The extension is named after the source stem: `fruntime_abi_f90`. The native
-module has the same name and is exposed as a child module.
+The extension is named after the source stem: `scale`. The standalone native
+function is exposed directly at that extension's root.
 
 ## Import And Call
 
@@ -52,10 +50,9 @@ import sys
 import numpy as np
 
 sys.path.insert(0, "build/first-function")
-import fruntime_abi_f90
+import scale
 
-native = fruntime_abi_f90.fruntime_abi_f90
-result = native.scale(np.float64(3.0), np.float64(2.5))
+result = scale.scale(np.float64(3.0), np.float64(2.5))
 
 assert isinstance(result, np.float64)
 assert result == np.float64(7.5)
@@ -68,7 +65,7 @@ The checked call returns `numpy.float64(7.5)`.
 Before compiling, print the semantic contract:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --pyi
+python3 -m x2py tests/data/fortran/wrapper/scale.f90 --pyi
 ```
 
 The contract describes `value` and `factor` as pointers to constant `Float64`
@@ -82,14 +79,14 @@ Native scalar arguments use exact NumPy dtypes. A plain Python `float` is not a
 replacement for `numpy.float64` at this boundary:
 
 ```python
-native.scale(3.0, 2.5)  # raises TypeError
+scale.scale(3.0, 2.5)  # raises TypeError
 ```
 
 Do not fix this by adding an implicit conversion inside generated code. Convert
 at the Python call site so the selected ABI is explicit:
 
 ```python
-native.scale(np.float64(3.0), np.float64(2.5))
+scale.scale(np.float64(3.0), np.float64(2.5))
 ```
 
 For array functions, rank, dtype, shape, order, contiguity, and allowed stride
@@ -101,8 +98,9 @@ patterns can also be contract requirements. Continue with
 
 - The wrapper uses the GNU compiler/ABI path; other compiler families are not
   established by the current runtime evidence.
-- Contained module procedures live under their Python child module rather than
-  being flattened into the extension root.
+- Standalone procedures live at the extension root. Contained module procedures
+  instead live under their Python child module, as shown in
+  [First Wrapped Module](first-wrapped-module.md).
 - Runtime generation in this workflow accepts Fortran source.
 
 <!-- X2PY_C_DOCS_START
@@ -117,5 +115,5 @@ successful import followed by a call failure goes to
 
 The displayed source is checked against the repository fixture by
 [`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py).
-Debug and optimized builds and the `7.5` runtime result are checked by
-[`test_runtime_abi.py`](../../tests/wrapper/fortran/build_from_source/test_runtime_abi.py).
+The renamed extension and `7.5` runtime result are checked by
+[`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py).

@@ -46,15 +46,15 @@ X2PY_C_DOCS_END -->
 ```python
 import numpy as np
 
-from fruntime_abi_f90 import fruntime_abi_f90
+import scale
 
-result = fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5))
+result = scale.scale(np.float64(3.0), np.float64(2.5))
 assert result == np.float64(7.5)
 ```
 
-Contained Fortran modules are Python child modules. The extension above is
-`fruntime_abi_f90`, and its contained native module is available as
-`fruntime_abi_f90.fruntime_abi_f90`.
+The first example is a standalone procedure exposed directly at the extension
+root. The next module example introduces contained Fortran modules as Python
+child namespaces.
 
 ## Current Boundary
 

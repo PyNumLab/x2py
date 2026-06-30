@@ -27,12 +27,11 @@ scale-project/
 
 ## Add The First Source
 
-Put the scalar module shown in
+Put the standalone scalar function shown in
 [First Wrapped Function](first-wrapped-function.md#source) at
 `src/scale_api.f90`. The first source filename determines the extension import
-name, so this project produces an extension named `scale_api`. A contained
-Fortran module named `fruntime_abi_f90` remains a child namespace inside that
-extension.
+name, so this project produces an extension named `scale_api`. The standalone
+function is exposed directly at the extension root.
 
 ## Build Into A Dedicated Directory
 
@@ -83,9 +82,7 @@ spec = spec_from_file_location("scale_api", shared_libraries[0])
 extension = module_from_spec(spec)
 spec.loader.exec_module(extension)
 
-assert extension.fruntime_abi_f90.scale(
-    np.float64(3.0), np.float64(2.5)
-) == np.float64(7.5)
+assert extension.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
 ```
 
 Run it with:

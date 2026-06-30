@@ -110,7 +110,7 @@ def test_fortran_wrapper_out_names_importable_shared_library(tmp_path: Path):
         module = importlib.import_module("SCALE")
     finally:
         sys.path.remove(str(tmp_path))
-    assert module.scale.scale_scalar(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
+    assert module.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
 
 
 def test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper(tmp_path: Path):

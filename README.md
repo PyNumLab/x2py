@@ -36,14 +36,11 @@ as `scale.f90` before running the commands below:
 
 <!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
 ```fortran
-module scale
-contains
-  real(8) function scale_scalar(value, factor) result(output)
-    real(8), intent(in) :: value
-    real(8), intent(in) :: factor
-    output = value * factor
-  end function scale_scalar
-end module scale
+real(8) function scale(value, factor) result(output)
+  real(8), intent(in) :: value
+  real(8), intent(in) :: factor
+  output = value * factor
+end function scale
 ```
 
 Build it with the default output locations:
@@ -82,8 +79,8 @@ Expected result:
 ```
 
 For a wrapper build, `--out SCALE` selects the Python module name and the final
-shared-library filename. The Fortran module namespace is still preserved inside
-that Python module.
+shared-library filename. This first example is a standalone procedure, so it is
+exposed directly at the extension root.
 
 Use `--out-dir` when you want the shared library and generated intermediates in
 an explicit build directory:
@@ -116,19 +113,13 @@ The command writes the contract package:
 ```text
 contracts/
   __init__.pyi
-  scale.pyi
 ```
 
-Expected package entry (`contracts/__init__.pyi`):
+Expected contract (`contracts/__init__.pyi`):
 
 ```python
-from . import scale
-```
-
-Expected leaf contract (`contracts/scale.pyi`):
-
-```python
-def scale_scalar(
+@external
+def scale(
     value: Ptr(Const(Float64)),
     factor: Ptr(Const(Float64))
 ) -> Float64: ...
@@ -157,8 +148,7 @@ build/SCALE_from_pyi/
   x2py_runtime/
 ```
 
-The direct source build preserves the native module namespace, so call the
-function through `SCALE.scale.scale_scalar`:
+The direct source build exposes the standalone procedure at the extension root:
 
 ```python
 import sys
@@ -168,10 +158,10 @@ import numpy as np
 sys.path.insert(0, "build/SCALE")
 import SCALE
 
-print(SCALE.scale.scale_scalar(np.float64(3.0), np.float64(2.5)))  # 7.5
+print(SCALE.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
 ```
 
-The package-entry `.pyi` build above also preserves the package namespace:
+The package-entry `.pyi` build exposes the same Python API:
 
 ```python
 import sys
@@ -181,19 +171,20 @@ import numpy as np
 sys.path.insert(0, "build/SCALE_from_pyi")
 import SCALE
 
-print(SCALE.scale.scale_scalar(np.float64(3.0), np.float64(2.5)))  # 7.5
+print(SCALE.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
 ```
-
-If you build from the leaf contract `contracts/scale.pyi` instead, the leaf
-function is the entry point and the call becomes `SCALE.scale_scalar(...)`. If you
-want the package-entry build to expose that top-level function, edit
-`contracts/__init__.pyi` to re-export it before building.
 
 Both calls print:
 
 ```text
 7.5
 ```
+
+Standalone procedures are the smallest wrapper surface and therefore come
+first. Contained Fortran module procedures are preserved under Python child
+modules; continue with the
+[first wrapped module](docs/getting-started/first-wrapped-module.md) for that
+layout and for public module state.
 
 The runtime wrapper mechanism is:
 
@@ -259,14 +250,11 @@ Input (`scale.f90`):
 
 <!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
 ```fortran
-module scale
-contains
-  real(8) function scale_scalar(value, factor) result(output)
-    real(8), intent(in) :: value
-    real(8), intent(in) :: factor
-    output = value * factor
-  end function scale_scalar
-end module scale
+real(8) function scale(value, factor) result(output)
+  real(8), intent(in) :: value
+  real(8), intent(in) :: factor
+  output = value * factor
+end function scale
 ```
 
 ```bash
@@ -275,10 +263,8 @@ python3 -m x2py scale.f90 --parse
 
 ```text
 File: scale.f90
-  Modules: 1
-    - module scale (vars=0, uses=0)
-      Procedures: 1
-        - function scale_scalar(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
+  Procedures: 1
+    - function scale(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
 ```
 
 Generate its editable `.pyi` contract:
@@ -289,11 +275,9 @@ python3 -m x2py scale.f90 --pyi
 
 ```python
 File: scale.f90
-Root contract: scale/__init__.pyi
-from . import scale
-
-Module contract: scale.pyi
-def scale_scalar(
+Root contract: scale/scale.pyi
+@external
+def scale(
     value: Ptr(Const(Float64)),
     factor: Ptr(Const(Float64))
 ) -> Float64: ...
@@ -321,10 +305,10 @@ the edited contract:
 
 ```bash
 python3 -m x2py scale.f90 --pyi --out contracts
-python3 -m x2py contracts/scale.pyi --wrap-readiness
+python3 -m x2py contracts/__init__.pyi --wrap-readiness
 ```
 
-Expected result: the first command writes `contracts/scale.pyi`; the
+Expected result: the first command writes `contracts/__init__.pyi`; the
 second command reports the same `Wrappable: yes` readiness result shown above.
 
 <!-- X2PY_C_DOCS_START

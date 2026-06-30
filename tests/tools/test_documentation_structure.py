@@ -543,14 +543,10 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         "python3 -m x2py scale.f90 \\\n  --pyi",
         explicit_source_build_tree_index,
     )
-    pyi_contract_tree_index = quick_start.index("contracts/\n  __init__.pyi\n  scale.pyi", pyi_generation_command_index)
-    pyi_package_entry_index = quick_start.index(
-        "from . import scale",
-        pyi_contract_tree_index,
-    )
+    pyi_contract_tree_index = quick_start.index("contracts/\n  __init__.pyi", pyi_generation_command_index)
     pyi_contract_body_index = quick_start.index(
-        "def scale_scalar(\n    value: Ptr(Const(Float64)),\n    factor: Ptr(Const(Float64))\n) -> Float64: ...",
-        pyi_package_entry_index,
+        "@external\ndef scale(\n    value: Ptr(Const(Float64)),\n    factor: Ptr(Const(Float64))\n) -> Float64: ...",
+        pyi_contract_tree_index,
     )
     pyi_build_command_index = quick_start.index(
         "python3 -m x2py contracts/__init__.pyi",
@@ -559,22 +555,21 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     native_source_argument_index = quick_start.index("--native-fortran-sources scale.f90", pyi_build_command_index)
     output_name_index = quick_start.index("--out SCALE", native_source_argument_index)
     pyi_build_tree_index = quick_start.index("build/SCALE_from_pyi/", output_name_index)
-    direct_import_index = quick_start.index("SCALE.scale.scale_scalar", pyi_build_tree_index)
-    package_entry_import_section_index = quick_start.index("The package-entry `.pyi` build above", direct_import_index)
-    pyi_import_index = quick_start.index("SCALE.scale.scale_scalar", package_entry_import_section_index)
-    leaf_entry_note_index = quick_start.index("contracts/scale.pyi", pyi_import_index)
-    leaf_call_note_index = quick_start.index("SCALE.scale_scalar(...)", leaf_entry_note_index)
-    runtime_output_index = quick_start.index("7.5", leaf_call_note_index)
+    direct_import_index = quick_start.index("SCALE.scale(", pyi_build_tree_index)
+    package_entry_import_section_index = quick_start.index("The package-entry `.pyi` build", direct_import_index)
+    pyi_import_index = quick_start.index("SCALE.scale(", package_entry_import_section_index)
+    module_lesson_index = quick_start.index("first wrapped module", pyi_import_index)
+    runtime_output_index = quick_start.index("7.5", pyi_import_index)
 
     assert source_index < fortran_block_index < source_build_command_index
     assert source_build_command_index < default_source_build_tree_index < named_source_build_command_index
     assert named_source_build_command_index < named_source_build_tree_index < explicit_source_build_command_index
     assert explicit_source_build_command_index < explicit_source_build_tree_index < pyi_generation_command_index
-    assert pyi_generation_command_index < pyi_contract_tree_index < pyi_package_entry_index < pyi_contract_body_index
+    assert pyi_generation_command_index < pyi_contract_tree_index < pyi_contract_body_index
     assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index < output_name_index
     assert output_name_index < pyi_build_tree_index < direct_import_index < package_entry_import_section_index
     assert package_entry_import_section_index < pyi_import_index
-    assert pyi_import_index < leaf_entry_note_index < leaf_call_note_index < runtime_output_index
+    assert pyi_import_index < runtime_output_index < module_lesson_index
     assert "tests/data/fortran/wrapper/scale.f90" in quick_start
     assert "scale.f90 --json" not in quick_start
     assert "python3 -m x2py solver.f90" not in quick_start

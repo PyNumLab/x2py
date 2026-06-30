@@ -68,7 +68,7 @@ X2PY_C_DOCS_END -->
 Then build the checked scalar fixture into a dedicated directory:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/scale.f90 \
   --wrap \
   --out-dir build/verify \
   --json
@@ -77,7 +77,7 @@ python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
 The JSON result must report:
 
 - `compiled` as `true`;
-- `module_name` as `fruntime_abi_f90`;
+- `module_name` as `scale`;
 - an existing `shared_library` under `build/verify`; and
 - generated native bridge, object, runtime-support, and extension paths.
 
@@ -96,16 +96,14 @@ import numpy as np
 from x2py import build_fortran_extension
 
 build = build_fortran_extension(
-    "tests/data/fortran/wrapper/fruntime_abi_f90.f90",
+    "tests/data/fortran/wrapper/scale.f90",
     output_dir="build/verify",
 )
 spec = spec_from_file_location(build.module_name, build.shared_library)
 extension = module_from_spec(spec)
 spec.loader.exec_module(extension)
 
-assert extension.fruntime_abi_f90.scale(
-    np.float64(3.0), np.float64(2.5)
-) == np.float64(7.5)
+assert extension.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
 ```
 
 ## 4. Inspect Generated Files
@@ -118,7 +116,7 @@ from pathlib import Path
 from x2py import build_fortran_extension
 
 build = build_fortran_extension(
-    "tests/data/fortran/wrapper/fruntime_abi_f90.f90",
+    "tests/data/fortran/wrapper/scale.f90",
     output_dir="build/verify",
 )
 
