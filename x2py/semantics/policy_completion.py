@@ -20,7 +20,7 @@ def complete_semantic_policies(
     """Complete policy decisions for semantic modules after parser-to-IR conversion.
 
     This is the shared post-IR boundary for policies that need full semantic
-    context. It completes ownership, transfer, destruction,
+    context. It completes entry export reachability, ownership, transfer, destruction,
     mutability/writeback, projection, nullability, release, codegen action, and
     contract/boundary storage modes, getter behavior, native setter assignment,
     and Python setter exposure. Future policy passes must be added here instead
@@ -29,8 +29,36 @@ def complete_semantic_policies(
 
     modules = list(semantic_ir) if not isinstance(semantic_ir, models.SemanticModule) else [semantic_ir]
     for module in modules:
+        _complete_entry_export_policy(module)
         _complete_ownership_policies(module)
     return modules
+
+
+def _complete_entry_export_policy(module: models.SemanticModule) -> None:
+    """Remove public declarations not reachable from an explicit entry export policy."""
+    if not module.metadata.get(models.PYTHON_EXPORTS_PREPARED_METADATA):
+        return
+    module.variables = [variable for variable in module.variables if _is_entry_export_reachable(variable)]
+    module.functions = [function for function in module.functions if _is_entry_export_reachable(function)]
+    module.overload_sets = [
+        overload_set for overload_set in module.overload_sets if _is_entry_export_reachable(overload_set)
+    ]
+
+
+def _is_entry_export_reachable(declaration: object) -> bool:
+    if getattr(declaration, "visibility", "public") == "private":
+        return True
+    return bool(_entry_exports(declaration))
+
+
+def _entry_exports(declaration: object) -> object:
+    if isinstance(declaration, models.ProcedureOverloadSet):
+        if not declaration.procedures:
+            return ()
+        return declaration.procedures[0].metadata.get(models.PYTHON_EXPORTS_METADATA, ())
+    if isinstance(declaration, models.SemanticVariable | models.SemanticFunction | models.SemanticClass):
+        return declaration.metadata.get(models.PYTHON_EXPORTS_METADATA, ())
+    raise TypeError(f"Unsupported semantic declaration: {type(declaration).__name__}")
 
 
 def _complete_ownership_policies(module: models.SemanticModule) -> models.SemanticModule:

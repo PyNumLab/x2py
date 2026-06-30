@@ -557,6 +557,9 @@ imports, wildcard flattening, and `as` aliases. Repeating the same export is
 idempotent, and exporting both the original name and an alias is allowed when
 both exports are explicit. Conflicting exports to the same Python name, missing
 relative files, and import cycles fail while the contract graph is loaded.
+Only declarations reachable from the entry export policy are emitted as public
+Python extension bindings; omitted leaf declarations are not wrapped just
+because their leaf file was discovered.
 
 ## Diagnostics For Edited Contracts
 

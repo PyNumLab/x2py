@@ -714,6 +714,9 @@ different public API or runtime contract.
   identifies every conflicting origin; explicit aliases resolve the failure.
 - [x] `from . import module1 as solver` exports only `solver` while retaining
   native module `module1`; selective procedure aliases retain native symbols.
+- [x] A reduced entry contract may repeat a selective module-variable import
+  and export both the original name and an alias; declarations omitted from the
+  entry export policy are pruned before bridge and binding generation.
 - [x] A three-level relative import graph discovers every transitive contract,
   while absolute `typing` and `types` support imports create no graph edge or
   runtime export. Missing files and cycles fail before code generation.

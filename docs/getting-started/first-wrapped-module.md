@@ -177,9 +177,20 @@ assert module_state_flat.summarize() == np.int32(15)
 assert not hasattr(module_state_flat, "module_state")
 ```
 
-The detailed editing guide covers selective imports and `as` aliases. These
-edits reshape Python exports only; they are not native ABI changes. Keep the
-leaf contract as the source of native facts, and use
+You can also export only selected declarations, repeat an import, or expose the
+same declaration under both its native Python name and an alias:
+
+```python
+from .module_state import counter
+from .module_state import counter as current_count
+from .module_state import summarize
+```
+
+That edited entry exposes `counter`, `current_count`, and `summarize` at the
+extension root, while `scale`, `scaled_counter`, `saved_counter`, and
+`next_local` stay out of the generated wrapper surface. These edits reshape
+Python exports only; they are not native ABI changes. Keep the leaf contract as
+the source of native facts, and use
 [Editing Semantic .pyi Contracts](../user-guide/editing-semantic-pyi-contracts.md)
 when you are ready to edit the generated contract package.
 

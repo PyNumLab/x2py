@@ -30,7 +30,7 @@ modules are searchable without relying on old flat filenames.
 | --- | --- |
 | One explicit package for ordered multi-source `--pyi --out` | `multiple_files/test_multi_source_builds.py::test_multi_source_pyi_out_writes_one_flat_combined_package` |
 | Source/generated-contract parity with same extension name, namespaces, and link order | `multiple_files/test_multi_source_builds.py::test_multi_source_generated_contract_build_matches_source_runtime_and_link_order` |
-| Modified entry export policy while preserving native module children | `multiple_files/test_multi_source_builds.py::test_multi_source_modified_entry_preserves_modules_and_adds_documented_alias` |
+| Modified entry export policy while preserving native module children | `multiple_files/test_multi_source_builds.py::test_multi_source_modified_entry_preserves_modules_and_adds_documented_alias`, `build_from_pyi/test_pyi_wrapper_builds.py::test_reduced_entry_generates_only_reachable_module_variable_bindings` |
 
 ## Stage 4 — Shared Parity Harness And Standalone Procedures
 

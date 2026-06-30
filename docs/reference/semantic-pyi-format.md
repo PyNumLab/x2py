@@ -613,6 +613,11 @@ one or more aliases when each export is requested explicitly. Missing relative
 imports, relative-import cycles, and conflicting exports fail before code
 generation and identify the participating contract paths.
 
+For wrapper builds, the entry export policy also defines the generated Python
+extension binding surface. Declarations in imported leaf files that are not
+reachable from that policy do not get standalone public wrapper bindings; they
+remain native contract facts only when an exported declaration depends on them.
+
 Absolute support imports such as `from typing import Callable` or
 `from types import SimpleNamespace` may support annotation parsing, but they are
 not contract graph edges and never create runtime exports. Generated references

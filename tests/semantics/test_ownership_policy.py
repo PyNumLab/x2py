@@ -24,6 +24,8 @@ from x2py.ownership_policy import (
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import (
     POLICY_COMPLETION_PREPARED_METADATA,
+    PYTHON_EXPORTS_METADATA,
+    PYTHON_EXPORTS_PREPARED_METADATA,
     RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
@@ -778,6 +780,43 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
     assert field_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
     assert arg_var.ownership_decision.owner is OwnershipOwner.PYTHON
     assert codegen_action_for_variable(arg_var) is CodegenAction.COPY_IN_OUT
+
+
+def test_policy_completion_prunes_unexported_entry_declarations_before_lowering():
+    exported_variable = SemanticVariable(
+        "counter",
+        _scalar_type(),
+        metadata={PYTHON_EXPORTS_METADATA: [{"namespace": (), "name": "counter"}]},
+    )
+    omitted_variable = SemanticVariable(
+        "scale",
+        _scalar_type("Float64"),
+        metadata={PYTHON_EXPORTS_METADATA: []},
+    )
+    exported_function = SemanticFunction(
+        "summarize",
+        return_type=_scalar_type(),
+        metadata={PYTHON_EXPORTS_METADATA: [{"namespace": (), "name": "summarize"}]},
+    )
+    omitted_function = SemanticFunction("scaled_counter", return_type=_scalar_type("Float64"))
+    private_helper = SemanticFunction(
+        "hidden_helper",
+        return_type=_scalar_type(),
+        visibility="private",
+        metadata={PYTHON_EXPORTS_METADATA: []},
+    )
+    module = SemanticModule(
+        name="entry_contract",
+        variables=[exported_variable, omitted_variable],
+        functions=[exported_function, omitted_function, private_helper],
+        metadata={PYTHON_EXPORTS_PREPARED_METADATA: True},
+    )
+
+    complete_semantic_policies(module)
+
+    assert module.variables == [exported_variable]
+    assert module.functions == [exported_function, private_helper]
+    assert POLICY_COMPLETION_PREPARED_METADATA in module.metadata
 
 
 def test_scalar_accessor_policies_are_complete_before_ir_lowering():

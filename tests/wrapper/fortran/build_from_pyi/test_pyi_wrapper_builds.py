@@ -115,6 +115,11 @@ def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
     return _import_from_build_dir(payload["module_name"], build_dir), payload
 
 
+def _generated_wrapper_text(payload: dict) -> str:
+    paths = [Path(path) for path in payload["generated_sources"] if Path(path).suffix in {".c", ".f90", ".h"}]
+    return "\n".join(path.read_text(encoding="utf-8") for path in paths)
+
+
 def _generate_pyi(source: Path, output_parent: Path, expected_package: Path | None = None) -> Path:
     package = output_parent / source.stem
     subprocess.run(
@@ -463,6 +468,45 @@ def test_entry_can_alias_one_module_procedure_at_the_root(tmp_path: Path):
     values = np.array([1.0, 2.0], dtype=np.float64)
     module.increment(np.int32(values.size), values)
     np.testing.assert_array_equal(values, np.array([1.0, 2.0], dtype=np.float64))
+
+
+def test_reduced_entry_generates_only_reachable_module_variable_bindings(tmp_path: Path):
+    root = _generate_pyi(MODULE_VARIABLE_SOURCE, tmp_path / "contracts", MODULE_VARIABLES_GENERATED)
+    root.write_text(
+        "\n".join(
+            [
+                "from .fmodule_vars_f90 import counter",
+                "from .fmodule_vars_f90 import counter",
+                "from .fmodule_vars_f90 import counter as current_count",
+                "from .fmodule_vars_f90 import summarize",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    native_object = _compile_native_object(MODULE_VARIABLE_SOURCE, tmp_path / "native")
+
+    module, payload = _build_pyi_cli(root, native_object, tmp_path / "pyi_build")
+
+    assert module.counter == np.int32(3)
+    assert module.current_count == np.int32(3)
+    assert module.summarize() == np.int32(15)
+    module.current_count = np.int32(9)
+    assert module.counter == np.int32(9)
+    assert module.summarize() == np.int32(21)
+    assert not hasattr(module, "scale")
+    assert not hasattr(module, "scaled_counter")
+    assert not hasattr(module, "saved_counter")
+    assert not hasattr(module, "next_local")
+
+    generated_text = _generated_wrapper_text(payload)
+    assert "bind_c_get_counter" in generated_text
+    assert "bind_c_set_counter" in generated_text
+    assert "scaled_counter" not in generated_text
+    assert "next_local" not in generated_text
+    assert "saved_counter" not in generated_text
+    assert "bind_c_get_scale" not in generated_text
+    assert "bind_c_set_scale" not in generated_text
 
 
 def test_entry_rejects_colliding_wildcard_exports(tmp_path: Path):
