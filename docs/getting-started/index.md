@@ -24,8 +24,8 @@ Follow these pages in order:
 
 1. [Install x2py and its native prerequisites](installation.md).
 2. [Verify Python, NumPy, the CLI, and the compilers](verification.md).
-3. [Create a minimal project](first-project.md).
-4. [Build and call a scalar function](first-wrapped-function.md).
+3. [Build and call a scalar function](first-wrapped-function.md).
+4. [Create a minimal project](first-project.md).
 5. [Work with a Fortran module and its saved state](first-wrapped-module.md).
 6. [Use the normal edit, inspect, build, test, and rebuild loop](beginner-workflow.md).
 
@@ -80,7 +80,8 @@ failures are routed through [Troubleshooting](../troubleshooting/index.md).
 
 ## Evidence
 
-The commands and result used in this section are checked by
-[`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py)
-and the runtime build by
-[`test_runtime_abi.py`](../../tests/wrapper/fortran/build_from_source/test_runtime_abi.py).
+The standalone example used throughout this section is checked against its
+fixture by
+[`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py),
+and its `7.5` runtime result is checked by
+[`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py).
