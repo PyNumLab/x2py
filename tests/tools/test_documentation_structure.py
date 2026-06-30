@@ -510,6 +510,22 @@ def test_deferred_c_pages_are_not_in_site_navigation() -> None:
     assert any("X2PY_C_DOCS" in line and "c-parser-reference.md" in line for line in lines)
 
 
+def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
+    readme = _visible_documentation_source(ROOT / "README.md")
+    quick_start = readme.split("## Quick Start", maxsplit=1)[1].split(
+        "The runtime wrapper mechanism is:",
+        maxsplit=1,
+    )[0]
+
+    source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->")
+    fortran_block_index = quick_start.index("```fortran", source_index)
+    build_command_index = quick_start.index("python3 -m x2py fruntime_abi_f90.f90", fortran_block_index)
+
+    assert source_index < fortran_block_index < build_command_index
+    assert "python3 -m x2py solver.f90" not in quick_start
+    assert "python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90" not in quick_start
+
+
 @pytest.mark.parametrize("relative_path", REQUIRED_AREA_INDEXES)
 def test_required_documentation_area_exists(relative_path: str) -> None:
     assert (DOCS_ROOT / relative_path).is_file()

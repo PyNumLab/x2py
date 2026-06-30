@@ -24,6 +24,9 @@ another generator with hierarchical navigation and front matter.
    produced by a documentation build step.
 5. Maintainer-only internals live under `internal-architecture/` rather than in
    user workflows.
+6. User-facing source-driven examples show the complete input source file before
+   the command that consumes it. Placeholder filenames may appear as shorthand
+   only after a concrete input-first example has established the workflow.
 
 ## Fortran-First Publication
 

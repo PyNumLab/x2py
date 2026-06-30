@@ -26,16 +26,24 @@ python3 -m x2py --help
 ```
 
 The default user-facing action for a single Fortran source is to build a Python
-extension:
+extension. Save this source as `fruntime_abi_f90.f90`:
 
-```bash
-python3 -m x2py solver.f90
+<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->
+```fortran
+module fruntime_abi_f90
+contains
+  real(8) function scale(value, factor) result(output)
+    real(8), intent(in) :: value
+    real(8), intent(in) :: factor
+    output = value * factor
+  end function scale
+end module fruntime_abi_f90
 ```
 
-Build a checked example into an explicit directory:
+Build it into an explicit directory:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
+python3 -m x2py fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```
