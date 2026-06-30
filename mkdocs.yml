@@ -8,7 +8,6 @@ nav:
       - Installation: getting-started/installation.md
       - Verification: getting-started/verification.md
       - First Wrapped Function: getting-started/first-wrapped-function.md
-      - First Project: getting-started/first-project.md
       - First Wrapped Module: getting-started/first-wrapped-module.md
       - Common Beginner Workflow: getting-started/beginner-workflow.md
   - User Guide:

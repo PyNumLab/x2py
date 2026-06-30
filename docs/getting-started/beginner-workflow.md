@@ -17,6 +17,21 @@ Python assertion, and rebuild cleanly when the contract changes.
 Keep native sources under `src/` and Python tests under `tests/`. Treat every
 file under `build/` as generated output that the next build may replace.
 
+A small wrapper project can start with this layout:
+
+```text
+scale-project/
+  src/
+    scale_api.f90
+  build/
+  tests/
+    test_scale.py
+```
+
+Run the remaining commands in this guide from `scale-project/`. Keep `src/` and
+`tests/` under version control; keep the disposable `build/` directory out of
+version control.
+
 <!-- X2PY_C_DOCS_START
 Keep native sources under `src/` and Python tests under `tests/`. Do not edit
 generated bridge, C binding, object, module, runtime-support, or shared-library
@@ -138,18 +153,10 @@ before using that advanced path.
 5. If a documented supported behavior fails, reproduce it with the focused
    wrapper test linked by the feature matrix before escalating to full CI.
 
-## Current Boundaries
-
-- Source order for multiple files is caller-controlled; automatic project-wide
-  dependency discovery is not the beginner workflow.
-- Generated extensions are local native artifacts, not portable wheels.
-- Other platforms and compiler ABIs need validation beyond the current Ubuntu
-  GNU evidence.
-
-<!-- X2PY_C_DOCS_START
-- Runtime wrapping is implemented for Fortran inputs; C-input runtime wrapping
-  remains future work.
-X2PY_C_DOCS_END -->
+Support boundaries are maintained in the
+[language feature matrix](../language-support/feature-matrix.md), platform and
+toolchain requirements in [Installation](installation.md), and artifact
+portability rules in [Distribution](../user-guide/distribution.md).
 
 ## Evidence
 

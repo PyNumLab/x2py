@@ -2,7 +2,7 @@
 title: Verification
 audience: users, contributors
 prerequisites: installation
-related: first-project.md, ../troubleshooting/index.md, ../reference/cli-commands.md
+related: first-wrapped-function.md, ../troubleshooting/index.md, ../reference/cli-commands.md
 status: maintained
 ---
 

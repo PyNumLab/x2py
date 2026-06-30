@@ -1,7 +1,7 @@
 ---
 title: Packaging
 audience: users, packagers
-prerequisites: first project, common beginner workflow
+prerequisites: common beginner workflow
 related: distribution.md, ../tutorials/packaging.md
 status: planned-documentation
 ---

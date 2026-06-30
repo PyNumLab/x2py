@@ -25,9 +25,8 @@ Follow these pages in order:
 1. [Install x2py and its native prerequisites](installation.md).
 2. [Verify Python, NumPy, the CLI, and the compilers](verification.md).
 3. [Build and call a scalar function](first-wrapped-function.md).
-4. [Create a minimal project](first-project.md).
-5. [Work with a Fortran module and its saved state](first-wrapped-module.md).
-6. [Use the normal edit, inspect, build, test, and rebuild loop](beginner-workflow.md).
+4. [Work with a Fortran module and its saved state](first-wrapped-module.md).
+5. [Use the normal edit, inspect, build, test, and rebuild loop](beginner-workflow.md).
 
 The [basic wrapper tutorial](../tutorials/basic-wrapper.md) combines inspection,
 semantic `.pyi` generation, readiness, compilation, and import into one longer

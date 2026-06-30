@@ -39,7 +39,7 @@ overview. Contribution and pull-request requirements remain in
 ## Site-Ready Documentation Areas
 
 - [Getting started](getting-started/index.md): maintained installation,
-  verification, first-project, function, module, and rebuild workflows
+  verification, function, module, and rebuild workflows
 - [User guide](user-guide/index.md)
 - [Tutorials](tutorials/index.md)
 - [Examples gallery](examples-gallery/index.md)

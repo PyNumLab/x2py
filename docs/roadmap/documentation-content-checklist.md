@@ -290,8 +290,6 @@ primary placeholder queue.
   native build, generated-artifact, and escalation checks.
 - [x] `docs/getting-started/first-wrapped-function.md`: maintained checked
   scalar build, call result, exact dtype contract, and failure route.
-- [x] `docs/getting-started/first-project.md`: maintained minimal project
-  layout, explicit output placement, import check, and clean rebuild flow.
 - [x] `docs/getting-started/first-wrapped-module.md`: maintained checked module
   namespace, public state, saved state, visibility, and limitation guide.
 - [x] `docs/getting-started/beginner-workflow.md`: maintained edit, inspect,

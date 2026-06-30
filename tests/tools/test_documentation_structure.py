@@ -101,7 +101,6 @@ REQUIRED_GETTING_STARTED_PAGES = [
     "getting-started/installation.md",
     "getting-started/verification.md",
     "getting-started/first-wrapped-function.md",
-    "getting-started/first-project.md",
     "getting-started/first-wrapped-module.md",
     "getting-started/beginner-workflow.md",
 ]
@@ -627,15 +626,11 @@ def test_getting_started_page_is_completed_in_documentation_checklist(relative_p
     assert f"- [x] `docs/{relative_path}`" in checklist
 
 
-def test_getting_started_sequence_builds_a_function_before_creating_a_project() -> None:
+def test_getting_started_overview_uses_standalone_example_and_current_evidence() -> None:
     overview = (DOCS_ROOT / "getting-started/index.md").read_text(encoding="utf-8")
-    function_index = overview.index("[Build and call a scalar function](first-wrapped-function.md)")
-    project_index = overview.index("[Create a minimal project](first-project.md)")
 
-    assert function_index < project_index
     assert "scale.scale(np.float64(3.0), np.float64(2.5))" in overview
     assert "build_from_source/test_build_modes.py" in overview
-    assert "build_from_source/test_runtime_abi.py" not in overview
 
 
 def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_centrally() -> None:
