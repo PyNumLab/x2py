@@ -635,7 +635,7 @@ def test_getting_started_overview_uses_standalone_example_and_current_evidence()
 
 def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_centrally() -> None:
     page = (DOCS_ROOT / "getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
-    source_index = page.index("[Verification](verification.md#verify-the-inspection-path)")
+    source_index = page.index("[README Quick Start](../../README.md#quick-start)")
     build_index = page.index("python3 -m x2py scale.f90 \\")
     command_index = page.index("python3 -m x2py scale.f90 --pyi")
     contract_index = page.index(

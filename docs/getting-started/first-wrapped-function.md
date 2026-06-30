@@ -13,9 +13,7 @@ NumPy dtypes required by its native contract.
 
 ## Source
 
-Reuse the same `scale.f90` input from
-[Verification](verification.md#verify-the-inspection-path). If you need to
-recreate the file, copy it from the
+Reuse the same `scale.f90` input from the
 [README Quick Start](../../README.md#quick-start).
 
 The generated Python call accepts two `numpy.float64` values and returns a
