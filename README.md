@@ -190,8 +190,7 @@ X2PY_C_DOCS_END -->
 Recognizable Fortran files do not require an explicit language. Parse the same
 checked source used in the Quick Start:
 
-Input (`tests/data/fortran/wrapper/scale_api.f90`, copied locally as
-`scale_api.f90`):
+Input (`scale_api.f90`):
 
 <!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->
 ```fortran
