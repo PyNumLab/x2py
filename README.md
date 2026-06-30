@@ -527,6 +527,9 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
   examples, reference material, language support, and troubleshooting.
 - [Getting started](docs/getting-started/index.md): installation, verification,
   standalone procedures, modules, and the normal rebuild workflow.
+- [User guide](docs/user-guide/index.md): feature-focused wrapper guidance for
+  data types, functions, subroutines, modules, arrays, ownership, runtime
+  behavior, packaging, and distribution.
 - [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported Fortran
   workflow from source inspection to an imported extension.
 - [Examples cookbook](docs/examples-gallery/verified-cookbook.md): checked Fortran wrapper builds and
