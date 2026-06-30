@@ -527,6 +527,9 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 - [Documentation landing](docs/index.md): draft entry point for the future
   documentation website.
+- [Getting started](docs/getting-started/index.md): installation, verification,
+  first project, first wrapped function, module procedures, and the normal
+  rebuild workflow.
 - [Documentation architecture](docs/documentation-architecture.md): site-ready
   directory tree, page metadata contract, and maturity roadmap.
 - [Examples cookbook](docs/examples-gallery/verified-cookbook.md): checked Fortran wrapper builds and
