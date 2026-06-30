@@ -46,7 +46,26 @@ contains
 end module scale_api
 ```
 
-Build it into an explicit directory:
+Build it with the default output locations:
+
+```bash
+python3 -m x2py scale_api.f90 --json
+```
+
+By default, x2py writes the importable `.so` beside the input source and keeps
+generated build intermediates under `__x2py__/`:
+
+```text
+.
+  scale_api.f90
+  scale_api.so
+  __x2py__/
+    generated-wrapper sources
+    x2py_runtime/
+```
+
+Use `--out-dir` when you want the shared library and generated intermediates in
+an explicit build directory:
 
 ```bash
 python3 -m x2py scale_api.f90 \
@@ -54,8 +73,7 @@ python3 -m x2py scale_api.f90 \
   --json
 ```
 
-The build directory will include the shared library and generated wrapper
-sources:
+Expected result:
 
 ```text
 build/scale_api/
@@ -100,6 +118,9 @@ python3 -m x2py contracts/scale_api.pyi \
   --json
 ```
 
+You can choose a different Python extension/module name for `.pyi` builds with
+`--extension-name NAME`.
+
 The `.pyi` build produces the same importable extension shape:
 
 ```text
@@ -109,9 +130,8 @@ build/scale_api_from_pyi/
   x2py_runtime/
 ```
 
-Import either generated extension and call it with the exact NumPy scalar dtype
-required by the native signature. This snippet uses the direct build output
-directory:
+The direct source build preserves the native module namespace, so call the
+function through `scale_api.scale_api.scale`:
 
 ```python
 import sys
@@ -121,10 +141,24 @@ import numpy as np
 sys.path.insert(0, "build/scale_api")
 import scale_api
 
+print(scale_api.scale_api.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
+```
+
+The `.pyi` build above uses the leaf contract `contracts/scale_api.pyi` as the
+entry point, so it exposes the contract function at the extension top level:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/scale_api_from_pyi")
+import scale_api
+
 print(scale_api.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
 ```
 
-It prints:
+Both calls print:
 
 ```text
 7.5

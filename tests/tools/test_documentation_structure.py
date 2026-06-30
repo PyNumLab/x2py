@@ -520,13 +520,20 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->")
     fortran_block_index = quick_start.index("```fortran", source_index)
     source_build_command_index = quick_start.index(
-        "python3 -m x2py scale_api.f90",
+        "python3 -m x2py scale_api.f90 --json",
         fortran_block_index,
     )
-    source_build_tree_index = quick_start.index("build/scale_api/", source_build_command_index)
+    default_source_build_tree_index = quick_start.index(
+        ".\n  scale_api.f90\n  scale_api.so\n  __x2py__/", source_build_command_index
+    )
+    explicit_source_build_command_index = quick_start.index(
+        "python3 -m x2py scale_api.f90 \\\n  --out-dir build/scale_api",
+        default_source_build_tree_index,
+    )
+    explicit_source_build_tree_index = quick_start.index("build/scale_api/", explicit_source_build_command_index)
     pyi_generation_command_index = quick_start.index(
         "python3 -m x2py scale_api.f90 \\\n  --pyi",
-        source_build_tree_index,
+        explicit_source_build_tree_index,
     )
     pyi_contract_tree_index = quick_start.index(
         "contracts/\n  __init__.pyi\n  scale_api.pyi", pyi_generation_command_index
@@ -541,14 +548,19 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     )
     native_source_argument_index = quick_start.index("--native-fortran-sources scale_api.f90", pyi_build_command_index)
     pyi_build_tree_index = quick_start.index("build/scale_api_from_pyi/", native_source_argument_index)
-    runtime_output_index = quick_start.index("7.5", pyi_build_tree_index)
+    direct_import_index = quick_start.index("scale_api.scale_api.scale", pyi_build_tree_index)
+    pyi_import_index = quick_start.index("scale_api.scale(np.float64(3.0), np.float64(2.5))", direct_import_index)
+    runtime_output_index = quick_start.index("7.5", pyi_import_index)
 
     assert source_index < fortran_block_index < source_build_command_index
-    assert source_build_command_index < source_build_tree_index < pyi_generation_command_index
+    assert source_build_command_index < default_source_build_tree_index < explicit_source_build_command_index
+    assert explicit_source_build_command_index < explicit_source_build_tree_index < pyi_generation_command_index
     assert pyi_generation_command_index < pyi_contract_tree_index < pyi_contract_body_index
     assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index
-    assert native_source_argument_index < pyi_build_tree_index < runtime_output_index
+    assert native_source_argument_index < pyi_build_tree_index < direct_import_index < pyi_import_index
+    assert pyi_import_index < runtime_output_index
     assert "tests/data/fortran/wrapper/scale_api.f90" in quick_start
+    assert "--extension-name NAME" in quick_start
     assert "python3 -m x2py solver.f90" not in quick_start
     assert "python3 -m x2py tests/data/fortran/wrapper/scale_api.f90" not in quick_start
     assert "fruntime_abi_f90" not in readme
