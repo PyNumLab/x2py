@@ -8,6 +8,7 @@ status: design
 
 # Semantic Multilanguage Wrapper and Interoperability Runtime
 
+<!-- X2PY_C_DOCS_START
 > **Status:** This is a long-term architecture document, not a statement that
 > every backend below exists. The source-driven Fortran-to-Python wrapper is
 > implemented and documented in
@@ -15,6 +16,7 @@ status: design
 > `.pyi`, and readiness are implemented, but the runtime backend for
 > user-supplied C inputs will be added later. Other language backends and the
 > broader coercion runtime remain design goals.
+X2PY_C_DOCS_END -->
 
 ## Vision
 
@@ -22,13 +24,6 @@ The goal of this project is to create a modern interoperability framework capabl
 
 The system should:
 
-* wrap native libraries from:
-  * Fortran
-  * C
-  * C++
-  * Rust
-  * CUDA
-  * and potentially more languages later
 * expose clean Python APIs
 * support semantic interoperability between different native runtimes
 * support automatic coercions and conversions
@@ -38,6 +33,16 @@ The system should:
 * avoid forcing users to modify native code
 * avoid the limitations of SWIG/f2py-style systems
 * support wrapping libraries even when the source code is unavailable
+
+<!-- X2PY_C_DOCS_START
+* wrap native libraries from:
+  * Fortran
+  * C
+  * C++
+  * Rust
+  * CUDA
+  * and potentially more languages later
+X2PY_C_DOCS_END -->
 
 The project is not merely a wrapper generator.
 
@@ -132,6 +137,7 @@ But:
 
 The architecture is composed of multiple layers.
 
+<!-- X2PY_C_DOCS_START
 ```text
 Native libraries/sources
         ↓
@@ -153,6 +159,7 @@ Generated CPython extension
         ↓
 Python API
 ```
+X2PY_C_DOCS_END -->
 
 The validation engine enforces concrete checks. Validation contracts describe when those checks run, what they guarantee, and how failures are reported.
 
@@ -380,12 +387,15 @@ Examples:
 * `Positive`
 * `Writable`
 * `ORDER_F`
-* `ORDER_C`
 * `CPUResident`
 * shape subscriptions such as `Float64["N", "N"]`
 * `Aligned(64)`
 * `Finite`
 * `NonNull`
+
+<!-- X2PY_C_DOCS_START
+* `ORDER_C`
+X2PY_C_DOCS_END -->
 
 A constraint is usually local to one value: dtype, shape, device, alignment, mutability, ownership, or value range.
 
@@ -405,12 +415,14 @@ Responsibilities:
 
 Example conversion trace:
 
+<!-- X2PY_C_DOCS_START
 ```text
 argument A:
   np.ndarray(shape=(10, 10), dtype=float64, order=C)
     -> copy_to_fortran_order
   Float64Matrix(shape=(10, 10), dtype=float64, order=F, owner=temporary)
 ```
+X2PY_C_DOCS_END -->
 
 ---
 
@@ -428,6 +440,7 @@ Responsibilities:
 
 Example validation error:
 
+<!-- X2PY_C_DOCS_START
 ```text
 ValidationError in solve(A, b)
   parameter: A
@@ -435,6 +448,7 @@ ValidationError in solve(A, b)
   observed: order='C', shape=(10, 10), dtype=float64
   hint: declare From(np.ndarray, copy=True) or pass np.asfortranarray(A)
 ```
+X2PY_C_DOCS_END -->
 
 The validation engine is runtime-oriented. It does not replace static typing; it protects the native ABI boundary and provides clear diagnostics for dynamic Python inputs.
 
@@ -544,7 +558,9 @@ The interface can then reference the contract:
 def solve(A: Float64Matrix, b: Float64Vector) -> Float64Vector: ...
 ```
 
+<!-- X2PY_C_DOCS_START
 This allows common validation logic to be shared across Fortran, C, C++, Rust, and CUDA backends.
+X2PY_C_DOCS_END -->
 
 ---
 
@@ -683,8 +699,11 @@ Examples:
 
 * Fortran descriptors
 * Eigen maps
-* C structs
 * CUDA tensors
+
+<!-- X2PY_C_DOCS_START
+* C structs
+X2PY_C_DOCS_END -->
 
 Adapters should receive values only after coercion and validation have completed. This keeps ABI code focused on call mechanics instead of user-input cleanup.
 
@@ -720,9 +739,12 @@ NOT the foundation.
 Possible parsers:
 
 * Fortran parser
+* Rust parser
+
+<!-- X2PY_C_DOCS_START
 * C parser
 * C++ parser
-* Rust parser
+X2PY_C_DOCS_END -->
 
 Their role:
 
@@ -741,10 +763,13 @@ The framework should support libraries implemented in multiple languages simulta
 Example:
 
 * Fortran numerical kernels
-* C runtime layer
-* C++ object systems
 * Rust runtime safety
 * CUDA kernels
+
+<!-- X2PY_C_DOCS_START
+* C runtime layer
+* C++ object systems
+X2PY_C_DOCS_END -->
 
 All unified through:
 
@@ -766,20 +791,26 @@ Suppose:
 subroutine solve_system(A, b, x)
 ```
 
+<!-- X2PY_C_DOCS_START
 ### C++ mesh
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```cpp
 class Mesh {
 public:
     void refine();
 };
 ```
+X2PY_C_DOCS_END -->
 
 ### Rust optimizer
 
+<!-- X2PY_C_DOCS_START
 ```rust
 extern "C" fn optimize(ptr: *mut f64, len: usize) -> i32;
 ```
+X2PY_C_DOCS_END -->
 
 The semantic API may expose:
 
@@ -830,10 +861,13 @@ Examples:
 | Conversion | Strategy |
 | --- | --- |
 | NumPy F-order → Fortran | zero-copy |
-| NumPy C-order → Fortran descriptor requiring F-order | copy or reject, depending on contract |
 | NumPy → Eigen::Map | zero-copy when dtype, alignment, and strides match |
 | Torch CUDA → CPU array | copy, unless API accepts GPU memory |
 | CuPy array → CUDA kernel | zero-copy when stream and device contracts match |
+
+<!-- X2PY_C_DOCS_START
+| NumPy C-order → Fortran descriptor requiring F-order | copy or reject, depending on contract |
+X2PY_C_DOCS_END -->
 
 The runtime should optimize coercion paths automatically while still honoring explicit API contracts.
 
@@ -856,18 +890,28 @@ because these domains already contain:
 
 * mixed-language systems
 * difficult interoperability
-* legacy Fortran/C++ code
 * array-heavy APIs
 * strict shape, device, ownership, and aliasing requirements
 
+<!-- X2PY_C_DOCS_START
+* legacy Fortran/C++ code
+X2PY_C_DOCS_END -->
+
 ---
 
+<!-- X2PY_C_DOCS_START
 ## CPython Extension Backend
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 The project should generate custom CPython extensions directly.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Reasons:
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 * full control over runtime
 * full control over arrays
 * full control over coercions
@@ -875,16 +919,25 @@ Reasons:
 * better diagnostics
 * better ownership handling
 * better performance
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 The project should NOT fundamentally depend on:
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 * SWIG
 * ctypes
 * pybind11
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 although optional backends may exist later.
+X2PY_C_DOCS_END -->
 
----
+<!-- X2PY_C_DOCS_START
+&#45;&#45;-
+X2PY_C_DOCS_END -->
 
 ## Diagnostics
 
@@ -967,9 +1020,12 @@ This allows:
 
 ### Phase 5: Backend Adapters
 
+* Add CUDA/device-memory adapters once device contracts are available.
+
+<!-- X2PY_C_DOCS_START
 * Implement initial Fortran and C adapters.
 * Add C++ and Rust adapters after the semantic runtime is stable.
-* Add CUDA/device-memory adapters once device contracts are available.
+X2PY_C_DOCS_END -->
 
 ### Phase 6: Parser Frontends and Ecosystem Plugins
 

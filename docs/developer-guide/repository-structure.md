@@ -16,14 +16,17 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | Path | Purpose |
 | --- | --- |
 | `x2py/` | Python package implementation. Start with [source-map.md](source-map.md) for entrypoints and [feature-to-code-map.md](feature-to-code-map.md) when starting from behavior. |
-| `x2py/c_parser/` | C parser frontend and C parser CLI helpers. |
 | `x2py/fortran_parser/` | Fortran parser frontend and Fortran parse report helpers. |
 | `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, readiness, and codegen lowering. |
-| `x2py/codegen/` | Codegen AST models, Fortran bridge generation, CPython binding generation, and printers. |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, runtime support installation, and linking. |
 | `x2py/stdlib/` | Native runtime support copied into generated wrapper builds. |
 | `x2py/naming/` | Unified public-name and generated-symbol policy. |
 | `x2py/utilities/` | Small shared Python utilities. |
+
+<!-- X2PY_C_DOCS_START
+| `x2py/c_parser/` | C parser frontend and C parser CLI helpers. |
+| `x2py/codegen/` | Codegen AST models, Fortran bridge generation, CPython binding generation, and printers. |
+X2PY_C_DOCS_END -->
 
 The major source packages have local README files under `x2py/` for
 maintainers reading directly in the source tree. Those README files should link
@@ -34,11 +37,14 @@ back to the maintained source-navigation docs instead of old top-level docs.
 | Path | Purpose |
 | --- | --- |
 | `tests/parser/` | Parser, preprocessing, CLI, and parser fixture tests. |
-| `tests/parser/c/` | C parser-specific tests and fixture maintenance. |
 | `tests/semantics/` | Semantic IR, readiness, type mapping, and lowering tests. |
 | `tests/pyi/` | Semantic `.pyi` parser and fixture tests. |
 | `tests/wrapper/fortran/` | Runtime wrapper tests that compile, import, call, and check failure paths. |
 | `tests/tools/` | Tooling tests, including documentation example and structure checks. |
+
+<!-- X2PY_C_DOCS_START
+| `tests/parser/c/` | C parser-specific tests and fixture maintenance. |
+X2PY_C_DOCS_END -->
 
 ## Documentation
 
@@ -73,9 +79,12 @@ Source navigation is considered maintained when these files agree:
   hand-edited as source.
 - Parser and `.pyi` fixture files should be regenerated with the documented
   fixture commands instead of edited loosely.
+- `x2py.egg-info/`, caches, and benchmark output are generated local artifacts,
+  not source ownership boundaries.
+
+<!-- X2PY_C_DOCS_START
 - Native source fixtures live under the shared `tests/data/fortran/` and
   `tests/data/c/` corpora; wrapper runtime tests should reference those shared
   fixtures instead of owning duplicate native sources. Runtime semantic `.pyi`
   contracts stay with the wrapper tests that consume them.
-- `x2py.egg-info/`, caches, and benchmark output are generated local artifacts,
-  not source ownership boundaries.
+X2PY_C_DOCS_END -->

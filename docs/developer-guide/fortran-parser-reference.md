@@ -143,6 +143,7 @@ The implementation inventory is maintained across these surfaces:
 - `tests/semantics/` covers semantic conversion, datatype precision mapping,
   readiness, `.pyi` emission, and compile-time specialization.
 
+<!-- X2PY_C_DOCS_START
 Parser-related pull requests should update this file when the documented
 feature inventory, public API, diagnostics, project behavior, semantic handoff,
 or maintenance workflow changes. The parser-reference guard watches
@@ -151,6 +152,7 @@ Fortran and C references independently. For Fortran, it watches
 Fortran parser tests directly under `tests/parser/`. It expects
 `docs/developer-guide/fortran-parser-reference.md` to change unless the PR is explicitly labeled to skip
 the guard.
+X2PY_C_DOCS_END -->
 
 `visit_file` is the central orchestration path. It first slices the source into
 direct file-level units, then each unit visitor parses only its own substring
@@ -409,6 +411,7 @@ More complex example:
 
 Input Fortran (`mixed_example.f90`):
 
+<!-- X2PY_C_DOCS_START
 ```fortran
 subroutine driver(n)
   integer, intent(in) :: n
@@ -440,6 +443,7 @@ contains
   end subroutine dump
 end module io_ops
 ```
+X2PY_C_DOCS_END -->
 
 Command:
 
@@ -505,11 +509,14 @@ diagnostics.
 
 `use` import shape:
 
+<!-- X2PY_C_DOCS_START
 - A bare module import such as `use iso_c_binding` is serialized as an empty
   symbol list for that module.
 - An explicit import such as `use iso_c_binding, only: c_int` is serialized as
   a list of mapping objects:
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```json
 "uses": {
   "iso_c_binding": [
@@ -520,6 +527,7 @@ diagnostics.
   ]
 }
 ```
+X2PY_C_DOCS_END -->
 
 - A renamed import such as
   `use list_input, delete_input => delete_input_list` records both sides:
@@ -535,10 +543,12 @@ diagnostics.
 }
 ```
 
+<!-- X2PY_C_DOCS_START
 For compatibility in Python tests and simple consumers, `FortranUseMapping`
 entries compare equal to their local name, so
 `module.uses["iso_c_binding"] == ["c_int"]` remains true for direct equality
 checks. Prefer reading `source`, `target`, or `local_name` in new code.
+X2PY_C_DOCS_END -->
 
 ### 3.4 Wrap-readiness summary
 

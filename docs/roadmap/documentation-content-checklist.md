@@ -48,8 +48,6 @@ change.
   links, limitation links, and a clear path to first successful wrapper build.
 - [ ] `docs/documentation-architecture.md`: resolve the remaining generator and
   migration TODOs, then turn the page into the maintained documentation contract.
-- [ ] `docs/user-guide/index.md`: group user guides by workflow and separate
-  current Fortran wrapper support from future C-input wrapper support.
 - [ ] `docs/tutorials/index.md`: explain which tutorials are maintained and which
   are planned, with expected prerequisites and runtime cost.
 - [ ] `docs/examples-gallery/index.md`: split verified cookbook recipes from
@@ -60,6 +58,11 @@ change.
   semantic pass, runtime, type-system, ownership, and symbol-table pages.
 - [ ] `docs/contributing/index.md`: route contributors to contribution,
   pull-request, review, and coding-standard pages.
+
+<!-- X2PY_C_DOCS_START
+- [ ] `docs/user-guide/index.md`: group user guides by workflow and separate
+  current Fortran wrapper support from future C-input wrapper support.
+X2PY_C_DOCS_END -->
 
 ### User Guide
 
@@ -159,11 +162,14 @@ change.
   and cleanup symptoms.
 - [ ] `docs/troubleshooting/platform-specific-issues.md`: document Linux,
   macOS, Windows, compiler, linker, and shared-library path caveats.
+- [ ] `docs/changelog/index.md`: define changelog policy, release-note shape,
+  migration notes, and how docs changes are tracked with releases.
+
+<!-- X2PY_C_DOCS_START
 - [ ] `docs/faq/index.md`: add answers for source versus `.pyi` builds,
   supported languages, C-input future work, generated files, editable contracts,
   unsupported features, and where to report bugs.
-- [ ] `docs/changelog/index.md`: define changelog policy, release-note shape,
-  migration notes, and how docs changes are tracked with releases.
+X2PY_C_DOCS_END -->
 
 ### Reference Material
 
@@ -225,12 +231,6 @@ change.
   preprocessing boundaries, model facts, diagnostics, and fixture strategy.
 - [ ] `docs/design/semantic-analysis.md`: document source-to-IR lowering,
   `.pyi`-to-IR loading, policy completion, readiness blockers, and invariants.
-- [ ] `docs/design/code-generation.md`: document codegen AST boundaries, bridge
-  generation, CPython binding generation, printers, and forbidden semantic
-  inference in backends.
-- [ ] `docs/design/cpython-integration.md`: document CPython API usage, NumPy
-  C API integration, extension module layout, reference ownership, and error
-  propagation.
 - [ ] `docs/design/runtime-model.md`: document runtime support files, generated
   wrappers, native state, callbacks, threading, and finalization.
 - [ ] `docs/design/error-propagation-model.md`: document diagnostic categories,
@@ -266,6 +266,15 @@ change.
 - [ ] `docs/internal-architecture/symbol-tables.md`: document public naming,
   generated-symbol reservation, collision policy, imports, scopes, and package
   names.
+
+<!-- X2PY_C_DOCS_START
+- [ ] `docs/design/code-generation.md`: document codegen AST boundaries, bridge
+  generation, CPython binding generation, printers, and forbidden semantic
+  inference in backends.
+- [ ] `docs/design/cpython-integration.md`: document CPython API usage, NumPy
+  C API integration, extension module layout, reference ownership, and error
+  propagation.
+X2PY_C_DOCS_END -->
 
 ## Completed Content Evidence
 
@@ -308,8 +317,6 @@ primary placeholder queue.
   map.
 - [x] `docs/developer-guide/repository-structure.md`: maintained repository tree
   reference.
-- [x] `docs/developer-guide/c-parser-reference.md`: maintained C parser
-  reference.
 - [x] `docs/developer-guide/fortran-parser-reference.md`: maintained Fortran
   parser reference.
 - [x] `docs/developer-guide/quality-assurance.md`: maintained quality and QA
@@ -318,3 +325,8 @@ primary placeholder queue.
   concept-ownership map.
 - [x] `docs/roadmap/semantic-pyi-wrapper-checklist.md`: active implementation
   roadmap for semantic `.pyi` wrapper parity.
+
+<!-- X2PY_C_DOCS_START
+- [x] `docs/developer-guide/c-parser-reference.md`: maintained C parser
+  reference.
+X2PY_C_DOCS_END -->

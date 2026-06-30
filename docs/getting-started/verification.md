@@ -56,8 +56,14 @@ Check compiler discovery before running a build:
 
 ```bash
 gfortran --version
-gcc --version
 ```
+
+<!-- X2PY_C_DOCS_START
+```bash
+gfortran &#45;&#45;version
+gcc &#45;&#45;version
+```
+X2PY_C_DOCS_END -->
 
 Then build the checked scalar fixture into a dedicated directory:
 
@@ -73,7 +79,11 @@ The JSON result must report:
 - `compiled` as `true`;
 - `module_name` as `fruntime_abi_f90`;
 - an existing `shared_library` under `build/verify`; and
+- generated native bridge, object, runtime-support, and extension paths.
+
+<!-- X2PY_C_DOCS_START
 - generated bridge, C binding, object, and runtime-support paths.
+X2PY_C_DOCS_END -->
 
 Import the extension through the Python API result so the platform-specific
 shared-library suffix does not need to be guessed:

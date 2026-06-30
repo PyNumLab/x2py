@@ -8,8 +8,10 @@ status: planned-documentation
 
 # Wrapper Generation Pipeline
 
+<!-- X2PY_C_DOCS_START
 Reserved maintainer page for lowering semantic contracts through codegen AST,
 Fortran bridge, C binding, native compilation, and importable extensions.
+X2PY_C_DOCS_END -->
 
 ## TODO
 

@@ -14,9 +14,14 @@ Python assertion, and rebuild cleanly when the contract changes.
 
 ## 1. Edit User-Owned Inputs
 
+Keep native sources under `src/` and Python tests under `tests/`. Treat every
+file under `build/` as generated output that the next build may replace.
+
+<!-- X2PY_C_DOCS_START
 Keep native sources under `src/` and Python tests under `tests/`. Do not edit
 generated bridge, C binding, object, module, runtime-support, or shared-library
 files under `build/`; the next build can replace them.
+X2PY_C_DOCS_END -->
 
 ## 2. Inspect Before Compiling
 
@@ -78,11 +83,14 @@ Generated output normally contains:
 
 | Artifact | Purpose |
 | --- | --- |
-| `bind_c_<name>_wrapper.f90` | Fortran-to-C ABI bridge |
-| `<name>_wrapper.c` and `.h` | CPython binding |
 | `x2py_runtime/` | shared runtime support sources |
 | `.o` and `.mod` files | native intermediates |
 | `<name>.<extension-suffix>` | importable extension |
+
+<!-- X2PY_C_DOCS_START
+| `bind_c_<name>_wrapper.f90` | Fortran-to-C ABI bridge |
+| `<name>_wrapper.c` and `.h` | CPython binding |
+X2PY_C_DOCS_END -->
 
 Treat these as diagnostic evidence, not editable API definitions. Change the
 native source or an intentional semantic `.pyi` contract instead.
@@ -133,13 +141,16 @@ before using that advanced path.
 
 ## Current Boundaries
 
-- Runtime wrapping is implemented for Fortran inputs; C-input runtime wrapping
-  remains future work.
 - Source order for multiple files is caller-controlled; automatic project-wide
   dependency discovery is not the beginner workflow.
 - Generated extensions are local native artifacts, not portable wheels.
 - Other platforms and compiler ABIs need validation beyond the current Ubuntu
   GNU evidence.
+
+<!-- X2PY_C_DOCS_START
+- Runtime wrapping is implemented for Fortran inputs; C-input runtime wrapping
+  remains future work.
+X2PY_C_DOCS_END -->
 
 ## Evidence
 

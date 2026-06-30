@@ -45,9 +45,15 @@ python3 -m x2py src/scale_api.f90 \
   --json
 ```
 
-Using `--out-dir` keeps generated bridge sources, C bindings, runtime support,
+Using `--out-dir` keeps generated sources, runtime support, native
+intermediates, module files, and the shared library under `build/scale_api/`.
+The returned JSON is the source of truth for the exact shared-library path.
+
+<!-- X2PY_C_DOCS_START
+Using `&#45;&#45;out-dir` keeps generated bridge sources, C bindings, runtime support,
 objects, module files, and the shared library under `build/scale_api/`.
 The returned JSON is the source of truth for the exact shared-library path.
+X2PY_C_DOCS_END -->
 
 Without `--out-dir`, x2py instead places intermediate files under
 `src/__x2py__/` and writes the importable extension beside `src/scale_api.f90`.

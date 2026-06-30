@@ -28,10 +28,14 @@ python3 --version
 Install these before attempting a wrapper build:
 
 - GNU Fortran (`gfortran`) for preprocessing, type probes, and native builds;
-- GNU C (`gcc`) for the generated CPython binding;
 - Python development headers matching the active interpreter;
-- NumPy, whose Python package supplies the required C headers; and
+- NumPy, whose installed package supplies the required development files;
 - a native linker supplied by the compiler toolchain.
+
+<!-- X2PY_C_DOCS_START
+- GNU C (`gcc`) for the generated CPython binding;
+- NumPy, whose Python package supplies the required C headers; and
+X2PY_C_DOCS_END -->
 
 GNU Make is optional. Direct builds do not require it, but `--makefile` emits a
 `Makefile.x2py` that expects GNU Make and a POSIX-style shell.
@@ -40,8 +44,15 @@ On Ubuntu or Debian, the prerequisite packages normally come from:
 
 ```bash
 sudo apt-get update
+sudo apt-get install build-essential gfortran python3-dev
+```
+
+<!-- X2PY_C_DOCS_START
+```bash
+sudo apt-get update
 sudo apt-get install gcc gfortran python3-dev
 ```
+X2PY_C_DOCS_END -->
 
 The checked CI target uses Ubuntu 24.04 and `gfortran-13`. Package names and
 compiler locations differ on other Linux distributions.
@@ -85,11 +96,17 @@ Verify the compiler executables independently:
 
 ```bash
 gfortran --version
-gcc --version
 ```
 
-Continue with [Verification](verification.md) only after all four commands
-succeed and the printed header directories exist.
+<!-- X2PY_C_DOCS_START
+```bash
+gfortran &#45;&#45;version
+gcc &#45;&#45;version
+```
+X2PY_C_DOCS_END -->
+
+Continue with [Verification](verification.md) only after these commands succeed
+and the printed header directories exist.
 
 ## Platform Caveats
 

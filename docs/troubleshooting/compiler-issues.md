@@ -8,8 +8,10 @@ status: planned-documentation
 
 # Compiler Issues
 
+<!-- X2PY_C_DOCS_START
 Reserved troubleshooting page for C and Fortran compiler discovery, flags,
 preprocessing, and native diagnostics.
+X2PY_C_DOCS_END -->
 
 ## TODO
 

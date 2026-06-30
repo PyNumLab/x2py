@@ -99,11 +99,15 @@ patterns can also be contract requirements. Continue with
 
 ## Current Limitations
 
-- Runtime generation in this workflow accepts Fortran source, not user C input.
 - The wrapper uses the GNU compiler/ABI path; other compiler families are not
   established by the current runtime evidence.
 - Contained module procedures live under their Python child module rather than
   being flattened into the extension root.
+- Runtime generation in this workflow accepts Fortran source.
+
+<!-- X2PY_C_DOCS_START
+- Runtime generation in this workflow accepts Fortran source, not user C input.
+X2PY_C_DOCS_END -->
 
 Build failures go to [Build Issues](../troubleshooting/build-issues.md); a
 successful import followed by a call failure goes to

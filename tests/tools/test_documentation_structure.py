@@ -19,7 +19,44 @@ CLI_REFERENCE_PATH = DOCS_ROOT / "reference/cli-commands.md"
 PYTHON_API_REFERENCE_PATH = DOCS_ROOT / "reference/python-api.md"
 DOCUMENTATION_CHECKLIST_PATH = DOCS_ROOT / "roadmap/documentation-content-checklist.md"
 DOC_PATHS = sorted(path for path in DOCS_ROOT.rglob("*.md") if "old_docs" not in path.parts)
+PUBLIC_DOCUMENTATION_PATHS = [ROOT / "README.md", *DOC_PATHS]
+DEFERRED_C_PAGE_PATHS = [
+    ROOT / "docs/design/cpython-integration.md",
+    ROOT / "docs/developer-guide/c-parser-reference.md",
+    ROOT / "docs/examples-gallery/recipes/inspect-c-api.md",
+]
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
+C_DOCS_START = "<!-- X2PY_C_DOCS_START"
+C_DOCS_END = "X2PY_C_DOCS_END -->"
+C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
+VISIBLE_C_DOCUMENTATION = re.compile(
+    r"(?:"
+    r"(?<![A-Za-z0-9_])C(?:\+\+)?(?![A-Za-z0-9_])"
+    r"|CPython"
+    r"|Cython"
+    r"|C-input"
+    r"|bind\s*\(\s*c\s*\)"
+    r"|```c(?:\s|$)"
+    r"|\b(?:c_parser|c2ir|fortran_to_c|c_to_python|cpython_api|cpythoncode)\b"
+    r"|\b(?:ccode|cpreprocessor)\.py\b"
+    r"|\btest_c(?:2ir|_(?:semantic|parser|declarations|functions|structs|project|compiler|corpus|fixture|json|error|public))[A-Za-z0-9_]*\b"
+    r"|\b(?:bind_c|iso_c_binding)\b"
+    r"|\b[A-Za-z][A-Za-z0-9_]*_c\b"
+    r"|\bc_[A-Za-z0-9_]+\b"
+    r"|\b(?:ORDER_C|REQUIRE_C_CONTIGUOUS|NPY_C_CONTIGUOUS)\b"
+    r"|\b(?:CToIR|CFile|CProject|CParse|CDiagnostic)[A-Za-z0-9_]*\b"
+    r"|\b(?:parse_c|c_file|c_project|c_function|c_parameter|c_struct|c_type)_[A-Za-z0-9_]+\b"
+    r"|(?:tests/data/c|tests/parser/c|x2py/c_parser|/c/general/)"
+    r"|(?:c-parser|inspect-c-api|c-api)"
+    r"|\b(?:structs?|unions?|typedefs?|declarators?|bitfields?|K&R)\b"
+    r"|--language\s+c\b"
+    r"|(?:fortran\|c|\{fortran,c\}|\bc11\b|\bc17\b|\bc23\b)"
+    r"|\"language\"\s*:\s*\"c\""
+    r"|\.(?:c|h)(?:\b|`)"
+    r"|\b(?:CFLAGS|CC|gcc(?:-\d+)?|clang(?:-\d+)?|cJSON)\b"
+    r"|\bc-type(?:s|\b)"
+    r")"
+)
 REQUIRED_METADATA = {"title", "audience", "prerequisites", "related", "status"}
 ALLOWED_STATUSES = {
     "active-roadmap",
@@ -87,7 +124,6 @@ CLI_REFERENCE_OPTIONS = [
     "--wrap-readiness",
     "--preprocessor-adapter",
     "--compiler",
-    "--compile-commands",
     "--preprocess-template",
     "-I",
     "--include-dir",
@@ -97,17 +133,10 @@ CLI_REFERENCE_OPTIONS = [
     "--undef",
     "--std",
     "--compiler-arg",
-    "--c-type-report",
-    "--c-type-probe-runner",
-    "--c-type-probe-cache-dir",
-    "--refresh-c-type-probe",
     "--fortran-type-report",
     "--fortran-type-probe-runner",
     "--fortran-type-probe-cache-dir",
     "--refresh-fortran-type-probe",
-    "--include-exposure",
-    "--public-include",
-    "--private-include",
     "--show-vars",
     "--print-limit",
     "--vars-limit",
@@ -269,7 +298,6 @@ FEATURE_MATRIX_REQUIRED_FEATURES = [
     "Defined operators and assignment overloads",
     "Output arguments and multiple results",
     "Optional arguments",
-    "`value` arguments and existing `bind(C)` procedures",
     "Allocatable outputs, results, replacements, and borrowed module/component views",
     "Pointer call-local inputs and snapshot results",
     "Array-valued function results",
@@ -280,17 +308,14 @@ FEATURE_MATRIX_REQUIRED_FEATURES = [
     "Fortran enum constants",
     "Scalar character arguments, results, and fields",
     "Scalar kind coverage",
-    "Opaque `bind(C)` and `sequence` derived-type layout through accessors",
     "Caller-ordered multi-source builds, Makefiles, verbose mode, and output placement",
     "Visibility, naming, keyword escaping, and collision policy",
     "Immediate call-scoped Python callbacks",
     "Runtime error projection, GIL policy, recursion, OpenMP path, and GNU ABI checks",
     "Fortran parse, semantic IR, `.pyi`, and readiness inspection",
-    "C parse, semantic IR, `.pyi`, and readiness inspection",
     "Semantic `.pyi` wrapper builds from explicit native artifacts",
-    "Assumed-size, assumed-rank, lower-bound, and `bind(C)` array contracts",
+    "Assumed-size, assumed-rank, and lower-bound array contracts",
     "Scalar inheritance and polymorphic dispatch",
-    "Runtime wrapping of user-supplied C libraries",
     "General borrowed pointer views and pointer reassociation",
     "Persistent callbacks and procedure pointers",
     "Advanced multi-source dependency discovery and external-library integration",
@@ -299,7 +324,6 @@ FEATURE_MATRIX_REQUIRED_FEATURES = [
     "Generic constructor interfaces and overloaded runtime initialization",
     "Character arrays and mutable deferred-length character storage",
     "Wider-than-supported real, complex, and logical storage",
-    "Direct C struct layout access for `bind(C)` or `sequence` derived types",
     "Full semantic `.pyi` parity across all wrapper scenarios",
     "MPI examples and distribution constraints",
     "Generated reference pages for modules, functions, and classes",
@@ -383,6 +407,29 @@ def _front_matter(path: Path) -> tuple[dict[str, str], str]:
     return metadata, "\n".join(lines[end + 1 :])
 
 
+def _visible_documentation_source(path: Path) -> str:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if path != ROOT / "README.md" and lines and lines[0] == "---":
+        lines = lines[lines.index("---", 1) + 1 :]
+
+    visible: list[str] = []
+    hidden = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped == C_DOCS_START:
+            assert not hidden, f"{path.relative_to(ROOT)}: nested deferred documentation comment"
+            hidden = True
+        elif stripped == C_DOCS_END:
+            assert hidden, f"{path.relative_to(ROOT)}: unmatched deferred documentation comment end"
+            hidden = False
+        elif hidden:
+            assert "--" not in line, f"{path.relative_to(ROOT)}: invalid double hyphen in deferred comment"
+        elif not line.lstrip().startswith(C_DOCS_DISABLED):
+            visible.append(line)
+    assert not hidden, f"{path.relative_to(ROOT)}: unclosed deferred documentation comment"
+    return "\n".join(visible)
+
+
 def _combined_text(relative_paths: list[str]) -> str:
     return "\n".join((ROOT / relative_path).read_text(encoding="utf-8") for relative_path in relative_paths)
 
@@ -440,6 +487,27 @@ def test_documentation_page_metadata(path: Path) -> None:
     if metadata["status"] in TODO_STATUSES:
         assert "## TODO" in body, f"{path.relative_to(ROOT)}: unfinished pages must include a TODO section"
         assert "TODO:" in body, f"{path.relative_to(ROOT)}: TODO section must contain explicit TODO markers"
+
+
+@pytest.mark.parametrize("path", PUBLIC_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+def test_deferred_c_documentation_is_not_visible(path: Path) -> None:
+    visible = _visible_documentation_source(path)
+    match = VISIBLE_C_DOCUMENTATION.search(visible)
+    assert match is None, f"{path.relative_to(ROOT)}: visible deferred documentation: {match.group(0)!r}"
+
+
+@pytest.mark.parametrize("path", DEFERRED_C_PAGE_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+def test_dedicated_deferred_c_pages_have_no_visible_body(path: Path) -> None:
+    assert _visible_documentation_source(path).strip() == ""
+
+
+def test_deferred_c_pages_are_not_in_site_navigation() -> None:
+    lines = (ROOT / "mkdocs.yml").read_text(encoding="utf-8").splitlines()
+    active_navigation = "\n".join(line for line in lines if not line.lstrip().startswith("#"))
+    assert "Inspect a C API" not in active_navigation
+    assert "C Parser Reference" not in active_navigation
+    assert any("X2PY_C_DOCS" in line and "inspect-c-api.md" in line for line in lines)
+    assert any("X2PY_C_DOCS" in line and "c-parser-reference.md" in line for line in lines)
 
 
 @pytest.mark.parametrize("relative_path", REQUIRED_AREA_INDEXES)

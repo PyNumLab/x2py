@@ -27,7 +27,7 @@ nav:
           - Generate an Editable Makefile: examples-gallery/recipes/generate-editable-makefile.md
           - Build Multiple Fortran Sources: examples-gallery/recipes/build-multiple-fortran-sources.md
           - Inspect a Fortran API: examples-gallery/recipes/inspect-fortran-api.md
-          - Inspect a C API: examples-gallery/recipes/inspect-c-api.md
+          # X2PY_C_DOCS: - Inspect a C API: examples-gallery/recipes/inspect-c-api.md
           - Work With Semantic .pyi Contracts: examples-gallery/recipes/semantic-pyi-contracts.md
           - Control CLI Output: examples-gallery/recipes/control-cli-output.md
           - Use Python Inspection APIs: examples-gallery/recipes/use-python-inspection-apis.md
@@ -47,7 +47,7 @@ nav:
       - Source Map: developer-guide/source-map.md
       - Feature To Code Map: developer-guide/feature-to-code-map.md
       - Repository Structure: developer-guide/repository-structure.md
-      - C Parser Reference: developer-guide/c-parser-reference.md
+      # X2PY_C_DOCS: - C Parser Reference: developer-guide/c-parser-reference.md
       - Fortran Parser Reference: developer-guide/fortran-parser-reference.md
       - Quality Assurance: developer-guide/quality-assurance.md
   - Internal Architecture:

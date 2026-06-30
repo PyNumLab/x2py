@@ -12,12 +12,14 @@ For the supported edit workflow and runtime consequences of changing a
 contract, including ownership and destruction examples, see
 [Editing semantic `.pyi` contracts](../user-guide/editing-semantic-pyi-contracts.md).
 
+<!-- X2PY_C_DOCS_START
 Semantic `.pyi` files are x2py's editable wrapper contract. They are valid
 Python stub files, but they are not meant to be clean static-type-checker stubs.
 They preserve native type, storage, ownership, shape and visibility facts that a
 wrapper generator needs. The implemented Fortran wrapper uses the same semantic
 contract internally; the wrapper backend for user-supplied C inputs remains
 future work.
+X2PY_C_DOCS_END -->
 
 The normal `--wrap` workflow remains source-driven and accepts Fortran source
 files. A `.pyi`-driven wrapper workflow is also available for the implemented
@@ -366,10 +368,13 @@ def DAXPY(
 dimension remains unconstrained, but the explicit Fortran interface generated
 from the `.pyi` uses `DX(*)`/`DY(*)` instead of assumed-shape descriptors.
 
+<!-- X2PY_C_DOCS_START
 C-order flat storage can be expressed for native routines that consume a raw
 flat buffer while the Python contract validates a multidimensional C-contiguous
 view:
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```python
 from typing import Annotated
 
@@ -380,13 +385,16 @@ def row_sums(
     result: Float64[Flat],
 ) -> None: ...
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Here `values` is not a literal Fortran dummy declaration such as `real ::
 values(*, 3)`, which Fortran does not allow. It is a Python storage contract:
 the wrapper validates a C-contiguous `(n, 3)` view, constructs the corresponding
 rank-2 Fortran bridge view over the same storage, and passes it to the native
 assumed-size dummy. The native routine's `values(*)` dummy receives the
 flattened element sequence and interprets the elements in row-major order.
+X2PY_C_DOCS_END -->
 
 ### Native Artifacts And Link Resolution
 
@@ -615,7 +623,9 @@ builds must not disagree about namespace placement.
 
 ## Semantic Type Names
 
+<!-- X2PY_C_DOCS_START
 The public annotations use semantic names, not raw C or Fortran spellings:
+X2PY_C_DOCS_END -->
 
 | Family | Names |
 | --- | --- |
@@ -628,17 +638,21 @@ The public annotations use semantic names, not raw C or Fortran spellings:
 | User types | class names and imported type names |
 | Callables | `Callable`, `Callable[..., T]`, `Callable[[A, B], T]` |
 
+<!-- X2PY_C_DOCS_START
 `Unknown` is intentionally rejected in `.pyi` annotations. Generated stubs must
 resolve or block unsupported source types instead of emitting unknown contracts.
 Current C callback placeholders such as `CFunctionPointer` can appear in
 generated stubs when source callback policy is incomplete; edit them to a full
 `Callable[[...], ...]` contract before expecting readiness to pass.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Fixed-size character storage uses `String[length]`, for example `String[8]`.
 Assumed, deferred, or otherwise non-fixed character length uses plain `String`.
 The subscription on `String` is a character length, not an array rank. Source
 kind names are already resolved into semantic dtypes, so generated contracts do
 not import `iso_c_binding`, `iso_fortran_env`, or their kind constants.
+X2PY_C_DOCS_END -->
 
 ## Storage Contracts
 
@@ -669,6 +683,7 @@ argv: Ptr[3](Const(Int8))
 
 Array storage uses NumPy-style subscriptions:
 
+<!-- X2PY_C_DOCS_START
 ```python
 vector: Float64[:]
 fixed: Float64[3]
@@ -679,6 +694,7 @@ flat_matrix: Float64[3, Flat]
 c_flat_matrix: Annotated[Float64[Flat, 3], ORDER_C]
 rank_polymorphic: Float64[...]
 ```
+X2PY_C_DOCS_END -->
 
 Dimension entries have the following meaning:
 
@@ -692,6 +708,7 @@ Dimension entries have the following meaning:
 | `Flat` | edge-position flat contiguous storage dimension |
 | `...` | rank-polymorphic storage |
 
+<!-- X2PY_C_DOCS_START
 `Flat` must appear exactly once at either edge of a concrete-rank array. Final
 `Flat` is Fortran-oriented flat storage: `Float64[3, Flat]` corresponds to
 `real :: a(3, *)`. Leading `Flat` is C-oriented flat storage and should be
@@ -700,6 +717,7 @@ spelled with explicit `ORDER_C` in Fortran-facing contracts:
 view, constructs a rank-preserving bridge view over the same storage, and passes
 that view to the native assumed-size dummy. It does not imply an invalid
 Fortran declaration such as `real :: a(*, 3)`.
+X2PY_C_DOCS_END -->
 
 The Python argument may provide more storage than the declared explicit
 dimensions describe, but the wrapper passes it to native code without a stride
@@ -725,7 +743,6 @@ Generated canonical metadata:
 | Metadata | Meaning |
 | --- | --- |
 | `ORDER_F` | multidimensional Fortran-oriented storage |
-| `ORDER_ANY` | edited contract accepts either C or Fortran orientation |
 | `Allocatable` | Fortran allocatable array storage |
 | `Pointer` | Fortran pointer array storage |
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
@@ -739,15 +756,22 @@ Generated canonical metadata:
 | `Destruction("python_refcount" | "wrapper_dealloc" | "native_owner" | "caller" | "call_local" | "none" | "blocked")` | explicit destruction override for the wrapper ownership policy |
 | `PointerPolicy(...)` | complete pointer policy: `nullable`, `transfer`, `target_owner`, `lifetime`, `deallocation`, `shape_source`, `contiguity`, `reassociation`, `aliasing`, and `mutability` |
 
+<!-- X2PY_C_DOCS_START
+| `ORDER_ANY` | edited contract accepts either C or Fortran orientation |
+X2PY_C_DOCS_END -->
+
 Loaded compatibility metadata:
 
 | Metadata | Meaning |
 | --- | --- |
-| `ORDER_C` | explicit C-oriented storage; this is also the default for plain multidimensional arrays |
 | `Contiguous` | source provenance says the array is contiguous |
 | `ArrayCategory("...")` | source array category provenance |
 | `SourceDims(...)` | source declaration dimensions |
 | `LowerBounds(...)`, `UpperBounds(...)` | source bound provenance |
+
+<!-- X2PY_C_DOCS_START
+| `ORDER_C` | explicit C-oriented storage; this is also the default for plain multidimensional arrays |
+X2PY_C_DOCS_END -->
 
 Other positional `Annotated` helpers are preserved as semantic constraints:
 
@@ -851,8 +875,10 @@ nmax: Final[Int32]
 answer: Final[Int32] = 42
 ```
 
+<!-- X2PY_C_DOCS_START
 C and Fortran enumerators are plain integer constants. Do not declare or expect
 Python `Enum`/`IntEnum` classes or semantic enum datatypes:
+X2PY_C_DOCS_END -->
 
 ```python
 STATUS_OK: Final[Int] = 0
@@ -873,7 +899,9 @@ class particle:
     position: Float64[3]
 ```
 
+<!-- X2PY_C_DOCS_START
 C aggregate identity is explicit through base markers:
+X2PY_C_DOCS_END -->
 
 ```python
 class packet(CStruct):
@@ -889,13 +917,18 @@ class context(CStruct, Opaque):
 
 | Marker | Meaning |
 | --- | --- |
+| `Opaque` | type identity is known, but fields/layout are intentionally hidden |
+
+<!-- X2PY_C_DOCS_START
 | `CStruct` | native C `struct` |
 | `CUnion` | native C `union` |
 | `CAnonymous` | generated nested anonymous C aggregate type |
-| `Opaque` | type identity is known, but fields/layout are intentionally hidden |
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Anonymous C aggregate members are represented as nested classes plus a generated
 field that marks the anonymous member:
+X2PY_C_DOCS_END -->
 
 ```python
 class flags(CStruct):
@@ -907,8 +940,10 @@ class flags(CStruct):
     tag: Int
 ```
 
+<!-- X2PY_C_DOCS_START
 The generated field preserves that the anonymous union is a real C member even
 though C exposes its fields through the containing aggregate.
+X2PY_C_DOCS_END -->
 
 External opaque types can live in separate owner stubs:
 
@@ -1074,24 +1109,28 @@ restricted to a compatible operator or assignment generic. It is emitted for
 `.eqv.` and `.neqv.`, which would otherwise be indistinguishable from
 `operator(==)` and `operator(/=)`.
 
+<!-- X2PY_C_DOCS_START
 The generated C extension exposes one callable for each generic name. It
 dispatches before conversion using the wrapped scalar dtype, array element
 dtype and rank, or wrapped derived-type class. It does not use implicit numeric
 coercion to choose an overload. Array shape, bounds, and layout are validated
 by the selected concrete wrapper, but they do not distinguish overloads;
 overloads that differ only in those properties are rejected during generation.
+X2PY_C_DOCS_END -->
 
 All specifics must have one compatible Python call shape. Parameter names and
 keyword parsing use the first specific procedure's signature. A call that
 matches no specific raises `TypeError`; duplicate dtype/rank signatures are a
 deterministic generation error.
 
+<!-- X2PY_C_DOCS_START
 Wrapped derived types dispatch by their generated extension class. Fortran
 `extends` relationships are preserved semantically but do not currently create
 Python C-type inheritance, so a base-type overload is not a fallback for a
 derived wrapper. Each accepted wrapped derived type needs an explicit specific
 procedure. User-defined Python subclasses are not part of this runtime
 contract.
+X2PY_C_DOCS_END -->
 
 ## Defined Operators And Assignment
 
@@ -1123,6 +1162,7 @@ Operand positions are fixed:
 | unary method | `self` is the only operand |
 | comparison method | `self` is the Python left operand; reflected comparison metadata restores native order |
 
+<!-- X2PY_C_DOCS_START
 Return annotations must equal the concrete procedure result. The generated C
 extension dispatches the Python slot before conversion by dtype, rank, and
 wrapped extension class. Operator slots also accept a native Python scalar when
@@ -1131,6 +1171,7 @@ family; this is needed when CPython or NumPy invokes a reflected slot with a
 built-in scalar. No match raises `TypeError`, and indistinguishable candidates
 fail during generation. Three-argument `pow(value, exponent, modulus)` is not a
 Fortran operator form and raises `TypeError`.
+X2PY_C_DOCS_END -->
 
 Mappings:
 
@@ -1288,10 +1329,12 @@ include `None` because native storage may be unallocated:
 module_values: Annotated[Float64[:], Allocatable, FortranTarget] | None
 ```
 
+<!-- X2PY_C_DOCS_START
 `FortranTarget` is required for module allocatable arrays because the generated
 Fortran bridge needs `c_loc` on the native storage. Without that native `target`
 attribute, readiness and direct code generation report a blocker instead of
 generating a copied fallback.
+X2PY_C_DOCS_END -->
 
 Public scalar Fortran module variables are emitted directly with their resolved
 semantic type:
@@ -1321,11 +1364,13 @@ No setter is generated for parameters. Python module namespaces remain ordinary
 Python module namespaces, so assigning to `mod.nmax` can rebind that Python name
 without modifying native Fortran state.
 
+<!-- X2PY_C_DOCS_START
 Allocatable array function results and allocatable `intent(out)` array arguments
 use a copy-return policy. The generated bridge copies allocated Fortran storage
 into C memory that becomes owned by the returned NumPy array, then deallocates
 the Fortran allocatable. If the Fortran value remains unallocated, Python
 receives `None`.
+X2PY_C_DOCS_END -->
 
 Allocatable `intent(inout)` arguments remain blocked. They need a replacement
 policy for the caller-visible object before x2py can safely expose them.
@@ -1421,7 +1466,6 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Area | Generated behavior |
 | --- | --- |
 | Fortran intrinsic scalars | compiler-aware semantic dtype names |
-| C primitive scalars | compiler-probed semantic dtype names when a target report is supplied |
 | Native scope | module-leaf filename, or `@external` for standalone procedures |
 | Functions/subroutines | declaration return shape, optional native rename, ABI argument order, and direct result |
 | Hidden Fortran outputs | Python returns plus generated `@native_call` in native argument order |
@@ -1430,17 +1474,21 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Module variables | direct module-level annotations; native accessors remain internal |
 | Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
-| C and Fortran enums | module-level `Final[...]` integer constants |
 | Fortran derived types | classes with fields and methods; `@native_type` only for irreducible attributes or finalizers |
-| Fortran generic interfaces | explicit `@overload("specific")` links with C-extension dtype/rank dispatch |
 | Fortran defined operators | Python data-model methods plus explicit named-operator methods |
 | Fortran defined assignment | explicit mutating `assign(...)` overloads |
-| C structs/unions | `CStruct` and `CUnion` classes |
-| C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
 | Opaque types | `Opaque` classes and owner-module dependency stubs |
 | Imports | retained contract dependencies with aliases; source kind modules are omitted after dtype resolution |
 | Callbacks | complete `Callable` signatures when source interfaces resolve |
+
+<!-- X2PY_C_DOCS_START
+| C primitive scalars | compiler-probed semantic dtype names when a target report is supplied |
+| C and Fortran enums | module-level `Final[...]` integer constants |
+| Fortran generic interfaces | explicit `@overload("specific")` links with C-extension dtype/rank dispatch |
+| C structs/unions | `CStruct` and `CUnion` classes |
+| C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
 | Incomplete C callbacks | placeholder type that readiness reports as incomplete |
+X2PY_C_DOCS_END -->
 
 Loaded but usually not generated from source today:
 
@@ -1481,6 +1529,10 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 
 Near-term format work:
 
+5. Represent Fortran polymorphic `class(...)` and procedure bindings without
+   losing dynamic-type or dispatch information.
+
+<!-- X2PY_C_DOCS_START
 1. Make C and Fortran callbacks/procedure pointers first-class by preserving
    complete `Callable[[...], ...]` contracts from source.
 2. Add explicit pointer ownership, borrow, nullability, output-buffer and
@@ -1489,8 +1541,7 @@ Near-term format work:
    byte-string metadata beyond the existing `String[n]` fixed-length contract.
 4. Expand aggregate layout metadata for C bitfields, C attributes, Fortran
    `bind(c)`, `sequence`, and by-value aggregate ABI checks.
-5. Represent Fortran polymorphic `class(...)` and procedure bindings without
-   losing dynamic-type or dispatch information.
+X2PY_C_DOCS_END -->
 
 Projection/runtime roadmap:
 

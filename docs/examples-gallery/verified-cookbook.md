@@ -26,11 +26,14 @@ editable wrapper contracts.
 | Generate wrapper sources and an editable Makefile | [Generate an editable Makefile](recipes/generate-editable-makefile.md) |
 | Build one extension from multiple ordered Fortran sources | [Build multiple Fortran sources](recipes/build-multiple-fortran-sources.md) |
 | Parse, print `.pyi`, and check readiness | [Inspect a Fortran API](recipes/inspect-fortran-api.md) |
-| Inspect a C API without building a wrapper | [Inspect a C API](recipes/inspect-c-api.md) |
 | Work with generated or edited `.pyi` contracts | [Work with semantic .pyi contracts](recipes/semantic-pyi-contracts.md) |
 | Combine stages or limit human-readable output | [Control CLI output](recipes/control-cli-output.md) |
 | Use parser and semantic APIs from Python code | [Use Python inspection APIs](recipes/use-python-inspection-apis.md) |
 | Pass compiler and preprocessing flags | [Use compiler preprocessing options](recipes/compiler-preprocessing.md) |
+
+<!-- X2PY_C_DOCS_START
+| Inspect a C API without building a wrapper | [Inspect a C API](recipes/inspect-c-api.md) |
+X2PY_C_DOCS_END -->
 
 ## Fixture Inputs
 
@@ -40,17 +43,22 @@ The recipes reuse these checked fixtures:
 | --- | --- |
 | Compiled Fortran wrapper and scalar call | `tests/data/fortran/wrapper/fruntime_abi_f90.f90` |
 | Basic Fortran procedure | `tests/data/fortran/general/basic_subroutine.f90` |
-| Basic C functions, pointers, and arrays | `tests/data/c/general/math_api.h` |
 | Rich Fortran module, types, arrays, and visibility | `tests/data/fortran/general/modern_pyi_example.f90` |
 | Generated Fortran semantic interface | `tests/pyi/fixtures/general/modern_pyi_example/modern_pyi_example.pyi` |
+
+<!-- X2PY_C_DOCS_START
+| Basic C functions, pointers, and arrays | `tests/data/c/general/math_api.h` |
 | Generated C semantic interface | `tests/pyi/fixtures/c/general/math_api.pyi` |
+X2PY_C_DOCS_END -->
 
 ## Current Boundary
 
+<!-- X2PY_C_DOCS_START
 The implemented runtime wrapper backend is for Fortran source inputs and the
 documented `.pyi` subset with explicit native artifacts. C inputs can be parsed,
 lowered to semantic IR, printed as `.pyi`, and checked for readiness; runtime
 wrapping of user-supplied C libraries is not implemented yet.
+X2PY_C_DOCS_END -->
 
 ## Related Documentation
 

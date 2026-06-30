@@ -82,11 +82,14 @@ The supported edit surface is:
 | Change the Python export name or namespace | Edit the entry-package import/export tree; use `@bind(...)` when the Python declaration name differs from its native target. |
 | Change overload grouping | Add or remove `@overload("specific")` candidates with distinct supported dtype/rank signatures. |
 | Change Python/native argument projection | Add or edit `@native_call(...)` and `Returns[...]`, or remove `@native_call` and expose the complete native argument list in native order. |
-| Change array validation | Edit dtype, rank, dimensions, `ORDER_C`, `ORDER_F`, `ORDER_ANY`, `Flat`, optionality, and supported pointer/allocatable metadata. |
 | Change visible mutation | Use caller-owned writable storage, or `Immutable` plus an explicit replacement result. |
 | Change supported ownership/lifetime policy | Supply a valid `Ownership(...)`, `Transfer(...)`, and `Destruction(...)` triple for the declared storage and context. |
 | Translate native status to exceptions | Add `@raises(...)` with valid projected status/message values. |
 | Keep the GIL | Add `@hold_gil` for a call that must execute while holding the Python GIL. |
+
+<!-- X2PY_C_DOCS_START
+| Change array validation | Edit dtype, rank, dimensions, `ORDER_C`, `ORDER_F`, `ORDER_ANY`, `Flat`, optionality, and supported pointer/allocatable metadata. |
+X2PY_C_DOCS_END -->
 
 The following are not supported edits:
 

@@ -25,6 +25,18 @@ another generator with hierarchical navigation and front matter.
 5. Maintainer-only internals live under `internal-architecture/` rather than in
    user workflows.
 
+## Fortran-First Publication
+
+The published documentation is currently Fortran-first. Material for the next
+native-language frontend remains in explicit Markdown source comments and is
+excluded from site navigation. Do not delete these comments: they are the
+preserved documentation baseline for the later frontend phase.
+
+Mixed pages keep their Fortran blocks visible and comment only the deferred
+paragraphs, list items, table rows, examples, or sections. A page dedicated to
+the deferred frontend keeps neutral front matter, a commented original title,
+and a fully commented body so it cannot appear as current user guidance.
+
 ## Audience Separation
 
 The website-oriented tree has two explicit lanes:

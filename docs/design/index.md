@@ -19,10 +19,13 @@ They do not by themselves establish runtime support.
 - [Parser architecture](parser-architecture.md)
 - [Semantic analysis](semantic-analysis.md)
 - [Code generation](code-generation.md)
-- [CPython integration](cpython-integration.md)
 - [Runtime model](runtime-model.md)
 - [Memory ownership model](memory-ownership-model.md)
 - [Error propagation model](error-propagation-model.md)
+
+<!-- X2PY_C_DOCS_START
+- [CPython integration](cpython-integration.md)
+X2PY_C_DOCS_END -->
 
 ## TODO
 

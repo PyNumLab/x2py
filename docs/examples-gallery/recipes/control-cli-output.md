@@ -63,14 +63,19 @@ python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
   --parse --wrap-readiness
 ```
 
-<!-- x2py-doc-test: run -->
+<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: run -->
+<!-- X2PY_C_DOCS_START
 ```bash
 python3 -m x2py tests/data/c/general/math_api.h \
-  --language c --pyi --wrap-readiness
+  &#45;&#45;language c &#45;&#45;pyi &#45;&#45;wrap-readiness
 ```
+X2PY_C_DOCS_END -->
 
 ## Notes
 
 - `--show-vars` is Fortran-only.
-- `--print-limit` works with human-readable C and Fortran parse reports.
 - Use `--json` when another tool needs stable machine-readable output.
+
+<!-- X2PY_C_DOCS_START
+- `&#45;&#45;print-limit` works with human-readable C and Fortran parse reports.
+X2PY_C_DOCS_END -->

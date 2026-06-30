@@ -13,6 +13,9 @@ failures, runtime exceptions, and callback exceptions.
 
 ## TODO
 
+- TODO: Link diagnostics and Python exceptions to troubleshooting pages.
+
+<!-- X2PY_C_DOCS_START
 - TODO: Document error propagation across parser, semantic, generated bridge,
   generated C binding, and Python callback layers.
-- TODO: Link diagnostics and Python exceptions to troubleshooting pages.
+X2PY_C_DOCS_END -->

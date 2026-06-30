@@ -37,9 +37,12 @@ Expected output:
 ping
 ```
 
+<!-- X2PY_C_DOCS_START
 ## Parse Inline C
+X2PY_C_DOCS_END -->
 
-<!-- x2py-doc-test: exact -->
+<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact -->
+<!-- X2PY_C_DOCS_START
 ```python
 from x2py import parse_c_file
 
@@ -47,17 +50,25 @@ parsed = parse_c_file("int add(int a, int b);", filename="inline.h")
 
 print([function.name for function in parsed.functions])
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Expected output:
+X2PY_C_DOCS_END -->
 
-<!-- x2py-doc-test-output -->
+<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test-output -->
+<!-- X2PY_C_DOCS_START
 ```text
 ['add']
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ## Convert C To Semantic IR
+X2PY_C_DOCS_END -->
 
-<!-- x2py-doc-test: exact -->
+<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact -->
+<!-- X2PY_C_DOCS_START
 ```python
 from x2py import (
     assess_semantic_wrap_readiness,
@@ -72,10 +83,14 @@ modules = c_file_to_semantic_modules(parsed)
 print(emit_module_stubs(modules)["inline"])
 print(assess_semantic_wrap_readiness(modules)["wrappable"])
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Expected output:
+X2PY_C_DOCS_END -->
 
-<!-- x2py-doc-test-output -->
+<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test-output -->
+<!-- X2PY_C_DOCS_START
 ```text
 def add(
     a: Int,
@@ -83,6 +98,7 @@ def add(
 ) -> Int: ...
 True
 ```
+X2PY_C_DOCS_END -->
 
 ## Check An Edited `.pyi` String
 

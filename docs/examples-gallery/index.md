@@ -24,11 +24,14 @@ check, limitations, and test evidence before it is marked maintained.
 - [Generate an editable Makefile](recipes/generate-editable-makefile.md)
 - [Build multiple Fortran sources](recipes/build-multiple-fortran-sources.md)
 - [Inspect a Fortran API](recipes/inspect-fortran-api.md)
-- [Inspect a C API](recipes/inspect-c-api.md)
 - [Work with semantic .pyi contracts](recipes/semantic-pyi-contracts.md)
 - [Control CLI output](recipes/control-cli-output.md)
 - [Use Python inspection APIs](recipes/use-python-inspection-apis.md)
 - [Use compiler preprocessing options](recipes/compiler-preprocessing.md)
+
+<!-- X2PY_C_DOCS_START
+- [Inspect a C API](recipes/inspect-c-api.md)
+X2PY_C_DOCS_END -->
 
 ## Planned Project Examples
 

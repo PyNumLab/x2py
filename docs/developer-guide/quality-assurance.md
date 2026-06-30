@@ -96,19 +96,23 @@ python -m bandit -c pyproject.toml -r x2py --severity-level medium --confidence-
 
 Run dead-code and complexity checks:
 
+<!-- X2PY_C_DOCS_START
 ```bash
 python -m vulture
-python3 tools/check_radon_policy.py --base-ref "$(git merge-base origin/main HEAD)"
-python -m radon cc x2py -n C -s --total-average
+python3 tools/check_radon_policy.py &#45;&#45;base-ref "$(git merge-base origin/main HEAD)"
+python -m radon cc x2py -n C -s &#45;&#45;total-average
 python -m radon mi x2py -s
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 The Radon policy check is blocking. It prevents the reviewed C-or-worse hotspot
 average from rising above `19.01` and rejects new or worsened changed production
 blocks above complexity `20`. Local runs must supply the pull-request merge base
-explicitly as shown above. CI may use `--base-ref auto`, which reads the event's
+explicitly as shown above. CI may use `&#45;&#45;base-ref auto`, which reads the event's
 base SHA from the environment and fails if no usable SHA is available. Full
 Radon reports remain advisory for refactor planning.
+X2PY_C_DOCS_END -->
 
 ## Tool Decisions
 
@@ -137,9 +141,11 @@ removed as redundant maintenance overhead.
 **Role:** generates edge cases for parsers, AST transforms, semantic IR, and
 code generation.
 
+<!-- X2PY_C_DOCS_START
 **Bugs found:** generated code-generation cases exposed quoted `Name(...)`
 emission. Generated preprocessing inputs also aligned raw Fortran and C macro
 handling around compiler-required errors.
+X2PY_C_DOCS_END -->
 
 **Decision:** keep bounded property tests in normal test coverage and longer
 fuzz profiles on schedule/manual dispatch.
@@ -193,9 +199,11 @@ lambda parameters reported by CI.
 
 **Role:** complexity and maintainability tracking.
 
+<!-- X2PY_C_DOCS_START
 **Evidence:** reviewed average complexity is `C (18.95)`. The staged policy
 allows unchanged legacy hotspots while blocking new or worsened changed
 production hotspots above complexity `20`.
+X2PY_C_DOCS_END -->
 
 **Bugs or issues found:** Radon found maintainability hotspots. CI also exposed
 that the first staged policy was too strict for unchanged legacy hotspots; the
@@ -240,11 +248,14 @@ needed.
 
 Keep the ordinary regression tests and fixes that came from it:
 
-- duplicate typedef-cycle diagnostic coverage;
-- cycle-safe union-by-value diagnostics;
 - Fortran project namespace collection respecting the requested encoding;
 - direct Fortran parser contracts for diagnostics, forwarding, registries,
   ownership, provenance, source locations, boundaries, and loop progress.
+
+<!-- X2PY_C_DOCS_START
+- duplicate typedef-cycle diagnostic coverage;
+- cycle-safe union-by-value diagnostics;
+X2PY_C_DOCS_END -->
 
 ## Test Organization
 
@@ -317,7 +328,10 @@ The `Fuzz` workflow runs deeper discovery every Monday and by manual dispatch:
 | 2026-06-02 | Historical mutation-derived tests | Added direct Fortran parser contracts and fixed the directory namespace encoding bug. | Keep the tests as normal regression coverage. |
 | 2026-06-03 | Manual Quality workflow review | Reviewed workflow run `26832679820`: fuzz passed, changing random-order pytest passed, static analysis exposed Ruff fixes, and full-project mutation exceeded the `3h` Actions limit. | Mutation was removed from active adoption; scheduled fuzz moved to its own workflow. |
 | 2026-06-03 | Quality workflow triage | Reviewed latest Quality runs; run `26856679038` for `remove mutmut` completed successfully. | No actionable scheduled or PR quality failure remains. |
+
+<!-- X2PY_C_DOCS_START
 | 2026-06-03 | Final active-stack cleanup | Consolidated quality docs, removed mutation and pre-commit from the active stack, restored the C parser golden generator, and regenerated C parser goldens. | Treat scheduled review and threshold ratchets as ongoing maintenance. |
+X2PY_C_DOCS_END -->
 
 ## References
 

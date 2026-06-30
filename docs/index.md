@@ -21,13 +21,19 @@ ABI constraints, and fail early when a safe Python boundary cannot be proven.
 
 ## Main Features
 
-- Source-driven Fortran wrapper generation for importable CPython extensions.
-- Parser and semantic inspection for wrapper-relevant Fortran and C facts.
+- Source-driven Fortran wrapper generation for importable Python extensions.
+- Generated native bridge, Python binding, and build artifacts for the
+  implemented Fortran path.
 - Editable semantic `.pyi` contracts and readiness reports.
-- Generated Fortran bridge, C/CPython binding, and native build artifacts for
-  the implemented Fortran path.
 - Documentation and test rules that separate implemented support from planned
   or design-only behavior.
+
+<!-- X2PY_C_DOCS_START
+- Source-driven Fortran wrapper generation for importable CPython extensions.
+- Parser and semantic inspection for wrapper-relevant Fortran and C facts.
+- Generated Fortran bridge, C/CPython binding, and native build artifacts for
+  the implemented Fortran path.
+X2PY_C_DOCS_END -->
 
 ## Installation Links
 

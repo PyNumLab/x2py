@@ -200,13 +200,6 @@ objects, archives, and libraries remain separate build-plan facts.
 
 ### Stage 5 — Full Generated-Contract Runtime Parity
 
-- [x] The verified scalar baseline and legacy/F90 fmath array baseline run in
-  both `source` and `generated-pyi` modes through the same assertion bodies.
-  The generated contracts are compared against checked fixtures, the `.pyi`
-  build links only explicit native objects, and generated contracts encode
-  normalized Python public names with `@bind(...)` when the native Fortran name
-  differs. Scalar-kind, enum-like constant, `value`, and existing `bind(C)`
-  ABI cases also run from generated contracts with the same runtime assertions.
 - [x] Function-call parity covers optional arguments, hidden output arguments,
   projected return ordering, nullable allocatable copy returns, and validation
   failures in both `source` and `generated-pyi` modes through shared assertion
@@ -252,6 +245,16 @@ objects, archives, and libraries remain separate build-plan facts.
   `.pyi` regressions keep class/member name reservations scoped separately,
   import public native generics instead of private specific procedures, and
   preserve keyword-normalized type-bound binding names.
+
+<!-- X2PY_C_DOCS_START
+- [x] The verified scalar baseline and legacy/F90 fmath array baseline run in
+  both `source` and `generated-pyi` modes through the same assertion bodies.
+  The generated contracts are compared against checked fixtures, the `.pyi`
+  build links only explicit native objects, and generated contracts encode
+  normalized Python public names with `@bind(...)` when the native Fortran name
+  differs. Scalar-kind, enum-like constant, `value`, and existing `bind(C)`
+  ABI cases also run from generated contracts with the same runtime assertions.
+X2PY_C_DOCS_END -->
 
 ### Stage 6 — Replayable JSON, Native Compilation, And Makefiles
 
@@ -319,10 +322,6 @@ bundle, order, transitive-library, and failure-path evidence lives in
 - [x] Selected runtime smoke calls run against the fully wrapped BLAS/LAPACK
   modules and check NumPy-style behavior for `daxpy`, `ddot`, `dasum`, `dscal`,
   and `dlamrg`.
-- [x] Handwritten external-contract evidence covers C-order flat storage
-  (`Annotated[Float64[Flat, 3], ORDER_C]`) by validating a multidimensional
-  Python view while passing a rank-preserving bridge view to an assumed-size
-  native dummy.
 - [x] Several contracts imported by one entry resolve from one static archive
   and one direct shared library while preserving child module namespaces.
 - [x] Module procedures build with separately supplied `.mod` directories, while
@@ -340,6 +339,13 @@ bundle, order, transitive-library, and failure-path evidence lives in
   missing `.mod` directories, and unavailable dependent shared libraries report
   native linker/compiler/loader diagnostics without falling back to source
   reparsing.
+
+<!-- X2PY_C_DOCS_START
+- [x] Handwritten external-contract evidence covers C-order flat storage
+  (`Annotated[Float64[Flat, 3], ORDER_C]`) by validating a multidimensional
+  Python view while passing a rank-preserving bridge view to an assumed-size
+  native dummy.
+X2PY_C_DOCS_END -->
 
 ### Stage 8 — Editable Contract Semantics
 
@@ -453,6 +459,20 @@ bundle, order, transitive-library, and failure-path evidence lives in
   blockers until named validators or conversion actions exist. Evidence:
   `tests/semantics/test_semantic_wrap_readiness.py::test_readiness_blocks_generic_constraints_that_have_no_runtime_validator`
   and `docs/reference/semantic-pyi-format.md`.
+- [x] The currently documented editable-contract surface has direct modified
+  runtime evidence or focused semantic/readiness evidence: removal and hiding,
+  added and renamed bindings, overload pruning and renamed overload groups,
+  native-order identity calls without `@native_call`, immutable replacement,
+  ownership triples, pointer-policy blockers, runtime constraints, `@raises`,
+  `@hold_gil`, and native-artifact failures. Evidence:
+  `docs/user-guide/editing-semantic-pyi-contracts.md`,
+  `tests/wrapper/fortran/edit_pyi_contracts/`,
+  `tests/semantics/test_semantic_wrap_readiness.py`,
+  `tests/wrapper/fortran/runtime_behavior/test_runtime_policy_decorators.py`,
+  `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py`, and
+  `tests/wrapper/CHECKLIST_COVERAGE.md`.
+
+<!-- X2PY_C_DOCS_START
 - [x] Bridge-side function-argument conversion now dispatches projected hidden
   outputs and copy-in/copy-out replacements through completed object-kind/action
   policy. Numeric scalar, string replacement, scalar snapshot result, and
@@ -483,18 +503,6 @@ bundle, order, transitive-library, and failure-path evidence lives in
   Evidence:
   `x2py/codegen/bindings/c_to_python.py` and
   `tests/semantics/test_ownership_policy.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
-- [x] The currently documented editable-contract surface has direct modified
-  runtime evidence or focused semantic/readiness evidence: removal and hiding,
-  added and renamed bindings, overload pruning and renamed overload groups,
-  native-order identity calls without `@native_call`, immutable replacement,
-  ownership triples, pointer-policy blockers, runtime constraints, `@raises`,
-  `@hold_gil`, and native-artifact failures. Evidence:
-  `docs/user-guide/editing-semantic-pyi-contracts.md`,
-  `tests/wrapper/fortran/edit_pyi_contracts/`,
-  `tests/semantics/test_semantic_wrap_readiness.py`,
-  `tests/wrapper/fortran/runtime_behavior/test_runtime_policy_decorators.py`,
-  `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py`, and
-  `tests/wrapper/CHECKLIST_COVERAGE.md`.
 - [x] The remaining Stage 8 bridge and binding policy dispatch audit is closed
   for the current supported surface. Bridge field getters and setters dispatch
   from completed getter/setter policy, derived value-copy setters are selected
@@ -509,6 +517,7 @@ bundle, order, transitive-library, and failure-path evidence lives in
   `tests/semantics/test_ownership_policy.py`,
   `tests/wrapper/fortran/derived_types/test_derived_layout.py`, and
   `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py`.
+X2PY_C_DOCS_END -->
 
 ### Immutable Native Contract
 

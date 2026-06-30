@@ -16,31 +16,36 @@ The guide follows the wrapper by subject. Each subject includes a small example
 showing the Fortran interface and the corresponding Python use. Examples omit
 unrelated module scaffolding when that makes the contract easier to see.
 
+Runtime evidence lives in
+[`tests/wrapper`](../../tests/wrapper/fortran/README.md). A behavior is supported
+only when generated native sources compile, the extension imports, and Python
+tests exercise successful calls, mutation, lifetime, and relevant failures.
+
+This guide covers the implemented wrapper for Fortran source inputs.
+
+<!-- X2PY_C_DOCS_START
 Runtime evidence for these contracts lives in
 [`tests/wrapper`](../../tests/wrapper/fortran/README.md). Parser or semantic-IR support by
 itself does not establish runtime wrapper support: a behavior is treated as
 supported only when generated Fortran and C code compile, the extension imports,
 and Python tests exercise successful calls, mutation, lifetime, and relevant
 failure paths.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 This guide covers the implemented wrapper for Fortran source inputs. x2py also
 parses C and produces C semantic IR, `.pyi`, and readiness reports, but a
 runtime wrapper backend for user-supplied C libraries will be added later.
 The C source generated internally as part of a Fortran wrapper is an
 implementation detail of the current Fortran path, not the future C-input
 backend.
+X2PY_C_DOCS_END -->
 
 ## Contents
 
 - Foundations: [building a wrapper](#building-and-importing-a-wrapper),
   [support evidence](#how-support-claims-are-established), and
   [ownership and lifetime](#ownership-and-lifetime)
-- Procedures: [scalars](#scalar-calls-and-verified-baseline),
-  [generic interfaces](#generic-procedure-interfaces),
-  [operators](#defined-operators-and-assignment),
-  [outputs](#output-arguments-and-multiple-results),
-  [optional arguments](#optional-arguments), and
-  [`value`/`bind(C)`](#value-and-existing-bindc-procedures)
 - Arrays and pointers: [allocatables](#allocatable-arguments-results-and-views),
   [pointers](#pointer-arguments-results-and-association),
   [array results](#array-valued-function-results), and
@@ -58,13 +63,34 @@ backend.
   [callbacks](#immediate-python-callbacks), and
   [errors/concurrency](#runtime-errors-the-gil-openmp-and-concurrency)
 - [Not handled or not yet settled](#not-handled-or-not-yet-settled)
+- Procedures: [scalars](#scalar-calls-and-verified-baseline),
+  [generic interfaces](#generic-procedure-interfaces),
+  [operators](#defined-operators-and-assignment),
+  [outputs](#output-arguments-and-multiple-results), and
+  [optional arguments](#optional-arguments)
+
+<!-- X2PY_C_DOCS_START
+- Procedures: [scalars](#scalar-calls-and-verified-baseline),
+  [generic interfaces](#generic-procedure-interfaces),
+  [operators](#defined-operators-and-assignment),
+  [outputs](#output-arguments-and-multiple-results),
+  [optional arguments](#optional-arguments), and
+  [`value`/`bind(C)`](#value-and-existing-bindc-procedures)
+X2PY_C_DOCS_END -->
 
 ## Building And Importing A Wrapper
 
 The direct wrapper path accepts fixed-form and free-form Fortran sources and
+requires a working GNU native toolchain, Python development headers, and NumPy
+development files. Recognizable Fortran sources default to a wrapper build;
+`--wrap` makes that choice explicit.
+
+<!-- X2PY_C_DOCS_START
+The direct wrapper path accepts fixed-form and free-form Fortran sources and
 requires a working GNU Fortran/C toolchain, Python development headers, and
 NumPy headers. Supplying recognizable Fortran sources without a stage flag
-defaults to a wrapper build; `--wrap` makes that choice explicit.
+defaults to a wrapper build; `&#45;&#45;wrap` makes that choice explicit.
+X2PY_C_DOCS_END -->
 
 Build the checked scalar example:
 
@@ -106,27 +132,51 @@ ordered Fortran source files
   -> semantic modules and readiness blockers
   -> source-root export tree preserving native module namespaces
   -> codegen AST
+  -> generated native bridge and Python binding
+  -> compile and link one Python extension module
+```
+
+<!-- X2PY_C_DOCS_START
+```text
+ordered Fortran source files
+  -> compiler preprocessing
+  -> Fortran parser project model
+  -> compiler-dependent kind and storage probes
+  -> semantic modules and readiness blockers
+  -> source-root export tree preserving native module namespaces
+  -> codegen AST
   -> Fortran bind(C) bridge
   -> C/CPython binding and x2py runtime support
   -> compile user sources and generated sources
   -> link one Python extension module
 ```
+X2PY_C_DOCS_END -->
 
+The generated bridge preserves native calling contracts while the Python
+binding validates arguments, manages wrapper-owned temporaries, calls native
+code, and projects results onto the documented Python API. Shared runtime
+support supplies array, error, allocation, and ownership helpers.
+
+<!-- X2PY_C_DOCS_START
 The Fortran bridge converts non-interoperable Fortran contracts into a stable
 C ABI. The generated C layer validates Python and NumPy objects, manages Python
 references and wrapper-owned temporaries, calls the bridge, and projects native
 results onto the documented Python API. The runtime support supplies shared
 array, error, allocation, and ownership helpers.
+X2PY_C_DOCS_END -->
 
 Typical generated artifacts are:
 
 | Artifact | Purpose |
 | --- | --- |
-| `bind_c_<module>_wrapper.f90` | Fortran-to-C ABI bridge |
-| `<module>_wrapper.c` and `.h` | CPython extension binding |
 | `x2py_runtime/` | Shared native runtime support |
 | user and generated `.o`/`.mod` files | Native build intermediates |
 | `<module>.<extension-suffix>.so` | Importable extension on Linux |
+
+<!-- X2PY_C_DOCS_START
+| `bind_c_<module>_wrapper.f90` | Fortran-to-C ABI bridge |
+| `<module>_wrapper.c` and `.h` | CPython extension binding |
+X2PY_C_DOCS_END -->
 
 The extension name comes from the first source filename. Contained Fortran
 modules become child Python namespaces and standalone procedures remain at the
@@ -138,10 +188,17 @@ When a folder contains only standalone BLAS/LAPACK-style procedures,
 `@external` declarations while the native sources still compile and link as
 separate artifacts.
 
-Without `--out-dir`, x2py uses a private `__x2py__` build directory beside the
+<!-- X2PY_C_DOCS_START
+Without `&#45;&#45;out-dir`, x2py uses a private `__x2py__` build directory beside the
 source and places the importable extension beside the source file. Generated
 Fortran and C wrapper sources remain build artifacts; users do not edit them to
 change the Python API.
+X2PY_C_DOCS_END -->
+
+Without `--out-dir`, x2py uses a private `__x2py__` build directory beside the
+source and places the importable extension beside the source file. Generated
+wrapper sources remain build artifacts; users do not edit them to change the
+Python API.
 
 The semantic `.pyi` described in [Semantic `.pyi` format](../reference/semantic-pyi-format.md) is the
 editable semantic contract and readiness surface. The supported edit workflow,
@@ -231,13 +288,15 @@ compiler/linker command and for the wrapper creation, printing, and compilation
 stages. Use `--makefile` to generate an editable `Makefile.x2py` without
 compiling. These modes are mutually exclusive.
 
+<!-- X2PY_C_DOCS_START
 Direct wrapper builds use the compiler release profile by default, so generated
 wrapper sources compile with optimization flags and without debug flags. Use
-`--wrapper-compiler-debug` to select the compiler debug profile instead. Use
-`--wrapper-fortran-flags` for the generated Fortran bridge and
-`--wrapper-c-flags` for the generated CPython wrapper source; user flags are
+`&#45;&#45;wrapper-compiler-debug` to select the compiler debug profile instead. Use
+`&#45;&#45;wrapper-fortran-flags` for the generated Fortran bridge and
+`&#45;&#45;wrapper-c-flags` for the generated CPython wrapper source; user flags are
 appended after x2py defaults, so they can override optimization choices such as
 `-O3`.
+X2PY_C_DOCS_END -->
 
 The equivalent Python entrypoint returns structured artifact paths:
 
@@ -410,11 +469,14 @@ A wrapper feature is considered supported only when all applicable layers agree:
 - readiness emits a precise blocker when a declaration is unsupported or lacks
   policy;
 - semantic lowering preserves the contract without reconstructing source text;
-- generated Fortran and C compile without hand edits;
 - runtime tests import the extension and verify results, mutation, lifetime,
   ownership, and invalid calls; and
 - fixed-form and free-form behavior are both tested when the source feature
   exists in both forms.
+
+<!-- X2PY_C_DOCS_START
+- generated Fortran and C compile without hand edits;
+X2PY_C_DOCS_END -->
 
 This matters because a stable parser model is not the same thing as a safe
 Python runtime contract. When owner, lifetime, shape, ABI, or destruction is
@@ -457,8 +519,6 @@ The wrapper enforces these invariants:
 
 1. Exactly one owner destroys each owned native allocation.
 2. A Python-owned copy is independent of later native mutation.
-3. Wrapper-owned instances are destroyed through generated Fortran-aware
-   helpers, not by applying C `free()` to Fortran objects or components.
 4. A borrowed child or view keeps a Python wrapper owner alive when that owner
    contains the referenced storage.
 5. Keeping the Python owner alive does not protect a view from native
@@ -466,6 +526,11 @@ The wrapper enforces these invariants:
 6. A pointer component does not imply ownership of its target.
 7. Missing owner, lifetime, release, shape, dtype, contiguity, mutability, or
    aliasing facts produce a blocker.
+
+<!-- X2PY_C_DOCS_START
+3. Wrapper-owned instances are destroyed through generated Fortran-aware
+   helpers, not by applying C `free()` to Fortran objects or components.
+X2PY_C_DOCS_END -->
 
 ### Destruction Rules
 
@@ -776,12 +841,17 @@ with native temporary storage, so they are present and returned.
 
 Runtime tests: [`test_optional_arguments.py`](../../tests/wrapper/fortran/function_calls/test_optional_arguments.py).
 
+<!-- X2PY_C_DOCS_START
 ## `value` And Existing `bind(C)` Procedures
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 The Python call does not expose Fortran ABI mechanics, but x2py preserves them.
 A scalar `value` dummy is passed as a C value; the same declaration without
 `value` remains a by-reference Fortran dummy.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```fortran
 integer(c_int) function add_one(n) bind(C, name="solver_add_one")
   use iso_c_binding
@@ -789,22 +859,31 @@ integer(c_int) function add_one(n) bind(C, name="solver_add_one")
   add_one = n + 1
 end function add_one
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```python
 assert add_one(np.int32(4)) == 5
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 When every argument and result has a safely interoperable scalar ABI, the C
 extension can call the existing symbol `solver_add_one` directly. The
 `bind(C, name=...)` spelling changes the native ABI symbol only; it does not
 rename the Python function.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Arrays, character buffers, derived types, optionals, outputs, pointers,
 allocatables, by-reference dummies, or any non-interoperable declaration retain
 a generated Fortran shim or produce a readiness diagnostic when no safe shim
 contract exists.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Runtime tests: [`test_value_and_bind_c.py`](../../tests/wrapper/fortran/scalars/test_value_and_bind_c.py).
+X2PY_C_DOCS_END -->
 
 ## Allocatable Arguments, Results, And Views
 
@@ -1007,6 +1086,7 @@ subroutine scale_matrix(n, m, values)
 end subroutine scale_matrix
 ```
 
+<!-- X2PY_C_DOCS_START
 ```python
 values = np.ones((2, 3), dtype=np.float64, order="F")
 scale_matrix(2, 3, values)
@@ -1014,9 +1094,12 @@ scale_matrix(2, 3, values)
 bad = np.ones((2, 3), dtype=np.float64, order="C")
 scale_matrix(2, 3, bad)  # TypeError: incompatible layout
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Rank-1 contiguous arrays may use either contiguous order. Rank greater than one
 uses Fortran order unless the contract comes from a C-side interface.
+X2PY_C_DOCS_END -->
 
 ### Assumed-Size And Lower Bounds
 
@@ -1027,6 +1110,7 @@ caller must provide enough storage for the native routine.
 Generated semantic `.pyi` contracts spell this final assumed-size dimension as
 `Flat`, for example `Float64[Flat]` for `real(8) :: values(*)`.
 
+<!-- X2PY_C_DOCS_START
 For handwritten contracts over native routines that consume a raw flat buffer,
 `Flat` may also describe a C-contiguous Python view when it appears first and is
 spelled with `ORDER_C`, for example
@@ -1035,6 +1119,7 @@ not a literal Fortran dummy declaration: the generated wrapper validates a
 C-contiguous `(n, 3)` view, constructs the corresponding rank-2 bridge view over
 the same storage, and passes that view to the native assumed-size dummy. The
 native routine's `values(*)` dummy receives the flattened element sequence.
+X2PY_C_DOCS_END -->
 
 Non-default lower bounds are preserved when computing shape constraints; they
 do not change Python's zero-based indexing.
@@ -1088,8 +1173,10 @@ and [`test_multidimensional_arrays.py`](../../tests/wrapper/fortran/arrays/test_
 
 ## Derived Types Across Procedure Boundaries
 
+<!-- X2PY_C_DOCS_START
 Python wrappers store an opaque pointer to a native Fortran instance. Generated
 C never guesses the memory layout of the type.
+X2PY_C_DOCS_END -->
 
 ### Scalar Arguments And Results
 
@@ -1149,10 +1236,12 @@ and [`test_derived_type_methods.py`](../../tests/wrapper/fortran/derived_types/t
 
 ## Inheritance And Polymorphism
 
+<!-- X2PY_C_DOCS_START
 Supported Fortran extension types generate a matching static Python C-extension
 inheritance hierarchy. The derived wrapper type uses the base wrapper type as
 its Python base, so inherited fields and methods are visible and concrete
 overrides resolve through the derived class.
+X2PY_C_DOCS_END -->
 
 ```fortran
 type :: shape
@@ -1333,10 +1422,13 @@ and [`test_common_blocks.py`](../../tests/wrapper/fortran/module_state/test_comm
 
 ## Fortran Enums
 
+<!-- X2PY_C_DOCS_START
 `enum, bind(C)` enumerators become ordinary typed integer constants. x2py does
 not generate Python `Enum` or `IntEnum` classes, and enum-typed arguments,
 results, fields, and variables remain ordinary integer types.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```fortran
 enum, bind(C)
   enumerator :: red = 1
@@ -1344,6 +1436,7 @@ enum, bind(C)
   enumerator :: invalid = -1
 end enum
 ```
+X2PY_C_DOCS_END -->
 
 The generated semantic stub preserves the values:
 
@@ -1353,8 +1446,10 @@ blue: Final[Int32] = 2
 invalid: Final[Int32] = -1
 ```
 
+<!-- X2PY_C_DOCS_START
 The underlying `bind(C)` integer representation is retained as metadata. The
 same integer-constant surface applies to C enums.
+X2PY_C_DOCS_END -->
 
 Runtime tests: [`test_fortran_enums.py`](../../tests/wrapper/fortran/scalars/test_fortran_enums.py).
 
@@ -1364,10 +1459,12 @@ The public scalar character type is Python `str`. Native character storage is
 copied at the boundary, so returned strings are Python-owned and never borrow a
 Fortran character buffer.
 
+<!-- X2PY_C_DOCS_START
 Supported scalar forms include fixed-length and assumed-length arguments,
 fixed-length and allocatable results, hidden `intent(out)` values, immutable
 replacement for `intent(inout)`, and optional arguments. Default character,
 `kind=1`, and `c_char` are supported; other kinds are blocked.
+X2PY_C_DOCS_END -->
 
 ### Input, Output, And Replacement
 
@@ -1393,11 +1490,13 @@ other scalar output.
 
 ### Length, Encoding, And NUL Rules
 
+<!-- X2PY_C_DOCS_START
 Python input uses CPython's UTF-8 bytes at the ABI boundary. For a fixed-length
 dummy, longer input is truncated to the declared byte length and shorter input
 is blank-padded. The returned Python value reflects the complete post-call
 Fortran buffer, including trailing blanks. An assumed-length `intent(inout)`
 dummy uses the encoded input byte length.
+X2PY_C_DOCS_END -->
 
 ```fortran
 character(len=8) function label()
@@ -1409,9 +1508,11 @@ end function label
 assert label() == "ready   "
 ```
 
+<!-- X2PY_C_DOCS_START
 Embedded NUL in Python input is rejected before the call because the public
 result path uses NUL-terminated C strings. Generated `bind(C)` shims handle
 compiler-specific hidden-length ABI details; these are not exposed in Python.
+X2PY_C_DOCS_END -->
 
 Character arrays and mutable allocatable character dummy arguments are blocked
 until array storage, per-element length, allocation, encoding, and ownership are
@@ -1429,15 +1530,20 @@ number equals a byte width.
 The supported scalar storage subset is:
 
 - signed integers corresponding to 8, 16, 32, and 64 bits;
-- default logical results and the one-byte Boolean path used by
-  `logical(c_bool)` and compiler-confirmed `logical*1` arrays;
 - real values corresponding to 32 and 64 bits; and
 - complex values corresponding to 64 and 128 total bits.
 
+<!-- X2PY_C_DOCS_START
+- default logical results and the one-byte Boolean path used by
+  `logical(c_bool)` and compiler-confirmed `logical*1` arrays;
+X2PY_C_DOCS_END -->
+
+<!-- X2PY_C_DOCS_START
 `iso_fortran_env` names such as `int8`, `int16`, `int32`, `int64`, `real32`, and
 `real64`, and common `iso_c_binding` names such as `c_int32_t`, `c_float`,
 `c_double`, `c_float_complex`, and `c_double_complex`, are resolved during the
 build.
+X2PY_C_DOCS_END -->
 
 ```fortran
 module kinds_api
@@ -1465,43 +1571,55 @@ Runtime tests: [`test_scalar_kinds.py`](../../tests/wrapper/fortran/scalars/test
 
 ## Derived-Type Layout And Interoperability
 
+<!-- X2PY_C_DOCS_START
 All wrapped Fortran derived types use opaque native-instance storage, including
 `bind(C)` and `sequence` types. Fields are read and written through generated
 Fortran accessors. Generated C does not declare a mirror struct, calculate
 component offsets, or assume padding and alignment.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```fortran
 type, bind(C) :: point_c
   real(c_double) :: x
   integer(c_int) :: tag
 end type point_c
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```python
 p = point_c(x=np.float64(1.5), tag=np.int32(4))
 assert p.x == 1.5
 p.tag = np.int32(8)       # generated accessor writes the native component
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 The parser and semantic IR still preserve `bind(C)`, `sequence`, component
 order, types, kinds, ranks, shapes, and storage facts. An interoperable
 derived-type `value` argument remains routed through a Fortran bridge so the
 Fortran compiler performs the ABI copy. A non-`bind(C)` derived type used by an
 existing `bind(C)` procedure is rejected before code generation.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 Direct C layout access is not currently enabled. It would require
 compiler-validated size, alignment, padding, component offsets, and nested
 layout, with accessor fallback whenever proof is unavailable.
+X2PY_C_DOCS_END -->
 
 Runtime tests: [`test_derived_layout.py`](../../tests/wrapper/fortran/derived_types/test_derived_layout.py).
 
 ## Multiple Sources And Build Modes
 
+<!-- X2PY_C_DOCS_START
 A wrapper invocation can accept several user-supplied sources and produce one
 Python extension. x2py compiles every supplied source in caller order, links all
 objects, and generates one Fortran `bind(C)` bridge that imports the wrapped
 modules and merges their Python surface. The first generated semantic module
 sets the extension name; later modules and standalone procedures are merged.
+X2PY_C_DOCS_END -->
 
 ```bash
 python3 -m x2py \
@@ -1619,12 +1737,14 @@ python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build --json
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
+<!-- X2PY_C_DOCS_START
 The Makefile covers user sources, generated wrappers, runtime support, and the
 shared-library link. It records resolved compilers and exposes `FC`, `CC`,
 `X2PY_LD`, `X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS`. User Fortran
 sources are conservatively chained in supplied order; independent generated C
 and runtime work may run in parallel. This target expects GNU Make and a POSIX
 shell.
+X2PY_C_DOCS_END -->
 
 For semantic `.pyi` builds, Makefile mode writes `x2py-build.json` before
 `Makefile.x2py` and the Makefile is regenerated from that manifest:
@@ -1665,15 +1785,20 @@ keyword arguments:
    `class_`.
 3. Invalid identifier characters become underscores, and a leading underscore
    is added when the first character would otherwise be invalid.
-4. `bind(C, name=...)` changes only the native ABI symbol.
 5. Module variables retain `<name>` as Python attributes; generated native
    accessors remain internal. Parameters retain `<name>` as constants.
 
+<!-- X2PY_C_DOCS_START
+4. `bind(C, name=...)` changes only the native ABI symbol.
+X2PY_C_DOCS_END -->
+
+<!-- X2PY_C_DOCS_START
 ```fortran
 subroutine class(value) bind(C, name="native_class_entry")
   integer, intent(in) :: value
 end subroutine class
 ```
+X2PY_C_DOCS_END -->
 
 ```python
 class_(np.int32(4))      # Python name
@@ -1773,10 +1898,12 @@ The callback trampoline acquires the GIL for Python invocation and releases the
 matching GIL state afterward. The callback must execute on the Python thread
 that entered the wrapped routine.
 
+<!-- X2PY_C_DOCS_START
 A callback exception, bad return conversion, or cross-thread invocation cannot
 be safely unwound through arbitrary Fortran and C frames. The trampoline prints
 the complete Python traceback and calls `abort()` immediately. It does not
 invent a fallback value or continue native execution.
+X2PY_C_DOCS_END -->
 
 Stored callbacks, callback registration, optional dummy procedures, procedure
 pointers, and invocation after the wrapped call are not supported.
@@ -1818,9 +1945,11 @@ process abort, or a callback failure crossing a native callback boundary.
 
 ### GIL Policy
 
+<!-- X2PY_C_DOCS_START
 Ordinary callback-free procedure calls release the CPython GIL around the
 C-compatible native call. Argument parsing, NumPy validation, ownership work,
 result conversion, and exception handling execute with the GIL held.
+X2PY_C_DOCS_END -->
 
 Module-variable and class-property accessors, constructors, destructors, and
 callback-taking calls keep the GIL automatically. An edited `.pyi` can keep it
@@ -1941,8 +2070,11 @@ wrappers:
 | Constructors | Generic constructor interfaces and overloaded runtime initialization | Deterministic Python constructor selection and lowering. |
 | Characters | Mutable allocatable character dummies and deferred-length mutable fields | Allocation, encoding, replacement, and destruction. |
 | Kinds | Real wider than 64 bits, complex wider than 128 bits, wider explicit logical storage | Portable NumPy round-trip without silent precision loss. |
-| Layout | Direct C struct views of Fortran derived types | Compiler-validated size, alignment, padding, offsets, and nested layout. |
 | Callbacks | Stored, optional, cross-thread, or procedure-pointer callbacks | Persistent ownership, thread, exception, nullability, and teardown. |
+
+<!-- X2PY_C_DOCS_START
+| Layout | Direct C struct views of Fortran derived types | Compiler-validated size, alignment, padding, offsets, and nested layout. |
+X2PY_C_DOCS_END -->
 
 ## Finding The Runtime Tests
 

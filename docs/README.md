@@ -14,9 +14,6 @@ Start with:
   documentation website.
 - [Documentation architecture](documentation-architecture.md): the page
   metadata standard, recommended repository tree, and maturity roadmap.
-- [Basic wrapper tutorial](tutorials/basic-wrapper.md): the supported end-to-end workflow from Fortran
-  source to an imported extension, plus semantic `.pyi` editing, readiness,
-  and the current C boundary.
 - [Verified examples cookbook](examples-gallery/verified-cookbook.md): copy-paste Fortran wrapper builds
   and calls, CLI inspection commands, compiler preprocessing recipes, Python
   API snippets, and blocker examples.
@@ -26,6 +23,14 @@ Start with:
 - [Maintainer guide](developer-guide/maintainer-guide.md): implementation ownership, support
   evidence rules, parser references, focused tests, fixture generators, and
   change workflows.
+- [Basic wrapper tutorial](tutorials/basic-wrapper.md): the supported
+  end-to-end Fortran workflow from source to an imported extension.
+
+<!-- X2PY_C_DOCS_START
+- [Basic wrapper tutorial](tutorials/basic-wrapper.md): the supported end-to-end workflow from Fortran
+  source to an imported extension, plus semantic `.pyi` editing, readiness,
+  and the current C boundary.
+X2PY_C_DOCS_END -->
 
 The repository [`README.md`](../README.md) remains the user-facing project
 overview. Contribution and pull-request requirements remain in
@@ -73,9 +78,12 @@ support claims.
   route to implementation files, tests, and support evidence
 - [Pipeline map](internal-architecture/pipeline-map.md): maintainer route
   through the current wrapper and inspection pipelines
-- [C parser reference](developer-guide/c-parser-reference.md)
 - [Fortran parser reference](developer-guide/fortran-parser-reference.md)
 - [Quality assurance](developer-guide/quality-assurance.md)
+
+<!-- X2PY_C_DOCS_START
+- [C parser reference](developer-guide/c-parser-reference.md)
+X2PY_C_DOCS_END -->
 
 ## Design Documents
 
@@ -83,9 +91,15 @@ support claims.
 - [Semantic multilanguage wrapper runtime architecture](design/semantic-multilanguage-wrapper-runtime-architecture.md)
 
 Design documents describe deferred or long-term decisions. They are not
+evidence beyond the Fortran contracts proved by the
+[Fortran wrapper guide](user-guide/fortran-wrapper.md) and its linked tests.
+
+<!-- X2PY_C_DOCS_START
+Design documents describe deferred or long-term decisions. They are not
 evidence for behavior beyond the runtime Fortran contracts proved by the
 [Fortran wrapper guide](user-guide/fortran-wrapper.md) and its linked tests. In
 particular, the wrapper backend for user-supplied C inputs remains future work.
+X2PY_C_DOCS_END -->
 
 ## Archived Old Documentation
 

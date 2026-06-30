@@ -19,8 +19,12 @@ This tutorial walks through one beginner path:
 At the end, you should have seen both sides of x2py:
 
 - the inspection path, which is useful for understanding a native API; and
+- the wrapper path, which compiles an importable Python extension from Fortran.
+
+<!-- X2PY_C_DOCS_START
 - the wrapper path, which compiles an importable CPython extension for the
   implemented Fortran backend.
+X2PY_C_DOCS_END -->
 
 For lookup-style commands, use the
 [verified examples cookbook](../examples-gallery/verified-cookbook.md). For
@@ -30,7 +34,12 @@ the full generated Python contract, use the
 ## Before You Start
 
 x2py requires Python 3.10 or newer. Wrapper builds also need a working GNU
+native toolchain, Python development headers, and NumPy development files.
+
+<!-- X2PY_C_DOCS_START
+x2py requires Python 3.10 or newer. Wrapper builds also need a working GNU
 Fortran/C toolchain, Python development headers, and NumPy headers.
+X2PY_C_DOCS_END -->
 
 Install the checkout and inspect the CLI:
 
@@ -52,13 +61,26 @@ Fortran sources
   -> compiler preprocessing and target-type probing
   -> parser facts
   -> semantic IR and readiness blockers
+  -> generated native bridge and Python binding
+  -> compiled Python extension
+```
+
+<!-- X2PY_C_DOCS_START
+```text
+Fortran sources
+  -> compiler preprocessing and target-type probing
+  -> parser facts
+  -> semantic IR and readiness blockers
   -> generated Fortran bind(C) bridge
   -> generated C/CPython binding and runtime support
   -> compiled Python extension
 ```
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 C inputs currently support inspection, semantic IR, `.pyi`, and readiness
 reports. Runtime wrapping of user-supplied C libraries is future backend work.
+X2PY_C_DOCS_END -->
 
 ## Step 1: Inspect A Small Fortran Source
 
@@ -153,10 +175,12 @@ File: tests/data/fortran/general/basic_subroutine.f90
   No semantic readiness blockers detected.
 ```
 
+<!-- X2PY_C_DOCS_START
 `Wrappable: yes` means the semantic contract has no known readiness blockers.
 For Fortran source inputs, x2py can continue into the implemented wrapper
 backend. For C inputs, the same readiness result does not yet mean a C-input
 runtime wrapper backend exists.
+X2PY_C_DOCS_END -->
 
 ## Step 4: Build A Real Extension
 
@@ -232,11 +256,14 @@ plain Python `float` where the wrapper requires `numpy.float64` raises
 
 | Symptom | Check |
 | --- | --- |
-| The compiler cannot be found | Install `gfortran` and a C compiler, or pass the project compiler settings. |
 | Importing the extension fails | Make sure the output directory is on `sys.path`, or load the shared library path returned by the Python API. |
 | A Python number is rejected | Pass the exact NumPy scalar dtype required by the native signature. |
-| Readiness says `Wrappable: yes` for C input | That only proves semantic readiness; C-input runtime wrapping is not implemented yet. |
 | Generated files are hard to inspect | Build with `--out-dir` and optionally `--verbose` to keep and print artifact paths. |
+
+<!-- X2PY_C_DOCS_START
+| The compiler cannot be found | Install `gfortran` and a C compiler, or pass the project compiler settings. |
+| Readiness says `Wrappable: yes` for C input | That only proves semantic readiness; C-input runtime wrapping is not implemented yet. |
+X2PY_C_DOCS_END -->
 
 ## What You Learned
 

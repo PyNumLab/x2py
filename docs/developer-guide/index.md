@@ -18,7 +18,6 @@ top-level material is kept under `../old_docs/`.
 - [Source map](source-map.md)
 - [Feature to code map](feature-to-code-map.md)
 - [Maintainer guide](maintainer-guide.md)
-- [C parser reference](c-parser-reference.md)
 - [Fortran parser reference](fortran-parser-reference.md)
 - [Quality assurance](quality-assurance.md)
 - [Build system](build-system.md)
@@ -29,6 +28,10 @@ top-level material is kept under `../old_docs/`.
 - [Adding a new feature](adding-a-feature.md)
 - [Adding a new Fortran construct](adding-a-fortran-construct.md)
 - [Adding a new code generation backend](adding-a-code-generation-backend.md)
+
+<!-- X2PY_C_DOCS_START
+- [C parser reference](c-parser-reference.md)
+X2PY_C_DOCS_END -->
 
 Maintainer internals stay in `../internal-architecture/`; user workflows stay
 under `../getting-started/`, `../user-guide/`, `../tutorials/`, and

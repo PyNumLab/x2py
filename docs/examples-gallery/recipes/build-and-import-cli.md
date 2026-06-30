@@ -62,4 +62,7 @@ print(result)  # 7.5
 - Use `--out-dir` to keep generated sources and build artifacts in one place.
 - Use `--verbose` to print compiler and linker commands.
 - Exact NumPy scalar dtypes are part of the native ABI contract.
+
+<!-- X2PY_C_DOCS_START
 - Runtime wrapping of user-supplied C sources is not implemented by this path.
+X2PY_C_DOCS_END -->

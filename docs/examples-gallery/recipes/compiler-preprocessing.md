@@ -13,23 +13,29 @@ or compiler-specific flags before x2py can parse it.
 
 ## Direct Compiler Settings
 
+<!-- X2PY_C_DOCS_START
 ```bash
-python3 -m x2py include/api.h --language c --parse \
-  --compiler clang \
+python3 -m x2py include/api.h &#45;&#45;language c &#45;&#45;parse \
+  &#45;&#45;compiler clang \
   -I include \
   -D API_EXPORT= \
-  --std c11 \
-  --compiler-arg=--sysroot=/opt/sdk
+  &#45;&#45;std c11 \
+  &#45;&#45;compiler-arg=&#45;&#45;sysroot=/opt/sdk
 ```
+X2PY_C_DOCS_END -->
 
 ## Compilation Database
 
+<!-- X2PY_C_DOCS_START
 C projects can use a compilation database:
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 ```bash
-python3 -m x2py src/api.c --language c --semantics \
-  --compile-commands build/compile_commands.json
+python3 -m x2py src/api.c &#45;&#45;language c &#45;&#45;semantics \
+  &#45;&#45;compile-commands build/compile_commands.json
 ```
+X2PY_C_DOCS_END -->
 
 ## Notes
 

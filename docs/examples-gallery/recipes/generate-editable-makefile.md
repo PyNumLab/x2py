@@ -55,11 +55,14 @@ The generated Makefile exposes these variables for local override:
 | Variable | Meaning |
 | --- | --- |
 | `FC` | Fortran compiler |
-| `CC` | C compiler |
 | `X2PY_LD` | Link command |
 | `X2PY_FFLAGS` | Extra Fortran compiler flags |
-| `X2PY_CFLAGS` | Extra C compiler flags |
 | `X2PY_LDFLAGS` | Extra linker flags |
+
+<!-- X2PY_C_DOCS_START
+| `CC` | C compiler |
+| `X2PY_CFLAGS` | Extra C compiler flags |
+X2PY_C_DOCS_END -->
 
 ## Notes
 

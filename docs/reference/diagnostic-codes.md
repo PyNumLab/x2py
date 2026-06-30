@@ -54,11 +54,14 @@ traceback unless `--debug` is used.
 | `PARSE_DUPLICATE_ARGUMENT` | Fortran | A procedure argument list repeats a name. |
 | `PARSE_PREPROCESSING_REQUIRED` | Fortran | Raw CPP directives require compiler preprocessing before parser entry. |
 | `PARSE_INTERNAL_STATE` | Fortran | A defensive internal parser invariant was violated. |
+
+<!-- X2PY_C_DOCS_START
 | `CPARSE_ERROR` | C | Fallback for a manually constructed or defensive C parse error without a narrower category. |
 | `CPARSE_PREPROCESSING_REQUIRED` | C | Raw preprocessing directives require compiler preprocessing before parser entry. |
 | `CPARSE_UNSUPPORTED_KNR_DEFINITION` | C | Unsupported K&R-style function definition. |
 | `CPARSE_INVALID_SPECIFIER_SEQUENCE` | C | Invalid C primitive-specifier sequence. |
 | `CPARSE_INVALID_SYNTAX` | C | Syntax cannot be consumed in a modeled C grammar region. |
+X2PY_C_DOCS_END -->
 
 ## Preprocessing Diagnostics
 
@@ -76,14 +79,19 @@ the expanded source.
 | `INCLUDE_NOT_FOUND` | A native Fortran `include "..."` target could not be resolved or read. |
 | `INCLUDE_CYCLE` | Recursive native Fortran INCLUDE expansion found a cycle. |
 
+<!-- X2PY_C_DOCS_START
 ## C Report Diagnostics
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 The C parser can preserve partial metadata and attach `CDiagnostic` records.
 These records do not necessarily stop parsing; inspect each diagnostic's
 `severity`.
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 | Code | Meaning |
-| --- | --- |
+| &#45;&#45;- | &#45;&#45;- |
 | `C_UNRESOLVED_INCLUDE` | A local include could not be resolved. |
 | `C_UNMODELED_COMPILER_EXTENSION` | Compiler syntax was accepted for declaration extraction, but ABI-, layout-, type-, or symbol-relevant extension semantics remain unmodeled. |
 | `C_UNSUPPORTED_DECLARATION` | Recognized declaration form is outside the modeled subset. |
@@ -98,3 +106,4 @@ These records do not necessarily stop parsing; inspect each diagnostic's
 | `C_DUPLICATE_VARIABLE_DEFINITION` | File-scope variable has more than one definition. |
 | `C_CONFLICTING_TYPEDEF` | Typedef declarations conflict. |
 | `C_DUPLICATE_TAG_DEFINITION` | Struct, union, or enum tag has more than one definition. |
+X2PY_C_DOCS_END -->

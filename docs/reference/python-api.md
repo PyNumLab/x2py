@@ -24,19 +24,25 @@ sorted(x2py.__all__)
 | --- | --- |
 | `main` | Runs the `python3 -m x2py` command-line interface. Prefer the CLI for shell workflows and the functions below for Python workflows. |
 
+<!-- X2PY_C_DOCS_START
 ## C parser API
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 | Symbol | Purpose |
-| --- | --- |
+| &#45;&#45;- | &#45;&#45;- |
 | `parse_c_file` | Parses one C source or header into a `CFile`. |
 | `parse_c_project` | Parses multiple C files into a `CProject`. |
 | `CFile` | Parsed C file model. |
 | `CProject` | Parsed C project model. |
 | `CParseError` | Error raised for C parse failures. |
+X2PY_C_DOCS_END -->
 
+<!-- X2PY_C_DOCS_START
 The parser APIs expect already-selected inputs. CLI-only features such as
 language inference, directory expansion, command-line validation, and compiler
 preprocessing option parsing live in the CLI layer.
+X2PY_C_DOCS_END -->
 
 ## Fortran parser API
 
@@ -65,6 +71,8 @@ preprocessing option parsing live in the CLI layer.
 | `fortran_module_to_semantic_module` | Converts one parsed Fortran module to one semantic module. |
 | `collect_semantic_compile_time_requirements` | Collects semantic values that must be known at compile time. |
 | `resolve_semantic_compile_time_values` | Resolves collected compile-time requirements. |
+
+<!-- X2PY_C_DOCS_START
 | `CToIRConverter` | Stateful C-to-semantic-IR converter. |
 | `c_file_to_semantic_module` | Converts one parsed C file to one semantic module. |
 | `c_file_to_semantic_modules` | Converts one parsed C file to semantic modules. |
@@ -74,6 +82,7 @@ preprocessing option parsing live in the CLI layer.
 | `c_parameter_to_semantic_argument` | Converts one parsed C parameter to a semantic argument. |
 | `c_struct_to_semantic_class` | Converts one parsed C struct to a semantic class. |
 | `c_type_to_semantic_type` | Converts one parsed C type to a semantic type. |
+X2PY_C_DOCS_END -->
 
 Semantic conversion is the boundary between parser models and wrapper-facing
 contracts. Use readiness checks before assuming a semantic module can be wrapped.
@@ -146,9 +155,12 @@ type and NumPy dtype mapping. The CLI type-probe flags are documented in
 
 ## Current boundaries
 
-- Runtime wrapping of user-supplied C libraries is not part of the public
-  wrapper-build API yet.
 - Parser functions do not run CLI path expansion or command-line preprocessing
   validation.
 - Generated module, function, and class reference pages are still planned; this
   page is the maintained public-symbol inventory until those pages exist.
+
+<!-- X2PY_C_DOCS_START
+- Runtime wrapping of user-supplied C libraries is not part of the public
+  wrapper-build API yet.
+X2PY_C_DOCS_END -->
