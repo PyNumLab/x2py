@@ -133,20 +133,61 @@ def _complete_accessor_policies(variable: models.SemanticVariable, context: Owne
 
 def _complete_module_variable_initializer(variable: models.SemanticVariable) -> None:
     variable.metadata.pop(models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA, None)
+    _clear_readiness_blocker(variable, models.MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER)
     if variable.default_value is None or _is_constant(variable):
         return
     setter = variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
     if variable.semantic_type.rank != 0:
-        raise ValueError(
-            f"Module variable {variable.name!r} has an initializer, but only scalar module variables support "
-            "import-time native initialization"
+        _add_readiness_blocker(
+            variable,
+            models.MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
+            "Module variable initializers require scalar storage with a write-through native setter.",
+            {
+                "item": variable.name,
+                "rank": variable.semantic_type.rank,
+                "reason": "only scalar module variables support import-time native initialization",
+            },
         )
+        return
     if setter.setter_action is not SetterAction.WRITE_THROUGH:
-        raise ValueError(
-            f"Module variable {variable.name!r} has an initializer, but its completed setter policy is "
-            f"{setter.setter_action.value!r}"
+        _add_readiness_blocker(
+            variable,
+            models.MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
+            "Module variable initializers require scalar storage with a write-through native setter.",
+            {
+                "item": variable.name,
+                "setter_action": setter.setter_action.value,
+                "reason": "completed setter policy does not expose write-through native assignment",
+            },
         )
+        return
     variable.metadata[models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA] = variable.default_value
+
+
+def _clear_readiness_blocker(variable: models.SemanticVariable, code: str) -> None:
+    blockers = variable.metadata.get("readiness_blockers")
+    if not isinstance(blockers, list):
+        return
+    remaining = [blocker for blocker in blockers if not isinstance(blocker, dict) or blocker.get("code") != code]
+    if remaining:
+        variable.metadata["readiness_blockers"] = remaining
+    else:
+        variable.metadata.pop("readiness_blockers", None)
+
+
+def _add_readiness_blocker(
+    variable: models.SemanticVariable,
+    code: str,
+    message: str,
+    item: dict[str, object],
+) -> None:
+    variable.metadata.setdefault("readiness_blockers", []).append(
+        {
+            "code": code,
+            "message": message,
+            "item": item,
+        }
+    )
 
 
 def _is_constant(variable: models.SemanticVariable) -> bool:

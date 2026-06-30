@@ -1392,6 +1392,21 @@ their literal value can be represented in `.pyi`:
 nmax: Final[Int32] = 12
 ```
 
+If a Fortran `parameter` initializer is an expression, generated `.pyi` emits a
+default only after x2py has resolved that expression to a literal. Unresolved
+native expressions are kept out of the active `.pyi` default:
+
+```fortran
+real, parameter :: c = cos(0.0)
+```
+
+```python
+c: Final[Float32]
+```
+
+The source expression may remain available as native provenance metadata, but it
+does not become an executable Python default unless a literal value is known.
+
 No setter is generated for parameters. Python module namespaces remain ordinary
 Python module namespaces, so assigning to `mod.nmax` can rebind that Python name
 without modifying native Fortran state.

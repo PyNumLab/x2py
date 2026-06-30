@@ -547,8 +547,10 @@ class PyiPrinter:
             return self_value
         if PyiPrinter._is_enum_constant(arg):
             return PyiPrinter._enum_default_value(arg)
-        if initializer := arg.metadata.get("fortran_initializer"):
-            return PyiPrinter._python_literal_text(initializer) or PyiPrinter._python_literal_text(arg.default_value)
+        if (initializer := arg.metadata.get("fortran_initializer")) and (
+            literal := PyiPrinter._fortran_literal_text(initializer)
+        ):
+            return literal
         return PyiPrinter._python_literal_text(arg.default_value)
 
     @staticmethod
@@ -566,6 +568,18 @@ class PyiPrinter:
             return ast.unparse(ast.parse(text, mode="eval").body)
         except SyntaxError:
             return None
+
+    @staticmethod
+    def _fortran_literal_text(value: str | None) -> str | None:
+        """Return a Python literal spelling for literal Fortran initializer text."""
+        text = PyiPrinter._python_literal_text(value)
+        if text is None:
+            return None
+        try:
+            ast.literal_eval(ast.parse(text, mode="eval").body)
+        except (ValueError, SyntaxError):
+            return None
+        return text
 
     @staticmethod
     def _without_constant_constraint(semantic_type: SemanticType) -> SemanticType:
@@ -700,9 +714,10 @@ class PyiPrinter:
         name = self._data_member_name(field)
         semantic_type = self._without_constant_constraint(field.semantic_type)
         type_text = self._visit(semantic_type)
-        initializer = field.metadata.get("fortran_initializer")
         default_value = (
-            self._python_literal_text(initializer) or self._python_literal_text(field.default_value) or "..."
+            self._fortran_literal_text(field.metadata.get("fortran_initializer"))
+            or self._python_literal_text(field.default_value)
+            or "..."
         )
         if name != field.name:
             type_text = self._annotated_type_text(type_text, [f"Name({json.dumps(field.name)})"])

@@ -24,6 +24,7 @@ from x2py.ownership_policy import (
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import (
     POLICY_COMPLETION_PREPARED_METADATA,
+    MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
     PYTHON_EXPORTS_METADATA,
     PYTHON_EXPORTS_PREPARED_METADATA,
     RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA,
@@ -850,6 +851,29 @@ def test_module_variable_initializer_policy_is_complete_before_ir_lowering():
     variable = module.variables[0]
     assert variable.metadata[RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA] == "41"
     assert variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA].setter_action is SetterAction.WRITE_THROUGH
+
+
+def test_unsupported_module_variable_initializer_is_readiness_blocker():
+    module = SemanticModule(
+        name="labels",
+        variables=[SemanticVariable("label", SemanticType("String"), default_value='"ready"')],
+    )
+
+    complete_semantic_policies(module)
+
+    variable = module.variables[0]
+    assert RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA not in variable.metadata
+    assert variable.metadata["readiness_blockers"] == [
+        {
+            "code": MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
+            "message": "Module variable initializers require scalar storage with a write-through native setter.",
+            "item": {
+                "item": "label",
+                "setter_action": "reject_replacement",
+                "reason": "completed setter policy does not expose write-through native assignment",
+            },
+        }
+    ]
 
 
 def test_derived_field_setter_policy_uses_value_copy_write_through():

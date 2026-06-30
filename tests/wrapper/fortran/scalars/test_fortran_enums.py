@@ -28,6 +28,9 @@ def test_fortran_enums_preserve_values_in_generated_pyi_contract():
     ]
     assert constants["red"].semantic_type.metadata["fortran_bind_c"] is True
     stub = emit_module(semantic)
+    assert "color: Int32 = red" not in stub
+    assert "color: Int32 = ..." in stub
+    assert "color: Int32\n" in stub
     assert "red: Final[Int32] = -1" in stub
     assert "yellow: Final[Int32] = 11" in stub
     assert "class Enum" not in stub

@@ -507,13 +507,36 @@ def test_assess_pyi_wrap_readiness_expands_directory_and_uses_leaf_filenames(tmp
 
 def test_assess_pyi_wrap_readiness_honors_explicit_encoding(tmp_path: Path):
     pyi = tmp_path / "latin1.pyi"
-    pyi.write_bytes('label: String = "caf\xe9"\n'.encode("latin-1"))
+    pyi.write_bytes('label: Final[String] = "caf\xe9"\n'.encode("latin-1"))
 
     report = assess_pyi_wrap_readiness(pyi, encoding="latin-1")
 
     assert report["wrappable"] is True
     assert report["source"] == [str(pyi)]
     assert _blocker_codes(report) == set()
+
+
+def test_readiness_reports_unsupported_module_variable_initializer(tmp_path: Path):
+    pyi = tmp_path / "labels.pyi"
+    pyi.write_text('label: String = "ready"\n', encoding="utf-8")
+
+    report = assess_pyi_wrap_readiness(pyi)
+
+    assert report["wrappable"] is False
+    assert "module_variable_initializer_unsupported" in _blocker_codes(report)
+    blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "module_variable_initializer_unsupported"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "labels.label",
+            "item": "label",
+            "setter_action": "reject_replacement",
+            "reason": "completed setter policy does not expose write-through native assignment",
+        }
+    ]
 
 
 def test_readiness_skips_private_api_and_normalizes_metadata_blocker_items():

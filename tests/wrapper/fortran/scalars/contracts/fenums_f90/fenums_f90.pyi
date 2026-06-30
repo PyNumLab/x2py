@@ -2,10 +2,10 @@ class paint:
     def __init__(
         self,
         *,
-        color: Int32 = red
+        color: Int32 = ...
     ) -> None: ...
 
-    color: Int32 = red
+    color: Int32
 
 red: Final[Int32] = -1
 

@@ -183,7 +183,9 @@ extension import by calling the generated native setter. The variable remains
 writable after import; later reads and writes still use the current native
 storage. This form accepts literal values only. Calls, names, and expressions
 such as `f(42)`, `x + 1`, or `SOME_NAME` are rejected for mutable module
-variables.
+variables. The declaration must also have a completed write-through native
+setter; unsupported module-variable defaults are reported as readiness blockers
+instead of being treated as copied Python values.
 
 Use `Final[...]` for true constants:
 

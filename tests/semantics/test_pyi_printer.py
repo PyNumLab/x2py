@@ -1361,6 +1361,20 @@ end module
     assert "ping" not in code
 
 
+def test_emit_fortran_parameter_defaults_only_when_resolved_to_literals():
+    source = """
+module trig_constants
+  real, parameter :: c = cos(0.0)
+  integer, parameter :: n = 3 + 4
+end module
+"""
+    code = generate_pyi(source)
+
+    assert "c: Final[Float32]\n" in code
+    assert "c: Final[Float32] = cos(0.0)" not in code
+    assert "n: Final[Int32] = 7" in code
+
+
 def test_emit_omits_fortran_source_private_methods_and_fields():
     source = """
 module private_method_mod

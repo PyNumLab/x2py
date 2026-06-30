@@ -418,8 +418,11 @@ def _raise_for_unsupported_constructor_overloads(node: models.SemanticClass) -> 
 
 
 def _raise_for_unsupported_fortran_module_features(node: models.SemanticModule) -> None:
-    owners = [node, *node.functions]
-    blocking_codes = {"fortran_generic_constructor_unsupported"}
+    owners = [node, *node.variables, *node.functions]
+    blocking_codes = {
+        "fortran_generic_constructor_unsupported",
+        models.MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
+    }
     for owner in owners:
         for blocker in owner.metadata.get("readiness_blockers", ()):
             if blocker.get("code") in blocking_codes:
