@@ -517,33 +517,30 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         maxsplit=1,
     )[0]
 
-    source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->")
+    source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->")
     fortran_block_index = quick_start.index("```fortran", source_index)
     source_build_command_index = quick_start.index(
-        "python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90",
+        "python3 -m x2py scale_api.f90",
         fortran_block_index,
     )
-    source_build_tree_index = quick_start.index("build/fruntime_abi/", source_build_command_index)
+    source_build_tree_index = quick_start.index("build/scale_api/", source_build_command_index)
     pyi_generation_command_index = quick_start.index(
-        "python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \\\n  --pyi",
+        "python3 -m x2py scale_api.f90 \\\n  --pyi",
         source_build_tree_index,
     )
     pyi_contract_tree_index = quick_start.index(
-        "contracts/\n  __init__.pyi\n  fruntime_abi_f90.pyi", pyi_generation_command_index
+        "contracts/\n  __init__.pyi\n  scale_api.pyi", pyi_generation_command_index
     )
     pyi_contract_body_index = quick_start.index(
         "def scale(\n    value: Ptr(Const(Float64)),\n    factor: Ptr(Const(Float64))\n) -> Float64: ...",
         pyi_contract_tree_index,
     )
     pyi_build_command_index = quick_start.index(
-        "python3 -m x2py contracts/fruntime_abi_f90.pyi",
+        "python3 -m x2py contracts/scale_api.pyi",
         pyi_contract_body_index,
     )
-    native_source_argument_index = quick_start.index(
-        "--native-fortran-sources tests/data/fortran/wrapper/fruntime_abi_f90.f90",
-        pyi_build_command_index,
-    )
-    pyi_build_tree_index = quick_start.index("build/fruntime_abi_from_pyi/", native_source_argument_index)
+    native_source_argument_index = quick_start.index("--native-fortran-sources scale_api.f90", pyi_build_command_index)
+    pyi_build_tree_index = quick_start.index("build/scale_api_from_pyi/", native_source_argument_index)
     runtime_output_index = quick_start.index("7.5", pyi_build_tree_index)
 
     assert source_index < fortran_block_index < source_build_command_index
@@ -551,8 +548,10 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     assert pyi_generation_command_index < pyi_contract_tree_index < pyi_contract_body_index
     assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index
     assert native_source_argument_index < pyi_build_tree_index < runtime_output_index
+    assert "tests/data/fortran/wrapper/scale_api.f90" in quick_start
     assert "python3 -m x2py solver.f90" not in quick_start
-    assert "python3 -m x2py fruntime_abi_f90.f90" not in quick_start
+    assert "python3 -m x2py tests/data/fortran/wrapper/scale_api.f90" not in quick_start
+    assert "fruntime_abi_f90" not in readme
     assert "solver.f90" not in readme
     assert "add1" not in readme
     assert "tests/data/fortran/general/basic_subroutine.f90" not in readme

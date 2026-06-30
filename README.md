@@ -30,26 +30,27 @@ prints the CLI usage with input selection, inspection stages, wrapper builds,
 and output options.
 
 The default user-facing action for a single Fortran source is to build a Python
-extension. This checked input source is
-`tests/data/fortran/wrapper/fruntime_abi_f90.f90`:
+extension. This checked input source exists at
+`tests/data/fortran/wrapper/scale_api.f90`; copy it into your working directory
+as `scale_api.f90` before running the commands below:
 
-<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->
 ```fortran
-module fruntime_abi_f90
+module scale_api
 contains
   real(8) function scale(value, factor) result(output)
     real(8), intent(in) :: value
     real(8), intent(in) :: factor
     output = value * factor
   end function scale
-end module fruntime_abi_f90
+end module scale_api
 ```
 
 Build it into an explicit directory:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
-  --out-dir build/fruntime_abi \
+python3 -m x2py scale_api.f90 \
+  --out-dir build/scale_api \
   --json
 ```
 
@@ -57,8 +58,8 @@ The build directory will include the shared library and generated wrapper
 sources:
 
 ```text
-build/fruntime_abi/
-  fruntime_abi_f90.<extension-suffix>
+build/scale_api/
+  scale_api.so
   generated-wrapper sources
   x2py_runtime/
 ```
@@ -66,7 +67,7 @@ build/fruntime_abi/
 Generate the semantic `.pyi` contract for the same source:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
+python3 -m x2py scale_api.f90 \
   --pyi \
   --out contracts
 ```
@@ -76,10 +77,10 @@ The command writes the contract package:
 ```text
 contracts/
   __init__.pyi
-  fruntime_abi_f90.pyi
+  scale_api.pyi
 ```
 
-Expected contract (`contracts/fruntime_abi_f90.pyi`):
+Expected contract (`contracts/scale_api.pyi`):
 
 ```python
 def scale(
@@ -92,18 +93,18 @@ Then build the shared library from that `.pyi` contract and the same native
 implementation source:
 
 ```bash
-python3 -m x2py contracts/fruntime_abi_f90.pyi \
+python3 -m x2py contracts/scale_api.pyi \
   --wrap \
-  --native-fortran-sources tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
-  --out-dir build/fruntime_abi_from_pyi \
+  --native-fortran-sources scale_api.f90 \
+  --out-dir build/scale_api_from_pyi \
   --json
 ```
 
 The `.pyi` build produces the same importable extension shape:
 
 ```text
-build/fruntime_abi_from_pyi/
-  fruntime_abi_f90.<extension-suffix>
+build/scale_api_from_pyi/
+  scale_api.so
   generated-wrapper sources
   x2py_runtime/
 ```
@@ -117,10 +118,10 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, "build/fruntime_abi")
-import fruntime_abi_f90
+sys.path.insert(0, "build/scale_api")
+import scale_api
 
-print(fruntime_abi_f90.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
+print(scale_api.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
 ```
 
 It prints:
@@ -189,48 +190,45 @@ X2PY_C_DOCS_END -->
 Recognizable Fortran files do not require an explicit language. Parse the same
 checked source used in the Quick Start:
 
-Input (`tests/data/fortran/wrapper/fruntime_abi_f90.f90`):
+Input (`tests/data/fortran/wrapper/scale_api.f90`, copied locally as
+`scale_api.f90`):
 
-<!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->
 ```fortran
-module fruntime_abi_f90
+module scale_api
 contains
   real(8) function scale(value, factor) result(output)
     real(8), intent(in) :: value
     real(8), intent(in) :: factor
     output = value * factor
   end function scale
-end module fruntime_abi_f90
+end module scale_api
 ```
 
-<!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --parse
+python3 -m x2py scale_api.f90 --parse
 ```
 
-<!-- x2py-doc-test-output -->
 ```text
-File: tests/data/fortran/wrapper/fruntime_abi_f90.f90
+File: scale_api.f90
   Modules: 1
-    - module fruntime_abi_f90 (vars=0, uses=0)
+    - module scale_api (vars=0, uses=0)
       Procedures: 1
         - function scale(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
 ```
 
 Generate its editable `.pyi` contract:
 
-<!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --pyi
+python3 -m x2py scale_api.f90 --pyi
 ```
 
-<!-- x2py-doc-test-output -->
 ```python
-File: tests/data/fortran/wrapper/fruntime_abi_f90.f90
-Root contract: fruntime_abi_f90/__init__.pyi
-from . import fruntime_abi_f90
+File: scale_api.f90
+Root contract: scale_api/__init__.pyi
+from . import scale_api
 
-Module contract: fruntime_abi_f90.pyi
+Module contract: scale_api.pyi
 def scale(
     value: Ptr(Const(Float64)),
     factor: Ptr(Const(Float64))
@@ -239,16 +237,14 @@ def scale(
 
 Check semantic readiness:
 
-<!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --wrap-readiness
+python3 -m x2py scale_api.f90 --wrap-readiness
 ```
 
-<!-- x2py-doc-test-output -->
 ```text
-File: tests/data/fortran/wrapper/fruntime_abi_f90.f90
+File: scale_api.f90
   Source: fortran
-  Semantic modules: fruntime_abi_f90
+  Semantic modules: scale_api
   Wrappable: yes
   Public functions: 1
   Public classes: 0
@@ -260,11 +256,11 @@ Write a draft interface, edit it when source facts are not enough, then check
 the edited contract:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --pyi --out contracts
-python3 -m x2py contracts/fruntime_abi_f90.pyi --wrap-readiness
+python3 -m x2py scale_api.f90 --pyi --out contracts
+python3 -m x2py contracts/scale_api.pyi --wrap-readiness
 ```
 
-Expected result: the first command writes `contracts/fruntime_abi_f90.pyi`; the
+Expected result: the first command writes `contracts/scale_api.pyi`; the
 second command reports the same `Wrappable: yes` readiness result shown above.
 
 <!-- X2PY_C_DOCS_START
@@ -361,7 +357,7 @@ directories, definitions, language standard, and target flags when inspecting
 or building a real source tree:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 --parse \
+python3 -m x2py scale_api.f90 --parse \
   --compiler gfortran \
   --std f2018
 ```
@@ -418,8 +414,8 @@ conversion, `.pyi` emission, and readiness:
 from x2py import build_fortran_extension
 
 result = build_fortran_extension(
-    "tests/data/fortran/wrapper/fruntime_abi_f90.f90",
-    output_dir="build/fruntime_abi",
+    "scale_api.f90",
+    output_dir="build/scale_api",
 )
 print(result.module_name)
 print(result.shared_library)
