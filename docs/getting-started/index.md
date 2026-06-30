@@ -56,24 +56,6 @@ The first example is a standalone procedure exposed directly at the extension
 root. The next module example introduces contained Fortran modules as Python
 child namespaces.
 
-## Current Boundary
-
-- Python 3.10 or newer is required; CI currently verifies 3.10, 3.11, and 3.12.
-- The verified platform is Ubuntu Linux with `gfortran-13`. Other compilers and
-  operating systems need their own ABI validation.
-- Exact NumPy scalar dtypes and array contracts are part of the generated API.
-- Runtime wrapper builds require GNU Fortran and native build tools, Python
-  development headers, and NumPy development files.
-- A readiness result describes the semantic contract; native compilation and
-  runtime behavior still require their own verification.
-
-<!-- X2PY_C_DOCS_START
-- Runtime wrapper builds use GNU Fortran and C compilers, Python development
-  headers, and NumPy headers.
-- A readiness result of `Wrappable: yes` describes the semantic contract; it
-  does not create a C-input runtime backend.
-X2PY_C_DOCS_END -->
-
 Check the [language feature matrix](../language-support/feature-matrix.md) before
 depending on an advanced construct. Installation, compiler, build, and import
 failures are routed through [Troubleshooting](../troubleshooting/index.md).
