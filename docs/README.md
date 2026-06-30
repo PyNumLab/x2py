@@ -14,6 +14,9 @@ Start with:
   documentation website.
 - [Documentation architecture](documentation-architecture.md): the page
   metadata standard, recommended repository tree, and maturity roadmap.
+- [User guide](user-guide/index.md): the maintained route from Fortran/Python
+  datatype mapping through wrapper calls, ownership, runtime behavior,
+  packaging, and distribution limits.
 - [Verified examples cookbook](examples-gallery/verified-cookbook.md): copy-paste Fortran wrapper builds
   and calls, CLI inspection commands, compiler preprocessing recipes, Python
   API snippets, and blocker examples.

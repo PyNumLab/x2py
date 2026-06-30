@@ -54,52 +54,6 @@ investments and site-publication decisions until the underlying content is
 stable. Within each section, work from foundational pages toward dependent or
 more specialized pages.
 
-### User Guide
-
-- [ ] `docs/user-guide/wrapping-functions.md`: document scalar returns, array
-  returns, generated Python signatures, native calling limits, and checked call
-  assertions.
-- [ ] `docs/user-guide/wrapping-subroutines.md`: document `intent(in)`,
-  `intent(out)`, `intent(inout)`, hidden versus visible outputs, and tuple or
-  storage projection rules.
-- [ ] `docs/user-guide/wrapping-modules.md`: document module functions, public
-  constants, module variables, saved state, unsupported common-block exposure,
-  and generated package shape.
-- [ ] `docs/user-guide/arrays.md`: document dtype mapping, rank and shape
-  validation, contiguity, stride support, zero-sized arrays, order requirements,
-  and NumPy error messages.
-- [ ] `docs/user-guide/optional-arguments.md`: document Python call syntax,
-  omitted arguments, defaults, unsupported optional combinations, and diagnostics.
-- [ ] `docs/user-guide/generic-interfaces.md`: document named generic overloads,
-  type-bound overloads, ambiguity handling, operator dispatch, and generated
-  `.pyi` overload stubs.
-- [ ] `docs/user-guide/allocatable-arrays.md`: document allocatable results,
-  borrowed module or component views, replacement semantics, null or unallocated
-  state, and ownership limits.
-- [ ] `docs/user-guide/pointer-arguments.md`: document supported call-local
-  pointer inputs, pointer snapshot results, blocked reassociation cases, and
-  lifetime rules.
-- [ ] `docs/user-guide/wrapping-derived-types.md`: document generated classes,
-  constructors, fields, methods, finalizers, opaque layouts, accessor-only
-  behavior, and unsupported polymorphic forms.
-- [ ] `docs/user-guide/memory-management.md`: document ownership transfer,
-  borrowed views, destructor responsibility, finalization, release limits, and
-  the policy-completion source of truth.
-- [ ] `docs/user-guide/callbacks.md`: document immediate callback arguments,
-  callback signatures, exception behavior, lifetime limits, GIL expectations,
-  and unsupported persistent procedure pointers.
-- [ ] `docs/user-guide/enumerations.md`: document generated constants or enum
-  shapes, supported Fortran enum forms, unsupported forms, and type-checking
-  expectations.
-- [ ] `docs/user-guide/error-handling.md`: document wrapper validation errors,
-  native failure projection, diagnostics, traceback behavior, and cleanup
-  guarantees.
-- [ ] `docs/user-guide/packaging.md`: document generated packages, generated
-  makefiles, native artifacts, rebuild flow, import paths, and local distribution
-  assumptions.
-- [ ] `docs/user-guide/distribution.md`: document what can be distributed today,
-  native dependency constraints, platform caveats, and what remains future work.
-
 ### Reference Material
 
 - [ ] `docs/reference/generated-functions.md`: document generated function and
@@ -284,11 +238,6 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/contributing/index.md`: route contributors to contribution,
   pull-request, review, and coding-standard pages.
 
-<!-- X2PY_C_DOCS_START
-- [ ] `docs/user-guide/index.md`: group user guides by workflow and separate
-  current Fortran wrapper support from future C-input wrapper support.
-X2PY_C_DOCS_END -->
-
 ## Completed Content Evidence
 
 These pages already carry maintained content or active implementation roadmap
@@ -313,6 +262,40 @@ primary placeholder queue.
 - [x] `docs/reference/cli-commands.md`: maintained CLI reference.
 - [x] `docs/reference/python-api.md`: maintained Python API reference.
 - [x] `docs/reference/diagnostic-codes.md`: maintained diagnostic registry.
+- [x] `docs/user-guide/index.md`: maintained workflow-first route from datatype
+  mapping through calls, storage, runtime behavior, and deployment.
+- [x] `docs/user-guide/data-types.md`: maintained Fortran storage, semantic
+  `.pyi`, Python value, and NumPy dtype mapping with compiler-probed limits.
+- [x] `docs/user-guide/wrapping-functions.md`: maintained scalar, array-result,
+  mixed-output, signature, native-call-limit, and evidence guide.
+- [x] `docs/user-guide/wrapping-subroutines.md`: maintained input, output,
+  inout, hidden/visible storage, tuple-order, and scalar-replacement guide.
+- [x] `docs/user-guide/wrapping-modules.md`: maintained module namespace,
+  procedure, constant, variable, saved-state, module-array, and common-block guide.
+- [x] `docs/user-guide/arrays.md`: maintained dtype, rank, shape, layout,
+  stride, lower-bound, assumed-rank, zero-size, result, and validation guide.
+- [x] `docs/user-guide/optional-arguments.md`: maintained omission, `None`,
+  keyword, input/output, default, limitation, and diagnostic guide.
+- [x] `docs/user-guide/generic-interfaces.md`: maintained named, type-bound,
+  operator, assignment, exact-dispatch, ambiguity, and overload guide.
+- [x] `docs/user-guide/allocatable-arrays.md`: maintained copy, replacement,
+  borrowed module/component view, unallocated, lifetime, and limitation guide.
+- [x] `docs/user-guide/pointer-arguments.md`: maintained call-local input,
+  snapshot result, nullability, target policy, and blocked-reassociation guide.
+- [x] `docs/user-guide/wrapping-derived-types.md`: maintained class, field,
+  method, constructor, finalizer, nested borrow, layout, and polymorphism guide.
+- [x] `docs/user-guide/memory-management.md`: maintained ownership, transfer,
+  destruction, mutability, release, borrowing, and policy-completion guide.
+- [x] `docs/user-guide/callbacks.md`: maintained immediate callback contract,
+  values, lifetime, GIL, thread, fatal-error, and unsupported-form guide.
+- [x] `docs/user-guide/enumerations.md`: maintained integer-constant surface,
+  value, typing, naming, and unsupported-form guide.
+- [x] `docs/user-guide/error-handling.md`: maintained failure-layer, Python
+  exception, native status projection, callback, diagnostic, and cleanup guide.
+- [x] `docs/user-guide/packaging.md`: maintained local project integration,
+  artifact, Makefile, rebuild, import, and packaging-limit guide.
+- [x] `docs/user-guide/distribution.md`: maintained source-rebuild, prebuilt
+  compatibility, native dependency, wheel-limit, and release-checklist guide.
 - [x] `docs/user-guide/fortran-wrapper.md`: maintained Fortran wrapper contract.
 - [x] `docs/user-guide/editing-semantic-pyi-contracts.md`: maintained editable
   `.pyi` contract guide.
@@ -338,6 +321,9 @@ primary placeholder queue.
   roadmap for semantic `.pyi` wrapper parity.
 
 <!-- X2PY_C_DOCS_START
+When the C-input documentation phase resumes, extend the maintained user-guide
+index with a separate C-input route rather than mixing future behavior into the
+current Fortran workflow.
 - [x] `docs/developer-guide/c-parser-reference.md`: maintained C parser
   reference.
 X2PY_C_DOCS_END -->

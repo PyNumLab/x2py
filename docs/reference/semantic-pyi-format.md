@@ -41,9 +41,10 @@ Status terms used below:
   subset when the required native artifacts are supplied.
 - **Roadmap**: design direction, not implemented wrapper behavior.
 
-The scalar dtype mapping behind these names is documented in
-[Semantic IR reference](semantic-ir.md). Wrapper-policy gaps are tracked in
-[Wrapper design notes](../design/wrapper-design-notes.md).
+The user-facing Fortran, semantic `.pyi`, Python, and NumPy mapping is documented
+in [Data Types](../user-guide/data-types.md). The underlying semantic model is
+documented in [Semantic IR reference](semantic-ir.md). Wrapper-policy gaps are
+tracked in [Wrapper design notes](../design/wrapper-design-notes.md).
 
 ## Misuse, Diagnostics And Risk
 

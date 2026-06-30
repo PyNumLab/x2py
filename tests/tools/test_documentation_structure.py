@@ -29,6 +29,9 @@ MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
 C_DOCS_START = "<!-- X2PY_C_DOCS_START"
 C_DOCS_END = "X2PY_C_DOCS_END -->"
 C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
+VISIBLE_C_DOCUMENTATION_EXCEPTIONS = {
+    "docs/user-guide/enumerations.md": ("bind(C)",),
+}
 VISIBLE_C_DOCUMENTATION = re.compile(
     r"(?:"
     r"(?<![A-Za-z0-9_])C(?:\+\+)?(?![A-Za-z0-9_])"
@@ -103,6 +106,27 @@ REQUIRED_GETTING_STARTED_PAGES = [
     "getting-started/first-wrapped-function.md",
     "getting-started/first-wrapped-module.md",
     "getting-started/beginner-workflow.md",
+]
+REQUIRED_USER_GUIDE_PAGES = [
+    "user-guide/index.md",
+    "user-guide/data-types.md",
+    "user-guide/wrapping-functions.md",
+    "user-guide/wrapping-subroutines.md",
+    "user-guide/wrapping-modules.md",
+    "user-guide/arrays.md",
+    "user-guide/optional-arguments.md",
+    "user-guide/generic-interfaces.md",
+    "user-guide/allocatable-arrays.md",
+    "user-guide/pointer-arguments.md",
+    "user-guide/wrapping-derived-types.md",
+    "user-guide/memory-management.md",
+    "user-guide/callbacks.md",
+    "user-guide/enumerations.md",
+    "user-guide/error-handling.md",
+    "user-guide/packaging.md",
+    "user-guide/distribution.md",
+    "user-guide/fortran-wrapper.md",
+    "user-guide/editing-semantic-pyi-contracts.md",
 ]
 CLI_HELP_GROUP_HEADINGS = [
     "input selection:",
@@ -491,6 +515,8 @@ def test_documentation_page_metadata(path: Path) -> None:
 @pytest.mark.parametrize("path", PUBLIC_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
 def test_deferred_c_documentation_is_not_visible(path: Path) -> None:
     visible = _visible_documentation_source(path)
+    for allowed_text in VISIBLE_C_DOCUMENTATION_EXCEPTIONS.get(str(path.relative_to(ROOT)), ()):
+        visible = visible.replace(allowed_text, "")
     match = VISIBLE_C_DOCUMENTATION.search(visible)
     assert match is None, f"{path.relative_to(ROOT)}: visible deferred documentation: {match.group(0)!r}"
 
@@ -624,6 +650,31 @@ def test_required_getting_started_page_is_maintained_and_navigable(relative_path
 def test_getting_started_page_is_completed_in_documentation_checklist(relative_path: str) -> None:
     checklist = DOCUMENTATION_CHECKLIST_PATH.read_text(encoding="utf-8")
     assert f"- [x] `docs/{relative_path}`" in checklist
+
+
+@pytest.mark.parametrize("relative_path", REQUIRED_USER_GUIDE_PAGES)
+def test_required_user_guide_page_is_maintained_and_navigable(relative_path: str) -> None:
+    path = DOCS_ROOT / relative_path
+    assert path.is_file()
+    metadata, body = _front_matter(path)
+    assert metadata["status"] == "maintained"
+    assert relative_path in (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    for target in MARKDOWN_LINK.findall(body):
+        if target.startswith(("http://", "https://")):
+            continue
+        assert (path.parent / target).resolve().exists(), f"{relative_path}: missing link target {target}"
+
+
+@pytest.mark.parametrize("relative_path", REQUIRED_USER_GUIDE_PAGES)
+def test_user_guide_page_is_completed_in_documentation_checklist(relative_path: str) -> None:
+    checklist = DOCUMENTATION_CHECKLIST_PATH.read_text(encoding="utf-8")
+    assert f"- [x] `docs/{relative_path}`" in checklist
+
+
+@pytest.mark.parametrize("relative_path", REQUIRED_USER_GUIDE_PAGES[:-2])
+def test_user_guide_commands_do_not_expose_fixture_paths(relative_path: str) -> None:
+    page = (DOCS_ROOT / relative_path).read_text(encoding="utf-8")
+    assert "python3 -m x2py tests/" not in page
 
 
 def test_getting_started_overview_uses_standalone_example_and_current_evidence() -> None:
