@@ -635,7 +635,7 @@ def test_getting_started_overview_uses_standalone_example_and_current_evidence()
 
 def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_centrally() -> None:
     page = (DOCS_ROOT / "getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
-    source_index = page.index("Create `scale.f90` with this standalone function:")
+    source_index = page.index("[Verification](verification.md#verify-the-inspection-path)")
     build_index = page.index("python3 -m x2py scale.f90 \\")
     command_index = page.index("python3 -m x2py scale.f90 --pyi")
     contract_index = page.index(
@@ -643,18 +643,20 @@ def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_cen
     )
 
     assert source_index < build_index < command_index < contract_index
+    assert "<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->" not in page
     assert "## Current Limitations" not in page
     assert "[language feature matrix](../language-support/feature-matrix.md)" in page
 
 
 def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None:
     page = (DOCS_ROOT / "getting-started/first-wrapped-module.md").read_text(encoding="utf-8")
-    source_index = page.index("Create `fmodule_vars_f90.f90` with this module:")
-    build_index = page.index("python3 -m x2py fmodule_vars_f90.f90 \\")
-    inspect_index = page.index("python3 -m x2py fmodule_vars_f90.f90 --pyi")
+    source_index = page.index("Create `module_state.f90` with this module:")
+    build_index = page.index("python3 -m x2py module_state.f90 \\")
+    inspect_index = page.index("python3 -m x2py module_state.f90 --pyi")
     contract_index = page.index("nmax: Final[Int32] = 12")
 
     assert source_index < build_index < inspect_index < contract_index
+    assert "fmodule_vars_f90" not in page
     assert "## Current Limitations" not in page
     assert "[language feature matrix](../language-support/feature-matrix.md)" in page
 

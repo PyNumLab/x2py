@@ -32,6 +32,13 @@ these are true:
   focused verification commands, and rules for updating related docs.
 - [ ] Examples are either executable documentation examples, checked fixtures,
   or clearly labeled illustrative snippets.
+- [ ] Reuse earlier examples by reference instead of reprinting them, unless the
+  page must be self-contained for a first-time user task.
+- [ ] User-facing examples use clean copyable filenames and module names; keep
+  fixture-style names such as parser/test abbreviations out of beginner docs.
+- [ ] Documentation-only changes use focused docs checks and `git diff --check`;
+  reserve the full static-analysis suite for code, tests, build/tooling changes,
+  or explicit pre-merge verification.
 - [ ] Area indexes, `docs/README.md`, `mkdocs.yml`, related front matter, and
   `tests/tools/test_documentation_structure.py` stay synchronized.
 

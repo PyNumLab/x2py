@@ -13,16 +13,10 @@ NumPy dtypes required by its native contract.
 
 ## Source
 
-Create `scale.f90` with this standalone function:
-
-<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
-```fortran
-real(8) function scale(value, factor) result(output)
-  real(8), intent(in) :: value
-  real(8), intent(in) :: factor
-  output = value * factor
-end function scale
-```
+Reuse the same `scale.f90` input from
+[Verification](verification.md#verify-the-inspection-path). If you need to
+recreate the file, copy it from the
+[README Quick Start](../../README.md#quick-start).
 
 The generated Python call accepts two `numpy.float64` values and returns a
 `numpy.float64` result.
@@ -111,7 +105,7 @@ successful import followed by a call failure goes to
 
 ## Evidence
 
-The displayed source is checked against the repository fixture by
+The linked `scale.f90` input is checked against the repository fixture by
 [`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py).
 The renamed extension and `7.5` runtime result are checked by
 [`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py).

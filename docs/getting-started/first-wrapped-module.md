@@ -14,11 +14,10 @@ names and internal getter/setter hooks do not.
 
 ## Source
 
-Create `fmodule_vars_f90.f90` with this module:
+Create `module_state.f90` with this module:
 
-<!-- x2py-doc-source: tests/data/fortran/wrapper/fmodule_vars_f90.f90 -->
 ```fortran
-module fmodule_vars_f90
+module module_state
   implicit none
   private
   public :: nmax, counter, scale, saved_counter
@@ -45,22 +44,22 @@ contains
     local_counter = local_counter + 1
     value = local_counter
   end function next_local
-end module fmodule_vars_f90
+end module module_state
 ```
 
 ## Build
 
-From the directory containing `fmodule_vars_f90.f90`:
+From the directory containing `module_state.f90`:
 
 ```bash
-python3 -m x2py fmodule_vars_f90.f90 \
+python3 -m x2py module_state.f90 \
   --wrap \
   --out-dir build/first-module \
   --json
 ```
 
-The source stem creates extension `fmodule_vars_f90`. Its contained module is
-available as `fmodule_vars_f90.fmodule_vars_f90`.
+The source stem creates extension `module_state`. Its contained module is
+available as `module_state.module_state`.
 
 ## Read Procedures And State
 
@@ -70,9 +69,9 @@ import sys
 import numpy as np
 
 sys.path.insert(0, "build/first-module")
-import fmodule_vars_f90
+import module_state
 
-module = fmodule_vars_f90.fmodule_vars_f90
+module = module_state.module_state
 
 assert module.nmax == np.int32(12)
 assert module.counter == np.int32(3)
@@ -124,13 +123,13 @@ assert module.next_local() == np.int32(2)
 Use `--pyi` to inspect names and types before building:
 
 ```bash
-python3 -m x2py fmodule_vars_f90.f90 --pyi
+python3 -m x2py module_state.f90 --pyi
 ```
 
 The generated package entry preserves the module namespace:
 
 ```python
-from . import fmodule_vars_f90
+from . import module_state
 ```
 
 The generated module contract is:
@@ -159,8 +158,8 @@ check native visibility, and use [Runtime Issues](../troubleshooting/runtime-iss
 
 ## Evidence
 
-The module attributes, hidden accessors, mutation, saved state, and repeated
-import behavior are checked by
+The same module-state behavior, hidden accessors, mutation, saved state, and
+repeated import behavior are checked by the internal fixture tests in
 [`test_module_state.py`](../../tests/wrapper/fortran/module_state/test_module_state.py).
 Generated module contracts are checked by
 [`test_module_state_generated_pyi_contracts.py`](../../tests/wrapper/fortran/module_state/test_module_state_generated_pyi_contracts.py).

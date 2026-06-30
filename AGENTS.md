@@ -21,7 +21,15 @@ Changes in `x2py/semantics/ir2ast.py`, `x2py/codegen/`, and `x2py/compiling/` ar
 Do not run LAPACK wrapper tests locally unless the user explicitly asks for them. Local verification may run everything else, including BLAS-only real-library tests; leave LAPACK coverage to GitHub Actions by default.
 Do not run the full coverage workflow for routine changes. Run focused tests plus the required static-analysis suite. Reserve the complete CI-style coverage workflow for explicit pre-merge or pull-request verification, or when the user specifically requests it.
 When investigating coverage failures, mirror the GitHub Actions workflow before deciding the fix: run coverage with `COVERAGE_PROCESS_START=pyproject.toml`, combine parallel data with `python3 -m coverage combine`, then run `python3 -m coverage report`. Do not assume a plain local coverage run matches CI, especially when subprocess tests are involved.
-At the end of every change, before the final response, run the complete GitHub Actions static-analysis suite to verify code quality:
+For documentation-only changes that do not modify executable Python code,
+runtime behavior, build configuration, or test logic, do not run the complete
+static-analysis suite by default. Run the focused documentation checks and
+whitespace check instead:
+- `python3 -m pytest -q tests/tools/test_documentation_examples.py tests/tools/test_documentation_structure.py`
+- `git diff --check`
+Run the complete static-analysis suite when code, tests, build behavior, or
+tooling configuration changes, or when explicitly requested for pre-merge or
+pull-request verification:
 - `python3 -m ruff check .`
 - `python3 -m ruff format --check .`
 - `bandit -c pyproject.toml -r c_parser fortran_parser semantics x2py --severity-level medium --confidence-level medium`
