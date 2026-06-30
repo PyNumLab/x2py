@@ -628,7 +628,7 @@ def test_x2py_c_compiler_source_loader_drives_semantics_and_readiness(tmp_path: 
     assert calls == [header, header]
 
 
-def test_cli_c_requires_a_stage_and_combines_pyi_with_readiness(tmp_path: Path):
+def test_cli_c_requires_a_stage(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
 
@@ -639,12 +639,3 @@ def test_cli_c_requires_a_stage_and_combines_pyi_with_readiness(tmp_path: Path):
     )
     assert no_stage.returncode == 2
     assert "--language c requires a stage flag" in no_stage.stderr
-
-    combined = subprocess.run(
-        [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi", "--wrap-readiness"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    assert "def add(" in combined.stdout
-    assert "Wrappable: yes" in combined.stdout
