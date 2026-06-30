@@ -552,8 +552,11 @@ from .helpers import norm2
 
 Leaf files continue to identify native modules. Entry imports compose the
 Python package; they do not rename native modules or infer object files.
-Conflicting exports, missing relative files, and import cycles fail while the
-contract graph is loaded.
+Supported relative imports include module imports, selective declaration
+imports, wildcard flattening, and `as` aliases. Repeating the same export is
+idempotent, and exporting both the original name and an alias is allowed when
+both exports are explicit. Conflicting exports to the same Python name, missing
+relative files, and import cycles fail while the contract graph is loaded.
 
 ## Diagnostics For Edited Contracts
 

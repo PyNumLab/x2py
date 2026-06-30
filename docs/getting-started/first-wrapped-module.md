@@ -132,7 +132,58 @@ The generated package entry preserves the module namespace:
 from . import module_state
 ```
 
-The generated module contract is:
+That entry file is Python export policy. In the advanced contract-editing
+workflow, it can reshape exports without changing the native module leaf. To
+try a small export edit, generate an editable package:
+
+```bash
+python3 -m x2py module_state.f90 --pyi --out contracts/module_state
+```
+
+Then edit `contracts/module_state/__init__.pyi` from the generated
+namespace-preserving form:
+
+```python
+from . import module_state
+```
+
+to this explicit flattening form:
+
+```python
+from .module_state import *
+```
+
+Build the edited entry contract with the same native source:
+
+```bash
+python3 -m x2py contracts/module_state/__init__.pyi \
+  --wrap \
+  --native-fortran-sources module_state.f90 \
+  --out module_state_flat \
+  --out-dir build/module-state-flat
+```
+
+The resulting shared library exposes module procedures at the extension root:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/module-state-flat")
+import module_state_flat
+
+assert module_state_flat.summarize() == np.int32(15)
+assert not hasattr(module_state_flat, "module_state")
+```
+
+The detailed editing guide covers selective imports and `as` aliases. These
+edits reshape Python exports only; they are not native ABI changes. Keep the
+leaf contract as the source of native facts, and use
+[Editing Semantic .pyi Contracts](../user-guide/editing-semantic-pyi-contracts.md)
+when you are ready to edit the generated contract package.
+
+The generated module leaf remains the native contract:
 
 ```python
 nmax: Final[Int32] = 12
@@ -163,3 +214,5 @@ repeated import behavior are checked by the internal fixture tests in
 [`test_module_state.py`](../../tests/wrapper/fortran/module_state/test_module_state.py).
 Generated module contracts are checked by
 [`test_module_state_generated_pyi_contracts.py`](../../tests/wrapper/fortran/module_state/test_module_state_generated_pyi_contracts.py).
+Edited entry export policy is checked by
+[`test_pyi_wrapper_builds.py`](../../tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py).

@@ -661,6 +661,19 @@ def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None
     assert "[language feature matrix](../language-support/feature-matrix.md)" in page
 
 
+def test_beginner_workflow_reuses_scale_example_without_renaming_it() -> None:
+    page = (DOCS_ROOT / "getting-started/beginner-workflow.md").read_text(encoding="utf-8")
+    source_reference_index = page.index("[README Quick Start](../../README.md#quick-start)")
+    layout_index = page.index("src/\n    scale.f90")
+    inspect_index = page.index("python3 -m x2py src/scale.f90 --wrap-readiness")
+    build_index = page.index("python3 -m x2py src/scale.f90 \\\n  --wrap \\\n  --out-dir build/scale")
+    smoke_index = page.index("result = scale.scale(np.float64(3.0), np.float64(2.5))")
+    advanced_index = page.index("## Advanced Next Step: Edit The Semantic Contract")
+
+    assert source_reference_index < layout_index < inspect_index < build_index < smoke_index < advanced_index
+    assert "scale_api" not in page
+
+
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)
 def test_cli_help_uses_documented_option_groups(heading: str) -> None:
     assert heading in _x2py_cli_help()

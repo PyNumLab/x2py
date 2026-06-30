@@ -607,9 +607,11 @@ from .m1 import *
 ```
 
 The first form creates child namespace `m2`, the second exports only `f`, and
-the third explicitly flattens all public names. Missing relative imports,
-relative-import cycles, and conflicting exports fail before code generation and
-identify the participating contract paths.
+the third explicitly flattens all public names. Repeating the same export is
+idempotent, and the same declaration may be exported under its original name and
+one or more aliases when each export is requested explicitly. Missing relative
+imports, relative-import cycles, and conflicting exports fail before code
+generation and identify the participating contract paths.
 
 Absolute support imports such as `from typing import Callable` or
 `from types import SimpleNamespace` may support annotation parsing, but they are
