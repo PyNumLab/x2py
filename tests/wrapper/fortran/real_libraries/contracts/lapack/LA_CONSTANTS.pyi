@@ -1,4 +1,4 @@
-sp: Final[Int32] = kind(1.0)
+sp: Final[Int32]
 
 szero: Final[Float32] = 0
 
@@ -32,15 +32,15 @@ seps: Final[Float32]
 
 ssafmin: Final[Float32]
 
-ssafmax: Final[Float32] = sone / ssafmin
+ssafmax: Final[Float32]
 
-ssmlnum: Final[Float32] = ssafmin / sulp
+ssmlnum: Final[Float32]
 
-sbignum: Final[Float32] = ssafmax * sulp
+sbignum: Final[Float32]
 
-srtmin: Final[Float32] = sqrt(ssmlnum)
+srtmin: Final[Float32]
 
-srtmax: Final[Float32] = sqrt(sbignum)
+srtmax: Final[Float32]
 
 stsml: Final[Float32]
 
@@ -84,15 +84,15 @@ deps: Final[Float64]
 
 dsafmin: Final[Float64]
 
-dsafmax: Final[Float64] = done / dsafmin
+dsafmax: Final[Float64]
 
-dsmlnum: Final[Float64] = dsafmin / dulp
+dsmlnum: Final[Float64]
 
-dbignum: Final[Float64] = dsafmax * dulp
+dbignum: Final[Float64]
 
-drtmin: Final[Float64] = sqrt(dsmlnum)
+drtmin: Final[Float64]
 
-drtmax: Final[Float64] = sqrt(dbignum)
+drtmax: Final[Float64]
 
 dtsml: Final[Float64]
 
