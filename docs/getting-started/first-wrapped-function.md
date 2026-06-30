@@ -68,6 +68,16 @@ Before compiling, print the semantic contract:
 python3 -m x2py tests/data/fortran/wrapper/scale.f90 --pyi
 ```
 
+The generated declaration is:
+
+```python
+@external
+def scale(
+    value: Ptr(Const(Float64)),
+    factor: Ptr(Const(Float64))
+) -> Float64: ...
+```
+
 The contract describes `value` and `factor` as pointers to constant `Float64`
 values and the function result as `Float64`. The semantic `.pyi` is a native
 contract, not an ordinary pure-Python type stub. Read
@@ -92,20 +102,9 @@ scale.scale(np.float64(3.0), np.float64(2.5))
 For array functions, rank, dtype, shape, order, contiguity, and allowed stride
 patterns can also be contract requirements. Continue with
 [Wrapping Functions](../user-guide/wrapping-functions.md) and
-[Arrays](../user-guide/arrays.md).
-
-## Current Limitations
-
-- The wrapper uses the GNU compiler/ABI path; other compiler families are not
-  established by the current runtime evidence.
-- Standalone procedures live at the extension root. Contained module procedures
-  instead live under their Python child module, as shown in
-  [First Wrapped Module](first-wrapped-module.md).
-- Runtime generation in this workflow accepts Fortran source.
-
-<!-- X2PY_C_DOCS_START
-- Runtime generation in this workflow accepts Fortran source, not user C input.
-X2PY_C_DOCS_END -->
+[Arrays](../user-guide/arrays.md). The central
+[language feature matrix](../language-support/feature-matrix.md) records
+supported, partial, and unsupported wrapper forms.
 
 Build failures go to [Build Issues](../troubleshooting/build-issues.md); a
 successful import followed by a call failure goes to

@@ -638,6 +638,18 @@ def test_getting_started_sequence_builds_a_function_before_creating_a_project() 
     assert "build_from_source/test_runtime_abi.py" not in overview
 
 
+def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_centrally() -> None:
+    page = (DOCS_ROOT / "getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
+    command_index = page.index("python3 -m x2py tests/data/fortran/wrapper/scale.f90 --pyi")
+    contract_index = page.index(
+        "@external\ndef scale(\n    value: Ptr(Const(Float64)),\n    factor: Ptr(Const(Float64))\n) -> Float64: ..."
+    )
+
+    assert command_index < contract_index
+    assert "## Current Limitations" not in page
+    assert "[language feature matrix](../language-support/feature-matrix.md)" in page
+
+
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)
 def test_cli_help_uses_documented_option_groups(heading: str) -> None:
     assert heading in _x2py_cli_help()
