@@ -26,9 +26,18 @@ interpreter. The third proves that the module entrypoint is installed.
 
 ## 2. Verify The Inspection Path
 
-Use the small module from
-[Basic Wrapper: inspect a small Fortran source](../tutorials/basic-wrapper.md#step-1-inspect-a-small-fortran-source)
-and save it as `basic_subroutine.f90`.
+Create `basic_subroutine.f90` with this module:
+
+<!-- x2py-doc-source: tests/data/fortran/general/basic_subroutine.f90 -->
+```fortran
+module m1
+contains
+subroutine add1(n, x)
+  integer, intent(in) :: n
+  real(kind=8), intent(inout), dimension(n) :: x
+end subroutine add1
+end module m1
+```
 
 From the directory containing `basic_subroutine.f90`, inspect readiness without
 compiling a wrapper:
@@ -68,9 +77,16 @@ gcc &#45;&#45;version
 ```
 X2PY_C_DOCS_END -->
 
-Use the standalone function from
-[First Wrapped Function: source](first-wrapped-function.md#source) and save it
-as `scale.f90`.
+Create `scale.f90` with this standalone function:
+
+<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
+```fortran
+real(8) function scale(value, factor) result(output)
+  real(8), intent(in) :: value
+  real(8), intent(in) :: factor
+  output = value * factor
+end function scale
+```
 
 From the directory containing `scale.f90`, build it into a dedicated directory:
 
@@ -156,7 +172,7 @@ the full GitHub Actions matrix is the final cross-version evidence.
 
 ## Evidence
 
-The linked source inputs are checked against repository fixtures by
+The displayed source inputs are checked against repository fixtures by
 [`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py).
 Native artifact placement and runtime calls are checked by
 [`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py)
