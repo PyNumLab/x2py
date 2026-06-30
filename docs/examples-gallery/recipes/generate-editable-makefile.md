@@ -17,6 +17,7 @@ manifest is the source of truth used to generate the Makefile.
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
+  --wrap \
   --makefile \
   --out-dir build/fruntime_abi \
   --json
@@ -67,9 +68,10 @@ X2PY_C_DOCS_END -->
 ## Notes
 
 - `--makefile` generates the build plan without compiling immediately.
+- `--makefile` is a wrapper-build option and must be used with `--wrap`.
 - `--makefile` and `--verbose` are mutually exclusive.
 - `.pyi` Makefile generation is replayable through
-  `python3 -m x2py --build-manifest build/fruntime_abi/x2py-build.json --makefile`
+  `python3 -m x2py --build-manifest build/fruntime_abi/x2py-build.json --wrap --makefile`
   or buildable through
   `python3 -m x2py --build-manifest build/fruntime_abi/x2py-build.json --wrap`.
 - User Fortran sources remain in caller-provided order. Generated independent

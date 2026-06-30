@@ -234,7 +234,7 @@ different public API or runtime contract.
   that flag, `__init__.pyi` is selected automatically.
 - [ ] One supplied `.pyi` works as an implicit root, while multiple `.pyi` files
   without `--root-contract` or `__init__.pyi` fail as ambiguous.
-- [ ] `--extension-name` controls the extension filename, `PyInit_<name>`, JSON
+- [ ] wrapper wrapper `--out` controls the extension filename, `PyInit_<name>`, JSON
   build result, and successful Python import in every contract-bundle path.
 
 ### 6.4 Namespace and export policy

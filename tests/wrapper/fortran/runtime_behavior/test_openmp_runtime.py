@@ -29,6 +29,7 @@ def test_openmp_enabled_procedure_builds_with_explicit_gnu_flags(tmp_path: Path)
             "-m",
             "x2py",
             str(source),
+            "--wrap",
             "--makefile",
             "--out-dir",
             str(tmp_path),

@@ -272,6 +272,7 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
             "x2py",
             "--build-manifest",
             str(manifest_path),
+            "--wrap",
             "--makefile",
             "--json",
         ],

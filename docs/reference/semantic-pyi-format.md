@@ -291,7 +291,7 @@ python3 -m x2py contracts/basic_subroutine/__init__.pyi \
 ```
 
 For `__init__.pyi`, the package directory name supplies the extension name
-unless `--extension-name` is provided. The runtime follows the entry's import
+unless wrapper `--out NAME` is provided. The runtime follows the entry's import
 policy: `from . import m1` exposes `basic_subroutine.m1`, while
 `from .m1 import *` explicitly flattens `m1` into the extension root.
 
@@ -555,7 +555,7 @@ from .module2 import *
 The entry filename chooses the compiled extension and shared-library name by
 default. For `__init__.pyi`, the resolved containing directory name is used;
 calling x2py as either `foo/__init__.pyi` or `__init__.pyi` from inside `foo/`
-therefore selects `foo`. `--extension-name`
+therefore selects `foo`. Wrapper `--out NAME`
 overrides that inference and controls the extension filename,
 `PyInit_<name>` symbol, and Python import name.
 
@@ -564,14 +564,14 @@ Target CLI shapes are:
 ```bash
 python3 -m x2py contracts/library/__init__.pyi \
   --wrap \
-  --extension-name library \
+  --out library \
   --native-objects native.a
 ```
 
 ```bash
 python3 -m x2py api.pyi \
   --wrap \
-  --extension-name library \
+  --out library \
   --native-library native \
   --native-library-dir /path/to/libs
 ```
@@ -581,7 +581,7 @@ For a single standalone fragment, no `__init__.pyi` is required:
 ```bash
 python3 -m x2py dgesv.pyi \
   --wrap \
-  --extension-name lapack_dgesv \
+  --out lapack_dgesv \
   --native-objects dgesv.o
 ```
 

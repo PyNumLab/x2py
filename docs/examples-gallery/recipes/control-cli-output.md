@@ -53,14 +53,22 @@ File: tests/data/fortran/general/modern_pyi_example.f90
         ... 6 more procedures
 ```
 
-## Combine Inspection Stages
+## Run Separate Inspection Stages
 
-You can ask for more than one inspection stage in a single command:
+Choose one inspection stage per command. For parser details, run:
 
 <!-- x2py-doc-test: run -->
 ```bash
 python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --parse --wrap-readiness
+  --parse
+```
+
+For wrapper readiness, run a separate command:
+
+<!-- x2py-doc-test: run -->
+```bash
+python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
+  --wrap-readiness
 ```
 
 <!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: run -->

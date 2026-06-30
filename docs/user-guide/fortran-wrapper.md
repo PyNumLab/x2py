@@ -251,7 +251,7 @@ python3 -m x2py contracts/module.pyi \
   --json
 
 python3 -m x2py --build-manifest build/module/x2py-build.json --wrap
-python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
+python3 -m x2py --build-manifest build/module/x2py-build.json --wrap --makefile
 ```
 
 Edited `.pyi` contracts may expose the native call shape directly. If every
@@ -285,7 +285,7 @@ Runtime tests: [`test_pyi_wrapper_builds.py`](../../tests/wrapper/fortran/build_
 Use `--verbose` to execute a build while printing every exact, shell-escaped
 compiler and linker command. Verbose builds also print elapsed time for each
 compiler/linker command and for the wrapper creation, printing, and compilation
-stages. Use `--makefile` to generate an editable `Makefile.x2py` without
+stages. Use `--wrap --makefile` to generate an editable `Makefile.x2py` without
 compiling. These modes are mutually exclusive.
 
 <!-- X2PY_C_DOCS_START
@@ -1691,7 +1691,7 @@ objects are separate build inputs and keep caller order.
 ```bash
 python3 -m x2py contracts/__init__.pyi \
   --wrap \
-  --extension-name first_api \
+  --out first_api \
   --native-objects native/first_api.o native/second_api.o \
   --native-include-dir native \
   --out-dir build/first_api
@@ -1707,7 +1707,7 @@ result = build_pyi_extension(
     "contracts/__init__.pyi",
     native_objects=["native/first_api.o", "native/second_api.o"],
     native_include_dirs=["native"],
-    extension_name="first_api",
+    output_name="first_api",
     output_dir="build/first_api",
 )
 
@@ -1733,7 +1733,7 @@ module contracts; the entry only changes the Python-facing export tree.
 ### Editable Makefile
 
 ```bash
-python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build --json
+python3 -m x2py mesh.f90 solver.f90 --wrap --makefile --out-dir build --json
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
@@ -1971,7 +1971,7 @@ uses the normal GIL-release policy. For GNU Fortran, pass OpenMP flags to both
 compile and link steps:
 
 ```bash
-python3 -m x2py parallel_api.f90 --makefile --out-dir build --json
+python3 -m x2py parallel_api.f90 --wrap --makefile --out-dir build --json
 make -f build/Makefile.x2py \
   X2PY_FFLAGS=-fopenmp \
   X2PY_LDFLAGS=-fopenmp

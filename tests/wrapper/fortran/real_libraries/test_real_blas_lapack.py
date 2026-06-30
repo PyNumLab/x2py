@@ -381,7 +381,7 @@ def test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_li
     expected_root_names = {function.name for function in _root_module(runtime_entry.parent).functions}
     result = build_pyi_extension(
         runtime_entry,
-        extension_name=f"full_{library}",
+        output_name=f"full_{library}",
         output_dir=tmp_path / "build" / library,
         native_objects=[shared],
         wrapper_fortran_flags=FULL_LIBRARY_WRAPPER_FLAGS,

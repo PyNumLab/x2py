@@ -517,52 +517,68 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         maxsplit=1,
     )[0]
 
-    source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->")
+    source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->")
     fortran_block_index = quick_start.index("```fortran", source_index)
     source_build_command_index = quick_start.index(
-        "python3 -m x2py scale_api.f90 --json",
+        "python3 -m x2py scale.f90",
         fortran_block_index,
     )
     default_source_build_tree_index = quick_start.index(
-        ".\n  scale_api.f90\n  scale_api.so\n  __x2py__/", source_build_command_index
+        ".\n  scale.f90\n  scale.so\n  __x2py__/", source_build_command_index
     )
-    explicit_source_build_command_index = quick_start.index(
-        "python3 -m x2py scale_api.f90 \\\n  --out-dir build/scale_api",
+    named_source_build_command_index = quick_start.index(
+        "python3 -m x2py scale.f90 --out SCALE",
         default_source_build_tree_index,
     )
-    explicit_source_build_tree_index = quick_start.index("build/scale_api/", explicit_source_build_command_index)
+    named_source_build_tree_index = quick_start.index(
+        ".\n  scale.f90\n  SCALE.so\n  __x2py__/",
+        named_source_build_command_index,
+    )
+    explicit_source_build_command_index = quick_start.index(
+        "python3 -m x2py scale.f90 \\\n  --out SCALE \\\n  --out-dir build/SCALE",
+        named_source_build_tree_index,
+    )
+    explicit_source_build_tree_index = quick_start.index("build/SCALE/", explicit_source_build_command_index)
     pyi_generation_command_index = quick_start.index(
-        "python3 -m x2py scale_api.f90 \\\n  --pyi",
+        "python3 -m x2py scale.f90 \\\n  --pyi",
         explicit_source_build_tree_index,
     )
-    pyi_contract_tree_index = quick_start.index(
-        "contracts/\n  __init__.pyi\n  scale_api.pyi", pyi_generation_command_index
-    )
-    pyi_contract_body_index = quick_start.index(
-        "def scale(\n    value: Ptr(Const(Float64)),\n    factor: Ptr(Const(Float64))\n) -> Float64: ...",
+    pyi_contract_tree_index = quick_start.index("contracts/\n  __init__.pyi\n  scale.pyi", pyi_generation_command_index)
+    pyi_package_entry_index = quick_start.index(
+        "from . import scale",
         pyi_contract_tree_index,
     )
+    pyi_contract_body_index = quick_start.index(
+        "def scale_scalar(\n    value: Ptr(Const(Float64)),\n    factor: Ptr(Const(Float64))\n) -> Float64: ...",
+        pyi_package_entry_index,
+    )
     pyi_build_command_index = quick_start.index(
-        "python3 -m x2py contracts/scale_api.pyi",
+        "python3 -m x2py contracts/__init__.pyi",
         pyi_contract_body_index,
     )
-    native_source_argument_index = quick_start.index("--native-fortran-sources scale_api.f90", pyi_build_command_index)
-    pyi_build_tree_index = quick_start.index("build/scale_api_from_pyi/", native_source_argument_index)
-    direct_import_index = quick_start.index("scale_api.scale_api.scale", pyi_build_tree_index)
-    pyi_import_index = quick_start.index("scale_api.scale(np.float64(3.0), np.float64(2.5))", direct_import_index)
-    runtime_output_index = quick_start.index("7.5", pyi_import_index)
+    native_source_argument_index = quick_start.index("--native-fortran-sources scale.f90", pyi_build_command_index)
+    output_name_index = quick_start.index("--out SCALE", native_source_argument_index)
+    pyi_build_tree_index = quick_start.index("build/SCALE_from_pyi/", output_name_index)
+    direct_import_index = quick_start.index("SCALE.scale.scale_scalar", pyi_build_tree_index)
+    package_entry_import_section_index = quick_start.index("The package-entry `.pyi` build above", direct_import_index)
+    pyi_import_index = quick_start.index("SCALE.scale.scale_scalar", package_entry_import_section_index)
+    leaf_entry_note_index = quick_start.index("contracts/scale.pyi", pyi_import_index)
+    leaf_call_note_index = quick_start.index("SCALE.scale_scalar(...)", leaf_entry_note_index)
+    runtime_output_index = quick_start.index("7.5", leaf_call_note_index)
 
     assert source_index < fortran_block_index < source_build_command_index
-    assert source_build_command_index < default_source_build_tree_index < explicit_source_build_command_index
+    assert source_build_command_index < default_source_build_tree_index < named_source_build_command_index
+    assert named_source_build_command_index < named_source_build_tree_index < explicit_source_build_command_index
     assert explicit_source_build_command_index < explicit_source_build_tree_index < pyi_generation_command_index
-    assert pyi_generation_command_index < pyi_contract_tree_index < pyi_contract_body_index
-    assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index
-    assert native_source_argument_index < pyi_build_tree_index < direct_import_index < pyi_import_index
-    assert pyi_import_index < runtime_output_index
-    assert "tests/data/fortran/wrapper/scale_api.f90" in quick_start
-    assert "--extension-name NAME" in quick_start
+    assert pyi_generation_command_index < pyi_contract_tree_index < pyi_package_entry_index < pyi_contract_body_index
+    assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index < output_name_index
+    assert output_name_index < pyi_build_tree_index < direct_import_index < package_entry_import_section_index
+    assert package_entry_import_section_index < pyi_import_index
+    assert pyi_import_index < leaf_entry_note_index < leaf_call_note_index < runtime_output_index
+    assert "tests/data/fortran/wrapper/scale.f90" in quick_start
+    assert "scale.f90 --json" not in quick_start
     assert "python3 -m x2py solver.f90" not in quick_start
-    assert "python3 -m x2py tests/data/fortran/wrapper/scale_api.f90" not in quick_start
+    assert "python3 -m x2py tests/data/fortran/wrapper/scale.f90" not in quick_start
     assert "fruntime_abi_f90" not in readme
     assert "solver.f90" not in readme
     assert "add1" not in readme

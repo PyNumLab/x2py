@@ -916,7 +916,7 @@ def _pyi_build_manifest(
     output_dir: Path,
     shared_library: Path,
     strict_wrapper_names: bool,
-    requested_extension_name: str | None,
+    requested_output_name: str | None,
     native_fortran_flags: tuple[str, ...],
     wrapper_compiler_debug: bool,
     wrapper_fortran_flags: tuple[str, ...],
@@ -930,7 +930,7 @@ def _pyi_build_manifest(
         "entry_contract": _manifest_path(bundle.entry, base=manifest_dir),
         "contract_paths": [_manifest_path(path, base=manifest_dir) for path in bundle.paths],
         "extension": {
-            "requested_name": requested_extension_name,
+            "requested_name": requested_output_name,
             "module_name": module_name,
         },
         "output": {
@@ -1066,6 +1066,15 @@ def _merge_wrapper_modules(modules: list[SemanticModule], *, name: str | None = 
         metadata=_wrapper_module_metadata(modules),
         origin=modules[0].origin,
     )
+
+
+def _wrapper_codegen_module_name(codegen_ast, requested_name: str, *, explicit_output_name: bool) -> str:
+    if not explicit_output_name:
+        return str(codegen_ast.scope.get_python_name(codegen_ast.name))
+
+    codegen_ast._name = requested_name
+    codegen_ast.scope._original_symbol[requested_name] = requested_name
+    return requested_name
 
 
 def _wrapper_module_metadata(modules: list[SemanticModule]) -> dict[str, object]:
@@ -1288,6 +1297,7 @@ def build_fortran_extension(
     sources: str | Path | Iterable[str | Path],
     *,
     output_dir: str | Path | None = None,
+    output_name: str | None = None,
     preprocessing: PreprocessingConfig | None = None,
     strict_wrapper_names: bool = False,
     fortran_type_report=None,
@@ -1340,7 +1350,10 @@ def build_fortran_extension(
         type_facts=type_facts,
     )
     _apply_source_python_exports(modules)
-    module = _merge_wrapper_modules(modules, name=primary_source.stem)
+    requested_name = output_name or primary_source.stem
+    if not requested_name.isidentifier():
+        raise ValueError(f"Output name must be a valid Python identifier: {requested_name!r}")
+    module = _merge_wrapper_modules(modules, name=requested_name)
     complete_semantic_policies(module)
     scope = Scope(
         name=module.name,
@@ -1349,7 +1362,11 @@ def build_fortran_extension(
         public_namespace=(module.name.casefold(),),
     )
     codegen_ast = semantic_ir_to_codegen_ast(module, scope)
-    module_name = str(codegen_ast.scope.get_python_name(codegen_ast.name))
+    module_name = _wrapper_codegen_module_name(
+        codegen_ast,
+        requested_name,
+        explicit_output_name=output_name is not None,
+    )
 
     wrapper_fortran_flags = _compiler_flags(wrapper_fortran_flags)
     wrapper_c_flags = _compiler_flags(wrapper_c_flags)
@@ -1442,7 +1459,7 @@ def build_pyi_extension(
     native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None = None,
     native_library_dirs: Iterable[str | Path] | None = None,
     native_include_dirs: Iterable[str | Path] | None = None,
-    extension_name: str | None = None,
+    output_name: str | None = None,
     output_dir: str | Path | None = None,
     strict_wrapper_names: bool = False,
     makefile: bool = False,
@@ -1479,9 +1496,9 @@ def build_pyi_extension(
 
     modules = list(bundle.modules)
     validate_pyi_native_contract(modules)
-    requested_name = extension_name or _bundle_extension_name(bundle)
+    requested_name = output_name or _bundle_output_name(bundle)
     if not requested_name.isidentifier():
-        raise ValueError(f"Extension name must be a valid Python identifier: {requested_name!r}")
+        raise ValueError(f"Output name must be a valid Python identifier: {requested_name!r}")
     module = _merge_wrapper_modules(modules, name=requested_name)
     complete_semantic_policies(module)
     scope = Scope(
@@ -1491,7 +1508,11 @@ def build_pyi_extension(
         public_namespace=(module.name.casefold(),),
     )
     codegen_ast = semantic_ir_to_codegen_ast(module, scope)
-    module_name = str(codegen_ast.scope.get_python_name(codegen_ast.name))
+    module_name = _wrapper_codegen_module_name(
+        codegen_ast,
+        requested_name,
+        explicit_output_name=output_name is not None,
+    )
 
     include_dirs = _pyi_native_include_dirs(native_inputs, output_path=output_path)
     native_source_objects = _pyi_native_source_objects(
@@ -1551,7 +1572,7 @@ def build_pyi_extension(
         output_dir=output_path,
         shared_library=shared_library_path,
         strict_wrapper_names=strict_wrapper_names,
-        requested_extension_name=extension_name,
+        requested_output_name=output_name,
         native_fortran_flags=native_inputs.source_flags,
         wrapper_compiler_debug=wrapper_compiler_debug,
         wrapper_fortran_flags=wrapper_fortran_flags,
@@ -1613,6 +1634,7 @@ def build_pyi_extension(
 def build_pyi_extension_from_manifest(
     manifest: str | Path,
     *,
+    output_name: str | None = None,
     makefile: bool = False,
     verbose: bool | int = False,
 ) -> WrapperBuildResult:
@@ -1635,7 +1657,7 @@ def build_pyi_extension_from_manifest(
     strict_wrapper_names = output_section.get("strict_wrapper_names", False)
     if not isinstance(strict_wrapper_names, bool):
         raise ValueError("Wrapper build manifest output.strict_wrapper_names must be a boolean")
-    requested_name = extension_section.get("requested_name")
+    requested_name = output_name if output_name is not None else extension_section.get("requested_name")
     if requested_name is not None and not isinstance(requested_name, str):
         raise ValueError("Wrapper build manifest extension.requested_name must be a string or null")
 
@@ -1647,7 +1669,7 @@ def build_pyi_extension_from_manifest(
         native_fortran_flags=_manifest_string_list(compiler_section, "fortran_flags"),
         native_include_dirs=native_include_dirs,
         native_library_dirs=_manifest_path_list(native_section, "library_dirs", base=base),
-        extension_name=requested_name,
+        output_name=requested_name,
         output_dir=output_path,
         strict_wrapper_names=strict_wrapper_names,
         makefile=makefile,
@@ -1665,7 +1687,7 @@ def build_pyi_extension_from_manifest(
     return result
 
 
-def _bundle_extension_name(bundle: _PyiContractBundle) -> str:
+def _bundle_output_name(bundle: _PyiContractBundle) -> str:
     if bundle.entry.name == "__init__.pyi":
         return bundle.entry.resolve().parent.name
     return bundle.entry.stem

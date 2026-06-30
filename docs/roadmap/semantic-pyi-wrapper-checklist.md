@@ -280,12 +280,12 @@ surface evidence lives in `tests/parser/test_cli.py`.
 - [x] Native sources, prebuilt objects, archives, direct shared libraries, named
   libraries, and ordered native link items can be mixed without changing the
   `.pyi`-defined Python API or reparsing native implementation sources.
-- [x] `.pyi --makefile --json` writes `<out-dir>/x2py-build.json` and
+- [x] `.pyi --wrap --makefile --json` writes `<out-dir>/x2py-build.json` and
   `<out-dir>/Makefile.x2py`; JSON output reports both artifacts and the
   normalized manifest.
 - [x] `--build-manifest PATH --wrap` validates and executes a saved manifest,
-  and `--build-manifest PATH --makefile` regenerates `Makefile.x2py` without
-  positional contracts or repeated native flags.
+  and `--build-manifest PATH --wrap --makefile` regenerates `Makefile.x2py`
+  without positional contracts or repeated native flags.
 - [x] `Makefile.x2py` tracks the manifest, complete `.pyi` graph, native
   implementation inputs, compile outputs, and link target while preserving
   source compile order and native link order.
@@ -613,7 +613,7 @@ implemented single-entry contract and is not a future feature.
   redefining native module structure. For explicit `--out PATH`, `PATH` is the
   package and `PATH/__init__.pyi` is the entry.
 - [x] The entry stem determines extension identity. For `__init__.pyi`, the
-  parent directory name is used. `--extension-name` explicitly overrides either
+  parent directory name is used. Wrapper `--out NAME` explicitly overrides either
   inference path.
 ### Python Namespace And Root Export Policy
 
@@ -621,7 +621,7 @@ Only after imported contracts retain native structure may the entry contract
 reshape exports.
 
 - [x] The generated Python extension is the root namespace inferred from the
-  entry contract or selected by `--extension-name`.
+  entry contract or selected by wrapper `--out NAME`.
 - [x] Every imported Fortran module is preserved as one child namespace of the extension;
   its procedures, variables, derived types, constructors, and overloads remain
   under that namespace instead of being flattened into the extension root.
@@ -700,7 +700,7 @@ different public API or runtime contract.
 - [x] The entry stem controls the extension filename, `PyInit_<name>`, JSON
   build result, and import name; `__init__.pyi` uses its resolved parent
   directory, including when invoked from inside that directory.
-- [x] `--extension-name` overrides the inferred extension filename, `PyInit_<name>`, JSON
+- [x] Wrapper `--out NAME` overrides the inferred extension filename, `PyInit_<name>`, JSON
   build result, and successful Python import in every contract-bundle path.
 
 #### Namespace and export policy

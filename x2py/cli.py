@@ -4,9 +4,10 @@ import argparse
 import json
 import os
 import shlex
+import shutil
 import sys
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, fields, is_dataclass
+from dataclasses import asdict, dataclass, fields, is_dataclass, replace
 from pathlib import Path
 
 from x2py.c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
@@ -66,13 +67,13 @@ _CLI_HELP_EPILOG = (
     "\n"
     "  Check wrapper readiness:\n"
     "    python3 -m x2py path/to/file.f90 --wrap-readiness\n"
-    "    python3 -m x2py path/to/file.f90 --semantics --wrap-readiness\n"
     "    python3 -m x2py path/to/module.pyi --wrap-readiness --json\n"
     "\n"
     "  Build wrappers:\n"
     "    python3 -m x2py path/to/file.f\n"
-    "    python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
-    "    python3 -m x2py basic_subroutine.pyi --wrap --native-objects basic_subroutine.o\n"
+    "    python3 -m x2py path/to/file.f90 --out my_extension\n"
+    "    python3 -m x2py dependency.f90 api.f90 --wrap --makefile --out-dir build\n"
+    "    python3 -m x2py contracts/__init__.pyi --wrap --out my_extension --native-objects native.o\n"
     "    python3 -m x2py --build-manifest build/x2py-build.json --wrap\n"
     "\n"
     "  Write stage output:\n"
@@ -928,14 +929,21 @@ def _validate_fortran_type_probe_options(
 
 
 def _has_stage(args: argparse.Namespace) -> bool:
-    return bool(
-        args.parse
-        or args.semantics
-        or args.pyi
-        or args.wrap_readiness
-        or getattr(args, "wrap", False)
-        or getattr(args, "makefile", False)
-    )
+    return bool(args.parse or args.semantics or args.pyi or args.wrap_readiness or getattr(args, "wrap", False))
+
+
+def _selected_stage_flags(args: argparse.Namespace) -> list[str]:
+    return [
+        flag
+        for flag, selected in (
+            ("--parse", args.parse),
+            ("--semantics", args.semantics),
+            ("--pyi", args.pyi),
+            ("--wrap-readiness", args.wrap_readiness),
+            ("--wrap", getattr(args, "wrap", False)),
+        )
+        if selected
+    ]
 
 
 def _path_is_fortran_source(path: str) -> bool:
@@ -982,12 +990,13 @@ def _stage_defaults_to_wrap(args: argparse.Namespace) -> bool:
     return bool(
         args.language == "fortran"
         and not _has_stage(args)
+        and not getattr(args, "makefile", False)
         and any(Path(path).is_dir() or _path_is_fortran_source(path) for path in args.paths)
     )
 
 
 def _should_run_wrap(args: argparse.Namespace) -> bool:
-    return bool(getattr(args, "wrap", False) or getattr(args, "makefile", False) or _stage_defaults_to_wrap(args))
+    return bool(getattr(args, "wrap", False) or _stage_defaults_to_wrap(args))
 
 
 def _has_semantic_stage(args: argparse.Namespace) -> bool:
@@ -1053,8 +1062,18 @@ def _validate_source_wrap_options(args: argparse.Namespace, parser: argparse.Arg
         parser.error("Native artifact link flags are only supported for .pyi wrapper builds")
     if any(Path(path).is_dir() for path in args.paths):
         parser.error("--wrap expects Fortran source files, not directories")
-    if getattr(args, "extension_name", None) is not None:
-        parser.error("--extension-name is only supported for .pyi wrapper builds")
+
+
+def _validate_wrapper_out(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    if args.out is None:
+        return
+    if args.out == "":
+        parser.error("--out for wrapper builds requires an output name")
+    output_path = Path(args.out)
+    if output_path.suffix and output_path.suffix != ".so":
+        parser.error("--out for wrapper builds expects NAME or NAME.so")
+    if not output_path.stem.isidentifier():
+        parser.error("--out for wrapper builds expects a valid Python module name")
 
 
 def _validate_c_type_probe_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -1078,10 +1097,11 @@ def _validate_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentPa
         parser.error("--wrap currently requires --language fortran")
     if args.parse or args.semantics or args.pyi or args.wrap_readiness:
         parser.error("--wrap cannot be combined with --parse, --semantics, --pyi, or --wrap-readiness")
-    if args.out is not None:
-        parser.error("--wrap writes build artifacts; use --out-dir instead of --out")
     if getattr(args, "makefile", False) and getattr(args, "verbose", False):
         parser.error("--makefile cannot be combined with --verbose")
+    if args.out is not None and getattr(args, "makefile", False):
+        parser.error("--out names a compiled wrapper extension and cannot be combined with --makefile")
+    _validate_wrapper_out(args, parser)
 
     if _wrap_uses_build_manifest(args):
         _validate_manifest_wrap_options(args, parser)
@@ -1104,15 +1124,24 @@ def _validate_c_main_options(args: argparse.Namespace, parser: argparse.Argument
 
 
 def _validate_output_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
-    if args.out is not None and not _has_stage(args):
+    if args.out is not None and not (_has_stage(args) or _stage_defaults_to_wrap(args)):
         parser.error(f"--out requires a stage flag: choose one of {_STAGE_FLAGS_DESCRIPTION}")
     if (args.show_vars or args.print_limit is not None or args.vars_limit is not None) and not args.parse:
         parser.error("--show-vars/--print-limit require --parse")
 
 
+def _validate_stage_selection(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    selected = _selected_stage_flags(args)
+    if len(selected) > 1:
+        parser.error(f"Choose exactly one stage flag; cannot combine {', '.join(selected)}")
+    if getattr(args, "makefile", False) and not getattr(args, "wrap", False):
+        parser.error("--makefile requires --wrap")
+
+
 def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
-    if getattr(args, "build_manifest", None) is not None and not _should_run_wrap(args):
-        parser.error("--build-manifest requires --wrap or --makefile")
+    _validate_stage_selection(args, parser)
+    if getattr(args, "build_manifest", None) is not None and not getattr(args, "wrap", False):
+        parser.error("--build-manifest requires --wrap")
     if not args.paths and getattr(args, "build_manifest", None) is None:
         parser.error("Source input is required unless --build-manifest is used")
 
@@ -1231,6 +1260,38 @@ def _cli_wrapper_c_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
     return _cli_compiler_flags(raw_flags, option_name="--wrapper-c-flags")
 
 
+def _wrapper_shared_library_alias_path(result, raw_out: str | None) -> Path:
+    if raw_out in (None, ""):
+        return result.shared_library.with_name(f"{result.module_name}.so")
+
+    path = Path(raw_out)
+    target = path if path.suffix else path.with_suffix(".so")
+    if not target.is_absolute() and target.parent == Path("."):
+        return result.shared_library.with_name(target.name)
+    return target
+
+
+def _wrapper_output_name(args: argparse.Namespace) -> str | None:
+    if getattr(args, "out", None) is None:
+        return None
+    return Path(args.out).stem
+
+
+def _copy_wrapper_shared_library_alias(args: argparse.Namespace, result):
+    if not result.compiled:
+        return result
+
+    target = _wrapper_shared_library_alias_path(result, getattr(args, "out", None))
+    if target != result.shared_library:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(result.shared_library, target)
+
+    generated_files = result.generated_files
+    if target not in generated_files:
+        generated_files = (*generated_files, target)
+    return replace(result, shared_library=target, generated_files=generated_files)
+
+
 def _cli_native_libraries(raw_libraries: list[str] | None) -> tuple[str, ...]:
     if not raw_libraries:
         return ()
@@ -1312,14 +1373,16 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
     from x2py.wrapping import build_fortran_extension, build_pyi_extension, build_pyi_extension_from_manifest
 
     if _wrap_uses_build_manifest(args):
-        return build_pyi_extension_from_manifest(
+        result = build_pyi_extension_from_manifest(
             args.build_manifest,
+            output_name=_wrapper_output_name(args),
             makefile=getattr(args, "makefile", False),
             verbose=1 if getattr(args, "verbose", False) else 0,
         )
+        return _copy_wrapper_shared_library_alias(args, result)
 
     if _wrap_uses_pyi_contract(args):
-        return build_pyi_extension(
+        result = build_pyi_extension(
             args.paths[0],
             native_fortran_sources=getattr(args, "native_fortran_sources", None),
             native_fortran_flags=_cli_native_fortran_flags(getattr(args, "native_fortran_flags", None)),
@@ -1328,7 +1391,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
             native_link_items=_cli_native_link_items(getattr(args, "native_link_items", None)),
             native_library_dirs=getattr(args, "native_library_dirs", None),
             native_include_dirs=getattr(args, "native_include_dirs", None),
-            extension_name=getattr(args, "extension_name", None),
+            output_name=_wrapper_output_name(args),
             output_dir=getattr(args, "out_dir", None),
             strict_wrapper_names=getattr(args, "strict_wrapper_names", False),
             makefile=getattr(args, "makefile", False),
@@ -1337,10 +1400,12 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
             wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
             wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
         )
+        return _copy_wrapper_shared_library_alias(args, result)
 
-    return build_fortran_extension(
+    result = build_fortran_extension(
         args.paths,
         output_dir=getattr(args, "out_dir", None),
+        output_name=_wrapper_output_name(args),
         preprocessing=preprocessing,
         strict_wrapper_names=getattr(args, "strict_wrapper_names", False),
         fortran_type_report=_load_fortran_type_report_for_stages(args),
@@ -1353,6 +1418,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
         wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
         wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
     )
+    return _copy_wrapper_shared_library_alias(args, result)
 
 
 def _run_wrap_build_with_diagnostics(args: argparse.Namespace, preprocessing: PreprocessingConfig):
@@ -1383,11 +1449,6 @@ def _run_wrap_build_with_diagnostics(args: argparse.Namespace, preprocessing: Pr
 
 
 def _select_main_payload(args: argparse.Namespace, parse_payload, semantic_payload, readiness_payload):
-    if args.parse and args.wrap_readiness and (args.json or args.out is not None):
-        return {
-            "parse": parse_payload or {},
-            "wrap_readiness": readiness_payload or {},
-        }
     if args.parse:
         return parse_payload or {}
     if args.semantics or args.pyi:
@@ -1572,24 +1633,15 @@ def _print_main_output(
 
 def _print_wrap_readiness_output(
     args: argparse.Namespace,
-    payload: dict,
+    _payload: dict,
     *,
     parse_payload: dict[str, dict] | None,
     semantic_payload: dict[str, dict] | None,
     readiness_payload: dict[str, dict] | None,
     print_limit: int | None,
 ) -> None:
-    if args.parse and not args.json:
-        _print_parse_output(args, parse_payload or {}, print_limit)
-        print()
-        print(_format_semantic_readiness(readiness_payload or {}))
-    elif args.pyi and not args.json:
-        print_pyi_output(_format_pyi_report(semantic_payload or {}))
-        print()
-        print(_format_semantic_readiness(readiness_payload or {}))
-    elif args.parse or args.semantics or args.pyi:
-        print(json.dumps(payload, indent=2))
-    elif args.json:
+    _ = (parse_payload, semantic_payload, print_limit)
+    if args.json:
         print(json.dumps(readiness_payload or {}, indent=2))
     else:
         print(_format_semantic_readiness(readiness_payload or {}))
@@ -1924,18 +1976,16 @@ def main() -> int:
         metavar="DIR",
         help="Directories containing native module/interface files needed to compile .pyi wrapper bridges",
     )
-    wrapper_group.add_argument(
-        "--extension-name",
-        metavar="NAME",
-        help="Override the extension import name inferred from the entry contract",
-    )
     output_group.add_argument("--json", action="store_true", help="Print JSON to stdout")
     output_group.add_argument(
         "--out",
         nargs="?",
         const="",
         type=str,
-        help="Write stage output; for Fortran --pyi, PATH is the generated contract package directory",
+        help=(
+            "Write stage output, select the generated Fortran .pyi package directory, "
+            "or name the wrapper Python module and final .so"
+        ),
     )
     output_group.add_argument(
         "--out-dir",

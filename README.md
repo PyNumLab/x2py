@@ -31,25 +31,25 @@ and output options.
 
 The default user-facing action for a single Fortran source is to build a Python
 extension. This checked input source exists at
-`tests/data/fortran/wrapper/scale_api.f90`; copy it into your working directory
-as `scale_api.f90` before running the commands below:
+`tests/data/fortran/wrapper/scale.f90`; copy it into your working directory
+as `scale.f90` before running the commands below:
 
-<!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
 ```fortran
-module scale_api
+module scale
 contains
-  real(8) function scale(value, factor) result(output)
+  real(8) function scale_scalar(value, factor) result(output)
     real(8), intent(in) :: value
     real(8), intent(in) :: factor
     output = value * factor
-  end function scale
-end module scale_api
+  end function scale_scalar
+end module scale
 ```
 
 Build it with the default output locations:
 
 ```bash
-python3 -m x2py scale_api.f90 --json
+python3 -m x2py scale.f90
 ```
 
 By default, x2py writes the importable `.so` beside the input source and keeps
@@ -57,27 +57,48 @@ generated build intermediates under `__x2py__/`:
 
 ```text
 .
-  scale_api.f90
-  scale_api.so
+  scale.f90
+  scale.so
   __x2py__/
     generated-wrapper sources
     x2py_runtime/
 ```
 
-Use `--out-dir` when you want the shared library and generated intermediates in
-an explicit build directory:
+Name the Python extension and final `.so` explicitly with `--out NAME`:
 
 ```bash
-python3 -m x2py scale_api.f90 \
-  --out-dir build/scale_api \
-  --json
+python3 -m x2py scale.f90 --out SCALE
 ```
 
 Expected result:
 
 ```text
-build/scale_api/
-  scale_api.so
+.
+  scale.f90
+  SCALE.so
+  __x2py__/
+    generated-wrapper sources
+    x2py_runtime/
+```
+
+For a wrapper build, `--out SCALE` selects the Python module name and the final
+shared-library filename. The Fortran module namespace is still preserved inside
+that Python module.
+
+Use `--out-dir` when you want the shared library and generated intermediates in
+an explicit build directory:
+
+```bash
+python3 -m x2py scale.f90 \
+  --out SCALE \
+  --out-dir build/SCALE
+```
+
+Expected result:
+
+```text
+build/SCALE/
+  SCALE.so
   generated-wrapper sources
   x2py_runtime/
 ```
@@ -85,7 +106,7 @@ build/scale_api/
 Generate the semantic `.pyi` contract for the same source:
 
 ```bash
-python3 -m x2py scale_api.f90 \
+python3 -m x2py scale.f90 \
   --pyi \
   --out contracts
 ```
@@ -95,68 +116,78 @@ The command writes the contract package:
 ```text
 contracts/
   __init__.pyi
-  scale_api.pyi
+  scale.pyi
 ```
 
-Expected contract (`contracts/scale_api.pyi`):
+Expected package entry (`contracts/__init__.pyi`):
 
 ```python
-def scale(
+from . import scale
+```
+
+Expected leaf contract (`contracts/scale.pyi`):
+
+```python
+def scale_scalar(
     value: Ptr(Const(Float64)),
     factor: Ptr(Const(Float64))
 ) -> Float64: ...
 ```
 
-Then build the shared library from that `.pyi` contract and the same native
-implementation source:
+Then build the shared library from the package-entry `.pyi` contract and the
+same native implementation source:
 
 ```bash
-python3 -m x2py contracts/scale_api.pyi \
+python3 -m x2py contracts/__init__.pyi \
   --wrap \
-  --native-fortran-sources scale_api.f90 \
-  --out-dir build/scale_api_from_pyi \
-  --json
+  --native-fortran-sources scale.f90 \
+  --out SCALE \
+  --out-dir build/SCALE_from_pyi
 ```
 
-You can choose a different Python extension/module name for `.pyi` builds with
-`--extension-name NAME`.
+Use `--out NAME` with wrapper builds when you want the import name and final
+`.so` filename to differ from the default inferred name.
 
 The `.pyi` build produces the same importable extension shape:
 
 ```text
-build/scale_api_from_pyi/
-  scale_api.so
+build/SCALE_from_pyi/
+  SCALE.so
   generated-wrapper sources
   x2py_runtime/
 ```
 
 The direct source build preserves the native module namespace, so call the
-function through `scale_api.scale_api.scale`:
+function through `SCALE.scale.scale_scalar`:
 
 ```python
 import sys
 
 import numpy as np
 
-sys.path.insert(0, "build/scale_api")
-import scale_api
+sys.path.insert(0, "build/SCALE")
+import SCALE
 
-print(scale_api.scale_api.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
+print(SCALE.scale.scale_scalar(np.float64(3.0), np.float64(2.5)))  # 7.5
 ```
 
-The `.pyi` build above uses the leaf contract `contracts/scale_api.pyi` as the
-entry point, so it exposes the contract function at the extension top level:
+The package-entry `.pyi` build above also preserves the package namespace:
 
 ```python
 import sys
 
 import numpy as np
 
-sys.path.insert(0, "build/scale_api_from_pyi")
-import scale_api
+sys.path.insert(0, "build/SCALE_from_pyi")
+import SCALE
 
-print(scale_api.scale(np.float64(3.0), np.float64(2.5)))  # 7.5
+print(SCALE.scale.scale_scalar(np.float64(3.0), np.float64(2.5)))  # 7.5
 ```
+
+If you build from the leaf contract `contracts/scale.pyi` instead, the leaf
+function is the entry point and the call becomes `SCALE.scale_scalar(...)`. If you
+want the package-entry build to expose that top-level function, edit
+`contracts/__init__.pyi` to re-export it before building.
 
 Both calls print:
 
@@ -224,45 +255,45 @@ X2PY_C_DOCS_END -->
 Recognizable Fortran files do not require an explicit language. Parse the same
 checked source used in the Quick Start:
 
-Input (`scale_api.f90`):
+Input (`scale.f90`):
 
-<!-- x2py-doc-source: tests/data/fortran/wrapper/scale_api.f90 -->
+<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
 ```fortran
-module scale_api
+module scale
 contains
-  real(8) function scale(value, factor) result(output)
+  real(8) function scale_scalar(value, factor) result(output)
     real(8), intent(in) :: value
     real(8), intent(in) :: factor
     output = value * factor
-  end function scale
-end module scale_api
+  end function scale_scalar
+end module scale
 ```
 
 ```bash
-python3 -m x2py scale_api.f90 --parse
+python3 -m x2py scale.f90 --parse
 ```
 
 ```text
-File: scale_api.f90
+File: scale.f90
   Modules: 1
-    - module scale_api (vars=0, uses=0)
+    - module scale (vars=0, uses=0)
       Procedures: 1
-        - function scale(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
+        - function scale_scalar(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
 ```
 
 Generate its editable `.pyi` contract:
 
 ```bash
-python3 -m x2py scale_api.f90 --pyi
+python3 -m x2py scale.f90 --pyi
 ```
 
 ```python
-File: scale_api.f90
-Root contract: scale_api/__init__.pyi
-from . import scale_api
+File: scale.f90
+Root contract: scale/__init__.pyi
+from . import scale
 
-Module contract: scale_api.pyi
-def scale(
+Module contract: scale.pyi
+def scale_scalar(
     value: Ptr(Const(Float64)),
     factor: Ptr(Const(Float64))
 ) -> Float64: ...
@@ -271,13 +302,13 @@ def scale(
 Check semantic readiness:
 
 ```bash
-python3 -m x2py scale_api.f90 --wrap-readiness
+python3 -m x2py scale.f90 --wrap-readiness
 ```
 
 ```text
-File: scale_api.f90
+File: scale.f90
   Source: fortran
-  Semantic modules: scale_api
+  Semantic modules: scale
   Wrappable: yes
   Public functions: 1
   Public classes: 0
@@ -289,11 +320,11 @@ Write a draft interface, edit it when source facts are not enough, then check
 the edited contract:
 
 ```bash
-python3 -m x2py scale_api.f90 --pyi --out contracts
-python3 -m x2py contracts/scale_api.pyi --wrap-readiness
+python3 -m x2py scale.f90 --pyi --out contracts
+python3 -m x2py contracts/scale.pyi --wrap-readiness
 ```
 
-Expected result: the first command writes `contracts/scale_api.pyi`; the
+Expected result: the first command writes `contracts/scale.pyi`; the
 second command reports the same `Wrappable: yes` readiness result shown above.
 
 <!-- X2PY_C_DOCS_START
@@ -390,7 +421,7 @@ directories, definitions, language standard, and target flags when inspecting
 or building a real source tree:
 
 ```bash
-python3 -m x2py scale_api.f90 --parse \
+python3 -m x2py scale.f90 --parse \
   --compiler gfortran \
   --std f2018
 ```
@@ -447,8 +478,9 @@ conversion, `.pyi` emission, and readiness:
 from x2py import build_fortran_extension
 
 result = build_fortran_extension(
-    "scale_api.f90",
-    output_dir="build/scale_api",
+    "scale.f90",
+    output_name="SCALE",
+    output_dir="build/SCALE",
 )
 print(result.module_name)
 print(result.shared_library)

@@ -62,7 +62,6 @@ def _main_args(**overrides):
         "native_link_items": None,
         "native_library_dirs": None,
         "native_include_dirs": None,
-        "extension_name": None,
         "strict_wrapper_names": False,
         "wrapper_compiler_debug": False,
         "wrapper_fortran_flags": None,
@@ -583,7 +582,7 @@ end module conflict_mod
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--pyi", "--json", "--out", str(tmp_path / "out")]
+    cmd = [sys.executable, "-m", "x2py", str(f90), "--pyi", "--json", "--out", str(tmp_path / "out")]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 2
@@ -874,11 +873,20 @@ def test_x2py_main_formats_preprocessing_errors_with_and_without_diagnostics(mon
     assert "x2py: error[PREPROCESSOR_FAILED]: plain failure" in capsys.readouterr().err
 
 
-def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch):
+@pytest.mark.parametrize(
+    ("overrides", "expected_stage_calls"),
+    [
+        ({"parse": True}, [("parse",)]),
+        ({"semantics": True}, [("semantic",)]),
+        ({"pyi": True}, [("semantic",)]),
+        ({"wrap_readiness": True}, [("readiness",)]),
+    ],
+)
+def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch, overrides, expected_stage_calls):
     class StopAfterDispatch(Exception):
         pass
 
-    args = _main_args(parse=True, semantics=True, pyi=True, wrap_readiness=True)
+    args = _main_args(**overrides)
     parser = _install_main_parser(monkeypatch, args)
     preprocessing = object()
     parse_payload = {"parse": "payload"}
@@ -920,14 +928,26 @@ def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch):
     with pytest.raises(StopAfterDispatch):
         x2py_cli.main()
 
-    assert calls == [
+    expected_calls = [
         ("resolve", args.paths, "fortran", parser),
         ("config", args, parser),
-        ("parse", args.paths, preprocessing),
-        ("semantic", args.paths, preprocessing, "fortran"),
-        ("readiness", args.paths, preprocessing, "fortran"),
-        ("attach", semantic_payload, readiness_payload),
     ]
+    for (stage_name,) in expected_stage_calls:
+        if stage_name == "parse":
+            expected_calls.append(("parse", args.paths, preprocessing))
+        elif stage_name == "semantic":
+            expected_calls.append(("semantic", args.paths, preprocessing, "fortran"))
+        elif stage_name == "readiness":
+            expected_calls.append(("readiness", args.paths, preprocessing, "fortran"))
+    expected_calls.append(
+        (
+            "attach",
+            semantic_payload if ("semantic",) in expected_stage_calls else None,
+            readiness_payload if ("readiness",) in expected_stage_calls else None,
+        )
+    )
+
+    assert calls == expected_calls
 
 
 def test_x2py_main_preserves_c_parse_dispatch_contract(monkeypatch):
@@ -1004,14 +1024,21 @@ def test_x2py_main_accepts_each_non_parse_c_stage(monkeypatch, stage):
         x2py_cli.main()
 
 
-def test_x2py_main_reuses_one_c_type_report_across_semantic_and_readiness_stages(monkeypatch):
+@pytest.mark.parametrize(
+    ("stage", "expected_stage_call"),
+    [
+        ("semantics", "semantic"),
+        ("pyi", "semantic"),
+        ("wrap_readiness", "readiness"),
+    ],
+)
+def test_x2py_main_passes_c_type_report_to_each_semantic_stage(monkeypatch, stage, expected_stage_call):
     class StopAfterDispatch(Exception):
         pass
 
     args = _main_args(
         language="c",
-        semantics=True,
-        wrap_readiness=True,
+        **{stage: True},
         c_type_probe_runner=["qemu"],
         c_type_probe_cache_dir="cache",
         refresh_c_type_probe=True,
@@ -1058,18 +1085,28 @@ def test_x2py_main_reuses_one_c_type_report_across_semantic_and_readiness_stages
                 "refresh": True,
             },
         ),
-        ("semantic", {"language": "c", "c_standard_type_report": report}),
-        ("readiness", {"language": "c", "c_standard_type_report": report}),
+        (expected_stage_call, {"language": "c", "c_standard_type_report": report}),
     ]
 
 
-def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkeypatch):
+@pytest.mark.parametrize(
+    ("stage", "expected_stage_call"),
+    [
+        ("semantics", "semantic"),
+        ("pyi", "semantic"),
+        ("wrap_readiness", "readiness"),
+    ],
+)
+def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(
+    monkeypatch,
+    stage,
+    expected_stage_call,
+):
     class StopAfterDispatch(Exception):
         pass
 
     args = _main_args(
-        semantics=True,
-        wrap_readiness=True,
+        **{stage: True},
         fortran_type_probe_runner=["qemu"],
         fortran_type_probe_cache_dir="cache",
         refresh_fortran_type_probe=True,
@@ -1106,7 +1143,7 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
         "fortran_type_probe_cache_dir": "cache",
         "refresh_fortran_type_probe": True,
     }
-    assert calls == [("semantic", expected), ("readiness", expected)]
+    assert calls == [(expected_stage_call, expected)]
 
 
 @pytest.mark.parametrize(
@@ -1122,11 +1159,67 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
         ),
         (
             {"out": ""},
-            "--wrap writes build artifacts; use --out-dir instead of --out",
+            "--out for wrapper builds requires an output name",
         ),
         (
-            {"makefile": True, "verbose": True},
+            {"out": "module.txt"},
+            "--out for wrapper builds expects NAME or NAME.so",
+        ),
+        (
+            {"out": "bad-name"},
+            "--out for wrapper builds expects a valid Python module name",
+        ),
+        (
+            {"wrap": True, "out": "module", "makefile": True},
+            "--out names a compiled wrapper extension and cannot be combined with --makefile",
+        ),
+        (
+            {"makefile": True},
+            "--makefile requires --wrap",
+        ),
+        (
+            {"wrap": True, "makefile": True, "verbose": True},
             "--makefile cannot be combined with --verbose",
+        ),
+        (
+            {"parse": True, "semantics": True},
+            "Choose exactly one stage flag; cannot combine --parse, --semantics",
+        ),
+        (
+            {"parse": True, "pyi": True},
+            "Choose exactly one stage flag; cannot combine --parse, --pyi",
+        ),
+        (
+            {"parse": True, "wrap_readiness": True},
+            "Choose exactly one stage flag; cannot combine --parse, --wrap-readiness",
+        ),
+        (
+            {"parse": True, "wrap": True},
+            "Choose exactly one stage flag; cannot combine --parse, --wrap",
+        ),
+        (
+            {"semantics": True, "pyi": True},
+            "Choose exactly one stage flag; cannot combine --semantics, --pyi",
+        ),
+        (
+            {"semantics": True, "wrap_readiness": True},
+            "Choose exactly one stage flag; cannot combine --semantics, --wrap-readiness",
+        ),
+        (
+            {"semantics": True, "wrap": True},
+            "Choose exactly one stage flag; cannot combine --semantics, --wrap",
+        ),
+        (
+            {"pyi": True, "wrap_readiness": True},
+            "Choose exactly one stage flag; cannot combine --pyi, --wrap-readiness",
+        ),
+        (
+            {"pyi": True, "wrap": True},
+            "Choose exactly one stage flag; cannot combine --pyi, --wrap",
+        ),
+        (
+            {"wrap_readiness": True, "wrap": True},
+            "Choose exactly one stage flag; cannot combine --wrap-readiness, --wrap",
         ),
         ({"show_vars": True}, "--show-vars/--print-limit require --parse"),
         ({"print_limit": 1}, "--show-vars/--print-limit require --parse"),
@@ -1156,6 +1249,10 @@ def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(monkey
         (
             {"paths": ["input.pyi"]},
             "Select at least one stage flag: --parse, --semantics, --pyi, --wrap-readiness, or --wrap",
+        ),
+        (
+            {"paths": [], "build_manifest": "build/x2py-build.json"},
+            "--build-manifest requires --wrap",
         ),
     ],
 )
@@ -1560,15 +1657,6 @@ def test_x2py_main_preserves_explicit_and_adjacent_json_write_contracts(monkeypa
     assert x2py_cli.main() == 0
 
     readiness_payload = {"readiness": {"wrappable": True}}
-    combined_args = _main_args(parse=True, wrap_readiness=True, out="/tmp/combined.json")
-    _install_main_parser(monkeypatch, combined_args)
-    _patch_main_report_payloads(
-        monkeypatch,
-        parse_payload=explicit_payload,
-        readiness_payload=readiness_payload,
-    )
-    assert x2py_cli.main() == 0
-
     readiness_args = _main_args(wrap_readiness=True, out="/tmp/readiness.json")
     _install_main_parser(monkeypatch, readiness_args)
     _patch_main_report_payloads(monkeypatch, readiness_payload=readiness_payload)
@@ -1582,11 +1670,6 @@ def test_x2py_main_preserves_explicit_and_adjacent_json_write_contracts(monkeypa
             {"encoding": "utf-8"},
         ),
         (Path("/tmp/empty.json"), json.dumps({"/tmp/empty.f90": {}}, indent=2), {"encoding": "utf-8"}),
-        (
-            Path("/tmp/combined.json"),
-            json.dumps({"parse": explicit_payload, "wrap_readiness": readiness_payload}, indent=2),
-            {"encoding": "utf-8"},
-        ),
         (Path("/tmp/readiness.json"), json.dumps(readiness_payload, indent=2), {"encoding": "utf-8"}),
     ]
 
@@ -1596,47 +1679,15 @@ def test_x2py_main_preserves_stdout_mode_matrix(monkeypatch, capsys):
     semantic_payload = {"semantic": {"node": 2}}
     readiness_payload = {"readiness": {"wrappable": True}}
     scenarios = [
-        (
-            {"parse": True, "wrap_readiness": True, "json": True},
-            json.dumps({"parse": parse_payload, "wrap_readiness": readiness_payload}, indent=2) + "\n",
-            [],
-        ),
         ({"semantics": True}, json.dumps(semantic_payload, indent=2) + "\n", []),
         ({"parse": True, "json": True}, json.dumps(parse_payload, indent=2) + "\n", []),
         ({"wrap_readiness": True, "json": True}, json.dumps(readiness_payload, indent=2) + "\n", []),
         ({"wrap_readiness": True}, "READINESS\n", [("readiness-format", readiness_payload)]),
         ({"pyi": True}, "", [("pyi-format", semantic_payload), ("pyi-output", "PYI")]),
         (
-            {"parse": True, "wrap_readiness": True, "vars_limit": 2},
-            "PARSE\n\nREADINESS\n",
-            [
-                ("parse-format", parse_payload, {"show_vars": True, "print_limit": 2}),
-                ("readiness-format", readiness_payload),
-            ],
-        ),
-        (
-            {"pyi": True, "wrap_readiness": True},
-            "\nREADINESS\n",
-            [
-                ("pyi-format", semantic_payload),
-                ("pyi-output", "PYI"),
-                ("readiness-format", readiness_payload),
-            ],
-        ),
-        (
-            {"semantics": True, "wrap_readiness": True},
-            json.dumps(semantic_payload, indent=2) + "\n",
-            [],
-        ),
-        (
             {"parse": True},
             "PARSE\n",
             [("parse-format", parse_payload, {"show_vars": False, "print_limit": None})],
-        ),
-        (
-            {"parse": True, "semantics": True},
-            json.dumps(parse_payload, indent=2) + "\n",
-            [],
         ),
     ]
 
@@ -1700,38 +1751,16 @@ def test_x2py_main_preserves_c_readable_stdout_contract(monkeypatch, capsys):
     assert formats == [(parse_payload, {"print_limit": 2})]
 
 
-def test_x2py_main_uses_c_formatter_for_parse_wrap_readiness(monkeypatch, capsys):
+def test_x2py_main_rejects_c_parse_wrap_readiness_combination(monkeypatch):
     args = _main_args(language="c", parse=True, wrap_readiness=True, print_limit=1)
     _install_main_parser(monkeypatch, args)
-    preprocessing = types.SimpleNamespace(include_dirs=())
-    parse_payload = {"parse": {"node": 1}}
-    readiness_payload = {"readiness": {"wrappable": True}}
-    formats = []
-
     monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
-    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
-    monkeypatch.setattr(x2py_cli, "_c_parser_preprocessing_mode", lambda active_preprocessing: "mode")
-    monkeypatch.setattr(x2py_cli, "_c_source_loader", lambda active_preprocessing: "loader")
-    monkeypatch.setattr(x2py_cli, "parse_c_report", lambda *args, **kwargs: parse_payload)
-    monkeypatch.setattr(x2py_cli, "_wrap_readiness_report", lambda *args, **kwargs: readiness_payload)
-    monkeypatch.setattr(x2py_cli, "_attach_wrap_readiness", lambda semantic_payload, readiness_payload: None)
-    monkeypatch.setattr(
-        x2py_cli,
-        "format_c_report",
-        lambda payload, **kwargs: formats.append(("c-format", payload, kwargs)) or "C REPORT",
-    )
-    monkeypatch.setattr(
-        x2py_cli,
-        "_format_semantic_readiness",
-        lambda payload: formats.append(("readiness-format", payload)) or "READINESS",
-    )
+    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: object())
 
-    assert x2py_cli.main() == 0
-    assert capsys.readouterr().out == "C REPORT\n\nREADINESS\n"
-    assert formats == [
-        ("c-format", parse_payload, {"print_limit": 1}),
-        ("readiness-format", readiness_payload),
-    ]
+    with pytest.raises(_MainParserError) as exc_info:
+        x2py_cli.main()
+
+    assert str(exc_info.value) == "Choose exactly one stage flag; cannot combine --parse, --wrap-readiness"
 
 
 def test_x2py_cli_helpers_cover_language_and_preprocessing_edges(tmp_path: Path, monkeypatch):
@@ -2032,11 +2061,11 @@ def test_x2py_main_debug_reraises_preprocessing_errors(monkeypatch):
         x2py_cli.main()
 
 
-def test_cli_out_requires_stage_flag():
+def test_cli_wrapper_out_requires_name_for_default_wrap():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--out"]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
-    assert "--wrap writes build artifacts; use --out-dir instead of --out" in res.stderr
+    assert "--out for wrapper builds requires an output name" in res.stderr
 
 
 def test_cli_help_includes_examples():
@@ -2153,7 +2182,6 @@ def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
         ("wrapper builds", ("--native-link-item",)),
         ("wrapper builds", ("--native-library-dir", "--library-dir")),
         ("wrapper builds", ("--native-include-dir",)),
-        ("wrapper builds", ("--extension-name",)),
         ("output and diagnostics", ("--json",)),
         ("output and diagnostics", ("--out",)),
         ("output and diagnostics", ("--out-dir",)),

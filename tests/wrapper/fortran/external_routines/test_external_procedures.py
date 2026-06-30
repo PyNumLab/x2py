@@ -117,7 +117,7 @@ def _build_generated_contract(
     sources: tuple[Path, ...],
     workdir: Path,
     *,
-    extension_name: str,
+    output_name: str,
     contract_input: tuple[Path, ...] | None = None,
     expected_package: Path | None = None,
 ):
@@ -127,7 +127,7 @@ def _build_generated_contract(
         entry,
         native_objects=native_objects,
         native_include_dirs=[native_objects[0].parent],
-        extension_name=extension_name,
+        output_name=output_name,
         output_dir=workdir / "pyi_build",
     )
     return _import_extension(result.module_name, result.output_dir), result, entry
@@ -145,7 +145,7 @@ def _standalone_module_for_mode(
     module, _result, _entry = _build_generated_contract(
         sources,
         tmp_path,
-        extension_name=source.stem,
+        output_name=source.stem,
         expected_package=_generated_contract_fixture(source.stem),
     )
     return module
@@ -170,7 +170,7 @@ def bundled_external_module(pyi_parity_build_mode: str, tmp_path: Path):
     module, _result, _entry = _build_generated_contract(
         sources,
         tmp_path,
-        extension_name=EXTERNAL_BUNDLE.stem,
+        output_name=EXTERNAL_BUNDLE.stem,
         expected_package=_generated_contract_fixture(EXTERNAL_BUNDLE.stem),
     )
     return module
@@ -210,7 +210,7 @@ def test_external_bridge_uses_explicit_interface_and_no_module_use(tmp_path: Pat
     module, result, entry = _build_generated_contract(
         sources,
         tmp_path,
-        extension_name=FREE_EXTERNAL.stem,
+        output_name=FREE_EXTERNAL.stem,
         expected_package=_generated_contract_fixture(FREE_EXTERNAL.stem),
     )
 
@@ -247,7 +247,7 @@ def test_external_bind_renames_python_export_without_changing_native_call(tmp_pa
     result = build_pyi_extension(
         HANDWRITTEN_RENAMED,
         native_objects=native_objects,
-        extension_name="renamed_api",
+        output_name="renamed_api",
         output_dir=tmp_path / "pyi_build",
     )
     module = _import_extension(result.module_name, result.output_dir)
@@ -265,7 +265,7 @@ def test_handwritten_c_order_flat_contract_passes_rank_preserving_bridge_view(tm
     result = build_pyi_extension(
         C_ORDER_FLAT_CONTRACT,
         native_objects=native_objects,
-        extension_name="c_order_flat_api",
+        output_name="c_order_flat_api",
         output_dir=tmp_path / "pyi_build",
     )
     module = _import_extension(result.module_name, result.output_dir)
@@ -302,7 +302,7 @@ def test_compact_blas_like_folder_generates_one_external_entry_and_preserves_sep
     generated_module, generated_result, entry = _build_generated_contract(
         copied_sources,
         tmp_path,
-        extension_name=source_result.module_name,
+        output_name=source_result.module_name,
         contract_input=(tmp_path / "sources",),
         expected_package=_generated_contract_fixture("blas_like"),
     )

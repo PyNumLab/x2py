@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import _assert_fmath_examples, _sole_native_module, wrapper_source
@@ -17,6 +18,7 @@ from x2py.wrapping import NativeBuildPlan, NativeLinkItem, build_fortran_extensi
 
 VERBOSE_SOURCE = wrapper_source("verbose_api.f90")
 DEFAULT_OUTPUT_SOURCE = wrapper_source("fdefault_output.f")
+SCALE_SOURCE = wrapper_source("scale.f90")
 SCALAR_SOURCE = wrapper_source("fmath.f")
 
 
@@ -67,10 +69,48 @@ def test_fortran_wrapper_default_places_extension_beside_source(tmp_path: Path):
     build_dir = tmp_path / "__x2py__"
     shared_library = Path(payload["shared_library"])
     assert shared_library.parent == tmp_path
+    assert shared_library.name == "fdefault_output.so"
     assert shared_library.exists()
     assert Path(payload["output_dir"]) == build_dir
     assert (build_dir / "bind_c_fdefault_output_wrapper.f90").exists()
     assert not list(tmp_path.glob("*_wrapper.c"))
+
+
+def test_fortran_wrapper_out_names_importable_shared_library(tmp_path: Path):
+    source = tmp_path / SCALE_SOURCE.name
+    output_name = tmp_path / "SCALE"
+    shutil.copyfile(SCALE_SOURCE, source)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--out",
+            str(output_name),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+
+    shared_library = Path(payload["shared_library"])
+    assert shared_library == output_name.with_suffix(".so")
+    assert shared_library.is_file()
+    assert payload["module_name"] == "SCALE"
+    assert any(path.name.startswith("SCALE.") and path.suffix == ".so" for path in tmp_path.iterdir())
+    assert str(shared_library) in payload["generated_files"]
+
+    sys.modules.pop("SCALE", None)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        module = importlib.import_module("SCALE")
+    finally:
+        sys.path.remove(str(tmp_path))
+    assert module.scale.scale_scalar(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
 
 
 def test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper(tmp_path: Path):

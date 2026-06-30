@@ -101,7 +101,7 @@ def _build_contract(
     build_dir: Path,
     *,
     cwd: Path | None = None,
-    extension_name: str | None = None,
+    output_name: str | None = None,
 ):
     command = [
         sys.executable,
@@ -117,8 +117,8 @@ def _build_contract(
         str(build_dir),
         "--json",
     ]
-    if extension_name is not None:
-        command.extend(("--extension-name", extension_name))
+    if output_name is not None:
+        command.extend(("--out", output_name))
     payload = _run_json(command, cwd=cwd)
     module = _import_extension(str(payload["module_name"]), build_dir)
     return module, payload
@@ -166,7 +166,7 @@ def test_init_entry_uses_resolved_parent_name_from_inside_package(tmp_path: Path
     assert module.contract_same_name.module_ping() is None
 
 
-def test_extension_name_override_replaces_entry_inference(tmp_path: Path):
+def test_output_name_override_replaces_entry_inference(tmp_path: Path):
     source = _copy_source(STANDALONE_ONLY, tmp_path)
     entry = _generate_contract_package(source, tmp_path / "contracts")
     native_object = _compile_native(source, tmp_path / "native")
@@ -175,7 +175,7 @@ def test_extension_name_override_replaces_entry_inference(tmp_path: Path):
         entry,
         native_object,
         tmp_path / "build",
-        extension_name="custom_api",
+        output_name="custom_api",
     )
 
     assert payload["module_name"] == "custom_api"

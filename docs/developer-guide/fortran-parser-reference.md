@@ -562,14 +562,19 @@ per-file semantic readiness status. A non-wrappable file is reported as
 blockers, for example unresolved semantic types, missing compile-time constant
 values, or incomplete callback signatures.
 
-The readiness stage can be combined with parser output:
+Parser output and readiness are separate stages. Run parser inspection with:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --wrap-readiness
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
 ```
 
-With `--json`, combined parse/readiness output is split into top-level `parse`
-and `wrap_readiness` sections. Parser JSON stays parse-only.
+Run readiness inspection separately:
+
+```bash
+python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+```
+
+Parser JSON stays parse-only.
 
 Semantic IR JSON uses the same output channels, but the per-file payload is the
 semantic model projection instead of raw parser output:

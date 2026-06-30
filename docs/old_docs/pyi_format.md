@@ -70,7 +70,7 @@ reconciles imported external type references across the loaded set.
 ## Contract Bundles And Native Procedure Placement
 
 > **Roadmap:** `@external`, generated contract bundles, `__init__.pyi` export
-> lowering, `--root-contract`, and `--extension-name` are the required contract
+> lowering, `--root-contract`, and wrapper `--out` are the required contract
 > described here, but are not implemented by the current `.pyi` build subset.
 
 Wrapper generation must distinguish immutable native structure from editable
@@ -315,7 +315,7 @@ from module2 import *
 ```
 
 The root filename does not choose the compiled extension name. Multi-module and
-standalone-only contract sets require `--extension-name`, which controls the
+standalone-only contract sets can use wrapper `--out`, which controls the
 extension filename, `PyInit_<name>` symbol, and Python import name. Source,
 generated-contract, and modified-contract parity builds use the same explicit
 extension name.
@@ -325,7 +325,7 @@ Target CLI shapes are:
 ```bash
 python3 -m x2py contracts/library \
   --wrap \
-  --extension-name library \
+  --out library \
   --native-objects native.a
 ```
 
@@ -333,7 +333,7 @@ python3 -m x2py contracts/library \
 python3 -m x2py module1.pyi module2.pyi \
   --root-contract api.pyi \
   --wrap \
-  --extension-name library \
+  --out library \
   --native-library native \
   --native-library-dir /path/to/libs
 ```
@@ -343,7 +343,7 @@ For a single standalone fragment, no `__init__.pyi` is required:
 ```bash
 python3 -m x2py dgesv.pyi \
   --wrap \
-  --extension-name lapack_dgesv \
+  --out lapack_dgesv \
   --native-objects dgesv.o
 ```
 

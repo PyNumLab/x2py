@@ -163,13 +163,13 @@ def _build_contract(
     native_objects: tuple[Path, ...],
     build_dir: Path,
     *,
-    extension_name: str,
+    output_name: str,
 ):
     result = build_pyi_extension(
         entry,
         native_objects=native_objects,
         native_include_dirs=[native_objects[0].parent],
-        extension_name=extension_name,
+        output_name=output_name,
         output_dir=build_dir,
     )
     return _import_extension(result.module_name, build_dir), result.to_dict()
@@ -249,7 +249,7 @@ def test_multi_source_generated_contract_build_matches_source_runtime_and_link_o
         entry,
         native_objects,
         tmp_path / "generated_build",
-        extension_name=str(source_payload["module_name"]),
+        output_name=str(source_payload["module_name"]),
     )
 
     assert source_payload["module_name"] == "first_api"
@@ -294,7 +294,7 @@ def test_multi_source_modified_entry_preserves_modules_and_adds_documented_alias
         modified_entry,
         native_objects,
         tmp_path / "modified_build",
-        extension_name=str(source_payload["module_name"]),
+        output_name=str(source_payload["module_name"]),
     )
 
     assert modified_payload["module_name"] == source_payload["module_name"]
@@ -319,6 +319,7 @@ def test_makefile_mode_reproduces_multi_source_build(tmp_path: Path):
         "x2py",
         str(first),
         str(second),
+        "--wrap",
         "--makefile",
         "--out-dir",
         str(tmp_path),

@@ -106,9 +106,9 @@ rm -rf build/scale_api
 python3 -m x2py src/scale_api.f90 --wrap --out-dir build/scale_api --json
 ```
 
-Use `--makefile` when you intentionally want inspectable commands and manual
-rebuild control. `--makefile` and `--verbose` are separate modes and cannot be
-combined.
+Use `--wrap --makefile` when you intentionally want inspectable commands and
+manual rebuild control. `--makefile` and `--verbose` are separate modes and
+cannot be combined.
 
 ## Semantic `.pyi` Review Workflow
 

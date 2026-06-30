@@ -37,8 +37,8 @@ Install these before attempting a wrapper build:
 - NumPy, whose Python package supplies the required C headers; and
 X2PY_C_DOCS_END -->
 
-GNU Make is optional. Direct builds do not require it, but `--makefile` emits a
-`Makefile.x2py` that expects GNU Make and a POSIX-style shell.
+GNU Make is optional. Direct builds do not require it, but `--wrap --makefile`
+emits a `Makefile.x2py` that expects GNU Make and a POSIX-style shell.
 
 On Ubuntu or Debian, the prerequisite packages normally come from:
 

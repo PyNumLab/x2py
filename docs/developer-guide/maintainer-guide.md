@@ -839,8 +839,8 @@ source dependencies: multi-source source builds compile in caller order, and
 the first semantic module names the merged extension. `.pyi` builds use exactly
 one semantic entry contract plus a separate extension-level
 `NativeBuildPlan`; they must not recover Python API facts by reparsing native
-implementation sources. `--makefile` records the compiler/linker plan without
-executing it; for `.pyi` builds, `x2py-build.json` is written first and
+implementation sources. `--wrap --makefile` records the compiler/linker plan
+without executing it; for `.pyi` builds, `x2py-build.json` is written first and
 `Makefile.x2py` is projected from that manifest.
 
 <!-- X2PY_C_DOCS_START

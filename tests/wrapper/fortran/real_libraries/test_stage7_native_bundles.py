@@ -138,7 +138,7 @@ def test_imported_contracts_resolve_from_one_archive_or_shared_library(
         entry,
         native_objects=[artifact],
         native_include_dirs=[native_objects[0].parent],
-        extension_name="combined_from_single_artifact",
+        output_name="combined_from_single_artifact",
         output_dir=tmp_path / "build",
     )
     module = _import_extension(result.module_name, result.output_dir)
@@ -203,7 +203,7 @@ end module stage7_mod
         native_libraries=["stage7named"],
         native_library_dirs=[libs],
         native_include_dirs=[native / "mods"],
-        extension_name="mixed_stage7",
+        output_name="mixed_stage7",
         output_dir=tmp_path / "build",
     )
     module = _import_from_build(result)
@@ -260,7 +260,7 @@ end function ordered_entry
             {"kind": "archive", "path": entry_archive},
             {"kind": "archive", "path": helper_archive},
         ],
-        extension_name="ordered_stage7",
+        output_name="ordered_stage7",
         output_dir=tmp_path / "build",
     )
     module = _import_from_build(result)
@@ -324,7 +324,7 @@ end function cycle_b
             {"kind": "archive", "path": archive_b},
             {"kind": "linker_argument", "argument": "-Wl,--end-group"},
         ],
-        extension_name="cycle_stage7",
+        output_name="cycle_stage7",
         output_dir=tmp_path / "build",
     )
     module = _import_from_build(result)
@@ -368,7 +368,7 @@ end function transitive_entry
         native_objects=[entry_object],
         native_libraries=["stage7transitive"],
         native_library_dirs=[libs],
-        extension_name="transitive_stage7",
+        output_name="transitive_stage7",
         output_dir=tmp_path / "build",
     )
     module = _import_from_build(result)
@@ -392,7 +392,7 @@ def test_missing_symbol_reports_native_link_or_loader_error(tmp_path: Path):
     result = build_pyi_extension(
         entry,
         native_objects=[native_object],
-        extension_name="missing_symbol",
+        output_name="missing_symbol",
         output_dir=tmp_path / "build",
     )
 
@@ -420,7 +420,7 @@ def test_duplicate_native_definitions_report_linker_error(tmp_path: Path):
         build_pyi_extension(
             entry,
             native_objects=[first, second],
-            extension_name="duplicate_symbol",
+            output_name="duplicate_symbol",
             output_dir=tmp_path / "build",
         )
 
@@ -438,7 +438,7 @@ def test_incompatible_native_artifact_reports_linker_error(tmp_path: Path):
         build_pyi_extension(
             entry,
             native_objects=[invalid_object],
-            extension_name="invalid_artifact",
+            output_name="invalid_artifact",
             output_dir=tmp_path / "build",
         )
 
@@ -474,7 +474,7 @@ end module missing_mod
         build_pyi_extension(
             entry,
             native_objects=[module_object],
-            extension_name="missing_mod",
+            output_name="missing_mod",
             output_dir=tmp_path / "build",
         )
 
@@ -519,7 +519,7 @@ end function unavailable_entry
     result = build_pyi_extension(
         entry,
         native_objects=[dependent_library],
-        extension_name="unavailable_dep",
+        output_name="unavailable_dep",
         output_dir=tmp_path / "build",
     )
     helper_library.unlink()

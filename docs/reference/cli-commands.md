@@ -66,9 +66,8 @@ Use these flags when you want reports instead of a compiled wrapper.
 | `&#45;&#45;wrap-readiness` | Converts Fortran, C, or `.pyi` input to semantic IR and reports wrapper readiness. |
 X2PY_C_DOCS_END -->
 
-The stage flags can be combined when the selected combination is meaningful. For
-example, `--semantics --wrap-readiness` prints semantic IR with readiness
-attached.
+Select exactly one stage flag per command. `--parse`, `--semantics`, `--pyi`,
+`--wrap-readiness`, and `--wrap` are mutually exclusive.
 
 ## Compiler preprocessing
 
@@ -158,7 +157,7 @@ only when native implementation inputs are supplied explicitly.
 | `--wrap` | Explicitly builds one Python extension module from Fortran source files or semantic `.pyi` contracts. |
 | `--makefile` | Generates wrapper sources and a GNU Make build without compiling. |
 | `--strict-wrapper-names` | Rejects Python wrapper names that require escaping or collision suffixes. |
-| `--build-manifest PATH` | Replays a saved semantic `.pyi` wrapper build manifest. Combine with `--wrap` to build or `--makefile` to regenerate the Makefile. |
+| `--build-manifest PATH` | Replays a saved semantic `.pyi` wrapper build manifest. Use `--wrap` to build; add `--makefile` to regenerate the Makefile instead of compiling. |
 | `--native-fortran-sources PATH [PATH ...]` | Compiles one or more native Fortran implementation sources for a `.pyi` wrapper build without using them as semantic inputs. |
 | `--native-fortran-flags FLAG [FLAG ...]` | Adds one or more Fortran compiler flags to each source passed with `--native-fortran-sources`. |
 | `--native-objects PATH [PATH ...]` | Links one or more native object, static archive, or shared library paths into a `.pyi` wrapper build. |
@@ -171,6 +170,13 @@ Important boundaries:
 
 - `--wrap` is mutually exclusive with `--parse`, `--semantics`, `--pyi`, and
   `--wrap-readiness`.
+- `--makefile` is a wrapper-build option and requires `--wrap`.
+- For compiled wrapper builds, `--out NAME` selects the Python module name,
+  `PyInit_<name>` symbol, JSON `module_name`, and final `NAME.so` path. Use
+  `--out-dir DIR` to choose the build directory.
+- Wrapper `--out` requires a value and accepts `NAME` or `NAME.so`.
+- `--makefile` cannot be combined with `--out` because no shared library is
+  compiled in that mode.
 - `.pyi` wrapper builds require at least one native implementation input such
   as `--native-fortran-sources`, `--native-objects`, `--native-library`, or
   `--native-link-item`.
@@ -182,8 +188,8 @@ Important boundaries:
 - In `.pyi` Makefile mode, x2py writes `<out-dir>/x2py-build.json` first and
   generates `<out-dir>/Makefile.x2py` from that manifest.
 - `--build-manifest PATH --wrap` builds from a saved manifest.
-  `--build-manifest PATH --makefile` regenerates `Makefile.x2py` from the
-  manifest without positional contracts or repeated native flags.
+  `--build-manifest PATH --wrap --makefile` regenerates `Makefile.x2py` from
+  the manifest without positional contracts or repeated native flags.
 
 <!-- X2PY_C_DOCS_START
 - C source inspection is supported; runtime wrapping of user-supplied C
@@ -195,7 +201,7 @@ X2PY_C_DOCS_END -->
 | Option | Purpose |
 | --- | --- |
 | `--json` | Prints JSON to stdout for inspection stages and wrapper build results. |
-| `--out [PATH]` | Writes stage output. For Fortran `--pyi`, `PATH` is the generated contract package directory. |
+| `--out [PATH]` | Writes inspection-stage output, selects the generated Fortran `.pyi` package directory, or names the wrapper Python module and final `.so`. |
 | `--out-dir DIR` | Selects the wrapper build output directory. |
 | `--verbose` | Prints wrapper compiler commands, build steps, and elapsed time for each compiler/linker command and wrapper stage. |
 | `--wrapper-compiler-debug` | Uses the compiler debug profile for direct wrapper builds instead of the default release profile. |
@@ -207,8 +213,9 @@ X2PY_C_DOCS_END -->
 | `&#45;&#45;wrapper-c-flags FLAG...` | Appends flags to generated CPython wrapper compilation commands. |
 X2PY_C_DOCS_END -->
 
-Use `--out` for inspection-stage output. Use `--out-dir` for wrapper build
-artifacts. Wrapper build JSON includes generated artifact paths,
+Use `--out` for inspection-stage output, generated `.pyi` contract packages, or
+the wrapper Python module and final `.so`. Use `--out-dir` for wrapper build artifacts.
+Wrapper build JSON includes generated artifact paths,
 `native_build_plan`, the structured native compile/link plan for the extension,
 and for semantic `.pyi` builds the normalized replay `manifest`.
 
@@ -224,7 +231,8 @@ and for semantic `.pyi` builds the normalized replay `manifest`.
 | Emit a semantic `.pyi` contract directory | `python3 -m x2py path/to/file.f90 --pyi --out contracts` |
 | Check edited `.pyi` readiness | `python3 -m x2py path/to/module.pyi --wrap-readiness --json` |
 | Build a Fortran wrapper | `python3 -m x2py path/to/file.f` |
-| Generate an editable Makefile | `python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build` |
+| Build a Fortran wrapper with an explicit module and `.so` name | `python3 -m x2py path/to/file.f90 --out my_extension` |
+| Generate an editable Makefile | `python3 -m x2py dependency.f90 api.f90 --wrap --makefile --out-dir build` |
 | Generate a `.pyi` replay manifest and Makefile | `python3 -m x2py contracts/module.pyi --wrap --native-fortran-sources native/module.f90 --out-dir build --makefile --json` |
 | Replay a `.pyi` manifest | `python3 -m x2py --build-manifest build/x2py-build.json --wrap` |
 
