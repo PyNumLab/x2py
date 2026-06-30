@@ -26,7 +26,8 @@ python3 -m x2py --help
 ```
 
 The default user-facing action for a single Fortran source is to build a Python
-extension. Save this source as `fruntime_abi_f90.f90`:
+extension. This checked input source is
+`tests/data/fortran/wrapper/fruntime_abi_f90.f90`:
 
 <!-- x2py-doc-source: tests/data/fortran/wrapper/fruntime_abi_f90.f90 -->
 ```fortran
@@ -43,13 +44,33 @@ end module fruntime_abi_f90
 Build it into an explicit directory:
 
 ```bash
-python3 -m x2py fruntime_abi_f90.f90 \
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```
 
-Import the generated extension and call it with the exact NumPy scalar dtype
-required by the native signature:
+Generate the semantic `.pyi` contract for the same source:
+
+```bash
+python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
+  --pyi \
+  --out contracts
+```
+
+Then build the shared library from that `.pyi` contract and the same native
+implementation source:
+
+```bash
+python3 -m x2py contracts/fruntime_abi_f90.pyi \
+  --wrap \
+  --native-fortran-sources tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
+  --out-dir build/fruntime_abi_from_pyi \
+  --json
+```
+
+Import either generated extension and call it with the exact NumPy scalar dtype
+required by the native signature. This snippet uses the direct build output
+directory:
 
 ```python
 import sys
@@ -192,8 +213,8 @@ Write a draft interface, edit it when source facts are not enough, then check
 the edited contract:
 
 ```bash
-python3 -m x2py solver.f90 --pyi --out contracts
-python3 -m x2py contracts/solver/solver.pyi --wrap-readiness
+python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi --out contracts
+python3 -m x2py contracts/m1.pyi --wrap-readiness
 ```
 
 <!-- X2PY_C_DOCS_START
@@ -290,12 +311,13 @@ directories, definitions, language standard, and target flags when inspecting
 or building a real source tree:
 
 ```bash
-python3 -m x2py solver.f90 --parse \
+python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse \
   --compiler gfortran \
-  -I include \
-  -D PROJECT_REAL_KIND=8 \
   --std f2018
 ```
+
+For a real project, replace the checked input path with your source path and
+add the project's include directories, definitions, and target flags.
 
 <!-- X2PY_C_DOCS_START
 The CLI uses compiler preprocessing for native source. C defaults to `cc` and
@@ -342,7 +364,10 @@ conversion, `.pyi` emission, and readiness:
 ```python
 from x2py import build_fortran_extension
 
-result = build_fortran_extension("solver.f90", output_dir="build/solver")
+result = build_fortran_extension(
+    "tests/data/fortran/wrapper/fruntime_abi_f90.f90",
+    output_dir="build/fruntime_abi",
+)
 print(result.module_name)
 print(result.shared_library)
 ```
