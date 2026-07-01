@@ -32,17 +32,13 @@ scale-project/
 Build from the project root:
 
 ```bash
-python3 -m x2py src/scale.f90 \
-  --wrap \
-  --out-dir build/scale \
-  --json
+python3 -m x2py src/scale.f90 --out-dir build/scale
 ```
 
 Put the following result check in `python/check_scale.py`:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/scale")
@@ -96,7 +92,6 @@ python3 -m x2py src/scale.f90 \
   --wrap \
   --makefile \
   --out-dir build/scale \
-  --json
 
 make -f build/scale/Makefile.x2py X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
