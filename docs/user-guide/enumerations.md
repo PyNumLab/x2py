@@ -36,17 +36,13 @@ end module colors_api
 Build it:
 
 ```bash
-python3 -m x2py colors.f90 \
-  --wrap \
-  --out-dir build/colors \
-  --json
+python3 -m x2py colors.f90 --out-dir build/colors
 ```
 
 The generated constants retain explicit and implicit values:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/colors")
@@ -78,7 +74,6 @@ and pass `numpy.int32(member.value)` to the wrapper.
 
 ## Limitations
 
-- No generated Python `Enum` or `IntEnum` class.
 - No runtime validation restricting an integer parameter to declared
   enumerator values unless the native routine performs that validation.
 - Unsupported source enum forms stop at parsing, semantic readiness, or wrapper
