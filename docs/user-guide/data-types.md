@@ -44,22 +44,36 @@ contains
 end module numeric_types
 ```
 
-Inspect the resolved mapping, then build it:
-
-```bash
-python3 -m x2py numeric_types.f90 \
-  --wrap \
-  --out-dir build/numeric-types \
-  --json
-```
-
-It is highly recommended to also generate the type contract first for inspection:
+It is highly recommended to generate the type contract first for inspection:
 
 ```bash
 python3 -m x2py numeric_types.f90 --pyi
 ```
-Use the semantic types shown in the `.pyi` file (e.g. `Int32`, `Float64`, etc.) when calling from Python. 
-The tables below summarize the currently verified mappings.
+
+Build the wrapper with:
+
+```bash
+python3 -m x2py numeric_types.f90 --out-dir build/numeric-types
+```
+
+Here is how to call the generated module from Python:
+
+```python
+import sys
+import numpy as np
+
+sys.path.insert(0, "build/numeric-types")
+import numeric_types
+
+api = numeric_types.numeric_types
+
+assert api.add_one(np.int32(4)) == np.int32(5)
+assert api.double(np.float64(1.5)) == np.float64(3.0)
+assert api.conjugate_value(np.complex128(1.0 + 2.0j)) == np.complex128(1.0 - 2.0j)
+assert bool(api.invert(True)) is False
+```
+
+The tables below summarize the currently verified Fortran-to-Python type mappings.
 
 ## Scalar Mapping
 
@@ -77,25 +91,6 @@ The tables below summarize the currently verified mappings.
 | scalar character | `String` or `String[n]` | `str` | character arrays are unsupported |
 | derived type | generated class name | instance of that generated class | arrays of derived types are unsupported |
 | dummy procedure | `Callable[[...], T]` | Python callable with the exact argument/result contract | not applicable |
-
-
-Import the child module and call it with matching values:
-
-```python
-import sys
-
-import numpy as np
-
-sys.path.insert(0, "build/numeric-types")
-import numeric_types
-
-api = numeric_types.numeric_types
-
-assert api.add_one(np.int32(4)) == np.int32(5)
-assert api.double(np.float64(1.5)) == np.float64(3.0)
-assert api.conjugate_value(np.complex128(1.0 + 2.0j)) == np.complex128(1.0 - 2.0j)
-assert bool(api.invert(True)) is False
-```
 
 The checked [First Wrapped Function](../getting-started/first-wrapped-function.md)
 uses the same explicit-dtype rule for the smaller `scale.f90` example.
