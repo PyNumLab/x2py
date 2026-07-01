@@ -12,8 +12,8 @@ A contained Fortran module becomes a child Python module inside the generated
 extension. Standalone procedures stay at the extension root. x2py preserves
 this namespace instead of flattening native module membership implicitly.
 
-The checked beginner example builds source `module_state.f90` as extension
-`module_state` and imports its contained module as:
+As seen in the introductory example, building the source file `module_state.f90` 
+creates an extension named module_state, allowing you to import its contained module:
 
 ```python
 import module_state
@@ -32,15 +32,15 @@ Module functions and subroutines are attributes of the child module:
 assert module.summarize() == np.int32(15)
 ```
 
-For several ordered sources, one generated extension can contain several child
-modules. Each native module retains its own child namespace, while standalone
+When compiling multiple ordered source files, a single generated extension can contain multiple child modules. 
+Each native module retains its own child namespace, while standalone
 procedures remain on the extension root. The first source determines the
 default extension name unless `--out` selects another name.
 
 ## Public Variables
 
 Supported public scalar integer, real, complex, and logical module variables
-are direct Python attributes. Reading fetches current native state and assigning
+are direct Python attributes. Reading fetches its current native state, and assigning
 an exact matching value writes through to native storage:
 
 ```python
@@ -66,7 +66,7 @@ only shadow the attribute on that Python module object; it does not mutate the
 native parameter.
 
 Public module variables already have module lifetime, whether or not `save` is
-written explicitly. Procedure-local saved variables remain internal but their
+written explicitly. Procedure-local saved variables remain internal, but their
 state persists across calls. Multiple imported Python module objects backed by
 the same extension observe the same native module storage.
 
@@ -104,8 +104,8 @@ current: Annotated[box, Aliased]
 
 Reading `module.current` returns a native-owned borrowed wrapper. The wrapper
 does not copy or destroy `current`; it retains the module object's address and
-allows supported component access such as `module.current.values`. An
-allocatable component view is writable and reaches native module state until
+allows supported component access such as `module.current.values`. 
+An allocatable component view is writable and reaches native module state until
 native code reallocates or deallocates that component.
 
 Without `Aliased`, x2py blocks the derived module variable. It does not create
