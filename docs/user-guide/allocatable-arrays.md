@@ -14,10 +14,14 @@ somewhere else.
 
 | Case | Python sees | Owner and lifetime |
 | --- | --- | --- |
-| Function result or hidden allocatable output | new NumPy array or `None` | Python owns the returned copy; the native temporary is released |
+| Function result or hidden allocatable output | new NumPy array, or `None` when unallocated | Python owns the returned copy; the native temporary is released |
 | Allocatable `intent(inout)` dummy | replacement NumPy array or `None` | Python owns the returned replacement; the original argument is unchanged |
-| Allocatable module variable | borrowed NumPy view or `None` | the Fortran module owns allocation and release |
+| Target-backed allocatable module variable | borrowed NumPy view or `None` | the Fortran module owns allocation and release |
 | Allocatable derived-type field | borrowed NumPy view or `None` | the containing generated wrapper owns the native instance |
+
+`Allocatable` is the dynamic-storage fact shared by all rows. It does not by
+itself choose copy, replacement, or borrowed-view behavior. The declaration
+context and completed ownership policy choose that behavior.
 
 A borrowed view is a NumPy array that points at storage Python does not own.
 Mutating the view mutates the owner. Deallocating or reallocating the owner can
@@ -76,10 +80,10 @@ contracts:
 ```python
 shared_values: Annotated[Float64[:], Allocatable, FortranTarget] | None
 
-@native_call([Ref(Arg(0)), Return('values', 0)])
+@native_call([Ref(Arg(0))])
 def make_values(
     count: Const(Int32)
-) -> Annotated[Float64[:], Allocatable] | None: ...
+) -> Annotated[Float64[:], Allocatable]: ...
 
 @native_call([Arg(0)])
 def replace_values(
@@ -168,8 +172,9 @@ A target-backed allocatable module array is native-owned. The module's
 allocation routines create and release the storage. Reading the Python
 attribute returns a borrowed NumPy view or `None`. Mutating the view reaches
 native module storage; deleting the view does not deallocate that storage.
-The generated `.pyi` marks this with `FortranTarget`, matching the Fortran
-`target` attribute required for the zero-copy view.
+The generated `.pyi` marks the module variable with `FortranTarget`, matching
+the Fortran `target` attribute needed to take the native address. `FortranTarget`
+is not an ownership mode and does not by itself mean "borrowed view".
 
 A supported allocatable component belongs to its containing native derived-type
 instance. The generated wrapper owns that native instance. Its NumPy view uses
