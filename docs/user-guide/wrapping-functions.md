@@ -8,24 +8,22 @@ status: maintained
 
 # Wrapping Functions
 
-A Fortran function becomes a Python callable whose direct function result is
-the first Python result. Inputs retain the exact dtype, rank, shape, and storage
-contract shown by generated `.pyi` output.
+A Fortran `function` becomes a Python callable. The direct result of the function becomes the first returned value in Python. 
+All arguments follow the exact semantic types shown in the generated `.pyi` file.
 
-Reuse `scale.f90`, whose complete source is first shown in the
-[README Quick Start](../../README.md#quick-start) and then explained by
-[First Wrapped Function](../getting-started/first-wrapped-function.md). Inspect
-that same file before rebuilding it:
+See [Data Types](data-types.md) for details on how Fortran types are mapped to Python/NumPy.
+
+For this example, we'll use `scale.f90` (from [README Quick Start](../../README.md#quick-start)).
 
 ```bash
 python3 -m x2py scale.f90 --pyi
 python3 -m x2py scale.f90 --wrap-readiness
-python3 -m x2py scale.f90 --wrap --out-dir build/scale --json
+python3 -m x2py scale.f90 --out-dir build/scale
 ```
 
 ## Scalar Functions
 
-The beginner `scale` example generates this callable contract:
+The generated contract for the scale function is:
 
 ```python
 @external
@@ -36,7 +34,7 @@ def scale(
 ) -> Float64: ...
 ```
 
-Call it with the resolved NumPy dtype:
+Call it like this:
 
 ```python
 result = scale.scale(np.float64(3.0), np.float64(2.5))
@@ -55,12 +53,9 @@ class instances.
 
 ## Array Results
 
-Numeric explicit-shape, automatic-shape, allocatable, and supported pointer
-array results become NumPy arrays. Ordinary and allocatable results are detached
-Python-owned copies. Supported pointer results are snapshot copies, not live
-views of native targets.
+Functions can return numeric arrays. These are returned as new NumPy arrays with Fortran (column-major) ordering.
 
-Create `function_results.f90`:
+Example (`function_results.f90`):
 
 ```fortran
 module results
@@ -76,7 +71,7 @@ contains
 end module results
 ```
 
-Inspecting `function_results.f90` prints this function contract:
+Generated contract:
 
 ```python
 @native_call([Ref(Arg(0))])
@@ -88,17 +83,13 @@ def squares(
 Build it:
 
 ```bash
-python3 -m x2py function_results.f90 \
-  --wrap \
-  --out-dir build/function-results \
-  --json
+python3 -m x2py function_results.f90 --out-dir build/function-results
 ```
 
-Then assert the returned NumPy array:
+Usage:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/function-results")
@@ -106,6 +97,7 @@ import function_results
 
 api = function_results.results
 result = api.squares(np.int32(4))
+
 np.testing.assert_array_equal(
     result,
     np.array([1.0, 4.0, 9.0, 16.0], dtype=np.float64),
@@ -120,8 +112,7 @@ result lifetime.
 
 ## Functions With Output Arguments
 
-If a function also has output dummies, Python returns a tuple. The direct
-function result is first, followed by projected output dummies in native
+If a function also has output arguments, Python returns a tuple: **first the direct function result, then the output arguments** in their native
 argument order.
 
 Create `function_outputs.f90`:
@@ -153,10 +144,7 @@ def sum_with_count(
 Build it:
 
 ```bash
-python3 -m x2py function_outputs.f90 \
-  --wrap \
-  --out-dir build/function-outputs \
-  --json
+python3 -m x2py function_outputs.f90 --out-dir build/function-outputs
 ```
 
 Then assert the tuple order:
