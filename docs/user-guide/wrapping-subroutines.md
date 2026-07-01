@@ -34,7 +34,7 @@ these forms.
 Create `outputs.f90`:
 
 ```fortran
-module outputs_api
+module outputs
   implicit none
 contains
   subroutine bounds(values, smallest, largest)
@@ -45,11 +45,38 @@ contains
     largest = maxval(values)
   end subroutine bounds
 
+  subroutine scale_in_place(values, factor)
+    real(8), intent(inout) :: values(:)
+    real(8), intent(in) :: factor
+
+    values = factor * values
+  end subroutine scale_in_place
+
   subroutine fill(values)
     real(8), intent(out) :: values(:)
     values = 1.0_8
   end subroutine fill
-end module outputs_api
+end module outputs
+```
+
+Inspecting `outputs.f90` prints these subroutine contracts:
+
+```python
+@native_call([Arg(0), Return('smallest', 0), Return('largest', 1)])
+def bounds(
+    values: Const(Float64[::])
+) -> tuple[Float64, Float64]: ...
+
+@native_call([Arg(0), Ref(Arg(1))])
+def scale_in_place(
+    values: Float64[::],
+    factor: Const(Float64)
+) -> None: ...
+
+@native_call([Arg(0)])
+def fill(
+    values: Float64[::]
+) -> Returns["values", Float64[::]]: ...
 ```
 
 Build the extension:
@@ -61,7 +88,7 @@ python3 -m x2py outputs.f90 \
   --json
 ```
 
-Then assert both projection forms:
+Then assert scalar projection, in-place mutation, and output-array projection:
 
 ```python
 import sys
@@ -71,11 +98,15 @@ import numpy as np
 sys.path.insert(0, "build/outputs")
 import outputs
 
-api = outputs.outputs_api
+api = outputs.outputs
 source = np.array([4.0, -2.0, 7.0], dtype=np.float64)
 smallest, largest = api.bounds(source)
 assert smallest == np.float64(-2.0)
 assert largest == np.float64(7.0)
+
+mutable = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+assert api.scale_in_place(mutable, np.float64(3.0)) is None
+np.testing.assert_array_equal(mutable, np.array([3.0, 6.0, 9.0], dtype=np.float64))
 
 target = np.empty(4, dtype=np.float64)
 returned = api.fill(target)
@@ -95,9 +126,10 @@ wrapper-owned object.
 
 ## Caller-Provided Arrays
 
-Array output storage remains visible. Allocate it with the exact dtype, shape,
-layout, alignment, and writeability required by the contract. The `fill` call
-above returns the same `target` object after native mutation.
+Array output and inout storage remains visible. Allocate it with the exact
+dtype, shape, layout, alignment, and writeability required by the contract. The
+`fill` call above returns the same `target` object after native mutation, while
+`scale_in_place` mutates `mutable` in place and returns `None`.
 
 The initial contents of an `intent(out)` array are ignored. An `intent(inout)`
 array is read and written in place. x2py does not create a hidden replacement
