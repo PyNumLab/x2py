@@ -943,9 +943,10 @@ np.testing.assert_array_equal(replacement, [10.0, 20.0])
 
 An allocatable derived-type field is owned by its containing native instance.
 Access returns a borrowed NumPy view whose base keeps the wrapper owner alive.
-A target-backed allocatable module array is native-owned and may also be exposed
-through a borrowed getter. In both cases native reallocation can invalidate old
-views; copy before reallocation when independent lifetime is required.
+An `Aliased` allocatable module array is native-owned and may also be exposed
+through a borrowed getter. A plain allocatable module array is exposed as a
+read-only snapshot copy or `None`. Borrowed views can become stale after native
+reallocation; copy before reallocation when independent lifetime is required.
 
 Allocatable scalar derived-type dummy replacement remains blocked because a
 safe contract must define native construction, replacement, finalization, and

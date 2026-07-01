@@ -370,6 +370,7 @@ class OwnershipPolicyResolver:
     def decide_semantic_type(self, semantic_type: Any, context: OwnershipContext) -> OwnershipDecision:
         facts = self._semantic_facts(semantic_type)
         decision = self._apply_overrides(self._decide(facts, context), facts)
+        decision = self._validate_aliased_decision(decision, facts, context)
         decision = self._validate_pointer_decision(decision, facts, context)
         decision = self._complete_immutable_policy(decision, facts, context)
         decision = self._validate_result_projection(decision, context)
@@ -669,16 +670,26 @@ class OwnershipPolicyResolver:
                 reason="allocatable field storage is owned by the containing wrapper instance",
             )
         if context.is_module_variable:
+            if (facts.metadata or {}).get("aliased"):
+                return OwnershipDecision(
+                    ObjectKind.NUMPY_ARRAY,
+                    OwnershipOwner.NATIVE,
+                    TransferMode.BORROWED_VIEW,
+                    DestructionPolicy.NATIVE_OWNER,
+                    storage_mode=StorageMode.HEAP,
+                    boundary_storage_mode=StorageMode.ALIAS,
+                    nullable=True,
+                    borrowed=True,
+                    reason="aliased allocatable module storage is owned by the native module",
+                )
             return OwnershipDecision(
                 ObjectKind.NUMPY_ARRAY,
-                OwnershipOwner.NATIVE,
-                TransferMode.BORROWED_VIEW,
-                DestructionPolicy.NATIVE_OWNER,
+                OwnershipOwner.PYTHON,
+                TransferMode.SNAPSHOT_COPY,
+                DestructionPolicy.PYTHON_REFCOUNT,
                 storage_mode=StorageMode.HEAP,
-                boundary_storage_mode=StorageMode.ALIAS,
                 nullable=True,
-                borrowed=True,
-                reason="allocatable module storage is owned by the Fortran module",
+                reason="plain allocatable module storage is copied into a read-only Python snapshot",
             )
         if context.is_result or context.intent in {"out", "inout"}:
             return OwnershipDecision(
@@ -866,6 +877,30 @@ class OwnershipPolicyResolver:
             borrowed=borrowed,
             blocker=blocker,
             reason=str(raw.get("reason", "explicit ownership policy metadata")),
+        )
+
+    @staticmethod
+    def _validate_aliased_decision(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
+        if decision.is_blocked:
+            return decision
+        if not context.is_module_variable or not facts.allocatable or facts.rank == 0:
+            return decision
+        if decision.transfer is not TransferMode.BORROWED_VIEW:
+            return decision
+        if (facts.metadata or {}).get("aliased"):
+            return decision
+        return replace(
+            decision,
+            owner=OwnershipOwner.UNKNOWN,
+            transfer=TransferMode.BLOCKED,
+            destruction=DestructionPolicy.BLOCKED,
+            borrowed=False,
+            blocker="borrowed module allocatable views require Aliased storage",
+            reason="plain allocatable module arrays use snapshot_copy by default",
         )
 
     @staticmethod

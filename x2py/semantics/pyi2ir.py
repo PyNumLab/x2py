@@ -1308,8 +1308,8 @@ class _PyiAstParser:
         if name == "FortranAllocatable":
             semantic_type.metadata["fortran_allocatable"] = True
             return True
-        if name == "FortranTarget":
-            semantic_type.metadata["fortran_target"] = True
+        if name == "Aliased":
+            semantic_type.metadata["aliased"] = True
             return True
         if name == "AssumedType":
             semantic_type.metadata["fortran_assumed_type"] = True
@@ -1441,7 +1441,7 @@ class _PyiAstParser:
             "Allocatable",
             "Constant",
             "Contiguous",
-            "FortranTarget",
+            "Aliased",
             "Immutable",
             "Ownership",
             "Optional",

@@ -243,6 +243,15 @@ PyArray_CHKFLAGS = FunctionDef(
     results=FunctionDefResult(Variable(NumpyBoolType(), name="b")),
 )
 
+PyArray_CLEARFLAGS = FunctionDef(
+    name="PyArray_CLEARFLAGS",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(NumpyArrayObjectType(), name="arr", memory_handling="alias")),
+        FunctionDefArgument(Variable(CNativeInt(), name="flags")),
+    ],
+)
+
 PyArray_ISNOTSWAPPED = FunctionDef(
     name="PyArray_ISNOTSWAPPED",
     body=[],

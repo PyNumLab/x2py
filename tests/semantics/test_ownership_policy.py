@@ -131,12 +131,20 @@ def test_default_policy_decisions_cover_public_object_kinds():
     assert allocatable_output.nullable is True
 
     module_allocatable = resolver.decide_semantic_type(
-        _array_type(allocatable=True, metadata={"fortran_target": True}),
+        _array_type(allocatable=True, metadata={"aliased": True}),
         OwnershipContext.module_variable(),
     )
     assert module_allocatable.owner is OwnershipOwner.NATIVE
     assert module_allocatable.transfer is TransferMode.BORROWED_VIEW
     assert module_allocatable.destruction is DestructionPolicy.NATIVE_OWNER
+
+    snapshot_module_allocatable = resolver.decide_semantic_type(
+        _array_type(allocatable=True),
+        OwnershipContext.module_variable(),
+    )
+    assert snapshot_module_allocatable.owner is OwnershipOwner.PYTHON
+    assert snapshot_module_allocatable.transfer is TransferMode.SNAPSHOT_COPY
+    assert snapshot_module_allocatable.destruction is DestructionPolicy.PYTHON_REFCOUNT
 
     derived_output = resolver.decide_semantic_type(_derived_type(), OwnershipContext.result())
     assert derived_output.owner is OwnershipOwner.WRAPPER
@@ -298,6 +306,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         (FortranToCBridgeGenerator, "_FIELD_SETTER_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_FIELD_GETTER_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_MODULE_VARIABLE_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_MODULE_ARRAY_GETTER_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_ARGUMENT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_RESULT_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_ARGUMENT_POLICY_DISPATCHER"),
@@ -512,7 +521,7 @@ def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
         ("snapshot_copy", _array_type(pointer=True), OwnershipContext.result()),
         (
             "native_borrowed_view",
-            _array_type(allocatable=True, metadata={"fortran_target": True}),
+            _array_type(allocatable=True, metadata={"aliased": True}),
             OwnershipContext.module_variable(),
         ),
         ("wrapper_borrowed_view", _array_type(allocatable=True), OwnershipContext.field()),
@@ -674,7 +683,7 @@ def test_recursive_module_policy_map_includes_nested_fields_and_functions():
         variables=[
             SemanticVariable(
                 "values",
-                _array_type(allocatable=True, metadata={"fortran_target": True}),
+                _array_type(allocatable=True, metadata={"aliased": True}),
             )
         ],
         classes=[
@@ -713,7 +722,7 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
         variables=[
             SemanticVariable(
                 "module_values",
-                _array_type(allocatable=True, metadata={"fortran_target": True}),
+                _array_type(allocatable=True, metadata={"aliased": True}),
             )
         ],
         classes=[

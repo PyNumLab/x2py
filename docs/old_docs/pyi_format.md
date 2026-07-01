@@ -446,7 +446,7 @@ Generated canonical metadata:
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `FortranCharacterLength("n")` | Fortran character storage length for `String` contracts |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
-| `FortranTarget` | native storage has the Fortran `target` attribute needed for module zero-copy views |
+| `Aliased` | native storage may be exposed across the Python boundary as an alias |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
 | `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
 | `Destruction("python_refcount" | "wrapper_dealloc" | "native_owner" | "caller" | "call_local" | "none" | "blocked")` | explicit destruction override for the wrapper ownership policy |
@@ -880,15 +880,14 @@ unallocated storage can be represented as `None`:
 
 ```python
 @module_variable("module_values")
-def get_module_values() -> Annotated[Float64[:], Allocatable, FortranTarget] | None: ...
+def get_module_values() -> Annotated[Float64[:], Allocatable, Aliased] | None: ...
 ```
 
 `@module_variable("name")` is x2py metadata linking the getter to the native
 module variable. The getter must take no arguments and must return an
-allocatable array type unioned with `None`. `FortranTarget` is required for
-module allocatable arrays because the generated Fortran bridge needs `c_loc` on
-the native storage. Without that native `target` attribute, readiness and direct
-code generation report a blocker instead of generating a copied fallback.
+allocatable array type unioned with `None`. `Aliased` marks native storage
+that may be exposed as a borrowed view. Plain module allocatable arrays are
+returned as read-only Python-owned snapshots.
 
 Public scalar Fortran module variables use explicit accessors. The getter reads
 current native storage; the setter writes through to the Fortran module

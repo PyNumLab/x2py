@@ -19,7 +19,7 @@ class buffer:
 
     def values_sum(self) -> Float64: ...
 
-module_values: Annotated[Float64[:], Allocatable, FortranTarget] | None
+module_values: Annotated[Float64[:], Allocatable, Aliased] | None
 
 @native_call([Ref(Arg(0))])
 def allocate_module_values(

@@ -461,11 +461,11 @@ end module alloc_target_mod
     values = module.variables[0]
     assert values.name == "values"
     assert values.semantic_type.storage.array.allocatable is True
-    assert values.semantic_type.metadata["fortran_target"] is True
+    assert values.semantic_type.metadata["aliased"] is True
 
     field = module.classes[0].fields[0]
     assert field.semantic_type.storage.array.allocatable is True
-    assert "fortran_target" not in field.semantic_type.metadata
+    assert "aliased" not in field.semantic_type.metadata
 
 
 def test_converter_reports_missing_generic_target_as_readiness_blocker():

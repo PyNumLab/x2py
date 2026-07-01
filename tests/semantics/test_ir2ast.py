@@ -241,7 +241,7 @@ end module generic_mod
         )
 
 
-def test_allocatable_module_array_without_target_raises_before_codegen():
+def test_allocatable_module_array_without_aliased_lowers_as_snapshot_copy():
     source = """
 module alloc_mod
   real(8), allocatable :: values(:)
@@ -249,11 +249,14 @@ end module alloc_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match="allocatable array without the Fortran target attribute"):
-        semantic_ir_to_codegen_ast(
-            semantic_module,
-            Scope(name=semantic_module.name, scope_type="module"),
-        )
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    values = codegen_module.variables[0]
+    assert values.ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert values.getter_ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
 
 
 def test_allocatable_result_and_output_lower_for_copy_return_codegen():

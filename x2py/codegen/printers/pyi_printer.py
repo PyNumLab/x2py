@@ -403,8 +403,8 @@ class PyiPrinter:
             metadata.append("Polymorphic")
         if semantic_type.metadata.get("fortran_allocatable"):
             metadata.append("FortranAllocatable")
-        if semantic_type.metadata.get("fortran_target"):
-            metadata.append("FortranTarget")
+        if semantic_type.metadata.get("aliased"):
+            metadata.append("Aliased")
         if semantic_type.metadata.get(PYTHON_VALUE_MUTABILITY_METADATA) == PYTHON_VALUE_IMMUTABLE:
             metadata.append("Immutable")
         pointer_association = semantic_type.metadata.get("fortran_pointer_association")

@@ -38,7 +38,7 @@ class buffer:
 module_values: Annotated[
     Float64[:],
     Allocatable,
-    FortranTarget,
+    Aliased,
     Ownership("native"),
     Transfer("borrowed_view"),
     Destruction("native_owner"),

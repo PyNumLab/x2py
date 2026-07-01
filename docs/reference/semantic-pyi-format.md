@@ -772,7 +772,7 @@ Generated canonical metadata:
 | `Intent("out")` | exact native argument is an output argument when that fact changes wrapper behavior |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
-| `FortranTarget` | native storage has the Fortran `target` attribute needed for module zero-copy views |
+| `Aliased` | native storage may be exposed across the Python boundary as an alias |
 | `Immutable` | Python-visible value must not be mutated in place; writable native calls require a completed copy-in/copy-out replacement policy or an explicit call-local discarded-mutation policy |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
 | `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
@@ -833,7 +833,7 @@ Transfer modes:
 | `Transfer("in_place")` | Native code writes through caller-provided mutable Python storage. The same Python object observes the mutation. | `Destruction("caller")`; x2py must not free caller storage. | `def scale(values: Annotated[Float64[:], Ownership("caller"), Transfer("in_place"), Destruction("caller")]) -> None: ...` |
 | `Transfer("copy_return")` | Native output is copied or read back into a fresh Python-visible return value. The original Python object is not mutated unless separately declared. | `Destruction("python_refcount")` after Python owns the copy. | `def read_values() -> Annotated[Float64[:], Ownership("python"), Transfer("copy_return"), Destruction("python_refcount")]: ...` |
 | `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. | `Destruction("python_refcount")` for the snapshot. | `def current_pointer() -> Annotated[Float64[:], Pointer, Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")] | None: ...` |
-| `Transfer("borrowed_view")` | Python receives a no-copy view of storage owned somewhere else. Writes may mutate that storage when the value is mutable and the backend supports writable views. | Usually `Destruction("native_owner")` or `Destruction("wrapper_dealloc")`; Python does not free the borrowed target. | `module_values: Annotated[Float64[:], Allocatable, FortranTarget, Ownership("native"), Transfer("borrowed_view"), Destruction("native_owner")] | None` |
+| `Transfer("borrowed_view")` | Python receives a no-copy view of storage owned somewhere else. Writes may mutate that storage when the value is mutable and the backend supports writable views. | Usually `Destruction("native_owner")` or `Destruction("wrapper_dealloc")`; Python does not free the borrowed target. | `module_values: Annotated[Float64[:], Allocatable, Aliased, Ownership("native"), Transfer("borrowed_view"), Destruction("native_owner")] | None` |
 | `Transfer("wrapper_instance")` | Python receives a wrapper object that owns or controls a native instance. | `Destruction("wrapper_dealloc")`. | `def make_state() -> Annotated[state, Ownership("wrapper"), Transfer("wrapper_instance"), Destruction("wrapper_dealloc")]: ...` |
 | `Transfer("blocked")` | The contract intentionally has no safe lowering with the current policy facts. Wrapper generation must stop. | `Destruction("blocked")`. | `def reassociate(values: Annotated[Float64[:], Pointer, Ownership("unknown"), Transfer("blocked"), Destruction("blocked")]) -> None: ...` |
 
@@ -1364,15 +1364,15 @@ Module variables are declarations in the semantic contract. Allocatable arrays
 include `None` because native storage may be unallocated:
 
 ```python
-module_values: Annotated[Float64[:], Allocatable, FortranTarget] | None
+module_values: Annotated[Float64[:], Allocatable, Aliased] | None
+snapshot_values: Annotated[Float64[:], Allocatable] | None
 ```
 
-<!-- X2PY_C_DOCS_START
-`FortranTarget` is required for module allocatable arrays because the generated
-Fortran bridge needs `c_loc` on the native storage. Without that native `target`
-attribute, readiness and direct code generation report a blocker instead of
-generating a copied fallback.
-X2PY_C_DOCS_END -->
+`Aliased` selects a native-owned borrowed view. A plain allocatable module
+array remains wrappable as `None` when unallocated or as a fresh read-only
+snapshot copy when allocated. Fortran source declarations with `target` are
+printed as `Aliased` because they prove that the current allocation may be
+aliased by the wrapper.
 
 Public scalar Fortran module variables are emitted directly with their resolved
 semantic type:
@@ -1551,7 +1551,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Writable scalar references | `Ref(T)`, `Intent("out")`, or explicit projection when the Python-visible API differs |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
 | Module variables | direct module-level annotations; native accessors remain internal |
-| Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
+| Allocatable borrowed views and snapshots | derived-type fields and aliased module arrays as borrowed views; plain module arrays as read-only snapshots; `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
 | Fortran derived types | classes with fields and methods; `@native_type` only for irreducible attributes or finalizers |
 | Fortran defined operators | Python data-model methods plus explicit named-operator methods |

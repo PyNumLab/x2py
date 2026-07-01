@@ -15,6 +15,7 @@ from x2py.ownership_policy import (
     SetterAction,
     SetterActionDispatcher,
     StorageMode,
+    TransferMode,
     ownership_decision_for_codegen_variable,
 )
 from x2py.semantics.models import (
@@ -139,6 +140,7 @@ from ..models.datatypes import (
 from ..models.core import Slice
 from .numpy_cpython_api import (
     PyArray_Check,
+    PyArray_CLEARFLAGS,
     PyArray_DATA,
     PyArray_CHKFLAGS,
     PyArray_ISNOTSWAPPED,
@@ -1429,20 +1431,33 @@ class CPythonBindingGenerator(BindingGenerator):
         release_memory = self._ARRAY_RELEASE_POLICY_DISPATCHER.dispatch(self, expr, decision)
         unallocated_guard = self._return_none_if_unallocated(data_var) if decision.nullable else []
         # Save the ndarray to vars_to_wrap to be handled as if it came from C
+        create_array = AliasAssign(
+            py_equiv,
+            to_pyarray(
+                convert_to_literal(v.rank),
+                typenum,
+                data_var,
+                shape_var,
+                convert_to_literal(v.order != "F"),
+                release_memory,
+            ),
+        )
+        readonly = self._clear_writeable_flag(py_equiv) if decision.transfer is TransferMode.SNAPSHOT_COPY else []
         return [
             call,
             *unallocated_guard,
-            AliasAssign(
-                py_equiv,
-                to_pyarray(
-                    convert_to_literal(v.rank),
-                    typenum,
-                    data_var,
-                    shape_var,
-                    convert_to_literal(v.order != "F"),
-                    release_memory,
-                ),
-            ),
+            create_array,
+            *readonly,
+        ]
+
+    @staticmethod
+    def _clear_writeable_flag(py_array):
+        """Clear NumPy writeability on a returned snapshot copy."""
+        return [
+            PyArray_CLEARFLAGS(
+                ObjectAddress(PointerCast(py_array, PyArray_CLEARFLAGS.arguments[0].var)),
+                numpy_flag_writeable,
+            )
         ]
 
     def _visit_BindCModuleConstant(self, expr):
@@ -3334,10 +3349,11 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _snapshot_copy_result_detail_lines(self, var, decision):
         """Handle snapshot copy result detail lines for the current generation context."""
-        return [
-            f"    Ownership: {decision.owner_label}",
-            "    Returns None when unassociated.",
-        ]
+        lines = [f"    Ownership: {decision.owner_label}"]
+        if decision.nullable:
+            state = "unallocated" if decision.storage_mode is StorageMode.HEAP else "unassociated"
+            lines.append(f"    Returns None when {state}.")
+        return lines
 
     def _copy_return_result_notes(self, var, decision):
         """Handle copy return result notes for the current generation context."""
@@ -3350,6 +3366,12 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _snapshot_copy_result_notes(self, var, decision):
         """Handle snapshot copy result notes for the current generation context."""
+        if decision.storage_mode is StorageMode.HEAP:
+            return [
+                "Plain allocatable module arrays without Aliased are copied into Python-owned NumPy arrays.",
+                "Returned snapshots are read-only and detached from later native changes.",
+                "Unallocated module arrays return None.",
+            ]
         if not var.rank:
             return [
                 "Pointer scalar results are copied into detached Python values.",
@@ -3558,18 +3580,17 @@ class CPythonBindingGenerator(BindingGenerator):
     def _module_array_getter_docstring(self, name, var):
         """Handle module array getter docstring for the current generation context."""
         var = self._doc_original_var(var)
+        notes = self._RESULT_NOTE_DISPATCHER.dispatch(self, var)
         lines = [
             f"{name}() -> {self._type_doc(var, include_none=True, signature=True)}",
             "",
             "Returns",
             "-------",
             f"{var.name} : {self._type_doc(var, include_none=True)}",
-            *self._borrowed_detail_lines(var),
-            "",
-            "Notes",
-            "-----",
-            *self._borrowed_view_notes(),
+            *self._result_detail_lines(var),
         ]
+        if notes:
+            lines.extend(["", "Notes", "-----", *notes])
         return CommentBlock("\n".join(lines))
 
     def _new_python_object(self, name, dtype=None, is_temp=False):

@@ -708,16 +708,6 @@ def _raise_for_unsupported_array_contracts(node: models.SemanticModule) -> None:
         _raise_for_unsupported_array_contracts_in_class(semantic_class)
 
 
-def _raise_for_unsupported_allocatable_module_variables(node: models.SemanticModule) -> None:
-    for variable in node.variables:
-        semantic_type = variable.semantic_type
-        if _is_allocatable_array(semantic_type) and not semantic_type.metadata.get("fortran_target"):
-            raise ValueError(
-                f"Module variable {variable.name!r} is an allocatable array without the Fortran target attribute; "
-                "borrowed zero-copy module views require target storage"
-            )
-
-
 def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> None:
     for argument in node.arguments:
         decision = _variable_ownership_decision(argument)
@@ -998,7 +988,6 @@ def _has_known_iso_c_kind(semantic_type: models.SemanticType) -> bool:
 def _convert_semantic_module(node, scope, legacy, custom_types):
     _raise_for_unresolved_generic_targets(node)
     _raise_for_unsupported_fortran_module_features(node)
-    _raise_for_unsupported_allocatable_module_variables(node)
     _raise_for_unsupported_array_contracts(node)
     _raise_for_blocked_ownership_contracts(node)
     _raise_for_private_type_exposure(node)
@@ -1572,7 +1561,7 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
         shape=shape,
         memory_handling=ownership_decision.storage_mode.value,
         is_private=node.visibility == "private",
-        is_target=bool(semantic_type.metadata.get("fortran_target")),
+        is_target=bool(semantic_type.metadata.get("aliased")),
         is_optional=getattr(node, "optional", False),
         intent=getattr(node, "intent", "in"),
         passes_by_value=_passes_by_value(node),

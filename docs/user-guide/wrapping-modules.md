@@ -72,8 +72,9 @@ the same extension observe the same native module storage.
 
 ## Module Arrays
 
-A supported target-backed allocatable module array is a native-owned borrowed
-view or `None` when unallocated:
+An `Aliased` allocatable module array is a native-owned borrowed view or
+`None` when unallocated. A plain allocatable module array returns a read-only
+snapshot copy instead:
 
 ```python
 module.allocate_values(np.int32(3))
@@ -81,9 +82,10 @@ view = module.values
 view[0] = np.float64(5.0)
 ```
 
-Mutation reaches native module storage. A later native deallocation or
-reallocation invalidates old views; use `view.copy()` first when Python needs an
-independent lifetime. Pointer module variables use snapshot-or-block policy.
+For aliased arrays, mutation reaches native module storage. A later native
+deallocation or reallocation invalidates old views; use `view.copy()` first when
+Python needs an independent lifetime. Pointer module variables use
+snapshot-or-block policy.
 
 ## Common Blocks
 

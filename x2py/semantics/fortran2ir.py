@@ -293,7 +293,7 @@ class FortranToIRConverter:
         if getattr(var, "polymorphic", False):
             metadata["fortran_polymorphic"] = True
         if getattr(var, "target", False):
-            metadata["fortran_target"] = True
+            metadata["aliased"] = True
         if getattr(var, "pointer", False):
             metadata["fortran_pointer"] = True
             metadata["fortran_pointer_association"] = "runtime"

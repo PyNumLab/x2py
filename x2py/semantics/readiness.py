@@ -231,17 +231,6 @@ class _SemanticReadinessChecker:
         for var in module.variables:
             if not _is_public(var):
                 continue
-            if self._is_allocatable_array(var.semantic_type) and not var.semantic_type.metadata.get("fortran_target"):
-                self._add_blocker(
-                    "allocatable_module_target_missing",
-                    "Borrowed zero-copy module views require allocatable module arrays to have the Fortran target attribute.",
-                    {
-                        "owner": f"{module.name}.{var.name}",
-                        "item": var.name,
-                    },
-                    unit=f"{module.name}.{var.name}",
-                    unit_kind="variable",
-                )
             self._check_ownership_policy(
                 var.metadata.get(RESOLVED_OWNERSHIP_POLICY_METADATA),
                 owner=f"{module.name}.{var.name}",
@@ -759,12 +748,6 @@ class _SemanticReadinessChecker:
         if decision is None:
             return False
         return decision.is_blocked
-
-    @staticmethod
-    def _is_allocatable_array(semantic_type: SemanticType | None) -> bool:
-        if semantic_type is None or semantic_type.storage is None or semantic_type.storage.array is None:
-            return False
-        return semantic_type.storage.array.allocatable
 
     @staticmethod
     def _is_pointer_array(semantic_type: SemanticType | None) -> bool:

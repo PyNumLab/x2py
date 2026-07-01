@@ -134,28 +134,47 @@ def test_allocatable_policy_blockers_are_reported_for_only_unsupported_cases():
     report = _readiness_from_pyi(
         """
 values: Annotated[Float64[:], Allocatable]
-target_values: Annotated[Float64[:], Allocatable, FortranTarget]
+target_values: Annotated[Float64[:], Allocatable, Aliased]
 
 def fill() -> Returns["values", Annotated[Float64[:], Allocatable]]: ...
 
 def make_values() -> Annotated[Float64[:], Allocatable]: ...
 
-def replace(values: Annotated[Float64[:], Allocatable]) -> Returns["values", Annotated[Float64[:], Allocatable]]: ...
-
 def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Returns["right", Annotated[Float64[:], Allocatable]]]: ...
 """
     )
 
-    assert _blocker_codes(report) >= {
-        "allocatable_module_target_missing",
-    }
+    assert report["wrappable"] is True
     assert "allocatable_replacement_policy_missing" not in _blocker_codes(report)
     assert "allocatable_owner_policy_missing" not in _blocker_codes(report)
     assert "allocatable_multiple_copy_returns_unsupported" not in _blocker_codes(report)
-    target_blocker = next(
-        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "allocatable_module_target_missing"
+    assert report["wrappability_blockers"] == []
+
+
+def test_explicit_borrowed_module_allocatable_requires_aliased_storage():
+    report = _readiness_from_pyi(
+        """
+values: Annotated[
+    Float64[:],
+    Allocatable,
+    Ownership("native"),
+    Transfer("borrowed_view"),
+    Destruction("native_owner"),
+]
+"""
     )
-    assert target_blocker["items"] == [{"owner": "solver.values", "item": "values"}]
+
+    assert report["wrappable"] is False
+    blocker = next(
+        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_ownership_policy_blocked"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "solver.values",
+            "item": "values",
+            "policy": "borrowed module allocatable views require Aliased storage",
+        }
+    ]
 
 
 def test_pointer_module_variable_uses_snapshot_or_block_ownership_policy():

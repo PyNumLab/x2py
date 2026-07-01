@@ -352,7 +352,7 @@ path. Examples of supported changes include:
 - `ORDER_F` to `ORDER_ANY` when the native path is implemented for either
   contiguous orientation;
 - `T | None` or a default `= ...` for a genuinely optional native argument;
-- `Allocatable`, `Pointer`, `FortranTarget`, or `PointerPolicy(...)` when those
+- `Allocatable`, `Pointer`, `Aliased`, or `PointerPolicy(...)` when those
   facts match the native declaration and the selected policy path; and
 - `Immutable` for a supported replacement or call-local mutation policy.
 
@@ -434,7 +434,7 @@ but their native storage contexts make their lifetimes different.
 module_values: Annotated[
     Float64[:],
     Allocatable,
-    FortranTarget,
+    Aliased,
     Ownership("native"),
     Transfer("borrowed_view"),
     Destruction("native_owner"),
