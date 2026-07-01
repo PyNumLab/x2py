@@ -18,7 +18,7 @@ The first example uses a small file named `numeric_types.f90`. Create it with
 the complete source below:
 
 ```fortran
-module numeric_types_api
+module numeric_types
   use iso_fortran_env, only: int32, real64
   implicit none
 contains
@@ -41,21 +41,25 @@ contains
     logical(kind=1), intent(in) :: flag
     output = .not. flag
   end function invert
-end module numeric_types_api
+end module numeric_types
 ```
 
 Inspect the resolved mapping, then build it:
 
 ```bash
-python3 -m x2py numeric_types.f90 --pyi
 python3 -m x2py numeric_types.f90 \
   --wrap \
   --out-dir build/numeric-types \
   --json
 ```
 
-Use the type printed by that command as the call contract. The tables below
-summarize the currently verified Fortran wrapper mappings.
+It is highly recommended to also generate the type contract first for inspection:
+
+```bash
+python3 -m x2py numeric_types.f90 --pyi
+```
+Use the semantic types shown in the `.pyi` file (e.g. `Int32`, `Float64`, etc.) when calling from Python. 
+The tables below summarize the currently verified mappings.
 
 ## Scalar Mapping
 
@@ -74,21 +78,6 @@ summarize the currently verified Fortran wrapper mappings.
 | derived type | generated class name | instance of that generated class | arrays of derived types are unsupported |
 | dummy procedure | `Callable[[...], T]` | Python callable with the exact argument/result contract | not applicable |
 
-The relevant generated declarations have this shape:
-
-```python
-@native_call([Ref(Arg(0))])
-def add_one(value: Const(Int32)) -> Int32: ...
-
-@native_call([Ref(Arg(0))])
-def double(value: Const(Float64)) -> Float64: ...
-
-@native_call([Ref(Arg(0))])
-def conjugate_value(value: Const(Complex128)) -> Complex128: ...
-
-@native_call([Ref(Arg(0))])
-def invert(flag: Const(Bool)) -> Bool: ...
-```
 
 Import the child module and call it with matching values:
 
@@ -100,7 +89,7 @@ import numpy as np
 sys.path.insert(0, "build/numeric-types")
 import numeric_types
 
-api = numeric_types.numeric_types_api
+api = numeric_types.numeric_types
 
 assert api.add_one(np.int32(4)) == np.int32(5)
 assert api.double(np.float64(1.5)) == np.float64(3.0)
