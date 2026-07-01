@@ -39,10 +39,7 @@ end module pointers_api
 Build it:
 
 ```bash
-python3 -m x2py pointers.f90 \
-  --wrap \
-  --out-dir build/pointers \
-  --json
+python3 -m x2py pointers.f90 --out-dir build/pointers
 ```
 
 Then verify call-local input and snapshot output:
