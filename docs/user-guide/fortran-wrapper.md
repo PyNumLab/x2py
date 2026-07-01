@@ -1164,9 +1164,9 @@ bump(vector)
 bump(matrix)
 ```
 
-Assumed-type `type(*)`, character arrays, and derived-type arrays are blocked
-until their descriptor, ABI, element construction, and ownership policies are
-defined.
+Assumed-type `type(*)`, character arrays that cannot be represented as
+fixed-width NumPy bytes storage, and derived-type arrays are blocked until their
+descriptor, ABI, element construction, and ownership policies are defined.
 
 Runtime tests: [`test_array_contracts.py`](../../tests/wrapper/fortran/arrays/test_array_contracts.py),
 [`test_assumed_rank_arrays.py`](../../tests/wrapper/fortran/arrays/test_assumed_rank_arrays.py),
@@ -1515,10 +1515,12 @@ result path uses NUL-terminated C strings. Generated `bind(C)` shims handle
 compiler-specific hidden-length ABI details; these are not exposed in Python.
 X2PY_C_DOCS_END -->
 
-Character arrays and mutable allocatable character dummy arguments are blocked
-until array storage, per-element length, allocation, encoding, and ownership are
-defined. Deferred-length character fields and mutable character-buffer fields
-also require an explicit field policy.
+Character arrays use fixed-width NumPy bytes dtypes such as `S5`; the dtype
+itemsize is the Fortran element length. Deferred-length allocatable character
+arrays carry that length at runtime and return a fresh fixed-width bytes array.
+Python Unicode arrays, object arrays, mutable scalar deferred-length character
+storage, deferred-length character fields, and mutable character-buffer fields
+remain blocked until an explicit field and encoding policy exists.
 
 Runtime tests: [`test_character_arguments.py`](../../tests/wrapper/fortran/strings/test_character_arguments.py)
 and [`test_character_edge_cases.py`](../../tests/wrapper/fortran/strings/test_character_edge_cases.py).
@@ -2064,12 +2066,12 @@ wrappers:
 | --- | --- | --- |
 | Allocatables | Allocatable scalar derived-type replacement | Whole-object construction, replacement, finalization, and destruction. |
 | Arrays | Assumed type `type(*)` | Runtime dtype and descriptor policy. |
-| Arrays | Character arrays | Element length, encoding, ABI, allocation, and ownership. |
+| Arrays | Character arrays not representable as fixed-width bytes dtype | Encoding, ABI, allocation, and ownership. |
 | Arrays | Derived-type arrays | Element layout, construction, destruction, aliasing, and copy/view behavior. |
 | Pointers | Pointer output/inout and borrowed targets | Owner, lifetime, reassociation, release, and stale-view behavior. |
 | Polymorphism | Results, mutable dummies, arrays, allocatable/pointer scalars, `class(*)` | Dynamic type, allocation, replacement, and ownership. |
 | Constructors | Generic constructor interfaces and overloaded runtime initialization | Deterministic Python constructor selection and lowering. |
-| Characters | Mutable allocatable character dummies and deferred-length mutable fields | Allocation, encoding, replacement, and destruction. |
+| Characters | Mutable scalar allocatable character dummies and deferred-length mutable fields | Allocation, encoding, replacement, and destruction. |
 | Kinds | Real wider than 64 bits, complex wider than 128 bits, wider explicit logical storage | Portable NumPy round-trip without silent precision loss. |
 | Callbacks | Stored, optional, cross-thread, or procedure-pointer callbacks | Persistent ownership, thread, exception, nullability, and teardown. |
 

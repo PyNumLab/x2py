@@ -88,7 +88,7 @@ The tables below summarize the currently verified Fortran-to-Python type mapping
 | complex, 64 total bits | `Complex64` | `numpy.complex64` | `numpy.complex64` |
 | complex, 128 total bits | `Complex128` | `numpy.complex128` | `numpy.complex128` |
 | supported logical storage | `Bool` | `bool` or `numpy.bool_` as documented by the generated contract | `numpy.bool_` |
-| scalar character | `String` or `String[n]` | `str` | character arrays are unsupported |
+| scalar character | `String` or `String[n]` | `str` | fixed-width NumPy bytes, such as `S8` |
 | derived type | generated class name | instance of that generated class | arrays of derived types are unsupported |
 | dummy procedure | `Callable[[...], T]` | Python callable with the exact argument/result contract | not applicable |
 
@@ -157,8 +157,14 @@ non-fixed scalar length. The length is a character length, not an array shape.
 
 Returned strings are Python-owned copies. Fixed-length results retain trailing
 Fortran blanks. Mutable scalar character input/output uses replacement: Python
-receives a new `str` because the original string is immutable. Character arrays
-and mutable deferred-length character storage remain blocked.
+receives a new `str` because the original string is immutable.
+
+Character arrays use fixed-width NumPy bytes dtypes. For
+`character(len=5) :: names(:)`, Python passes and receives arrays with
+`dtype="S5"`. For an allocatable deferred-length character array, the runtime
+allocation length becomes the returned dtype itemsize. x2py treats these arrays
+as raw fixed-width bytes storage; Python Unicode arrays, object arrays, and
+mutable scalar deferred-length character storage remain blocked.
 
 ## Derived Types
 
@@ -181,7 +187,8 @@ Fortran wrapper generation blocks:
 - complex storage wider than 128 total bits;
 - wider explicit logical storage without a portable NumPy round trip;
 - unsigned Fortran integer assumptions without a proved native mapping;
-- character arrays; and
+- character arrays that cannot be represented as fixed-width NumPy bytes
+  storage; and
 - arrays of derived types.
 
 Check the [language feature matrix](../language-support/feature-matrix.md) when a

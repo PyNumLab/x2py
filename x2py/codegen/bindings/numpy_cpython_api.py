@@ -266,7 +266,21 @@ to_pyarray = FunctionDef(
         FunctionDefArgument(Variable(CNativeInt(), name="nd")),
         FunctionDefArgument(Variable(CNativeInt(), name="typenum")),
         FunctionDefArgument(Variable(VoidType(), name="data", memory_handling="alias")),
+        FunctionDefArgument(Variable(NumpyNDArrayType.get_new(NumpyInt32Type(), 1, None, raw=True), "shape")),
+        FunctionDefArgument(Variable(NumpyBoolType(), "c_order")),
+        FunctionDefArgument(Variable(NumpyBoolType(), "release_memory")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="arr", memory_handling="alias")),
+)
+
+to_numpy_bytes_array = FunctionDef(
+    name="x2py_to_numpy_bytes_array",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(CNativeInt(), name="nd")),
+        FunctionDefArgument(Variable(VoidType(), name="data", memory_handling="alias")),
         FunctionDefArgument(Variable(NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True), "shape")),
+        FunctionDefArgument(Variable(NumpyInt64Type(), name="itemsize")),
         FunctionDefArgument(Variable(NumpyBoolType(), "c_order")),
         FunctionDefArgument(Variable(NumpyBoolType(), "release_memory")),
     ],
@@ -298,6 +312,7 @@ require_any_contiguous = Variable(CNativeInt(), name="REQUIRE_ANY_CONTIGUOUS")
 # https://numpy.org/doc/stable/reference/c-api/dtype.html
 numpy_bool_type = Variable(CNativeInt(), name="NPY_BOOL")
 numpy_byte_type = Variable(CNativeInt(), name="NPY_BYTE")
+numpy_string_type = Variable(CNativeInt(), name="NPY_STRING")
 numpy_ubyte_type = Variable(CNativeInt(), name="NPY_UBYTE")
 numpy_short_type = Variable(CNativeInt(), name="NPY_SHORT")
 numpy_ushort_type = Variable(CNativeInt(), name="NPY_USHORT")

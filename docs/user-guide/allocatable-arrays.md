@@ -239,8 +239,8 @@ independent = view.copy()
 ## Limitations
 
 - Allocatable scalar derived-type argument replacement is blocked.
-- Character allocatable arrays and mutable deferred-length character storage
-  are blocked.
+- Character allocatable arrays are supported only as fixed-width NumPy bytes
+  arrays; mutable scalar deferred-length character storage is blocked.
 - Borrowed views require a proved native or wrapper owner and `Aliased`
   storage when the owner is a module variable.
 - An edited `.pyi` cannot relabel a native-owned allocation as Python-owned

@@ -310,6 +310,20 @@ class CPythonCodePrinter(CCodePrinter):
         property_defs = self._module_property_blocks(expr)
 
         init_func = self._visit(expr.init_func)
+        rendered_body_parts = [
+            decs,
+            class_defs,
+            function_defs,
+            *method_defs,
+            *property_defs,
+            *module_defs,
+            init_func,
+        ]
+        numpy_bytes_helper = (
+            self._x2py_numpy_bytes_array_helper()
+            if any("x2py_to_numpy_bytes_array(" in part for part in rendered_body_parts)
+            else ""
+        )
 
         pymod_name = f"{expr.name}_wrapper"
         imports = [
@@ -326,6 +340,7 @@ class CPythonCodePrinter(CCodePrinter):
                 f"#define {pymod_name.upper()}\n",
                 imports,
                 self._x2py_malloc_helper(),
+                numpy_bytes_helper,
                 decs,
                 sep,
                 class_defs,
@@ -340,6 +355,53 @@ class CPythonCodePrinter(CCodePrinter):
                 sep,
                 init_func,
             ]
+        )
+
+    @staticmethod
+    def _x2py_numpy_bytes_array_helper():
+        """Create a fixed-width NumPy bytes array from native-owned data."""
+        return (
+            "#include <stdint.h>\n"
+            "#include <stdbool.h>\n"
+            "static PyObject* x2py_to_numpy_bytes_array(int nd, void* data, int32_t* shape,\n"
+            "                                              int64_t itemsize, bool c_order,\n"
+            "                                              bool release_memory)\n"
+            "{\n"
+            "    if (itemsize < 0) {\n"
+            "        if (release_memory) free(data);\n"
+            '        PyErr_SetString(PyExc_ValueError, "bytes array itemsize must be non-negative");\n'
+            "        return NULL;\n"
+            "    }\n"
+            "    if (nd < 0 || nd > NPY_MAXDIMS) {\n"
+            "        if (release_memory) free(data);\n"
+            '        PyErr_SetString(PyExc_ValueError, "unsupported array rank");\n'
+            "        return NULL;\n"
+            "    }\n"
+            "    npy_intp dims[NPY_MAXDIMS];\n"
+            "    for (int i = 0; i < nd; ++i) {\n"
+            "        int source = c_order ? nd - i - 1 : i;\n"
+            "        dims[i] = (npy_intp)shape[source];\n"
+            "    }\n"
+            "    PyArray_Descr* descr = PyArray_DescrNewFromType(NPY_STRING);\n"
+            "    if (descr == NULL) {\n"
+            "        if (release_memory) free(data);\n"
+            "        return NULL;\n"
+            "    }\n"
+            "#if defined(PyDataType_SET_ELSIZE)\n"
+            "    PyDataType_SET_ELSIZE(descr, (npy_intp)itemsize);\n"
+            "#else\n"
+            "    descr->elsize = (int)itemsize;\n"
+            "#endif\n"
+            "    int flags = NPY_ARRAY_ALIGNED;\n"
+            "    flags |= c_order ? NPY_ARRAY_C_CONTIGUOUS : NPY_ARRAY_F_CONTIGUOUS;\n"
+            "    PyObject* arr = PyArray_NewFromDescr(&PyArray_Type, descr, nd, dims, NULL, data, flags, NULL);\n"
+            "    if (arr == NULL) {\n"
+            "        if (release_memory) free(data);\n"
+            "        return NULL;\n"
+            "    }\n"
+            "    if (release_memory) PyArray_ENABLEFLAGS((PyArrayObject*)arr, NPY_ARRAY_OWNDATA);\n"
+            "    return arr;\n"
+            "}\n"
         )
 
     def _module_namespace_exports(self, expr, funcs):

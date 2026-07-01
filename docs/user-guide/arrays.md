@@ -171,14 +171,17 @@ its own runtime rank. Rank-zero values and ranks above 15 are rejected.
 
 ## Array Results
 
-Supported numeric array results preserve dtype, rank, and Fortran-oriented
-multidimensional data. Allocated zero-sized results are arrays; unallocated
-allocatable or unassociated pointer results are `None`.
+Supported numeric and fixed-width character array results preserve dtype, rank,
+and Fortran-oriented multidimensional data. Character arrays use NumPy bytes
+dtypes such as `S5`, where the dtype itemsize is the Fortran element length.
+Allocated zero-sized results are arrays; unallocated allocatable or
+unassociated pointer results are `None`.
 
 ## Unsupported Forms
 
 - assumed type `type(*)`;
-- character arrays;
+- character arrays that cannot be represented as fixed-width NumPy bytes
+  storage;
 - arrays of derived types;
 - general borrowed pointer array views and reassociation; and
 - any kind or rank whose portable NumPy storage contract cannot be proved.

@@ -980,6 +980,8 @@ class _PyiAstParser:
             return self._pointer_type(node)
 
         if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
+            if self._string_subscript_is_array_dimensions(node):
+                return self.array_type(node)
             return self._character_type(node)
 
         name = self.type_name(node)
@@ -1045,6 +1047,13 @@ class _PyiAstParser:
         return self._array_type_from_dimensions(
             self.type_name(node),
             self.array_dimension_texts(node),
+        )
+
+    def _string_subscript_is_array_dimensions(self, node: ast.Subscript) -> bool:
+        """Return whether ``String[...]`` is an array contract, not a length."""
+        return any(
+            isinstance(item, ast.Slice) or (isinstance(item, ast.Constant) and item.value is Ellipsis)
+            for item in self.subscript_items(node)
         )
 
     def array_dimension_texts(self, node: ast.Subscript) -> list[str]:
@@ -1294,6 +1303,8 @@ class _PyiAstParser:
         if name == "Allocatable":
             array = self._require_array_storage(semantic_type)
             array.allocatable = True
+            if semantic_type.name == "String" and "fortran_character_length" not in semantic_type.metadata:
+                semantic_type.metadata["fortran_character_length"] = ":"
             return True
         if name == "Pointer":
             array = self._require_array_storage(semantic_type)

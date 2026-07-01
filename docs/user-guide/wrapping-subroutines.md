@@ -158,7 +158,8 @@ normal source-generated subroutine API.
 ## Limitations
 
 - Pointer output and inout reassociation are blocked.
-- Character arrays and arrays of derived types are blocked.
+- Character arrays require fixed-width NumPy bytes dtype storage. Arrays of
+  derived types are blocked.
 - Allocatable scalar derived-type replacement is blocked.
 - Unsupported output combinations stop at readiness; code generation does not
   silently select another projection.

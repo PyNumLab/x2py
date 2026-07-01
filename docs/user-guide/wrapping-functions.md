@@ -173,8 +173,8 @@ subroutines that have no direct function result.
 
 - Exact input dtype is required where the generated contract names one; x2py
   does not silently narrow or widen a native scalar or array.
-- Numeric array results support ranks 1 through 15. Character arrays and arrays
-  of derived types are blocked.
+- Numeric and fixed-width bytes character array results support ranks 1 through
+  15. Arrays of derived types are blocked.
 - Wider-than-supported real, complex, or explicit logical storage is blocked
   rather than narrowed.
 - A function result never creates an unproven borrowed pointer view.

@@ -16,6 +16,7 @@ from .datatypes import (
     FinalType,
     Type,
     NumpyBoolType,
+    NumpyInt32Type,
     TupleType,
     PrimitiveIntegerType,
     NumpyInt64Type,
@@ -66,6 +67,7 @@ __all__ = (
     "DottedVariable",
     "EmptyNode",
     "Eq",
+    "FortranCharacterLength",
     "Function",
     "FunctionAddress",
     "FunctionCall",
@@ -363,6 +365,9 @@ class Variable:
     fortran_source_shape : tuple, optional
         Native Fortran source dimensions preserved for ABI-sensitive declarations.
 
+    fortran_character_length : object, optional
+        Native Fortran character element length for character scalars and arrays.
+
     ownership_decision : object, default: None
         Central ownership policy decision preserved from semantic lowering.
 
@@ -406,6 +411,7 @@ class Variable:
         "_cls_base",
         "_default_value",
         "_fortran_array_category",
+        "_fortran_character_length",
         "_fortran_source_shape",
         "_getter_ownership_decision",
         "_intent",
@@ -436,6 +442,7 @@ class Variable:
         intent="in",
         passes_by_value=False,
         fortran_array_category=None,
+        fortran_character_length=None,
         fortran_source_shape=None,
         getter_ownership_decision=None,
         ownership_decision=None,
@@ -483,6 +490,7 @@ class Variable:
             raise TypeError("passes_by_value must be a boolean.")
         self._passes_by_value = passes_by_value
         self._fortran_array_category = fortran_array_category
+        self._fortran_character_length = fortran_character_length
         self._fortran_source_shape = tuple(fortran_source_shape or ())
         self._getter_ownership_decision = getter_ownership_decision
         self._ownership_decision = ownership_decision
@@ -659,6 +667,11 @@ class Variable:
     def fortran_array_category(self):
         """Native Fortran array category used by ABI-sensitive printers."""
         return self._fortran_array_category
+
+    @property
+    def fortran_character_length(self):
+        """Native Fortran character element length, when this variable stores character data."""
+        return self._fortran_character_length
 
     @property
     def fortran_source_shape(self):
@@ -866,6 +879,24 @@ class IndexedElement:
 
     def __hash__(self):
         return hash((self.base, self._indices))
+
+
+class FortranCharacterLength:
+    """Represent the Fortran ``len(value)`` intrinsic for character storage."""
+
+    __slots__ = ("_arg", "_class_type", "_shape")
+    _attribute_nodes = ("_arg",)
+
+    def __init__(self, arg):
+        self._arg = arg
+        self._class_type = NumpyInt32Type()
+        self._shape = None
+        init_model_object(self)
+
+    @property
+    def arg(self):
+        """The character scalar or array whose element length is requested."""
+        return self._arg
 
 
 class DottedVariable(Variable):
@@ -4666,6 +4697,7 @@ for _model_cls in (
     ArrayAllocated,
     ArrayAssociated,
     ArrayShapeElement,
+    FortranCharacterLength,
     Slice,
     PythonTuple,
 ):

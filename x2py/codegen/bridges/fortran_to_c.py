@@ -58,6 +58,7 @@ from ..models.core import (
     CaseSection,
     Deallocate,
     EmptyNode,
+    FortranCharacterLength,
     FunctionAddress,
     FunctionCallArgument,
     FunctionDef,
@@ -1581,6 +1582,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         scope = self.scope
         scope.insert_symbol(name)
         rank = var.rank
+        has_itemsize = self._is_character_array(var)
         base_shape = [
             scope.get_temporary_variable(
                 NumpyInt64Type(),
@@ -1589,6 +1591,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
             for index in range(rank)
         ]
+        itemsize_var = (
+            scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_itemsize", is_argument=True)
+            if has_itemsize
+            else None
+        )
         bind_var = Variable(
             BindCPointer(),
             scope.get_new_name(f"bound_{name}"),
@@ -1602,6 +1609,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             is_optional=False,
             memory_handling=StorageMode.ALIAS.value,
             new_class=Variable,
+            fortran_character_length=itemsize_var if has_itemsize else var.fortran_character_length,
         )
         local_var = var.clone(
             scope.get_expected_name(name),
@@ -1616,7 +1624,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         prepare_local = []
         if decision.storage_mode is StorageMode.HEAP:
-            prepare_local.append(Allocate(local_var, shape=tuple(base_shape), status="unallocated"))
+            alloc_var = (
+                local_var.clone(local_var.name, new_class=Variable, fortran_character_length=itemsize_var)
+                if has_itemsize
+                else local_var
+            )
+            prepare_local.append(Allocate(alloc_var, shape=tuple(base_shape), status="unallocated"))
         prepare_local.append(Assign(local_var, input_var))
         pointer_shape = base_shape[::-1] if var.order == "C" else base_shape
         body = [
@@ -1627,16 +1640,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 )
             )
         ]
+        descriptor_offset = 2 if has_itemsize else 1
         c_arg_var = Variable(
-            BindCArrayType.get_new(rank, has_strides=False),
+            BindCArrayType.get_new(rank, has_strides=False, has_itemsize=has_itemsize),
             scope.get_new_name(),
             is_argument=True,
-            shape=(convert_to_literal(rank + 1),),
+            shape=(convert_to_literal(rank + descriptor_offset),),
         )
         scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
+        if itemsize_var is not None:
+            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(1)), itemsize_var)
         for index, shape_var in enumerate(base_shape):
             scope.insert_symbolic_alias(
-                IndexedElement(c_arg_var, convert_to_literal(index + 1)),
+                IndexedElement(c_arg_var, convert_to_literal(index + descriptor_offset)),
                 shape_var,
             )
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": local_var, "body": body}
@@ -1650,6 +1666,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         rank = var.rank
         order = var.order
         allows_strides = var.class_type.allows_strides
+        has_itemsize = self._is_character_array(var)
         bind_var = Variable(
             BindCPointer(),
             scope.get_new_name(f"bound_{name}"),
@@ -1665,12 +1682,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_base_shape_{i + 1}", is_argument=True)
             for i in range(rank)
         ]
+        itemsize_var = (
+            scope.get_temporary_variable(NumpyInt64Type(), name=f"{name}_itemsize", is_argument=True)
+            if has_itemsize
+            else None
+        )
         arg_var = var.clone(
             collisionless_name,
             is_argument=False,
             is_optional=False,
             memory_handling="alias",
             new_class=Variable,
+            fortran_character_length=itemsize_var if has_itemsize else var.fortran_character_length,
         )
         pointer_shape = base_shape[::-1] if order == "C" else base_shape
         scope.insert_variable(arg_var)
@@ -1694,22 +1717,30 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
 
         body = [C_F_Pointer(bind_var, arg_var, pointer_shape)]
+        descriptor_offset = 2 if has_itemsize else 1
 
         c_arg_var = Variable(
-            BindCArrayType.get_new(rank, has_strides=allows_strides),
+            BindCArrayType.get_new(rank, has_strides=allows_strides, has_itemsize=has_itemsize),
             scope.get_new_name(),
             is_argument=True,
-            shape=(convert_to_literal(rank * 3 + 1 if allows_strides else rank + 1),),
+            shape=(convert_to_literal(rank * 3 + descriptor_offset if allows_strides else rank + descriptor_offset),),
         )
 
         scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
+        if itemsize_var is not None:
+            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(1)), itemsize_var)
         for i, s in enumerate(base_shape):
-            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + 1)), s)
+            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + descriptor_offset)), s)
         if allows_strides:
             for i, s in enumerate(ubound):
-                scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + rank + 1)), s)
+                scope.insert_symbolic_alias(
+                    IndexedElement(c_arg_var, convert_to_literal(i + rank + descriptor_offset)), s
+                )
             for i, s in enumerate(stride):
-                scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(i + 2 * rank + 1)), s)
+                scope.insert_symbolic_alias(
+                    IndexedElement(c_arg_var, convert_to_literal(i + 2 * rank + descriptor_offset)),
+                    s,
+                )
 
             start = convert_to_literal(1)  # C_F_Pointer leads to default Fortran lbound
             indexes = [
@@ -2185,7 +2216,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _build_borrowed_array_result(self, orig_var, _decision, name, local_var):
         """Build borrowed array result nodes."""
-        return self._get_bind_c_array(name, orig_var, local_var.shape, local_var)
+        return self._get_bind_c_array(name, orig_var, local_var.shape, local_var, source_var=local_var)
 
     def _build_copy_return_array_result(self, orig_var, decision, name, local_var):
         """Dispatch copy-return emission from completed boundary storage."""
@@ -2199,22 +2230,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _build_stack_copy_return_array_result(self, orig_var, _decision, name, local_var):
         """Copy a fixed-shape native result into Python-owned storage."""
-        result = self._get_bind_c_array(name, orig_var, local_var.shape)
-        result["body"].append(If(IfSection(IsNot(result["bind_var"], NIL), [Assign(result["f_array"], local_var)])))
+        result = self._get_bind_c_array(name, orig_var, local_var.shape, source_var=local_var)
+        result["body"].append(self._array_result_copy_section(result, local_var))
         return result
 
     def _build_heap_copy_return_array_result(self, orig_var, _decision, name, local_var):
         """Copy an allocated native result and release its native storage."""
         copy_shape = tuple(ArrayShapeElement(local_var, convert_to_literal(index)) for index in range(local_var.rank))
-        result = self._get_bind_c_array(name, orig_var, copy_shape)
-        result["body"].append(
-            If(
-                IfSection(
-                    IsNot(result["bind_var"], NIL),
-                    [Assign(result["f_array"], local_var)],
-                )
-            )
-        )
+        result = self._get_bind_c_array(name, orig_var, copy_shape, source_var=local_var)
+        result["body"].append(self._array_result_copy_section(result, local_var))
         allocated_body = [*result["body"], Deallocate(local_var)]
         unallocated_body = [
             Assign(result["bind_var"], NIL),
@@ -2250,15 +2274,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             orig_var.name,
             orig_var,
             result_shape,
+            source_var=local_var,
         )
-        result["body"].append(
-            If(
-                IfSection(
-                    IsNot(result["bind_var"], NIL),
-                    [Assign(result["f_array"], local_var)],
-                )
-            )
-        )
+        result["body"].append(self._array_result_copy_section(result, local_var))
         if decision.storage_mode is StorageMode.HEAP:
             allocated_body = [*result["body"], Deallocate(local_var)]
             unallocated_body = [
@@ -2289,6 +2307,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     # ------------------------------------------------------------------
     # Shared helpers
     # ------------------------------------------------------------------
+
+    def _array_result_copy_section(self, result, source_var):
+        """Copy a native array into the returned C-compatible result buffer."""
+        if self._is_character_array(source_var):
+            copy_expr = FortranTransfer(source_var, result["f_array"], result["byte_count"])
+        else:
+            copy_expr = source_var
+        return If(IfSection(IsNot(result["bind_var"], NIL), [Assign(result["f_array"], copy_expr)]))
+
+    @staticmethod
+    def _is_character_array(var):
+        """Return whether ``var`` stores fixed-width character array elements."""
+        return isinstance(var.class_type, NumpyNDArrayType) and isinstance(var.dtype, CharType)
 
     @staticmethod
     def _has_optional_arguments(func: FunctionDef) -> bool:
@@ -2927,7 +2958,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "shape_vars": shape_vars,
         }
 
-    def _get_bind_c_array(self, name, orig_var, shape, pointer_target=False):
+    def _get_bind_c_array(self, name, orig_var, shape, pointer_target=False, source_var=None):
         """
         Get all the objects necessary to return an array from the BindCFunctionDef.
 
@@ -2969,75 +3000,135 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             - f_array: The Fortran-accessible array that will be returned. This is where the data
                     should be copied to.
         """
-        dtype = orig_var.dtype
         rank = orig_var.rank
-        order = orig_var.order
         scope = self.scope
+        has_itemsize = self._is_character_array(orig_var)
         # Create the C-compatible data pointer
         bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
-
+        itemsize_var = Variable(NumpyInt64Type(), scope.get_new_name(f"{name}_itemsize")) if has_itemsize else None
         shape_vars = [Variable(NumpyInt32Type(), scope.get_new_name(f"{name}_shape_{i + 1}")) for i in range(rank)]
-
-        if pointer_target:
-            f_array = orig_var
-        else:
-            # Create an array variable which can be passed to CLocFunc
-            numpy_dtype = numpy_precision_map[(dtype.primitive_type, dtype.precision)]
-            ptr_var = Variable(
-                NumpyNDArrayType.get_new(numpy_dtype, rank, order),
-                scope.get_new_name(name + "_ptr"),
-                memory_handling="alias",
-            )
-            elem_var = Variable(dtype, scope.get_new_name(name + "_elem"))
-            scope.insert_variable(ptr_var)
-            scope.insert_variable(elem_var)
-            f_array = ptr_var
-
-        if shape is None:
-            shape = tuple(ArrayShapeElement(f_array, convert_to_literal(i)) for i in range(rank))
-        else:
-            shape = tuple(
-                ArrayShapeElement(f_array, convert_to_literal(i)) if dim is None else dim for i, dim in enumerate(shape)
-            )
-
+        f_array, elem_var = self._bind_c_array_result_storage(name, orig_var, pointer_target, has_itemsize)
+        shape = self._bind_c_array_result_shape(f_array, rank, shape)
         body = [Assign(s_v, cast_to(s, NumpyInt32Type())) for s_v, s in zip(shape_vars, shape, strict=False)]
-
-        if pointer_target:
-            pointer_source = orig_var
-            if ownership_decision_for_codegen_variable(orig_var).storage_mode is StorageMode.HEAP:
-                pointer_source = IndexedElement(
-                    orig_var,
-                    *(convert_to_literal(1) for _ in range(rank)),
-                )
-            body.append(CLocFunc(pointer_source, bind_var))
-        else:
-            size = reduce(Mul, [BindCSizeOf(elem_var), *shape_vars])
-            body = [
-                *body,
-                Assign(bind_var, c_malloc(size)),
-                If(
-                    IfSection(
-                        IsNot(bind_var, NIL),
-                        [C_F_Pointer(bind_var, ptr_var, shape_vars if order == "F" else shape_vars[::-1])],
-                    )
-                ),
-            ]
-
-        result_var = Variable(
-            BindCArrayType.get_new(rank, has_strides=False),
-            scope.get_new_name(),
-            shape=(rank + 1,),
+        body.extend(self._bind_c_array_itemsize_body(itemsize_var, source_var, pointer_target, orig_var))
+        byte_count = reduce(Mul, [itemsize_var, *shape_vars]) if itemsize_var is not None else None
+        body.extend(
+            self._bind_c_array_pointer_body(
+                orig_var,
+                bind_var,
+                elem_var,
+                shape_vars,
+                byte_count,
+                pointer_target,
+                f_array,
+            )
         )
-        c_result = BindCVariable(result_var, orig_var)
-        for descriptor in (result_var, c_result):
-            scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(0)), bind_var)
-            for i, s in enumerate(shape_vars):
-                scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(i + 1)), s)
+        result_var, c_result = self._bind_c_array_result_descriptor(
+            rank,
+            has_itemsize,
+            bind_var,
+            itemsize_var,
+            shape_vars,
+            orig_var,
+        )
 
         return {
             "c_result": c_result,
             "body": body,
             "f_array": f_array,
             "bind_var": bind_var,
+            "byte_count": byte_count,
+            "itemsize_var": itemsize_var,
             "shape_vars": shape_vars,
         }
+
+    def _bind_c_array_result_storage(self, name, orig_var, pointer_target, has_itemsize):
+        """Create the Fortran-side array storage used for bind-C array results."""
+        if pointer_target:
+            return orig_var, None
+        dtype = orig_var.dtype
+        rank = orig_var.rank
+        order = orig_var.order
+        numpy_dtype = dtype if has_itemsize else numpy_precision_map[(dtype.primitive_type, dtype.precision)]
+        ptr_rank = 1 if has_itemsize else rank
+        ptr_var = Variable(
+            NumpyNDArrayType.get_new(numpy_dtype, ptr_rank, order),
+            self.scope.get_new_name(name + "_ptr"),
+            memory_handling="alias",
+            fortran_character_length=1 if has_itemsize else None,
+        )
+        elem_var = Variable(dtype, self.scope.get_new_name(name + "_elem"))
+        self.scope.insert_variable(ptr_var)
+        self.scope.insert_variable(elem_var)
+        return ptr_var, elem_var
+
+    @staticmethod
+    def _bind_c_array_result_shape(f_array, rank, shape):
+        """Fill unspecified bind-C result dimensions from the emitted Fortran array."""
+        if shape is None:
+            return tuple(ArrayShapeElement(f_array, convert_to_literal(index)) for index in range(rank))
+        return tuple(
+            ArrayShapeElement(f_array, convert_to_literal(index)) if dim is None else dim
+            for index, dim in enumerate(shape)
+        )
+
+    @staticmethod
+    def _bind_c_array_itemsize_body(itemsize_var, source_var, pointer_target, orig_var):
+        """Return itemsize assignment nodes for fixed-width character array results."""
+        if itemsize_var is None:
+            return []
+        length_source = source_var
+        if length_source is None and isinstance(pointer_target, Variable):
+            length_source = pointer_target
+        if length_source is None:
+            length_source = orig_var
+        return [Assign(itemsize_var, cast_to(FortranCharacterLength(length_source), NumpyInt64Type()))]
+
+    def _bind_c_array_pointer_body(self, orig_var, bind_var, elem_var, shape_vars, byte_count, pointer_target, f_array):
+        """Create pointer association or allocation nodes for a bind-C result."""
+        if pointer_target:
+            return [CLocFunc(self._bind_c_array_pointer_source(orig_var), bind_var)]
+        pointer_shape = (
+            [byte_count] if byte_count is not None else self._bind_c_array_pointer_shape(orig_var, shape_vars)
+        )
+        size_terms = (
+            [BindCSizeOf(elem_var), byte_count] if byte_count is not None else [BindCSizeOf(elem_var), *shape_vars]
+        )
+        return [
+            Assign(bind_var, c_malloc(reduce(Mul, size_terms))),
+            If(IfSection(IsNot(bind_var, NIL), [C_F_Pointer(bind_var, f_array, pointer_shape)])),
+        ]
+
+    @staticmethod
+    def _bind_c_array_pointer_shape(orig_var, shape_vars):
+        """Return pointer shape respecting Fortran or C-oriented storage."""
+        return shape_vars if orig_var.order == "F" else shape_vars[::-1]
+
+    @staticmethod
+    def _bind_c_array_pointer_source(orig_var):
+        """Return the addressable source for borrowed bind-C result arrays."""
+        if ownership_decision_for_codegen_variable(orig_var).storage_mode is StorageMode.HEAP:
+            return IndexedElement(
+                orig_var,
+                *(convert_to_literal(1) for _ in range(orig_var.rank)),
+            )
+        return orig_var
+
+    def _bind_c_array_result_descriptor(self, rank, has_itemsize, bind_var, itemsize_var, shape_vars, orig_var):
+        """Create and alias the bind-C array result descriptor."""
+        descriptor_offset = 2 if has_itemsize else 1
+        result_var = Variable(
+            BindCArrayType.get_new(rank, has_strides=False, has_itemsize=has_itemsize),
+            self.scope.get_new_name(),
+            shape=(rank + descriptor_offset,),
+        )
+        c_result = BindCVariable(result_var, orig_var)
+        for descriptor in (result_var, c_result):
+            self.scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(0)), bind_var)
+            if itemsize_var is not None:
+                self.scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(1)), itemsize_var)
+            for i, s in enumerate(shape_vars):
+                self.scope.insert_symbolic_alias(
+                    IndexedElement(descriptor, convert_to_literal(i + descriptor_offset)), s
+                )
+        return result_var, c_result

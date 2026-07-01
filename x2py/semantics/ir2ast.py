@@ -100,6 +100,14 @@ def _string_shape(semantic_type: models.SemanticType):
     return (None,)
 
 
+def _fortran_character_length(semantic_type: models.SemanticType):
+    """Return codegen metadata for the native Fortran character element length."""
+    length = semantic_type.metadata.get("fortran_character_length")
+    if isinstance(length, str) and length.isdigit():
+        return convert_to_literal(int(length))
+    return length
+
+
 def _array_contract(
     semantic_type: models.SemanticType,
 ) -> models.SemanticArrayContract | None:
@@ -1255,6 +1263,8 @@ def _semantic_function_result(node, func_scope, custom_types):
         return FunctionDefResult(NIL)
     return_dtype = _codegen_type(node.return_type.dtype, custom_types)
     if node.return_type.rank > 0:
+        if isinstance(return_dtype, StringType):
+            return_dtype = CharType()
         return_dtype = NumpyNDArrayType.get_new(
             return_dtype,
             node.return_type.rank,
@@ -1274,6 +1284,7 @@ def _semantic_function_result(node, func_scope, custom_types):
         shape=result_shape,
         memory_handling=result_ownership.storage_mode.value,
         intent="out",
+        fortran_character_length=_fortran_character_length(node.return_type),
         ownership_decision=result_ownership,
     )
     func_scope.insert_variable(result_var, name=node.name)
@@ -1566,6 +1577,7 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
         intent=getattr(node, "intent", "in"),
         passes_by_value=_passes_by_value(node),
         fortran_array_category=fortran_array_category,
+        fortran_character_length=_fortran_character_length(semantic_type),
         fortran_source_shape=fortran_source_shape,
         getter_ownership_decision=node.metadata.get(models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA),
         ownership_decision=ownership_decision,

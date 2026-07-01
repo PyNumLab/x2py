@@ -1738,6 +1738,34 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit(SemanticType("Callable")) == "Callable"
 
 
+def test_character_array_pyi_spelling_round_trips_fixed_and_deferred_lengths():
+    source = """
+module char_array_mod
+contains
+  subroutine use_labels(labels)
+    character(len=4), intent(in) :: labels(:)
+  end subroutine use_labels
+  subroutine replace_names(names)
+    character(len=:), allocatable, intent(inout) :: names(:)
+  end subroutine replace_names
+end module char_array_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_source(source))
+    emitted = emit_module(semantic_module)
+
+    assert "String[4][::]" in emitted
+    assert "Annotated[String[:], Allocatable]" in emitted
+
+    parsed = parse_pyi_text(emitted, module_name="char_array_mod")
+    use_labels = next(func for func in parsed.functions if func.name == "use_labels")
+    assert use_labels.arguments[0].semantic_type.metadata["fortran_character_length"] == "4"
+
+    replace_names = next(func for func in parsed.functions if func.name == "replace_names")
+    names_type = replace_names.arguments[0].semantic_type
+    assert names_type.metadata["fortran_character_length"] == ":"
+    assert names_type.storage.array.allocatable is True
+
+
 def test_printer_projection_return_helpers_and_keyword_data_members():
     printer = PyiPrinter()
     argument = SemanticArgument(

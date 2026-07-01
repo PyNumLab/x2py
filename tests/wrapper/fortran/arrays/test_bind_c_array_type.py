@@ -75,6 +75,17 @@ def test_bind_c_array_type_without_strides_contains_pointer_and_shape():
     assert array_type.shape_is_compatible((convert_to_literal(4),))
 
 
+def test_bind_c_array_type_with_itemsize_places_length_before_shape():
+    array_type = BindCArrayType.get_new(2, has_strides=False, has_itemsize=True)
+
+    assert array_type.has_itemsize is True
+    assert len(array_type) == 4
+    assert isinstance(array_type[0], BindCPointer)
+    assert all(isinstance(field, NumpyInt64Type) for field in array_type[1:])
+    assert "_itemsize" in type(array_type).__name__
+    assert array_type.shape_is_compatible((convert_to_literal(4),))
+
+
 @pytest.mark.parametrize(
     ("rank", "has_strides", "error"),
     [

@@ -5,6 +5,7 @@ import pytest
 from x2py import parse_fortran_file
 from x2py.codegen.models.core import ClassDef, FunctionOverloadSet
 from x2py.codegen.models.datatypes import (
+    CharType,
     CustomDataType,
     NIL,
     NumpyFloat64Type,
@@ -57,6 +58,39 @@ def normalize(
     values = lowered.funcs[0].arguments[0].var
 
     assert values.ownership_decision.codegen_action is CodegenAction.COPY_IN_OUT
+
+
+def test_character_array_lowering_preserves_element_length_metadata():
+    source = """
+module char_array_mod
+contains
+  subroutine use_labels(labels)
+    character(len=4), intent(in) :: labels(:)
+  end subroutine use_labels
+  subroutine replace_names(names)
+    character(len=:), allocatable, intent(inout) :: names(:)
+    if (allocated(names)) deallocate(names)
+    allocate(character(len=5) :: names(2))
+    names(1) = 'red'
+    names(2) = 'blue'
+  end subroutine replace_names
+end module char_array_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+    lowered = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    use_labels = next(func for func in lowered.funcs if func.name == "use_labels")
+    labels = use_labels.arguments[0].var
+    assert labels.dtype is CharType()
+    assert labels.fortran_character_length.python_value == 4
+
+    replace_names = next(func for func in lowered.funcs if func.name == "replace_names")
+    names = replace_names.arguments[0].var
+    assert names.dtype is CharType()
+    assert names.fortran_character_length == ":"
 
 
 def test_modern_fortran_derived_type_and_type_bound_methods_become_codegen_class():

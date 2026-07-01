@@ -144,6 +144,7 @@ from .numpy_cpython_api import (
     PyArray_DATA,
     PyArray_CHKFLAGS,
     PyArray_ISNOTSWAPPED,
+    PyArray_ITEMSIZE,
     PyArray_NDIM,
     PyArray_SetBaseObject,
     PyArray_TYPE,
@@ -157,10 +158,12 @@ from .numpy_cpython_api import (
     numpy_flag_c_contig,
     numpy_flag_f_contig,
     numpy_flag_writeable,
+    numpy_string_type,
     pyarray_check,
     require_any_contiguous,
     require_c_contiguous,
     require_f_contiguous,
+    to_numpy_bytes_array,
     to_pyarray,
 )
 from ..models.datatypes import (
@@ -1406,10 +1409,14 @@ class CPythonBindingGenerator(BindingGenerator):
         """
         v = expr.original_variable
 
-        typenum = numpy_dtype_registry[v.dtype]
         # Get pointer to store raw array data
         data_var = self.scope.get_temporary_variable(
             dtype_or_var=VoidType(), name=v.name + "_data", memory_handling="alias"
+        )
+        itemsize_var = (
+            self.scope.get_temporary_variable(NumpyInt64Type(), name=v.name + "_itemsize")
+            if self._is_character_array(v)
+            else None
         )
         # Create variables to store the shape of the array
         shape_var = self.scope.get_temporary_variable(
@@ -1421,7 +1428,11 @@ class CPythonBindingGenerator(BindingGenerator):
         # Get the bind_c function which wraps a fortran array and returns c objects
         var_wrapper = expr.wrapper_function
         # Call bind_c function
-        call = Assign(PythonTuple(ObjectAddress(data_var), *shape), var_wrapper())
+        c_results = [ObjectAddress(data_var)]
+        if itemsize_var is not None:
+            c_results.append(itemsize_var)
+        c_results.extend(shape)
+        call = Assign(PythonTuple(*c_results), var_wrapper())
 
         # Create the resulting Variable with datatype `PythonObjectType`
         py_equiv = self._new_python_object(f"{v.name}_obj", dtype=v.dtype)
@@ -1432,15 +1443,7 @@ class CPythonBindingGenerator(BindingGenerator):
         unallocated_guard = self._return_none_if_unallocated(data_var) if decision.nullable else []
         # Save the ndarray to vars_to_wrap to be handled as if it came from C
         create_array = AliasAssign(
-            py_equiv,
-            to_pyarray(
-                convert_to_literal(v.rank),
-                typenum,
-                data_var,
-                shape_var,
-                convert_to_literal(v.order != "F"),
-                release_memory,
-            ),
+            py_equiv, self._array_to_python_call(v, data_var, shape_var, itemsize_var, release_memory)
         )
         readonly = self._clear_writeable_flag(py_equiv) if decision.transfer is TransferMode.SNAPSHOT_COPY else []
         return [
@@ -2150,6 +2153,7 @@ class CPythonBindingGenerator(BindingGenerator):
         parts = self._get_array_parts(orig_var, collect_arg)
         body = parts["body"]
         shape = parts["shape"]
+        itemsize = parts["itemsize"]
         strides = parts["strides"]
         ubounds = parts["ubounds"]
         descriptor_rank = self._array_descriptor_rank(orig_var)
@@ -2158,42 +2162,12 @@ class CPythonBindingGenerator(BindingGenerator):
         ubound_elems = [IndexedElement(ubounds, i) for i in range(descriptor_rank)]
         args = [parts["data"], *shape_elems, *stride_elems]
         body.extend(self._array_shape_validation(orig_var, shape_elems))
+        body.extend(self._array_itemsize_validation(orig_var, itemsize, collect_arg))
         body.extend(self._array_access_validation(orig_var, decision, collect_arg))
-        default_body = (
-            [AliasAssign(parts["data"], NIL)]
-            + ([Assign(parts["rank"], 0)] if parts["rank"] is not None else [])
-            + [Assign(s, 0) for s in shape_elems]
-            + [Assign(s, 0) for s in ubound_elems]
-            + [Assign(s, 1) for s in stride_elems]
-        )
+        default_body = self._array_default_initializers(parts, shape_elems, ubound_elems, stride_elems)
 
         if is_bind_c_argument:
-            rank = descriptor_rank
-            allows_strides = orig_var.class_type.allows_strides
-            has_rank = self._is_assumed_rank_array(orig_var)
-            descriptor_type = BindCArrayType.get_new(rank, allows_strides, has_rank=has_rank)
-            arg_var = Variable(
-                descriptor_type,
-                self.scope.get_new_name(orig_var.name),
-                shape=(convert_to_literal(len(descriptor_type)),),
-            )
-            self.scope.insert_symbolic_alias(
-                IndexedElement(arg_var, convert_to_literal(0)), ObjectAddress(parts["data"])
-            )
-            offset = 1
-            if has_rank:
-                self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(1)), parts["rank"])
-                offset += 1
-            for i, s in enumerate(shape_elems):
-                self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(i + offset)), s)
-            if allows_strides:
-                for i, s in enumerate(ubound_elems):
-                    self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(i + rank + offset)), s)
-                for i, s in enumerate(stride_elems):
-                    self.scope.insert_symbolic_alias(
-                        IndexedElement(arg_var, convert_to_literal(i + 2 * rank + offset)), s
-                    )
-
+            arg_var = self._bind_c_array_argument_descriptor(orig_var, parts, shape_elems, ubound_elems, stride_elems)
             return {"body": body, "args": [arg_var], "default_init": default_body}
 
         class_type = orig_var.class_type
@@ -2248,6 +2222,66 @@ class CPythonBindingGenerator(BindingGenerator):
             default_body.append(AliasAssign(optional_arg_var, NIL))
             collect_arg = optional_arg_var
         return {"body": body, "args": [collect_arg], "default_init": default_body}
+
+    def _array_default_initializers(self, parts, shape_elems, ubound_elems, stride_elems):
+        """Return null descriptor defaults for optional/nullable array arguments."""
+        itemsize = parts["itemsize"]
+        return (
+            [AliasAssign(parts["data"], NIL)]
+            + ([Assign(parts["rank"], 0)] if parts["rank"] is not None else [])
+            + ([Assign(itemsize, 0)] if itemsize is not None else [])
+            + [Assign(shape, 0) for shape in shape_elems]
+            + [Assign(ubound, 0) for ubound in ubound_elems]
+            + [Assign(stride, 1) for stride in stride_elems]
+        )
+
+    def _bind_c_array_argument_descriptor(self, orig_var, parts, shape_elems, ubound_elems, stride_elems):
+        """Pack a Python NumPy argument into the bind-C array descriptor."""
+        rank = self._array_descriptor_rank(orig_var)
+        allows_strides = orig_var.class_type.allows_strides
+        descriptor_type = BindCArrayType.get_new(
+            rank,
+            allows_strides,
+            has_rank=self._is_assumed_rank_array(orig_var),
+            has_itemsize=self._is_character_array(orig_var),
+        )
+        arg_var = Variable(
+            descriptor_type,
+            self.scope.get_new_name(orig_var.name),
+            shape=(convert_to_literal(len(descriptor_type)),),
+        )
+        offset = self._bind_c_array_descriptor_prefix(arg_var, parts)
+        self._bind_c_array_descriptor_shape(arg_var, shape_elems, offset)
+        if allows_strides:
+            self._bind_c_array_descriptor_strides(arg_var, rank, offset, ubound_elems, stride_elems)
+        return arg_var
+
+    def _bind_c_array_descriptor_prefix(self, arg_var, parts):
+        """Alias pointer, runtime rank, and itemsize descriptor fields."""
+        offset = 1
+        self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(0)), ObjectAddress(parts["data"]))
+        if parts["rank"] is not None:
+            self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(offset)), parts["rank"])
+            offset += 1
+        if parts["itemsize"] is not None:
+            self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(offset)), parts["itemsize"])
+            offset += 1
+        return offset
+
+    def _bind_c_array_descriptor_shape(self, arg_var, shape_elems, offset):
+        """Alias shape fields in a bind-C array descriptor."""
+        for index, shape in enumerate(shape_elems):
+            self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(index + offset)), shape)
+
+    def _bind_c_array_descriptor_strides(self, arg_var, rank, offset, ubound_elems, stride_elems):
+        """Alias upper-bound and stride fields in a bind-C array descriptor."""
+        for index, ubound in enumerate(ubound_elems):
+            self.scope.insert_symbolic_alias(IndexedElement(arg_var, convert_to_literal(index + rank + offset)), ubound)
+        for index, stride in enumerate(stride_elems):
+            self.scope.insert_symbolic_alias(
+                IndexedElement(arg_var, convert_to_literal(index + 2 * rank + offset)),
+                stride,
+            )
 
     def _convert_call_local_string_argument(
         self,
@@ -2627,21 +2661,13 @@ class CPythonBindingGenerator(BindingGenerator):
         name = self.scope.get_new_name(orig_var.name)
         py_res = self._new_python_object(f"{name}_obj", orig_var.dtype)
         c_res = orig_var.clone(name, is_argument=False, memory_handling="alias")
-        typenum = numpy_dtype_registry[orig_var.dtype]
         data_var = DottedVariable(VoidType(), "data", memory_handling="alias", lhs=c_res)
         shape_var = DottedVariable(NumpyNDArrayType.get_new(NumpyInt64Type(), 1, None, raw=True), "shape", lhs=c_res)
         release_memory = self._ARRAY_RELEASE_POLICY_DISPATCHER.dispatch(self, orig_var, decision)
         body = [
             AliasAssign(
                 py_res,
-                to_pyarray(
-                    convert_to_literal(orig_var.rank),
-                    typenum,
-                    data_var,
-                    shape_var,
-                    convert_to_literal(orig_var.order != "F"),
-                    release_memory,
-                ),
+                self._array_to_python_call(orig_var, data_var, shape_var, None, release_memory),
             )
         ]
         self.scope.insert_variable(c_res)
@@ -2723,23 +2749,22 @@ class CPythonBindingGenerator(BindingGenerator):
             shape=(orig_var.rank,),
             memory_handling="alias",
         )
-        typenum = numpy_dtype_registry[orig_var.dtype]
         # Save so we can find by iterating over func.results
         self.scope.insert_variable(data_var)
         self.scope.insert_variable(shape_var)
 
         release_memory = self._ARRAY_RELEASE_POLICY_DISPATCHER.dispatch(self, orig_var, decision)
+        itemsize_var = (
+            Variable(NumpyInt64Type(), self.scope.get_new_name(name + "_itemsize"))
+            if self._is_character_array(orig_var)
+            else None
+        )
+        if itemsize_var is not None:
+            self.scope.insert_variable(itemsize_var)
 
         array_to_python = AliasAssign(
             py_res,
-            to_pyarray(
-                convert_to_literal(orig_var.rank),
-                typenum,
-                data_var,
-                shape_var,
-                convert_to_literal(orig_var.order != "F"),
-                release_memory,
-            ),
+            self._array_to_python_call(orig_var, data_var, shape_var, itemsize_var, release_memory),
         )
         shape_vars = [IndexedElement(shape_var, i) for i in range(orig_var.rank)]
         body = [array_to_python]
@@ -2752,7 +2777,11 @@ class CPythonBindingGenerator(BindingGenerator):
             else:
                 body = [*self._return_none_if_unallocated(data_var, shape_vars), *body]
 
-        c_result_vars = PythonTuple(ObjectAddress(data_var), *shape_vars)
+        c_results = [ObjectAddress(data_var)]
+        if itemsize_var is not None:
+            c_results.append(itemsize_var)
+        c_results.extend(shape_vars)
+        c_result_vars = PythonTuple(*c_results)
 
         if funcdef:
             body.extend(self._connect_pointer_targets(orig_var, py_res, funcdef, True))
@@ -3833,10 +3862,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 )
                 type_check_condition = Or(type_check_condition, native_func(py_obj))
         elif isinstance(arg.class_type, NumpyNDArrayType):
-            try:
-                type_ref = numpy_dtype_registry[dtype]
-            except KeyError:
-                raise TypeError(f"Can't check the type of an array of {dtype}") from None
+            type_ref = self._numpy_array_type_ref(arg)
             if self._is_assumed_rank_array(arg):
                 type_check_condition = self._assumed_rank_type_check_condition(py_obj, arg, type_ref)
                 if raise_error:
@@ -3898,6 +3924,58 @@ class CPythonBindingGenerator(BindingGenerator):
     def _is_assumed_rank_array(arg):
         """Return whether is assumed rank array."""
         return bool(getattr(arg, "assumed_rank", False) and isinstance(arg.class_type, NumpyNDArrayType))
+
+    @staticmethod
+    def _is_character_array(arg):
+        """Return whether ``arg`` is a fixed-width Fortran character array."""
+        variable = getattr(arg, "original_var", arg)
+        return isinstance(variable.class_type, NumpyNDArrayType) and isinstance(variable.dtype, CharType)
+
+    @staticmethod
+    def _fixed_character_itemsize(arg):
+        """Return the compile-time character itemsize, when fixed and numeric."""
+        variable = getattr(arg, "original_var", arg)
+        length = getattr(variable, "fortran_character_length", None)
+        if length in (None, ":"):
+            return None
+        value = getattr(length, "python_value", length)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return None
+
+    def _numpy_array_type_ref(self, arg):
+        """Return the NumPy typenum variable for an array contract."""
+        variable = getattr(arg, "original_var", arg)
+        if self._is_character_array(variable):
+            return numpy_string_type
+        try:
+            return numpy_dtype_registry[variable.dtype]
+        except KeyError:
+            raise TypeError(f"Can't check the type of an array of {variable.dtype}") from None
+
+    def _array_to_python_call(self, orig_var, data_var, shape_var, itemsize_var, release_memory):
+        """Build the helper call that converts native array storage to Python."""
+        if self._is_character_array(orig_var):
+            if itemsize_var is None:
+                raise TypeError(f"Character array result {orig_var.name} is missing itemsize metadata")
+            return to_numpy_bytes_array(
+                convert_to_literal(orig_var.rank),
+                data_var,
+                shape_var,
+                itemsize_var,
+                convert_to_literal(orig_var.order != "F"),
+                release_memory,
+            )
+        return to_pyarray(
+            convert_to_literal(orig_var.rank),
+            self._numpy_array_type_ref(orig_var),
+            data_var,
+            shape_var,
+            convert_to_literal(orig_var.order != "F"),
+            release_memory,
+        )
 
     @staticmethod
     def _array_descriptor_rank(arg):
@@ -4668,6 +4746,11 @@ class CPythonBindingGenerator(BindingGenerator):
             self.scope.get_new_name(orig_var.name + "_data"),
             memory_handling="alias",
         )
+        itemsize_var = (
+            self.scope.get_temporary_variable(NumpyInt64Type(), name=f"{orig_var.name}_itemsize")
+            if self._is_character_array(orig_var)
+            else None
+        )
         descriptor_rank = self._array_descriptor_rank(orig_var)
         actual_rank_var = (
             self.scope.get_temporary_variable(NumpyInt64Type(), name=f"{orig_var.name}_rank")
@@ -4711,11 +4794,19 @@ class CPythonBindingGenerator(BindingGenerator):
                     cast_to(PyArray_NDIM(ObjectAddress(pyarray_collect_arg)), NumpyInt64Type()),
                 )
             )
+        if itemsize_var is not None:
+            body.append(
+                Assign(
+                    itemsize_var,
+                    cast_to(PyArray_ITEMSIZE(ObjectAddress(pyarray_collect_arg)), NumpyInt64Type()),
+                )
+            )
         body.append(get_strides_and_shape)
 
         return {
             "body": body,
             "data": data_var,
+            "itemsize": itemsize_var,
             "rank": actual_rank_var,
             "shape": base_shape_var,
             "ubounds": ubound_var,
@@ -5277,6 +5368,30 @@ class CPythonBindingGenerator(BindingGenerator):
                 )
             )
         return checks
+
+    def _array_itemsize_validation(self, orig_var, itemsize, _collect_arg):
+        """Validate fixed-width bytes dtype itemsize for character arrays."""
+        expected = self._fixed_character_itemsize(orig_var)
+        if expected is None or itemsize is None:
+            return []
+        return [
+            If(
+                IfSection(
+                    Ne(itemsize, convert_to_literal(expected, dtype=NumpyInt64Type())),
+                    [
+                        PyErr_SetString(
+                            PyTypeError,
+                            CStrStr(
+                                convert_to_literal(
+                                    f"Argument {orig_var.name} must have NumPy bytes dtype itemsize {expected}"
+                                )
+                            ),
+                        ),
+                        Return(self._error_exit_code),
+                    ],
+                )
+            )
+        ]
 
     def _array_access_validation(self, orig_var, decision, collect_arg):
         """Handle array access validation for the current generation context."""

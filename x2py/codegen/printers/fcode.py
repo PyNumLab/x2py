@@ -17,7 +17,7 @@ from ..bind_c import (
     FortranTransfer,
 )
 
-from ..models.datatypes import cast_to
+from ..models.datatypes import cast_to, is_model_object
 from ..models.core import (
     AliasAssign,
     Assign,
@@ -488,7 +488,9 @@ class FCodePrinter(CodePrinter):
         is_target = var.is_target and not var.is_alias
         intent = expr.intent
         intent_in = intent and intent != "out"
-        deferred_string = isinstance(dtype, StringType) and not intent_in and (not shape or shape[0] is None)
+        deferred_string = (
+            isinstance(dtype, StringType) and not intent_in and (not shape or shape[0] is None)
+        ) or self._is_deferred_character_array(var)
         # ...
 
         dtype_str, rankstr = self._fortran_declaration_type(
@@ -566,7 +568,10 @@ class FCodePrinter(CodePrinter):
             self._constantImports[-1].setdefault("ISO_C_Binding", set()).add("c_ptr")
             return "type(c_ptr)", ""
         if isinstance(dtype, FixedSizeType) and isinstance(expr_type, NumpyNDArrayType | FixedSizeType):
-            type_code = self._visit(dtype.primitive_type)
+            if self._is_character_array(var):
+                type_code = self._fortran_character_array_type(var, dtype, intent_in)
+            else:
+                type_code = self._visit(dtype.primitive_type)
             if isinstance(dtype, FixedSizeNumericType):
                 type_code += f"({self._kind(var)})"
             rank_code = self._fortran_rank_code(
@@ -630,6 +635,28 @@ class FCodePrinter(CodePrinter):
         if intent_in:
             return f"{type_code}(len = *)"
         return f"{type_code}(len = :)"
+
+    @staticmethod
+    def _is_character_array(var):
+        """Return whether ``var`` stores fixed-width Fortran character elements."""
+        return isinstance(var.class_type, NumpyNDArrayType) and isinstance(
+            var.dtype.primitive_type, PrimitiveCharacterType
+        )
+
+    def _is_deferred_character_array(self, var):
+        """Return whether ``var`` needs an allocatable deferred character length."""
+        return self._is_character_array(var) and var.fortran_character_length == ":"
+
+    def _fortran_character_array_type(self, var, dtype, intent_in):
+        """Render a Fortran character array element type and length contract."""
+        type_code = self._visit(dtype.primitive_type)
+        length = var.fortran_character_length
+        if length == ":":
+            return f"{type_code}(len = :)"
+        if length is None:
+            return f"{type_code}(len = *)" if intent_in else type_code
+        length_code = self._visit(length) if is_model_object(length) else self._visit(convert_to_literal(length))
+        return f"{type_code}(len = {length_code})"
 
     @staticmethod
     def _fortran_intent_attribute(intent, rank, is_optional, expr_type, is_const):
@@ -727,25 +754,26 @@ class FCodePrinter(CodePrinter):
             shape_code = ", ".join("0:" + self._visit(Minus(i, convert_to_literal(1))) for i in shape)
             if shape:
                 shape_code = f"({shape_code})"
+            type_spec = self._allocate_type_spec(expr.variable)
             code = ""
 
             if expr.status == "unallocated":
-                code += f"allocate({var_code}{shape_code})\n"
+                code += f"allocate({type_spec}{var_code}{shape_code})\n"
 
             elif expr.status == "unknown":
                 code += f"if (allocated({var_code})) then\n"
                 code += f"  if (any(size({var_code}) /= [{size_code}])) then\n"
                 code += f"    deallocate({var_code})\n"
-                code += f"    allocate({var_code}{shape_code})\n"
+                code += f"    allocate({type_spec}{var_code}{shape_code})\n"
                 code += "  end if\n"
                 code += "else\n"
-                code += f"  allocate({var_code}{shape_code})\n"
+                code += f"  allocate({type_spec}{var_code}{shape_code})\n"
                 code += "end if\n"
 
             elif expr.status == "allocated":
                 code += f"if (any(size({var_code}) /= [{size_code}])) then\n"
                 code += f"  deallocate({var_code})\n"
-                code += f"  allocate({var_code}{shape_code})\n"
+                code += f"  allocate({type_spec}{var_code}{shape_code})\n"
                 code += "end if\n"
 
             return code
@@ -754,6 +782,16 @@ class FCodePrinter(CodePrinter):
             return ""
 
         return self._visit_not_supported(expr)
+
+    def _allocate_type_spec(self, var):
+        """Render an allocation type spec for fixed-length character arrays."""
+        if not self._is_character_array(var):
+            return ""
+        length = var.fortran_character_length
+        if length in (None, ":"):
+            return ""
+        length_code = self._visit(length) if is_model_object(length) else self._visit(convert_to_literal(length))
+        return f"character(len = {length_code}) :: "
 
     # -----------------------------------------------------------------------------
     def _visit_Deallocate(self, expr):
@@ -805,6 +843,10 @@ class FCodePrinter(CodePrinter):
     def _visit_StringType(self, expr):
         """Render the ``StringType`` model node."""
         return "character"
+
+    def _visit_FortranCharacterLength(self, expr):
+        """Render the Fortran element length intrinsic."""
+        return f"len({self._visit(expr.arg)})"
 
     def _visit_CustomDataType(self, expr):
         """Render the ``CustomDataType`` model node."""
