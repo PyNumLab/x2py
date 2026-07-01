@@ -11,7 +11,7 @@ status: maintained
 Supported optional scalars, arrays, strings, derived types, outputs, and inout
 arguments preserve native `present(...)` behavior. The generated Python
 signature places required parameters before optional parameters without
-changing native dummy positions.
+changing native argument positions.
 
 ## Complete Optional Example
 
@@ -44,10 +44,7 @@ def adjust(
 Build it:
 
 ```bash
-python3 -m x2py optional.f90 \
-  --wrap \
-  --out-dir build/optional \
-  --json
+python3 -m x2py optional.f90 --out-dir build/optional
 ```
 
 Omission and explicit `None` both make `offset` absent:
@@ -72,7 +69,7 @@ For a Python-visible optional input, omission and explicit `None` both mean the
 native actual argument is absent. The `adjust` calls above show omission,
 explicit `None`, and a concrete keyword value.
 
-A concrete value means the native dummy is present. Use keywords when skipping
+A concrete value means the native argument is present. Use keywords when skipping
 an earlier optional argument; do not depend on native declaration order after
 required and optional Python parameters have been normalized.
 
@@ -107,7 +104,7 @@ responsible for its own `present(...)` branch.
 
 ## Unsupported Combinations
 
-Optional dummy procedures, procedure pointers, and combinations without a
+Optional passed procedures, procedure pointers, and combinations without a
 complete native presence and ownership contract are readiness blockers. x2py
 does not convert an unsupported optional form into an always-present argument
 or silently drop it.
