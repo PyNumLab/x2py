@@ -32,10 +32,7 @@ scale-project/
 `BUILDING.md` should record the exact supported build command:
 
 ```bash
-python3 -m x2py src/scale.f90 \
-  --wrap \
-  --out-dir build/scale \
-  --json
+python3 -m x2py src/scale.f90 --out-dir build/scale
 python3 python/check_scale.py
 ```
 
