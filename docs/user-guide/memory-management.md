@@ -78,13 +78,12 @@ it does not transfer native release responsibility.
 
 ## Mutability And Replacement
 
-- ordinary caller-owned arrays mutate in place;
-- Python strings use replacement because `str` is immutable;
-- allocatable inout arrays use replacement because native allocation identity
-  may change;
-- array/function results use copy-return;
-- supported pointer results use snapshot-copy; and
-- borrowed allocatable views share native storage until native invalidation.
+- Ordinary caller-owned arrays **mutate in place**;
+- Python strings use **replacement** because `str` is immutable;
+- Allocatable inout arrays use **replacement** because native allocation identity may change;
+- Array/function results use **copy-return**;
+- Supported pointer results use **snapshot-copy**; and
+- Borrowed allocatable views **share native storage** until native invalidation.
 
 Return projection and ownership are one contract. An edited `.pyi` cannot ask
 for copy-return without a projected replacement, or combine immutable storage
