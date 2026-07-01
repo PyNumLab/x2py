@@ -1233,6 +1233,31 @@ end module alloc_view_mod
     assert codegen_module.variables[0].is_target is True
 
 
+def test_emit_and_load_aliased_derived_module_variable_declaration():
+    source = """
+module derived_module_state
+  type :: box
+    real(8), allocatable :: values(:)
+  end type box
+  type(box), target :: current
+end module derived_module_state
+"""
+    code = generate_pyi(source)
+
+    assert "current: Annotated[box, Aliased]" in code
+
+    loaded = parse_pyi_text(code, module_name="derived_module_state")
+    assert [variable.name for variable in loaded.variables] == ["current"]
+    assert loaded.variables[0].semantic_type.name == "box"
+    assert loaded.variables[0].semantic_type.metadata["aliased"] is True
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        loaded,
+        Scope(name=loaded.name, scope_type="module"),
+    )
+    assert codegen_module.variables[0].is_target is True
+
+
 def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():
     semantic_module = fortran_module_to_semantic_module(
         parse_fortran_source(OPERATOR_F90_SOURCE.read_text(), filename=str(OPERATOR_F90_SOURCE))

@@ -1,5 +1,6 @@
 """Module variables, parameters, saved state, and synchronization tests."""
 
+import gc
 import importlib
 import sys
 from pathlib import Path
@@ -13,6 +14,7 @@ from tests.wrapper.fortran._support import (
 )
 
 MODULE_VARIABLES_F90_SOURCE = wrapper_source("fmodule_vars_f90.f90")
+DERIVED_ALIAS_F90_SOURCE = wrapper_source("fmodule_derived_alias_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 
 
@@ -98,3 +100,55 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     assert second_module.nmax == np.int32(12)
     assert module.summarize() == np.int32(16)
     assert second_module.summarize() == np.int32(16)
+
+
+def test_aliased_derived_module_object_borrows_native_state(
+    pyi_parity_build_mode: str,
+    tmp_path: Path,
+):
+    module = _build_source_or_generated_pyi_and_import(
+        DERIVED_ALIAS_F90_SOURCE,
+        tmp_path,
+        {
+            "bind_c_fmodule_derived_alias_f90_wrapper.f90",
+            "fmodule_derived_alias_f90_wrapper.c",
+            "fmodule_derived_alias_f90_wrapper.h",
+        },
+        CONTRACT_FIXTURES / "fmodule_derived_alias_f90",
+        pyi_parity_build_mode,
+    )
+
+    current = module.current
+    assert isinstance(current, module.box)
+    assert current.values is None
+
+    module.allocate_current(np.int32(3))
+    view = current.values
+    assert view.base is current
+    np.testing.assert_allclose(view, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+
+    view[0] = np.float64(10.0)
+    assert module.current_sum() == np.float64(15.0)
+    assert module.current.values_sum() == np.float64(15.0)
+
+    owned = module.box()
+    owned.allocate_values(np.int32(2))
+    owned.values[0] = np.float64(20.0)
+    assert owned.values_sum() == np.float64(22.0)
+    assert module.current_sum() == np.float64(15.0)
+
+    del view
+    del current
+    gc.collect()
+    assert module.current_sum() == np.float64(15.0)
+
+    with np.testing.assert_raises(AttributeError):
+        module.current = owned
+
+    build_dir = _module_variables_build_dir(tmp_path, pyi_parity_build_mode)
+    bridge_source = (build_dir / "bind_c_fmodule_derived_alias_f90_wrapper.f90").read_text(encoding="utf-8")
+    assert "c_loc(current)" in bridge_source
+    assert "bind_c_set_current" not in bridge_source
+
+    module.deallocate_current()
+    assert module.current.values is None

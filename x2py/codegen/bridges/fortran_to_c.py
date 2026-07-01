@@ -231,6 +231,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_scalar_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_array_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_array_module_variable",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_derived_module_variable",
         }
     )
     _MODULE_ARRAY_GETTER_POLICY_DISPATCHER = PolicyActionDispatcher(
@@ -431,9 +432,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 continue
             variable = self._visit(item)
             if isinstance(variable, BindCScalarModuleVariable):
-                accessors.extend((variable.getter_function, variable.setter_function))
-                sources[id(variable.getter_function)] = item
-                sources[id(variable.setter_function)] = item
+                wrapped_accessors = tuple(
+                    function
+                    for function in (variable.getter_function, variable.setter_function)
+                    if function is not None
+                )
+                accessors.extend(wrapped_accessors)
+                sources.update({id(function): item for function in wrapped_accessors})
             else:
                 variables.append(variable)
                 sources[id(variable)] = item
@@ -2606,6 +2611,72 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=BindCScalarModuleVariable,
             getter_function=getter,
             setter_function=setter,
+        )
+
+    def _derived_module_variable(self, expr, decision):
+        """Expose one addressable native module object through a borrowed wrapper."""
+        if decision.boundary_storage_mode is not StorageMode.ALIAS:
+            raise ValueError(f"Derived module variable {expr.name!r} is missing completed Aliased storage")
+        if expr.setter_ownership_decision.setter_action is not SetterAction.REJECT_REPLACEMENT:
+            raise ValueError(f"Derived module variable {expr.name!r} unexpectedly exposes replacement")
+        return expr.clone(
+            expr.name,
+            new_class=BindCScalarModuleVariable,
+            getter_function=self._derived_module_getter(expr),
+            setter_function=None,
+        )
+
+    def _derived_module_getter(self, expr):
+        """Return the C address of an Aliased derived module object."""
+        getter_policy = expr.getter_ownership_decision
+        if getter_policy is None:
+            raise ValueError(f"Module variable {expr.name!r} is missing completed getter policy")
+        scope = self.scope
+        public_name = f"get_{expr.name}"
+        original_name = self._generated_module_function_name(public_name)
+        func_name = scope.get_new_name("bind_c_" + public_name.lower())
+        func_scope = scope.new_child_scope(func_name, "function")
+        self.scope = func_scope
+        getter_value = expr.clone(
+            expr.name,
+            is_argument=False,
+            is_optional=False,
+            memory_handling=getter_policy.boundary_storage_mode.value,
+            ownership_decision=getter_policy,
+            new_class=Variable,
+        )
+        bind_var = Variable(BindCPointer(), func_scope.get_new_name(f"bound_{expr.name}"), memory_handling="alias")
+        func_scope.imports["variables"][expr.name] = expr
+        self.exit_scope()
+
+        original_result = expr.clone(
+            f"{expr.name}_value",
+            is_argument=False,
+            is_optional=False,
+            memory_handling=getter_policy.boundary_storage_mode.value,
+            ownership_decision=getter_policy,
+            new_class=Variable,
+        )
+        original_function = FunctionDef(
+            original_name,
+            [],
+            [],
+            FunctionDefResult(original_result),
+            scope=scope,
+            decorators={
+                RUNTIME_HOLD_GIL_METADATA: True,
+                INTERNAL_MODULE_VARIABLE_NAME_METADATA: expr.name,
+                INTERNAL_MODULE_VARIABLE_ACCESS_METADATA: "get",
+            },
+        )
+        return BindCFunctionDef(
+            func_name,
+            [],
+            [CLocFunc(getter_value, bind_var)],
+            FunctionDefResult(BindCVariable(bind_var, getter_value)),
+            imports=self._module_variable_imports(expr),
+            scope=func_scope,
+            original_function=original_function,
         )
 
     def _scalar_module_getter(self, expr):

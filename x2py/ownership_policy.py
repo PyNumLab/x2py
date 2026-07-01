@@ -421,14 +421,20 @@ class OwnershipPolicyResolver:
             assignment_mode=(
                 AssignmentMode.ALIAS if storage.storage_mode is StorageMode.ALIAS else AssignmentMode.VALUE_COPY
             ),
-            setter_action=self._setter_action(storage, incoming),
+            setter_action=self._setter_action(storage, incoming, context),
         )
 
     @staticmethod
-    def _setter_action(storage: OwnershipDecision, incoming: OwnershipDecision) -> SetterAction:
+    def _setter_action(
+        storage: OwnershipDecision,
+        incoming: OwnershipDecision,
+        context: OwnershipContext,
+    ) -> SetterAction:
         """Select Python property setter exposure from completed storage and input policy."""
         if storage.kind is ObjectKind.SCALAR:
             return SetterAction.WRITE_THROUGH
+        if storage.kind is ObjectKind.DERIVED_TYPE and context.is_module_variable:
+            return SetterAction.REJECT_REPLACEMENT
         if storage.kind is ObjectKind.DERIVED_TYPE and incoming.transfer is TransferMode.CALL_LOCAL:
             return SetterAction.WRITE_THROUGH
         return SetterAction.REJECT_REPLACEMENT
@@ -796,6 +802,26 @@ class OwnershipPolicyResolver:
     def _module_variable_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if facts.pointer and facts.rank == 0:
             return self._pointer_scalar_decision(facts, context)
+        if facts.is_custom:
+            if not (facts.metadata or {}).get("aliased"):
+                return OwnershipDecision(
+                    ObjectKind.DERIVED_TYPE,
+                    OwnershipOwner.UNKNOWN,
+                    TransferMode.BLOCKED,
+                    DestructionPolicy.BLOCKED,
+                    blocker="borrowed derived module objects require Aliased storage",
+                    reason="native module objects need object-level addressability before they can be borrowed",
+                )
+            return OwnershipDecision(
+                ObjectKind.DERIVED_TYPE,
+                OwnershipOwner.NATIVE,
+                TransferMode.BORROWED_VIEW,
+                DestructionPolicy.NATIVE_OWNER,
+                storage_mode=StorageMode.STACK,
+                boundary_storage_mode=StorageMode.ALIAS,
+                borrowed=True,
+                reason="aliased derived module storage is borrowed from the native module",
+            )
         if facts.rank > 0 or facts.is_ndarray:
             if facts.pointer:
                 return self._pointer_array_decision(facts, context)
@@ -887,20 +913,32 @@ class OwnershipPolicyResolver:
     ) -> OwnershipDecision:
         if decision.is_blocked:
             return decision
-        if not context.is_module_variable or not facts.allocatable or facts.rank == 0:
+        if not context.is_module_variable:
             return decision
         if decision.transfer is not TransferMode.BORROWED_VIEW:
             return decision
+        requires_alias = facts.is_custom or (facts.allocatable and facts.rank > 0)
+        if not requires_alias:
+            return decision
         if (facts.metadata or {}).get("aliased"):
             return decision
+        blocker = (
+            "borrowed derived module objects require Aliased storage"
+            if facts.is_custom
+            else "borrowed module allocatable views require Aliased storage"
+        )
         return replace(
             decision,
             owner=OwnershipOwner.UNKNOWN,
             transfer=TransferMode.BLOCKED,
             destruction=DestructionPolicy.BLOCKED,
             borrowed=False,
-            blocker="borrowed module allocatable views require Aliased storage",
-            reason="plain allocatable module arrays use snapshot_copy by default",
+            blocker=blocker,
+            reason=(
+                "native module objects need object-level addressability before they can be borrowed"
+                if facts.is_custom
+                else "plain allocatable module arrays use snapshot_copy by default"
+            ),
         )
 
     @staticmethod

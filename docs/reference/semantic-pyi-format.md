@@ -1374,6 +1374,25 @@ snapshot copy when allocated. Fortran source declarations with `target` are
 printed as `Aliased` because they prove that the current allocation may be
 aliased by the wrapper.
 
+`Aliased` also controls borrowed access to an existing derived-type module
+object:
+
+```python
+class box:
+    values: Annotated[Float64[:], Allocatable]
+
+current: Annotated[box, Aliased]
+```
+
+The annotation belongs to `current`, not to `box`. An x2py-created `box()` is
+addressable because its generated constructor allocates pointer-backed native
+storage. A native module declaration is a different object origin and requires
+its own `target`/`Aliased` fact before the wrapper may retain its native address.
+The borrowed Python wrapper is native-owned, rejects whole-object replacement,
+and may expose supported fields and component views. A derived module variable
+without `Aliased` is a readiness blocker; x2py does not silently substitute a
+detached copy.
+
 Public scalar Fortran module variables are emitted directly with their resolved
 semantic type:
 

@@ -39,6 +39,9 @@ attached to one canonical source listing.
 5. Owner retention does not protect a view from explicit native reallocation or deallocation.
 6. A pointer declaration never proves ownership of its target.
 7. Missing owner, lifetime, release, shape, dtype, mutability, nullability, or aliasing facts block generation.
+8. Addressability is an object-origin fact: generated constructors allocate
+   pointer-backed instances, while pre-existing derived module objects require
+   `Aliased` on their own declaration before Python may borrow them.
 
 ## Destruction Responsibilities
 

@@ -509,7 +509,7 @@ class CPythonCodePrinter(CCodePrinter):
             "            if (args == NULL) {\n"
             "                return NULL;\n"
             "            }\n"
-            f"            PyObject *result = {getter.name}(self, args, NULL);\n"
+            f"            PyObject *result = (PyObject *){getter.name}(self, args, NULL);\n"
             "            Py_DECREF(args);\n"
             "            return result;\n"
             "        }\n"

@@ -177,6 +177,59 @@ values: Annotated[
     ]
 
 
+def test_derived_module_object_requires_object_level_aliased_storage():
+    plain = _readiness_from_pyi(
+        """
+class box:
+    value: Float64
+
+current: box
+"""
+    )
+
+    assert plain["wrappable"] is False
+    blocker = next(
+        item for item in plain["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "solver.current",
+            "item": "current",
+            "policy": "borrowed derived module objects require Aliased storage",
+        }
+    ]
+
+    explicit_borrow = _readiness_from_pyi(
+        """
+class box:
+    value: Float64
+
+current: Annotated[
+    box,
+    Ownership("native"),
+    Transfer("borrowed_view"),
+    Destruction("native_owner"),
+]
+"""
+    )
+    explicit_blocker = next(
+        item for item in explicit_borrow["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
+    )
+    assert explicit_blocker["items"][0]["policy"] == ("borrowed derived module objects require Aliased storage")
+
+    aliased = _readiness_from_pyi(
+        """
+class box:
+    value: Float64
+
+current: Annotated[box, Aliased]
+"""
+    )
+
+    assert aliased["wrappable"] is True
+    assert aliased["wrappability_blockers"] == []
+
+
 def test_pointer_module_variable_uses_snapshot_or_block_ownership_policy():
     parsed = parse_fortran_file(
         """

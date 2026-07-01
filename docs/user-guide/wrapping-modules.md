@@ -87,6 +87,33 @@ deallocation or reallocation invalidates old views; use `view.copy()` first when
 Python needs an independent lifetime. Pointer module variables use
 snapshot-or-block policy.
 
+## Derived Module Objects
+
+A derived-type module variable is not automatically addressable just because
+the same type can be constructed from Python. Python construction asks x2py to
+allocate a new pointer-backed native instance. A pre-existing module variable
+has its own source attributes and is borrowed only when that particular
+declaration has `target`, represented by `Aliased` in the semantic `.pyi`:
+
+```python
+class box:
+    values: Annotated[Float64[:], Allocatable]
+
+current: Annotated[box, Aliased]
+```
+
+Reading `module.current` returns a native-owned borrowed wrapper. The wrapper
+does not copy or destroy `current`; it retains the module object's address and
+allows supported component access such as `module.current.values`. An
+allocatable component view is writable and reaches native module state until
+native code reallocates or deallocates that component.
+
+Without `Aliased`, x2py blocks the derived module variable. It does not create
+a pointer-owned copy because `module.current.values[...] = ...` would then
+modify detached storage instead of the authoritative module object. Whole
+object replacement through `module.current = other` is not exposed; mutate the
+borrowed object's supported fields or call a wrapped native procedure.
+
 ## Common Blocks
 
 Common-block storage is not exported as Python variables. Wrapped procedures
@@ -108,6 +135,9 @@ code.
 - Common-block variables have no generated attribute surface.
 - Pointer state is exposed only when snapshot policy is complete; general
   borrowed pointer variables are blocked.
+- Derived-type module variables require `Aliased` on that module declaration;
+  constructible instances of the same type do not make native module storage
+  addressable.
 - Source ordering and external dependency discovery remain the caller's job.
 
 ## Evidence And Troubleshooting

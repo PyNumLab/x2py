@@ -85,8 +85,12 @@ def _array_type(
     )
 
 
-def _derived_type(name: str = "point") -> SemanticType:
-    return SemanticType(name=name, dtype=name)
+def _derived_type(
+    name: str = "point",
+    *,
+    metadata: dict[str, object] | None = None,
+) -> SemanticType:
+    return SemanticType(name=name, dtype=name, metadata=metadata or {})
 
 
 def test_default_policy_decisions_cover_public_object_kinds():
@@ -149,6 +153,22 @@ def test_default_policy_decisions_cover_public_object_kinds():
     derived_output = resolver.decide_semantic_type(_derived_type(), OwnershipContext.result())
     assert derived_output.owner is OwnershipOwner.WRAPPER
     assert derived_output.transfer is TransferMode.WRAPPER_INSTANCE
+
+    aliased_module_object = resolver.decide_semantic_type(
+        _derived_type(metadata={"aliased": True}),
+        OwnershipContext.module_variable(),
+    )
+    assert aliased_module_object.owner is OwnershipOwner.NATIVE
+    assert aliased_module_object.transfer is TransferMode.BORROWED_VIEW
+    assert aliased_module_object.destruction is DestructionPolicy.NATIVE_OWNER
+    assert aliased_module_object.boundary_storage_mode is StorageMode.ALIAS
+
+    plain_module_object = resolver.decide_semantic_type(
+        _derived_type(),
+        OwnershipContext.module_variable(),
+    )
+    assert plain_module_object.is_blocked
+    assert plain_module_object.blocker == "borrowed derived module objects require Aliased storage"
 
     projected_derived_output = resolver.decide_semantic_type(
         _derived_type(),
@@ -366,6 +386,12 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW)
         ]
         == "_append_borrowed_array_field_getter"
+    )
+    assert (
+        FortranToCBridgeGenerator._MODULE_VARIABLE_POLICY_DISPATCHER.handlers[
+            (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW)
+        ]
+        == "_derived_module_variable"
     )
     assert (
         CPythonBindingGenerator._ARRAY_RELEASE_POLICY_DISPATCHER.handlers[DestructionPolicy.PYTHON_REFCOUNT]
@@ -900,6 +926,35 @@ def test_derived_field_setter_policy_uses_value_copy_write_through():
     assert setter.kind is ObjectKind.DERIVED_TYPE
     assert setter.assignment_mode is AssignmentMode.VALUE_COPY
     assert setter.setter_action is SetterAction.WRITE_THROUGH
+
+
+def test_aliased_derived_module_object_is_borrowed_and_rejects_replacement():
+    module = SemanticModule(
+        name="state",
+        variables=[SemanticVariable("current", _derived_type("box", metadata={"aliased": True}))],
+        classes=[SemanticClass("box", fields=[SemanticField("value", _scalar_type())])],
+    )
+
+    complete_semantic_policies(module)
+
+    variable = module.variables[0]
+    storage = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    getter = variable.metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA]
+    setter = variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    assert storage.owner is OwnershipOwner.NATIVE
+    assert storage.transfer is TransferMode.BORROWED_VIEW
+    assert storage.boundary_storage_mode is StorageMode.ALIAS
+    assert getter.codegen_action is CodegenAction.BORROWED_VIEW
+    assert setter.setter_action is SetterAction.REJECT_REPLACEMENT
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+    codegen_variable = codegen_module.variables[0]
+    assert codegen_variable.is_target is True
+    assert codegen_variable.ownership_decision.owner is OwnershipOwner.NATIVE
+    assert codegen_variable.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
 
 
 def test_explicit_borrowed_derived_field_setter_rejects_replacement():
