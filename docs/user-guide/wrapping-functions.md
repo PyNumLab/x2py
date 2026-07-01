@@ -63,7 +63,7 @@ views of native targets.
 Create `function_results.f90`:
 
 ```fortran
-module function_results_api
+module results
   implicit none
 contains
   function squares(size) result(values)
@@ -73,7 +73,16 @@ contains
 
     values = [(real(index, 8) * real(index, 8), index = 1, size)]
   end function squares
-end module function_results_api
+end module results
+```
+
+Inspecting `function_results.f90` prints this function contract:
+
+```python
+@native_call([Ref(Arg(0))])
+def squares(
+    size: Const(Int32)
+) -> Float64[size]: ...
 ```
 
 Build it:
@@ -95,7 +104,7 @@ import numpy as np
 sys.path.insert(0, "build/function-results")
 import function_results
 
-api = function_results.function_results_api
+api = function_results.results
 result = api.squares(np.int32(4))
 np.testing.assert_array_equal(
     result,
@@ -118,7 +127,7 @@ argument order.
 Create `function_outputs.f90`:
 
 ```fortran
-module function_outputs_api
+module outputs
   implicit none
 contains
   function sum_with_count(values, count) result(total)
@@ -129,7 +138,16 @@ contains
     total = sum(values)
     count = size(values)
   end function sum_with_count
-end module function_outputs_api
+end module outputs
+```
+
+Inspecting `function_outputs.f90` prints this function contract:
+
+```python
+@native_call([Arg(0), Return('count', 1)])
+def sum_with_count(
+    values: Const(Float64[::])
+) -> tuple[Float64, Int32]: ...
 ```
 
 Build it:
@@ -151,7 +169,7 @@ import numpy as np
 sys.path.insert(0, "build/function-outputs")
 import function_outputs
 
-api = function_outputs.function_outputs_api
+api = function_outputs.outputs
 source = np.array([4.0, -2.0, 7.0], dtype=np.float64)
 total, count = api.sum_with_count(source)
 assert total == np.float64(9.0)
