@@ -69,17 +69,13 @@ def convert(
 Build it:
 
 ```bash
-python3 -m x2py generic.f90 \
-  --wrap \
-  --out-dir build/generic \
-  --json
+python3 -m x2py generic.f90 --out-dir build/generic
 ```
 
 The public generic dispatches by exact dtype:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/generic")
@@ -143,7 +139,7 @@ though both use overload dispatch.
 
 - Generic constructor interfaces and overloaded runtime initialization are
   blocked.
-- Polymorphic results, mutable polymorphic dummies, arrays, pointer/allocatable
+- Polymorphic results, mutable polymorphic arguments, arrays, pointer/allocatable
   polymorphic scalars, and `class(*)` are blocked.
 - Unsupported operands raise deterministic Python errors; x2py does not fall
   back to a different specific.
