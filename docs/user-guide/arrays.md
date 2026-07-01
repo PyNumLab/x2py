@@ -68,10 +68,7 @@ def automatic_vector(
 Build it:
 
 ```bash
-python3 -m x2py arrays.f90 \
-  --wrap \
-  --out-dir build/arrays \
-  --json
+python3 -m x2py arrays.f90 --out-dir build/arrays
 ```
 
 Then assert in-place mutation, lower-bound handling, and an array result:
@@ -161,13 +158,14 @@ the actual allocation, and the caller must ensure it is large enough for the
 native routine. x2py validates explicit dimensions it can express but cannot
 infer an omitted final extent from an unrelated argument.
 
-Non-default lower bounds affect the extent calculation, not Python indexing.
-The `shift` procedure in the complete example declares lower bound zero while
-Python still indexes its NumPy array from zero.
+Non-default native lower bounds change how extents are computed internally, 
+but they do not alter Python indexing. Even if a Fortran argument is declared 
+with custom bounds like values(3:size+2), 
+the wrapped NumPy array in Python remains strictly zero-indexed.
 
 ## Assumed Rank
 
-Supported numeric assumed-rank dummies accept NumPy ranks 1 through 15 through
+Supported numeric assumed-rank arguments accept NumPy ranks 1 through 15 through
 a generated native rank dispatcher. Each assumed-rank argument dispatches at
 its own runtime rank. Rank-zero values and ranks above 15 are rejected.
 
