@@ -36,17 +36,13 @@ end module callbacks_api
 Build it:
 
 ```bash
-python3 -m x2py callbacks.f90 \
-  --wrap \
-  --out-dir build/callbacks \
-  --json
+python3 -m x2py callbacks.f90 --out-dir build/callbacks
 ```
 
 Then pass a Python callable and assert the converted result:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/callbacks")
@@ -86,8 +82,8 @@ the matching state afterward. The callback must execute on the same Python
 thread that entered the wrapped routine. Cross-thread native invocation is not
 supported.
 
-Callback-taking calls keep the GIL policy required by the callback bridge. Do
-not use callback execution as synchronization for unrelated native state.
+Callback-taking calls keep the GIL policy required by the callback bridge.
+Do not use callback execution as synchronization for unrelated native state.
 
 ## Callback Failures
 
@@ -103,7 +99,7 @@ survive such failures.
 
 - stored callback registration and unregistration;
 - callbacks invoked after the wrapped call;
-- optional dummy procedures;
+- optional dummy procedure arguments;
 - procedure pointers and null procedure pointers;
 - asynchronous or cross-thread callback invocation; and
 - persistent callback ownership during object or library teardown.
