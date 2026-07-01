@@ -92,9 +92,6 @@ The tables below summarize the currently verified Fortran-to-Python type mapping
 | derived type | generated class name | instance of that generated class | arrays of derived types are unsupported |
 | dummy procedure | `Callable[[...], T]` | Python callable with the exact argument/result contract | not applicable |
 
-The checked [First Wrapped Function](../getting-started/first-wrapped-function.md)
-uses the same explicit-dtype rule for the smaller `scale.f90` example.
-
 ## Source Kind Names
 
 Source spellings such as default `integer`, `integer(8)`,
