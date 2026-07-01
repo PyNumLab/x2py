@@ -58,26 +58,110 @@ class instances.
 Numeric explicit-shape, automatic-shape, allocatable, and supported pointer
 array results become NumPy arrays. Ordinary and allocatable results are detached
 Python-owned copies. Supported pointer results are snapshot copies, not live
-views of native targets. The complete `arrays.f90` source, build command, and
-asserted result are presented in [Arrays](arrays.md#complete-array-example).
+views of native targets.
+
+Create `function_results.f90`:
+
+```fortran
+module function_results_api
+  implicit none
+contains
+  function squares(size) result(values)
+    integer(4), intent(in) :: size
+    real(8) :: values(size)
+    integer(4) :: index
+
+    values = [(real(index, 8) * real(index, 8), index = 1, size)]
+  end function squares
+end module function_results_api
+```
+
+Build it:
+
+```bash
+python3 -m x2py function_results.f90 \
+  --wrap \
+  --out-dir build/function-results \
+  --json
+```
+
+Then assert the returned NumPy array:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/function-results")
+import function_results
+
+api = function_results.function_results_api
+result = api.squares(np.int32(4))
+np.testing.assert_array_equal(
+    result,
+    np.array([1.0, 4.0, 9.0, 16.0], dtype=np.float64),
+)
+```
 
 Allocated zero-sized results are zero-sized arrays. An unallocated allocatable
 result or unassociated pointer result is `None`. Multidimensional results retain
-Fortran-oriented element ordering. See [Arrays](arrays.md) and
-[Allocatable Arrays](allocatable-arrays.md) before relying on result lifetime.
+Fortran-oriented element ordering. See [Arrays](arrays.md) for broader array
+validation and [Allocatable Arrays](allocatable-arrays.md) before relying on
+result lifetime.
 
 ## Functions With Output Arguments
 
 If a function also has output dummies, Python returns a tuple. The direct
 function result is first, followed by projected output dummies in native
-argument order. The `outputs.f90` example in
-[Wrapping Subroutines](wrapping-subroutines.md#complete-output-example) shows
-the output-dummy part of this projection with complete source and results.
+argument order.
+
+Create `function_outputs.f90`:
+
+```fortran
+module function_outputs_api
+  implicit none
+contains
+  function sum_with_count(values, count) result(total)
+    real(8), intent(in) :: values(:)
+    integer(4), intent(out) :: count
+    real(8) :: total
+
+    total = sum(values)
+    count = size(values)
+  end function sum_with_count
+end module function_outputs_api
+```
+
+Build it:
+
+```bash
+python3 -m x2py function_outputs.f90 \
+  --wrap \
+  --out-dir build/function-outputs \
+  --json
+```
+
+Then assert the tuple order:
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/function-outputs")
+import function_outputs
+
+api = function_outputs.function_outputs_api
+source = np.array([4.0, -2.0, 7.0], dtype=np.float64)
+total, count = api.sum_with_count(source)
+assert total == np.float64(9.0)
+assert count == np.int32(3)
+```
 
 Caller-provided output arrays remain arguments because the caller must allocate
 their storage. Their return projection, when present, refers to that same
-object. [Wrapping Subroutines](wrapping-subroutines.md) defines the common
-`intent(out)` and `intent(inout)` rules.
+object. The same `intent(out)` and `intent(inout)` projection rules apply to
+subroutines that have no direct function result.
 
 ## Call Limits
 
