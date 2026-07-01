@@ -3023,7 +3023,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 f_array,
             )
         )
-        result_var, c_result = self._bind_c_array_result_descriptor(
+        _result_var, c_result = self._bind_c_array_result_descriptor(
             rank,
             has_itemsize,
             bind_var,
