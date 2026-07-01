@@ -8,7 +8,7 @@ status: maintained
 
 # Wrapping Derived Types
 
-A supported Fortran derived type becomes a generated Python extension class.
+A supported Fortran-derived type becomes a generated Python extension class.
 The wrapper owns an opaque native instance; Python field access and methods use
 generated native operations rather than assuming a public memory layout.
 
@@ -53,17 +53,13 @@ end module points_api
 Build it:
 
 ```bash
-python3 -m x2py points.f90 \
-  --wrap \
-  --out-dir build/points \
-  --json
+python3 -m x2py points.f90 --wrap --out-dir build/points
 ```
 
 Then construct, mutate, return, and borrow generated objects:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/points")
@@ -102,7 +98,7 @@ omitted. A nested scalar derived component is a borrowed child wrapper: it
 retains its parent owner and never destroys the component independently.
 
 Allocatable fields use borrowed NumPy views. Pointer fields use
-snapshot-or-block policy. Arrays of derived types are blocked because element
+the snapshot-or-block policy. Arrays of derived types are blocked because element
 construction, destruction, layout, aliasing, and copy policy are incomplete.
 
 ## Constructors
@@ -134,7 +130,7 @@ deallocation. Native termination from a finalizer terminates the process.
 Supported extension types form a matching Python inheritance hierarchy. A
 scalar polymorphic input over a known hierarchy dispatches descendant-first.
 
-Polymorphic results, mutable polymorphic dummies, arrays, allocatable or pointer
+Polymorphic results, mutable polymorphic arguments, arrays, allocatable or pointer
 polymorphic scalars, `class(*)`, abstract instantiation, and deferred bindings
 are blocked.
 
