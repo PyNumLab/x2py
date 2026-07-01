@@ -19,7 +19,7 @@ the process.
 Create `solver.f90`:
 
 ```fortran
-module solver_api
+module solver
   implicit none
 contains
   subroutine solve(value, status, message)
@@ -35,7 +35,7 @@ contains
       message = ""
     end if
   end subroutine solve
-end module solver_api
+end module solver
 ```
 
 Generate an editable contract package:
@@ -59,11 +59,8 @@ Build that contract against the same simple native source:
 
 ```bash
 python3 -m x2py contracts/solver/__init__.pyi \
-  --wrap \
   --native-fortran-sources solver.f90 \
-  --out solver \
   --out-dir build/solver \
-  --json
 ```
 
 The success outputs are consumed, while a nonzero status becomes
@@ -71,13 +68,12 @@ The success outputs are consumed, while a nonzero status becomes
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/solver")
 import solver
 
-api = solver.solver_api
+api = solver.solver
 assert api.solve(np.int32(1)) is None
 
 try:
