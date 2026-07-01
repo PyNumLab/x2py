@@ -8,17 +8,28 @@ status: maintained
 
 # Allocatable Arrays
 
-Allocatable behavior depends on where the allocation lives. A top-level result
-or output crosses as a Python-owned copy, an inout dummy crosses as a replacement,
-and module or component storage can be a borrowed view owned by native state or
-its containing wrapper object.
+Allocatable behavior depends on which side owns the allocation. The Python
+value may be a copy, a replacement, or a borrowed view into storage owned
+somewhere else.
+
+| Case | Python sees | Owner and lifetime |
+| --- | --- | --- |
+| Function result or hidden allocatable output | new NumPy array or `None` | Python owns the returned copy; the native temporary is released |
+| Allocatable `intent(inout)` dummy | replacement NumPy array or `None` | Python owns the returned replacement; the original argument is unchanged |
+| Allocatable module variable | borrowed NumPy view or `None` | the Fortran module owns allocation and release |
+| Allocatable derived-type field | borrowed NumPy view or `None` | the containing generated wrapper owns the native instance |
+
+A borrowed view is a NumPy array that points at storage Python does not own.
+Mutating the view mutates the owner. Deallocating or reallocating the owner can
+make existing views stale, so copy the view when Python needs an independent
+lifetime.
 
 ## Complete Allocatable Example
 
 Create `allocations.f90`:
 
 ```fortran
-module allocations_api
+module storage
   implicit none
   real(8), allocatable, target :: shared_values(:)
 contains
@@ -56,7 +67,33 @@ contains
   real(8) function shared_sum() result(total)
     total = sum(shared_values)
   end function shared_sum
-end module allocations_api
+end module storage
+```
+
+Inspecting `allocations.f90` prints the copy, replacement, and borrowed-view
+contracts:
+
+```python
+shared_values: Annotated[Float64[:], Allocatable, FortranTarget] | None
+
+@native_call([Ref(Arg(0)), Return('values', 0)])
+def make_values(
+    count: Const(Int32)
+) -> Annotated[Float64[:], Allocatable] | None: ...
+
+@native_call([Arg(0)])
+def replace_values(
+    values: Annotated[Float64[:], Allocatable]
+) -> Returns["values", Annotated[Float64[:], Allocatable], Optional]: ...
+
+@native_call([Ref(Arg(0))])
+def allocate_shared(
+    count: Const(Int32)
+) -> None: ...
+
+def release_shared() -> None: ...
+
+def shared_sum() -> Float64: ...
 ```
 
 Build it:
@@ -78,7 +115,7 @@ import numpy as np
 sys.path.insert(0, "build/allocations")
 import allocations
 
-api = allocations.allocations_api
+api = allocations.storage
 
 copy = api.make_values(np.int32(3))
 np.testing.assert_array_equal(copy, np.array([2.0, 4.0, 6.0], dtype=np.float64))
@@ -100,23 +137,24 @@ the previous borrowed view stale.
 
 ## Output And Function Results
 
-Allocated top-level results and hidden allocatable outputs are copied into new
-Python-owned NumPy arrays. The native temporary is released after the copy.
-Unallocated storage becomes `None`, while allocated zero-sized storage remains
-a zero-sized array.
+Allocated top-level results and hidden allocatable outputs use copy-return:
+x2py copies the native allocation into a new Python-owned NumPy array and then
+releases the native temporary. Unallocated storage becomes `None`, while
+allocated zero-sized storage remains a zero-sized array.
 
 Changing the returned NumPy array does not mutate later native results or module
 state.
 
 ## Inout Replacement
 
-An allocatable `intent(inout)` argument accepts `None` for initially
-unallocated storage or an exact matching NumPy array. A supplied array is
-copied into temporary native allocatable storage and is not mutated. Python
-receives the final native allocation as a new array or `None`.
+An allocatable `intent(inout)` argument accepts `None` or an exact matching
+NumPy array. x2py copies the supplied value into temporary native allocatable
+storage. The Python argument remains Python-owned and is not mutated.
 
-This is replacement behavior, not ordinary in-place array mutation. Assign the
-return value:
+After the call, x2py copies the final native allocation into a new Python-owned
+return value, or returns `None` if native storage is unallocated. This is
+replacement behavior, not ordinary in-place array mutation. Assign the return
+value:
 
 ```python
 values = api.replace_values(values)
@@ -126,14 +164,18 @@ The source for this call is already shown in the complete example above.
 
 ## Module And Component Views
 
-A target-backed allocatable module array is native-owned. Reading its Python
-attribute returns a borrowed NumPy view or `None`. Mutation reaches native
-module storage; deleting the NumPy view does not deallocate that storage.
+A target-backed allocatable module array is native-owned. The module's
+allocation routines create and release the storage. Reading the Python
+attribute returns a borrowed NumPy view or `None`. Mutating the view reaches
+native module storage; deleting the view does not deallocate that storage.
+The generated `.pyi` marks this with `FortranTarget`, matching the Fortran
+`target` attribute required for the zero-copy view.
 
 A supported allocatable component belongs to its containing native derived-type
-instance. Its NumPy view uses the generated wrapper object as `view.base`, which
-keeps the owner alive. Assigning a replacement array directly to such a field
-is rejected when native reallocation must go through an explicit method.
+instance. The generated wrapper owns that native instance. Its NumPy view uses
+the wrapper object as `view.base`, which keeps the owner alive. Assigning a
+replacement array directly to such a field is rejected when native reallocation
+must go through an explicit method.
 
 Neither owner model can invalidate an already-created NumPy object safely after
 native reallocation. Copy before any operation that may reallocate or
