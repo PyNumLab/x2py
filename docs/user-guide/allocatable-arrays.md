@@ -15,7 +15,7 @@ somewhere else.
 | Case | Python sees | Owner and lifetime |
 | --- | --- | --- |
 | Function result or hidden allocatable output | new NumPy array, or `None` when unallocated | Python owns the returned copy; the native temporary is released |
-| Allocatable `intent(inout)` dummy | replacement NumPy array or `None` | Python owns the returned replacement; the original argument is unchanged |
+| Allocatable `intent(inout)` argument | replacement NumPy array or `None` | Python owns the returned replacement; the original argument is unchanged |
 | Aliased allocatable module variable | borrowed NumPy view or `None` | the Fortran module owns allocation and release |
 | Plain allocatable module variable | read-only NumPy snapshot or `None` | Python owns each returned copy |
 | Allocatable derived-type field | borrowed NumPy view or `None` | the containing generated wrapper owns the native instance |
@@ -135,17 +135,13 @@ def shared_sum() -> Float64: ...
 Build it:
 
 ```bash
-python3 -m x2py allocations.f90 \
-  --wrap \
-  --out-dir build/allocations \
-  --json
+python3 -m x2py allocations.f90 --out-dir build/allocations
 ```
 
 Then exercise copy, replacement, and borrowed-view behavior:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/allocations")
@@ -242,7 +238,7 @@ independent = view.copy()
 
 ## Limitations
 
-- Allocatable scalar derived-type dummy replacement is blocked.
+- Allocatable scalar derived-type argument replacement is blocked.
 - Character allocatable arrays and mutable deferred-length character storage
   are blocked.
 - Borrowed views require a proved native or wrapper owner and `Aliased`
