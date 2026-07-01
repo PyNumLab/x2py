@@ -18,7 +18,7 @@ changing native dummy positions.
 Create `optional.f90`:
 
 ```fortran
-module optional_api
+module adjustments
   implicit none
 contains
   integer(4) function adjust(value, offset) result(output)
@@ -28,7 +28,17 @@ contains
     output = value
     if (present(offset)) output = output + offset
   end function adjust
-end module optional_api
+end module adjustments
+```
+
+Inspecting `optional.f90` prints this optional-input contract:
+
+```python
+@native_call([Ref(Arg(0)), Ref(Arg(1))])
+def adjust(
+    value: Const(Int32),
+    offset: Const(Int32) = ...
+) -> Int32: ...
 ```
 
 Build it:
@@ -50,7 +60,7 @@ import numpy as np
 sys.path.insert(0, "build/optional")
 import optional
 
-api = optional.optional_api
+api = optional.adjustments
 assert api.adjust(np.int32(5)) == np.int32(5)
 assert api.adjust(np.int32(5), None) == np.int32(5)
 assert api.adjust(np.int32(5), offset=np.int32(3)) == np.int32(8)

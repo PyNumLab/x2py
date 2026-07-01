@@ -18,7 +18,7 @@ native call and does not silently repair an incompatible array.
 Create `arrays.f90`:
 
 ```fortran
-module arrays_api
+module array_ops
   implicit none
 contains
   subroutine scale_matrix(rows, columns, values)
@@ -40,7 +40,29 @@ contains
 
     values = [(2.0_8 * index, index = 1, size)]
   end function automatic_vector
-end module arrays_api
+end module array_ops
+```
+
+Inspecting `arrays.f90` prints these array contracts:
+
+```python
+@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2)])
+def scale_matrix(
+    rows: Const(Int32),
+    columns: Const(Int32),
+    values: Annotated[Float64[rows, columns], ORDER_F]
+) -> None: ...
+
+@native_call([Ref(Arg(0)), Arg(1)])
+def shift(
+    size: Const(Int32),
+    values: Float64[size - 1 - 0 + 1]
+) -> None: ...
+
+@native_call([Ref(Arg(0))])
+def automatic_vector(
+    size: Const(Int32)
+) -> Float64[size]: ...
 ```
 
 Build it:
@@ -62,7 +84,7 @@ import numpy as np
 sys.path.insert(0, "build/arrays")
 import arrays
 
-api = arrays.arrays_api
+api = arrays.array_ops
 matrix = np.ones((2, 3), dtype=np.float64, order="F")
 api.scale_matrix(np.int32(2), np.int32(3), matrix)
 np.testing.assert_array_equal(matrix, np.full((2, 3), 2.0, order="F"))

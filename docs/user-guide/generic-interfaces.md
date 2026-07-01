@@ -18,7 +18,7 @@ coercion.
 Create `generic.f90`:
 
 ```fortran
-module generic_api
+module conversions
   implicit none
   interface convert
     module procedure convert_integer
@@ -34,7 +34,36 @@ contains
     real(8), intent(in) :: value
     output = value + 0.5_8
   end function convert_real
-end module generic_api
+end module conversions
+```
+
+Inspecting `generic.f90` prints the private specifics and public overload
+contracts:
+
+```python
+@private
+@native_call([Ref(Arg(0))])
+def convert_integer(
+    value: Const(Int32)
+) -> Int32: ...
+
+@private
+@native_call([Ref(Arg(0))])
+def convert_real(
+    value: Const(Float64)
+) -> Float64: ...
+
+@overload("convert_integer")
+@native_call([Ref(Arg(0))])
+def convert(
+    value: Const(Int32)
+) -> Int32: ...
+
+@overload("convert_real")
+@native_call([Ref(Arg(0))])
+def convert(
+    value: Const(Float64)
+) -> Float64: ...
 ```
 
 Build it:
@@ -56,7 +85,7 @@ import numpy as np
 sys.path.insert(0, "build/generic")
 import generic
 
-api = generic.generic_api
+api = generic.conversions
 assert api.convert(np.int32(4)) == np.int32(14)
 assert api.convert(np.float64(4.0)) == np.float64(4.5)
 ```
