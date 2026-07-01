@@ -6,13 +6,13 @@ def scale2_contiguous(
 
 @native_call([Arg(0), Arg(1)])
 def scale2_strided(
-    a: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F],
-    out: Annotated[Float64[::Strided, ::Strided], ORDER_F]
-) -> Returns["out", Annotated[Float64[::Strided, ::Strided], ORDER_F]]: ...
+    a: Annotated[Const(Float64[::, ::]), ORDER_F],
+    out: Annotated[Float64[::, ::], ORDER_F]
+) -> Returns["out", Annotated[Float64[::, ::], ORDER_F]]: ...
 
 @native_call([Arg(0), Arg(1)])
 def checksum2_strided(
-    a: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F],
+    a: Annotated[Const(Float64[::, ::]), ORDER_F],
     checksum: Float64[1]
 ) -> Returns["checksum", Float64[1]]: ...
 
@@ -32,12 +32,12 @@ def shift3_contiguous(
 
 @native_call([Arg(0), Arg(1)])
 def shift3_strided(
-    a: Annotated[Const(Float64[::Strided, ::Strided, ::Strided]), ORDER_F],
-    out: Annotated[Float64[::Strided, ::Strided, ::Strided], ORDER_F]
-) -> Returns["out", Annotated[Float64[::Strided, ::Strided, ::Strided], ORDER_F]]: ...
+    a: Annotated[Const(Float64[::, ::, ::]), ORDER_F],
+    out: Annotated[Float64[::, ::, ::], ORDER_F]
+) -> Returns["out", Annotated[Float64[::, ::, ::], ORDER_F]]: ...
 
 @native_call([Arg(0), Arg(1)])
 def checksum3_strided(
-    a: Annotated[Const(Float64[::Strided, ::Strided, ::Strided]), ORDER_F],
+    a: Annotated[Const(Float64[::, ::, ::]), ORDER_F],
     checksum: Float64[1]
 ) -> Returns["checksum", Float64[1]]: ...

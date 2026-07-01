@@ -37,7 +37,7 @@ class vector:
     @overload("add_vector_array")
     def __add__(
         self,
-        right: Const(Float64[::Strided])
+        right: Const(Float64[::])
     ) -> vector: ...
 
     @overload("add_vector_offset")
@@ -281,7 +281,7 @@ def add_real_vector(
 @private
 def add_vector_array(
     left: Ref(Const(vector)),
-    right: Const(Float64[::Strided])
+    right: Const(Float64[::])
 ) -> vector: ...
 
 @private

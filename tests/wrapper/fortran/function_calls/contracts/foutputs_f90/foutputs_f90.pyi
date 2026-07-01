@@ -44,12 +44,12 @@ def mixed_outputs(
 ) -> tuple[Float64, Returns["values", Float64[n]], Int32, Annotated[Float64[:], Allocatable] | None]: ...
 
 def increment(
-    values: Float64[::Strided]
+    values: Float64[::]
 ) -> None: ...
 
 @native_call([Arg(0), Return('status', 0)])
 def increment_with_status(
-    values: Float64[::Strided]
+    values: Float64[::]
 ) -> Int32: ...
 
 @native_call([Return('label', 0)])

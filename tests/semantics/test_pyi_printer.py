@@ -368,7 +368,7 @@ end module
     assert "Float64[" in code
 
     assert "Shape" not in code
-    assert "Float64[::Strided]" in code
+    assert "Float64[::]" in code
     assert "ArrayCategory" not in code
     assert "SourceDims" not in code
 
@@ -397,12 +397,12 @@ end module
 
     code = generate_pyi(source)
 
-    assert "A: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
+    assert "A: Annotated[Const(Float64[::, ::]), ORDER_F" in code
     assert "Shape" not in code
-    assert "x: Const(Float64[::Strided])" in code
-    assert "y: Float64[::Strided]" in code
-    assert "y: Annotated[Float64[::Strided], Intent('out')]" not in code
-    assert 'Returns["y", Float64[::Strided]]' in code
+    assert "x: Const(Float64[::])" in code
+    assert "y: Float64[::]" in code
+    assert "y: Annotated[Float64[::], Intent('out')]" not in code
+    assert 'Returns["y", Float64[::]]' in code
 
 
 def test_emit_explicit_bound_ranges_as_extents_without_source_dimension_metadata():
@@ -806,12 +806,12 @@ end module
     # Matrix annotations
     # --------------------------------------------------------
 
-    assert "K: Annotated[Float64[::Strided, ::Strided], ORDER_F" in code
-    assert 'Returns["K", Annotated[Float64[::Strided, ::Strided], ORDER_F]]' in code
+    assert "K: Annotated[Float64[::, ::], ORDER_F" in code
+    assert 'Returns["K", Annotated[Float64[::, ::], ORDER_F]]' in code
 
-    assert "coords: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F" in code
+    assert "coords: Annotated[Const(Float64[::, ::]), ORDER_F" in code
 
-    assert "connectivity: Annotated[Const(Int32[::Strided, ::Strided]), ORDER_F" in code
+    assert "connectivity: Annotated[Const(Int32[::, ::]), ORDER_F" in code
 
     # --------------------------------------------------------
     # Return type
@@ -846,7 +846,7 @@ end module
     expected = normalize(
         """
 def scale(
-    x: Float64[::Strided]
+    x: Float64[::]
 ) -> None: ...
 """
     )

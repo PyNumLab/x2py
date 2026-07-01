@@ -100,7 +100,7 @@ def convert_pyi_to_ir(source: str, *, module_name: str = "<pyi>") -> SemanticMod
 
 def parse_pyi_text(source: str, *, module_name: str = "<pyi>", filename: str = "<pyi>") -> SemanticModule:
     tree = parse_pyi_ast_text(source, filename=filename)
-    module = _PyiAstParser(module_name=module_name).parse(tree)
+    module = _PyiAstParser(module_name=module_name, source=source).parse(tree)
     _annotate_imported_external_type_refs(module)
     return module
 
@@ -129,8 +129,9 @@ class _PendingOverload:
 
 
 class _PyiAstParser:
-    def __init__(self, *, module_name: str):
+    def __init__(self, *, module_name: str, source: str = ""):
         self.module = SemanticModule(name=module_name, metadata={PYI_LOADED_METADATA: True})
+        self.source = source
         self._pending_overloads: list[_PendingOverload] = []
 
     def parse(self, tree: ast.Module) -> SemanticModule:
@@ -1031,7 +1032,7 @@ class _PyiAstParser:
                 semantic_type = self._character_type(node.value)
                 return self._array_type_from_dimensions(
                     semantic_type.name,
-                    [self.dimension_text(item) for item in self.subscript_items(node)],
+                    self.array_dimension_texts(node),
                     metadata=semantic_type.metadata,
                 )
             semantic_type = self.array_type(node.value)
@@ -1043,8 +1044,70 @@ class _PyiAstParser:
 
         return self._array_type_from_dimensions(
             self.type_name(node),
-            [self.dimension_text(item) for item in self.subscript_items(node)],
+            self.array_dimension_texts(node),
         )
+
+    def array_dimension_texts(self, node: ast.Subscript) -> list[str]:
+        items = self.subscript_items(node)
+        raw_items = self._source_dimension_items(node)
+        if raw_items is None or len(raw_items) != len(items):
+            return [self.dimension_text(item) for item in items]
+        dimensions = []
+        for raw_item, item in zip(raw_items, items, strict=True):
+            if isinstance(item, ast.Slice) and self._is_empty_step_slice(raw_item):
+                dimensions.append(self._strided_dimension_text(raw_item))
+            else:
+                dimensions.append(self.dimension_text(item))
+        return dimensions
+
+    def _source_dimension_items(self, node: ast.Subscript) -> list[str] | None:
+        if not self.source:
+            return None
+        source = ast.get_source_segment(self.source, node.slice)
+        if source is None:
+            return None
+        return self._split_top_level_dimensions(source)
+
+    @staticmethod
+    def _split_top_level_dimensions(source: str) -> list[str]:
+        items = []
+        start = 0
+        depth = 0
+        quote: str | None = None
+        escape = False
+        for index, char in enumerate(source):
+            if quote is not None:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == quote:
+                    quote = None
+                continue
+            if char in {"'", '"'}:
+                quote = char
+                continue
+            if char in "([{":
+                depth += 1
+                continue
+            if char in ")]}":
+                depth = max(depth - 1, 0)
+                continue
+            if char == "," and depth == 0:
+                items.append(source[start:index].strip())
+                start = index + 1
+        items.append(source[start:].strip())
+        return items
+
+    @staticmethod
+    def _is_empty_step_slice(text: str) -> bool:
+        parts = text.split(":")
+        return len(parts) == 3 and parts[2].strip() == ""
+
+    @staticmethod
+    def _strided_dimension_text(text: str) -> str:
+        lower, upper, _step = text.split(":", 2)
+        return f"{lower.strip()}:{upper.strip()}:Strided"
 
     @staticmethod
     def _array_type_from_dimensions(

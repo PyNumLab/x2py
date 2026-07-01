@@ -707,7 +707,7 @@ Array storage uses NumPy-style subscriptions:
 vector: Float64[:]
 fixed: Float64[3]
 matrix: Float64[n, m]
-strided: Float64[::Strided]
+strided: Float64[::]
 flat: Float64[Flat]
 flat_matrix: Float64[3, Flat]
 c_flat_matrix: Annotated[Float64[Flat, 3], ORDER_C]
@@ -722,10 +722,14 @@ Dimension entries have the following meaning:
 | `:` | unconstrained extent for that axis |
 | `n`, `3`, `n + 1` | required extent expression |
 | `lower:upper` | range-like storage expression |
-| `::Strided` | axis accepts runtime stride |
-| `0:n:Strided` | range plus stride-aware axis |
+| `::` | axis accepts runtime stride |
+| `0:n:` | range plus stride-aware axis |
 | `Flat` | edge-position flat contiguous storage dimension |
 | `...` | rank-polymorphic storage |
+
+Generated `.pyi` prints `::` and bounded forms such as `0:n:` for stride-aware
+axes. Edited contracts may still use the explicit `::Strided` and
+`0:n:Strided` spellings; they load to the same semantic array contract.
 
 <!-- X2PY_C_DOCS_START
 `Flat` must appear exactly once at either edge of a concrete-rank array. Final

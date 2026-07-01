@@ -148,12 +148,20 @@ Array annotations combine an element dtype with rank and shape:
 
 | Semantic type | Python value |
 | --- | --- |
-| `Float64[:]` | rank-one `numpy.ndarray` with `dtype=numpy.float64` |
-| `Float64[:, :]` | rank-two `numpy.ndarray` with `dtype=numpy.float64` |
+| `Float64[:]` | rank-one dense array with `dtype=numpy.float64` |
+| `Float64[:, :]` | rank-two dense array with `dtype=numpy.float64`; the wrapper requires the documented contiguous layout |
+| `Float64[::]` | rank-one array whose axis may be a strided NumPy view |
+| `Float64[::, ::]` | rank-two array whose axes may be strided NumPy views |
 | `Float64[3, 4]` | exact shape `(3, 4)` |
 | `Float64[n, :]` | first extent constrained by semantic constant or argument `n` |
 | `Float64[Flat]` | flat contiguous storage for a supported assumed-size contract |
 | `Float64[...]` | supported assumed-rank numeric storage, ranks 1 through 15 |
+
+Plain `:` records a dense axis. `::` records an axis where the contract allows
+runtime strides; x2py reads that exact slice spelling from the `.pyi` source
+before Python AST normalization. Multidimensional dense arrays are validated
+against their documented orientation, such as `ORDER_F` for Fortran-oriented
+storage.
 
 The wrapper validates exact dtype, native byte order, rank, known extents,
 alignment, layout, and writeability before entering native code. It does not

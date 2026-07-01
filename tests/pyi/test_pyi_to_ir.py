@@ -1055,7 +1055,7 @@ def test_parse_pyi_text_preserves_explicit_array_source_dimensions():
         """
 def apply(
     A: Annotated[Float64[LDA, N], ORDER_F],
-    work: Float64[::Strided],
+    work: Float64[::],
     scratch: Float64[:]
 ) -> None: ...
 """,
@@ -1066,8 +1066,31 @@ def apply(
     assert args["A"].source_shape == ["LDA", "N"]
     assert args["A"].lower_bounds == [None, None]
     assert args["A"].upper_bounds == [None, None]
+    assert args["work"].shape == ["::Strided"]
+    assert args["work"].axes == ["strided"]
+    assert args["work"].contiguous is False
     assert args["work"].source_shape == []
+    assert args["scratch"].shape == [":"]
+    assert args["scratch"].axes == ["dense"]
+    assert args["scratch"].contiguous is True
     assert args["scratch"].source_shape == []
+
+
+def test_parse_pyi_text_accepts_explicit_strided_marker_for_edited_contracts():
+    module = parse_pyi_text(
+        """
+current: Float64[::]
+explicit: Float64[::Strided]
+bounded: Float64[0:n:]
+explicit_bounded: Float64[0:n:Strided]
+""",
+        module_name="strided_axes",
+    )
+
+    arrays = [variable.semantic_type.storage.array for variable in module.variables]
+    assert [array.shape for array in arrays] == [["::Strided"], ["::Strided"], ["0:n:Strided"], ["0:n:Strided"]]
+    assert [array.axes for array in arrays] == [["strided"], ["strided"], ["strided"], ["strided"]]
+    assert [array.contiguous for array in arrays] == [False, False, False, False]
 
 
 def test_native_call_preserves_unnamed_output_argument_position():
@@ -1852,7 +1875,7 @@ opaque_callback: Callable[..., Float64]
 constant: Const(Int32)
 deep: Ref[3](Const(Float64))
 rank_any: Float64[...]
-strided: Float64[0:n:Strided]
+strided: Float64[0:n:]
 computed: Float64[size(xl)]
 bounded_answer: Final[Annotated[Int32, Bounded(1, 8)]]
 nested_answer: Final[Final[Int32]]
@@ -1880,6 +1903,7 @@ nested_answer: Final[Final[Int32]]
     assert rank_any.storage.array.category == "assumed_rank"
     assert rank_any.storage.array.source_shape == [".."]
     assert rank_any.rank == 1
+    assert strided.shape == ["0:n:Strided"]
     assert strided.storage.array.contiguous is False
     assert computed.shape == ["size(xl)"]
     assert bounded.constraints == [

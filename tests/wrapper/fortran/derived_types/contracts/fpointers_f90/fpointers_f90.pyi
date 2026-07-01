@@ -15,6 +15,6 @@ def sum_pointer(
 
 @native_call([Arg(0), Ref(Arg(1))])
 def pointer_to_values(
-    values: Annotated[Const(Float64[::Strided]), FortranTarget],
+    values: Annotated[Const(Float64[::]), FortranTarget],
     use_values: Const(Int32)
 ) -> Annotated[Float64[:], Pointer, PointerAssociation("runtime")]: ...

@@ -83,7 +83,7 @@ np.testing.assert_array_equal(
 For the complete example, generated annotations record a rank-two matrix whose
 extents depend on `rows` and `columns`, a rank-one lower-bound-aware array, and
 an automatic rank-one result. Other supported contracts can use `Float64[:]`,
-`Float64[3]`, `Float64[::Strided]`, `Float64[Flat]`, or `Float64[...]`.
+`Float64[3]`, `Float64[::]`, `Float64[Flat]`, or `Float64[...]`.
 
 The element name maps to an exact NumPy dtype; see [Data Types](data-types.md).
 Dimension expressions constrain extents. Python remains zero-indexed even when

@@ -30,7 +30,7 @@ def shift_matrix(
 
 @native_call([Arg(0), Return('status', 0)])
 def scale_with_status(
-    values: Float64[::Strided]
+    values: Float64[::]
 ) -> Int32: ...
 
 @native_call([Arg(0)])

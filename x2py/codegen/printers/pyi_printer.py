@@ -313,7 +313,7 @@ class PyiPrinter:
             shape = list(array.shape if array is not None and array.shape else semantic_type.shape)
         if not shape and semantic_type.rank > 0:
             shape = [":" for _ in range(semantic_type.rank)]
-        return [PyiPrinter._canonical_array_dimension(dim) for dim in shape]
+        return [PyiPrinter._printed_array_dimension(dim) for dim in shape]
 
     @staticmethod
     def _assumed_size_array_dimension(dimension: object) -> str:
@@ -335,6 +335,16 @@ class PyiPrinter:
             return ast.unparse(ast.parse(text, mode="eval").body)
         except SyntaxError:
             return text
+
+    @staticmethod
+    def _printed_array_dimension(dimension: object) -> str:
+        """Return the public `.pyi` spelling for an array dimension."""
+        text = PyiPrinter._canonical_array_dimension(dimension)
+        if text == "::Strided":
+            return "::"
+        if text.endswith(":Strided"):
+            return text[: -len("Strided")]
+        return text
 
     @staticmethod
     def _array_annotation_metadata(array: SemanticArrayContract | None) -> list[str]:

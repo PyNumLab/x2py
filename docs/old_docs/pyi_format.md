@@ -404,7 +404,7 @@ Array storage uses NumPy-style subscriptions:
 vector: Float64[:]
 fixed: Float64[3]
 matrix: Float64[n, m]
-strided: Float64[::Strided]
+strided: Float64[::]
 rank_polymorphic: Float64[...]
 ```
 
@@ -415,8 +415,8 @@ Dimension entries have the following meaning:
 | `:` | unconstrained extent for that axis |
 | `n`, `3`, `n + 1` | required extent expression |
 | `lower:upper` | range-like storage expression |
-| `::Strided` | axis accepts runtime stride |
-| `0:n:Strided` | range plus stride-aware axis |
+| `::` | axis accepts runtime stride |
+| `0:n:` | range plus stride-aware axis |
 | `...` | rank-polymorphic storage |
 
 Qualified names such as `foo.bar` are not accepted as dimension expressions.

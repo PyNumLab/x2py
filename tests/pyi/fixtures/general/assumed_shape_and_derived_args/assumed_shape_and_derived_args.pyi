@@ -1,11 +1,11 @@
 @external
 def fill_grid(
-    x: Annotated[Int32[::Strided, ::Strided], ORDER_F]
+    x: Annotated[Int32[::, ::], ORDER_F]
 ) -> None: ...
 
 @external
 def update_plane(
-    x: Annotated[Float32[::Strided, ::Strided], ORDER_F]
+    x: Annotated[Float32[::, ::], ORDER_F]
 ) -> None: ...
 
 @external

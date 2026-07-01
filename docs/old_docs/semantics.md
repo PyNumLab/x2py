@@ -372,13 +372,13 @@ are the storage contract:
 ```python
 def scale(n: Ref(Const(Int32)), x: Float64[n]) -> None: ...
 def matrix(a: Annotated[Const(Float64[n, m]), ORDER_F]) -> None: ...
-def assumed(x: Annotated[Float64[::Strided, ::Strided], ORDER_F]) -> None: ...
+def assumed(x: Annotated[Float64[::, ::], ORDER_F]) -> None: ...
 ```
 
 There is no separate dimension helper in canonical type syntax. A dimension
 entry without colons is an extent (`Float64[n]`, `Float64[n, m]`). Slice-like
 entries express range or stride contracts (`Float64[1:n]`,
-`Float64[::Strided]`, `Float64[:, 0:n:m]`). `Strided` means the runtime stride
+`Float64[::]`, `Float64[:, 0:n:m]`). `::` means the runtime stride
 is part of the accepted storage contract.
 
 Generic semantic constraints are not represented as type subscriptions.
@@ -516,11 +516,11 @@ policy, a rank-two or higher assumed-shape dummy retains Fortran orientation
 while permitting strides:
 
 ```python
-def vector(x: Float64[::Strided]) -> None: ...
+def vector(x: Float64[::]) -> None: ...
 
 def matrix(
     a: Annotated[
-        Const(Float64[::Strided, ::Strided]),
+        Const(Float64[::, ::]),
         ORDER_F,
     ]
 ) -> None: ...
@@ -531,7 +531,7 @@ orientation. The generated semantic interface deliberately chooses
 Fortran-oriented storage by default. An edited interface or future projection
 may choose `ORDER_ANY` only with corresponding backend and validation policy.
 `contiguous` assumed-shape arrays use dense dimensions instead of
-`::Strided`; their multidimensional forms also carry `ORDER_F`.
+`::`; their multidimensional forms also carry `ORDER_F`.
 
 Explicit bounds are expressed through storage extents, not source-dimension
 metadata. For example, `x(1:n)` has storage extent `n`; `x(0:n-1)` also has
@@ -591,7 +591,7 @@ Fortran parser model -> semantic IR -> .pyi -> semantic IR
 
 The loader rejects removed dimension helper syntax in type annotations. Use
 array subscriptions such as `Float64[n]`, `Float64[:, :]` or
-`Float64[::Strided]` instead.
+`Float64[::]` instead.
 
 ### Pythonic Projection (Later)
 
@@ -671,7 +671,7 @@ def sum_values(values: Const(Float64[:])) -> Float64: ...
 
 ```python
 @native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
-def process_columns(values: Const(Float64[:, ::Strided])) -> None: ...
+def process_columns(values: Const(Float64[:, ::])) -> None: ...
 ```
 
 Dimension steps such as `::m` are expressed in elements; deriving a native
@@ -907,17 +907,17 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
    `ORDER_C`.
    Rank-one contiguous storage has no C-versus-Fortran order distinction, so
    `T[:]` and `T[n]` never need `ORDER_F` either. A non-contiguous vector uses
-   stride notation such as `T[::Strided]`, not an order modifier.
+   stride notation such as `T[::]`, not an order modifier.
    For multidimensional storage, order and stride constraints are independent.
    `ORDER_C` is not needed in canonical stubs because bare array notation,
-   including `T[::Strided, ::Strided]`, already carries the C orientation.
+   including `T[::, ::]`, already carries the C orientation.
    The explicit non-default layout form is
    `Annotated[T[dimension-specs], ORDER_F]`, including
-   `Annotated[T[::Strided, ::Strided], ORDER_F]` for a Fortran-oriented
+   `Annotated[T[::, ::], ORDER_F]` for a Fortran-oriented
    strided contract. `ORDER_ANY` represents a multidimensional strided
    contract with no C/F orientation restriction.
-   A stride-aware axis is written `::Strided`, as in
-   `Float64[:, ::Strided]` or `Float64[:, 0:n:Strided]`. It is a direct
+   A stride-aware axis is written `::`, as in
+   `Float64[:, ::]` or `Float64[:, 0:n:]`. It is a direct
    interface when any native extent or stride values remain visible arguments;
    the exact interface must not generate them.
 9. `Const(...)` is the canonical spelling for a read-only C pointee/storage
@@ -1030,10 +1030,10 @@ represents pointer-backed array storage; do not additionally wrap it in
 For multidimensional storage, order is orthogonal to rank, dimensions and
 stride capability. `Annotated[Float64[:, :], ORDER_F]` denotes a rank-two
 dense Fortran-contiguous array, while
-`Annotated[Float64[::Strided, ::Strided], ORDER_F]` denotes a rank-two
-Fortran-oriented strided array. Bare `Float64[::Strided, ::Strided]` retains
+`Annotated[Float64[::, ::], ORDER_F]` denotes a rank-two
+Fortran-oriented strided array. Bare `Float64[::, ::]` retains
 the default `ORDER_C` orientation, and
-`Annotated[Float64[::Strided, ::Strided], ORDER_ANY]` imposes no C/F
+`Annotated[Float64[::, ::], ORDER_ANY]` imposes no C/F
 orientation restriction. `Annotated[Float64[...][1:4], ORDER_F]` expresses
 the corresponding Fortran-oriented rank-polymorphic contract. These spellings
 define the semantic format; they are explicit because `ORDER_F` and
@@ -1056,13 +1056,13 @@ Stride-aware dimensions use a slice step marker:
 
 | Semantic annotation | Meaning | Exact-call condition |
 | --- | --- | --- |
-| `Float64[::Strided]` | Rank-one array with a runtime element stride. | Any required stride argument is separately visible in the native signature. |
-| `Float64[:, ::Strided]` | Rank-two array whose second axis has runtime stride metadata. | Any required stride argument is separately visible in the native signature. |
-| `Float64[::Strided, ::Strided]` | Rank-two strided array with implicit `ORDER_C` orientation. | Any required stride arguments are separately visible in the native signature. |
-| `Annotated[Float64[::Strided, ::Strided], ORDER_F]` | Rank-two strided array with required Fortran orientation. | The native routine accepts that orientation and any required stride arguments remain visible. |
-| `Annotated[Float64[::Strided, ::Strided], ORDER_ANY]` | Rank-two strided array with no C/F orientation restriction. | The native routine accepts arbitrary orientation and any required stride arguments remain visible. |
+| `Float64[::]` | Rank-one array with a runtime element stride. | Any required stride argument is separately visible in the native signature. |
+| `Float64[:, ::]` | Rank-two array whose second axis has runtime stride metadata. | Any required stride argument is separately visible in the native signature. |
+| `Float64[::, ::]` | Rank-two strided array with implicit `ORDER_C` orientation. | Any required stride arguments are separately visible in the native signature. |
+| `Annotated[Float64[::, ::], ORDER_F]` | Rank-two strided array with required Fortran orientation. | The native routine accepts that orientation and any required stride arguments remain visible. |
+| `Annotated[Float64[::, ::], ORDER_ANY]` | Rank-two strided array with no C/F orientation restriction. | The native routine accepts arbitrary orientation and any required stride arguments remain visible. |
 | `Float64[:, ::2]` | Rank-two array whose second-axis element step is exactly two. | The native routine consumes that layout directly. |
-| `Float64[:, 0:n:Strided]` | Rank-two array with bounded second axis and an arbitrary runtime step. | `n` and any required stride metadata are native inputs. |
+| `Float64[:, 0:n:]` | Rank-two array with bounded second axis and an arbitrary runtime step. | `n` and any required stride metadata are native inputs. |
 | `Float64[:, 0:n:m]` | Rank-two array with bounded second axis and exact symbolic step `m`. | `n` and `m` are native inputs or semantic constants. |
 
 `Float64[:, ::]` does not select a strided representation: under Python slice
@@ -1247,13 +1247,13 @@ void process_columns(const double *values, size_t columns, size_t stride_bytes);
 ```python
 def process_bounded_step(n: Int, m: Int, values: Float64[:, 0:n:m]) -> None: ...
 def process_columns(
-    values: Const(Float64[:, ::Strided]),
+    values: Const(Float64[:, ::]),
     columns: SizeT,
     stride_bytes: SizeT,
 ) -> None: ...
 ```
 
-`Strided` means the axis stride must be carried or checked rather than assumed
+`::` means the axis stride must be carried or checked rather than assumed
 to be contiguous. `::2` is the fixed-step equivalent. `0:n:m` validates a
 bounded axis and exact element step using visible native values or declared
 semantic constants. In `process_columns`, the caller supplies both the array
@@ -1292,15 +1292,15 @@ Without an explicit layout or stride form, array annotations such as `T[:]`,
 `T[:, :]`, `T[n]`, and `T[...]` require C-contiguous numeric storage; a
 generated C stub does not repeat this as `ORDER_C`. Explicit non-default
 forms such as `Annotated[T[:, :], ORDER_F]`,
-`Annotated[T[::Strided, ::Strided], ORDER_F]`, or
-`Annotated[T[::Strided, ::Strided], ORDER_ANY]` are exact interfaces when
+`Annotated[T[::, ::], ORDER_F]`, or
+`Annotated[T[::, ::], ORDER_ANY]` are exact interfaces when
 the native routine accepts that layout and all required metadata remains
 visible in the signature. A bare multidimensional stride form such as
-`T[:, ::Strided]` is also exact when native metadata is visible, but retains
+`T[:, ::]` is also exact when native metadata is visible, but retains
 the implicit `ORDER_C` orientation. Automatic packing, copy-back, or
 derivation of native metadata is a later Pythonic transformation.
 For rank one, `T[:]` and `T[n]` are also the canonical Fortran-contiguous
-spelling; write `T[::Strided]` when contiguity is not required.
+spelling; write `T[::]` when contiguity is not required.
 
 ### 7. Direct Native Returns
 
@@ -1687,7 +1687,7 @@ def sum_values(values: Const(Float64[:])) -> Float64: ...
 
 # C: void process_columns(const double *values, size_t n, ptrdiff_t stride_bytes);
 @native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
-def process_columns(values: Const(Float64[:, ::Strided])) -> None: ...
+def process_columns(values: Const(Float64[:, ::])) -> None: ...
 
 # C: void get_values(int n, double *out);
 @native_call([Arg(0), Return(0)])

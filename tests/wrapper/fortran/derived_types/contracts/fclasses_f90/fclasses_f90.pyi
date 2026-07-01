@@ -39,7 +39,7 @@ class vector_store:
 
     def set_values(
         self,
-        source: Const(Float64[::Strided])
+        source: Const(Float64[::])
     ) -> None: ...
 
     @native_call([Pass(), Ref(Arg(0)), Ref(Arg(1))])
@@ -51,7 +51,7 @@ class vector_store:
 
     def set_matrix(
         self,
-        source: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F]
+        source: Annotated[Const(Float64[::, ::]), ORDER_F]
     ) -> None: ...
 
     @staticmethod
@@ -87,7 +87,7 @@ def allocate_values(
 
 def set_values(
     self: Annotated[Ref(vector_store), Polymorphic],
-    source: Const(Float64[::Strided])
+    source: Const(Float64[::])
 ) -> None: ...
 
 @native_call([Arg(0), Ref(Arg(1)), Ref(Arg(2))])
@@ -99,7 +99,7 @@ def allocate_matrix(
 
 def set_matrix(
     self: Annotated[Ref(vector_store), Polymorphic],
-    source: Annotated[Const(Float64[::Strided, ::Strided]), ORDER_F]
+    source: Annotated[Const(Float64[::, ::]), ORDER_F]
 ) -> None: ...
 
 @native_call([Ref(Arg(0)), Ref(Arg(1))])

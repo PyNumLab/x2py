@@ -72,7 +72,7 @@ def summarize_scalar(
 
 @private
 def summarize_vector(
-    values: Const(Float64[::Strided])
+    values: Const(Float64[::])
 ) -> Float64: ...
 
 @private
@@ -125,7 +125,7 @@ def summarize(
 
 @overload("summarize_vector")
 def summarize(
-    values: Const(Float64[::Strided])
+    values: Const(Float64[::])
 ) -> Float64: ...
 
 @overload("inspect_accumulator")

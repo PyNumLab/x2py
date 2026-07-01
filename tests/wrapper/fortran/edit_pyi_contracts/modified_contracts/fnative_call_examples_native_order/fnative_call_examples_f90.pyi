@@ -29,7 +29,7 @@ def shift_matrix(
 ) -> None: ...
 
 def scale_with_status(
-    values: Float64[::Strided],
+    values: Float64[::],
     status: Annotated[Ref(Int32), Intent("out")]
 ) -> None: ...
 

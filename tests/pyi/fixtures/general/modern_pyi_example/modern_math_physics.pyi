@@ -36,7 +36,7 @@ def kinetic_energy(
 
 @native_call([Arg(0), Ref(Arg(1))])
 def scale_vector(
-    v: Float64[::Strided],
+    v: Float64[::],
     alpha: Const(Float64)
 ) -> None: ...
 
