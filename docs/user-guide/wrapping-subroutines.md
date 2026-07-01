@@ -8,9 +8,9 @@ status: maintained
 
 # Wrapping Subroutines
 
-A subroutine has no direct native function result, but its output dummies may
+A subroutine has no direct native function result, but its output arguments may
 become Python return values. The generated signature separates hidden values
-from storage the Python caller must allocate.
+from the storage that the Python caller must allocate.
 
 ## Argument Projection
 
@@ -82,17 +82,13 @@ def fill(
 Build the extension:
 
 ```bash
-python3 -m x2py outputs.f90 \
-  --wrap \
-  --out-dir build/outputs \
-  --json
+python3 -m x2py outputs.f90 --out-dir build/outputs
 ```
 
 Then assert scalar projection, in-place mutation, and output-array projection:
 
 ```python
 import sys
-
 import numpy as np
 
 sys.path.insert(0, "build/outputs")
@@ -131,15 +127,15 @@ dtype, shape, layout, alignment, and writeability required by the contract. The
 `fill` call above returns the same `target` object after native mutation, while
 `scale_in_place` mutates `mutable` in place and returns `None`.
 
-The initial contents of an `intent(out)` array are ignored. An `intent(inout)`
-array is read and written in place. x2py does not create a hidden replacement
+The initial contents of an `intent(out)` array are ignored by Fortran, but the array must still be pre-allocated on the Python side. 
+An `intent(inout)` array is read and written in place. x2py does not create a hidden replacement
 for ordinary array storage merely because the supplied array is inconvenient;
 an incompatible array is rejected before the native call.
 
 ## Multiple Results
 
-For a subroutine, projected results follow output dummy order. For a function,
-the function result comes first, followed by output dummies in native argument
+For a subroutine, projected results follow the native output argument order. For a function,
+the function result comes first, followed by output arguments in native argument
 order. A caller-provided output can remain visible and also be named in return
 metadata; hidden outputs use ordinary result annotations.
 
