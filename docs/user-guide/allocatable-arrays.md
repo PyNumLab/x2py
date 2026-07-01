@@ -206,6 +206,80 @@ values = api.replace_values(values)
 
 The source for this call is already shown in the complete example above.
 
+## Character Array Replacement
+
+Allocatable character arrays use fixed-width NumPy bytes storage. Create
+`character_allocatables.f90`:
+
+```fortran
+module character_names
+  implicit none
+contains
+  subroutine replace_names(names)
+    character(len=:), allocatable, intent(inout) :: names(:)
+    integer :: count
+
+    if (allocated(names)) then
+      count = size(names)
+    else
+      count = 2
+    end if
+
+    if (allocated(names)) deallocate(names)
+    allocate(character(len=5) :: names(count))
+    names = "     "
+    if (count >= 1) names(1) = "red"
+    if (count >= 2) names(2) = "blue"
+  end subroutine replace_names
+end module character_names
+```
+
+The generated `.pyi` represents a fixed-length rank-one character array as
+`String[4][::]`. A deferred-length allocatable rank-one array uses
+`Annotated[String[:], Allocatable]`, so the element width can come from the
+native allocation at runtime:
+
+```python
+@native_call([Arg(0)])
+def replace_names(
+    names: Annotated[String[:], Allocatable]
+) -> Returns[
+    "names", Annotated[String[:], Allocatable], Optional
+]: ...
+```
+
+Build the example:
+
+```bash
+python3 -m x2py character_allocatables.f90 --out-dir build/character_allocatables
+```
+
+Pass a NumPy bytes array and assign the returned replacement:
+
+```python
+import sys
+import numpy as np
+
+sys.path.insert(0, "build/character_allocatables")
+import character_allocatables
+
+api = character_allocatables.character_names
+original = np.array([b"aa", b"bbb"], dtype="S3")
+replacement = api.replace_names(original)
+
+assert original.dtype == np.dtype("S3")
+assert original.tolist() == [b"aa", b"bbb"]
+assert replacement.dtype == np.dtype("S5")
+assert replacement.tolist() == [b"red  ", b"blue "]
+assert replacement is not original
+```
+
+The `S5` itemsize comes from `allocate(character(len=5) :: names(count))`.
+x2py copies the final native allocation into the returned Python-owned array
+and releases the native temporary. Python inputs must use NumPy bytes dtype
+`S`; Unicode (`U`) and object (`O`) arrays are rejected. When the Fortran
+element length is fixed, the input dtype itemsize must match that length.
+
 ## Module Snapshots And Views
 
 An `Aliased` allocatable module array is native-owned. The module's allocation
@@ -239,8 +313,7 @@ independent = view.copy()
 ## Limitations
 
 - Allocatable scalar derived-type argument replacement is blocked.
-- Character allocatable arrays are supported only as fixed-width NumPy bytes
-  arrays; mutable scalar deferred-length character storage is blocked.
+- Mutable scalar deferred-length character storage is blocked.
 - Borrowed views require a proved native or wrapper owner and `Aliased`
   storage when the owner is a module variable.
 - An edited `.pyi` cannot relabel a native-owned allocation as Python-owned
@@ -253,6 +326,8 @@ by
 [`test_allocatable_views.py`](../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
 Replacement behavior and invalid dtype/rank calls are exercised by
 [`test_allocatable_replacement.py`](../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
+Character array replacement and generated-`.pyi` builds are exercised by
+[`test_character_edge_cases.py`](../../tests/wrapper/fortran/strings/test_character_edge_cases.py).
 
 Use [Memory Management](memory-management.md) before retaining a view and
 [Runtime Issues](../troubleshooting/runtime-issues.md) for dtype, rank, or stale
