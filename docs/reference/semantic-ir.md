@@ -397,521 +397,56 @@ semantic model or an edited interface. In particular, an unresolved typedef is
 not assumed to be opaque because its ABI representation is unknown.
 X2PY_C_DOCS_END -->
 
-## Semantic `.pyi` Format
+## Semantic `.pyi` Contract Surface
 
-<!-- X2PY_C_DOCS_START
-The semantic `.pyi` format is a Python-valid view of x2py semantic IR. It is
-language-neutral: Fortran and C inputs use the same type, storage,
-pointer, array, layout and metadata notation. Source language differences are
-represented by contracts and metadata, not by separate syntax families.
-X2PY_C_DOCS_END -->
+Semantic `.pyi` is a Python-valid serialization and editing surface for
+semantic IR, not a second semantic model. The syntax, metadata names,
+projection notation, diagnostics, generated coverage, and editing workflow are
+owned by [Semantic `.pyi` format](semantic-pyi-format.md).
 
-<!-- X2PY_C_DOCS_START
-This document describes the behavior implemented for the current Fortran and C
-semantic conversion paths.
-X2PY_C_DOCS_END -->
+This IR reference keeps only the relationship between that surface and the
+underlying semantic model:
 
-### Canonical Type And Storage Contract
+- source frontends populate `SemanticModule`, `SemanticFunction`,
+  `SemanticArgument`, `SemanticVariable`, `SemanticClass`, and related storage
+  contracts;
+- `.pyi` printing exposes the public wrapper contract plus the native-call
+  metadata required to reconstruct the same semantic IR;
+- `.pyi` loading converts the documented contract subset back to semantic IR
+  without reparsing native source; and
+- readiness, policy completion, and lowering consume semantic IR, not raw
+  `.pyi` syntax.
 
-Bare scalar types represent direct semantic values:
+The shared semantic model separates value type, storage and calling contract,
+public array contract, ownership and transfer policy, and source-origin
+metadata. The `.pyi` surface exposes only the facts that are part of the public
+wrapper contract or required to reconstruct native-call topology. Native
+source-provenance details not emitted into the public contract are
+intentionally excluded from public contract equality.
 
-```python
-def dot_value(a: Float64, b: Float64) -> Float64: ...
-```
+### Round Trips And Provenance
 
-Native reference and pointer-backed storage is explicit:
-
-```python
-def inspect(value: Ref(Const(Int32))) -> None: ...
-def update(value: Ref(Float64)) -> None: ...
-```
-
-Array storage uses NumPy-style subscriptions. The dimensions inside `T[...]`
-are the storage contract:
-
-```python
-@native_call([Ref(Arg(0)), Arg(1)])
-def scale(n: Const(Int32), x: Float64[n]) -> None: ...
-def matrix(a: Annotated[Const(Float64[n, m]), ORDER_F]) -> None: ...
-def assumed(x: Annotated[Float64[::, ::], ORDER_F]) -> None: ...
-```
-
-There is no separate dimension helper in canonical type syntax. A dimension
-entry without colons is an extent (`Float64[n]`, `Float64[n, m]`). Slice-like
-entries express range or stride contracts (`Float64[1:n]`,
-`Float64[::]`, `Float64[:, 0:n:m]`). `::` means the runtime stride
-is part of the accepted storage contract.
-
-Generic semantic constraints are not represented as type subscriptions.
-Constants use `Final[T]`; other constraints and non-dimensional array metadata
-use `Annotated[T[...], Constraint, ...]`.
-
-`Annotated[...]` carries non-dimensional metadata:
-
-- `ORDER_F` for a Fortran-oriented multidimensional contract.
-- `ORDER_ANY` for an orientation-independent multidimensional strided
-  contract chosen explicitly by an edited interface or later projection.
-- `Allocatable` for a Fortran allocatable array.
-- `Pointer` for a Fortran pointer array.
-- `Intent("out")` when output intent changes wrapper behavior, such as scalar
-  reference output, hidden output, allocation, ownership, temporary, or
-  copy/readback policy. Visible non-allocatable array output buffers and
-  visible derived-type assignment destinations can omit the marker in compact
-  generated `.pyi`; `Returns["name", T]` plus writable storage is enough to
-  preserve the runtime behavior.
-
-<!-- X2PY_C_DOCS_START
-Plain multidimensional array notation is C-oriented (`ORDER_C`) by default.
-Under the current Fortran generation policy, every multidimensional Fortran
-array contract emits `ORDER_F`, including stride-aware assumed-shape arrays.
-Rank-one storage has no C-versus-Fortran order distinction, so no order marker
-is emitted for vectors.
-X2PY_C_DOCS_END -->
-
-`ArrayCategory(...)`, `SourceDims(...)`, `LowerBounds(...)` and `Contiguous`
-are not part of generated canonical array annotations. They described native
-declaration provenance rather than additional requirements on the
-Python-visible array. Fortran source category, original bounds and declaration
-dimensions may remain available as internal source provenance
-when converting source; they are not required for the public storage contract
-or for ordinary Python-to-Fortran array argument association.
-
-### Implemented Fortran Native Contract And Projection
-
-Generated Fortran `.pyi` retains the exact native dummy-argument interface but
-may expose hidden outputs as Python return values. Ordinary annotations carry
-the native types. When the Python signature differs from native argument order,
-ordered `@native_call` projection metadata carries that topology.
-
-Fortran scalar dummy arguments are represented as follows:
-
-- Scalar dummy without `value`, `intent(in)`: Python-visible `Const(T)` plus
-  `Ref(Arg(...))` native-call projection.
-- Scalar dummy without `value`, `intent(out)`: hidden Python result backed by
-  an `Intent("out")` native argument and a `Return(...)` projection entry.
-- Scalar dummy without `value`, `intent(inout)`: `Ref(T)`, except documented
-  immutable replacement values that use a named return projection.
-- Scalar dummy with `value`: direct `T`.
-- Function result: direct return annotation.
-
-For a read-only scalar reference input:
-
-```fortran
-integer function add_one(value) result(output)
-  integer, intent(in) :: value
-end function
-```
-
-```python
-@native_call([Ref(Arg(0))])
-def add_one(value: Const(Int32)) -> Int32: ...
-```
-
-Example:
-
-```fortran
-subroutine update(scale, value, result)
-  real(8), value, intent(in) :: scale
-  real(8), intent(inout) :: value
-  real(8), intent(out) :: result
-end subroutine
-```
-
-```python
-@native_call([Arg(0), Arg(1), Return("result", 0)])
-def update(
-    scale: Float64,
-    value: Ref(Float64),
-) -> Returns["result", Float64]: ...
-```
-
-Fortran derived-type fields are data declarations, not procedure dummy
-arguments. Scalar fields therefore remain direct types:
-
-```python
-class particle:
-    id: Int32
-    position: Float64[3]
-```
-
-<!-- X2PY_C_DOCS_START
-Fortran `bind(C)` and `sequence` type attributes are preserved on semantic
-class metadata together with an `accessors` layout policy. Field list order is
-the native declaration order, and every field retains its source type, kind,
-rank, shape, and storage metadata. This metadata does not authorize direct C
-struct access: generated wrappers treat every Fortran derived type as opaque
-and route component access through Fortran accessors.
-X2PY_C_DOCS_END -->
-
-Fortran module variables are native module storage. Public variables remain
-direct module-level declarations in the semantic `.pyi`; wrapper-only native
-accessors implement Python attribute reads and writes but are not public
-procedures. Public Fortran parameters are semantic constants and use
-`Final[T]`:
-
-```python
-answer: Final[Int32]
-counter: Int32
-label: String[8]
-```
-
-Fortran generic interfaces whose name matches a derived type are constructor
-interfaces. They currently produce the
-`fortran_generic_constructor_unsupported` readiness blocker; they are not
-silently emitted over the generated field-based class constructor. Persistent
-pointer module variables use the ownership-policy checker and remain blocked
-unless complete snapshot metadata makes the transfer safe.
-
-### Implemented Fortran Arrays
-
-Explicit-shape and adjustable arrays use shaped storage. Multidimensional
-Fortran-contiguous storage carries `ORDER_F`; vectors omit order metadata:
-
-```python
-@native_call([Ref(Arg(0)), Arg(1)])
-def scale(n: Const(Int32), x: Float64[n]) -> None: ...
-
-@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2)])
-def apply(
-    n: Const(Int32),
-    m: Const(Int32),
-    a: Annotated[Const(Float64[n, m]), ORDER_F],
-) -> None: ...
-```
-
-Assumed-size arrays preserve their fixed rank and any dimensions constrained by
-the visible storage contract. A rank-one `x(*)` is emitted as `T[:]`; for
-`x(n, *)`, the second dimension has an unconstrained runtime extent, not an
-unknown rank:
-
-```python
-def legacy(values: Float64[:]) -> None: ...
-
-@native_call([Ref(Arg(0)), Arg(1)])
-def legacy_matrix(
-    n: Const(Int32),
-    a: Annotated[Float64[n, :], ORDER_F]
-) -> None: ...
-```
-
-Assumed-shape arrays are stride-aware. A rank-one assumed-shape dummy is
-emitted as a strided vector. Under the current generated semantic-interface
-policy, a rank-two or higher assumed-shape dummy retains Fortran orientation
-while permitting strides:
-
-```python
-def vector(x: Float64[::]) -> None: ...
-
-def matrix(
-    a: Annotated[
-        Const(Float64[::, ::]),
-        ORDER_F,
-    ]
-) -> None: ...
-```
-
-The Fortran declaration itself may permit an actual argument with another
-orientation. The generated semantic interface deliberately chooses
-Fortran-oriented storage by default. An edited interface or future projection
-may choose `ORDER_ANY` only with corresponding backend and validation policy.
-`contiguous` assumed-shape arrays use dense dimensions instead of
-`::`; their multidimensional forms also carry `ORDER_F`.
-
-Explicit bounds are expressed through storage extents, not source-dimension
-metadata. For example, `x(1:n)` has storage extent `n`; `x(0:n-1)` also has
-extent `n` (the implementation currently retains the equivalent arithmetic
-expression when it is not simplified). Python arrays present zero-based
-storage; the compiled Fortran call associates that storage with the dummy
-argument and supplies the lower and upper bounds declared by the procedure.
-Those Fortran bounds affect indexing within the procedure, not what bound
-metadata Python must pass. The public contract therefore needs the required
-extent, layout and mutability, not `LowerBounds(...)`.
-
-Allocatable and pointer arrays preserve their source storage property:
-
-```python
-class workspace:
-    values: Annotated[Float64[:], Allocatable]
-
-def section(
-    x: Annotated[Float64[:], Pointer]
-) -> None: ...
-```
-
-Allocation or association replacement policy is not implemented. The semantic
-IR preserves the facts needed for readiness and lowering decisions; a backend
-must not silently treat replacement-capable allocatable or pointer dummies as
-ordinary borrowed arrays.
-
-### Preserved Metadata
-
-The shared semantic model separates:
-
-- value type (`Float64`, `Int32`, derived type names);
-- storage/calling contract (`value`, `reference`, `pointer`, `array`);
-- public array contract (rank, required extents or admitted strides, order,
-  contiguity, allocatable and pointer semantics);
-- source origin metadata (source language, native name, native scope,
-  source-level type/category information and lowering-relevant facts).
-
-The Fortran converter currently preserves public storage dimensions, order,
-`intent`, optionality, `value`, constants, `allocatable` and `pointer` in the
-visible semantic contract. It retains source declaration dimensions, bounds,
-dummy category and `contiguous` provenance internally where the parser
-supplies those facts for diagnostics or native-interface provenance; those
-facts do not add visible array requirements.
-
-### Loading And Round Trips
-
-`parse_pyi_text`, `load_pyi_file` and `convert_pyi_to_ir` load canonical
-array subscriptions and `Annotated[...]` metadata into the same public
-storage contracts emitted by the Fortran semantic pipeline. Native
-source-provenance details not emitted into the public type are intentionally
-excluded from public contract equality. Focused round-trip tests cover:
+`parse_pyi_text`, `load_pyi_file`, and `convert_pyi_to_ir` load the documented
+semantic `.pyi` subset into the same public storage contracts emitted by the
+source semantic pipelines. Focused round-trip tests cover:
 
 ```text
 Fortran parser model -> semantic IR -> .pyi -> semantic IR
 ```
 
-The loader rejects removed dimension helper syntax in type annotations. Use
-array subscriptions such as `Float64[n]`, `Float64[:, :]` or
-`Float64[::]` instead.
+Generated and edited stubs must not use hidden native-source parsing as a
+fallback. If the `.pyi` contract omits native facts required for readiness or
+lowering, x2py reports a contract error or readiness blocker instead of
+guessing.
 
-### Pythonic Projection
+### External Type References
 
-The implemented Fortran generator uses projection for supported output and
-replacement contracts. Further optional generation or editing may expose a
-friendlier Python API whose arguments or results differ from the native
-contract. Every projected interface must retain a mapping back to the exact
-semantic/native interface; it must not discard source origin, storage, intent,
-shape, ownership or lowering facts needed to issue the call.
-
-A projection is allowed to be more restrictive or more expressive than the
-exact native interface, according to the Python API the user wants to expose.
-It may add accepted-input coercions, local constraints, cross-argument checks,
-result checks, mutation policy or ownership policy. It need not expose every
-use that the native routine could technically accept. At the native-call
-boundary, however, the mapped native values must still satisfy the
-requirements encoded by the exact native contract.
-
-The Fortran converter automatically generates projection mappings for
-supported hidden and replacement outputs and for read-only scalar reference
-inputs. The loader and printer also retain explicit mappings from edited
-semantic stubs, including `@native_call` entries formed from `Arg`, `Ref(Arg)`,
-`Return`, `Ref(Return)`, `Const`, `Len`, `IsPresent`, `Work`, `Pass`, and
-`.shape[...]`, plus `Returns[...]`. `As[...]`, `.strides[...]`, coercion
-policy and validation contracts describe extensions required for the fuller
-Pythonic projection; they are not currently accepted or emitted by this path.
-
-#### Native Argument Projection
-
-Only a projected interface uses `@native_call`. The decorator records how
-visible Python arguments and projected results supply the exact native
-arguments.
-
-For a mutable scalar reference, the implemented exact Fortran form keeps
-caller-supplied storage:
-
-```python
-# Implemented exact form.
-def advance(value: Ref(Float64)) -> None: ...
-```
-
-A future Pythonic form may create writable temporary storage, perform the
-native call and read the updated value back as a Python result:
-
-```python
-# Projected form, not currently implemented.
-@native_call([Ref(Arg(0))])
-def advance(value: Float64) -> Returns["value", Float64]: ...
-```
-
-An `intent(out)` scalar is generated as a hidden Python result while preserving
-its native position:
-
-```python
-@native_call([Return("result", 0)])
-def get_count() -> Int32: ...
-```
-
-A projection may derive hidden native metadata from a visible array. For a
-future native interface with a by-value length parameter, for example:
-
-```python
-# Exact contract for a future supported native frontend.
-def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
-
-# Projected form, not currently implemented.
-@native_call([As[SizeT](Arg(0).shape[0]), Arg(0)])
-def sum_values(values: Const(Float64[:])) -> Float64: ...
-```
-
-`Arg(i).shape[dim]` denotes a zero-based array extent.
-`Arg(i).strides[dim]` denotes a NumPy byte stride:
-
-```python
-@native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
-def process_columns(values: Const(Float64[:, ::])) -> None: ...
-```
-
-Dimension steps such as `::m` are expressed in elements; deriving a native
-element stride from a byte stride must include the item-size conversion in
-the native mapping.
-
-#### Coercions And Constraints
-
-<!-- X2PY_C_DOCS_START
-A Pythonic projection may accept values that are not already in the exact
-storage form, but only through explicit allowed coercions. For example, a
-projected API could allow a NumPy C-order matrix to be copied into an
-`ORDER_F` value required by a Fortran-oriented exact contract. It may instead
-reject that input when no copying coercion is declared.
-X2PY_C_DOCS_END -->
-
-Coercions and constraints serve different purposes:
-
-- A coercion states how an accepted Python object becomes the required
-  semantic runtime value, potentially allocating storage or changing layout.
-- A constraint states what must be true of the adapted value before native
-  lowering, such as dtype, rank, shape, stride capability, `ORDER_F`,
-  mutability, device residence, alignment or ownership.
-
-The exact notation already records native-facing local constraints, including
-`Ref(Const(T))`, `Const(T[...])`, dimensions, `ORDER_F`, `ORDER_ANY`,
-`Allocatable` and `Pointer`. A projected API may add allowed conversion
-policy, for example a future `From(np.ndarray, copy=True)` spelling, but it
-cannot silently weaken the exact native contract.
-
-<!-- X2PY_C_DOCS_START
-The exact native contract is therefore a minimum obligation for a projection.
-A projected API may require additional properties, such as finite values,
-non-aliasing arguments, a square matrix or a no-copy policy. A declared
-coercion may convert a projected input so that it satisfies a native
-requirement, such as packing C-oriented input into `ORDER_F` storage. But the
-mapped value sent to native lowering must satisfy the encoded native element
-type, reference/read-write contract, rank, extent, layout, stride,
-allocation/association and other calling-relevant requirements.
-X2PY_C_DOCS_END -->
-
-This document does not currently define a hard-versus-soft classification for
-exact-contract constraints. Until such a classification and override policy
-exist, constraints encoded in the exact native interface are mandatory at the
-native-call boundary. A later design may classify advisory requirements, such
-as a preferred layout or zero-copy preference, as relaxable by an explicit
-projection policy. ABI, memory-safety and semantic-correctness requirements
-cannot be treated as advisory.
-
-In particular, conversion and copy-back policies are required before a
-projection can:
-
-- expose mutable scalar references as ordinary scalar inputs and returns;
-- return changes to output arrays through allocated temporary storage;
-- expose replacement-capable `Allocatable` or `Pointer` dummies; or
-- preserve ownership, lifetime and aliasing behavior through a temporary.
-
-<!-- X2PY_C_DOCS_START
-- accept C-order or non-contiguous storage for a target requiring dense
-  Fortran-oriented storage;
-X2PY_C_DOCS_END -->
-
-#### Validation Contracts
-
-Local constraints are not sufficient for relationships between multiple
-arguments or for promises about projected results. A future projected
-interface may add a validation contract, whether or not the exact native
-interface already contains local constraints, for:
-
-- preconditions, such as matching extents or non-aliasing inputs;
-- postconditions, such as the returned shape or dtype;
-- invariants on projected objects after mutation;
-- mutation and aliasing rules; and
-- ownership and lifetime rules for borrowed, owned, viewed or temporary
-  storage.
-
-For example, this is an illustrative later projected interface, not currently
-accepted projection syntax:
-
-```python
-@contract(
-    pre=[
-        lambda ctx: ctx.args.a.shape[0] == ctx.args.a.shape[1],
-        lambda ctx: ctx.args.b.shape == (ctx.args.a.shape[0],),
-    ],
-    post=[lambda ctx: ctx.result.shape == ctx.args.b.shape],
-    invariants=[lambda ctx: not ctx.result.aliases(ctx.args.a)],
-)
-def solve(
-    a: Annotated[Float64[:, :], ORDER_F],
-    b: Float64[:],
-) -> Float64[:]: ...
-```
-
-A constraint can require that `a` is `ORDER_F`; a contract can require that
-`a` is square, that `b` agrees with its extent and that the result does not
-alias mutable input storage. These checks occur at distinct levels and must
-remain distinct in a later semantic model. Projection-level checks supplement
-the exact native contract; they do not replace its mandatory native-call
-checks.
-
-A projected call therefore has the following conceptual sequence:
-
-```text
-visible Python values
-  -> projected allowed coercions
-  -> projected local constraints and contract preconditions
-  -> exact native argument mapping
-  -> mandatory exact-native constraint validation
-  -> backend lowering
-  -> native call
-  -> contract postconditions and invariants
-  -> projected Python results
-```
-
-<!-- X2PY_C_DOCS_START
-The projection mechanism is language-neutral. It can later adapt exact
-Fortran or C contracts through the same notation and runtime concepts, but
-this milestone does not implement automatic Pythonic generation, current
-exact-reference adaptation, coercion/contract execution or C wrapper lowering.
-The C frontend can generate starter exact-contract `.pyi` output for the
-implemented semantic subset.
-X2PY_C_DOCS_END -->
-
-### External Opaque Type Stubs
-
-<!-- X2PY_C_DOCS_START
-An external source-language type whose owner module is not part of the explicit
-wrapping target is emitted as an owner-module opaque dependency stub. This
-applies to imported Fortran derived types and to C opaque structs from external
-header surfaces:
-X2PY_C_DOCS_END -->
-
-```python
-# types_mod.pyi
-class particle(Opaque):
-    pass
-```
-
-The importing module references that owner rather than re-exporting the type:
-
-```python
-# physics.pyi
-from types_mod import particle
-
-def move(p: Ref(particle)) -> None: ...
-```
-
-`emit_module_stubs(...)` produces the complete stub mapping. `load_pyi_modules`
-loads one or more files or directories and reconciles those imports back into
-semantic `external_type_ref` metadata. If the user replaces the opaque owner
-stub with a concrete class body, the imported semantic reference becomes
-`representation="wrapped"` without changing the importing stub.
-
-This file-set round-trip is the editing boundary for wrapper policy. Existing
-type constraints encoded with `Annotated[...]` are preserved now. The normal
-Fortran CLI build remains source-driven, and the implemented `.pyi` build
-subset consumes edited `.pyi` files when native artifacts and link inputs are
-supplied. Full parity and additional coercion or executable contract syntax are
-tracked separately in the `.pyi` wrapper checklist.
+External source-language types are modeled in semantic IR by owner-module type
+identity. Stub printing may emit owner-module dependency stubs, and
+`load_pyi_modules` reconciles those imports back into semantic
+`external_type_ref` metadata. The concrete file syntax for those owner stubs is
+documented in
+[Semantic `.pyi` format](semantic-pyi-format.md#classes-and-native-type-markers).
 
 <!-- X2PY_C_DOCS_START
 For C, an unresolved typedef is not automatically opaque: its ABI could be an
@@ -928,10 +463,10 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 The shared model represents the current C semantic conversion subset for
-functions, variables,
-fields, constants, scalar references, pointers, arrays with known contracts,
-origin metadata, mutability and ownership facts. The C frontend can generate
-starter exact-contract stubs from that model. Remaining C work includes:
+functions, variables, fields, constants, scalar references, pointers, arrays
+with known contracts, origin metadata, mutability and ownership facts. The C
+frontend can generate starter exact-contract stubs from that model. Remaining C
+work includes:
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -941,9 +476,10 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-Future C conversion should use the same notation: by-value scalars as bare
-types, unrefined pointers as `Ref(T)` or `Ref(Const(T))`, and array notation
-only when a real array storage contract is known.
+Future C conversion should use the same notation documented by the semantic
+`.pyi` format reference: by-value scalars as bare types, unrefined pointers as
+`Ref(T)` or `Ref(Const(T))`, and array notation only when a real array storage
+contract is known.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
