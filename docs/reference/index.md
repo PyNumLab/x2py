@@ -19,13 +19,15 @@ and user guides; this section stays close to the public surfaces.
 - [Semantic IR](semantic-ir.md)
 - [Semantic .pyi format](semantic-pyi-format.md)
 - [Diagnostic codes](diagnostic-codes.md)
+- [Generated functions](generated-functions.md)
+- [Generated modules](generated-modules.md)
+- [Generated classes](generated-classes.md)
+- [Configuration files](configuration-files.md)
 
-## Planned generated pages
+## Generated Wrapper Surface
 
-The generated reference toolchain has not been selected yet. Until it exists,
-[Python API](python-api.md) is the maintained inventory for public exports.
-
-- Generated modules
-- Generated functions
-- Generated classes
-- Configuration files
+The generated function, module, and class pages document the maintained Python
+surface produced by wrapper builds. They are manually maintained references
+backed by checked contracts and runtime tests. A generated-reference toolchain
+can replace the inventory details later, but it must preserve the same public
+rules.

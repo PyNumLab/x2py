@@ -64,6 +64,10 @@ overview. Contribution and pull-request requirements remain in
 - [Semantic `.pyi` wrapper checklist](roadmap/semantic-pyi-wrapper-checklist.md)
 - [Documentation content checklist](roadmap/documentation-content-checklist.md)
 - [Diagnostic code registry](reference/diagnostic-codes.md)
+- [Generated functions](reference/generated-functions.md)
+- [Generated modules](reference/generated-modules.md)
+- [Generated classes](reference/generated-classes.md)
+- [Configuration files](reference/configuration-files.md)
 - [Fortran wrapper guide](user-guide/fortran-wrapper.md): supported Python API, examples,
   ownership, lifetime, naming, concurrency, and current limitations
 

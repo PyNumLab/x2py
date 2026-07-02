@@ -54,21 +54,6 @@ investments and site-publication decisions until the underlying content is
 stable. Within each section, work from foundational pages toward dependent or
 more specialized pages.
 
-### Reference Material
-
-- [ ] `docs/reference/generated-functions.md`: document generated function and
-  subroutine signatures, output projection, validation errors, and overload
-  representation.
-- [ ] `docs/reference/generated-modules.md`: document generated module package
-  shape, module-level functions, variables, constants, hidden native names, and
-  import rules.
-- [ ] `docs/reference/generated-classes.md`: document generated class surfaces,
-  constructors, fields, methods, finalizers, ownership metadata, and unsupported
-  class shapes.
-- [ ] `docs/reference/configuration-files.md`: document public configuration
-  files only after their stable contract exists, including build manifests,
-  generated makefiles, coverage config, and docs tooling config.
-
 ### Troubleshooting, FAQ, And Releases
 
 - [ ] `docs/troubleshooting/index.md`: route users by symptom: install, build,
@@ -155,9 +140,10 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/internal-architecture/semantic-passes.md`: document semantic pass
   ordering, completed policy decisions, readiness checks, and handoff to
   `ir2ast`.
-- [ ] `docs/internal-architecture/wrapper-generation-pipeline.md`: finish the
-  bridge and binding generation route with current policy-completion boundaries
-  and focused evidence.
+- [x] `docs/internal-architecture/wrapper-generation-pipeline.md`: maintained
+  explanation of the current wrapper stages, semantic-policy boundary,
+  pass/planner/emitter distinctions, incremental decomposition criteria, and
+  acceptance criteria for bridge and binding refactoring.
 - [ ] `docs/internal-architecture/type-system.md`: document scalar kinds, arrays,
   characters, derived types, pointers, allocatables, callbacks, and unsupported
   storage forms.
@@ -237,6 +223,23 @@ X2PY_C_DOCS_END -->
   semantic pass, runtime, type-system, ownership, and symbol-table pages.
 - [ ] `docs/contributing/index.md`: route contributors to contribution,
   pull-request, review, and coding-standard pages.
+- [ ] Public documentation site readiness gate: deploy the existing MkDocs
+  documentation as the project website only after all of the following are
+  true; do not create a separate marketing-content system for this milestone.
+  - [ ] The landing page states the current project promise, supported workflow,
+    and limitations without relying on planned behavior.
+  - [ ] Installation and the first-wrapper workflow are complete and verified
+    end to end.
+  - [ ] The feature matrix is current and links supported behavior to evidence
+    and limitations.
+  - [ ] Semantic `.pyi` contracts, derived types, ownership, and memory
+    management have maintained user-facing explanations.
+  - [ ] The architecture overview explains the parser, semantic-policy,
+    lowering, bridge, and binding boundaries.
+  - [ ] Empty, placeholder-only, and TODO-only pages are removed from public
+    navigation until their content is ready.
+  - [ ] An unlisted development preview has validated navigation, links, search,
+    rendering, and the static site build before public deployment.
 
 ## Completed Content Evidence
 
@@ -262,6 +265,15 @@ primary placeholder queue.
 - [x] `docs/reference/cli-commands.md`: maintained CLI reference.
 - [x] `docs/reference/python-api.md`: maintained Python API reference.
 - [x] `docs/reference/diagnostic-codes.md`: maintained diagnostic registry.
+- [x] `docs/reference/generated-functions.md`: maintained generated callable
+  signature, output projection, validation, and overload reference.
+- [x] `docs/reference/generated-modules.md`: maintained generated module package
+  shape, variables, constants, visibility, binding-name, and import reference.
+- [x] `docs/reference/generated-classes.md`: maintained generated class,
+  constructor, field, method, finalizer, ownership, and unsupported-shape
+  reference.
+- [x] `docs/reference/configuration-files.md`: maintained generated manifest,
+  Makefile, coverage, and documentation tooling configuration reference.
 - [x] `docs/user-guide/index.md`: maintained workflow-first route from datatype
   mapping through calls, storage, runtime behavior, and deployment.
 - [x] `docs/user-guide/data-types.md`: maintained Fortran storage, semantic

@@ -157,8 +157,9 @@ type and NumPy dtype mapping. The CLI type-probe flags are documented in
 
 - Parser functions do not run CLI path expansion or command-line preprocessing
   validation.
-- Generated module, function, and class reference pages are still planned; this
-  page is the maintained public-symbol inventory until those pages exist.
+- Generated module, function, class, and configuration references document the
+  wrapper output surface; this page remains the maintained inventory for
+  `x2py.__all__`.
 
 <!-- X2PY_C_DOCS_START
 - Runtime wrapping of user-supplied C libraries is not part of the public

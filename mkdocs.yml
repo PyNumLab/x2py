@@ -54,6 +54,10 @@ nav:
       - Semantic IR: reference/semantic-ir.md
       - Semantic .pyi Format: reference/semantic-pyi-format.md
       - Diagnostic Codes: reference/diagnostic-codes.md
+      - Generated Functions: reference/generated-functions.md
+      - Generated Modules: reference/generated-modules.md
+      - Generated Classes: reference/generated-classes.md
+      - Configuration Files: reference/configuration-files.md
   - Language Support: language-support/index.md
   - Design Documents: design/index.md
   - Developer Guide:
