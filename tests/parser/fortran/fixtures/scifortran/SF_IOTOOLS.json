@@ -16,6 +16,7 @@
       "procedures": [],
       "derived_types": [],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "splot",
@@ -51,7 +52,8 @@
         "get_filepath",
         "print_matrix"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -76,6 +78,7 @@
       "procedures": [],
       "derived_types": [],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "splot",
@@ -111,7 +114,8 @@
         "get_filepath",
         "print_matrix"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

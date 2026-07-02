@@ -1,0 +1,6 @@
+@external
+@native_call([Ref(Arg(0)), Ref(Arg(1))])
+def optional_scale(
+    base: Const(Int32),
+    factor: Const(Int32) = ...
+) -> Int32: ...

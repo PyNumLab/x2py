@@ -31,7 +31,7 @@ curated fixture workflow.
 ## Developer Walkthrough
 
 `test_c_parser_developer_tutorial.py` is an executable reading guide for
-`c_parser/parser.py`. It shows the shared declaration/declarator gateway, the
+`x2py/c_parser/parser.py`. It shows the shared declaration/declarator gateway, the
 `visit_file` dispatch of declaration roles, and the preprocessed linemarker
 path without replacing the feature-focused test modules.
 

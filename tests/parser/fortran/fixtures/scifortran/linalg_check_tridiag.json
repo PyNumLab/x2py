@@ -34,6 +34,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag",
@@ -56,6 +57,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "d_check_tridiag",
@@ -66,9 +68,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "c_check_tridiag",
@@ -96,6 +100,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag",
@@ -118,6 +123,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "c_check_tridiag",
@@ -128,9 +134,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "d_check_tridiag_block",
@@ -149,6 +157,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag_block",
@@ -170,6 +179,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag_block",
@@ -200,6 +210,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag_block",
@@ -222,6 +233,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "d_check_tridiag_block",
@@ -232,9 +244,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "c_check_tridiag_block",
@@ -253,6 +267,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag_block",
@@ -274,6 +289,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag_block",
@@ -304,6 +320,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag_block",
@@ -326,6 +343,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "c_check_tridiag_block",
@@ -336,9 +354,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -373,6 +393,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag",
@@ -395,6 +416,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "d_check_tridiag",
@@ -405,9 +427,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "c_check_tridiag": {
       "name": "c_check_tridiag",
@@ -435,6 +459,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag",
@@ -457,6 +482,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "c_check_tridiag",
@@ -467,9 +493,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "d_check_tridiag_block": {
       "name": "d_check_tridiag_block",
@@ -488,6 +516,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag_block",
@@ -509,6 +538,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag_block",
@@ -539,6 +569,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_check_tridiag_block",
@@ -561,6 +592,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "d_check_tridiag_block",
@@ -571,9 +603,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "c_check_tridiag_block": {
       "name": "c_check_tridiag_block",
@@ -592,6 +626,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag_block",
@@ -613,6 +648,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag_block",
@@ -643,6 +679,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "c_check_tridiag_block",
@@ -665,6 +702,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "c_check_tridiag_block",
@@ -675,9 +713,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

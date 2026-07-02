@@ -16,6 +16,7 @@ def parse_fortran_modules(source, filename=None):
 _TESTS_DIR = Path(__file__).resolve().parents[1] / "data" / "fortran"
 _FIXTURES_DIR = Path(__file__).parent / "fortran" / "fixtures"
 _SOURCE_SUFFIXES = {".f", ".f90", ".f95", ".f03", ".f08", ".for", ".f77", ".ftn"}
+_UPDATE_GOLDENS = os.getenv("FORTRAN_PARSER_UPDATE_GOLDENS", "0") == "1"
 
 
 def _requires_compiler_preprocessing(fixture: Path) -> bool:
@@ -41,7 +42,7 @@ def _fixture_json_relpaths(root: Path) -> set[Path]:
 _GOLDEN_FIXTURES = sorted(
     f
     for f in (_TESTS_DIR / "general").glob("*")
-    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES and _has_direct_expected_json(f)
+    if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES and (_UPDATE_GOLDENS or _has_direct_expected_json(f))
 )
 _BLAS_FIXTURES = sorted(
     f for f in (_TESTS_DIR / "blas").rglob("*") if f.is_file() and f.suffix.lower() in _SOURCE_SUFFIXES
@@ -109,8 +110,7 @@ def _run_fixture_comparison(fixture: Path, *, filename_for_parser: str, expected
 
     parsed = _to_dict(parse_fortran_file(source, filename=filename_for_parser))
 
-    update_mode = os.getenv("FORTRAN_PARSER_UPDATE_GOLDENS", "0") == "1"
-    if update_mode:
+    if _UPDATE_GOLDENS:
         _dump_expected(expected_path, parsed)
         return
 
@@ -142,7 +142,8 @@ def test_fortran_parser_fixtures_match_data_files_one_to_one(data_subdir, fixtur
     missing = sorted(expected - actual)
     extra = sorted(actual - expected)
 
-    assert not missing, f"Missing parser JSON fixtures for {data_subdir}: {missing[:20]}"
+    if not _UPDATE_GOLDENS:
+        assert not missing, f"Missing parser JSON fixtures for {data_subdir}: {missing[:20]}"
     assert not extra, f"Parser JSON fixtures without matching data files in {fixture_subdir}: {extra[:20]}"
 
 

@@ -34,6 +34,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "ddet",
@@ -56,6 +57,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "ddet",
@@ -66,9 +68,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zdet",
@@ -96,6 +100,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zdet",
@@ -118,6 +123,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zdet",
@@ -128,9 +134,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "ddiag",
@@ -155,6 +163,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "ddiag",
@@ -186,6 +195,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "ddiag",
@@ -198,9 +208,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zdiag",
@@ -225,6 +237,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zdiag",
@@ -256,6 +269,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zdiag",
@@ -268,9 +282,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "d_diagonal",
@@ -298,6 +314,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_diagonal",
@@ -326,6 +343,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "d_diagonal",
@@ -338,9 +356,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "z_diagonal",
@@ -368,6 +388,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "z_diagonal",
@@ -396,6 +417,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "z_diagonal",
@@ -408,9 +430,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "dtrace",
@@ -438,6 +462,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "dtrace",
@@ -460,6 +485,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "dtrace",
@@ -472,9 +498,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "ztrace",
@@ -502,6 +530,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "ztrace",
@@ -524,6 +553,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "ztrace",
@@ -536,9 +566,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "deye_matrix",
@@ -557,6 +589,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deye_matrix",
@@ -588,6 +621,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "deye_matrix",
@@ -600,9 +634,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zeye_matrix",
@@ -621,6 +657,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeye_matrix",
@@ -652,6 +689,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zeye_matrix",
@@ -664,9 +702,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "deye_indices",
@@ -685,6 +725,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deye_indices",
@@ -706,6 +747,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deye_indices",
@@ -728,6 +770,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "deye_indices",
@@ -740,9 +783,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zeye_indices",
@@ -761,6 +806,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeye_indices",
@@ -782,6 +828,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeye_indices",
@@ -804,6 +851,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zeye_indices",
@@ -816,9 +864,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zzeros_1",
@@ -837,6 +887,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_1",
@@ -865,6 +916,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_1",
@@ -877,9 +929,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zzeros_2",
@@ -898,6 +952,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_2",
@@ -919,6 +974,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_2",
@@ -950,6 +1006,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_2",
@@ -962,9 +1019,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zzeros_3",
@@ -983,6 +1042,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_3",
@@ -1004,6 +1064,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_3",
@@ -1025,6 +1086,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_3",
@@ -1059,6 +1121,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_3",
@@ -1071,9 +1134,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zzeros_4",
@@ -1092,6 +1157,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -1113,6 +1179,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -1134,6 +1201,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -1155,6 +1223,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -1192,6 +1261,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_4",
@@ -1204,9 +1274,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zzeros_5",
@@ -1225,6 +1297,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -1246,6 +1319,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -1267,6 +1341,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -1288,6 +1363,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -1309,6 +1385,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -1349,6 +1426,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_5",
@@ -1361,9 +1439,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zzeros_6",
@@ -1382,6 +1462,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -1403,6 +1484,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -1424,6 +1506,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -1445,6 +1528,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -1466,6 +1550,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -1487,6 +1572,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -1530,6 +1616,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_6",
@@ -1542,9 +1629,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zzeros_7",
@@ -1563,6 +1652,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -1584,6 +1674,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -1605,6 +1696,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -1626,6 +1718,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -1647,6 +1740,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -1668,6 +1762,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -1689,6 +1784,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -1735,6 +1831,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_7",
@@ -1747,9 +1844,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zones_1",
@@ -1768,6 +1867,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_1",
@@ -1796,6 +1896,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_1",
@@ -1808,9 +1909,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zones_2",
@@ -1829,6 +1932,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_2",
@@ -1850,6 +1954,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_2",
@@ -1881,6 +1986,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_2",
@@ -1893,9 +1999,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zones_3",
@@ -1914,6 +2022,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_3",
@@ -1935,6 +2044,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_3",
@@ -1956,6 +2066,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_3",
@@ -1990,6 +2101,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_3",
@@ -2002,9 +2114,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zones_4",
@@ -2023,6 +2137,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -2044,6 +2159,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -2065,6 +2181,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -2086,6 +2203,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -2123,6 +2241,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_4",
@@ -2135,9 +2254,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zones_5",
@@ -2156,6 +2277,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -2177,6 +2299,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -2198,6 +2321,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -2219,6 +2343,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -2240,6 +2365,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -2280,6 +2406,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_5",
@@ -2292,9 +2419,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zones_6",
@@ -2313,6 +2442,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -2334,6 +2464,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -2355,6 +2486,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -2376,6 +2508,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -2397,6 +2530,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -2418,6 +2552,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -2461,6 +2596,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_6",
@@ -2473,9 +2609,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zones_7",
@@ -2494,6 +2632,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -2515,6 +2654,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -2536,6 +2676,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -2557,6 +2698,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -2578,6 +2720,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -2599,6 +2742,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -2620,6 +2764,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -2666,6 +2811,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_7",
@@ -2678,9 +2824,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -2715,6 +2863,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "ddet",
@@ -2737,6 +2886,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "ddet",
@@ -2747,9 +2897,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zdet": {
       "name": "zdet",
@@ -2777,6 +2929,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zdet",
@@ -2799,6 +2952,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zdet",
@@ -2809,9 +2963,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "ddiag": {
       "name": "ddiag",
@@ -2836,6 +2992,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "ddiag",
@@ -2867,6 +3024,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "ddiag",
@@ -2879,9 +3037,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zdiag": {
       "name": "zdiag",
@@ -2906,6 +3066,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zdiag",
@@ -2937,6 +3098,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zdiag",
@@ -2949,9 +3111,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "d_diagonal": {
       "name": "d_diagonal",
@@ -2979,6 +3143,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_diagonal",
@@ -3007,6 +3172,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "d_diagonal",
@@ -3019,9 +3185,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "z_diagonal": {
       "name": "z_diagonal",
@@ -3049,6 +3217,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "z_diagonal",
@@ -3077,6 +3246,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "z_diagonal",
@@ -3089,9 +3259,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "dtrace": {
       "name": "dtrace",
@@ -3119,6 +3291,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "dtrace",
@@ -3141,6 +3314,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "dtrace",
@@ -3153,9 +3327,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "ztrace": {
       "name": "ztrace",
@@ -3183,6 +3359,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "ztrace",
@@ -3205,6 +3382,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "ztrace",
@@ -3217,9 +3395,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "deye_matrix": {
       "name": "deye_matrix",
@@ -3238,6 +3418,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deye_matrix",
@@ -3269,6 +3450,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "deye_matrix",
@@ -3281,9 +3463,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zeye_matrix": {
       "name": "zeye_matrix",
@@ -3302,6 +3486,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeye_matrix",
@@ -3333,6 +3518,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zeye_matrix",
@@ -3345,9 +3531,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "deye_indices": {
       "name": "deye_indices",
@@ -3366,6 +3554,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deye_indices",
@@ -3387,6 +3576,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deye_indices",
@@ -3409,6 +3599,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "deye_indices",
@@ -3421,9 +3612,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zeye_indices": {
       "name": "zeye_indices",
@@ -3442,6 +3635,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeye_indices",
@@ -3463,6 +3657,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeye_indices",
@@ -3485,6 +3680,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zeye_indices",
@@ -3497,9 +3693,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zzeros_1": {
       "name": "zzeros_1",
@@ -3518,6 +3716,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_1",
@@ -3546,6 +3745,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_1",
@@ -3558,9 +3758,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zzeros_2": {
       "name": "zzeros_2",
@@ -3579,6 +3781,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_2",
@@ -3600,6 +3803,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_2",
@@ -3631,6 +3835,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_2",
@@ -3643,9 +3848,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zzeros_3": {
       "name": "zzeros_3",
@@ -3664,6 +3871,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_3",
@@ -3685,6 +3893,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_3",
@@ -3706,6 +3915,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_3",
@@ -3740,6 +3950,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_3",
@@ -3752,9 +3963,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zzeros_4": {
       "name": "zzeros_4",
@@ -3773,6 +3986,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -3794,6 +4008,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -3815,6 +4030,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -3836,6 +4052,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_4",
@@ -3873,6 +4090,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_4",
@@ -3885,9 +4103,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zzeros_5": {
       "name": "zzeros_5",
@@ -3906,6 +4126,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -3927,6 +4148,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -3948,6 +4170,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -3969,6 +4192,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -3990,6 +4214,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_5",
@@ -4030,6 +4255,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_5",
@@ -4042,9 +4268,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zzeros_6": {
       "name": "zzeros_6",
@@ -4063,6 +4291,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -4084,6 +4313,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -4105,6 +4335,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -4126,6 +4357,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -4147,6 +4379,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -4168,6 +4401,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_6",
@@ -4211,6 +4445,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_6",
@@ -4223,9 +4458,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zzeros_7": {
       "name": "zzeros_7",
@@ -4244,6 +4481,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -4265,6 +4503,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -4286,6 +4525,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -4307,6 +4547,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -4328,6 +4569,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -4349,6 +4591,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -4370,6 +4613,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zzeros_7",
@@ -4416,6 +4660,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zzeros_7",
@@ -4428,9 +4673,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zones_1": {
       "name": "zones_1",
@@ -4449,6 +4696,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_1",
@@ -4477,6 +4725,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_1",
@@ -4489,9 +4738,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zones_2": {
       "name": "zones_2",
@@ -4510,6 +4761,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_2",
@@ -4531,6 +4783,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_2",
@@ -4562,6 +4815,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_2",
@@ -4574,9 +4828,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zones_3": {
       "name": "zones_3",
@@ -4595,6 +4851,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_3",
@@ -4616,6 +4873,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_3",
@@ -4637,6 +4895,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_3",
@@ -4671,6 +4930,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_3",
@@ -4683,9 +4943,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zones_4": {
       "name": "zones_4",
@@ -4704,6 +4966,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -4725,6 +4988,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -4746,6 +5010,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -4767,6 +5032,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_4",
@@ -4804,6 +5070,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_4",
@@ -4816,9 +5083,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zones_5": {
       "name": "zones_5",
@@ -4837,6 +5106,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -4858,6 +5128,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -4879,6 +5150,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -4900,6 +5172,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -4921,6 +5194,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_5",
@@ -4961,6 +5235,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_5",
@@ -4973,9 +5248,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zones_6": {
       "name": "zones_6",
@@ -4994,6 +5271,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -5015,6 +5293,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -5036,6 +5315,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -5057,6 +5337,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -5078,6 +5359,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -5099,6 +5381,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_6",
@@ -5142,6 +5425,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_6",
@@ -5154,9 +5438,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zones_7": {
       "name": "zones_7",
@@ -5175,6 +5461,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -5196,6 +5483,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -5217,6 +5505,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -5238,6 +5527,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -5259,6 +5549,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -5280,6 +5571,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -5301,6 +5593,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zones_7",
@@ -5347,6 +5640,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zones_7",
@@ -5359,9 +5653,11 @@
       "attributes": [
         "pure"
       ],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

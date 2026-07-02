@@ -21,6 +21,7 @@
           "symbolic_value": "4357",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -42,6 +43,7 @@
           "symbolic_value": "624",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -63,6 +65,7 @@
           "symbolic_value": "N+1",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -90,6 +93,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -111,6 +115,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -132,6 +137,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -153,6 +159,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -174,6 +181,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -195,6 +203,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -216,6 +225,7 @@
           "symbolic_value": "3.14159265358979d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -237,6 +247,7 @@
           "symbolic_value": "6.28318530717959d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -258,6 +269,7 @@
           "symbolic_value": "1.41421356237309504880169d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -279,6 +291,7 @@
           "symbolic_value": "1.73205080756887729352745d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -300,6 +313,7 @@
           "symbolic_value": "2.44948974278317809819728d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -321,6 +335,7 @@
           "symbolic_value": "SELECTED_REAL_KIND(12, 60)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -342,6 +357,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -363,6 +379,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -384,6 +401,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -405,6 +423,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -426,6 +445,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -447,6 +467,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -475,6 +496,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_number_init",
@@ -487,9 +509,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "random_number_seed",
@@ -508,6 +532,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_number_seed",
@@ -529,6 +554,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_number_seed",
@@ -551,6 +577,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "random_number_seed",
@@ -561,9 +588,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "nrand",
@@ -582,6 +611,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "nrand",
@@ -604,6 +634,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "nrand",
@@ -614,9 +645,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "random_order",
@@ -641,6 +674,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_order",
@@ -662,6 +696,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_order",
@@ -674,9 +709,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -684,94 +721,184 @@
         {
           "name": "mersenne_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mersenne",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "grnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_random",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_grnd_1",
+            "d_grnd_2",
+            "d_grnd_3",
+            "d_grnd_4",
+            "d_grnd_5",
+            "d_grnd_6",
+            "d_grnd_7",
+            "c_grnd_1",
+            "c_grnd_2",
+            "c_grnd_3",
+            "c_grnd_4",
+            "c_grnd_5",
+            "c_grnd_6",
+            "c_grnd_7"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_uniform",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "igrnd",
+            "dgrnd_uniform"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gaussrnd",
+            "normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_exponential",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "exponentialrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_chi_square",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "chi_squarernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_inverse_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "inverse_gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_weibull",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "weibullrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_cauchy",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cauchyrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_student_t",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "student_trnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_laplace",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "laplacernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_log_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "log_normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_beta",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "betarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_save",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtsavef",
+            "mtsaveu"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_get",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtgetf",
+            "mtgetu"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "mersenne",
@@ -814,7 +941,8 @@
         "nrand",
         "random_order"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -844,6 +972,7 @@
           "symbolic_value": "4357",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -865,6 +994,7 @@
           "symbolic_value": "624",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -886,6 +1016,7 @@
           "symbolic_value": "N+1",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -913,6 +1044,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -934,6 +1066,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -955,6 +1088,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -976,6 +1110,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -997,6 +1132,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1018,6 +1154,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1039,6 +1176,7 @@
           "symbolic_value": "3.14159265358979d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1060,6 +1198,7 @@
           "symbolic_value": "6.28318530717959d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1081,6 +1220,7 @@
           "symbolic_value": "1.41421356237309504880169d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1102,6 +1242,7 @@
           "symbolic_value": "1.73205080756887729352745d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1123,6 +1264,7 @@
           "symbolic_value": "2.44948974278317809819728d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1144,6 +1286,7 @@
           "symbolic_value": "SELECTED_REAL_KIND(12, 60)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1165,6 +1308,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1186,6 +1330,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1207,6 +1352,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1228,6 +1374,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1249,6 +1396,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1270,6 +1418,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1298,6 +1447,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_number_init",
@@ -1310,9 +1460,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "random_number_seed",
@@ -1331,6 +1483,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_number_seed",
@@ -1352,6 +1505,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_number_seed",
@@ -1374,6 +1528,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "random_number_seed",
@@ -1384,9 +1539,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "nrand",
@@ -1405,6 +1562,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "nrand",
@@ -1427,6 +1585,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "nrand",
@@ -1437,9 +1596,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "random_order",
@@ -1464,6 +1625,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_order",
@@ -1485,6 +1647,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "random_order",
@@ -1497,9 +1660,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1507,94 +1672,184 @@
         {
           "name": "mersenne_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_init",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "init_genrand"
+          ],
+          "abstract": false
         },
         {
           "name": "mersenne",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "grnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_random",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_grnd_1",
+            "d_grnd_2",
+            "d_grnd_3",
+            "d_grnd_4",
+            "d_grnd_5",
+            "d_grnd_6",
+            "d_grnd_7",
+            "c_grnd_1",
+            "c_grnd_2",
+            "c_grnd_3",
+            "c_grnd_4",
+            "c_grnd_5",
+            "c_grnd_6",
+            "c_grnd_7"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_uniform",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "igrnd",
+            "dgrnd_uniform"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gaussrnd",
+            "normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_exponential",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "exponentialrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_chi_square",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "chi_squarernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_inverse_gamma",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "inverse_gammarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_weibull",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "weibullrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_cauchy",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cauchyrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_student_t",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "student_trnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_laplace",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "laplacernd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_log_normal",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "log_normalrnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_beta",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "betarnd"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_save",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtsavef",
+            "mtsaveu"
+          ],
+          "abstract": false
         },
         {
           "name": "mt_get",
           "module": "SF_RANDOM",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "mtgetf",
+            "mtgetu"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "mersenne",
@@ -1637,7 +1892,8 @@
         "nrand",
         "random_order"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

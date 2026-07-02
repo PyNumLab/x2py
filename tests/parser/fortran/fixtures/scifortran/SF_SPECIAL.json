@@ -28,6 +28,7 @@
           "symbolic_value": "0d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -49,6 +50,7 @@
           "symbolic_value": "1d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -70,6 +72,7 @@
           "symbolic_value": "2d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -91,6 +94,7 @@
           "symbolic_value": "0.5d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -112,6 +116,7 @@
           "symbolic_value": "tiny(one)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -133,6 +138,7 @@
           "symbolic_value": "epsilon(one)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -154,6 +160,7 @@
           "symbolic_value": "sqrt(-log(rmin))",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -175,6 +182,7 @@
           "symbolic_value": "3.14159265358979323846264338327950288419d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -196,6 +204,7 @@
           "symbolic_value": "pi*pi",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -217,6 +226,7 @@
           "symbolic_value": "one/sqrt( pi )",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -238,6 +248,7 @@
           "symbolic_value": "dcmplx(zero,one)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -259,6 +270,7 @@
           "symbolic_value": "dcmplx(zero,zero)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -287,6 +299,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "heaviside",
@@ -309,6 +322,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "heaviside",
@@ -321,6 +335,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -330,7 +345,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_x",
@@ -349,6 +365,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_x",
@@ -370,6 +387,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_x",
@@ -392,6 +410,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "step_x",
@@ -404,6 +423,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -413,7 +433,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_ij",
@@ -432,6 +453,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_ij",
@@ -453,6 +475,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_ij",
@@ -474,6 +497,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_ij",
@@ -496,6 +520,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "step_ij",
@@ -508,6 +533,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -517,7 +543,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fermi",
@@ -536,6 +563,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fermi",
@@ -557,6 +585,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fermi",
@@ -578,6 +607,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fermi",
@@ -600,6 +630,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fermi",
@@ -612,6 +643,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -621,7 +653,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dfermi",
@@ -640,6 +673,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dfermi",
@@ -661,6 +695,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dfermi",
@@ -682,6 +717,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dfermi",
@@ -704,6 +740,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dfermi",
@@ -716,6 +753,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -725,7 +763,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_sgn",
@@ -744,6 +783,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "i_sgn",
@@ -766,6 +806,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "i_sgn",
@@ -778,6 +819,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -787,7 +829,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_sgn",
@@ -806,6 +849,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_sgn",
@@ -828,6 +872,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_sgn",
@@ -840,6 +885,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -849,7 +895,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "wfun",
@@ -868,6 +915,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "wfun",
@@ -890,6 +938,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "wfun",
@@ -900,6 +949,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -909,7 +959,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_hyperc",
@@ -928,6 +979,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_hyperc",
@@ -949,6 +1001,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_hyperc",
@@ -971,6 +1024,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dens_hyperc",
@@ -983,6 +1037,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -992,7 +1047,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_2dsquare",
@@ -1011,6 +1067,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_2dsquare",
@@ -1032,6 +1089,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_2dsquare",
@@ -1054,6 +1112,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dens_2dsquare",
@@ -1064,6 +1123,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1073,7 +1133,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_3dcubic",
@@ -1092,6 +1153,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_3dcubic",
@@ -1113,6 +1175,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_3dcubic",
@@ -1135,6 +1198,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dens_3dcubic",
@@ -1145,6 +1209,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1154,7 +1219,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "EllipticK",
@@ -1173,6 +1239,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "EllipticK",
@@ -1195,6 +1262,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "EllipticK",
@@ -1205,6 +1273,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1214,7 +1283,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ellf",
@@ -1233,6 +1303,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "ellf",
@@ -1254,6 +1325,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "ellf",
@@ -1276,6 +1348,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "ellf",
@@ -1286,6 +1359,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1295,7 +1369,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rf",
@@ -1314,6 +1389,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rf",
@@ -1335,6 +1411,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rf",
@@ -1356,6 +1433,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rf",
@@ -1378,6 +1456,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "rf",
@@ -1388,6 +1467,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1397,7 +1477,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1405,14 +1486,25 @@
         {
           "name": "step",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "step_x",
+            "step_ij"
+          ],
+          "abstract": false
         },
         {
           "name": "sgn",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_sgn",
+            "d_sgn"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "heaviside",
@@ -1594,7 +1686,8 @@
         "msta2",
         "envj"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -1631,6 +1724,7 @@
           "symbolic_value": "0d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1652,6 +1746,7 @@
           "symbolic_value": "1d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1673,6 +1768,7 @@
           "symbolic_value": "2d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1694,6 +1790,7 @@
           "symbolic_value": "0.5d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1715,6 +1812,7 @@
           "symbolic_value": "tiny(one)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1736,6 +1834,7 @@
           "symbolic_value": "epsilon(one)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1757,6 +1856,7 @@
           "symbolic_value": "sqrt(-log(rmin))",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1778,6 +1878,7 @@
           "symbolic_value": "3.14159265358979323846264338327950288419d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1799,6 +1900,7 @@
           "symbolic_value": "pi*pi",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1820,6 +1922,7 @@
           "symbolic_value": "one/sqrt( pi )",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1841,6 +1944,7 @@
           "symbolic_value": "dcmplx(zero,one)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1862,6 +1966,7 @@
           "symbolic_value": "dcmplx(zero,zero)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -1890,6 +1995,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "heaviside",
@@ -1912,6 +2018,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "heaviside",
@@ -1924,6 +2031,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1933,7 +2041,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_x",
@@ -1952,6 +2061,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_x",
@@ -1973,6 +2083,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_x",
@@ -1995,6 +2106,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "step_x",
@@ -2007,6 +2119,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2016,7 +2129,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "step_ij",
@@ -2035,6 +2149,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_ij",
@@ -2056,6 +2171,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_ij",
@@ -2077,6 +2193,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "step_ij",
@@ -2099,6 +2216,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "step_ij",
@@ -2111,6 +2229,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2120,7 +2239,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fermi",
@@ -2139,6 +2259,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fermi",
@@ -2160,6 +2281,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fermi",
@@ -2181,6 +2303,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fermi",
@@ -2203,6 +2326,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fermi",
@@ -2215,6 +2339,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2224,7 +2349,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dfermi",
@@ -2243,6 +2369,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dfermi",
@@ -2264,6 +2391,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dfermi",
@@ -2285,6 +2413,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dfermi",
@@ -2307,6 +2436,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dfermi",
@@ -2319,6 +2449,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2328,7 +2459,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "i_sgn",
@@ -2347,6 +2479,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "i_sgn",
@@ -2369,6 +2502,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "i_sgn",
@@ -2381,6 +2515,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2390,7 +2525,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_sgn",
@@ -2409,6 +2545,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_sgn",
@@ -2431,6 +2568,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_sgn",
@@ -2443,6 +2581,7 @@
           "attributes": [
             "elemental"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2452,7 +2591,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "wfun",
@@ -2471,6 +2611,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "wfun",
@@ -2493,6 +2634,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "wfun",
@@ -2503,6 +2645,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2512,7 +2655,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_hyperc",
@@ -2531,6 +2675,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_hyperc",
@@ -2552,6 +2697,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_hyperc",
@@ -2574,6 +2720,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dens_hyperc",
@@ -2586,6 +2733,7 @@
           "attributes": [
             "pure"
           ],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2595,7 +2743,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_2dsquare",
@@ -2614,6 +2763,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_2dsquare",
@@ -2635,6 +2785,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_2dsquare",
@@ -2657,6 +2808,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dens_2dsquare",
@@ -2667,6 +2819,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2676,7 +2829,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dens_3dcubic",
@@ -2695,6 +2849,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_3dcubic",
@@ -2716,6 +2871,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dens_3dcubic",
@@ -2738,6 +2894,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dens_3dcubic",
@@ -2748,6 +2905,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2757,7 +2915,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "EllipticK",
@@ -2776,6 +2935,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "EllipticK",
@@ -2798,6 +2958,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "EllipticK",
@@ -2808,6 +2969,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2817,7 +2979,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ellf",
@@ -2836,6 +2999,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "ellf",
@@ -2857,6 +3021,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "ellf",
@@ -2879,6 +3044,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "ellf",
@@ -2889,6 +3055,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2898,7 +3065,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rf",
@@ -2917,6 +3085,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rf",
@@ -2938,6 +3107,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rf",
@@ -2959,6 +3129,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rf",
@@ -2981,6 +3152,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "rf",
@@ -2991,6 +3163,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3000,7 +3173,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -3008,14 +3182,25 @@
         {
           "name": "step",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "step_x",
+            "step_ij"
+          ],
+          "abstract": false
         },
         {
           "name": "sgn",
           "module": "SF_SPECIAL",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "i_sgn",
+            "d_sgn"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "heaviside",
@@ -3197,7 +3382,8 @@
         "msta2",
         "envj"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

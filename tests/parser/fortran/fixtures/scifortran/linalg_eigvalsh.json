@@ -34,6 +34,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deigvalsh",
@@ -62,6 +63,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "deigvalsh",
@@ -72,9 +74,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "zeigvalsh",
@@ -102,6 +106,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeigvalsh",
@@ -130,6 +135,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zeigvalsh",
@@ -140,9 +146,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -177,6 +185,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "deigvalsh",
@@ -205,6 +214,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "deigvalsh",
@@ -215,9 +225,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "zeigvalsh": {
       "name": "zeigvalsh",
@@ -245,6 +257,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "zeigvalsh",
@@ -273,6 +286,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "zeigvalsh",
@@ -283,9 +297,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

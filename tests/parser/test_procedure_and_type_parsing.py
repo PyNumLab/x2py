@@ -1,6 +1,6 @@
 import pytest
 
-from fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
+from x2py.fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
 
@@ -402,6 +402,21 @@ end module cfg
     assert mod.variables[1].shape == ["3"]
 
 
+def test_module_allocatable_target_attribute_is_preserved():
+    module = parse_fortran_module(
+        """
+module alloc_target_mod
+  real(8), allocatable, target :: values(:)
+end module alloc_target_mod
+"""
+    )
+
+    values = module.variables[0]
+    assert values.name == "values"
+    assert values.allocatable is True
+    assert values.target is True
+
+
 def test_module_contains_procedure_and_type_children():
     code = """
 module m1
@@ -668,6 +683,53 @@ end interface foo
     assert all(p.in_interface for p in interfaces[0].procedures)
 
 
+def test_named_generic_interface_preserves_specific_procedure_references():
+    code = """
+module generic_mod
+  interface convert
+    module procedure convert_integer, convert_real
+  end interface convert
+contains
+  integer function convert_integer(value)
+    integer :: value
+    convert_integer = value
+  end function convert_integer
+  real function convert_real(value)
+    real :: value
+    convert_real = value
+  end function convert_real
+end module generic_mod
+"""
+    interface = parse_fortran_module(code).interfaces[0]
+    assert interface.name == "convert"
+    assert interface.specific_procedures == ["convert_integer", "convert_real"]
+    assert interface.procedures == []
+    assert interface.abstract is False
+
+
+def test_defined_operator_and_assignment_interfaces_preserve_generic_names_and_targets():
+    code = """
+module defined_generics
+  interface operator(+)
+    module procedure add_values
+  end interface operator(+)
+  interface operator(.cross.)
+    module procedure cross_values
+  end interface operator(.cross.)
+  interface assignment(=)
+    module procedure assign_value
+  end interface assignment(=)
+end module defined_generics
+"""
+    interfaces = parse_fortran_module(code).interfaces
+
+    assert [(interface.name, interface.specific_procedures) for interface in interfaces] == [
+        ("operator(+)", ["add_values"]),
+        ("operator(.cross.)", ["cross_values"]),
+        ("assignment(=)", ["assign_value"]),
+    ]
+
+
 def test_external_dummy_keeps_recursive_attribute_metadata():
     code = """
 recursive function apply_once(f, x) result(y)
@@ -919,7 +981,7 @@ def test_fortran_variable_spec_expressions_parse_function_calls():
 
 
 def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
-    from fortran_parser.type_resolver import extract_kind_from_type_spec
+    from x2py.fortran_parser.type_resolver import extract_kind_from_type_spec
 
     var = FortranVariable(name="empty", shape=[""])
     assert var.shape_info == [{"raw": "", "lower": None, "upper": None}]
@@ -950,7 +1012,7 @@ def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
     ],
 )
 def test_extract_kind_from_type_spec_contract(base_type, type_spec, expected):
-    from fortran_parser.type_resolver import extract_kind_from_type_spec
+    from x2py.fortran_parser.type_resolver import extract_kind_from_type_spec
 
     assert extract_kind_from_type_spec(base_type, type_spec) == expected
 

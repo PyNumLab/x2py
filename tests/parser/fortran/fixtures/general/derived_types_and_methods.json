@@ -27,6 +27,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -54,6 +55,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -67,6 +69,7 @@
           "methods": [
             "move"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -93,6 +96,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -120,6 +124,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -134,6 +139,7 @@
             "init",
             "clear"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -150,9 +156,11 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -188,6 +196,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -215,6 +224,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -228,6 +238,7 @@
           "methods": [
             "move"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -254,6 +265,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -281,6 +293,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -295,6 +308,7 @@
             "init",
             "clear"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -311,9 +325,11 @@
         }
       ],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

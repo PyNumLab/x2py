@@ -15,7 +15,10 @@ import pytest
 
 
 ROOT = Path(__file__).parents[2]
-DOC_PATHS = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
+DOC_PATHS = [
+    ROOT / "README.md",
+    *sorted(path for path in (ROOT / "docs").rglob("*.md") if "old_docs" not in path.parts),
+]
 TEST_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test:\s*(run|exact)(?:\s+([a-z0-9_-]+))?\s*-->\s*$")
 OUTPUT_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test-output\s*-->\s*$")
 SOURCE_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-source:\s*(.+?)\s*-->\s*$")
@@ -28,6 +31,9 @@ DISALLOWED_OPTIONS = {
     "--out",
     "--preprocess-template",
 }
+C_DOCS_START = "<!-- X2PY_C_DOCS_START"
+C_DOCS_END = "X2PY_C_DOCS_END -->"
+C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
 
 
 @dataclass(frozen=True)
@@ -93,8 +99,27 @@ def _logical_command(command_block: str, *, location: str) -> str:
     return command
 
 
-def _documented_content_from_path(path: Path) -> tuple[list[DocumentationExample], list[DocumentedSource]]:
+def _visible_documentation_lines(path: Path) -> list[str]:
     lines = path.read_text(encoding="utf-8").splitlines()
+    visible: list[str] = []
+    hidden = False
+    for line in lines:
+        if line.strip() == C_DOCS_START:
+            hidden = True
+            visible.append("")
+        elif line.strip() == C_DOCS_END:
+            hidden = False
+            visible.append("")
+        elif hidden or line.lstrip().startswith(C_DOCS_DISABLED):
+            visible.append("")
+        else:
+            visible.append(line)
+    assert not hidden, f"{path.relative_to(ROOT)}: unclosed deferred documentation comment"
+    return visible
+
+
+def _documented_content_from_path(path: Path) -> tuple[list[DocumentationExample], list[DocumentedSource]]:
+    lines = _visible_documentation_lines(path)
     examples: list[DocumentationExample] = []
     sources: list[DocumentedSource] = []
     index = 0
@@ -206,7 +231,7 @@ def test_documented_source_input(source: DocumentedSource):
 
 @pytest.mark.parametrize("path", DOC_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
 def test_documented_expected_output_labels_are_automatically_verified(path: Path):
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = _visible_documentation_lines(path)
     for index, line in enumerate(lines):
         if line.strip() not in {"Expected output:", "Output:"}:
             continue

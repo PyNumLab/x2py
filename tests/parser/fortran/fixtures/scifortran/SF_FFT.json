@@ -60,6 +60,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_direct",
@@ -87,6 +88,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_direct",
@@ -114,6 +116,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_direct",
@@ -142,6 +145,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_FT_direct",
@@ -152,6 +156,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -181,7 +186,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_FT_direct",
@@ -206,6 +212,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_direct",
@@ -233,6 +240,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_direct",
@@ -260,6 +268,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_direct",
@@ -288,6 +297,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_FT_direct",
@@ -298,6 +308,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -327,7 +338,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_FT_inverse",
@@ -352,6 +364,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_inverse",
@@ -379,6 +392,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_inverse",
@@ -406,6 +420,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_inverse",
@@ -434,6 +449,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_FT_inverse",
@@ -444,6 +460,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -473,7 +490,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_FT_inverse",
@@ -498,6 +516,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_inverse",
@@ -525,6 +544,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_inverse",
@@ -552,6 +572,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_inverse",
@@ -580,6 +601,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_FT_inverse",
@@ -590,6 +612,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -619,7 +642,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_FFT_signal",
@@ -644,6 +668,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FFT_signal",
@@ -665,6 +690,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FFT_signal",
@@ -693,6 +719,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_FFT_signal",
@@ -703,6 +730,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -732,7 +760,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_FFT_signal",
@@ -757,6 +786,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FFT_signal",
@@ -778,6 +808,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FFT_signal",
@@ -806,6 +837,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_FFT_signal",
@@ -816,6 +848,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -845,7 +878,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_iFFT_signal",
@@ -870,6 +904,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_iFFT_signal",
@@ -891,6 +926,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_iFFT_signal",
@@ -919,6 +955,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_iFFT_signal",
@@ -929,6 +966,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -958,7 +996,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_iFFT_signal",
@@ -983,6 +1022,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_iFFT_signal",
@@ -1004,6 +1044,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_iFFT_signal",
@@ -1032,6 +1073,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_iFFT_signal",
@@ -1042,6 +1084,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1071,7 +1114,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_tfft",
@@ -1096,6 +1140,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_tfft",
@@ -1123,6 +1168,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_tfft",
@@ -1135,6 +1181,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1164,7 +1211,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_tfft",
@@ -1189,6 +1237,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_tfft",
@@ -1216,6 +1265,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_tfft",
@@ -1228,6 +1278,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1257,7 +1308,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_itfft",
@@ -1282,6 +1334,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_itfft",
@@ -1309,6 +1362,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_itfft",
@@ -1321,6 +1375,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1350,7 +1405,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_itfft",
@@ -1375,6 +1431,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_itfft",
@@ -1402,6 +1459,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_itfft",
@@ -1414,6 +1472,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1443,7 +1502,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_forward",
@@ -1468,6 +1528,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_forward",
@@ -1480,6 +1541,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1509,7 +1571,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_forward",
@@ -1534,6 +1597,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_forward",
@@ -1546,6 +1610,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1575,7 +1640,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_forward",
@@ -1603,6 +1669,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_2d_forward",
@@ -1615,6 +1682,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1644,7 +1712,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_forward",
@@ -1672,6 +1741,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_2d_forward",
@@ -1684,6 +1754,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1713,7 +1784,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_forward",
@@ -1738,6 +1810,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_forward",
@@ -1759,6 +1832,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_forward",
@@ -1780,6 +1854,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_forward",
@@ -1792,6 +1867,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1821,7 +1897,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_forward",
@@ -1846,6 +1923,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_forward",
@@ -1867,6 +1945,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_forward",
@@ -1888,6 +1967,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_forward",
@@ -1900,6 +1980,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1929,7 +2010,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_forward",
@@ -1954,6 +2036,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_1d_forward",
@@ -1966,6 +2049,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -1995,7 +2079,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_forward",
@@ -2020,6 +2105,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_1d_forward",
@@ -2032,6 +2118,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2061,7 +2148,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_forward",
@@ -2086,6 +2174,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_forward",
@@ -2107,6 +2196,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_forward",
@@ -2128,6 +2218,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_forward",
@@ -2140,6 +2231,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2169,7 +2261,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_forward",
@@ -2194,6 +2287,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_forward",
@@ -2215,6 +2309,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_forward",
@@ -2236,6 +2331,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_forward",
@@ -2248,6 +2344,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2277,7 +2374,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_backward",
@@ -2302,6 +2400,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_backward",
@@ -2314,6 +2413,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2343,7 +2443,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_backward",
@@ -2368,6 +2469,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_backward",
@@ -2380,6 +2482,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2409,7 +2512,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_backward",
@@ -2437,6 +2541,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_2d_backward",
@@ -2449,6 +2554,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2478,7 +2584,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_backward",
@@ -2506,6 +2613,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_2d_backward",
@@ -2518,6 +2626,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2547,7 +2656,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_backward",
@@ -2572,6 +2682,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_backward",
@@ -2593,6 +2704,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_backward",
@@ -2614,6 +2726,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_backward",
@@ -2626,6 +2739,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2655,7 +2769,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_backward",
@@ -2680,6 +2795,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_backward",
@@ -2701,6 +2817,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_backward",
@@ -2722,6 +2839,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_backward",
@@ -2734,6 +2852,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2763,7 +2882,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_backward",
@@ -2788,6 +2908,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_1d_backward",
@@ -2800,6 +2921,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2829,7 +2951,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_backward",
@@ -2854,6 +2977,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_1d_backward",
@@ -2866,6 +2990,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -2895,7 +3020,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_backward",
@@ -2920,6 +3046,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_backward",
@@ -2941,6 +3068,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_backward",
@@ -2962,6 +3090,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_backward",
@@ -2974,6 +3103,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3003,7 +3133,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_backward",
@@ -3028,6 +3159,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_backward",
@@ -3049,6 +3181,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_backward",
@@ -3070,6 +3203,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_backward",
@@ -3082,6 +3216,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3111,7 +3246,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_shift",
@@ -3136,6 +3272,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_shift",
@@ -3164,6 +3301,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "rfft_1d_shift",
@@ -3174,6 +3312,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3203,7 +3342,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_shift",
@@ -3228,6 +3368,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_shift",
@@ -3256,6 +3397,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "cfft_1d_shift",
@@ -3266,6 +3408,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3295,7 +3438,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ishift",
@@ -3320,6 +3464,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_ishift",
@@ -3348,6 +3493,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "rfft_1d_ishift",
@@ -3358,6 +3504,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3387,7 +3534,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ishift",
@@ -3412,6 +3560,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_ishift",
@@ -3440,6 +3589,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "cfft_1d_ishift",
@@ -3450,6 +3600,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3479,7 +3630,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ex",
@@ -3504,6 +3656,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_ex",
@@ -3516,6 +3669,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3545,7 +3699,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ex",
@@ -3570,6 +3725,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_ex",
@@ -3582,6 +3738,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3611,7 +3768,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_tmax",
@@ -3630,6 +3788,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tmax",
@@ -3651,6 +3810,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tmax",
@@ -3673,6 +3833,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_tmax",
@@ -3683,6 +3844,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3712,7 +3874,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_fmax",
@@ -3731,6 +3894,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_fmax",
@@ -3752,6 +3916,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_fmax",
@@ -3774,6 +3939,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_fmax",
@@ -3784,6 +3950,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3813,7 +3980,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_tarray",
@@ -3832,6 +4000,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tarray",
@@ -3853,6 +4022,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tarray",
@@ -3881,6 +4051,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_tarray",
@@ -3891,6 +4062,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -3920,7 +4092,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_farray",
@@ -3939,6 +4112,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_farray",
@@ -3960,6 +4134,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_farray",
@@ -3981,6 +4156,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_farray",
@@ -4009,6 +4185,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_farray",
@@ -4019,6 +4196,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -4048,7 +4226,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -4056,119 +4235,227 @@
         {
           "name": "FT_direct",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_direct",
+            "c_FT_direct"
+          ],
+          "abstract": false
         },
         {
           "name": "FT_inverse",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_inverse",
+            "c_FT_inverse"
+          ],
+          "abstract": false
         },
         {
           "name": "FFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FFT_signal",
+            "c_FFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "iFFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_iFFT_signal",
+            "c_iFFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "tfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_tfft",
+            "c_tfft"
+          ],
+          "abstract": false
         },
         {
           "name": "itfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_itfft",
+            "c_itfft"
+          ],
+          "abstract": false
         },
         {
           "name": "fft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_forward",
+            "cfft_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_backward",
+            "cfft_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_forward",
+            "cfft_2d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_backward",
+            "cfft_2d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_forward",
+            "cfft_nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_backward",
+            "cfft_nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_shift",
+            "cfft_1d_shift"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ishift",
+            "cfft_1d_ishift"
+          ],
+          "abstract": false
         },
         {
           "name": "fftex",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ex",
+            "cfft_1d_ex"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "FT_direct",
@@ -4225,7 +4512,8 @@
         "fft_tarray",
         "fft_farray"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -4294,6 +4582,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_direct",
@@ -4321,6 +4610,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_direct",
@@ -4348,6 +4638,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_direct",
@@ -4376,6 +4667,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_FT_direct",
@@ -4386,6 +4678,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -4415,7 +4708,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_FT_direct",
@@ -4440,6 +4734,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_direct",
@@ -4467,6 +4762,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_direct",
@@ -4494,6 +4790,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_direct",
@@ -4522,6 +4819,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_FT_direct",
@@ -4532,6 +4830,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -4561,7 +4860,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_FT_inverse",
@@ -4586,6 +4886,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_inverse",
@@ -4613,6 +4914,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_inverse",
@@ -4640,6 +4942,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FT_inverse",
@@ -4668,6 +4971,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_FT_inverse",
@@ -4678,6 +4982,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -4707,7 +5012,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_FT_inverse",
@@ -4732,6 +5038,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_inverse",
@@ -4759,6 +5066,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_inverse",
@@ -4786,6 +5094,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FT_inverse",
@@ -4814,6 +5123,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_FT_inverse",
@@ -4824,6 +5134,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -4853,7 +5164,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_FFT_signal",
@@ -4878,6 +5190,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FFT_signal",
@@ -4899,6 +5212,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_FFT_signal",
@@ -4927,6 +5241,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_FFT_signal",
@@ -4937,6 +5252,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -4966,7 +5282,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_FFT_signal",
@@ -4991,6 +5308,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FFT_signal",
@@ -5012,6 +5330,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_FFT_signal",
@@ -5040,6 +5359,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_FFT_signal",
@@ -5050,6 +5370,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5079,7 +5400,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_iFFT_signal",
@@ -5104,6 +5426,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_iFFT_signal",
@@ -5125,6 +5448,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_iFFT_signal",
@@ -5153,6 +5477,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "d_iFFT_signal",
@@ -5163,6 +5488,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5192,7 +5518,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_iFFT_signal",
@@ -5217,6 +5544,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_iFFT_signal",
@@ -5238,6 +5566,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_iFFT_signal",
@@ -5266,6 +5595,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "c_iFFT_signal",
@@ -5276,6 +5606,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5305,7 +5636,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_tfft",
@@ -5330,6 +5662,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_tfft",
@@ -5357,6 +5690,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_tfft",
@@ -5369,6 +5703,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5398,7 +5733,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_tfft",
@@ -5423,6 +5759,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_tfft",
@@ -5450,6 +5787,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_tfft",
@@ -5462,6 +5800,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5491,7 +5830,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "d_itfft",
@@ -5516,6 +5856,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_itfft",
@@ -5543,6 +5884,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "d_itfft",
@@ -5555,6 +5897,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5584,7 +5927,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "c_itfft",
@@ -5609,6 +5953,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_itfft",
@@ -5636,6 +5981,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "c_itfft",
@@ -5648,6 +5994,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5677,7 +6024,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_forward",
@@ -5702,6 +6050,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_forward",
@@ -5714,6 +6063,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5743,7 +6093,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_forward",
@@ -5768,6 +6119,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_forward",
@@ -5780,6 +6132,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5809,7 +6162,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_forward",
@@ -5837,6 +6191,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_2d_forward",
@@ -5849,6 +6204,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5878,7 +6234,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_forward",
@@ -5906,6 +6263,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_2d_forward",
@@ -5918,6 +6276,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -5947,7 +6306,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_forward",
@@ -5972,6 +6332,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_forward",
@@ -5993,6 +6354,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_forward",
@@ -6014,6 +6376,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_forward",
@@ -6026,6 +6389,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6055,7 +6419,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_forward",
@@ -6080,6 +6445,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_forward",
@@ -6101,6 +6467,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_forward",
@@ -6122,6 +6489,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_forward",
@@ -6134,6 +6502,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6163,7 +6532,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_forward",
@@ -6188,6 +6558,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_1d_forward",
@@ -6200,6 +6571,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6229,7 +6601,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_forward",
@@ -6254,6 +6627,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_1d_forward",
@@ -6266,6 +6640,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6295,7 +6670,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_forward",
@@ -6320,6 +6696,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_forward",
@@ -6341,6 +6718,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_forward",
@@ -6362,6 +6740,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_forward",
@@ -6374,6 +6753,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6403,7 +6783,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_forward",
@@ -6428,6 +6809,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_forward",
@@ -6449,6 +6831,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_forward",
@@ -6470,6 +6853,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_forward",
@@ -6482,6 +6866,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6511,7 +6896,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_backward",
@@ -6536,6 +6922,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_backward",
@@ -6548,6 +6935,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6577,7 +6965,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_backward",
@@ -6602,6 +6991,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_backward",
@@ -6614,6 +7004,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6643,7 +7034,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_2d_backward",
@@ -6671,6 +7063,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_2d_backward",
@@ -6683,6 +7076,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6712,7 +7106,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_2d_backward",
@@ -6740,6 +7135,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_2d_backward",
@@ -6752,6 +7148,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6781,7 +7178,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_nd_backward",
@@ -6806,6 +7204,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_backward",
@@ -6827,6 +7226,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_backward",
@@ -6848,6 +7248,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_nd_backward",
@@ -6860,6 +7261,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6889,7 +7291,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_nd_backward",
@@ -6914,6 +7317,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_backward",
@@ -6935,6 +7339,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_backward",
@@ -6956,6 +7361,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_nd_backward",
@@ -6968,6 +7374,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -6997,7 +7404,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_1d_backward",
@@ -7022,6 +7430,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_1d_backward",
@@ -7034,6 +7443,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7063,7 +7473,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_1d_backward",
@@ -7088,6 +7499,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_1d_backward",
@@ -7100,6 +7512,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7129,7 +7542,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cost_nd_backward",
@@ -7154,6 +7568,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_backward",
@@ -7175,6 +7590,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_backward",
@@ -7196,6 +7612,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cost_nd_backward",
@@ -7208,6 +7625,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7237,7 +7655,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sint_nd_backward",
@@ -7262,6 +7681,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_backward",
@@ -7283,6 +7703,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_backward",
@@ -7304,6 +7725,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sint_nd_backward",
@@ -7316,6 +7738,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7345,7 +7768,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_shift",
@@ -7370,6 +7794,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_shift",
@@ -7398,6 +7823,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "rfft_1d_shift",
@@ -7408,6 +7834,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7437,7 +7864,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_shift",
@@ -7462,6 +7890,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_shift",
@@ -7490,6 +7919,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "cfft_1d_shift",
@@ -7500,6 +7930,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7529,7 +7960,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ishift",
@@ -7554,6 +7986,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_ishift",
@@ -7582,6 +8015,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "rfft_1d_ishift",
@@ -7592,6 +8026,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7621,7 +8056,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ishift",
@@ -7646,6 +8082,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_ishift",
@@ -7674,6 +8111,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "cfft_1d_ishift",
@@ -7684,6 +8122,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7713,7 +8152,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rfft_1d_ex",
@@ -7738,6 +8178,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rfft_1d_ex",
@@ -7750,6 +8191,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7779,7 +8221,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "cfft_1d_ex",
@@ -7804,6 +8247,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "cfft_1d_ex",
@@ -7816,6 +8260,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7845,7 +8290,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_tmax",
@@ -7864,6 +8310,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tmax",
@@ -7885,6 +8332,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tmax",
@@ -7907,6 +8355,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_tmax",
@@ -7917,6 +8366,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -7946,7 +8396,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_fmax",
@@ -7965,6 +8416,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_fmax",
@@ -7986,6 +8438,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_fmax",
@@ -8008,6 +8461,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_fmax",
@@ -8018,6 +8472,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -8047,7 +8502,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_tarray",
@@ -8066,6 +8522,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tarray",
@@ -8087,6 +8544,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_tarray",
@@ -8115,6 +8573,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_tarray",
@@ -8125,6 +8584,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -8154,7 +8614,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "fft_farray",
@@ -8173,6 +8634,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_farray",
@@ -8194,6 +8656,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_farray",
@@ -8215,6 +8678,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fft_farray",
@@ -8243,6 +8707,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "fft_farray",
@@ -8253,6 +8718,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_INTEGRATE": [
               {
@@ -8282,7 +8748,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -8290,119 +8757,227 @@
         {
           "name": "FT_direct",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_direct",
+            "c_FT_direct"
+          ],
+          "abstract": false
         },
         {
           "name": "FT_inverse",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FT_inverse",
+            "c_FT_inverse"
+          ],
+          "abstract": false
         },
         {
           "name": "FFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_FFT_signal",
+            "c_FFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "iFFT_signal",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_iFFT_signal",
+            "c_iFFT_signal"
+          ],
+          "abstract": false
         },
         {
           "name": "tfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_tfft",
+            "c_tfft"
+          ],
+          "abstract": false
         },
         {
           "name": "itfft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_itfft",
+            "c_itfft"
+          ],
+          "abstract": false
         },
         {
           "name": "fft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_forward",
+            "cfft_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_backward",
+            "cfft_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_forward",
+            "cfft_2d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifft2",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_2d_backward",
+            "cfft_2d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_forward",
+            "cfft_nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_nd_backward",
+            "cfft_nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "cosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "icosftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "cost_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinft",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_1d_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "sinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_forward"
+          ],
+          "abstract": false
         },
         {
           "name": "isinftn",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "sint_Nd_backward"
+          ],
+          "abstract": false
         },
         {
           "name": "fftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_shift",
+            "cfft_1d_shift"
+          ],
+          "abstract": false
         },
         {
           "name": "ifftshift",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ishift",
+            "cfft_1d_ishift"
+          ],
+          "abstract": false
         },
         {
           "name": "fftex",
           "module": "SF_FFT_FFTPACK",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "rfft_1d_ex",
+            "cfft_1d_ex"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "FT_direct",
@@ -8459,7 +9034,8 @@
         "fft_tarray",
         "fft_farray"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

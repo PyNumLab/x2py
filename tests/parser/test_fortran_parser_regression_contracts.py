@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from fortran_parser.models import FortranArgument, FortranDerivedType, FortranModule, FortranProcedureSignature
-from fortran_parser.parser import (
+from x2py.fortran_parser.models import FortranArgument, FortranDerivedType, FortranModule, FortranProcedureSignature
+from x2py.fortran_parser.parser import (
     FortranParser,
     _ParserScope,
     _SourceUnit,
@@ -24,6 +24,43 @@ def _lines(*values: str) -> list[tuple[str, int, str]]:
 def _unit(kind: str, name: str | None, *values: str) -> _SourceUnit:
     lines = _lines(*values)
     return _SourceUnit(kind=kind, name=name, lines=lines, start_line=1, end_line=len(lines))
+
+
+def test_function_result_assignment_name_with_intrinsic_prefix_starts_execution_part():
+    parsed = parse_fortran_file(
+        """
+        real function real_c4(z)
+        complex z
+        real_c4 = real(z)
+        return
+        end
+        """
+    )
+
+    proc = parsed.procedures[0]
+    assert proc.name == "real_c4"
+    assert proc.result is not None
+    assert proc.result.base_type == "real"
+
+
+def test_procedure_bind_c_name_and_value_argument_are_preserved():
+    parsed = parse_fortran_file(
+        """
+module c_api
+  use iso_c_binding
+contains
+  integer(c_int) function renamed(n) bind(C, name="x2py_renamed") result(res)
+    integer(c_int), value, intent(in) :: n
+    res = n
+  end function renamed
+end module c_api
+"""
+    )
+
+    proc = parsed.modules[0].procedures[0]
+    assert proc.attributes == ["bind(c)"]
+    assert proc.bind_name == "x2py_renamed"
+    assert proc.arguments[0].pass_by_value is True
 
 
 def test_unit_region_helpers_preserve_specification_execution_and_contains_boundaries():

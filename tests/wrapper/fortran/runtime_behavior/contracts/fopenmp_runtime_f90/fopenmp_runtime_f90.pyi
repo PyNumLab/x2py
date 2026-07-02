@@ -1,0 +1,3 @@
+def parallel_sum(
+    values: Const(Float64[::])
+) -> Float64: ...

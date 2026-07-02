@@ -25,6 +25,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "r8vec_print",
@@ -52,6 +53,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "r8vec_print",
@@ -73,6 +75,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "r8vec_print",
@@ -85,9 +88,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -113,6 +118,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "r8vec_print",
@@ -140,6 +146,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "r8vec_print",
@@ -161,6 +168,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "r8vec_print",
@@ -173,9 +181,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

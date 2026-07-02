@@ -25,6 +25,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -52,6 +53,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -79,6 +81,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -100,6 +103,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -112,9 +116,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "init_finter_c",
@@ -133,6 +139,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -160,6 +167,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -187,6 +195,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -208,6 +217,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -220,9 +230,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "delete_finter",
@@ -241,6 +253,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "delete_finter",
@@ -253,9 +266,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "finter",
@@ -274,6 +289,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "finter",
@@ -295,6 +311,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "finter",
@@ -317,6 +334,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "finter",
@@ -327,9 +345,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "cinter",
@@ -348,6 +368,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "cinter",
@@ -369,6 +390,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "cinter",
@@ -391,6 +413,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "cinter",
@@ -401,9 +424,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -429,6 +454,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -456,6 +482,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -483,6 +510,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -504,6 +532,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_d",
@@ -516,9 +545,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "init_finter_c": {
       "name": "init_finter_c",
@@ -537,6 +568,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -564,6 +596,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -591,6 +624,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -612,6 +646,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "init_finter_c",
@@ -624,9 +659,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "delete_finter": {
       "name": "delete_finter",
@@ -645,6 +682,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "delete_finter",
@@ -657,9 +695,11 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "finter": {
       "name": "finter",
@@ -678,6 +718,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "finter",
@@ -699,6 +740,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "finter",
@@ -721,6 +763,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "finter",
@@ -731,9 +774,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "cinter": {
       "name": "cinter",
@@ -752,6 +797,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "cinter",
@@ -773,6 +819,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "cinter",
@@ -795,6 +842,7 @@
         "symbolic_value": null,
         "value_type": "unknown",
         "is_parameter": false,
+        "target": false,
         "dimensions": [],
         "visibility": "public",
         "procedure": "cinter",
@@ -805,9 +853,11 @@
         "pointer": false
       },
       "attributes": [],
+      "bind_name": null,
       "uses": {},
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }

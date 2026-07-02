@@ -38,6 +38,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "shape_matrix",
@@ -66,6 +67,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "shape_matrix",
@@ -76,6 +78,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -89,7 +92,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sort_array",
@@ -114,6 +118,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sort_array",
@@ -141,6 +146,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sort_array",
@@ -153,6 +159,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -166,7 +173,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "binary_search",
@@ -191,6 +199,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "binary_search",
@@ -212,6 +221,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "binary_search",
@@ -234,6 +244,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "binary_search",
@@ -246,6 +257,7 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -259,7 +271,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "append_I",
@@ -284,6 +297,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_I",
@@ -305,6 +319,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_I",
@@ -317,6 +332,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -330,7 +346,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "append_D",
@@ -355,6 +372,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_D",
@@ -376,6 +394,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_D",
@@ -388,6 +407,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -401,7 +421,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "append_Z",
@@ -426,6 +447,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_Z",
@@ -447,6 +469,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_Z",
@@ -459,6 +482,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -472,7 +496,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -492,6 +517,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -513,6 +539,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -534,6 +561,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -551,10 +579,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -568,6 +597,7 @@
           "methods": [
             "shape     => shape_matrix"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -585,19 +615,31 @@
         {
           "name": "append",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "append_I",
+            "append_D",
+            "append_Z"
+          ],
+          "abstract": false
         },
         {
           "name": "shape",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "shape_matrix"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [
         "shape"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -644,6 +686,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "shape_matrix",
@@ -672,6 +715,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "shape_matrix",
@@ -682,6 +726,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -695,7 +740,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sort_array",
@@ -720,6 +766,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sort_array",
@@ -747,6 +794,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sort_array",
@@ -759,6 +807,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -772,7 +821,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "binary_search",
@@ -797,6 +847,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "binary_search",
@@ -818,6 +869,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "binary_search",
@@ -840,6 +892,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "binary_search",
@@ -852,6 +905,7 @@
           "attributes": [
             "recursive"
           ],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -865,7 +919,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "append_I",
@@ -890,6 +945,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_I",
@@ -911,6 +967,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_I",
@@ -923,6 +980,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -936,7 +994,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "append_D",
@@ -961,6 +1020,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_D",
@@ -982,6 +1042,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_D",
@@ -994,6 +1055,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -1007,7 +1069,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "append_Z",
@@ -1032,6 +1095,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_Z",
@@ -1053,6 +1117,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "append_Z",
@@ -1065,6 +1130,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_LINALG": [
               {
@@ -1078,7 +1144,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -1098,6 +1165,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1119,6 +1187,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1140,6 +1209,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1157,10 +1227,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1174,6 +1245,7 @@
           "methods": [
             "shape     => shape_matrix"
           ],
+          "final_procedures": [],
           "extends": null,
           "attributes": [],
           "procedure_bindings": [
@@ -1191,19 +1263,31 @@
         {
           "name": "append",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "append_I",
+            "append_D",
+            "append_Z"
+          ],
+          "abstract": false
         },
         {
           "name": "shape",
           "module": "SF_SPARSE_COMMON",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "shape_matrix"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [
         "shape"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

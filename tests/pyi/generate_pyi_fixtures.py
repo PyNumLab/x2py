@@ -8,14 +8,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from tests._shared.fixture_outputs import (
     iter_general_c_fixture_projects,
     iter_general_fortran_fixtures,
+    reset_fortran_pyi_fixtures,
     write_c_pyi_fixture,
-    write_pyi_fixture,
+    write_pyi_fixture_package,
 )
 
 
 def main() -> None:
+    reset_fortran_pyi_fixtures()
     for fixture in iter_general_fortran_fixtures():
-        print(f"updated {write_pyi_fixture(fixture)}")
+        print(f"updated {write_pyi_fixture_package(fixture)}")
     for project_key, fixtures in iter_general_c_fixture_projects():
         print(f"updated {write_c_pyi_fixture(project_key, fixtures)}")
 

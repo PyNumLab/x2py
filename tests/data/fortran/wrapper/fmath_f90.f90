@@ -1,0 +1,516 @@
+module fmath_f90
+contains
+      REAL FUNCTION SQUARE_R4(X)
+      REAL X
+      SQUARE_R4 = X * X
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION SQUARE_R8(X)
+      DOUBLE PRECISION X
+      SQUARE_R8 = X * X
+      RETURN
+      END
+
+      INTEGER FUNCTION SQUARE_I4(X)
+      INTEGER X
+      SQUARE_I4 = X * X
+      RETURN
+      END
+
+      COMPLEX FUNCTION SQUARE_C4(Z)
+      COMPLEX Z
+      SQUARE_C4 = Z * Z
+      RETURN
+      END
+
+      DOUBLE COMPLEX FUNCTION SQUARE_C8(Z)
+      DOUBLE COMPLEX Z
+      SQUARE_C8 = Z * Z
+      RETURN
+      END
+
+      REAL FUNCTION CUBE_R4(X)
+      REAL X
+      CUBE_R4 = X * X * X
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION CUBE_R8(X)
+      DOUBLE PRECISION X
+      CUBE_R8 = X * X * X
+      RETURN
+      END
+
+      INTEGER FUNCTION CUBE_I4(X)
+      INTEGER X
+      CUBE_I4 = X * X * X
+      RETURN
+      END
+
+      REAL FUNCTION ADD_R4(X, Y)
+      REAL X, Y
+      ADD_R4 = X + Y
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION ADD_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      ADD_R8 = X + Y
+      RETURN
+      END
+
+      INTEGER FUNCTION ADD_I4(X, Y)
+      INTEGER X, Y
+      ADD_I4 = X + Y
+      RETURN
+      END
+
+      COMPLEX FUNCTION ADD_C4(X, Y)
+      COMPLEX X, Y
+      ADD_C4 = X + Y
+      RETURN
+      END
+
+      DOUBLE COMPLEX FUNCTION ADD_C8(X, Y)
+      DOUBLE COMPLEX X, Y
+      ADD_C8 = X + Y
+      RETURN
+      END
+
+      REAL FUNCTION SUB_R4(X, Y)
+      REAL X, Y
+      SUB_R4 = X - Y
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION SUB_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      SUB_R8 = X - Y
+      RETURN
+      END
+
+      INTEGER FUNCTION SUB_I4(X, Y)
+      INTEGER X, Y
+      SUB_I4 = X - Y
+      RETURN
+      END
+
+      REAL FUNCTION MUL_R4(X, Y)
+      REAL X, Y
+      MUL_R4 = X * Y
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION MUL_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      MUL_R8 = X * Y
+      RETURN
+      END
+
+      INTEGER FUNCTION MUL_I4(X, Y)
+      INTEGER X, Y
+      MUL_I4 = X * Y
+      RETURN
+      END
+
+      REAL FUNCTION DIV_R4(X, Y)
+      REAL X, Y
+      DIV_R4 = X / Y
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION DIV_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      DIV_R8 = X / Y
+      RETURN
+      END
+
+      REAL FUNCTION POW_R4(X, Y)
+      REAL X, Y
+      POW_R4 = X ** Y
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION POW_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      POW_R8 = X ** Y
+      RETURN
+      END
+
+      REAL FUNCTION ABS_R4(X)
+      REAL X
+      ABS_R4 = ABS(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION ABS_R8(X)
+      DOUBLE PRECISION X
+      ABS_R8 = ABS(X)
+      RETURN
+      END
+
+      INTEGER FUNCTION ABS_I4(X)
+      INTEGER X
+      ABS_I4 = ABS(X)
+      RETURN
+      END
+
+      REAL FUNCTION NEG_R4(X)
+      REAL X
+      NEG_R4 = -X
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION NEG_R8(X)
+      DOUBLE PRECISION X
+      NEG_R8 = -X
+      RETURN
+      END
+
+      INTEGER FUNCTION NEG_I4(X)
+      INTEGER X
+      NEG_I4 = -X
+      RETURN
+      END
+
+      REAL FUNCTION SIN_R4(X)
+      REAL X
+      SIN_R4 = SIN(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION SIN_R8(X)
+      DOUBLE PRECISION X
+      SIN_R8 = DSIN(X)
+      RETURN
+      END
+
+      REAL FUNCTION COS_R4(X)
+      REAL X
+      COS_R4 = COS(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION COS_R8(X)
+      DOUBLE PRECISION X
+      COS_R8 = DCOS(X)
+      RETURN
+      END
+
+      REAL FUNCTION TAN_R4(X)
+      REAL X
+      TAN_R4 = TAN(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION TAN_R8(X)
+      DOUBLE PRECISION X
+      TAN_R8 = DTAN(X)
+      RETURN
+      END
+
+      REAL FUNCTION ASIN_R4(X)
+      REAL X
+      ASIN_R4 = ASIN(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION ASIN_R8(X)
+      DOUBLE PRECISION X
+      ASIN_R8 = DASIN(X)
+      RETURN
+      END
+
+      REAL FUNCTION ACOS_R4(X)
+      REAL X
+      ACOS_R4 = ACOS(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION ACOS_R8(X)
+      DOUBLE PRECISION X
+      ACOS_R8 = DACOS(X)
+      RETURN
+      END
+
+      REAL FUNCTION ATAN_R4(X)
+      REAL X
+      ATAN_R4 = ATAN(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION ATAN_R8(X)
+      DOUBLE PRECISION X
+      ATAN_R8 = DATAN(X)
+      RETURN
+      END
+
+      REAL FUNCTION ATAN2_R4(Y, X)
+      REAL Y, X
+      ATAN2_R4 = ATAN2(Y, X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION ATAN2_R8(Y, X)
+      DOUBLE PRECISION Y, X
+      ATAN2_R8 = DATAN2(Y, X)
+      RETURN
+      END
+
+      REAL FUNCTION EXP_R4(X)
+      REAL X
+      EXP_R4 = EXP(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION EXP_R8(X)
+      DOUBLE PRECISION X
+      EXP_R8 = DEXP(X)
+      RETURN
+      END
+
+      REAL FUNCTION LOG_R4(X)
+      REAL X
+      LOG_R4 = LOG(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION LOG_R8(X)
+      DOUBLE PRECISION X
+      LOG_R8 = DLOG(X)
+      RETURN
+      END
+
+      REAL FUNCTION LOG10_R4(X)
+      REAL X
+      LOG10_R4 = LOG10(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION LOG10_R8(X)
+      DOUBLE PRECISION X
+      LOG10_R8 = DLOG10(X)
+      RETURN
+      END
+
+      REAL FUNCTION SQRT_R4(X)
+      REAL X
+      SQRT_R4 = SQRT(X)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION SQRT_R8(X)
+      DOUBLE PRECISION X
+      SQRT_R8 = DSQRT(X)
+      RETURN
+      END
+
+      REAL FUNCTION HYPOT_R4(X, Y)
+      REAL X, Y
+      HYPOT_R4 = SQRT(X * X + Y * Y)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION HYPOT_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      HYPOT_R8 = DSQRT(X * X + Y * Y)
+      RETURN
+      END
+
+      REAL FUNCTION MIN_R4(X, Y)
+      REAL X, Y
+      MIN_R4 = MIN(X, Y)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION MIN_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      MIN_R8 = DMIN1(X, Y)
+      RETURN
+      END
+
+      INTEGER FUNCTION MIN_I4(X, Y)
+      INTEGER X, Y
+      MIN_I4 = MIN(X, Y)
+      RETURN
+      END
+
+      REAL FUNCTION MAX_R4(X, Y)
+      REAL X, Y
+      MAX_R4 = MAX(X, Y)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION MAX_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      MAX_R8 = DMAX1(X, Y)
+      RETURN
+      END
+
+      INTEGER FUNCTION MAX_I4(X, Y)
+      INTEGER X, Y
+      MAX_I4 = MAX(X, Y)
+      RETURN
+      END
+
+      REAL FUNCTION SIGN_R4(X, Y)
+      REAL X, Y
+      SIGN_R4 = SIGN(X, Y)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION SIGN_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      SIGN_R8 = DSIGN(X, Y)
+      RETURN
+      END
+
+      INTEGER FUNCTION MOD_I4(X, Y)
+      INTEGER X, Y
+      MOD_I4 = MOD(X, Y)
+      RETURN
+      END
+
+      REAL FUNCTION MOD_R4(X, Y)
+      REAL X, Y
+      MOD_R4 = AMOD(X, Y)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION MOD_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      MOD_R8 = DMOD(X, Y)
+      RETURN
+      END
+
+      REAL FUNCTION DEG2RAD_R4(X)
+      REAL X, PI
+      PI = 3.14159265358979323846
+      DEG2RAD_R4 = X * PI / 180.0
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION DEG2RAD_R8(X)
+      DOUBLE PRECISION X, PI
+      PI = 3.1415926535897932384626433832795D0
+      DEG2RAD_R8 = X * PI / 180.0D0
+      RETURN
+      END
+
+      REAL FUNCTION RAD2DEG_R4(X)
+      REAL X, PI
+      PI = 3.14159265358979323846
+      RAD2DEG_R4 = X * 180.0 / PI
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION RAD2DEG_R8(X)
+      DOUBLE PRECISION X, PI
+      PI = 3.1415926535897932384626433832795D0
+      RAD2DEG_R8 = X * 180.0D0 / PI
+      RETURN
+      END
+
+      REAL FUNCTION DIST2_R4(X, Y)
+      REAL X, Y
+      DIST2_R4 = X * X + Y * Y
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION DIST2_R8(X, Y)
+      DOUBLE PRECISION X, Y
+      DIST2_R8 = X * X + Y * Y
+      RETURN
+      END
+
+      REAL FUNCTION DOT2_R4(X1, X2, Y1, Y2)
+      REAL X1, X2, Y1, Y2
+      DOT2_R4 = X1 * Y1 + X2 * Y2
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION DOT2_R8(X1, X2, Y1, Y2)
+      DOUBLE PRECISION X1, X2, Y1, Y2
+      DOT2_R8 = X1 * Y1 + X2 * Y2
+      RETURN
+      END
+
+      REAL FUNCTION DOT3_R4(X1, X2, X3, Y1, Y2, Y3)
+      REAL X1, X2, X3, Y1, Y2, Y3
+      DOT3_R4 = X1 * Y1 + X2 * Y2 + X3 * Y3
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION DOT3_R8(X1, X2, X3, Y1, Y2, Y3)
+      DOUBLE PRECISION X1, X2, X3, Y1, Y2, Y3
+      DOT3_R8 = X1 * Y1 + X2 * Y2 + X3 * Y3
+      RETURN
+      END
+
+      COMPLEX FUNCTION CONJ_C4(Z)
+      COMPLEX Z
+      CONJ_C4 = CONJG(Z)
+      RETURN
+      END
+
+      DOUBLE COMPLEX FUNCTION CONJ_C8(Z)
+      DOUBLE COMPLEX Z
+      CONJ_C8 = DCONJG(Z)
+      RETURN
+      END
+
+      REAL FUNCTION REAL_C4(Z)
+      COMPLEX Z
+      REAL_C4 = REAL(Z)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION REAL_C8(Z)
+      DOUBLE COMPLEX Z
+      REAL_C8 = DBLE(Z)
+      RETURN
+      END
+
+      REAL FUNCTION AIMAG_C4(Z)
+      COMPLEX Z
+      AIMAG_C4 = AIMAG(Z)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION AIMAG_C8(Z)
+      DOUBLE COMPLEX Z
+      AIMAG_C8 = DIMAG(Z)
+      RETURN
+      END
+
+      REAL FUNCTION ABS_C4(Z)
+      COMPLEX Z
+      ABS_C4 = ABS(Z)
+      RETURN
+      END
+
+      DOUBLE PRECISION FUNCTION ABS_C8(Z)
+      DOUBLE COMPLEX Z
+      ABS_C8 = CDABS(Z)
+      RETURN
+      END
+
+      LOGICAL FUNCTION IS_POSITIVE_R4(X)
+      REAL X
+      IS_POSITIVE_R4 = X .GT. 0.0
+      RETURN
+      END
+
+      LOGICAL FUNCTION IS_POSITIVE_R8(X)
+      DOUBLE PRECISION X
+      IS_POSITIVE_R8 = X .GT. 0.0D0
+      RETURN
+      END
+
+      LOGICAL FUNCTION IS_EVEN_I4(X)
+      INTEGER X
+      IS_EVEN_I4 = MOD(X, 2) .EQ. 0
+      RETURN
+      END
+end module fmath_f90

@@ -66,6 +66,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -87,6 +88,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -108,6 +110,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -129,6 +132,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -150,6 +154,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -171,6 +176,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -183,6 +189,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -218,7 +225,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_mean",
@@ -243,6 +251,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_mean",
@@ -265,6 +274,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_mean",
@@ -275,6 +285,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -310,7 +321,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_sd",
@@ -335,6 +347,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_sd",
@@ -357,6 +370,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_sd",
@@ -367,6 +381,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -402,7 +417,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_var",
@@ -427,6 +443,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_var",
@@ -449,6 +466,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_var",
@@ -459,6 +477,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -494,7 +513,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_skew",
@@ -519,6 +539,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_skew",
@@ -541,6 +562,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_skew",
@@ -551,6 +573,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -586,7 +609,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_curt",
@@ -611,6 +635,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_curt",
@@ -633,6 +658,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_curt",
@@ -643,6 +669,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -678,7 +705,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_covariance",
@@ -706,6 +734,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_covariance",
@@ -733,6 +762,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_covariance",
@@ -764,6 +794,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_covariance",
@@ -774,6 +805,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -809,7 +841,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -825,10 +858,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -856,6 +890,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -883,6 +918,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -894,6 +930,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -913,10 +950,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -938,6 +976,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -959,6 +998,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -980,6 +1020,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -997,10 +1038,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1028,6 +1070,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1055,6 +1098,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1076,6 +1120,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1093,10 +1138,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1114,10 +1160,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1135,10 +1182,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1150,6 +1198,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -1179,6 +1228,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1206,6 +1256,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1233,6 +1284,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1260,6 +1312,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1277,10 +1330,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1308,6 +1362,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1335,6 +1390,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1365,6 +1421,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1395,6 +1452,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1412,10 +1470,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1433,10 +1492,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1454,10 +1514,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -1469,6 +1530,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -1481,99 +1543,191 @@
         {
           "name": "pdf_allocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_allocate_1d",
+            "pdf_allocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_deallocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_deallocate_1d",
+            "pdf_deallocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_save",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_save_1d",
+            "pdf_save_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_read",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_read_1d",
+            "pdf_read_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_set_range",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_set_range_1d",
+            "pdf_set_range_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_push_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_push_sigma_1d",
+            "pdf_push_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_get_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_get_sigma_1d",
+            "pdf_get_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sigma_data_1d",
+            "pdf_sigma_sdev_1d",
+            "pdf_sigma_data_2d",
+            "pdf_sigma_sdev_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_accumulate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_accumulate_s_1d",
+            "pdf_accumulate_v_1d",
+            "pdf_accumulate_s_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_normalize",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_normalize_1d",
+            "pdf_normalize_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_write",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_mean",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_mean_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_var",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_var_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sdev",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sdev_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_moment",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_moment_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_skew",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_skew_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_curt",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_curt_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print_moments",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_moments_pfile_1d"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "get_moments",
@@ -1609,7 +1763,8 @@
         "histogram_print",
         "histogram_reset"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -1684,6 +1839,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -1705,6 +1861,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -1726,6 +1883,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -1747,6 +1905,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -1768,6 +1927,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -1789,6 +1949,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_moments",
@@ -1801,6 +1962,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -1836,7 +1998,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_mean",
@@ -1861,6 +2024,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_mean",
@@ -1883,6 +2047,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_mean",
@@ -1893,6 +2058,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -1928,7 +2094,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_sd",
@@ -1953,6 +2120,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_sd",
@@ -1975,6 +2143,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_sd",
@@ -1985,6 +2154,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2020,7 +2190,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_var",
@@ -2045,6 +2216,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_var",
@@ -2067,6 +2239,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_var",
@@ -2077,6 +2250,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2112,7 +2286,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_skew",
@@ -2137,6 +2312,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_skew",
@@ -2159,6 +2335,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_skew",
@@ -2169,6 +2346,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2204,7 +2382,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_curt",
@@ -2229,6 +2408,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_curt",
@@ -2251,6 +2431,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_curt",
@@ -2261,6 +2442,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2296,7 +2478,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_covariance",
@@ -2324,6 +2507,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_covariance",
@@ -2351,6 +2535,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_covariance",
@@ -2382,6 +2567,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_covariance",
@@ -2392,6 +2578,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "SF_ARRAYS": [
               {
@@ -2427,7 +2614,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [
@@ -2443,10 +2631,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2474,6 +2663,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2501,6 +2691,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2512,6 +2703,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -2531,10 +2723,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2556,6 +2749,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2577,6 +2771,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2598,6 +2793,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2615,10 +2811,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2646,6 +2843,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2673,6 +2871,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2694,6 +2893,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2711,10 +2911,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2732,10 +2933,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2753,10 +2955,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2768,6 +2971,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -2797,6 +3001,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2824,6 +3029,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2851,6 +3057,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2878,6 +3085,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2895,10 +3103,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": "0",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2926,6 +3135,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2953,6 +3163,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -2983,6 +3194,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -3013,6 +3225,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -3030,10 +3243,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -3051,10 +3265,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -3072,10 +3287,11 @@
               "shape": [],
               "lbound": [],
               "ubound": [],
-              "value": null,
-              "symbolic_value": null,
-              "value_type": "unknown",
+              "value": "0",
+              "symbolic_value": ".false.",
+              "value_type": "expression",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": null,
@@ -3087,6 +3303,7 @@
             }
           ],
           "methods": [],
+          "final_procedures": [],
           "extends": null,
           "attributes": [
             "public"
@@ -3099,99 +3316,191 @@
         {
           "name": "pdf_allocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_allocate_1d",
+            "pdf_allocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_deallocate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_deallocate_1d",
+            "pdf_deallocate_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_save",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_save_1d",
+            "pdf_save_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_read",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_read_1d",
+            "pdf_read_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_set_range",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_set_range_1d",
+            "pdf_set_range_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_push_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_push_sigma_1d",
+            "pdf_push_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_get_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_get_sigma_1d",
+            "pdf_get_sigma_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sigma",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sigma_data_1d",
+            "pdf_sigma_sdev_1d",
+            "pdf_sigma_data_2d",
+            "pdf_sigma_sdev_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_accumulate",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_accumulate_s_1d",
+            "pdf_accumulate_v_1d",
+            "pdf_accumulate_s_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_normalize",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_normalize_1d",
+            "pdf_normalize_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_write",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_pfile_1d",
+            "pdf_print_pfile_2d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_mean",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_mean_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_var",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_var_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_sdev",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_sdev_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_moment",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_moment_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_skew",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_skew_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_curt",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_curt_1d"
+          ],
+          "abstract": false
         },
         {
           "name": "pdf_print_moments",
           "module": "SF_STAT",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "pdf_print_moments_pfile_1d"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "get_moments",
@@ -3227,7 +3536,8 @@
         "histogram_print",
         "histogram_reset"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

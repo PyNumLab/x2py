@@ -39,6 +39,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "broydn_func",
@@ -67,6 +68,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "broydn_func",
@@ -77,16 +79,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     },
     {
       "name": "BROYDEN_ROUTINES",
@@ -107,6 +115,7 @@
           "symbolic_value": "16",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -128,6 +137,7 @@
           "symbolic_value": "8",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -149,6 +159,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -183,6 +194,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fdjac",
@@ -210,6 +222,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fdjac",
@@ -240,6 +253,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fdjac",
@@ -252,11 +266,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lnsrch",
@@ -281,6 +297,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -302,6 +319,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -329,6 +347,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -356,6 +375,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -383,6 +403,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -404,6 +425,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -425,6 +447,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -446,6 +469,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -467,6 +491,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -479,11 +504,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrdcmp",
@@ -511,6 +538,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -538,6 +566,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -565,6 +594,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -586,6 +616,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -598,11 +629,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrupdt",
@@ -630,6 +663,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -660,6 +694,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -687,6 +722,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -714,6 +750,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -726,11 +763,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rsolv",
@@ -758,6 +797,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rsolv",
@@ -785,6 +825,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rsolv",
@@ -812,6 +853,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rsolv",
@@ -824,11 +866,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_diag",
@@ -856,6 +900,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_diag",
@@ -884,6 +929,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_diag",
@@ -894,11 +940,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq2",
@@ -917,6 +965,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -938,6 +987,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -959,6 +1009,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -981,6 +1032,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eq2",
@@ -991,11 +1043,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq4",
@@ -1014,6 +1068,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -1035,6 +1090,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -1056,6 +1112,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -1077,6 +1134,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -1098,6 +1156,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -1120,6 +1179,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eq4",
@@ -1130,11 +1190,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eqn",
@@ -1159,6 +1221,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eqn",
@@ -1180,6 +1243,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eqn",
@@ -1202,6 +1266,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eqn",
@@ -1212,11 +1277,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lower_triangle",
@@ -1235,6 +1302,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lower_triangle",
@@ -1256,6 +1324,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lower_triangle",
@@ -1277,6 +1346,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lower_triangle",
@@ -1308,6 +1378,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "lower_triangle",
@@ -1318,11 +1389,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerdiff",
@@ -1347,6 +1420,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerdiff",
@@ -1374,6 +1448,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerdiff",
@@ -1405,6 +1480,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "outerdiff",
@@ -1415,11 +1491,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerprod",
@@ -1444,6 +1522,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerprod",
@@ -1471,6 +1550,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerprod",
@@ -1502,6 +1582,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "outerprod",
@@ -1512,11 +1593,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "put_diag",
@@ -1541,6 +1624,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "put_diag",
@@ -1571,6 +1655,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "put_diag",
@@ -1583,11 +1668,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "unit_matrix",
@@ -1615,6 +1702,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "unit_matrix",
@@ -1627,11 +1715,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "vabs",
@@ -1656,6 +1746,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "vabs",
@@ -1678,6 +1769,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "vabs",
@@ -1688,11 +1780,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ifirstloc",
@@ -1717,6 +1811,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "ifirstloc",
@@ -1739,6 +1834,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "ifirstloc",
@@ -1749,11 +1845,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1785,6 +1883,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -1807,6 +1906,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -1817,16 +1917,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -1874,6 +1980,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "broydn_func",
@@ -1902,6 +2009,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "broydn_func",
@@ -1912,16 +2020,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     },
     "broyden_routines": {
       "name": "BROYDEN_ROUTINES",
@@ -1942,6 +2056,7 @@
           "symbolic_value": "16",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -1963,6 +2078,7 @@
           "symbolic_value": "8",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -1984,6 +2100,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -2018,6 +2135,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fdjac",
@@ -2045,6 +2163,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fdjac",
@@ -2075,6 +2194,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "fdjac",
@@ -2087,11 +2207,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lnsrch",
@@ -2116,6 +2238,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2137,6 +2260,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2164,6 +2288,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2191,6 +2316,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2218,6 +2344,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2239,6 +2366,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2260,6 +2388,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2281,6 +2410,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2302,6 +2432,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lnsrch",
@@ -2314,11 +2445,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrdcmp",
@@ -2346,6 +2479,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -2373,6 +2507,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -2400,6 +2535,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -2421,6 +2557,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrdcmp",
@@ -2433,11 +2570,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "qrupdt",
@@ -2465,6 +2604,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -2495,6 +2635,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -2522,6 +2663,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -2549,6 +2691,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "qrupdt",
@@ -2561,11 +2704,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "rsolv",
@@ -2593,6 +2738,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rsolv",
@@ -2620,6 +2766,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rsolv",
@@ -2647,6 +2794,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "rsolv",
@@ -2659,11 +2807,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_diag",
@@ -2691,6 +2841,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_diag",
@@ -2719,6 +2870,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "get_diag",
@@ -2729,11 +2881,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq2",
@@ -2752,6 +2906,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -2773,6 +2928,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -2794,6 +2950,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -2816,6 +2973,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eq2",
@@ -2826,11 +2984,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq4",
@@ -2849,6 +3009,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -2870,6 +3031,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -2891,6 +3053,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -2912,6 +3075,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -2933,6 +3097,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq4",
@@ -2955,6 +3120,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eq4",
@@ -2965,11 +3131,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eqn",
@@ -2994,6 +3162,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eqn",
@@ -3015,6 +3184,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eqn",
@@ -3037,6 +3207,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eqn",
@@ -3047,11 +3218,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "lower_triangle",
@@ -3070,6 +3243,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lower_triangle",
@@ -3091,6 +3265,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lower_triangle",
@@ -3112,6 +3287,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "lower_triangle",
@@ -3143,6 +3319,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "lower_triangle",
@@ -3153,11 +3330,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerdiff",
@@ -3182,6 +3361,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerdiff",
@@ -3209,6 +3389,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerdiff",
@@ -3240,6 +3421,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "outerdiff",
@@ -3250,11 +3432,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "outerprod",
@@ -3279,6 +3463,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerprod",
@@ -3306,6 +3491,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "outerprod",
@@ -3337,6 +3523,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "outerprod",
@@ -3347,11 +3534,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "put_diag",
@@ -3376,6 +3565,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "put_diag",
@@ -3406,6 +3596,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "put_diag",
@@ -3418,11 +3609,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "unit_matrix",
@@ -3450,6 +3643,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "unit_matrix",
@@ -3462,11 +3656,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "vabs",
@@ -3491,6 +3687,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "vabs",
@@ -3513,6 +3710,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "vabs",
@@ -3523,11 +3721,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "ifirstloc",
@@ -3552,6 +3752,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "ifirstloc",
@@ -3574,6 +3775,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "ifirstloc",
@@ -3584,11 +3786,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "BROYDEN_FUNC_INTERFACE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -3620,6 +3824,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -3642,6 +3847,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -3652,16 +3858,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

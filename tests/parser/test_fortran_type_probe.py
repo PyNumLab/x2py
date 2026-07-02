@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 import x2py.fortran_type_probe as fortran_type_probe
-from semantics.fortran2ir import (
+from x2py.semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_module_to_semantic_module,
 )

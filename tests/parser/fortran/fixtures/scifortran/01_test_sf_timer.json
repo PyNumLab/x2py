@@ -28,6 +28,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -49,6 +50,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -70,6 +72,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -80,7 +83,9 @@
           "pointer": false
         }
       ],
-      "procedures": []
+      "procedures": [],
+      "enums": [],
+      "common_variables": []
     }
   ],
   "block_data_units": [],

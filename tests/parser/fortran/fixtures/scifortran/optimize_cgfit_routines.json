@@ -21,6 +21,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -48,6 +49,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -75,6 +77,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -96,6 +99,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -117,6 +121,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -151,6 +156,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -178,6 +184,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -199,6 +206,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -220,6 +228,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -232,9 +241,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dlinmin",
@@ -259,6 +270,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -286,6 +298,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -307,6 +320,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -328,6 +342,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -349,6 +364,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -361,9 +377,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "f1dim",
@@ -382,6 +400,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "f1dim",
@@ -404,6 +423,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "f1dim",
@@ -414,9 +434,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "df1dim",
@@ -435,6 +457,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "df1dim",
@@ -457,6 +480,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "df1dim",
@@ -467,9 +491,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "mnbrak",
@@ -488,6 +514,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -509,6 +536,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -530,6 +558,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -551,6 +580,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -572,6 +602,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -593,6 +624,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -614,6 +646,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -626,9 +659,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "brent_",
@@ -647,6 +682,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -668,6 +704,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -689,6 +726,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -710,6 +748,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -731,6 +770,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -752,6 +792,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -774,6 +815,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "brent_",
@@ -784,9 +826,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dbrent_",
@@ -805,6 +849,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -826,6 +871,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -847,6 +893,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -868,6 +915,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -889,6 +937,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -910,6 +959,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -931,6 +981,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -952,6 +1003,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -974,6 +1026,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dbrent_",
@@ -984,9 +1037,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isinfty",
@@ -1005,6 +1060,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "isinfty",
@@ -1027,6 +1083,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "isinfty",
@@ -1037,9 +1094,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isnan",
@@ -1058,6 +1117,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "isnan",
@@ -1080,6 +1140,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "isnan",
@@ -1090,9 +1151,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1124,6 +1187,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "cgfit_func",
@@ -1146,6 +1210,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "cgfit_func",
@@ -1156,9 +1221,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "cgfit_fjac",
@@ -1183,6 +1250,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "cgfit_fjac",
@@ -1211,6 +1279,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "cgfit_fjac",
@@ -1221,11 +1290,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         },
         {
           "name": null,
@@ -1248,6 +1321,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -1270,6 +1344,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -1280,11 +1355,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -1307,6 +1386,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -1329,6 +1409,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -1339,11 +1420,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -1366,6 +1451,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -1388,6 +1474,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -1398,9 +1485,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "fjac",
@@ -1419,6 +1508,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "fjac",
@@ -1441,6 +1531,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "fjac",
@@ -1451,16 +1542,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -1490,6 +1587,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -1517,6 +1615,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -1544,6 +1643,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -1565,6 +1665,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -1586,6 +1687,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
@@ -1620,6 +1722,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -1647,6 +1750,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -1668,6 +1772,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -1689,6 +1794,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "linmin",
@@ -1701,9 +1807,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dlinmin",
@@ -1728,6 +1836,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -1755,6 +1864,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": true,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -1776,6 +1886,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -1797,6 +1908,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -1818,6 +1930,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dlinmin",
@@ -1830,9 +1943,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "f1dim",
@@ -1851,6 +1966,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "f1dim",
@@ -1873,6 +1989,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "f1dim",
@@ -1883,9 +2000,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "df1dim",
@@ -1904,6 +2023,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "df1dim",
@@ -1926,6 +2046,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "df1dim",
@@ -1936,9 +2057,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "mnbrak",
@@ -1957,6 +2080,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -1978,6 +2102,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -1999,6 +2124,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -2020,6 +2146,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -2041,6 +2168,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -2062,6 +2190,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -2083,6 +2212,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "mnbrak",
@@ -2095,9 +2225,11 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "brent_",
@@ -2116,6 +2248,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -2137,6 +2270,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -2158,6 +2292,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -2179,6 +2314,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -2200,6 +2336,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -2221,6 +2358,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "brent_",
@@ -2243,6 +2381,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "brent_",
@@ -2253,9 +2392,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "dbrent_",
@@ -2274,6 +2415,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2295,6 +2437,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2316,6 +2459,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2337,6 +2481,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2358,6 +2503,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2379,6 +2525,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2400,6 +2547,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2421,6 +2569,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "dbrent_",
@@ -2443,6 +2592,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "dbrent_",
@@ -2453,9 +2603,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isinfty",
@@ -2474,6 +2626,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "isinfty",
@@ -2496,6 +2649,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "isinfty",
@@ -2506,9 +2660,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "isnan",
@@ -2527,6 +2683,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "isnan",
@@ -2549,6 +2706,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "isnan",
@@ -2559,9 +2717,11 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {},
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -2593,6 +2753,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "cgfit_func",
@@ -2615,6 +2776,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "cgfit_func",
@@ -2625,9 +2787,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "cgfit_fjac",
@@ -2652,6 +2816,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "cgfit_fjac",
@@ -2680,6 +2845,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "cgfit_fjac",
@@ -2690,11 +2856,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": true
         },
         {
           "name": null,
@@ -2717,6 +2887,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -2739,6 +2910,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -2749,11 +2921,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -2776,6 +2952,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -2798,6 +2975,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -2808,11 +2986,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -2835,6 +3017,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "func",
@@ -2857,6 +3040,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "func",
@@ -2867,9 +3051,11 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             },
             {
               "name": "fjac",
@@ -2888,6 +3074,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "fjac",
@@ -2910,6 +3097,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "fjac",
@@ -2920,16 +3108,22 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

@@ -35,9 +35,11 @@
       "procedures": [],
       "derived_types": [],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -81,9 +83,11 @@
       "procedures": [],
       "derived_types": [],
       "interfaces": [],
+      "enums": [],
       "default_visibility": "public",
       "public_symbols": [],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

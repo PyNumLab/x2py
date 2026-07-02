@@ -5,6 +5,6 @@ def add1(
 
 def add1_strided(
     n: Int,
-    x: Ptr(Float64),
+    x: Ref(Float64),
     incx: Int
 ) -> None: ...

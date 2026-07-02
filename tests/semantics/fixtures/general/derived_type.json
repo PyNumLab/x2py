@@ -37,24 +37,23 @@
                   "native_name": "p",
                   "native_scope": null,
                   "source_kind": "variable",
-                  "source_type": "derived(kind=particle)",
+                  "source_type": "type(particle)",
                   "source_location": {},
                   "metadata": {
                     "rank": 0,
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -63,24 +62,28 @@
                 "native_name": "p",
                 "native_scope": "touch",
                 "source_kind": "argument",
-                "source_type": "derived(kind=particle)",
+                "source_type": "type(particle)",
                 "source_location": {},
                 "metadata": {
                   "rank": 0,
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -107,6 +110,7 @@
           }
         }
       ],
+      "overload_sets": [],
       "classes": [
         {
           "name": "particle",
@@ -140,17 +144,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -158,7 +161,7 @@
                 "source_language": "fortran",
                 "native_name": "id",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -166,12 +169,13 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             },
@@ -239,17 +243,16 @@
                     "upper_bounds": [
                       "3"
                     ],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -257,7 +260,7 @@
                 "source_language": "fortran",
                 "native_name": "x",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "real(kind=8)",
                 "source_location": {},
                 "metadata": {
@@ -271,20 +274,54 @@
                   "upper_bounds": [
                     "3"
                   ],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             }
           ],
           "methods": [],
+          "overload_sets": [],
           "base_classes": [],
           "contracts": [],
-          "metadata": {},
+          "metadata": {
+            "fortran_type_attributes": [],
+            "fortran_component_order": [
+              "id",
+              "x"
+            ],
+            "fortran_component_facts": [
+              {
+                "name": "id",
+                "source_type": "integer",
+                "kind": "",
+                "rank": 0,
+                "shape": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false
+              },
+              {
+                "name": "x",
+                "source_type": "real(kind=8)",
+                "kind": "8",
+                "rank": 1,
+                "shape": [
+                  "3"
+                ],
+                "allocatable": false,
+                "pointer": false,
+                "target": false
+              }
+            ],
+            "fortran_layout_policy": "accessors",
+            "fortran_direct_layout": false
+          },
           "visibility": "public",
           "origin": {
             "source_language": "fortran",

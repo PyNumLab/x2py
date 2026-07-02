@@ -6,7 +6,7 @@ import argparse
 from collections.abc import Sequence
 import platform
 
-from c_parser.models import (
+from x2py.c_parser.models import (
     CBool,
     CChar,
     CDouble,
@@ -27,33 +27,15 @@ from c_parser.models import (
     CUnsignedLongLong,
     CUnsignedShort,
 )
-from fortran_parser.models import FortranVariable
-from semantics.c2ir import CToIRConverter
-from semantics.fortran2ir import FortranToIRConverter, fortran_type_storage_expression
+from x2py.fortran_parser.models import FortranVariable
+from x2py.semantics.c2ir import CToIRConverter
+from x2py.semantics.fortran2ir import FortranToIRConverter, fortran_type_storage_expression
 
 from .c_type_probe import probe_c_standard_types_cached
 from .fortran_type_probe import evaluate_fortran_type_facts, probe_fortran_type_expressions_cached
+from .numpy_types import numpy_dtype_expression
 from .preprocessing import PreprocessingConfig
 
-
-_NUMPY_DTYPE_BY_SEMANTIC_DTYPE = {
-    "Bool": "numpy.bool_",
-    "Int8": "numpy.int8",
-    "Int16": "numpy.int16",
-    "Int32": "numpy.int32",
-    "Int64": "numpy.int64",
-    "UInt8": "numpy.uint8",
-    "UInt16": "numpy.uint16",
-    "UInt32": "numpy.uint32",
-    "UInt64": "numpy.uint64",
-    "Float32": "numpy.float32",
-    "Float64": "numpy.float64",
-    "Float128": "numpy.longdouble",
-    "Complex64": "numpy.complex64",
-    "Complex128": "numpy.complex128",
-    "Complex256": "numpy.clongdouble",
-    "String": "numpy.str_ / ABI bytes",
-}
 
 _C_TYPES = (
     ("_Bool", CBool()),
@@ -274,7 +256,13 @@ def _semantic_text(semantic_type) -> str:
 
 
 def _numpy_dtype(semantic_dtype: str | None) -> str:
-    return _NUMPY_DTYPE_BY_SEMANTIC_DTYPE.get(str(semantic_dtype), "unsupported")
+    try:
+        expression = numpy_dtype_expression(semantic_dtype)
+    except KeyError:
+        return "unsupported"
+    if semantic_dtype == "String":
+        return f"{expression} / ABI bytes"
+    return expression
 
 
 def _markdown_table(native_header: str, rows: list[tuple[str, str, str, str]]) -> str:

@@ -35,13 +35,13 @@ jobs:
           FORCE_LABEL="require-parser-reference-update"
           IGNORE_LABEL="ignore-parser-reference-guard"
 
-          if echo ",${PR_LABELS}," | grep -Fq ",${FORCE_LABEL}," && \
-             echo ",${PR_LABELS}," | grep -Fq ",${IGNORE_LABEL},"; then
+          if [[ ",${PR_LABELS}," == *",${FORCE_LABEL},"* && \
+                ",${PR_LABELS}," == *",${IGNORE_LABEL},"* ]]; then
             echo "Conflicting labels: ${FORCE_LABEL} and ${IGNORE_LABEL}. Remove one."
             exit 1
           fi
 
-          if echo ",${PR_LABELS}," | grep -Fq ",${IGNORE_LABEL},"; then
+          if [[ ",${PR_LABELS}," == *",${IGNORE_LABEL},"* ]]; then
             echo "${IGNORE_LABEL} label present; skipping guard."
             exit 0
           fi
@@ -55,19 +55,19 @@ jobs:
           FORTRAN_PARSER_CHANGED=false
           SHARED_PARSER_CHANGED=false
 
-          if printf '%s\n' "$CHANGED_FILES" | grep -Fxq "$C_DOC"; then
+          if grep -Fxq "$C_DOC" <<< "$CHANGED_FILES"; then
             C_DOC_CHANGED=true
           fi
-          if printf '%s\n' "$CHANGED_FILES" | grep -Fxq "$FORTRAN_DOC"; then
+          if grep -Fxq "$FORTRAN_DOC" <<< "$CHANGED_FILES"; then
             FORTRAN_DOC_CHANGED=true
           fi
 
           while IFS= read -r changed_file; do
             case "$changed_file" in
-              c_parser/*|tests/parser/c/*|tests/data/c/*|tests/parser/test_c_standard_type_probe.py)
+              c_parser/*|x2py/c_parser/*|tests/parser/c/*|tests/data/c/*|tests/parser/test_c_standard_type_probe.py)
                 C_PARSER_CHANGED=true
                 ;;
-              fortran_parser/*|tests/parser/fortran/*|tests/data/fortran/*)
+              fortran_parser/*|x2py/fortran_parser/*|tests/parser/fortran/*|tests/data/fortran/*)
                 FORTRAN_PARSER_CHANGED=true
                 ;;
               tests/parser/test_declaration_and_interface_edges.py|\
@@ -93,7 +93,7 @@ jobs:
             esac
           done <<< "$CHANGED_FILES"
 
-          if echo ",${PR_LABELS}," | grep -Fq ",${FORCE_LABEL},"; then
+          if [[ ",${PR_LABELS}," == *",${FORCE_LABEL},"* ]]; then
             if [ "$C_DOC_CHANGED" = true ] || [ "$FORTRAN_DOC_CHANGED" = true ]; then
               echo "${FORCE_LABEL} label present and at least one parser reference changed."
             else

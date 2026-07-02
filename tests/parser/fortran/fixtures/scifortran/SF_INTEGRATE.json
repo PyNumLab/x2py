@@ -23,6 +23,7 @@
           "symbolic_value": "(0.d0,0.d0)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -44,6 +45,7 @@
           "symbolic_value": "(0.d0,1.d0)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -65,6 +67,7 @@
           "symbolic_value": "(1.d0,0.d0)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -86,6 +89,7 @@
           "symbolic_value": "3.14159265358979323846264338327950288419716939937510d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -120,6 +124,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "kronig",
@@ -147,6 +152,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "kronig",
@@ -168,6 +174,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "kronig",
@@ -196,6 +203,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "kronig",
@@ -206,11 +214,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_quadrature_weights",
@@ -235,6 +245,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_quadrature_weights",
@@ -256,6 +267,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_quadrature_weights",
@@ -268,11 +280,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sf_integrate_linspace",
@@ -291,6 +305,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -312,6 +327,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -333,6 +349,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -354,6 +371,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -375,6 +393,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -396,6 +415,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -424,6 +444,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "sf_integrate_linspace",
@@ -434,11 +455,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polint",
@@ -463,6 +486,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -490,6 +514,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -511,6 +536,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -532,6 +558,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -553,6 +580,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -565,11 +593,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "locate",
@@ -594,6 +624,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "locate",
@@ -615,6 +646,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "locate",
@@ -637,6 +669,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "locate",
@@ -647,11 +680,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iminloc",
@@ -676,6 +711,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "iminloc",
@@ -698,6 +734,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "iminloc",
@@ -708,11 +745,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq2",
@@ -731,6 +770,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -752,6 +792,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -773,6 +814,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -795,6 +837,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eq2",
@@ -805,11 +848,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -817,29 +862,79 @@
         {
           "name": "trapz",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz_ab_sample",
+            "c_trapz_ab_sample",
+            "d_trapz_dh_sample",
+            "c_trapz_dh_sample",
+            "d_trapz_nonlin_sample",
+            "c_trapz_nonlin_sample",
+            "d_trapz_ab_func",
+            "c_trapz_ab_func",
+            "d_trapz_nonlin_func",
+            "c_trapz_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "trapz2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz2d_func",
+            "c_trapz2d_func",
+            "d_trapz2d_func_recursive",
+            "c_trapz2d_func_recursive",
+            "d_trapz2d_sample",
+            "c_trapz2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "simps",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simpson_dh_sample",
+            "c_simpson_dh_sample",
+            "d_simpson_ab_sample",
+            "c_simpson_ab_sample",
+            "d_simpson_nonlin_sample",
+            "c_simpson_nonlin_sample",
+            "d_simps_ab_func",
+            "c_simps_ab_func",
+            "d_simps_nonlin_func",
+            "c_simps_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "simps2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simps2d_func",
+            "c_simps2d_func",
+            "d_simps2d_func_recursive",
+            "c_simps2d_func_recursive",
+            "d_simps2d_sample",
+            "c_simps2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "quad",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "quad_func",
+            "quad_sample"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "quad",
@@ -852,7 +947,8 @@
         "kronig",
         "get_quadrature_weights"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -884,6 +980,7 @@
           "symbolic_value": "(0.d0,0.d0)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -905,6 +1002,7 @@
           "symbolic_value": "(0.d0,1.d0)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -926,6 +1024,7 @@
           "symbolic_value": "(1.d0,0.d0)",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -947,6 +1046,7 @@
           "symbolic_value": "3.14159265358979323846264338327950288419716939937510d0",
           "value_type": "expression",
           "is_parameter": true,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -981,6 +1081,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "kronig",
@@ -1008,6 +1109,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "kronig",
@@ -1029,6 +1131,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "kronig",
@@ -1057,6 +1160,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "kronig",
@@ -1067,11 +1171,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "get_quadrature_weights",
@@ -1096,6 +1202,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_quadrature_weights",
@@ -1117,6 +1224,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "get_quadrature_weights",
@@ -1129,11 +1237,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "sf_integrate_linspace",
@@ -1152,6 +1262,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -1173,6 +1284,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -1194,6 +1306,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -1215,6 +1328,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -1236,6 +1350,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -1257,6 +1372,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sf_integrate_linspace",
@@ -1285,6 +1401,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "sf_integrate_linspace",
@@ -1295,11 +1412,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "polint",
@@ -1324,6 +1443,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -1351,6 +1471,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -1372,6 +1493,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -1393,6 +1515,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -1414,6 +1537,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "polint",
@@ -1426,11 +1550,13 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "locate",
@@ -1455,6 +1581,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "locate",
@@ -1476,6 +1603,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "locate",
@@ -1498,6 +1626,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "locate",
@@ -1508,11 +1637,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "iminloc",
@@ -1537,6 +1668,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "iminloc",
@@ -1559,6 +1691,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "iminloc",
@@ -1569,11 +1702,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "assert_eq2",
@@ -1592,6 +1727,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -1613,6 +1749,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -1634,6 +1771,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "assert_eq2",
@@ -1656,6 +1794,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "assert_eq2",
@@ -1666,11 +1805,13 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "GAUSS_QUADRATURE": []
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -1678,29 +1819,79 @@
         {
           "name": "trapz",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz_ab_sample",
+            "c_trapz_ab_sample",
+            "d_trapz_dh_sample",
+            "c_trapz_dh_sample",
+            "d_trapz_nonlin_sample",
+            "c_trapz_nonlin_sample",
+            "d_trapz_ab_func",
+            "c_trapz_ab_func",
+            "d_trapz_nonlin_func",
+            "c_trapz_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "trapz2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_trapz2d_func",
+            "c_trapz2d_func",
+            "d_trapz2d_func_recursive",
+            "c_trapz2d_func_recursive",
+            "d_trapz2d_sample",
+            "c_trapz2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "simps",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simpson_dh_sample",
+            "c_simpson_dh_sample",
+            "d_simpson_ab_sample",
+            "c_simpson_ab_sample",
+            "d_simpson_nonlin_sample",
+            "c_simpson_nonlin_sample",
+            "d_simps_ab_func",
+            "c_simps_ab_func",
+            "d_simps_nonlin_func",
+            "c_simps_nonlin_func"
+          ],
+          "abstract": false
         },
         {
           "name": "simps2d",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_simps2d_func",
+            "c_simps2d_func",
+            "d_simps2d_func_recursive",
+            "c_simps2d_func_recursive",
+            "d_simps2d_sample",
+            "c_simps2d_sample"
+          ],
+          "abstract": false
         },
         {
           "name": "quad",
           "module": "SF_INTEGRATE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "quad_func",
+            "quad_sample"
+          ],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "quad",
@@ -1713,7 +1904,8 @@
         "kronig",
         "get_quadrature_weights"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

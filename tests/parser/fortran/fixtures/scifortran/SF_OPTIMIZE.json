@@ -31,6 +31,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -58,6 +59,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -86,6 +88,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -113,6 +116,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -140,6 +144,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -161,6 +166,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -173,6 +179,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -185,7 +192,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "func_func_jacobian",
@@ -204,6 +212,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "func_func_jacobian",
@@ -225,6 +234,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "func_func_jacobian",
@@ -252,6 +262,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "func_func_jacobian",
@@ -280,6 +291,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "func_func_jacobian",
@@ -290,6 +302,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -302,7 +315,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -310,57 +324,130 @@
         {
           "name": "fmin_cg",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cg_df",
+            "fmin_cg_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgplus",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgplus_df",
+            "fmin_cgplus_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgminimize",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgminimize_func",
+            "fmin_cgminimize_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "leastsq",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "leastsq_lmdif_func",
+            "leastsq_lmdif_sub",
+            "leastsq_lmder_func",
+            "leastsq_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "curvefit",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "curvefit_lmdif_func",
+            "curvefit_lmdif_sub",
+            "curvefit_lmder_func",
+            "curvefit_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "dbrent",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dbrent_wgrad",
+            "dbrent_nograd"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_bfgs",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "bfgs_with_grad",
+            "bfgs_no_grad"
+          ],
+          "abstract": false
         },
         {
           "name": "linear_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_linear_mix_1",
+            "d_linear_mix_2",
+            "d_linear_mix_3",
+            "d_linear_mix_4",
+            "d_linear_mix_5",
+            "d_linear_mix_6",
+            "d_linear_mix_7",
+            "c_linear_mix_1",
+            "c_linear_mix_2",
+            "c_linear_mix_3",
+            "c_linear_mix_4",
+            "c_linear_mix_5",
+            "c_linear_mix_6",
+            "c_linear_mix_7"
+          ],
+          "abstract": false
         },
         {
           "name": "adaptive_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_adaptive_mix",
+            "c_adaptive_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "broyden_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_broyden_mix",
+            "c_broyden_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "fsolve",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fsolve_hybrd_func",
+            "fsolve_hybrd_sub",
+            "fsolve_hybrj_func",
+            "fsolve_hybrj_sub"
+          ],
+          "abstract": false
         },
         {
           "name": null,
@@ -389,6 +476,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "funcv",
@@ -411,6 +499,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "funcv",
@@ -421,11 +510,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -454,6 +547,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "funcv",
@@ -476,6 +570,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "funcv",
@@ -486,13 +581,18 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "brent",
@@ -515,7 +615,8 @@
         "adaptive_mix",
         "broyden_mix"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   ],
   "submodules": [],
@@ -555,6 +656,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -582,6 +684,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "private",
           "procedure": null,
@@ -610,6 +713,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -637,6 +741,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -664,6 +769,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -685,6 +791,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "sub_func_jacobian",
@@ -697,6 +804,7 @@
           ],
           "result": null,
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -709,7 +817,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         },
         {
           "name": "func_func_jacobian",
@@ -728,6 +837,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "func_func_jacobian",
@@ -749,6 +859,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "func_func_jacobian",
@@ -776,6 +887,7 @@
               "symbolic_value": null,
               "value_type": "unknown",
               "is_parameter": false,
+              "target": false,
               "dimensions": [],
               "visibility": "public",
               "procedure": "func_func_jacobian",
@@ -804,6 +916,7 @@
             "symbolic_value": null,
             "value_type": "unknown",
             "is_parameter": false,
+            "target": false,
             "dimensions": [],
             "visibility": "public",
             "procedure": "func_func_jacobian",
@@ -814,6 +927,7 @@
             "pointer": false
           },
           "attributes": [],
+          "bind_name": null,
           "uses": {
             "CGFIT_ROUTINES": [],
             "BROYDEN_ROUTINES": [],
@@ -826,7 +940,8 @@
             ]
           },
           "in_interface": false,
-          "variables": {}
+          "variables": {},
+          "common_variables": []
         }
       ],
       "derived_types": [],
@@ -834,57 +949,130 @@
         {
           "name": "fmin_cg",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cg_df",
+            "fmin_cg_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgplus",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgplus_df",
+            "fmin_cgplus_f"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_cgminimize",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fmin_cgminimize_func",
+            "fmin_cgminimize_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "leastsq",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "leastsq_lmdif_func",
+            "leastsq_lmdif_sub",
+            "leastsq_lmder_func",
+            "leastsq_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "curvefit",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "curvefit_lmdif_func",
+            "curvefit_lmdif_sub",
+            "curvefit_lmder_func",
+            "curvefit_lmder_sub"
+          ],
+          "abstract": false
         },
         {
           "name": "dbrent",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "dbrent_wgrad",
+            "dbrent_nograd"
+          ],
+          "abstract": false
         },
         {
           "name": "fmin_bfgs",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "bfgs_with_grad",
+            "bfgs_no_grad"
+          ],
+          "abstract": false
         },
         {
           "name": "linear_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_linear_mix_1",
+            "d_linear_mix_2",
+            "d_linear_mix_3",
+            "d_linear_mix_4",
+            "d_linear_mix_5",
+            "d_linear_mix_6",
+            "d_linear_mix_7",
+            "c_linear_mix_1",
+            "c_linear_mix_2",
+            "c_linear_mix_3",
+            "c_linear_mix_4",
+            "c_linear_mix_5",
+            "c_linear_mix_6",
+            "c_linear_mix_7"
+          ],
+          "abstract": false
         },
         {
           "name": "adaptive_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_adaptive_mix",
+            "c_adaptive_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "broyden_mix",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "d_broyden_mix",
+            "c_broyden_mix"
+          ],
+          "abstract": false
         },
         {
           "name": "fsolve",
           "module": "SF_OPTIMIZE",
-          "procedures": []
+          "procedures": [],
+          "specific_procedures": [
+            "fsolve_hybrd_func",
+            "fsolve_hybrd_sub",
+            "fsolve_hybrj_func",
+            "fsolve_hybrj_sub"
+          ],
+          "abstract": false
         },
         {
           "name": null,
@@ -913,6 +1101,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "funcv",
@@ -935,6 +1124,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "funcv",
@@ -945,11 +1135,15 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         },
         {
           "name": null,
@@ -978,6 +1172,7 @@
                   "symbolic_value": null,
                   "value_type": "unknown",
                   "is_parameter": false,
+                  "target": false,
                   "dimensions": [],
                   "visibility": "public",
                   "procedure": "funcv",
@@ -1000,6 +1195,7 @@
                 "symbolic_value": null,
                 "value_type": "unknown",
                 "is_parameter": false,
+                "target": false,
                 "dimensions": [],
                 "visibility": "public",
                 "procedure": "funcv",
@@ -1010,13 +1206,18 @@
                 "pointer": false
               },
               "attributes": [],
+              "bind_name": null,
               "uses": {},
               "in_interface": true,
-              "variables": {}
+              "variables": {},
+              "common_variables": []
             }
-          ]
+          ],
+          "specific_procedures": [],
+          "abstract": false
         }
       ],
+      "enums": [],
       "default_visibility": "private",
       "public_symbols": [
         "brent",
@@ -1039,7 +1240,8 @@
         "adaptive_mix",
         "broyden_mix"
       ],
-      "private_symbols": []
+      "private_symbols": [],
+      "common_variables": []
     }
   }
 }

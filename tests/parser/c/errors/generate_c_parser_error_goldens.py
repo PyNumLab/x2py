@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from c_parser import CParseError, parse_c_file
+from x2py.c_parser import CParseError, parse_c_file
 
 
 _TESTS_DIR = Path(__file__).resolve().parents[3]

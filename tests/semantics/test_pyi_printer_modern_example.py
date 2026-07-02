@@ -1,13 +1,20 @@
 from pathlib import Path
 
 from x2py import parse_fortran_file
-from semantics.fortran2ir import fortran_module_to_semantic_module
-from semantics.pyi_printer import emit_module
+from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
+from x2py.codegen.printers.pyi_printer import emit_module
 
 
 def test_modern_fortran_example_pyi_snapshot():
     fixture = Path(__file__).resolve().parents[1] / "data" / "fortran" / "general" / "modern_pyi_example.f90"
-    expected_fixture = Path(__file__).resolve().parents[1] / "pyi" / "fixtures" / "general" / "modern_pyi_example.pyi"
+    expected_fixture = (
+        Path(__file__).resolve().parents[1]
+        / "pyi"
+        / "fixtures"
+        / "general"
+        / "modern_pyi_example"
+        / "modern_math_physics.pyi"
+    )
     source = fixture.read_text(encoding="utf-8")
 
     parsed = parse_fortran_file(source, filename=str(fixture.name))
@@ -48,6 +55,6 @@ end module visibility_mod
 
     assert "a: Int32" in pyi
     assert "b: Int32" in pyi
-    assert "@private\nclass hidden_t:" in pyi
+    assert "class hidden_t:" not in pyi
     assert "def pub_proc(" in pyi
-    assert "@private\ndef hidden_proc(" in pyi
+    assert "def hidden_proc(" not in pyi

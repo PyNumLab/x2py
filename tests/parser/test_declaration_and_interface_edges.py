@@ -2,8 +2,8 @@
 
 import pytest
 
-from fortran_parser.models import FortranModule
-from fortran_parser.parser import FortranParser, _ParserScope
+from x2py.fortran_parser.models import FortranModule
+from x2py.fortran_parser.parser import FortranParser, _ParserScope
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
 
@@ -67,7 +67,8 @@ def test_character_entity_lengths_and_assumed_bounds_are_preserved():
     args = {arg.name: arg for arg in sig.arguments}
 
     assert args["name"].base_type == "character"
-    assert args["name"].kind == ""
+    assert args["name"].kind == "6"
+    assert args["name"].character_length_syntax is True
     assert args["table"].shape == ["0:"]
     assert args["table"].lbound == ["0"]
     assert args["table"].ubound == [None]
@@ -323,7 +324,9 @@ end module type_contains_valid_mod
 """
 
     parsed = parse_fortran_file(valid_code, filename="type_contains_valid.f90")
-    assert parsed.modules[0].derived_types[0].methods == ["update"]
+    dtype = parsed.modules[0].derived_types[0]
+    assert dtype.methods == ["update"]
+    assert dtype.final_procedures == ["destroy"]
 
     for invalid_line in ("call ignored_statement()", "!$omp declare target", "integer, public :: bad_binding"):
         code = f"""
@@ -336,6 +339,25 @@ end module type_contains_bad_mod
 """
         with pytest.raises(FortranParseError, match="Unsupported or malformed type-bound declaration"):
             parse_fortran_file(code, filename="type_contains_bad.f90")
+
+
+def test_derived_type_field_default_initializers_are_preserved():
+    code = """
+module init_mod
+  type :: state
+    integer :: count = 7
+    logical :: enabled = .true.
+  end type state
+end module init_mod
+"""
+
+    dtype = parse_fortran_file(code).modules[0].derived_types[0]
+    fields = {field.name: field for field in dtype.fields}
+
+    assert fields["count"].value == "7"
+    assert fields["count"].symbolic_value == "7"
+    assert fields["enabled"].value == "1"
+    assert fields["enabled"].symbolic_value == ".true."
 
 
 def test_contains_alternative_line_validation_accepts_spec_lines_without_mutating_scope():
@@ -354,15 +376,24 @@ def test_valid_enum_subunit_accepts_optional_separator_and_multiple_enumerators(
         """
 module enum_valid_mod
   enum, bind(c)
-    enumerator first
-    enumerator :: second = 2, third = selected_int_kind(4)
+    enumerator first = -1
+    enumerator :: second, third = 10, fourth
   end enum
 end module enum_valid_mod
 """,
         filename="valid_enum.f90",
     )
 
-    assert parsed.modules[0].name == "enum_valid_mod"
+    module = parsed.modules[0]
+    enum = module.enums[0]
+    assert module.name == "enum_valid_mod"
+    assert enum.bind_c is True
+    assert [(item.name, item.value, item.symbolic_value) for item in enum.enumerators] == [
+        ("first", "-1", "-1"),
+        ("second", "0", None),
+        ("third", "10", "10"),
+        ("fourth", "11", None),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -427,6 +458,25 @@ end module type_field_edges_mod
     dtype = parse_fortran_file(code, filename="type_field_edges.f90").modules[0].derived_types[0]
 
     assert [field.name for field in dtype.fields] == ["first", "second"]
+    assert dtype.attributes == ["sequence"]
+
+
+def test_bind_c_derived_type_attribute_and_component_order_are_preserved():
+    code = """
+module bind_c_type_mod
+  use iso_c_binding
+  type, bind(C) :: sample
+    real(c_double) :: x
+    integer(c_int) :: tag
+    logical(c_bool) :: active
+  end type sample
+end module bind_c_type_mod
+"""
+
+    dtype = parse_fortran_file(code, filename="bind_c_type.f90").modules[0].derived_types[0]
+
+    assert dtype.attributes == ["bind(c)"]
+    assert [field.name for field in dtype.fields] == ["x", "tag", "active"]
 
 
 @pytest.mark.parametrize("invalid_line", ["type :: nested_marker", "call invalid_in_type_spec()"])

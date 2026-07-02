@@ -3,6 +3,7 @@
     {
       "name": "constants_mod",
       "functions": [],
+      "overload_sets": [],
       "classes": [],
       "variables": [
         {
@@ -38,26 +39,27 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false,
+                "contiguous": false,
                 "intent": "unknown",
                 "optional": false,
                 "value": false,
-                "allocatable": false,
-                "pointer": false,
-                "contiguous": false,
                 "constant": true
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
-          "default_value": null,
-          "metadata": {},
+          "default_value": "100",
+          "metadata": {
+            "fortran_initializer": "100"
+          },
           "origin": {
             "source_language": "fortran",
             "native_name": "nmax",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "integer(kind=c_int)",
             "source_location": {},
             "metadata": {
@@ -65,12 +67,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
+              "allocatable": false,
+              "pointer": false,
+              "target": false,
+              "contiguous": false,
               "intent": "unknown",
               "optional": false,
               "value": false,
-              "allocatable": false,
-              "pointer": false,
-              "contiguous": false,
               "constant": true
             }
           }
@@ -139,17 +142,16 @@
                 "upper_bounds": [
                   "3"
                 ],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -157,7 +159,7 @@
             "source_language": "fortran",
             "native_name": "origin",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "real(kind=c_double)",
             "source_location": {},
             "metadata": {
@@ -171,12 +173,13 @@
               "upper_bounds": [
                 "3"
               ],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         }

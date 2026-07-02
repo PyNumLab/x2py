@@ -44,17 +44,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -70,17 +69,21 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -147,17 +150,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -173,17 +175,21 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -250,17 +256,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -276,17 +281,21 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -353,17 +362,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -379,17 +387,21 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -456,17 +468,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "inout",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "inout",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "inout",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -482,17 +493,21 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "inout",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "inout",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "inout",
+              "optional": false
             }
           ],
           "return_type": null,
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -559,17 +574,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -585,14 +599,17 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -621,15 +638,17 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -696,17 +715,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -722,14 +740,17 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -744,7 +765,9 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {},
+            "metadata": {
+              "fortran_character_length": "16"
+            },
             "storage": null,
             "origin": {
               "source_language": "fortran",
@@ -758,15 +781,17 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -810,7 +835,9 @@
                   "mutable": false,
                   "aliasing": true
                 },
-                "metadata": {},
+                "metadata": {
+                  "fortran_character_length": "*"
+                },
                 "storage": {
                   "kind": "reference",
                   "read_only": true,
@@ -833,17 +860,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "in",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "in",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -859,14 +885,17 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "in",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "in",
+                  "optional": false,
+                  "value": false
                 }
-              }
+              },
+              "intent": "in",
+              "optional": false
             }
           ],
           "return_type": {
@@ -895,15 +924,17 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
+          "locals": [],
           "contracts": [],
           "projection": [
             {
@@ -928,6 +959,343 @@
             "source_location": {},
             "metadata": {}
           }
+        }
+      ],
+      "overload_sets": [
+        {
+          "name": "do_work",
+          "procedures": [
+            {
+              "name": "do_work_i",
+              "native_name": "do_work_i",
+              "arguments": [
+                {
+                  "name": "same_name",
+                  "semantic_type": {
+                    "name": "Int32",
+                    "rank": 0,
+                    "dtype": "Int32",
+                    "shape": [],
+                    "constraints": [],
+                    "coercions": [],
+                    "ownership": {
+                      "ownership": "borrowed",
+                      "mutable": true,
+                      "aliasing": true
+                    },
+                    "metadata": {},
+                    "storage": {
+                      "kind": "reference",
+                      "read_only": false,
+                      "mutable": true,
+                      "pointer_depth": 1,
+                      "ownership": "borrowed",
+                      "array": null,
+                      "calling_convention": null,
+                      "metadata": {}
+                    },
+                    "origin": {
+                      "source_language": "fortran",
+                      "native_name": "same_name",
+                      "native_scope": null,
+                      "source_kind": "variable",
+                      "source_type": "integer",
+                      "source_location": {},
+                      "metadata": {
+                        "rank": 0,
+                        "shape": [],
+                        "lower_bounds": [],
+                        "upper_bounds": [],
+                        "allocatable": false,
+                        "pointer": false,
+                        "target": false,
+                        "contiguous": false,
+                        "intent": "inout",
+                        "optional": false,
+                        "value": false
+                      }
+                    }
+                  },
+                  "visibility": "public",
+                  "default_value": null,
+                  "metadata": {},
+                  "origin": {
+                    "source_language": "fortran",
+                    "native_name": "same_name",
+                    "native_scope": "do_work_i",
+                    "source_kind": "argument",
+                    "source_type": "integer",
+                    "source_location": {},
+                    "metadata": {
+                      "rank": 0,
+                      "shape": [],
+                      "lower_bounds": [],
+                      "upper_bounds": [],
+                      "allocatable": false,
+                      "pointer": false,
+                      "target": false,
+                      "contiguous": false,
+                      "intent": "inout",
+                      "optional": false,
+                      "value": false
+                    }
+                  },
+                  "intent": "inout",
+                  "optional": false
+                }
+              ],
+              "return_type": null,
+              "locals": [],
+              "contracts": [],
+              "projection": [
+                {
+                  "python_name": "same_name",
+                  "native_name": "same_name",
+                  "native_position": 0,
+                  "python_position": 0,
+                  "result_position": null,
+                  "value_kind": "",
+                  "value": null,
+                  "intent": "inout"
+                }
+              ],
+              "metadata": {
+                "fortran_generic_name": "do_work",
+                "overload_kind": "generic",
+                "overload_target": "do_work_i"
+              },
+              "visibility": "public",
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "do_work_i",
+                "native_scope": "scope_name_reuse_combinations",
+                "source_kind": "subroutine",
+                "source_type": null,
+                "source_location": {},
+                "metadata": {}
+              }
+            },
+            {
+              "name": "do_work_r",
+              "native_name": "do_work_r",
+              "arguments": [
+                {
+                  "name": "same_name",
+                  "semantic_type": {
+                    "name": "Float32",
+                    "rank": 0,
+                    "dtype": "Float32",
+                    "shape": [],
+                    "constraints": [],
+                    "coercions": [],
+                    "ownership": {
+                      "ownership": "borrowed",
+                      "mutable": false,
+                      "aliasing": true
+                    },
+                    "metadata": {},
+                    "storage": {
+                      "kind": "reference",
+                      "read_only": true,
+                      "mutable": false,
+                      "pointer_depth": 1,
+                      "ownership": "borrowed",
+                      "array": null,
+                      "calling_convention": null,
+                      "metadata": {}
+                    },
+                    "origin": {
+                      "source_language": "fortran",
+                      "native_name": "same_name",
+                      "native_scope": null,
+                      "source_kind": "variable",
+                      "source_type": "real",
+                      "source_location": {},
+                      "metadata": {
+                        "rank": 0,
+                        "shape": [],
+                        "lower_bounds": [],
+                        "upper_bounds": [],
+                        "allocatable": false,
+                        "pointer": false,
+                        "target": false,
+                        "contiguous": false,
+                        "intent": "in",
+                        "optional": false,
+                        "value": false
+                      }
+                    }
+                  },
+                  "visibility": "public",
+                  "default_value": null,
+                  "metadata": {},
+                  "origin": {
+                    "source_language": "fortran",
+                    "native_name": "same_name",
+                    "native_scope": "do_work_r",
+                    "source_kind": "argument",
+                    "source_type": "real",
+                    "source_location": {},
+                    "metadata": {
+                      "rank": 0,
+                      "shape": [],
+                      "lower_bounds": [],
+                      "upper_bounds": [],
+                      "allocatable": false,
+                      "pointer": false,
+                      "target": false,
+                      "contiguous": false,
+                      "intent": "in",
+                      "optional": false,
+                      "value": false
+                    }
+                  },
+                  "intent": "in",
+                  "optional": false
+                }
+              ],
+              "return_type": null,
+              "locals": [],
+              "contracts": [],
+              "projection": [
+                {
+                  "python_name": "same_name",
+                  "native_name": "same_name",
+                  "native_position": 0,
+                  "python_position": 0,
+                  "result_position": null,
+                  "value_kind": "",
+                  "value": null,
+                  "intent": "in"
+                }
+              ],
+              "metadata": {
+                "fortran_generic_name": "do_work",
+                "overload_kind": "generic",
+                "overload_target": "do_work_r"
+              },
+              "visibility": "public",
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "do_work_r",
+                "native_scope": "scope_name_reuse_combinations",
+                "source_kind": "subroutine",
+                "source_type": null,
+                "source_location": {},
+                "metadata": {}
+              }
+            },
+            {
+              "name": "do_work_l",
+              "native_name": "do_work_l",
+              "arguments": [
+                {
+                  "name": "same_name",
+                  "semantic_type": {
+                    "name": "Bool",
+                    "rank": 0,
+                    "dtype": "Bool",
+                    "shape": [],
+                    "constraints": [],
+                    "coercions": [],
+                    "ownership": {
+                      "ownership": "borrowed",
+                      "mutable": false,
+                      "aliasing": true
+                    },
+                    "metadata": {},
+                    "storage": {
+                      "kind": "reference",
+                      "read_only": true,
+                      "mutable": false,
+                      "pointer_depth": 1,
+                      "ownership": "borrowed",
+                      "array": null,
+                      "calling_convention": null,
+                      "metadata": {}
+                    },
+                    "origin": {
+                      "source_language": "fortran",
+                      "native_name": "same_name",
+                      "native_scope": null,
+                      "source_kind": "variable",
+                      "source_type": "logical",
+                      "source_location": {},
+                      "metadata": {
+                        "rank": 0,
+                        "shape": [],
+                        "lower_bounds": [],
+                        "upper_bounds": [],
+                        "allocatable": false,
+                        "pointer": false,
+                        "target": false,
+                        "contiguous": false,
+                        "intent": "in",
+                        "optional": false,
+                        "value": false
+                      }
+                    }
+                  },
+                  "visibility": "public",
+                  "default_value": null,
+                  "metadata": {},
+                  "origin": {
+                    "source_language": "fortran",
+                    "native_name": "same_name",
+                    "native_scope": "do_work_l",
+                    "source_kind": "argument",
+                    "source_type": "logical",
+                    "source_location": {},
+                    "metadata": {
+                      "rank": 0,
+                      "shape": [],
+                      "lower_bounds": [],
+                      "upper_bounds": [],
+                      "allocatable": false,
+                      "pointer": false,
+                      "target": false,
+                      "contiguous": false,
+                      "intent": "in",
+                      "optional": false,
+                      "value": false
+                    }
+                  },
+                  "intent": "in",
+                  "optional": false
+                }
+              ],
+              "return_type": null,
+              "locals": [],
+              "contracts": [],
+              "projection": [
+                {
+                  "python_name": "same_name",
+                  "native_name": "same_name",
+                  "native_position": 0,
+                  "python_position": 0,
+                  "result_position": null,
+                  "value_kind": "",
+                  "value": null,
+                  "intent": "in"
+                }
+              ],
+              "metadata": {
+                "fortran_generic_name": "do_work",
+                "overload_kind": "generic",
+                "overload_target": "do_work_l"
+              },
+              "visibility": "public",
+              "origin": {
+                "source_language": "fortran",
+                "native_name": "do_work_l",
+                "native_scope": "scope_name_reuse_combinations",
+                "source_kind": "subroutine",
+                "source_type": null,
+                "source_location": {},
+                "metadata": {}
+              }
+            }
+          ]
         }
       ],
       "classes": [
@@ -963,17 +1331,16 @@
                     "shape": [],
                     "lower_bounds": [],
                     "upper_bounds": [],
-                    "intent": "unknown",
-                    "optional": false,
-                    "value": false,
                     "allocatable": false,
                     "pointer": false,
-                    "contiguous": false
+                    "target": false,
+                    "contiguous": false,
+                    "intent": "unknown",
+                    "optional": false,
+                    "value": false
                   }
                 }
               },
-              "intent": "in",
-              "optional": false,
               "visibility": "public",
               "default_value": null,
               "metadata": {},
@@ -981,7 +1348,7 @@
                 "source_language": "fortran",
                 "native_name": "payload",
                 "native_scope": null,
-                "source_kind": "argument",
+                "source_kind": "field",
                 "source_type": "integer",
                 "source_location": {},
                 "metadata": {
@@ -989,20 +1356,41 @@
                   "shape": [],
                   "lower_bounds": [],
                   "upper_bounds": [],
-                  "intent": "unknown",
-                  "optional": false,
-                  "value": false,
                   "allocatable": false,
                   "pointer": false,
-                  "contiguous": false
+                  "target": false,
+                  "contiguous": false,
+                  "intent": "unknown",
+                  "optional": false,
+                  "value": false
                 }
               }
             }
           ],
           "methods": [],
+          "overload_sets": [],
           "base_classes": [],
           "contracts": [],
-          "metadata": {},
+          "metadata": {
+            "fortran_type_attributes": [],
+            "fortran_component_order": [
+              "payload"
+            ],
+            "fortran_component_facts": [
+              {
+                "name": "payload",
+                "source_type": "integer",
+                "kind": "",
+                "rank": 0,
+                "shape": [],
+                "allocatable": false,
+                "pointer": false,
+                "target": false
+              }
+            ],
+            "fortran_layout_policy": "accessors",
+            "fortran_direct_layout": false
+          },
           "visibility": "public",
           "origin": {
             "source_language": "fortran",
@@ -1044,17 +1432,16 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1062,7 +1449,7 @@
             "source_language": "fortran",
             "native_name": "same_name_i",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
             "metadata": {
@@ -1070,12 +1457,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1107,17 +1495,16 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1125,7 +1512,7 @@
             "source_language": "fortran",
             "native_name": "same_name_r",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "real",
             "source_location": {},
             "metadata": {
@@ -1133,12 +1520,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1170,17 +1558,16 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1188,7 +1575,7 @@
             "source_language": "fortran",
             "native_name": "same_name_l",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "logical",
             "source_location": {},
             "metadata": {
@@ -1196,12 +1583,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1233,17 +1621,16 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1251,7 +1638,7 @@
             "source_language": "fortran",
             "native_name": "same_name_c",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "complex",
             "source_location": {},
             "metadata": {
@@ -1259,12 +1646,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         },
@@ -1282,7 +1670,9 @@
               "mutable": false,
               "aliasing": true
             },
-            "metadata": {},
+            "metadata": {
+              "fortran_character_length": "8"
+            },
             "storage": null,
             "origin": {
               "source_language": "fortran",
@@ -1296,17 +1686,16 @@
                 "shape": [],
                 "lower_bounds": [],
                 "upper_bounds": [],
-                "intent": "unknown",
-                "optional": false,
-                "value": false,
                 "allocatable": false,
                 "pointer": false,
-                "contiguous": false
+                "target": false,
+                "contiguous": false,
+                "intent": "unknown",
+                "optional": false,
+                "value": false
               }
             }
           },
-          "intent": "in",
-          "optional": false,
           "visibility": "public",
           "default_value": null,
           "metadata": {},
@@ -1314,7 +1703,7 @@
             "source_language": "fortran",
             "native_name": "same_name_s",
             "native_scope": null,
-            "source_kind": "argument",
+            "source_kind": "variable",
             "source_type": "character(kind=len=8)",
             "source_location": {},
             "metadata": {
@@ -1322,12 +1711,13 @@
               "shape": [],
               "lower_bounds": [],
               "upper_bounds": [],
-              "intent": "unknown",
-              "optional": false,
-              "value": false,
               "allocatable": false,
               "pointer": false,
-              "contiguous": false
+              "target": false,
+              "contiguous": false,
+              "intent": "unknown",
+              "optional": false,
+              "value": false
             }
           }
         }

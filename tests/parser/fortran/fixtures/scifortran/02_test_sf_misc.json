@@ -14,7 +14,9 @@
         "ASSERTING": []
       },
       "variables": [],
-      "procedures": []
+      "procedures": [],
+      "enums": [],
+      "common_variables": []
     }
   ],
   "block_data_units": [],

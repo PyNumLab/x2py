@@ -34,6 +34,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -64,6 +65,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -91,6 +93,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -112,6 +115,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -124,11 +128,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "Z_distribute_BLACS",
@@ -156,6 +162,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -186,6 +193,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -213,6 +221,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -234,6 +243,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -246,11 +256,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "D_Gather_BLACS",
@@ -278,6 +290,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -308,6 +321,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -335,6 +349,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -356,6 +371,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -368,11 +384,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     {
       "name": "Z_Gather_BLACS",
@@ -400,6 +418,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -430,6 +449,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -457,6 +477,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -478,6 +499,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -490,11 +512,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   ],
   "interfaces": [],
@@ -529,6 +553,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -559,6 +584,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -586,6 +612,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -607,6 +634,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "d_distribute_BLACS",
@@ -619,11 +647,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "z_distribute_blacs": {
       "name": "Z_distribute_BLACS",
@@ -651,6 +681,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -681,6 +712,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -708,6 +740,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -729,6 +762,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_distribute_BLACS",
@@ -741,11 +775,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "d_gather_blacs": {
       "name": "D_Gather_BLACS",
@@ -773,6 +809,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -803,6 +840,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -830,6 +868,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -851,6 +890,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "D_Gather_BLACS",
@@ -863,11 +903,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     },
     "z_gather_blacs": {
       "name": "Z_Gather_BLACS",
@@ -895,6 +937,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -925,6 +968,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -952,6 +996,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -973,6 +1018,7 @@
           "symbolic_value": null,
           "value_type": "unknown",
           "is_parameter": false,
+          "target": false,
           "dimensions": [],
           "visibility": "public",
           "procedure": "Z_Gather_BLACS",
@@ -985,11 +1031,13 @@
       ],
       "result": null,
       "attributes": [],
+      "bind_name": null,
       "uses": {
         "SF_MPI": []
       },
       "in_interface": false,
-      "variables": {}
+      "variables": {},
+      "common_variables": []
     }
   }
 }
