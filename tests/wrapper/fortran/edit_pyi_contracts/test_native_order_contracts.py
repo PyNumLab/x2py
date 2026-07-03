@@ -35,7 +35,7 @@ def test_editable_contract_can_use_native_order_arguments_without_native_call(tm
     status = np.empty((), dtype=np.int32)
     assert module.scalar_status(base, status) is None
     assert status[()] == np.int32(15)
-    with pytest.raises(TypeError, match="numpy.ndarray"):
+    with pytest.raises(TypeError, match=r"numpy.ndarray"):
         module.scalar_status(np.int32(4), status)
 
     raw_status = np.empty((), dtype=np.int32)
