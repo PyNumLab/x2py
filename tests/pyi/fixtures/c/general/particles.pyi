@@ -5,16 +5,16 @@ class particle(CStruct):
 current_particle: private[particle]
 
 def particle_touch(
-    p: Addr(particle)
+    p: particle
 ) -> None: ...
 
 def particle_reset(
-    p: Addr(particle)
+    p: particle
 ) -> None: ...
 
 def particle_move(
-    p: Addr(particle),
+    p: particle,
     delta: Const(Float64[3])
 ) -> None: ...
 
-def particle_current() -> Addr(Const(particle)): ...
+def particle_current() -> Const(particle): ...

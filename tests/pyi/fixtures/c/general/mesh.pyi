@@ -7,20 +7,20 @@ class mesh(CStruct):
     nodes: Addr(node)
 
 def node_move(
-    node: Addr(node),
+    node: node,
     delta: Const(Float64[3])
 ) -> None: ...
 
 def mesh_init(
-    mesh: Addr(mesh),
+    mesh: mesh,
     nnodes: SizeT
 ) -> Int: ...
 
 def mesh_clear(
-    mesh: Addr(mesh)
+    mesh: mesh
 ) -> None: ...
 
 def mesh_node_at(
-    mesh: Addr(mesh),
+    mesh: mesh,
     index: SizeT
-) -> Addr(node): ...
+) -> node: ...

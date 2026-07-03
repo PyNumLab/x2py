@@ -1180,7 +1180,7 @@ class context(Opaque):
     pass
 
 def raw_values() -> Addr(Float64): ...
-def context_current() -> Addr(context): ...
+def context_current() -> context: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1291,9 +1291,9 @@ X2PY_C_DOCS_END -->
 class context(Opaque):
     pass
 
-def context_create() -> Addr(context): ...
-def context_destroy(ctx: Addr(context)) -> None: ...
-def context_run(ctx: Addr(context)) -> Int: ...
+def context_create() -> context: ...
+def context_destroy(ctx: context) -> None: ...
+def context_run(ctx: context) -> Int: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1336,7 +1336,7 @@ X2PY_C_DOCS_END -->
 | &#45;&#45;- | &#45;&#45;- | &#45;&#45;- |
 | Pass a Python scalar through a native pointer | `void increment(int *value)` exposed as `value = increment(value)` | `@native_call([Addr(Arg(0))])` plus readback |
 | Generate a hidden length | `double sum(size_t n, const double *x)` exposed as `sum(x)` | `Arg(0).shape[0]` in `@native_call` |
-| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Addr(Return(...))` in `@native_call` |
+| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Return(...)` in `@native_call`; the output slot is already addressable |
 | Convert native status to exception | `int create(...);` with hidden status | `Status[...]` and `Check(...)` |
 | Wrap a raw opaque pointer with ownership behavior | `struct ctx *` / `struct ctx **` | handle and lifetime policy |
 | Convert Python strings to C strings | `const char *` from `str` | text encoding/termination policy |
@@ -1369,7 +1369,7 @@ X2PY_C_DOCS_END -->
 | `c_numpy_contiguity_required` | An unqualified dense C-contiguous array annotation receives non-contiguous storage. |
 | `c_numpy_stride_mapping_required` | A Pythonic interface hides native stride parameters required for stride-aware storage without an explicit mapping such as `Arg(0).strides[1]`. |
 | `c_numpy_writeability_required` | A mutable native pointer receives read-only NumPy storage. |
-| `c_opaque_handle_conversion_unsupported` | A raw opaque pointer is requested as an owning/high-level Python handle rather than direct `Addr(context)` identity. |
+| `c_opaque_handle_conversion_unsupported` | A raw opaque pointer cannot yet be represented as the documented wrapper-owned `context` handle. |
 | `c_string_conversion_unsupported` | A Python string conversion is requested. |
 | `c_callback_unsupported` | A Python callback-to-native-function-pointer mapping is requested. |
 | `c_union_unsupported` | A callable interface includes an unsupported union. |
@@ -1595,8 +1595,8 @@ X2PY_C_DOCS_END -->
 class context(Opaque):
     pass
 
-def context_create() -> Addr(context): ...
-def context_destroy(ctx: Addr(context)) -> None: ...
+def context_create() -> context: ...
+def context_destroy(ctx: context) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1671,7 +1671,7 @@ X2PY_C_DOCS_END -->
 def increment_value(value: Int) -> Returns["value", Int]: ...
 
 # C: void get_count(int *out);
-@native_call([Addr(Return(0))])
+@native_call([Return(0)])
 def get_count() -> Int: ...
 
 # C: double sum_values(size_t n, const double *values);
@@ -1688,7 +1688,7 @@ def get_values(n: Int) -> Float64[n]: ...
 
 # C: int context_create(struct context **out);
 @native_call(
-    [Addr(Return(0))],
+    [Return(0)],
     returns=Status[Int, Check(success=0, raises=RuntimeError)],
 )
 def context_create() -> Annotated[context, Owned, FreeWith("context_destroy")]: ...

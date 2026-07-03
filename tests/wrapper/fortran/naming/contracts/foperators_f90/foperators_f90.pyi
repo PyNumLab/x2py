@@ -10,7 +10,7 @@ class vector:
     @overload("add_vectors")
     def __add__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> vector: ...
 
     @overload("add_vector_integer")
@@ -43,7 +43,7 @@ class vector:
     @overload("add_vector_offset")
     def __add__(
         self,
-        right: Addr(Const(offset))
+        right: Const(offset)
     ) -> vector: ...
 
     @overload("positive_vector")
@@ -90,19 +90,19 @@ class vector:
     @overload("equal_vectors")
     def __eq__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("equivalent_vector_offset", generic="operator(.eqv.)")
     def __eq__(
         self,
-        right: Addr(Const(offset))
+        right: Const(offset)
     ) -> Bool: ...
 
     @overload("not_equal_vectors")
     def __ne__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("not_equivalent_vector_integer", generic="operator(.neqv.)")
@@ -115,7 +115,7 @@ class vector:
     @overload("less_vectors")
     def __lt__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("less_vector_real")
@@ -135,31 +135,31 @@ class vector:
     @overload("greater_vectors")
     def __gt__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("less_equal_vectors")
     def __le__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("greater_equal_vectors")
     def __ge__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("and_vectors")
     def __and__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("or_vectors")
     def __or__(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Bool: ...
 
     @overload("not_vector")
@@ -168,7 +168,7 @@ class vector:
     @overload("dot_vectors")
     def operator_dot(
         self,
-        right: Addr(Const(vector))
+        right: Const(vector)
     ) -> Float64: ...
 
     @overload("shift_real_vector")
@@ -205,14 +205,14 @@ class offset:
     @native_call([Arg(0), Pass()])
     def __radd__(
         self,
-        left: Addr(Const(vector))
+        left: Const(vector)
     ) -> vector: ...
 
     @overload("equivalent_vector_offset", generic="operator(.eqv.)")
     @native_call([Arg(0), Pass()])
     def __eq__(
         self,
-        left: Addr(Const(vector))
+        left: Const(vector)
     ) -> Bool: ...
 
 class counter:
@@ -253,21 +253,21 @@ def convert_real(
 
 @private
 def add_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def add_vector_integer(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Int32)
 ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def add_vector_real(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Float64)
 ) -> vector: ...
 
@@ -275,30 +275,30 @@ def add_vector_real(
 @native_call([Addr(Arg(0)), Arg(1)])
 def add_real_vector(
     left: Const(Float64),
-    right: Addr(Const(vector))
+    right: Const(vector)
 ) -> vector: ...
 
 @private
 def add_vector_array(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Float64[::])
 ) -> vector: ...
 
 @private
 def add_vector_offset(
-    left: Addr(Const(vector)),
-    right: Addr(Const(offset))
+    left: Const(vector),
+    right: Const(offset)
 ) -> vector: ...
 
 @private
 def positive_vector(
-    value: Addr(Const(vector))
+    value: Const(vector)
 ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def subtract_vector_real(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Float64)
 ) -> vector: ...
 
@@ -306,57 +306,57 @@ def subtract_vector_real(
 @native_call([Addr(Arg(0)), Arg(1)])
 def subtract_real_vector(
     left: Const(Float64),
-    right: Addr(Const(vector))
+    right: Const(vector)
 ) -> vector: ...
 
 @private
 def negative_vector(
-    value: Addr(Const(vector))
+    value: Const(vector)
 ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def multiply_vector_real(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Float64)
 ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def divide_vector_real(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Float64)
 ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def power_vector_integer(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Int32)
 ) -> vector: ...
 
 @private
 def equal_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def not_equal_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def less_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def less_vector_real(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Float64)
 ) -> Bool: ...
 
@@ -364,88 +364,88 @@ def less_vector_real(
 @native_call([Addr(Arg(0)), Arg(1)])
 def less_real_vector(
     left: Const(Float64),
-    right: Addr(Const(vector))
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def less_equal_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def greater_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def greater_equal_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def and_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def or_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Bool: ...
 
 @private
 def not_vector(
-    value: Addr(Const(vector))
+    value: Const(vector)
 ) -> Bool: ...
 
 @private
 def equivalent_vector_offset(
-    left: Addr(Const(vector)),
-    right: Addr(Const(offset))
+    left: Const(vector),
+    right: Const(offset)
 ) -> Bool: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def not_equivalent_vector_integer(
-    left: Addr(Const(vector)),
+    left: Const(vector),
     right: Const(Int32)
 ) -> Bool: ...
 
 @private
 def dot_vectors(
-    left: Addr(Const(vector)),
-    right: Addr(Const(vector))
+    left: Const(vector),
+    right: Const(vector)
 ) -> Float64: ...
 
 @private
 @native_call([Addr(Arg(0)), Arg(1)])
 def shift_real_vector(
     left: Const(Float64),
-    right: Addr(Const(vector))
+    right: Const(vector)
 ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_integer(
-    left: Addr(vector),
+    left: vector,
     right: Const(Int32)
-) -> Returns["left", Addr(vector)]: ...
+) -> Returns["left", vector]: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_real(
-    left: Addr(vector),
+    left: vector,
     right: Const(Float64)
-) -> Returns["left", Addr(vector)]: ...
+) -> Returns["left", vector]: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def counter_add_integer(
-    self: Annotated[Addr(Const(counter)), Polymorphic],
+    self: Annotated[Const(counter), Polymorphic],
     right: Const(Int32)
 ) -> counter: ...
 

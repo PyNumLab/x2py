@@ -778,6 +778,8 @@ class CCodePrinter(CodePrinter):
         decision = getattr(variable, "ownership_decision", None)
         return bool(
             decision is not None
+            and not variable.is_optional
+            and variable.intent != "out"
             and decision.kind is ObjectKind.SCALAR
             and decision.native_barrier_action
             in {

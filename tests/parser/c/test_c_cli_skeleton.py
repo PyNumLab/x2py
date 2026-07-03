@@ -368,7 +368,8 @@ def test_cli_c_pyi_out_writes_explicit_multi_header_owner_stubs(tmp_path: Path):
     api_stub = (tmp_path / "api.pyi").read_text(encoding="utf-8")
     assert "from types import state" in api_stub
     assert "class state" not in api_stub
-    assert "state: Addr(state)" in api_stub
+    assert "state: state" in api_stub
+    assert "Addr(state)" not in api_stub
     readiness = x2py_cli._wrap_readiness_report([str(types), str(api)], language="c")
     assert readiness[str(api)]["wrap_readiness"]["wrappable"] is True
 

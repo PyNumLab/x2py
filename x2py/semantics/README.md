@@ -43,6 +43,14 @@ The native barrier says how the bridge presents the extracted value to native
 code: direct value, call-local address, caller/Python-backed storage address,
 raw address, packed array descriptor, or wrapper-owned native address.
 
+Policy completion also validates the boundary spelling. Callable `Addr(T)` is
+an integer raw-address contract and is limited to primitive scalars,
+fixed-length strings, and primitive arrays with fully resolved extents.
+`Addr(Arg(i))` is limited to primitive scalar values that need call-local
+addressing. Arrays, strings, rank-zero storage, wrapped objects, and raw-address
+arguments use `Arg(i)` because their default native representation is already
+address- or handle-based.
+
 `readiness.py`, `ir2ast.py`, bridges, and bindings consume those decisions
 instead of making local policy guesses. Bridge and binding dispatch is strict:
 an unregistered barrier action or object-kind/action pair is an error rather

@@ -105,7 +105,7 @@ def _import_from_build(result):
 
 
 def _simple_external_contract(name: str) -> str:
-    return f"@external\ndef {name}(value: Addr(Const(Int32))) -> Int32: ...\n"
+    return f"@external\n@native_call([Addr(Arg(0))])\ndef {name}(value: Const(Int32)) -> Int32: ...\n"
 
 
 def _simple_external_source(name: str, expression: str) -> str:
@@ -193,7 +193,7 @@ end module stage7_mod
             f"{_simple_external_contract('ext_named')}"
         ),
         leaves={
-            "stage7_mod": "def mod_value(\n    value: Addr(Const(Int32))\n) -> Int32: ...\n",
+            "stage7_mod": ("@native_call([Addr(Arg(0))])\ndef mod_value(\n    value: Const(Int32)\n) -> Int32: ...\n"),
         },
     )
 
@@ -467,7 +467,11 @@ end module missing_mod
     entry = _write_contract_package(
         tmp_path / "contracts" / "missing_mod",
         entry="from . import missing_mod\n",
-        leaves={"missing_mod": "def value_plus_one(\n    value: Addr(Const(Int32))\n) -> Int32: ...\n"},
+        leaves={
+            "missing_mod": (
+                "@native_call([Addr(Arg(0))])\ndef value_plus_one(\n    value: Const(Int32)\n) -> Int32: ...\n"
+            )
+        },
     )
 
     with pytest.raises(RuntimeError, match=r"missing_mod.mod|Cannot open module file"):

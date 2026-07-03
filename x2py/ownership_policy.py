@@ -578,10 +578,10 @@ class OwnershipPolicyResolver:
     def _scalar_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if facts.scalar_storage:
             return self._scalar_storage_decision(facts, context)
-        if facts.address_role == PYI_ADDRESS_ROLE_PROJECTION:
-            return self._address_projection_scalar_decision(facts, context)
         if facts.pointer:
             return self._pointer_scalar_decision(facts, context)
+        if facts.address_role == PYI_ADDRESS_ROLE_PROJECTION:
+            return self._address_projection_scalar_decision(facts, context)
         if context.is_result:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
@@ -1300,7 +1300,7 @@ class OwnershipPolicyResolver:
         if (
             decision.kind is ObjectKind.SCALAR
             and decision.storage_mode is StorageMode.ALIAS
-            and facts.address_role != PYI_ADDRESS_ROLE_PROJECTION
+            and (facts.address_role != PYI_ADDRESS_ROLE_PROJECTION or facts.pointer)
         ):
             return NativeBarrierAction.PASS_STORAGE_ADDRESS
         if decision.kind is ObjectKind.NUMPY_ARRAY:

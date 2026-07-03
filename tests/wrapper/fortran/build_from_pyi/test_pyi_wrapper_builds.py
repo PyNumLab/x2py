@@ -366,6 +366,39 @@ def test_pyi_python_api_rejects_invalid_projection_before_codegen(tmp_path: Path
     assert not list((tmp_path / "build").glob("*_wrapper.*"))
 
 
+@pytest.mark.parametrize(
+    ("contract_text", "message"),
+    [
+        (
+            "class particle:\n    value: Float64\n\ndef invalid(value: Addr(particle)) -> None: ...\n",
+            r"Addr\(WrappedType\) is not allowed",
+        ),
+        (
+            "@native_call([Addr(Arg(0))])\ndef invalid(values: Float64[:]) -> None: ...\n",
+            "only valid for primitive scalar values",
+        ),
+        (
+            "def invalid(values: Addr(Float64[:])) -> None: ...\n",
+            "raw arrays require a fully resolved rank and shape",
+        ),
+    ],
+)
+def test_pyi_python_api_rejects_invalid_address_contracts_before_codegen(
+    tmp_path: Path,
+    contract_text: str,
+    message: str,
+):
+    contract = tmp_path / "invalid_address.pyi"
+    contract.write_text(contract_text, encoding="utf-8")
+    native_object = tmp_path / "native.o"
+    native_object.touch()
+
+    with pytest.raises(ValueError, match=message):
+        build_pyi_extension(contract, native_objects=[native_object], output_dir=tmp_path / "build")
+
+    assert not list((tmp_path / "build").glob("*_wrapper.*"))
+
+
 def test_generated_pyi_fixture_builds_from_native_object_without_source_reparse(tmp_path: Path):
     native_object = _compile_native_object(SOURCE, tmp_path / "native")
     module, payload = _build_pyi_cli(PYI_FIXTURE, native_object, tmp_path / "pyi_build")

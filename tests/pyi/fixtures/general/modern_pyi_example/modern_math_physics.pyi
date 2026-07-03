@@ -45,7 +45,6 @@ def dot3(
     b: Const(Float64[3])
 ) -> Float64: ...
 
-@native_call([Arg(0)])
 def fill_identity3(
     a: Annotated[Float64[3, 3], ORDER_F]
 ) -> Returns["a", Annotated[Float64[3, 3], ORDER_F]]: ...

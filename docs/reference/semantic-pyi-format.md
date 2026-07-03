@@ -707,7 +707,8 @@ arguments, or scalar by-address projection differs from the default lowering.
 | `Float64[()]` | rank-zero NumPy array with dtype `np.float64` | storage address |
 | `Float64[n]`, `Float64[:]`, `Float64[:, :]` | NumPy array storage | data address |
 | `String[n]` | Python `str` | address of x2py's call-local fixed-width character storage |
-| `Addr(Float64)`, `Addr(Float64[n])`, `Addr(String[n])` | raw address such as `array.ctypes.data` or a `ctypes` buffer address | that raw address |
+| `Addr(Float64)`, `Addr(Float64[n])`, `Addr(String[n])` | integer raw address such as `array.ctypes.data` or a `ctypes` buffer address | that raw address |
+| `WrappedType` | generated wrapper instance | wrapped object's native handle/address |
 
 `Arg(i)` in `@native_call` means "use argument `i`'s default native
 representation." For arrays, scalar storage, strings, and raw-address arguments,
@@ -748,12 +749,13 @@ native code. If a returned `Returns["name", String[n]]` item is present, native
 mutation is copied back into a replacement Python `str`; otherwise the mutation
 is discarded.
 
-`Addr(T)` represents a raw address supplied by the Python caller. This includes
-`Addr(Float64)`, `Addr(Float64[n])`, and `Addr(String[n])`. It is an advanced
-unsafe contract: x2py casts the address according to the declared pointee type,
-but it cannot prove the address lifetime, true dtype, alignment, length, or
-ownership. Raw array extents must be fixed literals or visible arguments because
-the pointer value itself does not carry shape:
+Type-level `Addr(T)` represents an integer raw address supplied by the Python
+caller. It is valid only for a primitive scalar pointee, a fixed-length
+`String[n]`, or an array whose rank and every extent are resolved by literals
+or visible scalar arguments. It is an advanced unsafe contract: x2py casts the
+address according to the declared pointee type, but it cannot prove the address
+lifetime, true dtype, alignment, length, or ownership. The pointer value itself
+does not carry string length or array shape:
 
 ```python
 def update_raw(value: Addr(Float64)) -> None: ...
@@ -768,6 +770,12 @@ The caller passes an address value, usually from NumPy:
 value = np.array(3.0, dtype=np.float64)
 update_raw(value.ctypes.data)
 ```
+
+`Addr(WrappedType)`, `Addr(String)`, and unresolved array forms such as
+`Addr(Float64[:])` are invalid callable contracts. Wrapped classes use
+`WrappedType` at the Python boundary, and their default `Arg(i)` representation
+already supplies the wrapped native handle/address. Post-IR policy completion
+rejects these invalid forms before readiness or `ir2ast` lowering.
 
 `Const(T)` marks the wrapped value or storage read-only. For `Addr(Const(T))`
 this means a read-only pointee contract. For `Const(T[()])` it means readable
@@ -1062,7 +1070,7 @@ class particle(Opaque):
 # physics.pyi
 from types_mod import particle
 
-def move(p: Addr(particle)) -> None: ...
+def move(p: particle) -> None: ...
 ```
 
 If the owner stub is later edited to include fields, the import is reconciled as
@@ -1135,9 +1143,25 @@ passes its address with no readback. `update_value` creates mutable native scala
 storage initialized from `x`, passes its address, then returns the updated value.
 The caller writes `x = update_value(x)`.
 
-Do not use `Addr(Arg(i))` for `T[()]`, arrays, strings, or raw `Addr(...)`
-arguments. Their default `Arg(i)` representation is already the native storage
-or address representation:
+When an existing native signature has writable scalar-reference intent but no
+projected replacement result, generated contracts retain that fact explicitly:
+
+```python
+@native_call([Addr(Arg(0))])
+def legacy_update(x: Annotated[Float64, Intent("inout")]) -> None: ...
+```
+
+The wrapper uses mutable call-local native storage, but because the Python value
+is not addressable and no replacement is projected, native mutation is
+discarded.
+
+Inside `@native_call`, `Addr` wraps a projection rather than a type.
+`Addr(Arg(i))` is valid only for a primitive scalar Python value whose native
+parameter requires the address of call-local scalar storage. Do not use it for
+`T[()]`, arrays, strings, wrapped objects, or raw `Addr(...)` arguments. Their
+default `Arg(i)` representation is already the native storage, handle, or raw
+address representation. Address projections of `Return(...)` and `Work(...)`
+are also rejected; native outputs and workspaces already name their storage.
 
 ```python
 def string_inout(label: String[8]) -> Returns["label", String[8]]: ...
@@ -1288,11 +1312,11 @@ method call:
 ```python
 @private
 @native_call([Arg(0), Addr(Arg(1))])
-def add_vector_real(left: Addr(Const(vector)), right: Const(Float64)) -> vector: ...
+def add_vector_real(left: Const(vector), right: Const(Float64)) -> vector: ...
 
 @private
 @native_call([Addr(Arg(0)), Arg(1)])
-def add_real_vector(left: Const(Float64), right: Addr(Const(vector))) -> vector: ...
+def add_real_vector(left: Const(Float64), right: Const(vector)) -> vector: ...
 
 class vector:
     @overload("add_vector_real")
@@ -1355,9 +1379,9 @@ explicit mutation:
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_real(
-    left: Addr(vector),
+    left: vector,
     right: Const(Float64),
-) -> Returns["left", Addr(vector)]: ...
+) -> Returns["left", vector]: ...
 
 class vector:
     @overload("assign_vector_real")
@@ -1660,7 +1684,6 @@ Loaded projection entries:
 | `Addr(Arg(i))` | native argument is the address of Python argument `i`'s call-local native scalar representation |
 | `Return(i)` | native argument is supplied by projected return slot `i` |
 | `Return("name", i)` | named native argument is supplied by projected return slot `i` |
-| `Addr(Return(i))` | native argument is the address of projected return slot `i`'s native storage |
 | `Pass()` | hidden type-bound passed-object argument |
 | `Const(value)` | hidden native literal |
 | `Len(Arg(i))`, `Len(Return(i))`, `Len(Work("name"))` | hidden native length metadata |
@@ -1722,12 +1745,19 @@ constraint has an implemented validator. Semantic coercions similarly report
 
 ## Rejected Or Not Yet Supported
 
-The loader intentionally rejects syntax that would be ambiguous or stale:
+The parser or post-IR policy-completion stage rejects contracts that would be
+ambiguous, unsafe, or stale before wrapper lowering:
 
 - `Unknown` semantic types.
 - `Constant` or `Shape` as `Annotated` metadata.
 - non-dimensional subscriptions such as `Float64[ORDER_F]`.
 - `Addr[1](T)`.
+- callable `Addr[n](T)` for `n > 1`; deeper pointer topology remains limited to
+  low-level data declarations.
+- callable `Addr(WrappedType)`, `Addr(String)`, or raw arrays with unresolved
+  extents.
+- `Addr(Arg(i))` for anything except a primitive scalar value, and all
+  `Addr(Return(i))` or `Addr(Work("name"))` projections.
 - untyped callable parameters.
 - positional-only, keyword-only, vararg or kwarg function parameters, except
   for the generated derived-type constructor shape.

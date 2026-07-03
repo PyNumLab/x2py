@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 
+from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.ownership_policy import (
     OwnershipContext,
     SetterAction,
@@ -107,6 +109,7 @@ def _complete_class(semantic_class: models.SemanticClass) -> None:
 
 
 def _complete_function(function: models.SemanticFunction) -> None:
+    _complete_callable_address_policy(function)
     for argument in function.arguments:
         _complete_variable(argument, ownership_context_for_argument(function, argument))
     if function.return_type is not None:
@@ -114,6 +117,166 @@ def _complete_function(function: models.SemanticFunction) -> None:
         function.metadata[models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA] = decision
     else:
         function.metadata.pop(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA, None)
+
+
+def _complete_callable_address_policy(function: models.SemanticFunction) -> None:
+    """Validate Python/native address boundaries and complete scalar projections."""
+    visible_scalar_names = {
+        argument.name for argument in function.arguments if _is_visible_extent_source(argument.semantic_type)
+    }
+    for argument in function.arguments:
+        _validate_raw_address_type(
+            argument.semantic_type,
+            owner=function.name,
+            item=argument.name,
+            visible_scalar_names=visible_scalar_names,
+        )
+    if function.return_type is not None:
+        _validate_raw_address_type(
+            function.return_type,
+            owner=function.name,
+            item="return",
+            visible_scalar_names=visible_scalar_names,
+        )
+    _complete_native_address_projections(function)
+
+
+def _complete_native_address_projections(function: models.SemanticFunction) -> None:
+    arguments_by_name = {argument.name: argument for argument in function.arguments}
+    for mapping in function.projection:
+        if mapping.value_kind != "addr":
+            continue
+        value = mapping.value
+        if not isinstance(value, dict) or value.get("kind") != "arg":
+            raise ValueError(
+                f"Invalid native Addr projection in {function.name!r}: only Addr(Arg(i)) is supported; "
+                "Return and Work projections already name native storage."
+            )
+        argument = arguments_by_name.get(mapping.python_name)
+        if argument is None:
+            position = mapping.python_position
+            if not isinstance(position, int) or not 0 <= position < len(function.arguments):
+                raise ValueError(f"Invalid native Addr projection in {function.name!r}: argument is out of range")
+            argument = function.arguments[position]
+        if not _is_primitive_scalar_value(argument.semantic_type, allow_completed_projection=True):
+            raise ValueError(
+                f"Invalid native Addr projection for {function.name!r} argument {argument.name!r}: "
+                "Addr(Arg(i)) is only valid for primitive scalar values; use Arg(i) for arrays, strings, "
+                "scalar storage, wrapped objects, and raw addresses."
+            )
+        _apply_scalar_address_projection(argument)
+
+
+def _apply_scalar_address_projection(argument: models.SemanticArgument) -> None:
+    semantic_type = argument.semantic_type
+    storage = semantic_type.storage
+    read_only = str(argument.intent).lower() == "in" or bool(storage is not None and storage.read_only)
+    metadata = dict(storage.metadata) if storage is not None else {}
+    metadata[models.PYI_ADDRESS_ROLE_METADATA] = models.PYI_ADDRESS_ROLE_PROJECTION
+    semantic_type.storage = models.SemanticStorageContract(
+        kind="address",
+        read_only=read_only,
+        mutable=not read_only,
+        pointer_depth=1,
+        ownership=storage.ownership if storage is not None else "borrowed",
+        calling_convention=storage.calling_convention if storage is not None else None,
+        metadata=metadata,
+    )
+    semantic_type.ownership.mutable = not read_only
+
+
+def _is_primitive_scalar_value(
+    semantic_type: models.SemanticType,
+    *,
+    allow_completed_projection: bool = False,
+) -> bool:
+    if semantic_type.rank != 0 or semantic_type.name == "String":
+        return False
+    if (semantic_type.dtype or semantic_type.name) not in SEMANTIC_SCALAR_TYPE_NAMES:
+        return False
+    storage = semantic_type.storage
+    if storage is None or storage.kind == "value":
+        return True
+    return bool(
+        allow_completed_projection
+        and storage.kind == "address"
+        and storage.pointer_depth == 1
+        and storage.metadata.get(models.PYI_ADDRESS_ROLE_METADATA) == models.PYI_ADDRESS_ROLE_PROJECTION
+    )
+
+
+def _is_visible_extent_source(semantic_type: models.SemanticType) -> bool:
+    if _is_primitive_scalar_value(semantic_type, allow_completed_projection=True):
+        return True
+    storage = semantic_type.storage
+    return bool(
+        semantic_type.rank == 0
+        and semantic_type.name != "String"
+        and (semantic_type.dtype or semantic_type.name) in SEMANTIC_SCALAR_TYPE_NAMES
+        and storage is not None
+        and storage.array is not None
+        and storage.array.category == models.PYI_SCALAR_STORAGE_CATEGORY
+    )
+
+
+def _validate_raw_address_type(
+    semantic_type: models.SemanticType,
+    *,
+    owner: str,
+    item: str,
+    visible_scalar_names: set[str],
+) -> None:
+    storage = semantic_type.storage
+    if storage is None or storage.metadata.get(models.PYI_ADDRESS_ROLE_METADATA) != models.PYI_ADDRESS_ROLE_RAW:
+        return
+    if storage.pointer_depth != 1:
+        raise ValueError(
+            f"Invalid raw address contract for {owner!r} {item!r}: callable Addr(T) supports depth one only."
+        )
+    if semantic_type.rank > 0:
+        if (semantic_type.dtype or semantic_type.name) not in SEMANTIC_SCALAR_TYPE_NAMES:
+            raise ValueError(
+                f"Invalid raw address contract for {owner!r} {item!r}: raw arrays require a primitive dtype."
+            )
+        dimensions = _semantic_shape(semantic_type)
+        if len(dimensions) != semantic_type.rank or not all(
+            _is_resolved_extent(dimension, visible_scalar_names) for dimension in dimensions
+        ):
+            raise ValueError(
+                f"Invalid raw address contract for {owner!r} {item!r}: raw arrays require a fully resolved "
+                "rank and shape using literals or visible scalar arguments."
+            )
+        return
+    if semantic_type.name == "String":
+        length = semantic_type.metadata.get("fortran_character_length")
+        if length is None or not _is_resolved_extent(length, visible_scalar_names):
+            raise ValueError(
+                f"Invalid raw address contract for {owner!r} {item!r}: raw strings require a fixed length."
+            )
+        return
+    if (semantic_type.dtype or semantic_type.name) not in SEMANTIC_SCALAR_TYPE_NAMES:
+        raise ValueError(
+            f"Invalid raw address contract for {owner!r} {item!r}: Addr(WrappedType) is not allowed; "
+            "use WrappedType and Arg(i)."
+        )
+
+
+def _semantic_shape(semantic_type: models.SemanticType) -> list[str]:
+    if semantic_type.shape:
+        return [str(dimension) for dimension in semantic_type.shape]
+    storage = semantic_type.storage
+    array = storage.array if storage is not None else None
+    if array is None:
+        return []
+    return [str(dimension) for dimension in (array.shape or array.source_shape)]
+
+
+def _is_resolved_extent(value: object, visible_scalar_names: set[str]) -> bool:
+    text = str(value).strip()
+    if not text or text in {":", "*", "...", ".."} or ":" in text:
+        return False
+    names = set(re.findall(r"\b[A-Za-z_]\w*\b", text))
+    return names <= visible_scalar_names
 
 
 def _complete_variable(variable: models.SemanticVariable, context: OwnershipContext) -> None:
@@ -198,13 +361,31 @@ def _complete_callable_policy(semantic_type: models.SemanticType) -> None:
     if semantic_type.name != "Callable":
         return
 
+    visible_scalar_names: set[str] = set()
     callback_arguments = semantic_type.metadata.get("callback_arguments")
     if isinstance(callback_arguments, list):
+        visible_scalar_names = {
+            argument.name
+            for argument in callback_arguments
+            if isinstance(argument, models.SemanticArgument) and _is_visible_extent_source(argument.semantic_type)
+        }
         for argument in callback_arguments:
             if isinstance(argument, models.SemanticArgument):
+                _validate_raw_address_type(
+                    argument.semantic_type,
+                    owner="Callable",
+                    item=argument.name,
+                    visible_scalar_names=visible_scalar_names,
+                )
                 _complete_variable(argument, OwnershipContext.argument(argument.intent))
 
     return_type = semantic_type.metadata.get("return")
     if isinstance(return_type, models.SemanticType) and return_type.name != "None":
+        _validate_raw_address_type(
+            return_type,
+            owner="Callable",
+            item="return",
+            visible_scalar_names=visible_scalar_names,
+        )
         decision = default_ownership_policy.decide_semantic_type(return_type, OwnershipContext.result())
         return_type.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = decision

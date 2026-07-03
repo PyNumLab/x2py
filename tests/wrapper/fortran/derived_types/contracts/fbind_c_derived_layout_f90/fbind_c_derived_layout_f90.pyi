@@ -22,7 +22,7 @@ class tagged_point:
     weight: Complex128
 
 def populate(
-    value: Addr(tagged_point),
+    value: tagged_point,
     x: Float64,
     axis: Int32,
     weight: Complex128

@@ -28,6 +28,19 @@ SEMANTIC_DTYPE_TO_NUMPY_DTYPE: Final[dict[str, str]] = {
     "SizeT": "numpy.uintp",
 }
 
+SEMANTIC_SCALAR_TYPE_NAMES: Final[frozenset[str]] = frozenset(
+    {
+        *SEMANTIC_DTYPE_TO_NUMPY_DTYPE,
+        "Byte",
+        "CEnum",
+        "Char",
+        "Float16",
+        "Int",
+        "UInt",
+        "Void",
+    }
+)
+
 
 def numpy_dtype_expression(semantic_dtype: str | None) -> str:
     """Return the qualified NumPy dtype expression for a resolved semantic dtype."""
@@ -63,6 +76,7 @@ def semantic_type_to_numpy_dtype(semantic_type: SemanticType) -> Any:
 
 __all__ = (
     "SEMANTIC_DTYPE_TO_NUMPY_DTYPE",
+    "SEMANTIC_SCALAR_TYPE_NAMES",
     "numpy_dtype_expression",
     "semantic_dtype_to_numpy_dtype",
     "semantic_dtype_to_numpy_dtype_map",

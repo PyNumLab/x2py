@@ -9,7 +9,7 @@ import re
 
 from x2py.naming import NamingPolicy
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_FIELDS, POINTER_POLICY_METADATA
-from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE, SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
@@ -46,6 +46,8 @@ from x2py.semantics.models import (
     _iter_module_semantic_types,
 )
 from x2py.visitor import ClassVisitor
+
+_WRAPPED_CALLABLE_TYPE_METADATA = "pyi_wrapped_callable_type"
 
 
 class PyiPrinter(ClassVisitor):
@@ -304,10 +306,14 @@ class PyiPrinter(ClassVisitor):
         return bool(
             semantic_type.rank == 0
             and storage is not None
-            and storage.kind in {"reference", "address"}
+            and storage.kind in {"reference", "pointer", "address"}
             and storage.pointer_depth == 1
             and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) != PYI_ADDRESS_ROLE_RAW
-            and (semantic_type.name == "String" or str(semantic_type.name) in self._semantic_class_names)
+            and (
+                semantic_type.name == "String"
+                or str(semantic_type.name) in self._semantic_class_names
+                or semantic_type.metadata.get(_WRAPPED_CALLABLE_TYPE_METADATA)
+            )
         )
 
     def _address_target_type(self, semantic_type: SemanticType) -> str:
@@ -555,6 +561,10 @@ class PyiPrinter(ClassVisitor):
         """Emit a callable argument with compact output metadata when possible."""
         name = self._parameter_target(arg.name)
         emitted_arg = self._projected_address_argument(func, arg)
+        visible_type = self._visible_wrapped_callable_type(emitted_arg.semantic_type)
+        if visible_type is not emitted_arg.semantic_type:
+            emitted_arg = deepcopy(emitted_arg)
+            emitted_arg.semantic_type = visible_type
         return self._emit_typed_name(
             name,
             emitted_arg,
@@ -595,14 +605,14 @@ class PyiPrinter(ClassVisitor):
         return bool(
             semantic_type.rank == 0
             and semantic_type.name != "String"
-            and semantic_type.dtype in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+            and semantic_type.dtype in SEMANTIC_SCALAR_TYPE_NAMES
             and storage is not None
             and (
                 (
                     storage.kind == "address"
                     and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) == PYI_ADDRESS_ROLE_PROJECTION
                 )
-                or (storage.kind == "reference" and storage.read_only)
+                or storage.kind == "reference"
             )
             and storage.pointer_depth == 1
         )
@@ -1003,7 +1013,7 @@ class PyiPrinter(ClassVisitor):
         """Handle projected return annotation for the current generation context."""
         parts = []
         if func.return_type:
-            parts.append(self._visit(func.return_type))
+            parts.append(self._visit(self._visible_wrapped_callable_type(func.return_type)))
         parts.extend(
             self._projected_argument_return(arg, visible=visible)
             for _, arg, visible in sorted(
@@ -1063,6 +1073,9 @@ class PyiPrinter(ClassVisitor):
     @staticmethod
     def _visible_projected_type(semantic_type: SemanticType) -> SemanticType:
         """Return the Python-visible type for address-projected scalars."""
+        wrapped = PyiPrinter._visible_wrapped_callable_type(semantic_type)
+        if wrapped is not semantic_type:
+            return wrapped
         storage = semantic_type.storage
         if (
             semantic_type.rank == 0
@@ -1078,6 +1091,24 @@ class PyiPrinter(ClassVisitor):
             )
             return visible
         return semantic_type
+
+    @staticmethod
+    def _visible_wrapped_callable_type(semantic_type: SemanticType) -> SemanticType:
+        """Hide native address topology behind a wrapped Python object."""
+        storage = semantic_type.storage
+        if not (
+            semantic_type.rank == 0
+            and semantic_type.name != "String"
+            and (semantic_type.dtype or semantic_type.name) not in SEMANTIC_SCALAR_TYPE_NAMES
+            and storage is not None
+            and storage.kind in {"reference", "pointer", "address"}
+            and storage.pointer_depth == 1
+            and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) != PYI_ADDRESS_ROLE_RAW
+        ):
+            return semantic_type
+        visible = deepcopy(semantic_type)
+        visible.metadata[_WRAPPED_CALLABLE_TYPE_METADATA] = True
+        return visible
 
     def _plain_projected_return(self, arg: SemanticArgument) -> str:
         """Handle plain projected return for the current generation context."""
@@ -1364,7 +1395,16 @@ class PyiPrinter(ClassVisitor):
     @staticmethod
     def _requires_intent_metadata(arg: SemanticVariable, *, omit_output_intent: bool = False) -> bool:
         """Return whether requires intent metadata."""
-        return getattr(arg, "intent", "in") == "out" and not omit_output_intent
+        intent = getattr(arg, "intent", "in")
+        if intent == "out":
+            return not omit_output_intent
+        storage = arg.semantic_type.storage
+        return bool(
+            intent == "inout"
+            and arg.semantic_type.rank == 0
+            and (arg.semantic_type.dtype or arg.semantic_type.name) in SEMANTIC_SCALAR_TYPE_NAMES
+            and (storage is None or storage.kind == "value")
+        )
 
     @staticmethod
     def _can_omit_visible_projected_output_intent(func: SemanticFunction, arg: SemanticArgument) -> bool:

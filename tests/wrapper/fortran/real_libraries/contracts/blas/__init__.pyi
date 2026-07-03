@@ -1,1992 +1,2146 @@
 @bind("CAXPY")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5))])
 def caxpy(
-    N: Addr(Int32),
-    CA: Addr(Complex64),
+    N: Annotated[Int32, Intent('inout')],
+    CA: Annotated[Complex64, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     CY: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CCOPY")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def ccopy(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     CY: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CDOTC")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def cdotc(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     CY: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Complex64: ...
 
 @bind("CDOTU")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def cdotu(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     CY: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Complex64: ...
 
 @bind("CGBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def cgbmv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    KL: Addr(Int32),
-    KU: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    KL: Annotated[Int32, Intent('inout')],
+    KU: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CGEMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def cgemm(
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CGEMMTR")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def cgemmtr(
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CGEMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def cgemv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CGERC")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def cgerc(
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CGERU")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def cgeru(
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def chbmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHEMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def chemm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHEMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def chemv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHER")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6))])
 def cher(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHER2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def cher2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHER2K")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def cher2k(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float32),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHERK")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def cherk(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
-    BETA: Addr(Float32),
+    LDA: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHPMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Arg(4), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def chpmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     AP: Complex64[Flat],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CHPR")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5)])
 def chpr(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     AP: Complex64[Flat]
 ) -> None: ...
 
 @bind("CHPR2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7)])
 def chpr2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     AP: Complex64[Flat]
 ) -> None: ...
 
 @bind("CROTG")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3))])
 def crotg(
-    a: Addr(Complex64),
-    b: Addr(Complex64),
-    c: Addr(Float32),
-    s: Addr(Complex64)
+    a: Annotated[Complex64, Intent('inout')],
+    b: Annotated[Complex64, Intent('inout')],
+    c: Annotated[Float32, Intent('inout')],
+    s: Annotated[Complex64, Intent('inout')]
 ) -> None: ...
 
 @bind("CSCAL")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3))])
 def cscal(
-    N: Addr(Int32),
-    CA: Addr(Complex64),
+    N: Annotated[Int32, Intent('inout')],
+    CA: Annotated[Complex64, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CSROT")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6))])
 def csrot(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     CY: Complex64[Flat],
-    INCY: Addr(Int32),
-    C: Addr(Float32),
-    S: Addr(Float32)
+    INCY: Annotated[Int32, Intent('inout')],
+    C: Annotated[Float32, Intent('inout')],
+    S: Annotated[Float32, Intent('inout')]
 ) -> None: ...
 
 @bind("CSSCAL")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3))])
 def csscal(
-    N: Addr(Int32),
-    SA: Addr(Float32),
+    N: Annotated[Int32, Intent('inout')],
+    SA: Annotated[Float32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CSWAP")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def cswap(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     CY: Complex64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CSYMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def csymm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CSYR2K")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def csyr2k(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CSYRK")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def csyrk(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
-    BETA: Addr(Complex64),
+    LDA: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex64, Intent('inout')],
     C: Complex64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTBMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def ctbmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTBSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def ctbsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTPMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def ctpmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Complex64[Flat],
     X: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTPSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def ctpsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Complex64[Flat],
     X: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTRMM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def ctrmm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTRMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def ctrmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTRSM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def ctrsm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex64),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex64, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex64[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("CTRSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def ctrsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Complex64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DASUM")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def dasum(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Float64: ...
 
 @bind("DAXPY")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5))])
 def daxpy(
-    N: Addr(Int32),
-    DA: Addr(Float64),
+    N: Annotated[Int32, Intent('inout')],
+    DA: Annotated[Float64, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     DY: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DCABS1")
 @external
+@native_call([Addr(Arg(0))])
 def dcabs1(
-    Z: Addr(Complex128)
+    Z: Annotated[Complex128, Intent('inout')]
 ) -> Float64: ...
 
 @bind("DCOPY")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def dcopy(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     DY: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DDOT")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def ddot(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     DY: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Float64: ...
 
 @bind("DGBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def dgbmv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    KL: Addr(Int32),
-    KU: Addr(Int32),
-    ALPHA: Addr(Float64),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    KL: Annotated[Int32, Intent('inout')],
+    KU: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DGEMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def dgemm(
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float64),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     C: Float64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DGEMMTR")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def dgemmtr(
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     C: Float64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DGEMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def dgemv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DGER")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def dger(
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DNRM2")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def dnrm2(
-    n: Addr(Int32),
+    n: Annotated[Int32, Intent('inout')],
     x: Float64[Flat],
-    incx: Addr(Int32)
+    incx: Annotated[Int32, Intent('inout')]
 ) -> Float64: ...
 
 @bind("DROT")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6))])
 def drot(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     DY: Float64[Flat],
-    INCY: Addr(Int32),
-    C: Addr(Float64),
-    S: Addr(Float64)
+    INCY: Annotated[Int32, Intent('inout')],
+    C: Annotated[Float64, Intent('inout')],
+    S: Annotated[Float64, Intent('inout')]
 ) -> None: ...
 
 @bind("DROTG")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3))])
 def drotg(
-    a: Addr(Float64),
-    b: Addr(Float64),
-    c: Addr(Float64),
-    s: Addr(Float64)
+    a: Annotated[Float64, Intent('inout')],
+    b: Annotated[Float64, Intent('inout')],
+    c: Annotated[Float64, Intent('inout')],
+    s: Annotated[Float64, Intent('inout')]
 ) -> None: ...
 
 @bind("DROTM")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5)])
 def drotm(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     DY: Float64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     DPARAM: Float64[5]
 ) -> None: ...
 
 @bind("DROTMG")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4)])
 def drotmg(
-    DD1: Addr(Float64),
-    DD2: Addr(Float64),
-    DX1: Addr(Float64),
-    DY1: Addr(Float64),
+    DD1: Annotated[Float64, Intent('inout')],
+    DD2: Annotated[Float64, Intent('inout')],
+    DX1: Annotated[Float64, Intent('inout')],
+    DY1: Annotated[Float64, Intent('inout')],
     DPARAM: Float64[5]
 ) -> None: ...
 
 @bind("DSBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def dsbmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSCAL")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3))])
 def dscal(
-    N: Addr(Int32),
-    DA: Addr(Float64),
+    N: Annotated[Int32, Intent('inout')],
+    DA: Annotated[Float64, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSDOT")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def dsdot(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Float64: ...
 
 @bind("DSPMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Arg(4), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def dspmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     AP: Float64[Flat],
     X: Float64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSPR")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5)])
 def dspr(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     AP: Float64[Flat]
 ) -> None: ...
 
 @bind("DSPR2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7)])
 def dspr2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     AP: Float64[Flat]
 ) -> None: ...
 
 @bind("DSWAP")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def dswap(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     DY: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSYMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def dsymm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     C: Float64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSYMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def dsymv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float64),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSYR")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6))])
 def dsyr(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSYR2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def dsyr2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Float64[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSYR2K")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def dsyr2k(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float64[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     C: Float64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DSYRK")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def dsyrk(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
-    BETA: Addr(Float64),
+    LDA: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     C: Float64[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTBMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def dtbmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTBSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def dtbsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTPMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def dtpmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Float64[Flat],
     X: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTPSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def dtpsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Float64[Flat],
     X: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTRMM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def dtrmm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float64[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTRMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def dtrmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTRSM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def dtrsm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float64[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DTRSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def dtrsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Float64[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("DZASUM")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def dzasum(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Float64: ...
 
 @bind("DZNRM2")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def dznrm2(
-    n: Addr(Int32),
+    n: Annotated[Int32, Intent('inout')],
     x: Complex128[Flat],
-    incx: Addr(Int32)
+    incx: Annotated[Int32, Intent('inout')]
 ) -> Float64: ...
 
 @bind("ICAMAX")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def icamax(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Int32: ...
 
 @bind("IDAMAX")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def idamax(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     DX: Float64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Int32: ...
 
 @bind("ISAMAX")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def isamax(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Int32: ...
 
 @bind("IZAMAX")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def izamax(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Int32: ...
 
 @bind("LSAME")
 @external
 def lsame(
-    CA: Addr(Const(String[1])),
-    CB: Addr(Const(String[1]))
+    CA: Const(String[1]),
+    CB: Const(String[1])
 ) -> Bool: ...
 
 @bind("SASUM")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def sasum(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Float32: ...
 
 @bind("SAXPY")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5))])
 def saxpy(
-    N: Addr(Int32),
-    SA: Addr(Float32),
+    N: Annotated[Int32, Intent('inout')],
+    SA: Annotated[Float32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SCABS1")
 @external
+@native_call([Addr(Arg(0))])
 def scabs1(
-    Z: Addr(Complex64)
+    Z: Annotated[Complex64, Intent('inout')]
 ) -> Float32: ...
 
 @bind("SCASUM")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def scasum(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     CX: Complex64[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> Float32: ...
 
 @bind("SCNRM2")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def scnrm2(
-    n: Addr(Int32),
+    n: Annotated[Int32, Intent('inout')],
     x: Complex64[Flat],
-    incx: Addr(Int32)
+    incx: Annotated[Int32, Intent('inout')]
 ) -> Float32: ...
 
 @bind("SCOPY")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def scopy(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SDOT")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def sdot(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Float32: ...
 
 @bind("SDSDOT")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5))])
 def sdsdot(
-    N: Addr(Int32),
-    SB: Addr(Float32),
+    N: Annotated[Int32, Intent('inout')],
+    SB: Annotated[Float32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Float32: ...
 
 @bind("SGBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def sgbmv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    KL: Addr(Int32),
-    KU: Addr(Int32),
-    ALPHA: Addr(Float32),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    KL: Annotated[Int32, Intent('inout')],
+    KU: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float32),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SGEMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def sgemm(
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float32),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float32[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float32),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     C: Float32[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SGEMMTR")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def sgemmtr(
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float32[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float32),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     C: Float32[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SGEMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def sgemv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float32),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SGER")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def sger(
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SNRM2")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def snrm2(
-    n: Addr(Int32),
+    n: Annotated[Int32, Intent('inout')],
     x: Float32[Flat],
-    incx: Addr(Int32)
+    incx: Annotated[Int32, Intent('inout')]
 ) -> Float32: ...
 
 @bind("SROT")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6))])
 def srot(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32),
-    C: Addr(Float32),
-    S: Addr(Float32)
+    INCY: Annotated[Int32, Intent('inout')],
+    C: Annotated[Float32, Intent('inout')],
+    S: Annotated[Float32, Intent('inout')]
 ) -> None: ...
 
 @bind("SROTG")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3))])
 def srotg(
-    a: Addr(Float32),
-    b: Addr(Float32),
-    c: Addr(Float32),
-    s: Addr(Float32)
+    a: Annotated[Float32, Intent('inout')],
+    b: Annotated[Float32, Intent('inout')],
+    c: Annotated[Float32, Intent('inout')],
+    s: Annotated[Float32, Intent('inout')]
 ) -> None: ...
 
 @bind("SROTM")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5)])
 def srotm(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     SPARAM: Float32[5]
 ) -> None: ...
 
 @bind("SROTMG")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4)])
 def srotmg(
-    SD1: Addr(Float32),
-    SD2: Addr(Float32),
-    SX1: Addr(Float32),
-    SY1: Addr(Float32),
+    SD1: Annotated[Float32, Intent('inout')],
+    SD2: Annotated[Float32, Intent('inout')],
+    SX1: Annotated[Float32, Intent('inout')],
+    SY1: Annotated[Float32, Intent('inout')],
     SPARAM: Float32[5]
 ) -> None: ...
 
 @bind("SSBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def ssbmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float32),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSCAL")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3))])
 def sscal(
-    N: Addr(Int32),
-    SA: Addr(Float32),
+    N: Annotated[Int32, Intent('inout')],
+    SA: Annotated[Float32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSPMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Arg(4), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def sspmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     AP: Float32[Flat],
     X: Float32[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float32),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSPR")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5)])
 def sspr(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     AP: Float32[Flat]
 ) -> None: ...
 
 @bind("SSPR2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7)])
 def sspr2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     AP: Float32[Flat]
 ) -> None: ...
 
 @bind("SSWAP")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def sswap(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     SX: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     SY: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSYMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def ssymm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float32[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float32),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     C: Float32[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSYMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def ssymv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Float32),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSYR")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6))])
 def ssyr(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSYR2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def ssyr2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Float32[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSYR2K")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def ssyr2k(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float32[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float32),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     C: Float32[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("SSYRK")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def ssyrk(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
-    BETA: Addr(Float32),
+    LDA: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float32, Intent('inout')],
     C: Float32[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STBMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def stbmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STBSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def stbsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STPMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def stpmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Float32[Flat],
     X: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STPSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def stpsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Float32[Flat],
     X: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STRMM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def strmm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float32[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STRMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def strmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STRSM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def strsm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Float32),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Float32[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("STRSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def strsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Float32[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Float32[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("XERBLA")
 @external
+@native_call([Arg(0), Addr(Arg(1))])
 def xerbla(
-    SRNAME: Addr(Const(String)),
-    INFO: Addr(Int32)
+    SRNAME: Const(String),
+    INFO: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("XERBLA_ARRAY")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
 def xerbla_array(
     SRNAME_ARRAY: String[1][SRNAME_LEN],
-    SRNAME_LEN: Addr(Int32),
-    INFO: Addr(Int32)
+    SRNAME_LEN: Annotated[Int32, Intent('inout')],
+    INFO: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZAXPY")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5))])
 def zaxpy(
-    N: Addr(Int32),
-    ZA: Addr(Complex128),
+    N: Annotated[Int32, Intent('inout')],
+    ZA: Annotated[Complex128, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     ZY: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZCOPY")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def zcopy(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     ZY: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZDOTC")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def zdotc(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     ZY: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Complex128: ...
 
 @bind("ZDOTU")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def zdotu(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     ZY: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> Complex128: ...
 
 @bind("ZDROT")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6))])
 def zdrot(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     ZY: Complex128[Flat],
-    INCY: Addr(Int32),
-    C: Addr(Float64),
-    S: Addr(Float64)
+    INCY: Annotated[Int32, Intent('inout')],
+    C: Annotated[Float64, Intent('inout')],
+    S: Annotated[Float64, Intent('inout')]
 ) -> None: ...
 
 @bind("ZDSCAL")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3))])
 def zdscal(
-    N: Addr(Int32),
-    DA: Addr(Float64),
+    N: Annotated[Int32, Intent('inout')],
+    DA: Annotated[Float64, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZGBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def zgbmv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    KL: Addr(Int32),
-    KU: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    KL: Annotated[Int32, Intent('inout')],
+    KU: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex128),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZGEMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def zgemm(
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex128),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZGEMMTR")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Arg(11), Addr(Arg(12))])
 def zgemmtr(
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    TRANSB: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    TRANSB: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex128),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZGEMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def zgemv(
-    TRANS: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    TRANS: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex128),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZGERC")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def zgerc(
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZGERU")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def zgeru(
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHBMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def zhbmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex128),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHEMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def zhemm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex128),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHEMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def zhemv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex128),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHER")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6))])
 def zher(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHER2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def zher2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32)
+    LDA: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHER2K")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def zher2k(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Float64),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHERK")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def zherk(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
-    BETA: Addr(Float64),
+    LDA: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Float64, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHPMV")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Arg(4), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def zhpmv(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     AP: Complex128[Flat],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
-    BETA: Addr(Complex128),
+    INCX: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZHPR")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5)])
 def zhpr(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Float64),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Float64, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     AP: Complex128[Flat]
 ) -> None: ...
 
 @bind("ZHPR2")
 @external
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Arg(3), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7)])
 def zhpr2(
-    UPLO: Addr(Const(String[1])),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     Y: Complex128[Flat],
-    INCY: Addr(Int32),
+    INCY: Annotated[Int32, Intent('inout')],
     AP: Complex128[Flat]
 ) -> None: ...
 
 @bind("ZROTG")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3))])
 def zrotg(
-    a: Addr(Complex128),
-    b: Addr(Complex128),
-    c: Addr(Float64),
-    s: Addr(Complex128)
+    a: Annotated[Complex128, Intent('inout')],
+    b: Annotated[Complex128, Intent('inout')],
+    c: Annotated[Float64, Intent('inout')],
+    s: Annotated[Complex128, Intent('inout')]
 ) -> None: ...
 
 @bind("ZSCAL")
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3))])
 def zscal(
-    N: Addr(Int32),
-    ZA: Addr(Complex128),
+    N: Annotated[Int32, Intent('inout')],
+    ZA: Annotated[Complex128, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZSWAP")
 @external
+@native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2)), Arg(3), Addr(Arg(4))])
 def zswap(
-    N: Addr(Int32),
+    N: Annotated[Int32, Intent('inout')],
     ZX: Complex128[Flat],
-    INCX: Addr(Int32),
+    INCX: Annotated[Int32, Intent('inout')],
     ZY: Complex128[Flat],
-    INCY: Addr(Int32)
+    INCY: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZSYMM")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def zsymm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex128),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZSYR2K")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Addr(Arg(9)), Arg(10), Addr(Arg(11))])
 def zsyr2k(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32),
-    BETA: Addr(Complex128),
+    LDB: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZSYRK")
 @external
+@native_call([Arg(0), Arg(1), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Addr(Arg(9))])
 def zsyrk(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
-    BETA: Addr(Complex128),
+    LDA: Annotated[Int32, Intent('inout')],
+    BETA: Annotated[Complex128, Intent('inout')],
     C: Complex128[LDC, Flat],
-    LDC: Addr(Int32)
+    LDC: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTBMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def ztbmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTBSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Arg(5), Addr(Arg(6)), Arg(7), Addr(Arg(8))])
 def ztbsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
-    K: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
+    K: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTPMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def ztpmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Complex128[Flat],
     X: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTPSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Arg(5), Addr(Arg(6))])
 def ztpsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     AP: Complex128[Flat],
     X: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTRMM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def ztrmm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTRMV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def ztrmv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTRSM")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10))])
 def ztrsm(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANSA: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    M: Addr(Int32),
-    N: Addr(Int32),
-    ALPHA: Addr(Complex128),
+    SIDE: Const(String[1]),
+    UPLO: Const(String[1]),
+    TRANSA: Const(String[1]),
+    DIAG: Const(String[1]),
+    M: Annotated[Int32, Intent('inout')],
+    N: Annotated[Int32, Intent('inout')],
+    ALPHA: Annotated[Complex128, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     B: Complex128[LDB, Flat],
-    LDB: Addr(Int32)
+    LDB: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @bind("ZTRSV")
 @external
+@native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5)), Arg(6), Addr(Arg(7))])
 def ztrsv(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    N: Addr(Int32),
+    UPLO: Const(String[1]),
+    TRANS: Const(String[1]),
+    DIAG: Const(String[1]),
+    N: Annotated[Int32, Intent('inout')],
     A: Complex128[LDA, Flat],
-    LDA: Addr(Int32),
+    LDA: Annotated[Int32, Intent('inout')],
     X: Complex128[Flat],
-    INCX: Addr(Int32)
+    INCX: Annotated[Int32, Intent('inout')]
 ) -> None: ...

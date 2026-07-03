@@ -251,7 +251,8 @@ class _PyiAstParser:
         hold_gil: bool = False,
         error_status_policy: dict[str, object] | None = None,
     ) -> SemanticFunction:
-        semantic_args, return_type = self._callable_parts(node, projection=projection or [])
+        actual_projection = projection if projection is not None else []
+        semantic_args, return_type = self._callable_parts(node, projection=actual_projection)
         metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
         if has_native_call:
             metadata[PYI_NATIVE_PROJECTION_METADATA] = True
@@ -271,7 +272,7 @@ class _PyiAstParser:
             native_name=native_name or node.name,
             arguments=semantic_args,
             return_type=return_type,
-            projection=projection or [],
+            projection=actual_projection,
             metadata=metadata,
             visibility=visibility,
             origin=origin,
@@ -291,9 +292,10 @@ class _PyiAstParser:
         hold_gil: bool = False,
         error_status_policy: dict[str, object] | None = None,
     ) -> SemanticMethod:
+        actual_projection = projection if projection is not None else []
         semantic_args, return_type = self._callable_parts(
             node,
-            projection=projection or [],
+            projection=actual_projection,
             drop_untyped_self=True,
         )
         metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
@@ -302,7 +304,7 @@ class _PyiAstParser:
         passed_object_name = None
         passed_object_position = None
         if infer_passed_object and not is_static and node.name != "__init__":
-            pass_mappings = [mapping for mapping in projection or [] if mapping.value_kind == "pass"]
+            pass_mappings = [mapping for mapping in actual_projection if mapping.value_kind == "pass"]
             if len(pass_mappings) > 1:
                 raise ValueError("native_call may contain at most one Pass() entry")
             passed_object_position = pass_mappings[0].native_position if pass_mappings else 0
@@ -321,7 +323,7 @@ class _PyiAstParser:
                     intent="inout",
                 ),
             )
-            self._restore_pass_projection(projection or [], passed_object_position)
+            self._restore_pass_projection(actual_projection, passed_object_position)
         if hold_gil:
             metadata[RUNTIME_HOLD_GIL_METADATA] = True
         if error_status_policy is not None:
@@ -335,7 +337,7 @@ class _PyiAstParser:
             native_name=native_name or node.name,
             arguments=semantic_args,
             return_type=return_type,
-            projection=projection or [],
+            projection=actual_projection,
             metadata=metadata,
             visibility=visibility,
             origin=origin,
@@ -1818,6 +1820,8 @@ class _PyiAstParser:
         return_type, returned_args = self._apply_native_call_returns(return_type, returned_args, projection)
         return_positions = self._return_positions_by_name(returned_args)
         self._apply_projected_returns(semantic_args, returned_args)
+        if returned_args and not projection:
+            projection.extend(self._identity_return_projection(semantic_args, visible_args, return_positions))
         self._apply_native_call_argument_names(visible_args, return_positions, projection)
         return semantic_args, return_type
 
@@ -1873,6 +1877,26 @@ class _PyiAstParser:
                 existing.intent = "inout"
             existing.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
             existing.semantic_type.ownership.mutable = True
+
+    @staticmethod
+    def _identity_return_projection(
+        semantic_args: list[SemanticArgument],
+        visible_args: list[SemanticArgument],
+        return_positions: dict[str, int | None],
+    ) -> list[ProjectionMapping]:
+        """Reconstruct native-order identity mappings for `Returns[...]` syntax."""
+        visible_positions = {argument.name: position for position, argument in enumerate(visible_args)}
+        return [
+            ProjectionMapping(
+                python_name=argument.name,
+                native_name=argument.name,
+                native_position=native_position,
+                python_position=visible_positions.get(argument.name),
+                result_position=return_positions.get(argument.name),
+                intent=argument.intent,
+            )
+            for native_position, argument in enumerate(semantic_args)
+        ]
 
     @staticmethod
     def _apply_native_call_returns(
@@ -1938,48 +1962,12 @@ class _PyiAstParser:
             if not 0 <= mapping.python_position < len(semantic_args):
                 raise ValueError(f"native_call argument position is out of range: {mapping.python_position}")
             arg = semantic_args[mapping.python_position]
-            if mapping.value_kind == "addr":
-                _PyiAstParser._apply_address_argument_projection(arg)
             mapping.python_name = arg.name
             if not mapping.native_name:
                 mapping.native_name = arg.name
             mapping.intent = arg.intent
             if arg.intent in {"out", "inout"} and mapping.result_position is None:
                 mapping.result_position = return_positions.get(arg.name)
-
-    @staticmethod
-    def _apply_address_argument_projection(arg: SemanticArgument) -> None:
-        semantic_type = arg.semantic_type
-        if semantic_type.rank != 0:
-            raise ValueError(f"Addr(Arg(...)) projection for {arg.name!r} requires a scalar argument")
-        storage = semantic_type.storage
-        if semantic_type.name == "String":
-            raise ValueError(
-                f"Addr(Arg(...)) projection for {arg.name!r} is redundant for String arguments; use Arg(...)"
-            )
-        if storage is not None and storage.kind == "array":
-            raise ValueError(
-                f"Addr(Arg(...)) projection for {arg.name!r} is redundant for storage arguments; use Arg(...)"
-            )
-        if (
-            storage is not None
-            and storage.kind in {"address", "pointer"}
-            and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) == PYI_ADDRESS_ROLE_RAW
-        ):
-            raise ValueError(
-                f"Addr(Arg(...)) projection for {arg.name!r} is redundant for raw address arguments; use Arg(...)"
-            )
-        read_only = str(arg.intent).lower() == "in" or bool(storage is not None and storage.read_only)
-        metadata = dict(storage.metadata) if storage is not None else {}
-        metadata[PYI_ADDRESS_ROLE_METADATA] = PYI_ADDRESS_ROLE_PROJECTION
-        semantic_type.storage = SemanticStorageContract(
-            kind="address",
-            read_only=read_only,
-            mutable=not read_only,
-            pointer_depth=1,
-            metadata=metadata,
-        )
-        semantic_type.ownership.mutable = not read_only
 
     @staticmethod
     def _shift_address_argument_value(

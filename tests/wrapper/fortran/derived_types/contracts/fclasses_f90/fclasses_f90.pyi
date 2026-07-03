@@ -64,41 +64,41 @@ class vector_store:
 
 @native_call([Arg(0), Addr(Arg(1))])
 def scale(
-    self: Annotated[Addr(vector), Polymorphic],
+    self: Annotated[vector, Polymorphic],
     factor: Const(Float64)
 ) -> None: ...
 
 @native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def shift_vector(
     dx: Const(Float64),
-    owner: Annotated[Addr(vector), Polymorphic],
+    owner: Annotated[vector, Polymorphic],
     dy: Const(Float64)
 ) -> None: ...
 
 def magnitude(
-    self: Annotated[Addr(Const(vector)), Polymorphic]
+    self: Annotated[Const(vector), Polymorphic]
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def allocate_values(
-    self: Annotated[Addr(vector_store), Polymorphic],
+    self: Annotated[vector_store, Polymorphic],
     n: Const(Int64)
 ) -> None: ...
 
 def set_values(
-    self: Annotated[Addr(vector_store), Polymorphic],
+    self: Annotated[vector_store, Polymorphic],
     source: Const(Float64[::])
 ) -> None: ...
 
 @native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
 def allocate_matrix(
-    self: Annotated[Addr(vector_store), Polymorphic],
+    self: Annotated[vector_store, Polymorphic],
     rows: Const(Int64),
     cols: Const(Int64)
 ) -> None: ...
 
 def set_matrix(
-    self: Annotated[Addr(vector_store), Polymorphic],
+    self: Annotated[vector_store, Polymorphic],
     source: Annotated[Const(Float64[::, ::]), ORDER_F]
 ) -> None: ...
 

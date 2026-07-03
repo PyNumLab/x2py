@@ -21,16 +21,18 @@ class buffer:
         Destruction("wrapper_dealloc"),
     ]
 
+    @native_call([Pass(), Addr(Arg(0))])
     def allocate_values(
         self,
-        n: Addr(Const(Int32))
+        n: Const(Int32)
     ) -> None: ...
 
     def deallocate_values(self) -> None: ...
 
+    @native_call([Pass(), Addr(Arg(0))])
     def scale_values(
         self,
-        scale: Addr(Const(Float64))
+        scale: Const(Float64)
     ) -> None: ...
 
     def values_sum(self) -> Float64: ...
@@ -44,17 +46,18 @@ module_values: Annotated[
     Destruction("native_owner"),
 ] | None
 
+@native_call([Addr(Arg(0))])
 def allocate_module_values(
-    n: Addr(Const(Int32))
+    n: Const(Int32)
 ) -> None: ...
 
 def deallocate_module_values() -> None: ...
 
 def module_values_sum() -> Float64: ...
 
-@native_call([Arg(0), Return('values', 0)])
+@native_call([Addr(Arg(0)), Return('values', 0)])
 def build_values(
-    n: Addr(Const(Int32))
+    n: Const(Int32)
 ) -> Annotated[
     Float64[:],
     Allocatable,

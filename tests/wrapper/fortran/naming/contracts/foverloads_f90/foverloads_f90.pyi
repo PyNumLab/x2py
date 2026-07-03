@@ -77,25 +77,25 @@ def summarize_vector(
 
 @private
 def inspect_accumulator(
-    value: Addr(Const(accumulator))
+    value: Const(accumulator)
 ) -> Float64: ...
 
 @private
 def inspect_sample(
-    value: Addr(Const(sample))
+    value: Const(sample)
 ) -> Float64: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def accumulator_add_integer(
-    self: Annotated[Addr(accumulator), Polymorphic],
+    self: Annotated[accumulator, Polymorphic],
     value: Const(Int32)
 ) -> None: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def accumulator_add_real(
-    self: Annotated[Addr(accumulator), Polymorphic],
+    self: Annotated[accumulator, Polymorphic],
     value: Const(Float64)
 ) -> None: ...
 
@@ -130,10 +130,10 @@ def summarize(
 
 @overload("inspect_accumulator")
 def inspect(
-    value: Addr(Const(accumulator))
+    value: Const(accumulator)
 ) -> Float64: ...
 
 @overload("inspect_sample")
 def inspect(
-    value: Addr(Const(sample))
+    value: Const(sample)
 ) -> Float64: ...

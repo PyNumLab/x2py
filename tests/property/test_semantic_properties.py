@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import asdict
 
 import pytest
 
@@ -16,7 +16,7 @@ from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules, resolve_
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     OwnershipPolicy,
-    PYI_LOADED_METADATA,
+    ProjectionMapping,
     SemanticArgument,
     SemanticArrayContract,
     SemanticConstraint,
@@ -329,15 +329,26 @@ def test_generated_pyi_synthetic_imports_are_stably_sorted(type_stems):
 @pytest.mark.property
 @given(st.lists(canonical_semantic_types(), max_size=5))
 def test_generated_semantic_ir_round_trips_through_pyi(arguments):
+    semantic_arguments = [
+        SemanticArgument(f"value_{index}", semantic_type, intent=intent)
+        for index, (semantic_type, intent) in enumerate(arguments)
+    ]
     module = SemanticModule(
         name="generated",
         functions=[
             SemanticFunction(
                 name="consume",
                 native_name="consume",
-                arguments=[
-                    SemanticArgument(f"value_{index}", semantic_type, intent=intent)
-                    for index, (semantic_type, intent) in enumerate(arguments)
+                arguments=semantic_arguments,
+                projection=[
+                    ProjectionMapping(
+                        python_name=argument.name,
+                        native_name=argument.name,
+                        native_position=index,
+                        python_position=index,
+                        intent=argument.intent,
+                    )
+                    for index, argument in enumerate(semantic_arguments)
                 ],
             )
         ],
@@ -346,4 +357,5 @@ def test_generated_semantic_ir_round_trips_through_pyi(arguments):
     emitted = emit_module(module)
     reparsed = parse_pyi_text(emitted, module_name="generated")
 
-    assert reparsed == replace(module, metadata={PYI_LOADED_METADATA: True})
+    assert emit_module(reparsed) == emitted
+    assert parse_pyi_text(emit_module(reparsed), module_name="generated") == reparsed

@@ -42,23 +42,23 @@ class box(base_shape):
     def area(self) -> Float64: ...
 
 def base_area(
-    self: Annotated[Addr(Const(base_shape)), Polymorphic]
+    self: Annotated[Const(base_shape), Polymorphic]
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def base_set_size(
-    self: Annotated[Addr(base_shape), Polymorphic],
+    self: Annotated[base_shape, Polymorphic],
     value: Const(Float64)
 ) -> None: ...
 
 def circle_area(
-    self: Annotated[Addr(Const(circle)), Polymorphic]
+    self: Annotated[Const(circle), Polymorphic]
 ) -> Float64: ...
 
 def box_area(
-    self: Annotated[Addr(Const(box)), Polymorphic]
+    self: Annotated[Const(box), Polymorphic]
 ) -> Float64: ...
 
 def describe_shape(
-    item: Annotated[Addr(Const(base_shape)), Polymorphic]
+    item: Annotated[Const(base_shape), Polymorphic]
 ) -> Float64: ...

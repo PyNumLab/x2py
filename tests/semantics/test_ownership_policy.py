@@ -219,6 +219,8 @@ def test_default_policy_decisions_cover_public_object_kinds():
 
 
 def test_default_policy_completes_python_and_native_barrier_actions():
+    pointer_projection = _address_type(PYI_ADDRESS_ROLE_PROJECTION)
+    pointer_projection.metadata["fortran_pointer"] = True
     cases = [
         (
             "scalar_value",
@@ -239,6 +241,13 @@ def test_default_policy_completes_python_and_native_barrier_actions():
             _scalar_storage_type(),
             OwnershipContext.argument("inout"),
             PythonBarrierAction.SCALAR_STORAGE,
+            NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        ),
+        (
+            "pointer_scalar_address_projection",
+            pointer_projection,
+            OwnershipContext.argument("in"),
+            PythonBarrierAction.SCALAR_VALUE,
             NativeBarrierAction.PASS_STORAGE_ADDRESS,
         ),
         (
@@ -975,6 +984,27 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
     assert field_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
     assert arg_var.ownership_decision.owner is OwnershipOwner.PYTHON
     assert codegen_action_for_variable(arg_var) is CodegenAction.COPY_IN_OUT
+
+
+def test_policy_completion_converts_native_addr_projection_after_python_boundary_parsing():
+    module = parse_pyi_text(
+        """
+@native_call([Addr(Arg(0))])
+def inspect(value: Const(Int32)) -> None: ...
+""",
+        module_name="native_projection_policy",
+    )
+    argument = module.functions[0].arguments[0]
+
+    assert argument.semantic_type.storage.kind == "value"
+
+    complete_semantic_policies(module)
+
+    assert argument.semantic_type.storage.kind == "address"
+    assert argument.semantic_type.storage.metadata[PYI_ADDRESS_ROLE_METADATA] == PYI_ADDRESS_ROLE_PROJECTION
+    decision = argument.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert decision.python_barrier_action is PythonBarrierAction.SCALAR_VALUE
+    assert decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
 
 
 def test_policy_completion_prunes_unexported_entry_declarations_before_lowering():

@@ -17,8 +17,9 @@ same_name_c: Complex64
 
 same_name_s: String[8]
 
+@native_call([Addr(Arg(0))])
 def do_work_i(
-    same_name: Addr(Int32)
+    same_name: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @native_call([Addr(Arg(0))])
@@ -31,12 +32,14 @@ def do_work_l(
     same_name: Const(Bool)
 ) -> None: ...
 
+@native_call([Addr(Arg(0))])
 def host_one(
-    same_name: Addr(Int32)
+    same_name: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
+@native_call([Addr(Arg(0))])
 def host_two(
-    same_name: Addr(Float32)
+    same_name: Annotated[Float32, Intent('inout')]
 ) -> None: ...
 
 @native_call([Addr(Arg(0))])
@@ -54,8 +57,9 @@ def convert_to_logical(
 ) -> Bool: ...
 
 @overload("do_work_i")
+@native_call([Addr(Arg(0))])
 def do_work(
-    same_name: Addr(Int32)
+    same_name: Annotated[Int32, Intent('inout')]
 ) -> None: ...
 
 @overload("do_work_r")

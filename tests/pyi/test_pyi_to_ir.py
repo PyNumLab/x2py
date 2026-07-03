@@ -364,9 +364,9 @@ from types_mod import particle
 
 answer: Int32
 
-def create_particle() -> Addr(particle): ...
+def create_particle() -> particle: ...
 
-def move(p: Annotated[Addr(particle), CompatibleHandle]) -> None: ...
+def move(p: Annotated[particle, CompatibleHandle]) -> None: ...
 """,
         encoding="utf-8",
     )
@@ -415,7 +415,7 @@ def test_load_pyi_modules_preserves_dotted_module_names_from_directory(tmp_path:
         """
 from shared.types_mod import particle
 
-def move(p: Addr(particle)) -> None: ...
+def move(p: particle) -> None: ...
 """,
         encoding="utf-8",
     )
@@ -565,10 +565,11 @@ class state:
     linked = parse_pyi_text(
         """
 @private
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
 def init_state(
-    self: Addr(state),
-    seed: Addr(Const(Int32)),
-    scale: Addr(Const(Float64)) = ...
+    self: state,
+    seed: Const(Int32),
+    scale: Const(Float64) = ...
 ) -> None: ...
 
 class state:
@@ -582,8 +583,8 @@ class state:
     @overload("init_state")
     def __init__(
         self,
-        seed: Addr(Const(Int32)),
-        scale: Addr(Const(Float64)) = ...
+        seed: Const(Int32),
+        scale: Const(Float64) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -607,7 +608,9 @@ class state:
 
     emitted = emit_module(linked)
     assert "def __init__(\n        self,\n        *,\n        id: Int32 = 7," in emitted
-    assert '    @overload("init_state")\n    def __init__(' in emitted
+    assert (
+        '    @overload("init_state")\n    @native_call([Pass(), Addr(Arg(0)), Addr(Arg(1))])\n    def __init__('
+    ) in emitted
     assert parse_pyi_text(emitted, module_name="edited") == linked
 
     with pytest.raises(ValueError, match="Constructor overload dispatch is not mapped"):
@@ -1003,11 +1006,15 @@ def add_one(value: Const(Int32)) -> Int32: ...
     value = function.arguments[0]
 
     assert value.semantic_type.name == "Int32"
+    assert value.semantic_type.storage.kind == "value"
+    assert function.projection[0].value_kind == "addr"
+    assert function.projection[0].value == {"kind": "arg", "position": 0}
+
+    complete_semantic_policies(module)
+
     assert value.semantic_type.storage.kind == "address"
     assert value.semantic_type.storage.read_only is True
     assert value.semantic_type.storage.metadata["pyi_address_role"] == "projection"
-    assert function.projection[0].value_kind == "addr"
-    assert function.projection[0].value == {"kind": "arg", "position": 0}
     assert emit_module(module).strip() == (
         "@native_call([Addr(Arg(0))])\ndef add_one(\n    value: Const(Int32)\n) -> Int32: ..."
     )
@@ -1076,6 +1083,90 @@ def raw_label(label: Addr(String[8])) -> None: ...
     assert "values: Addr(Float64[n])" in emitted
     assert "label: Addr(String[8])" in emitted
     assert parse_pyi_text(emitted, module_name="raw_address") == module
+
+
+def test_wrapped_type_raw_address_is_rejected_during_policy_completion():
+    module = parse_pyi_text(
+        """
+class particle:
+    value: Float64
+
+def move(value: Addr(particle)) -> None: ...
+""",
+        module_name="wrapped_address",
+    )
+
+    storage = module.functions[0].arguments[0].semantic_type.storage
+    assert storage.kind == "address"
+    assert storage.metadata["pyi_address_role"] == "raw"
+    assert emit_module(module).strip() == (
+        "class particle:\n    value: Float64\n\ndef move(\n    value: Addr(particle)\n) -> None: ..."
+    )
+    with pytest.raises(ValueError, match=r"Addr\(WrappedType\) is not allowed"):
+        complete_semantic_policies(module)
+
+
+def test_raw_address_policy_accepts_only_complete_primitive_layouts():
+    module = parse_pyi_text(
+        """
+def raw_access(
+    n: Int32,
+    scalar: Addr(Float64),
+    label: Addr(String[8]),
+    values: Addr(Float64[n])
+) -> Addr(Const(Int32)): ...
+
+def raw_access_with_storage_extent(
+    n: Const(Int32[()]),
+    values: Addr(Float64[n])
+) -> None: ...
+""",
+        module_name="raw_addresses",
+    )
+
+    complete_semantic_policies(module)
+
+    assert module.metadata["policy_completion_prepared"] is True
+
+
+@pytest.mark.parametrize(
+    ("annotation", "message"),
+    [
+        ("Addr(particle)", r"Addr\(WrappedType\) is not allowed"),
+        ("Addr(String)", "raw strings require a fixed length"),
+        ("Addr(Float64[:])", "raw arrays require a fully resolved rank and shape"),
+        ("Addr(Float64[missing])", "raw arrays require a fully resolved rank and shape"),
+        ("Addr[2](Float64)", r"callable Addr\(T\) supports depth one only"),
+        ("Callable[[Addr(particle)], None]", r"Addr\(WrappedType\) is not allowed"),
+    ],
+)
+def test_raw_address_policy_rejects_incomplete_or_wrapped_pointees(annotation: str, message: str):
+    module = parse_pyi_text(
+        f"""
+class particle:
+    value: Float64
+
+def invalid(n: Int32, value: {annotation}) -> None: ...
+""",
+        module_name="invalid_raw_address",
+    )
+
+    with pytest.raises(ValueError, match=message):
+        complete_semantic_policies(module)
+
+
+def test_identity_returns_reconstruct_native_projection_without_decorator():
+    source = """
+def fill(values: Float64[3]) -> Returns["values", Float64[3]]: ...
+"""
+    module = parse_pyi_text(source, module_name="identity_returns")
+    function = module.functions[0]
+
+    assert len(function.projection) == 1
+    assert function.projection[0].native_position == 0
+    assert function.projection[0].python_position == 0
+    assert function.projection[0].result_position == 0
+    assert emit_module(module).strip() == ('def fill(\n    values: Float64[3]\n) -> Returns["values", Float64[3]]: ...')
 
 
 def test_function_equality_treats_argument_names_as_placeholders():
@@ -1236,27 +1327,56 @@ def fixed_inout(
 
     assert func.arguments[0].intent == "inout"
     assert func.arguments[0].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
-    assert func.projection == []
+    assert len(func.projection) == 1
+    assert func.projection[0].native_position == 0
+    assert func.projection[0].python_position == 0
+    assert func.projection[0].result_position == 0
 
 
 @pytest.mark.parametrize(
-    ("annotation", "message"),
+    "annotation",
     [
-        ("String[8]", "redundant for String arguments"),
-        ("Float64[()]", "redundant for storage arguments"),
-        ("Float64[:]", "requires a scalar argument"),
-        ("Addr(Float64)", "redundant for raw address arguments"),
+        "String[8]",
+        "Float64[()]",
+        "Float64[:]",
+        "particle",
+        "Addr(Float64)",
     ],
 )
-def test_native_call_addr_arg_rejects_storage_like_arguments(annotation: str, message: str):
-    with pytest.raises(ValueError, match=message):
-        parse_pyi_text(
-            f"""
+def test_native_call_addr_arg_rejects_non_primitive_scalar_values(annotation: str):
+    module = parse_pyi_text(
+        f"""
+class particle:
+    value: Float64
+
 @native_call([Addr(Arg(0))])
 def invalid(value: {annotation}) -> None: ...
 """,
-            module_name="edited",
-        )
+        module_name="edited",
+    )
+
+    with pytest.raises(ValueError, match="only valid for primitive scalar values"):
+        complete_semantic_policies(module)
+
+
+@pytest.mark.parametrize(
+    ("projection", "return_type"),
+    [
+        ("Addr(Return(0))", "Float64"),
+        ('Addr(Work("scratch"))', "None"),
+    ],
+)
+def test_native_call_address_projection_rejects_non_argument_storage(projection: str, return_type: str):
+    module = parse_pyi_text(
+        f"""
+@native_call([{projection}])
+def invalid() -> {return_type}: ...
+""",
+        module_name="edited",
+    )
+
+    with pytest.raises(ValueError, match=r"only Addr\(Arg\(i\)\) is supported"):
+        complete_semantic_policies(module)
 
 
 def test_native_call_projected_output_keeps_explicit_output_intent():
@@ -1335,9 +1455,9 @@ class vector:
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_real(
-    left: Addr(vector),
+    left: vector,
     right: Const(Float64)
-) -> Returns["left", Addr(vector)]: ...
+) -> Returns["left", vector]: ...
 """,
         module_name="edited",
     )
@@ -1376,13 +1496,13 @@ class vector:
     ) -> None: ...
 
 def scale(
-    self: Annotated[Addr(vector), Polymorphic],
+    self: Annotated[vector, Polymorphic],
     factor: Addr(Const(Float64))
 ) -> None: ...
 
 def shift_vector(
     dx: Addr(Const(Float64)),
-    owner: Annotated[Addr(vector), Polymorphic],
+    owner: Annotated[vector, Polymorphic],
     dy: Addr(Const(Float64))
 ) -> None: ...
 """,

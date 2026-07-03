@@ -10,5 +10,5 @@ def update_plane(
 
 @external
 def step(
-    state: Addr(sim_state)
+    state: sim_state
 ) -> None: ...
