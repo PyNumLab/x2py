@@ -143,7 +143,7 @@ def test_converter_visitor_and_compatibility_methods_cover_public_paths():
     )
     parsed = FortranFile(filename="/tmp/standalone_source.f90", modules=[module], procedures=[proc])
 
-    assert converter.visit(parsed).name == "m"
+    assert converter.visit(parsed)[0].name == "m"
     assert converter.visit(module).functions[0].visibility == "private"
     assert converter.visit(proc, visibility="private").visibility == "private"
     assert converter.visit(proc).visibility == "public"
@@ -157,16 +157,16 @@ def test_converter_visitor_and_compatibility_methods_cover_public_paths():
     assert semantic_arg.origin.native_name == "x"
     assert semantic_arg.origin.source_kind == "argument"
 
-    semantic_var = converter.variable_to_semantic_type(scale)
+    semantic_var = converter.visit(scale)
     assert semantic_var.name == "Float64"
     assert has_constraint(semantic_var, "Constant")
-    assert converter.argument_to_semantic_argument(arg).name == "x"
-    assert converter.procedure_to_semantic_function(proc).name == "work"
-    assert converter.procedure_to_semantic_function(proc).visibility == "public"
-    assert converter.derived_type_to_semantic_class(dtype, procedure_lookup={}).base_classes == ["base_t"]
-    assert converter.module_to_semantic_module(module).imports[0].items[0].target == "i32"
+    assert converter.visit(arg).name == "x"
+    assert converter.visit(proc).name == "work"
+    assert converter.visit(proc).visibility == "public"
+    assert converter.visit(dtype, procedure_lookup={}).base_classes == ["base_t"]
+    assert converter.visit(module).imports[0].items[0].target == "i32"
 
-    modules = converter.file_to_semantic_modules(parsed)
+    modules = converter.visit(parsed)
     assert [module.name for module in modules] == ["m", "standalone_source"]
     assert converter.visit(FortranProject(files=[parsed]))[0].name == "m"
 
@@ -222,7 +222,9 @@ def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
     assert converter.visit(proc, derived_type_context=context).arguments[0].semantic_type.metadata[
         "external_type_ref"
     ] == (external_ref)
-    assert converter.visit(parsed_file).classes[0].fields[0].semantic_type.metadata["external_type_ref"] == external_ref
+    assert (
+        converter.visit(parsed_file)[0].classes[0].fields[0].semantic_type.metadata["external_type_ref"] == external_ref
+    )
     assert converter.visit(project)[0].classes[0].fields[0].semantic_type.metadata["external_type_ref"] == external_ref
     assert semantic_module.classes[0].fields[0].semantic_type.metadata["external_type_ref"] == external_ref
     assert "external_type_ref" not in semantic_module.classes[0].fields[1].semantic_type.metadata
@@ -279,10 +281,8 @@ def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
         "source_location": {},
         "metadata": {},
     }
-    assert converter.visit_derived_type(FortranDerivedType(name="default_t")).visibility == "public"
-    assert (
-        converter.visit_variable(FortranVariable(name="local", base_type="derived", kind="state_t")).name == "state_t"
-    )
+    assert converter.visit(FortranDerivedType(name="default_t")).visibility == "public"
+    assert converter.visit(FortranVariable(name="local", base_type="derived", kind="state_t")).name == "state_t"
 
 
 def test_converter_normalizes_wrapped_types_and_resolves_wildcard_imports():
@@ -290,12 +290,12 @@ def test_converter_normalizes_wrapped_types_and_resolves_wildcard_imports():
     module = FortranModule(name="consumer", uses={"OTHER_MOD": [], "TYPES_MOD": []})
     context = converter._module_derived_type_context(module)
 
-    state = converter.visit_argument(
+    state = converter.visit(
         FortranArgument(name="state", base_type="derived", kind="state_t"),
         derived_type_context=context,
     ).semantic_type
     opaque_context = converter._module_derived_type_context(FortranModule(name="consumer", uses={"OPAQUE_MOD": []}))
-    opaque = converter.visit_argument(
+    opaque = converter.visit(
         FortranArgument(name="opaque", base_type="derived", kind="opaque_t"),
         derived_type_context=opaque_context,
     ).semantic_type
@@ -358,13 +358,13 @@ def test_converter_rejects_unsupported_inputs_and_missing_derived_type_names():
     assert [proc.name for proc in from_list.procedures] == ["outside"]
 
     with pytest.raises(ValueError, match="missing concrete type name"):
-        converter.visit_variable(FortranVariable(name="state", base_type="derived"))
+        converter.visit(FortranVariable(name="state", base_type="derived"))
 
     with pytest.raises(ValueError, match="Unknown Fortran datatype"):
-        converter.visit_variable(FortranVariable(name="x", base_type="unknown"))
+        converter.visit(FortranVariable(name="x", base_type="unknown"))
 
     with pytest.raises(ValueError) as error:
-        converter.visit_variable(FortranVariable(name="x", base_type="real", kind="selected_real_kind(33)"))
+        converter.visit(FortranVariable(name="x", base_type="real", kind="selected_real_kind(33)"))
     assert str(error.value) == "Unsupported Fortran semantic type for variable 'x': real(kind=selected_real_kind(33))"
 
 
@@ -434,7 +434,7 @@ contains
   end subroutine set_real
 end module generic_mod
 """
-    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
 
     assert [(item.name, [proc.name for proc in item.procedures]) for item in module.overload_sets] == [
         ("convert", ["convert_integer", "convert_real"])
@@ -456,7 +456,7 @@ module alloc_target_mod
   end type box
 end module alloc_target_mod
 """
-    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
 
     values = module.variables[0]
     assert values.name == "values"
@@ -477,7 +477,7 @@ module generic_mod
   end interface convert
 end module generic_mod
 """
-    module = converter.visit_module(parse_fortran_source(source).modules[0])
+    module = converter.visit(parse_fortran_source(source).modules[0])
     report = assess_semantic_wrap_readiness(module)
 
     assert module.overload_sets[0].procedures == []
@@ -591,13 +591,13 @@ contains
   end subroutine assign_value
 end module operator_mod
 """
-    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
 
     assert module.overload_sets == []
 
 
 def test_converter_preserves_defined_operators_assignment_and_type_bound_operators():
-    module = FortranToIRConverter().visit_module(
+    module = FortranToIRConverter().visit(
         parse_fortran_source(
             OPERATOR_F90_SOURCE.read_text(),
             filename=str(OPERATOR_F90_SOURCE),
@@ -667,7 +667,7 @@ contains
   end subroutine assign_value
 end module invalid_assignment
 """
-    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
     report = assess_semantic_wrap_readiness(module)
     blocker = next(
         blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_defined_generic_invalid"
@@ -688,7 +688,7 @@ module missing_operator
   end interface operator(+)
 end module missing_operator
 """
-    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
     report = assess_semantic_wrap_readiness(module)
     blocker = next(
         blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_generic_target_unresolved"
@@ -1438,7 +1438,7 @@ def test_intrinsic_builtin_kinds_map_to_semantic_types():
 
     for base_type, kind, expected in cases:
         variable = FortranVariable(name=f"{base_type}_{kind or 'default'}", base_type=base_type, kind=kind)
-        assert converter.visit_variable(variable).name == expected
+        assert converter.visit(variable, as_type=True).name == expected
 
 
 @pytest.mark.parametrize(
@@ -1456,7 +1456,7 @@ def test_intrinsic_builtin_kinds_reject_unsupported_wrapper_mappings(base_type, 
     variable = FortranVariable(name="value", base_type=base_type, kind=kind)
 
     with pytest.raises(ValueError, match=re.escape(message)):
-        FortranToIRConverter().visit_variable(variable)
+        FortranToIRConverter().visit(variable, as_type=True)
 
 
 def test_fortran2ir_uses_compiler_probed_storage_facts_and_preserves_provenance():
@@ -1466,8 +1466,9 @@ def test_fortran2ir_uses_compiler_probed_storage_facts_and_preserves_provenance(
         "bits": 64,
         "expression": "storage_size(real(0.0))",
     }
-    semantic_type = FortranToIRConverter(type_facts={("real", None): fact}).visit_variable(
-        FortranVariable(name="value", base_type="real")
+    semantic_type = FortranToIRConverter(type_facts={("real", None): fact}).visit(
+        FortranVariable(name="value", base_type="real"),
+        as_type=True,
     )
 
     assert semantic_type.name == "Float64"
@@ -1481,7 +1482,7 @@ def test_fortran2ir_uses_compiler_probed_storage_facts_and_preserves_provenance(
         "bits": 8,
         "expression": "storage_size(logical(.false.,kind=1))",
     }
-    logical_type = FortranToIRConverter(type_facts={("logical", "1"): logical_fact}).visit_variable(
+    logical_type = FortranToIRConverter(type_facts={("logical", "1"): logical_fact}).visit(
         FortranVariable(name="flag", base_type="logical", kind="1")
     )
 
@@ -1498,7 +1499,7 @@ def test_fortran2ir_rejects_compiler_storage_without_semantic_dtype():
     }
 
     with pytest.raises(ValueError, match="integer uses 48-bit storage"):
-        FortranToIRConverter(type_facts={("integer", None): fact}).visit_variable(
+        FortranToIRConverter(type_facts={("integer", None): fact}).visit(
             FortranVariable(name="value", base_type="integer")
         )
 
@@ -1513,7 +1514,7 @@ def test_fortran2ir_rejects_compiler_storage_without_semantic_dtype():
 )
 def test_fortran2ir_rejects_compiler_probed_unknown_storage_widths(fact):
     with pytest.raises(ValueError, match="Unsupported Fortran target storage"):
-        FortranToIRConverter(type_facts={(fact["base_type"], fact["kind"]): fact}).visit_variable(
+        FortranToIRConverter(type_facts={(fact["base_type"], fact["kind"]): fact}).visit(
             FortranVariable(name="value", base_type=fact["base_type"], kind=fact["kind"])
         )
 
@@ -1555,9 +1556,9 @@ end subroutine legacy
     args = {arg.name: arg for arg in parsed.procedures[0].arguments}
     converter = FortranToIRConverter()
 
-    assert converter.visit_variable(args["c8"]).name == "Complex64"
-    assert converter.visit_variable(args["c16"]).name == "Complex128"
-    assert converter.visit_variable(args["c16"]).metadata["fortran_type_fact_source"] == "legacy_star_storage"
+    assert converter.visit(args["c8"], as_type=True).name == "Complex64"
+    assert converter.visit(args["c16"], as_type=True).name == "Complex128"
+    assert converter.visit(args["c16"], as_type=True).metadata["fortran_type_fact_source"] == "legacy_star_storage"
 
     requirements = collect_fortran_type_storage_requirements(parsed)
     assert {(item["base_type"], item["kind"], item["expression"]) for item in requirements} == {
@@ -1814,15 +1815,20 @@ def test_fortran_native_storage_contracts_preserve_exact_bounds_and_member_flags
         visibility="private",
     )
 
-    matrix_type = converter.visit_argument(matrix).semantic_type
-    assumed_rank = converter.visit_variable(FortranVariable(name="any_rank", base_type="real", rank=1, shape=[".."]))
-    semantic_member = converter.visit_data_member(member)
-    plain_member = converter.visit_data_member(FortranVariable(name="plain", base_type="real", rank=1, shape=[":"]))
-    mixed_bounds = converter.visit_variable(
-        FortranVariable(name="mixed", base_type="real", rank=3, shape=["3", "1:n", "0:n"])
+    matrix_type = converter.visit(matrix).semantic_type
+    assumed_rank = converter.visit(FortranVariable(name="any_rank", base_type="real", rank=1, shape=[".."]))
+    semantic_member = converter.visit(member, as_data_member=True)
+    plain_member = converter.visit(
+        FortranVariable(name="plain", base_type="real", rank=1, shape=[":"]),
+        as_data_member=True,
     )
-    spaced_intent = converter.visit_argument(FortranArgument(name="spaced", base_type="integer", intent="in out"))
-    out_member = converter.visit_data_member(FortranVariable(name="out_value", base_type="integer"), intent="out")
+    mixed_bounds = converter.visit(FortranVariable(name="mixed", base_type="real", rank=3, shape=["3", "1:n", "0:n"]))
+    spaced_intent = converter.visit(FortranArgument(name="spaced", base_type="integer", intent="in out"))
+    out_member = converter.visit(
+        FortranVariable(name="out_value", base_type="integer"),
+        as_data_member=True,
+        intent="out",
+    )
 
     assert asdict(matrix_type.storage) == {
         "kind": "array",
@@ -2068,7 +2074,7 @@ contains
 end module polymorphic_source_mod
 """
 
-    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
     touch_self = module.functions[0].arguments[0].semantic_type
     accept_value = module.functions[1].arguments[0].semantic_type
 
@@ -2519,7 +2525,7 @@ contains
   end subroutine notify_case
 end module callbacks
 """
-    module = FortranToIRConverter().visit_module(parse_fortran_source(source).modules[0])
+    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
 
     abstract_callback = get_function(module, "abstract_case").arguments[0].semantic_type
     assert abstract_callback.name == "Callable"
@@ -2577,7 +2583,7 @@ end module callback_user
 """,
         }
     )
-    modules = {item.name: item for item in FortranToIRConverter().visit_project(project)}
+    modules = {item.name: item for item in FortranToIRConverter().visit(project)}
     imported_callback = get_function(modules["callback_user"], "apply").arguments[0].semantic_type
     assert imported_callback.name == "Callable"
     assert [argument.name for argument in imported_callback.metadata["arguments"]] == ["Int32"]
@@ -2594,7 +2600,7 @@ subroutine standalone_case(callback)
 end subroutine standalone_case
 """
     )
-    standalone_module = FortranToIRConverter().visit_file_modules(standalone)[0]
+    standalone_module = FortranToIRConverter().visit(standalone)[0]
     standalone_callback = get_function(standalone_module, "standalone_case").arguments[0].semantic_type
     assert standalone_callback.name == "Callable"
     assert [argument.name for argument in standalone_callback.metadata["arguments"]] == ["Int32"]

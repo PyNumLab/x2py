@@ -97,10 +97,10 @@ end module
 
     assert "def add(" in code
 
-    assert "@native_call([Ref(Arg(0)), Ref(Arg(1)), Return('c', 0)])" in code
+    assert "@native_call([Addr(Arg(0)), Addr(Arg(1)), Return('c', 0)])" in code
     assert "a: Const(Float64)" in code
     assert "b: Const(Float64)" in code
-    assert "c: Annotated[Ref(Float64), Intent('out')]" not in code
+    assert "c: Annotated[Addr(Float64), Intent('out')]" not in code
     assert 'Returns["c"' not in code
     assert ") -> Float64: ..." in code
 
@@ -498,8 +498,8 @@ end module
 
     code = generate_pyi(source)
 
-    annotation = "Ref(String[8])"
-    assert "@native_call([Arg(0)])" in code
+    annotation = "String[8]"
+    assert "@native_call([Arg(0)])" not in code
     assert f"name: {annotation}" in code
     assert f') -> Returns["name", {annotation}]: ...' in code
 
@@ -663,7 +663,7 @@ end module physics
     code = stubs["physics"]
 
     assert "from types_mod import particle" in code
-    assert "p: Ref(particle)" in code
+    assert "p: Addr(particle)" in code
     assert "class particle" not in code
     assert stubs["types_mod"] == "class particle(Opaque):\n    pass"
 
@@ -876,7 +876,7 @@ end module
 
     code = PyiPrinter().emit(smod)
 
-    assert "c: Annotated[Ref(Float64), Intent('out')]" not in code
+    assert "c: Annotated[Addr(Float64), Intent('out')]" not in code
     assert 'Returns["c"' not in code
     assert ") -> Float64: ..." in code
 
@@ -946,7 +946,7 @@ end module
     code = PyiPrinter().emit(smod)
 
     assert "def touch(" in code
-    assert "x: Ref(Int32)" in code
+    assert "x: Addr(Int32)" in code
 
 
 def test_printer_emit_visitor_dispatches_semantic_models():
@@ -1086,7 +1086,7 @@ end module vector_mod
 
     assert "class vector:" in code
     assert "values: Annotated[Float64[:], Allocatable]" in code
-    assert "    @native_call([Pass(), Ref(Arg(0))])" in code
+    assert "    @native_call([Pass(), Addr(Arg(0))])" in code
     assert "    def scale(\n        self,\n        alpha: Const(Float64)\n    ) -> None: ..." in code
     assert "        self: vector" not in code
 
@@ -1145,8 +1145,8 @@ end module pass_mod
     code = generate_pyi(source)
 
     assert "    def shift(\n        self,\n        dx: Const(Float64),\n        dy: Const(Float64)" in code
-    assert "        owner: Ref(vector)" not in code
-    assert "@native_call([Ref(Arg(0)), Pass(), Ref(Arg(1))])" in code
+    assert "        owner: Addr(vector)" not in code
+    assert "@native_call([Addr(Arg(0)), Pass(), Addr(Arg(1))])" in code
     assert '    @staticmethod\n    @bind("make_vector")' in code
     assert "value: Const(Float64)" in code
     assert "-> vector: ..." in code
@@ -1268,9 +1268,9 @@ def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_
     assert "def __radd__(" in code
     assert '@overload("assign_vector_real")' in code
     assert "def assign(" in code
-    assert "left: Annotated[Ref(vector), Intent('out')]" not in code
-    assert "left: Ref(vector)" in code
-    assert '-> Returns["left", Ref(vector)]: ...' in code
+    assert "left: Annotated[Addr(vector), Intent('out')]" not in code
+    assert "left: vector" in code
+    assert '-> Returns["left", vector]: ...' in code
     assert "right: Const(Float64)\n    ) -> vector: ..." in code
     assert '@overload("dot_vectors")' in code
     assert "def operator_dot(" in code
@@ -1332,10 +1332,10 @@ def test_bound_constructor_pyi_generates_single_initializer_without_keyword_defa
         """
 class state:
     @private
-    def init_state(self, seed: Ref(Const(Int32))) -> None: ...
+    def init_state(self, seed: Addr(Const(Int32))) -> None: ...
 
     @bind("init_state")
-    def __init__(self, seed: Ref(Const(Int32))) -> None: ...
+    def __init__(self, seed: Addr(Const(Int32))) -> None: ...
 
     id: Int32
 """,
@@ -1724,14 +1724,14 @@ def test_printer_emits_extended_storage_and_callable_forms():
         printer.emit(canonical_constant.semantic_type)
     assert printer.emit(readonly_value) == "Const(Int32)"
     assert printer.emit(mutable_value) == "Int32"
-    assert printer.emit(deep_pointer) == "Ref[3](Const(Float64))"
-    assert printer.emit(double_pointer) == "Ref[2](Float64)"
+    assert printer.emit(deep_pointer) == "Addr[3](Const(Float64))"
+    assert printer.emit(double_pointer) == "Addr[2](Float64)"
     assert printer.emit(unspecified_storage) == "Int32"
     assert printer.emit(inferred_array) == "Float64[:, :]"
     assert printer.emit(annotated_array) == (
         "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
     )
-    assert printer.emit(character) == "Ref(String[16])"
+    assert printer.emit(character) == "String[16]"
     assert printer.emit(allocatable_character) == "Annotated[String, FortranAllocatable]"
     assert printer.emit(full_callback) == "Callable[[Int32, Float64], Float64]"
     assert printer.emit(any_callback) == "Callable[..., Float64]"
@@ -1789,7 +1789,7 @@ def test_printer_projection_return_helpers_and_keyword_data_members():
         ],
     )
 
-    assert printer._projected_argument_return(argument, visible=True) == 'Returns["x", Ref(Float64), Optional]'
+    assert printer._projected_argument_return(argument, visible=True) == 'Returns["x", Addr(Float64), Optional]'
     assert printer._named_return(plain) == 'Returns["value", Int32]'
     assert printer._projected_argument_return(argument, visible=False) == "Float64 | None"
     assert printer._projected_argument_return(plain, visible=False) == "Int32"

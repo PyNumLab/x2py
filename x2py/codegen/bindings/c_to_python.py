@@ -9,9 +9,12 @@ from x2py.ownership_policy import (
     CodegenAction,
     DestructionPolicy,
     DestructionPolicyDispatcher,
+    NativeBarrierAction,
     ObjectKind,
     PolicyActionDispatcher,
     PolicyProjectionDispatcher,
+    PythonBarrierAction,
+    PythonBarrierDispatcher,
     SetterAction,
     SetterActionDispatcher,
     StorageMode,
@@ -87,6 +90,7 @@ from .cpython_api import (
     PythonObjectType,
     PythonTypeObjectType,
     PyClassDef,
+    PyErr_Occurred,
     PyErr_SetString,
     PyErr_SetObject,
     PyFunctionDef,
@@ -96,6 +100,8 @@ from .cpython_api import (
     PyList_GetItem,
     PyList_New,
     PyList_SetItem,
+    PyLong_AsVoidPtr,
+    PyLong_Check,
     PyMemoryError,
     PyModInitFunc,
     PyModule,
@@ -248,23 +254,14 @@ class CPythonBindingGenerator(BindingGenerator):
 
     target_language = "Python"
     start_language = "C"
-    _ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
+    _PYTHON_BARRIER_DISPATCHER = PythonBarrierDispatcher(
         {
-            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_direct_scalar_argument",
-            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_call_local_scalar_argument",
-            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_direct_scalar_argument",
-            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_identity_scalar_argument",
-            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_direct_scalar_argument",
-            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_call_local_string_argument",
-            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_identity_string_argument",
-            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_replacement_string_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_array_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_array_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_array_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_array_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_custom_type_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_custom_type_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_custom_type_argument",
+            PythonBarrierAction.SCALAR_VALUE: "_convert_python_scalar_value_argument",
+            PythonBarrierAction.SCALAR_STORAGE: "_convert_python_scalar_storage_argument",
+            PythonBarrierAction.ARRAY_STORAGE: "_convert_python_array_storage_argument",
+            PythonBarrierAction.STRING_VALUE: "_convert_python_string_value_argument",
+            PythonBarrierAction.RAW_ADDRESS: "_convert_python_raw_address_argument",
+            PythonBarrierAction.WRAPPER_INSTANCE: "_convert_python_wrapper_instance_argument",
         }
     )
     _ARGUMENT_DETAIL_DISPATCHER = PolicyActionDispatcher(
@@ -1322,11 +1319,23 @@ class CPythonBindingGenerator(BindingGenerator):
         is_bind_c_argument,
     ):
         """Append type checks before the selected argument conversion body."""
+        if self._argument_conversion_owns_validation(orig_var):
+            body.extend(cast)
+            return
         check_func, err = self._get_type_check_condition(
             collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
         )
         body.append(If(IfSection(Not(check_func), [*err, Return(self._error_exit_code)])))
         body.extend(cast)
+
+    @staticmethod
+    def _argument_conversion_owns_validation(orig_var) -> bool:
+        """Return whether the selected conversion emits the full public contract check."""
+        decision = ownership_decision_for_codegen_variable(orig_var)
+        return decision.python_barrier_action in {
+            PythonBarrierAction.SCALAR_STORAGE,
+            PythonBarrierAction.RAW_ADDRESS,
+        }
 
     def _append_unchecked_argument_cast(
         self,
@@ -1830,7 +1839,7 @@ class CPythonBindingGenerator(BindingGenerator):
         dict
             A dictionary describing the objects necessary to access the argument.
         """
-        return self._ARGUMENT_POLICY_DISPATCHER.dispatch(
+        return self._PYTHON_BARRIER_DISPATCHER.dispatch(
             self,
             orig_var,
             collect_arg,
@@ -1839,7 +1848,7 @@ class CPythonBindingGenerator(BindingGenerator):
             arg_var=arg_var,
         )
 
-    def _convert_direct_scalar_argument(
+    def _convert_python_scalar_value_argument(
         self,
         orig_var,
         decision,
@@ -1849,29 +1858,7 @@ class CPythonBindingGenerator(BindingGenerator):
         *,
         arg_var=None,
     ):
-        """Convert a scalar argument that uses ordinary Python-to-C casting."""
-        return self._convert_scalar_argument(
-            orig_var,
-            decision,
-            collect_arg,
-            bound_argument,
-            is_bind_c_argument,
-            arg_var=arg_var,
-            bind_c_stack_alias=False,
-            identity_output=False,
-        )
-
-    def _convert_call_local_scalar_argument(
-        self,
-        orig_var,
-        decision,
-        collect_arg,
-        bound_argument,
-        is_bind_c_argument,
-        *,
-        arg_var=None,
-    ):
-        """Convert a call-local scalar argument through its selected storage mode."""
+        """Read a Python scalar value for the completed scalar barrier."""
         return self._convert_scalar_argument(
             orig_var,
             decision,
@@ -1880,10 +1867,9 @@ class CPythonBindingGenerator(BindingGenerator):
             is_bind_c_argument,
             arg_var=arg_var,
             bind_c_stack_alias=decision.storage_mode is StorageMode.ALIAS,
-            identity_output=False,
         )
 
-    def _convert_identity_scalar_argument(
+    def _convert_python_scalar_storage_argument(
         self,
         orig_var,
         decision,
@@ -1893,17 +1879,33 @@ class CPythonBindingGenerator(BindingGenerator):
         *,
         arg_var=None,
     ):
-        """Convert caller-supplied scalar output storage."""
-        return self._convert_scalar_argument(
+        """Validate rank-0 NumPy scalar storage for the completed barrier."""
+        assert not bound_argument
+        arg_var = self._scalar_argument_target(
             orig_var,
-            decision,
-            collect_arg,
-            bound_argument,
             is_bind_c_argument,
             arg_var=arg_var,
             bind_c_stack_alias=False,
-            identity_output=True,
         )
+        read_initial = decision.codegen_action is not CodegenAction.IDENTITY_OUTPUT
+        return self._convert_scalar_storage_argument(
+            orig_var, decision, collect_arg, arg_var, read_initial=read_initial
+        )
+
+    def _convert_python_raw_address_argument(
+        self,
+        orig_var,
+        _decision,
+        collect_arg,
+        _bound_argument,
+        _is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
+        """Read a Python raw address value for the completed barrier."""
+        if arg_var is not None:
+            raise ValueError(f"Raw address argument {orig_var.name!r} cannot reuse an existing conversion target")
+        return self._convert_raw_address_argument(orig_var, collect_arg)
 
     def _convert_scalar_argument(
         self,
@@ -1915,7 +1917,6 @@ class CPythonBindingGenerator(BindingGenerator):
         *,
         arg_var=None,
         bind_c_stack_alias,
-        identity_output,
     ):
         """
         Extract the C-compatible scalar FunctionDefArgument from the PythonObject.
@@ -1954,27 +1955,12 @@ class CPythonBindingGenerator(BindingGenerator):
             A dictionary describing the objects necessary to access the argument.
         """
         assert not bound_argument
-        if arg_var is None:
-            class_type = orig_var.class_type
-            if isinstance(class_type, FinalType):
-                class_type = class_type.underlying_type
-            kwargs = {
-                "new_class": Variable,
-                "is_argument": False,
-                "class_type": class_type,
-            }
-            if is_bind_c_argument and bind_c_stack_alias:
-                kwargs["memory_handling"] = "stack"
-            elif getattr(orig_var, "is_optional", False):
-                kwargs["memory_handling"] = "alias"
-            arg_var = orig_var.clone(
-                self.scope.get_expected_name(orig_var.name),
-                **kwargs,
-            )
-            self.scope.insert_variable(arg_var, orig_var.name)
-
-        if identity_output:
-            return self._convert_identity_scalar_output_argument(orig_var, decision, collect_arg, arg_var)
+        arg_var = self._scalar_argument_target(
+            orig_var,
+            is_bind_c_argument,
+            arg_var=arg_var,
+            bind_c_stack_alias=bind_c_stack_alias,
+        )
 
         dtype = orig_var.dtype
         try:
@@ -2001,12 +1987,35 @@ class CPythonBindingGenerator(BindingGenerator):
 
         return {"body": body, "args": [arg_var]}
 
-    def _convert_identity_scalar_output_argument(self, orig_var, decision, collect_arg, arg_var):
-        """Use a writable 0-D NumPy array as storage for an identity scalar output."""
+    def _scalar_argument_target(self, orig_var, is_bind_c_argument, *, arg_var, bind_c_stack_alias):
+        """Create or reuse the scalar C argument target selected by Python-barrier dispatch."""
+        if arg_var is not None:
+            return arg_var
+        class_type = orig_var.class_type
+        if isinstance(class_type, FinalType):
+            class_type = class_type.underlying_type
+        kwargs = {
+            "new_class": Variable,
+            "is_argument": False,
+            "class_type": class_type,
+        }
+        if getattr(orig_var, "is_optional", False):
+            kwargs["memory_handling"] = "alias"
+        elif is_bind_c_argument and bind_c_stack_alias:
+            kwargs["memory_handling"] = "stack"
+        arg_var = orig_var.clone(
+            self.scope.get_expected_name(orig_var.name),
+            **kwargs,
+        )
+        self.scope.insert_variable(arg_var, orig_var.name)
+        return arg_var
+
+    def _convert_scalar_storage_argument(self, orig_var, decision, collect_arg, arg_var, *, read_initial=True):
+        """Use caller-supplied rank-0 NumPy storage for a scalar contract."""
         try:
             type_ref = numpy_dtype_registry[orig_var.dtype]
         except KeyError:
-            raise TypeError(f"Can't check the type of identity output {orig_var.dtype}") from None
+            raise TypeError(f"Can't check the type of scalar storage {orig_var.dtype}") from None
         pyarray = PointerCast(collect_arg, Variable(NumpyArrayObjectType(), "_", memory_handling="alias"))
         check = pyarray_check(
             CStrStr(convert_to_literal(orig_var.name)),
@@ -2018,11 +2027,35 @@ class CPythonBindingGenerator(BindingGenerator):
         )
         data_value = PointerCast(PyArray_DATA(ObjectAddress(pyarray)), arg_var)
         body = [If(IfSection(Not(check), [Return(self._error_exit_code)]))]
-        body.extend(self._array_access_validation(orig_var, decision, collect_arg))
-        clean_up = [Assign(data_value, arg_var)]
+        if decision.mutates_native:
+            body.extend(self._writable_array_access_validation(orig_var, decision, collect_arg))
+        else:
+            body.extend(self._readable_array_access_validation(orig_var, decision, collect_arg))
+        if read_initial:
+            body.append(Assign(arg_var, data_value))
+        clean_up = [Assign(data_value, arg_var)] if decision.mutates_native else []
         return {"body": body, "args": [arg_var], "clean_up": clean_up}
 
-    def _convert_custom_type_argument(
+    def _convert_raw_address_argument(self, orig_var, collect_arg):
+        """Convert a Python integer address into a raw C pointer argument."""
+        address_var = Variable(
+            BindCPointer(),
+            self.scope.get_new_name(f"{orig_var.name}_addr"),
+            memory_handling="alias",
+        )
+        self.scope.insert_variable(address_var)
+        body = [
+            AliasAssign(address_var, PyLong_AsVoidPtr(collect_arg)),
+            If(IfSection(And(Is(address_var, NIL), PyErr_Occurred()), [Return(self._error_exit_code)])),
+        ]
+        return {"body": body, "args": [ObjectAddress(address_var)], "clean_up": []}
+
+    @staticmethod
+    def _uses_python_raw_address(var) -> bool:
+        """Return whether completed policy extracts this argument as an address."""
+        return ownership_decision_for_codegen_variable(var).python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+
+    def _convert_python_wrapper_instance_argument(
         self,
         orig_var,
         decision,
@@ -2104,7 +2137,7 @@ class CPythonBindingGenerator(BindingGenerator):
         cast.append(AliasAssign(arg_var, cast_c_res))
         return {"body": cast, "args": [arg_var]}
 
-    def _convert_array_argument(
+    def _convert_python_array_storage_argument(
         self,
         orig_var,
         decision,
@@ -2283,7 +2316,7 @@ class CPythonBindingGenerator(BindingGenerator):
                 stride,
             )
 
-    def _convert_call_local_string_argument(
+    def _convert_python_string_value_argument(
         self,
         orig_var,
         decision,
@@ -2293,7 +2326,7 @@ class CPythonBindingGenerator(BindingGenerator):
         *,
         arg_var=None,
     ):
-        """Convert a call-local string argument."""
+        """Read a Python string value for the completed barrier."""
         return self._convert_string_argument(
             orig_var,
             decision,
@@ -2301,49 +2334,7 @@ class CPythonBindingGenerator(BindingGenerator):
             bound_argument,
             is_bind_c_argument,
             arg_var=arg_var,
-            projected_replacement=False,
-        )
-
-    def _convert_identity_string_argument(
-        self,
-        orig_var,
-        decision,
-        collect_arg,
-        bound_argument,
-        is_bind_c_argument,
-        *,
-        arg_var=None,
-    ):
-        """Convert a string output argument whose mutation is not projected."""
-        return self._convert_string_argument(
-            orig_var,
-            decision,
-            collect_arg,
-            bound_argument,
-            is_bind_c_argument,
-            arg_var=arg_var,
-            projected_replacement=False,
-        )
-
-    def _convert_replacement_string_argument(
-        self,
-        orig_var,
-        decision,
-        collect_arg,
-        bound_argument,
-        is_bind_c_argument,
-        *,
-        arg_var=None,
-    ):
-        """Convert an immutable string argument that returns a replacement."""
-        return self._convert_string_argument(
-            orig_var,
-            decision,
-            collect_arg,
-            bound_argument,
-            is_bind_c_argument,
-            arg_var=arg_var,
-            projected_replacement=True,
+            projected_replacement=decision.codegen_action is CodegenAction.COPY_IN_OUT,
         )
 
     def _convert_string_argument(
@@ -2564,10 +2555,11 @@ class CPythonBindingGenerator(BindingGenerator):
         is_alias = decision.borrowed
         setup = self._allocate_class_instance(python_res, python_res.cls_base.scope, is_alias)
         if is_bind_c:
-            c_res = orig_var.clone(
+            result_source = wrapped_var.new_var if isinstance(wrapped_var, BindCVariable) else wrapped_var
+            c_res = result_source.clone(
                 self.scope.get_new_name(orig_var.name),
                 is_argument=False,
-                memory_handling="alias",
+                memory_handling=result_source.memory_handling,
                 new_class=Variable,
             )
             self.scope.insert_variable(c_res, orig_var.name)
@@ -2617,7 +2609,10 @@ class CPythonBindingGenerator(BindingGenerator):
         """
         name = getattr(orig_var, "name", "tmp")
         py_res = self._new_python_object(f"{name}_obj", orig_var.dtype)
-        c_res = Variable(orig_var.class_type, self.scope.get_new_name(name))
+        c_res = Variable(
+            orig_var.class_type,
+            self.scope.get_new_name(name),
+        )
         self.scope.insert_variable(c_res)
 
         body = [AliasAssign(py_res, FunctionCall(C_to_Python(c_res), [c_res]))]
@@ -3835,7 +3830,10 @@ class CPythonBindingGenerator(BindingGenerator):
         rank = arg.rank
         error_code = ()
         dtype = arg.dtype
-        if isinstance(dtype, CustomDataType):
+        uses_raw_address = self._uses_python_raw_address(arg)
+        if uses_raw_address:
+            type_check_condition = Ne(PyLong_Check(py_obj), convert_to_literal(0))
+        elif isinstance(dtype, CustomDataType):
             python_cls_base = self.scope.find(dtype.name, "classes", raise_if_missing=True)
             type_check_condition = PyObject_TypeCheck(py_obj, python_cls_base.type_object)
         elif isinstance(dtype, StringType):
@@ -3909,7 +3907,7 @@ class CPythonBindingGenerator(BindingGenerator):
         else:
             raise TypeError(f"Can't check the type of an array of {arg.class_type}")
 
-        if raise_error and not isinstance(arg.class_type, NumpyNDArrayType):
+        if raise_error and (uses_raw_address or not isinstance(arg.class_type, NumpyNDArrayType)):
             # No error code required for arrays as the error is raised inside pyarray_check
             python_error = PyArgumentError(
                 PyTypeError,
@@ -4842,6 +4840,8 @@ class CPythonBindingGenerator(BindingGenerator):
         if n_results == 1:
             res = results[0]
             func_call = func(*args)
+            if func_call.is_alias and self._returns_address_projected_value(func):
+                return Assign(res, func_call)
             if func_call.is_alias:
                 if isinstance(res, PointerCast):
                     res = res.obj
@@ -4850,6 +4850,18 @@ class CPythonBindingGenerator(BindingGenerator):
                 return AliasAssign(res, func_call)
             return Assign(res, func_call)
         return Assign(results, func(*args))
+
+    @staticmethod
+    def _returns_address_projected_value(func) -> bool:
+        """Return whether an alias-marked native result is emitted as a value result."""
+        result = getattr(func.results, "var", NIL)
+        original = getattr(result, "original_var", result)
+        decision = getattr(original, "ownership_decision", None)
+        return bool(
+            decision is not None
+            and decision.kind is ObjectKind.SCALAR
+            and decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+        )
 
     @staticmethod
     def _native_call_holds_gil(original_func, wrapped_args, *, force_hold=False):

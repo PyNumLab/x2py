@@ -25,10 +25,10 @@ def test_tutorial_shared_declarator_backend_builds_layered_variable_type():
     assert type_.components[-1].qualifiers == [CConst()]
 
 
-def test_tutorial_visit_file_dispatches_declaration_roles_through_one_model():
+def test_tutorial_parse_file_dispatches_declaration_roles_through_one_model():
     from x2py.c_parser import CParser, CStruct
 
-    parsed = CParser().visit_file(
+    parsed = CParser().parse_file(
         """
 typedef int api_status;
 struct request { int id; };
@@ -49,7 +49,7 @@ extern int request_count;
 def test_tutorial_preprocessed_input_reuses_parsing_and_remaps_locations():
     from x2py.c_parser import CParser
 
-    parsed = CParser().visit_file(
+    parsed = CParser().parse_file(
         '# 24 "include/api.h"\nint expanded_api(void);\n',
         filename="generated.i",
     )

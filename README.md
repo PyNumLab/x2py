@@ -117,9 +117,10 @@ Expected contract (`contracts/__init__.pyi`):
 
 ```python
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
-    value: Ref(Const(Float64)),
-    factor: Ref(Const(Float64))
+    value: Const(Float64),
+    factor: Const(Float64)
 ) -> Float64: ...
 ```
 
@@ -275,9 +276,10 @@ python3 -m x2py scale.f90 --pyi
 File: scale.f90
 Root contract: scale/scale.pyi
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
-    value: Ref(Const(Float64)),
-    factor: Ref(Const(Float64))
+    value: Const(Float64),
+    factor: Const(Float64)
 ) -> Float64: ...
 ```
 

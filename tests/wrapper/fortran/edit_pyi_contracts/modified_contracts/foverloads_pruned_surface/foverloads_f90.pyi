@@ -11,20 +11,20 @@ class accumulator:
 
 @private
 def convert_integer(
-    value: Ref(Const(Int32))
+    value: Addr(Const(Int32))
 ) -> Int32: ...
 
 @private
 def convert_real(
-    value: Ref(Const(Float64))
+    value: Addr(Const(Float64))
 ) -> Float64: ...
 
 @overload("convert_integer")
 def convert(
-    value: Ref(Const(Int32))
+    value: Addr(Const(Int32))
 ) -> Int32: ...
 
 @overload("convert_real")
 def convert(
-    value: Ref(Const(Float64))
+    value: Addr(Const(Float64))
 ) -> Float64: ...

@@ -32,6 +32,10 @@ POINTER_POLICY_FIELDS = (
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
 PYTHON_VALUE_IMMUTABLE = "immutable"
 PYI_PROJECTED_OUTPUT_METADATA = "pyi_projected_output"
+PYI_ADDRESS_ROLE_METADATA = "pyi_address_role"
+PYI_ADDRESS_ROLE_PROJECTION = "projection"
+PYI_ADDRESS_ROLE_RAW = "raw"
+PYI_SCALAR_STORAGE_CATEGORY = "scalar_storage"
 
 
 class ObjectKind(str, Enum):
@@ -88,6 +92,28 @@ class CodegenAction(str, Enum):
     SNAPSHOT_COPY = "snapshot_copy"
     BORROWED_VIEW = "borrowed_view"
     WRAPPER_INSTANCE = "wrapper_instance"
+    BLOCKED = "blocked"
+
+
+class PythonBarrierAction(str, Enum):
+    SCALAR_VALUE = "scalar_value"
+    SCALAR_STORAGE = "scalar_storage"
+    ARRAY_STORAGE = "array_storage"
+    STRING_VALUE = "string_value"
+    RAW_ADDRESS = "raw_address"
+    WRAPPER_INSTANCE = "wrapper_instance"
+    NONE = "none"
+    BLOCKED = "blocked"
+
+
+class NativeBarrierAction(str, Enum):
+    PASS_VALUE = "pass_value"
+    PASS_CALL_LOCAL_ADDRESS = "pass_call_local_address"
+    PASS_STORAGE_ADDRESS = "pass_storage_address"
+    PASS_RAW_ADDRESS = "pass_raw_address"
+    PASS_ARRAY_DESCRIPTOR = "pass_array_descriptor"
+    PASS_WRAPPER_ADDRESS = "pass_wrapper_address"
+    NONE = "none"
     BLOCKED = "blocked"
 
 
@@ -152,6 +178,44 @@ class PolicyProjectionDispatcher:
             raise ValueError(
                 f"No projection handler for {name!r}: "
                 f"{decision.kind.value}/{decision.codegen_action.value}/projects_result={decision.projects_result}"
+            ) from None
+
+    def dispatch(self, target: Any, var: Any, *args: Any, **kwargs: Any) -> Any:
+        decision = ownership_decision_for_codegen_variable(var)
+        name = str(getattr(var, "name", type(var).__name__))
+        handler = getattr(target, self.handler_name_for_decision(decision, name))
+        return handler(var, decision, *args, **kwargs)
+
+
+@dataclass(frozen=True)
+class PythonBarrierDispatcher:
+    handlers: Mapping[PythonBarrierAction, str]
+
+    def handler_name_for_decision(self, decision: OwnershipDecision, name: str) -> str:
+        try:
+            return self.handlers[decision.python_barrier_action]
+        except KeyError:
+            raise ValueError(
+                f"No Python-barrier handler for {name!r}: {decision.python_barrier_action.value}"
+            ) from None
+
+    def dispatch(self, target: Any, var: Any, *args: Any, **kwargs: Any) -> Any:
+        decision = ownership_decision_for_codegen_variable(var)
+        name = str(getattr(var, "name", type(var).__name__))
+        handler = getattr(target, self.handler_name_for_decision(decision, name))
+        return handler(var, decision, *args, **kwargs)
+
+
+@dataclass(frozen=True)
+class NativeBarrierDispatcher:
+    handlers: Mapping[NativeBarrierAction, str]
+
+    def handler_name_for_decision(self, decision: OwnershipDecision, name: str) -> str:
+        try:
+            return self.handlers[decision.native_barrier_action]
+        except KeyError:
+            raise ValueError(
+                f"No native-barrier handler for {name!r}: {decision.native_barrier_action.value}"
             ) from None
 
     def dispatch(self, target: Any, var: Any, *args: Any, **kwargs: Any) -> Any:
@@ -316,6 +380,8 @@ class OwnershipDecision:
     storage_mode: StorageMode = StorageMode.STACK
     boundary_storage_mode: StorageMode | None = None
     codegen_action: CodegenAction = CodegenAction.BLOCKED
+    python_barrier_action: PythonBarrierAction = PythonBarrierAction.BLOCKED
+    native_barrier_action: NativeBarrierAction = NativeBarrierAction.BLOCKED
     nullable: bool = False
     borrowed: bool = False
     mutates_native: bool = False
@@ -348,6 +414,9 @@ class _StorageFacts:
     is_ndarray: bool = False
     is_string: bool = False
     is_custom: bool = False
+    storage_kind: str = "value"
+    address_role: str | None = None
+    scalar_storage: bool = False
     metadata: Mapping[str, Any] | None = None
 
 
@@ -375,12 +444,17 @@ class OwnershipPolicyResolver:
         decision = self._complete_immutable_policy(decision, facts, context)
         decision = self._validate_result_projection(decision, context)
         decision = self._validate_policy_combination(decision)
-        return replace(
+        completed = replace(
             decision,
             boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
             codegen_action=self._codegen_action(decision, context),
             projects_result=context.projects_result,
             python_visible=context.python_visible,
+        )
+        return replace(
+            completed,
+            python_barrier_action=self._python_barrier_action(completed, facts, context),
+            native_barrier_action=self._native_barrier_action(completed, facts, context),
         )
 
     def decide_semantic_variable(
@@ -502,6 +576,10 @@ class OwnershipPolicyResolver:
         return ObjectKind.SCALAR
 
     def _scalar_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.scalar_storage:
+            return self._scalar_storage_decision(facts, context)
+        if facts.address_role == PYI_ADDRESS_ROLE_PROJECTION:
+            return self._address_projection_scalar_decision(facts, context)
         if facts.pointer:
             return self._pointer_scalar_decision(facts, context)
         if context.is_result:
@@ -545,6 +623,62 @@ class OwnershipPolicyResolver:
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
             reason="scalar input is converted for the call only",
+        )
+
+    @staticmethod
+    def _scalar_storage_decision(facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_result:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.BY_VALUE,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                reason="scalar storage is returned as a Python value",
+            )
+        if context.intent in {"out", "inout"}:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.CALLER,
+                TransferMode.IN_PLACE,
+                DestructionPolicy.CALLER,
+                mutates_native=True,
+                reason="rank-0 scalar storage mutates caller-provided NumPy storage",
+            )
+        return OwnershipDecision(
+            ObjectKind.SCALAR,
+            OwnershipOwner.CALLER,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.NONE,
+            reason="rank-0 scalar storage is borrowed for the duration of the call",
+        )
+
+    @staticmethod
+    def _address_projection_scalar_decision(facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_result:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.BY_VALUE,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                reason="address-projected scalar result is returned as a Python value",
+            )
+        if context.intent == "inout" and context.projects_result:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
+                reason="address-projected scalar value uses mutable native storage and a replacement return",
+            )
+        return OwnershipDecision(
+            ObjectKind.SCALAR,
+            OwnershipOwner.CALLER,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.NONE,
+            storage_mode=StorageMode.ALIAS,
+            mutates_native=context.intent in {"out", "inout"},
+            reason="address-projected scalar value passes the address of call-local native storage",
         )
 
     @staticmethod
@@ -1121,6 +1255,70 @@ class OwnershipPolicyResolver:
         return _CODEGEN_ACTION_BY_TRANSFER[decision.transfer]
 
     @staticmethod
+    def _python_barrier_action(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> PythonBarrierAction:
+        if decision.is_blocked:
+            return PythonBarrierAction.BLOCKED
+        if not context.is_argument or not context.python_visible:
+            return PythonBarrierAction.NONE
+        if facts.address_role == PYI_ADDRESS_ROLE_RAW:
+            return PythonBarrierAction.RAW_ADDRESS
+        if facts.scalar_storage or (
+            decision.kind is ObjectKind.SCALAR and decision.codegen_action is CodegenAction.IDENTITY_OUTPUT
+        ):
+            return PythonBarrierAction.SCALAR_STORAGE
+        if decision.kind is ObjectKind.SCALAR:
+            return PythonBarrierAction.SCALAR_VALUE
+        if decision.kind is ObjectKind.STRING:
+            return PythonBarrierAction.STRING_VALUE
+        if decision.kind is ObjectKind.NUMPY_ARRAY:
+            return PythonBarrierAction.ARRAY_STORAGE
+        if decision.kind is ObjectKind.DERIVED_TYPE:
+            return PythonBarrierAction.WRAPPER_INSTANCE
+        return PythonBarrierAction.BLOCKED
+
+    @staticmethod
+    def _native_barrier_action(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> NativeBarrierAction:
+        if decision.is_blocked:
+            return NativeBarrierAction.BLOCKED
+        if not context.is_argument:
+            return NativeBarrierAction.NONE
+        if facts.address_role == PYI_ADDRESS_ROLE_RAW:
+            return NativeBarrierAction.PASS_RAW_ADDRESS
+        if facts.scalar_storage or (
+            decision.kind is ObjectKind.SCALAR
+            and decision.codegen_action in {CodegenAction.IN_PLACE_ARGUMENT, CodegenAction.IDENTITY_OUTPUT}
+        ):
+            return NativeBarrierAction.PASS_STORAGE_ADDRESS
+        if (
+            decision.kind is ObjectKind.SCALAR
+            and decision.storage_mode is StorageMode.ALIAS
+            and facts.address_role != PYI_ADDRESS_ROLE_PROJECTION
+        ):
+            return NativeBarrierAction.PASS_STORAGE_ADDRESS
+        if decision.kind is ObjectKind.NUMPY_ARRAY:
+            return NativeBarrierAction.PASS_ARRAY_DESCRIPTOR
+        if decision.kind is ObjectKind.STRING:
+            return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+        if decision.kind is ObjectKind.DERIVED_TYPE:
+            return NativeBarrierAction.PASS_WRAPPER_ADDRESS
+        if decision.kind is ObjectKind.SCALAR:
+            if (
+                facts.address_role == PYI_ADDRESS_ROLE_PROJECTION
+                or decision.codegen_action is CodegenAction.COPY_IN_OUT
+            ):
+                return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+            return NativeBarrierAction.PASS_VALUE
+        return NativeBarrierAction.BLOCKED
+
+    @staticmethod
     def _enum_value(enum_type: type[Enum], value: object, default: Any) -> Any:
         if value is None:
             return default
@@ -1149,6 +1347,7 @@ class OwnershipPolicyResolver:
         metadata = getattr(semantic_type, "metadata", {}) or {}
         storage = getattr(semantic_type, "storage", None)
         array = getattr(storage, "array", None) if storage is not None else None
+        storage_metadata = getattr(storage, "metadata", {}) if storage is not None else {}
         name = str(getattr(semantic_type, "name", ""))
         rank = int(getattr(semantic_type, "rank", 0) or 0)
         is_string = name == "String"
@@ -1160,6 +1359,13 @@ class OwnershipPolicyResolver:
             pointer=bool(getattr(array, "pointer", False) or metadata.get("fortran_pointer")),
             is_string=is_string,
             is_custom=is_custom,
+            storage_kind=str(getattr(storage, "kind", "value") if storage is not None else "value"),
+            address_role=(
+                str(storage_metadata.get(PYI_ADDRESS_ROLE_METADATA))
+                if storage_metadata.get(PYI_ADDRESS_ROLE_METADATA) is not None
+                else None
+            ),
+            scalar_storage=bool(getattr(array, "category", None) == PYI_SCALAR_STORAGE_CATEGORY),
             metadata=metadata,
         )
 
@@ -1228,3 +1434,11 @@ def ownership_decision_for_codegen_variable(var: Any) -> OwnershipDecision:
 
 def codegen_action_for_variable(var: Any) -> CodegenAction:
     return ownership_decision_for_codegen_variable(var).codegen_action
+
+
+def python_barrier_action_for_variable(var: Any) -> PythonBarrierAction:
+    return ownership_decision_for_codegen_variable(var).python_barrier_action
+
+
+def native_barrier_action_for_variable(var: Any) -> NativeBarrierAction:
+    return ownership_decision_for_codegen_variable(var).native_barrier_action

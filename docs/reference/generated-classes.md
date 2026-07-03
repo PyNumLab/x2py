@@ -81,7 +81,7 @@ class accumulator:
     total: Float64 = 0.0
 
     @overload("accumulator_add_integer")
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def add(
         self,
         value: Const(Int32)

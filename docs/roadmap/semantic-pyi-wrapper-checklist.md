@@ -59,6 +59,33 @@ before starting implementation.
 
 ## Completed evidence
 
+### Barrier Policy Split And Model Visitor Dispatch
+
+Python-extension extraction and native handoff are separate completed policy actions.
+Policy completion records a Python barrier action and a native barrier action
+on each `OwnershipDecision` before `ir2ast.py`. Python binding generation
+dispatches from the Python barrier action; the native bridge dispatches
+argument handoff from the native barrier action.
+
+- [x] Python barrier actions cover scalar value, rank-0 scalar storage, NumPy
+  array storage, Python string value, raw address value, and generated wrapper
+  instance extraction.
+- [x] Native barrier actions cover direct value, call-local address, storage
+  address, raw address, packed array descriptor, and wrapper native-address
+  handoff.
+- [x] Bridge and binding argument routers no longer infer barrier policy from
+  datatype, `intent`, `is_alias`, local memory checks, or
+  `fortran_array_category`; the remaining category field is ABI metadata.
+- [x] Parser grammar units, parser-model converters, `.pyi` AST conversion,
+  semantic lowering, bridges, bindings, and printers now share
+  `x2py.visitor.ClassVisitor` and `_visit_<ClassName>` handlers instead of
+  parallel visitor names or local `isinstance` dispatch ladders.
+- [x] Structural evidence lives in `tests/semantics/test_visitor_protocol.py`
+  and `tests/semantics/test_ownership_policy.py`; runtime evidence covers scalar
+  value/address projection, rank-0 scalar storage, arrays, strings, raw
+  addresses, and wrapper instances through focused `tests/wrapper/fortran/`
+  slices.
+
 ### Stage 1 — Searchable Test Layout, Contract Output, And Fixtures
 
 Runtime wrapper tests are organized by stable subjects under

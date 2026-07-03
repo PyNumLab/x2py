@@ -5,5 +5,5 @@ def scale_with_status(
         Transfer("copy_return"),
         Destruction("native_owner"),
     ],
-    status: Annotated[Ref(Int32), Intent("out")]
+    status: Annotated[Addr(Int32), Intent("out")]
 ) -> Returns["values", Float64[:]]: ...

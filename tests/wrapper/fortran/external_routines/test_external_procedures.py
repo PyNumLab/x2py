@@ -309,8 +309,8 @@ def test_compact_blas_like_folder_generates_one_external_entry_and_preserves_sep
 
     assert sorted(path.relative_to(entry.parent).as_posix() for path in entry.parent.rglob("*.pyi")) == ["__init__.pyi"]
     text = entry.read_text(encoding="utf-8")
-    assert "@external\n@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2), Arg(3)])\ndef daxpy_like(" in text
-    assert "@external\n@native_call([Ref(Arg(0)), Arg(1), Arg(2)])\ndef ddot_like(" in text
+    assert "@external\n@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Arg(3)])\ndef daxpy_like(" in text
+    assert "@external\n@native_call([Addr(Arg(0)), Arg(1), Arg(2)])\ndef ddot_like(" in text
     assert generated_result.native_build_plan.to_dict()["link_items"] == [
         {"kind": "object", "path": str(tmp_path / "native" / "daxpy_like.o")},
         {"kind": "object", "path": str(tmp_path / "native" / "ddot_like.o")},

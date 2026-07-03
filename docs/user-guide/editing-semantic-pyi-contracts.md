@@ -257,7 +257,7 @@ An edited class may bind `__init__` to one concrete native initializer:
 ```python
 class state:
     @bind("init_state")
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def __init__(self, size: Const(Int32)) -> None: ...
 ```
 
@@ -273,16 +273,17 @@ does not need `@native_call`:
 
 ```python
 def scalar_status(
-    base: Ref(Const(Int32)),
-    status: Annotated[Ref(Int32), Intent("out")],
+    base: Const(Int32[()]),
+    status: Annotated[Int32[()], Intent("out")],
 ) -> None: ...
 ```
 
-The caller supplies writable storage for the `intent(out)` scalar:
+The caller supplies scalar storage objects for the visible native scalar slots:
 
 ```python
+base = np.array(4, dtype=np.int32)
 status = np.empty((), dtype=np.int32)
-assert module.scalar_status(np.int32(4), status) is None
+assert module.scalar_status(base, status) is None
 assert status[()] == np.int32(15)
 ```
 
@@ -293,6 +294,22 @@ order calls. An ordinary Python `str` cannot observe mutation of the temporary
 native character buffer; use a projected replacement when Python must see the
 new string.
 
+For a native-order scalar character dummy, keep the Python boundary as
+`String[n]`:
+
+```python
+def fixed_inout(label: String[8]) -> None: ...
+```
+
+The caller passes `str`. x2py creates fixed-width character storage, passes its
+address to the native call, and discards native mutation because the signature
+returns `None`. Add a replacement return when Python should receive the mutated
+value:
+
+```python
+def fixed_inout(label: String[8]) -> Returns["label", String[8]]: ...
+```
+
 ### Project native arguments into Python returns
 
 Use `Returns[...]` for the Python result contract and `@native_call(...)` when
@@ -300,7 +317,7 @@ the native call needs hidden output storage, reordered arguments, constants,
 lengths, presence flags, shapes, or work buffers:
 
 ```python
-@native_call([Ref(Arg(0)), Return("status", 0)])
+@native_call([Addr(Arg(0)), Return("status", 0)])
 def scalar_status(
     base: Const(Int32),
 ) -> Returns["status", Int32]: ...
@@ -319,7 +336,7 @@ or an explicit call-local discarded-mutation policy:
 ```python
 def scale_with_status(
     values: Annotated[Float64[:], Immutable],
-    status: Annotated[Ref(Int32), Intent("out")],
+    status: Annotated[Int32[()], Intent("out")],
 ) -> Returns["values", Float64[:]]: ...
 ```
 
@@ -485,7 +502,7 @@ wrapper allocates instance -> component allocates -> NumPy view retains wrapper
 #### NumPy-owned copy
 
 ```python
-@native_call([Ref(Arg(0)), Return("values", 0)])
+@native_call([Addr(Arg(0)), Return("values", 0)])
 def build_values(
     n: Const(Int32),
 ) -> Annotated[

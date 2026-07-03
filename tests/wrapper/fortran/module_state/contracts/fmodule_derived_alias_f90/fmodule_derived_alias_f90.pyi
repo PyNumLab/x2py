@@ -3,7 +3,7 @@ class box:
 
     values: Annotated[Float64[:], Allocatable]
 
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def allocate_values(
         self,
         n: Const(Int32)
@@ -13,7 +13,7 @@ class box:
 
 current: Annotated[box, Aliased]
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def allocate_current(
     n: Const(Int32)
 ) -> None: ...

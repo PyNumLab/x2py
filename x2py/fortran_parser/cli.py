@@ -66,7 +66,7 @@ def _parse_paths(paths: list[str]) -> dict[str, dict]:
 
     for p in sorted(set(expanded)):
         code = p.read_text(encoding="utf-8")
-        parsed = parser.visit_file(code, filename=str(p))
+        parsed = parser.parse_file(code, filename=str(p))
         out[str(p)] = {
             "signatures": [_to_dict_no_parent(s) for s in parsed.procedures],
             "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
@@ -89,7 +89,7 @@ def _semantic_report(paths: list[str]) -> dict[str, dict]:
 
     for fname in parsed:
         code = Path(fname).read_text(encoding="utf-8")
-        fobj = parser.visit_file(code, filename=fname)
+        fobj = parser.parse_file(code, filename=fname)
         modules = [fortran_module_to_semantic_module(m) for m in fobj.modules]
         semantic_out[fname] = {
             "semantic_modules": [asdict(m) for m in modules],

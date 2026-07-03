@@ -27,7 +27,7 @@ The generated contract for the scale function is:
 
 ```python
 @external
-@native_call([Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
     value: Const(Float64),
     factor: Const(Float64),
@@ -74,7 +74,7 @@ end module results
 Generated contract:
 
 ```python
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def squares(
     size: Const(Int32)
 ) -> Float64[size]: ...

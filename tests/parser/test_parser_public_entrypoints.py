@@ -20,16 +20,16 @@ contains
 end module alias_mod
 """
 
-    assert parser.visit_file(module_code).modules[0].name == "alias_mod"
-    assert parser.visit_file(module_code).modules[0].procedures[0].name == "ping"
-    assert "alias_mod" in parser.visit_project({"alias.f90": module_code}).modules
-    assert "alias_mod.ping" in parser.visit_project({"alias.f90": module_code}).procedures
+    assert parser.parse_file(module_code).modules[0].name == "alias_mod"
+    assert parser.parse_file(module_code).modules[0].procedures[0].name == "ping"
+    assert "alias_mod" in parser.parse_project({"alias.f90": module_code}).modules
+    assert "alias_mod.ping" in parser.parse_project({"alias.f90": module_code}).procedures
 
-    assert parser.visit_fortran_module("module single_mod\nend module single_mod\n").name == "single_mod"
-    assert parser.visit_fortran_program("program driver\nend program driver\n").name == "driver"
-    assert parser.visit_fortran_derived_type("type :: state_t\nend type state_t\n").name == "state_t"
+    assert parser.parse_module("module single_mod\nend module single_mod\n").name == "single_mod"
+    assert parser.parse_program("program driver\nend program driver\n").name == "driver"
+    assert parser.parse_derived_type("type :: state_t\nend type state_t\n").name == "state_t"
     assert (
-        parser.visit_fortran_interface(
+        parser.parse_interface(
             """
 interface callback
   subroutine cb()
@@ -39,20 +39,16 @@ end interface callback
         ).name
         == "callback"
     )
+    assert parser.parse_submodule("submodule (parent_mod) child_mod\nend submodule child_mod\n").name == "child_mod"
     assert (
-        parser.visit_fortran_submodule("submodule (parent_mod) child_mod\nend submodule child_mod\n").name
-        == "child_mod"
-    )
-    assert (
-        parser.visit_fortran_block_data_unit("block data init_data\n  integer seed\nend block data init_data\n").name
-        == "init_data"
+        parser.parse_block_data("block data init_data\n  integer seed\nend block data init_data\n").name == "init_data"
     )
 
     with pytest.raises(FortranParseError, match="none were found"):
-        parser.visit_fortran_module("program not_a_module\nend program not_a_module\n")
+        parser.parse_module("program not_a_module\nend program not_a_module\n")
 
     with pytest.raises(FortranParseError, match="found 2"):
-        parser.visit_fortran_module(
+        parser.parse_module(
             """
 module first_mod
 end module first_mod
@@ -64,7 +60,7 @@ end module second_mod
 
 def test_x2py_package_contains_parser_and_semantics_subpackages():
     parsed_c = parse_c_file("int add(int a, int b);\n")
-    parsed_fortran = PackageFortranParser().visit_file(
+    parsed_fortran = PackageFortranParser().parse_file(
         """
 subroutine work(n)
   integer, intent(in) :: n
@@ -109,7 +105,7 @@ def test_public_instance_visitor_entrypoints_use_source_strings():
     parser = FortranParser()
 
     assert (
-        parser.visit_file(
+        parser.parse_file(
             """
 subroutine alias_proc()
 end subroutine alias_proc
@@ -121,7 +117,7 @@ end subroutine alias_proc
     )
     assert (
         "alias_mod"
-        in parser.visit_project(
+        in parser.parse_project(
             {
                 "alias_mod.f90": """
 module alias_mod
@@ -132,7 +128,7 @@ end module alias_mod
     )
 
     with pytest.raises(FortranParseError, match="only standalone procedures were found"):
-        parser.visit_fortran_module(
+        parser.parse_module(
             """
 subroutine lone_proc()
 end subroutine lone_proc
@@ -170,7 +166,7 @@ end subroutine lone_proc
     ],
 )
 def test_public_derived_type_visitor_collects_nested_scope_sources(source, expected_module):
-    dtype = FortranParser().visit_fortran_derived_type(source, filename="nested_type.f90")
+    dtype = FortranParser().parse_derived_type(source, filename="nested_type.f90")
 
     assert dtype.name == "file_state"
     assert dtype.module == expected_module

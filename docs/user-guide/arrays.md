@@ -46,20 +46,20 @@ end module array_ops
 Inspecting `arrays.f90` prints these array contracts:
 
 ```python
-@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2)])
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2)])
 def scale_matrix(
     rows: Const(Int32),
     columns: Const(Int32),
     values: Annotated[Float64[rows, columns], ORDER_F]
 ) -> None: ...
 
-@native_call([Ref(Arg(0)), Arg(1)])
+@native_call([Addr(Arg(0)), Arg(1)])
 def shift(
     size: Const(Int32),
     values: Float64[size - 1 - 0 + 1]
 ) -> None: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def automatic_vector(
     size: Const(Int32)
 ) -> Float64[size]: ...

@@ -191,14 +191,14 @@ def parse_c_fixture_project(paths: list[Path]):
             recipe = dict(preprocessed.recipe)
             recipe["macros"] = [item for item in recipe["macros"] if item.get("path") in root_paths]
             filename = path.relative_to(C_DATA_DIR).as_posix()
-            parsed = parser.visit_file(
+            parsed = parser.parse_file(
                 preprocessed.source,
                 filename=filename,
                 preprocessing="compiler",
             )
             attach_preprocessing_recipe(parsed, recipe)
             parsed_files[filename] = parsed
-    return parser.visit_parsed_project(parsed_files)
+    return parser._assemble_project(parsed_files)
 
 
 def c_semantic_module_for_fixture_project(project_key: Path, paths: list[Path]):

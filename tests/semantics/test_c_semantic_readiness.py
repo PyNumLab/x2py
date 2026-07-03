@@ -75,9 +75,9 @@ def test_completed_pyi_callback_policy_can_make_c_api_semantically_ready():
 from typing import Any, Callable
 
 def each_item(
-    items: Ref(Any),
-    visit: Callable[[Ref(Any), Ref(Any)], None],
-    userdata: Ref(Any),
+    items: Addr(Any),
+    visit: Callable[[Addr(Any), Addr(Any)], None],
+    userdata: Addr(Any),
 ) -> None: ...
 """,
         module_name="callback_api",

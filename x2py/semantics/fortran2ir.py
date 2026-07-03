@@ -22,6 +22,7 @@ from x2py.fortran_parser.models import (
     FortranUseMapping,
     FortranVariable,
 )
+from x2py.visitor import ClassVisitor
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -179,12 +180,11 @@ def _resolve_compile_time_text(text: str, compile_time_values: dict[str, str]) -
     return re.sub(r"\b[A-Za-z_][A-Za-z0-9_]*\b", replace_symbol, raw)
 
 
-class FortranToIRConverter:
+class FortranToIRConverter(ClassVisitor):
     """Convert parsed Fortran models into semantic IR models.
 
-    The converter is intentionally a small visitor: public compatibility methods
-    delegate to explicit `visit_*` methods, and each visitor method converts one
-    parser model type into the corresponding semantic model type.
+    ``visit`` is the single dispatch entrypoint. Each parsed model class is
+    handled by its matching ``_visit_<ClassName>`` method.
     """
 
     def __init__(
@@ -205,29 +205,12 @@ class FortranToIRConverter:
         }
 
     def visit(self, node, **context):
-        """Dispatch one parsed Fortran model to the matching conversion method."""
-        if isinstance(node, FortranProject):
-            return self.visit_project(node)
-        if isinstance(node, FortranFile):
-            return self.visit_file(node)
-        if isinstance(node, FortranModule):
-            return self.visit_module(node)
-        if isinstance(node, FortranProcedureSignature):
-            return self.visit_procedure(
-                node,
-                visibility=context.get("visibility", "public"),
-                derived_type_context=context.get("derived_type_context"),
-            )
-        if isinstance(node, FortranDerivedType):
-            return self.visit_derived_type(
-                node,
-                procedure_lookup=context.get("procedure_lookup", {}),
-                derived_type_context=context.get("derived_type_context"),
-            )
-        if isinstance(node, FortranArgument):
-            return self.visit_argument(node, derived_type_context=context.get("derived_type_context"))
-        if isinstance(node, FortranVariable):
-            return self.visit_variable(node, derived_type_context=context.get("derived_type_context"))
+        """Dispatch one parsed Fortran model through its class visitor."""
+        return self._visit(node, **context)
+
+    @staticmethod
+    def _visit_not_supported(node):
+        """Reject parser models without a semantic conversion visitor."""
         raise TypeError(f"Unsupported Fortran parse object: {type(node)!r}")
 
     def first_module(self, parsed):
@@ -244,17 +227,31 @@ class FortranToIRConverter:
             return FortranModule(name=module_name or "", procedures=procedures)
         raise TypeError(f"Unsupported Fortran parse object: {type(parsed)!r}")
 
-    def visit_file(self, parsed_file: FortranFile) -> SemanticModule:
+    def _visit_FortranFile(
+        self,
+        parsed_file: FortranFile,
+        *,
+        standalone_module_name: str | None = None,
+    ) -> list[SemanticModule]:
         converter = self._with_additional_wrapped_types(self._wrapped_types_from_file(parsed_file))
-        return converter.visit_module(self.first_module(parsed_file))
+        modules = [converter.visit(module) for module in parsed_file.modules]
+        if parsed_file.procedures:
+            modules.append(
+                converter.procedures_to_semantic_module(
+                    parsed_file.procedures,
+                    name=standalone_module_name or self._standalone_module_name(parsed_file),
+                    callback_interfaces=self._callback_interface_lookup(parsed_file),
+                )
+            )
+        return modules
 
-    def visit_project(self, project: FortranProject) -> list[SemanticModule]:
+    def _visit_FortranProject(self, project: FortranProject) -> list[SemanticModule]:
         converter = self._with_additional_wrapped_types(self._wrapped_types_from_project(project))
         semantic_modules = []
         for parsed_file in project.files:
             file_converter = converter._with_additional_wrapped_types(converter._wrapped_types_from_file(parsed_file))
             semantic_modules.extend(
-                file_converter.visit_module(
+                file_converter.visit(
                     module,
                     callback_interfaces=self._project_callback_interface_lookup(project, module),
                 )
@@ -270,7 +267,31 @@ class FortranToIRConverter:
                 )
         return semantic_modules
 
-    def visit_variable(
+    def _visit_FortranVariable(
+        self,
+        var: FortranVariable,
+        *,
+        derived_type_context: _DerivedTypeContext | None = None,
+        as_type: bool = False,
+        as_data_member: bool = False,
+        intent: str = "in",
+        binding_cls: type[SemanticVariable] = SemanticVariable,
+        source_kind: str = "variable",
+    ) -> SemanticType | SemanticVariable:
+        """Convert one parsed variable through the class visitor protocol."""
+        if as_type:
+            return self._convert_variable_type(var, derived_type_context=derived_type_context)
+        if as_data_member:
+            return self._convert_data_member(
+                var,
+                intent=intent,
+                derived_type_context=derived_type_context,
+                binding_cls=binding_cls,
+                source_kind=source_kind,
+            )
+        return self._convert_variable_type(var, derived_type_context=derived_type_context)
+
+    def _convert_variable_type(
         self,
         var: FortranVariable,
         *,
@@ -325,14 +346,28 @@ class FortranToIRConverter:
             return raw
         return "1"
 
-    def visit_argument(
+    def _visit_FortranArgument(
         self,
         arg: FortranArgument | FortranVariable,
         *,
         intent: str | None = None,
         derived_type_context: _DerivedTypeContext | None = None,
         callback_interfaces: dict[str, FortranProcedureSignature] | None = None,
-    ) -> SemanticArgument:
+        as_data_member: bool = False,
+        as_type: bool = False,
+        binding_cls: type[SemanticVariable] = SemanticVariable,
+        source_kind: str = "variable",
+    ) -> SemanticArgument | SemanticVariable:
+        if as_type:
+            return self._convert_variable_type(arg, derived_type_context=derived_type_context)
+        if as_data_member:
+            return self._convert_data_member(
+                arg,
+                intent=intent or "in",
+                derived_type_context=derived_type_context,
+                binding_cls=binding_cls,
+                source_kind=source_kind,
+            )
         if arg.base_type.lower() == "procedure":
             semantic_type = self._callback_semantic_type(
                 arg,
@@ -340,7 +375,7 @@ class FortranToIRConverter:
                 derived_type_context=derived_type_context,
             )
         else:
-            semantic_type = self.visit_variable(arg, derived_type_context=derived_type_context)
+            semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
         raw_intent = getattr(arg, "intent", "in")
         resolved_intent = intent if intent is not None else raw_intent
         resolved_intent = str(resolved_intent).lower().replace(" ", "")
@@ -365,7 +400,7 @@ class FortranToIRConverter:
             origin=self._argument_origin(arg),
         )
 
-    def visit_data_member(
+    def _convert_data_member(
         self,
         var: FortranArgument | FortranVariable,
         *,
@@ -374,7 +409,7 @@ class FortranToIRConverter:
         binding_cls: type[SemanticVariable] = SemanticVariable,
         source_kind: str = "variable",
     ) -> SemanticVariable:
-        semantic_type = self.visit_variable(var, derived_type_context=derived_type_context)
+        semantic_type = self._convert_variable_type(var, derived_type_context=derived_type_context)
         if semantic_type.storage is not None and semantic_type.storage.array is not None:
             semantic_type.storage.array.allocatable = getattr(var, "allocatable", False)
             semantic_type.storage.array.pointer = getattr(var, "pointer", False)
@@ -438,19 +473,18 @@ class FortranToIRConverter:
         derived_type_context: _DerivedTypeContext | None,
     ) -> SemanticType:
         if getattr(arg, "pointer", False):
-            return self.visit_variable(arg, derived_type_context=derived_type_context)
+            return self._convert_variable_type(arg, derived_type_context=derived_type_context)
         interface_name = str(arg.kind or arg.name).casefold()
         signature = callback_interfaces.get(interface_name)
         if signature is None:
-            return self.visit_variable(arg, derived_type_context=derived_type_context)
+            return self._convert_variable_type(arg, derived_type_context=derived_type_context)
 
         context = self._procedure_derived_type_context(signature, derived_type_context)
         callback_arguments = [
-            self.visit_argument(item, derived_type_context=context)
-            for item in self._projected_procedure_arguments(signature)
+            self.visit(item, derived_type_context=context) for item in self._projected_procedure_arguments(signature)
         ]
         callback_return = (
-            self.visit_variable(signature.result, derived_type_context=context)
+            self.visit(signature.result, derived_type_context=context, as_type=True)
             if signature.result
             else SemanticType("None", dtype="None")
         )
@@ -483,7 +517,7 @@ class FortranToIRConverter:
         )
 
     @staticmethod
-    def visit_enumerator(enumerator: FortranEnumerator, enum: FortranEnum) -> SemanticVariable:
+    def _visit_FortranEnumerator(enumerator: FortranEnumerator, *, enum: FortranEnum) -> SemanticVariable:
         semantic_type = SemanticType(
             "Int32",
             dtype="Int32",
@@ -514,7 +548,7 @@ class FortranToIRConverter:
             ),
         )
 
-    def visit_procedure(
+    def _visit_FortranProcedureSignature(
         self,
         proc: FortranProcedureSignature,
         visibility: str = "public",
@@ -524,7 +558,7 @@ class FortranToIRConverter:
     ) -> SemanticFunction:
         context = self._procedure_derived_type_context(proc, derived_type_context)
         arguments = [
-            self.visit_argument(
+            self.visit(
                 arg,
                 derived_type_context=context,
                 callback_interfaces=callback_interfaces,
@@ -536,7 +570,7 @@ class FortranToIRConverter:
             name=proc.name,
             native_name=proc.name,
             arguments=arguments,
-            return_type=self.visit_variable(proc.result, derived_type_context=context) if proc.result else None,
+            return_type=self.visit(proc.result, derived_type_context=context, as_type=True) if proc.result else None,
             projection=self._procedure_projection(proc, arguments),
             metadata=metadata,
             visibility=visibility,
@@ -549,7 +583,7 @@ class FortranToIRConverter:
             ),
         )
 
-    def visit_derived_type(
+    def _visit_FortranDerivedType(
         self,
         dtype: FortranDerivedType,
         procedure_lookup: dict[str, SemanticFunction] | None = None,
@@ -588,8 +622,9 @@ class FortranToIRConverter:
             name=dtype.name,
             native_name=dtype.name,
             fields=[
-                self.visit_data_member(
+                self.visit(
                     field,
+                    as_data_member=True,
                     intent="in",
                     derived_type_context=context,
                     binding_cls=SemanticField,
@@ -623,7 +658,7 @@ class FortranToIRConverter:
             "target": field.target,
         }
 
-    def visit_module(
+    def _visit_FortranModule(
         self,
         module: FortranModule,
         *,
@@ -635,7 +670,7 @@ class FortranToIRConverter:
             **self._callback_interface_lookup(module),
         }
         semantic_functions = [
-            self.visit_procedure(
+            self.visit(
                 proc,
                 visibility=self._symbol_visibility(module, proc.name),
                 derived_type_context=context,
@@ -646,7 +681,7 @@ class FortranToIRConverter:
         procedure_lookup = {func.name.casefold(): func for func in semantic_functions}
 
         semantic_classes = [
-            self.visit_derived_type(
+            self.visit(
                 dtype,
                 procedure_lookup=procedure_lookup,
                 derived_type_context=context,
@@ -667,7 +702,7 @@ class FortranToIRConverter:
             metadata["readiness_blockers"] = overload_blockers
         common_variables = {name.casefold() for name in module.common_variables}
         enum_constants = [
-            self.visit_enumerator(enumerator, enum)
+            self.visit(enumerator, enum=enum)
             for enum in getattr(module, "enums", [])
             for enumerator in enum.enumerators
         ]
@@ -677,7 +712,7 @@ class FortranToIRConverter:
             overload_sets=overload_sets,
             classes=semantic_classes,
             variables=[
-                self.visit_data_member(var, intent="in", derived_type_context=context)
+                self.visit(var, as_data_member=True, intent="in", derived_type_context=context)
                 for var in getattr(module, "variables", [])
                 if var.name.casefold() not in common_variables
             ]
@@ -692,24 +727,6 @@ class FortranToIRConverter:
             ),
         )
 
-    def visit_file_modules(
-        self,
-        parsed_file: FortranFile,
-        *,
-        standalone_module_name: str | None = None,
-    ) -> list[SemanticModule]:
-        converter = self._with_additional_wrapped_types(self._wrapped_types_from_file(parsed_file))
-        modules = [converter.visit_module(module) for module in parsed_file.modules]
-        if parsed_file.procedures:
-            modules.append(
-                converter.procedures_to_semantic_module(
-                    parsed_file.procedures,
-                    name=standalone_module_name or self._standalone_module_name(parsed_file),
-                    callback_interfaces=self._callback_interface_lookup(parsed_file),
-                )
-            )
-        return modules
-
     def procedures_to_semantic_module(
         self,
         procedures: list[FortranProcedureSignature],
@@ -719,33 +736,12 @@ class FortranToIRConverter:
     ) -> SemanticModule:
         return SemanticModule(
             name=name,
-            functions=[self.visit_procedure(proc, callback_interfaces=callback_interfaces) for proc in procedures],
+            functions=[self.visit(proc, callback_interfaces=callback_interfaces) for proc in procedures],
             origin=SemanticOrigin(
                 source_language="fortran",
                 source_kind="external_root",
             ),
         )
-
-    def variable_to_semantic_type(self, var) -> SemanticType:
-        return self.visit_variable(var)
-
-    def argument_to_semantic_argument(self, arg) -> SemanticArgument:
-        return self.visit_argument(arg)
-
-    def procedure_to_semantic_function(self, proc, visibility: str = "public") -> SemanticFunction:
-        return self.visit_procedure(proc, visibility=visibility)
-
-    def derived_type_to_semantic_class(
-        self,
-        dtype,
-        procedure_lookup: dict[str, SemanticFunction],
-    ) -> SemanticClass:
-        return self.visit_derived_type(dtype, procedure_lookup=procedure_lookup)
-
-    def module_to_semantic_module(self, module) -> SemanticModule:
-        if isinstance(module, FortranFile):
-            return self.visit_file(module)
-        return self.visit_module(self.first_module(module))
 
     @staticmethod
     def _module_imports(module: FortranModule) -> list[str | SemanticImport]:
@@ -761,20 +757,6 @@ class FortranToIRConverter:
                     )
                 )
         return imports
-
-    def file_to_semantic_modules(
-        self,
-        parsed_file: FortranFile,
-        *,
-        standalone_module_name: str | None = None,
-    ) -> list[SemanticModule]:
-        return self.visit_file_modules(
-            parsed_file,
-            standalone_module_name=standalone_module_name,
-        )
-
-    def project_to_semantic_modules(self, project: FortranProject) -> list[SemanticModule]:
-        return self.visit_project(project)
 
     def _with_additional_wrapped_types(
         self,
@@ -1337,7 +1319,7 @@ class FortranToIRConverter:
             if not interface.name or interface.abstract:
                 continue
             inline_lookup = {
-                signature.name.casefold(): self.visit_procedure(
+                signature.name.casefold(): self.visit(
                     signature,
                     visibility=self._symbol_visibility(module, interface.name),
                     derived_type_context=context,
@@ -1944,20 +1926,66 @@ def _iter_fortran_variable_contexts(
         parameters, procedure arguments/results/locals, and type fields with
         the unit that owns each symbol.
     """
-    if isinstance(node, FortranProject):
-        yield from _iter_project_variable_contexts(node)
-    elif isinstance(node, FortranFile):
-        yield from _iter_file_variable_contexts(node)
-    elif isinstance(node, FortranModule | FortranSubmodule):
-        yield from _iter_module_variable_contexts(node)
-    elif isinstance(node, FortranProgram):
-        yield from _iter_program_variable_contexts(node)
-    elif isinstance(node, FortranBlockData):
-        yield from _iter_block_data_variable_contexts(node)
-    elif isinstance(node, FortranProcedureSignature):
-        yield from _iter_procedure_variable_contexts(node, module_name)
-    elif isinstance(node, FortranDerivedType):
-        yield from _iter_derived_type_variable_contexts(node, module_name)
+    yield from _FortranVariableContextVisitor()._visit(
+        node,
+        module_name=module_name,
+        unit_kind=unit_kind,
+        unit_name=unit_name,
+    )
+
+
+class _FortranVariableContextVisitor(ClassVisitor):
+    """Traverse parsed Fortran models through the shared class visitor protocol."""
+
+    @staticmethod
+    def _visit_FortranProject(node: FortranProject, **_context):
+        """Yield variable contexts from every project file."""
+        return _iter_project_variable_contexts(node)
+
+    @staticmethod
+    def _visit_FortranFile(node: FortranFile, **_context):
+        """Yield file, module, and standalone variable contexts."""
+        return _iter_file_variable_contexts(node)
+
+    @staticmethod
+    def _visit_FortranModule(node: FortranModule, **_context):
+        """Yield module-owned variable contexts."""
+        return _iter_module_variable_contexts(node, unit_kind="module")
+
+    @staticmethod
+    def _visit_FortranSubmodule(node: FortranSubmodule, **_context):
+        """Yield submodule-owned variable contexts."""
+        return _iter_module_variable_contexts(node, unit_kind="submodule")
+
+    @staticmethod
+    def _visit_FortranProgram(node: FortranProgram, **_context):
+        """Yield program-owned variable contexts."""
+        return _iter_program_variable_contexts(node)
+
+    @staticmethod
+    def _visit_FortranBlockData(node: FortranBlockData, **_context):
+        """Yield block-data variable contexts."""
+        return _iter_block_data_variable_contexts(node)
+
+    @staticmethod
+    def _visit_FortranProcedureSignature(
+        node: FortranProcedureSignature,
+        *,
+        module_name: str | None = None,
+        **_context,
+    ):
+        """Yield procedure argument, result, and local contexts."""
+        return _iter_procedure_variable_contexts(node, module_name)
+
+    @staticmethod
+    def _visit_FortranDerivedType(
+        node: FortranDerivedType,
+        *,
+        module_name: str | None = None,
+        **_context,
+    ):
+        """Yield derived-type field contexts."""
+        return _iter_derived_type_variable_contexts(node, module_name)
 
 
 def _variable_context(variable, *, unit_kind, unit, module, role, **extra):
@@ -1993,9 +2021,12 @@ def _iter_file_variable_contexts(parsed_file: FortranFile):
             yield from _iter_fortran_variable_contexts(child)
 
 
-def _iter_module_variable_contexts(node: FortranModule | FortranSubmodule):
+def _iter_module_variable_contexts(
+    node: FortranModule | FortranSubmodule,
+    *,
+    unit_kind: str,
+):
     owner = node.name
-    unit_kind = "module" if isinstance(node, FortranModule) else "submodule"
     for variable in node.variables:
         yield _variable_context(variable, unit_kind=unit_kind, unit=owner, module=owner, role="variable")
     for procedure in node.procedures:
@@ -2312,7 +2343,8 @@ def fortran_module_to_semantic_module(
     wrapped_derived_types: Iterable[tuple[str, str]] | None = None,
     type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
 ) -> SemanticModule:
-    return _converter_for(compile_time_values, wrapped_derived_types, type_facts).module_to_semantic_module(module)
+    converter = _converter_for(compile_time_values, wrapped_derived_types, type_facts)
+    return converter.visit(converter.first_module(module))
 
 
 def fortran_file_to_semantic_modules(
@@ -2323,7 +2355,7 @@ def fortran_file_to_semantic_modules(
     wrapped_derived_types: Iterable[tuple[str, str]] | None = None,
     type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
 ) -> list[SemanticModule]:
-    return _converter_for(compile_time_values, wrapped_derived_types, type_facts).file_to_semantic_modules(
+    return _converter_for(compile_time_values, wrapped_derived_types, type_facts).visit(
         parsed_file,
         standalone_module_name=standalone_module_name,
     )
@@ -2335,7 +2367,7 @@ def fortran_project_to_semantic_modules(
     compile_time_values: dict[str, int | str] | None = None,
     type_facts: dict[tuple[str, str | None], dict[str, object]] | None = None,
 ) -> list[SemanticModule]:
-    return _converter_for(compile_time_values, type_facts=type_facts).project_to_semantic_modules(project)
+    return _converter_for(compile_time_values, type_facts=type_facts).visit(project)
 
 
 if __name__ == "__main__":

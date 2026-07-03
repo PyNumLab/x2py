@@ -58,7 +58,7 @@ Root contract: basic_subroutine/basic_subroutine.pyi
 from . import m1
 
 Module contract: m1.pyi
-@native_call([Ref(Arg(0)), Arg(1)])
+@native_call([Addr(Arg(0)), Arg(1)])
 def add1(
     n: Const(Int32),
     x: Float64[n]

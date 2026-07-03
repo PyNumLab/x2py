@@ -348,8 +348,8 @@ model remains source-faithful and does not embed host ABI assumptions.
 top to bottom in these sections:
 
 1. Parser constants, private grammar dataclasses, and small path helpers.
-2. `CParser` public visitors: `visit_file`, `visit_project`, and
-   `visit_parsed_project`.
+2. `CParser` public parse entrypoints: `parse_file` and `parse_project`.
+   `_assemble_project` is the internal already-parsed-file assembly helper.
 3. Source-location, diagnostic, macro-provenance, and redeclaration helpers.
 4. Declaration-specifier and compiler-extension lexical helpers.
 5. Recursive declarator grammar and parameter helpers.
@@ -361,7 +361,7 @@ Helper methods remain on `CParser` when they depend on parser state. Their
 docstrings describe the narrow parsing responsibility and include examples
 where call shape or grammar behavior is not obvious.
 
-`visit_parsed_project(files)` assembles translation units that a caller has
+`_assemble_project(files)` assembles translation units that a caller has
 already parsed individually. The x2py CLI uses it after compiler preprocessing
 and recipe attachment. Most callers should use `parse_c_project(...)`, which
 handles source loading before delegating to the same project assembly path.
@@ -877,9 +877,9 @@ The C data flow is:
 ```text
 source path or source text
   -> optional compiler preprocessing and source mapping
-  -> CParser.visit_file(...)
+  -> CParser.parse_file(...)
   -> CFile parser facts
-  -> CParser.visit_parsed_project(...) or parse_c_project(...)
+  -> CParser._assemble_project(...) or parse_c_project(...)
   -> CProject indexes and cross-file resolution facts
   -> semantics.c2ir conversion
   -> readiness and `.pyi`; a C-input runtime wrapper backend comes later

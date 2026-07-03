@@ -1,5 +1,5 @@
 @external
-@native_call([Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def optional_scale(
     base: Const(Int32),
     factor: Const(Int32) = ...

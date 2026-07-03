@@ -9,7 +9,7 @@ def scale(
     x: Float64[1]
 ) -> None: ...
 
-@native_call([Arg(0), Ref(Arg(1)), Ref(Arg(2))])
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
 def dot(
     n: Int,
     x: Const(Float64),

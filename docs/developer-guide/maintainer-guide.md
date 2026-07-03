@@ -261,12 +261,17 @@ Use the same visible section banners as `FortranParser`, for example
 helpers`. Keep related visitors adjacent instead of sorting methods merely by
 name.
 
-All model-type dispatch goes through the class's `_visit` entrypoint. Use an
-explicit dispatch table for a second dispatch dimension such as datatype or
-ownership action. Do not add parallel `_print_*`, `_extract_*`, dynamic method
-name, or scattered `isinstance` dispatch schemes. A method that performs
-ordinary work but is not a dispatch target must have a descriptive helper
-name rather than a visitor-shaped name.
+All model-type dispatch goes through `x2py.visitor.ClassVisitor._visit` and a
+matching `_visit_<ClassName>` handler. Parser-model converters, semantic
+lowering, `.pyi` AST visitors, bridges, bindings, and printers share that one
+implementation; do not duplicate its MRO lookup in an individual class.
+
+An explicit table is allowed only for a genuine second dispatch dimension,
+such as a completed policy action or primitive ABI datatype mapping. Such a
+table must not replace model-class visitation. Do not add parallel `_print_*`,
+`_extract_*`, `visit_<ClassName>`, or scattered `isinstance` dispatch schemes.
+A method that performs ordinary work but is not a dispatch target must have a
+descriptive helper name rather than a visitor-shaped name.
 
 Keep functionality on the class that owns its state and policy. A module-level
 function is justified only when it is a deliberate public functional API or a
@@ -283,7 +288,7 @@ User-visible `.pyi` syntax is first parsed to Python AST by
 
 Important implementation rules:
 
-- `Ref(T)` and `Ref(Const(T))` are storage contracts, not just pretty syntax.
+- `Addr(T)` and `Addr(Const(T))` are storage contracts, not just pretty syntax.
 - Array subscriptions such as `Float64[n]` are semantic array contracts.
 - `Annotated[..., ORDER_F]`, `ORDER_ANY`, `Allocatable`, and `Pointer` are
   metadata on the semantic storage contract. `Intent("out")` is emitted only
@@ -956,7 +961,7 @@ loader and printer currently support `Arg`, `Return`, `Const`, `Len`,
 Fortran contracts use it when outputs make the Python-visible argument order
 differ from native order. `Pass()` preserves the hidden passed object when a
 type-bound method also needs such a projection. They do not currently
-implement future wrapper projection helpers such as `Ref(Arg(...))`, `As[...]`,
+implement future wrapper projection helpers such as `Addr(Arg(...))`, `As[...]`,
 status-return policy, ownership conversion, or coercion execution.
 
 The test ownership is:

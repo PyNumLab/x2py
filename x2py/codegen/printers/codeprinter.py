@@ -6,6 +6,8 @@ used by all code printers, such as the management of imports and the current
 scope.
 """
 
+from x2py.visitor import ClassVisitor
+
 from ..models.core import Module, ModuleHeader
 
 # TODO: add examples
@@ -13,7 +15,7 @@ from ..models.core import Module, ModuleHeader
 __all__ = ["CodePrinter"]
 
 
-class CodePrinter:
+class CodePrinter(ClassVisitor):
     """
     The base class for code-printing subclasses.
 
@@ -108,41 +110,6 @@ class CodePrinter:
     def exit_scope(self):
         """Exit the current scope and return to the enclosing scope"""
         self._scope = self._scope.parent_scope
-
-    # ------------------------------------------------------------------
-    # Model dispatch
-    # ------------------------------------------------------------------
-
-    def _visit(self, expr):
-        """
-        Print the AST node in the printer language.
-
-        The printing is done by finding the appropriate function _visit_X
-        for the object expr. X is the type of the object expr. If this function
-        does not exist then the method resolution order is used to search for
-        other compatible _visit_X functions. If none are found then an error is
-        raised.
-
-        Parameters
-        ----------
-        expr : model object
-            The expression that should be printed.
-
-        Returns
-        -------
-        str
-            A string containing code in the printer language which is equivalent
-            to the expression.
-        """
-
-        classes = type(expr).__mro__
-        for cls in classes:
-            visitor_method = "_visit_" + cls.__name__
-            if hasattr(self, visitor_method):
-                if self._verbose > 2:
-                    print(f">>>> Calling {type(self).__name__}.{visitor_method}")
-                return getattr(self, visitor_method)(expr)
-        return self._visit_not_supported(expr)
 
     # ------------------------------------------------------------------
     # Model visitors

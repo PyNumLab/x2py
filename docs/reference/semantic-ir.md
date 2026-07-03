@@ -327,7 +327,7 @@ X2PY_C_DOCS_END -->
 - Object-like numeric macros become `Final`-style `SemanticVariable` entries through
   the `Constant` constraint.
 - Struct definitions become `SemanticClass` entries. Incomplete structs become
-  opaque classes and may be used through direct `Ref(...)` identity contracts.
+  opaque classes and may be used through direct `Addr(...)` identity contracts.
 - Explicit multi-header conversion resolves a struct to the header that defines
   it. Other generated stubs import that owner class instead of emitting
   duplicate definitions.
@@ -335,7 +335,7 @@ X2PY_C_DOCS_END -->
   generated owner-module `class Name(Opaque): pass` dependency stubs.
 - Declared C arrays, including adjusted array parameters, become semantic array
   storage contracts with C order for rank greater than one.
-- Pointers become explicit `SemanticStorageContract` pointer/reference
+- Pointers become explicit `SemanticStorageContract` pointer/address
   metadata. `const` on the pointee makes the storage read-only, and `restrict`
   is preserved as aliasing metadata.
 X2PY_C_DOCS_END -->
@@ -380,7 +380,7 @@ X2PY_C_DOCS_END -->
 - function pointer/callback signatures without edited `.pyi` `Callable`
   policy;
 - mutable numeric or `void *` pointer parameters without ownership,
-  scalar-reference, or array policy;
+  scalar-storage, raw-address, or array policy;
 - arrays with unknown extents;
 - incomplete or external opaque structs used by value;
 - unions used in semantic signatures;
@@ -424,6 +424,30 @@ wrapper contract or required to reconstruct native-call topology. Native
 source-provenance details not emitted into the public contract are
 intentionally excluded from public contract equality.
 
+Post-IR policy completion turns those facts into two explicit barrier actions
+before lowering:
+
+- the Python barrier action, which tells Python binding generation how to
+  extract or validate the Python object; and
+- the native barrier action, which tells bridge generation how to hand the
+  extracted value to native code.
+
+The Python barrier distinguishes Python scalar values, rank-0 NumPy scalar
+storage, NumPy array storage, Python strings, raw address values, and generated
+wrapper instances. The native barrier distinguishes direct values, call-local
+addresses, caller/Python-backed storage addresses, raw addresses, packed array
+descriptors, and wrapper-owned native addresses. These decisions are semantic
+policy. `ir2ast.py`, bindings, bridges, and printers may create backend-local
+temporaries, but they must not infer or override a barrier action from datatype,
+`intent`, array category, aliasing, or memory-storage checks.
+
+Parser-model conversion and codegen model traversal use the shared
+`x2py.visitor.ClassVisitor` dispatcher and one `_visit_<ClassName>` protocol.
+Barrier/action dispatch tables are allowed only for completed policy actions;
+the primitive ABI map is the other deliberate table because it maps datatype
+classes to semantic dtypes rather than traversing model nodes. These tables
+are separate from model-node dispatch.
+
 ### Round Trips And Provenance
 
 `parse_pyi_text`, `load_pyi_file`, and `convert_pyi_to_ir` load the documented
@@ -463,7 +487,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 The shared model represents the current C semantic conversion subset for
-functions, variables, fields, constants, scalar references, pointers, arrays
+functions, variables, fields, constants, scalar storage, pointers, arrays
 with known contracts, origin metadata, mutability and ownership facts. The C
 frontend can generate starter exact-contract stubs from that model. Remaining C
 work includes:
@@ -478,7 +502,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 Future C conversion should use the same notation documented by the semantic
 `.pyi` format reference: by-value scalars as bare types, unrefined pointers as
-`Ref(T)` or `Ref(Const(T))`, and array notation only when a real array storage
+`Addr(T)` or `Addr(Const(T))`, and array notation only when a real array storage
 contract is known.
 X2PY_C_DOCS_END -->
 
@@ -549,13 +573,13 @@ X2PY_C_DOCS_END -->
    direct C return, or `None` for native `void`.
 5. A C pointer parameter is never silently represented by a plain immutable
    Python scalar. The caller supplies pointer-backed storage.
-6. A bare numeric pointer uses `Ref(T)` for writable storage and
-   `Ref(Const(T))` for read-only storage. For an API known to use that pointer
-   as a scalar reference, callers conventionally pass matching
-   zero-dimensional NumPy storage. Numeric pointer parameters with a recorded
-   array shape contract use `T[dimension-specs]` or `T[...]`. All these
-   one-level storage forms lower to one native pointer; C does not carry
-   rank, shape or stride metadata in an ordinary `T *` parameter.
+6. A bare numeric pointer uses `Addr(T)` for a raw writable address and
+   `Addr(Const(T))` for a raw read-only address. For an API known to use that
+   pointer as scalar storage, use `T[()]` so callers pass rank-zero NumPy
+   storage. Numeric pointer parameters with a recorded array shape contract use
+   `T[dimension-specs]` or `T[...]`. All these one-level storage forms lower to
+   one native pointer; C does not carry rank, shape or stride metadata in an
+   ordinary `T *` parameter.
 7. Array dimensions express validation constraints, not additional pointer
    depth. `Float64[:, :]` still lowers to one `double *`, never `double **`.
 8. With no stride or order modifier, numeric array storage in a C-origin
@@ -579,7 +603,7 @@ X2PY_C_DOCS_END -->
 9. `Const(...)` is the canonical spelling for a read-only C pointee/storage
    contract.
 10. Pointer graphs such as `T **` and deeper are not inferred from NumPy
-    arrays. They are represented directly as `Ref[n](T)` and require the
+    arrays. They are represented directly as `Addr[n](T)` and require the
     caller to supply a compatible low-level native pointer object.
 11. Functions requiring hidden outputs, generated lengths, Python string
     conversion, handle conversion, callback thunks, status-to-exception
@@ -661,14 +685,14 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-#### 5.1 Canonical Reference And Array Notation
+#### 5.1 Canonical Address And Array Notation
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 A numeric NumPy storage annotation means the caller supplies memory whose data
 address is passed directly to C. C ordinary pointer parameters contain no
 rank, extent or stride descriptor. Therefore a native `double *values` with no
-additional array contract is represented exactly as `Ref(Float64)`;
+additional array contract is represented exactly as `Addr(Float64)`;
 dimensioned forms are used only when the C declaration, documented API
 contract, or completed semantic stub provides those constraints.
 A generated Fortran intermediary that prepares Fortran dummy arguments is a
@@ -679,8 +703,10 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | Semantic annotation | Python caller supplies | Native parameter |
 | &#45;&#45;- | &#45;&#45;- | &#45;&#45;- |
-| `Ref(T)` | compatible writable native pointer-backed storage; a zero-dimensional NumPy array is the scalar-reference convention | `T *` |
-| `Ref(Const(T))` | compatible native pointer-backed storage under a read-only pointee contract | `const T *` |
+| `T[()]` | writable rank-zero NumPy scalar storage | `T *` |
+| `Const(T[()])` | read-only rank-zero NumPy scalar storage | `const T *` |
+| `Addr(T)` | raw address to compatible writable storage, for example `array.ctypes.data` | `T *` |
+| `Addr(Const(T))` | raw address to compatible read-only storage, for example `array.ctypes.data` | `const T *` |
 | `Int[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `int *` |
 | `Const(Int[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const int *` |
 | `Float64[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `double *` |
@@ -713,13 +739,13 @@ forms with a lower bound or step.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-`Ref(T)` and `Ref(Const(T))` preserve an unrefined one-level C pointer. For a
-known primitive scalar-reference API, the canonical NumPy value is a
-zero-dimensional array, as shown below. `T[dimension-specs]` and `T[...]`
+`Addr(T)` and `Addr(Const(T))` preserve an unrefined one-level C pointer as a
+raw address. For a known primitive scalar-storage API, use `T[()]` so the Python
+caller supplies a rank-zero NumPy array. `T[dimension-specs]` and `T[...]`
 with an optional rank selector are NumPy-backed array-pointer spellings once
 an array contract is known. A shape-bearing array annotation already
 represents pointer-backed array storage; do not additionally wrap it in
-`Ref(...)`.
+`Addr(...)`.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -793,32 +819,32 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-`Ref(...)` expresses native pointer depth directly. For a one-level pointer,
+`Addr(...)` expresses native pointer depth directly. For a one-level pointer,
 it preserves the native address form without inventing rank or shape. A known
-primitive scalar-reference use may be supplied with zero-dimensional NumPy
-storage. For an opaque argument or a direct pointer return, it represents a
+primitive scalar-storage use should be expressed as `T[()]` instead. For an
+opaque argument or a direct pointer return, `Addr(...)` represents a
 typed low-level native pointer object:
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 | Semantic annotation | Native parameter |
 | &#45;&#45;- | &#45;&#45;- |
-| `Ref(T)` | `T *`; writable unrefined one-level pointer storage |
-| `Ref(Const(T))` | `const T *`; read-only unrefined one-level pointer storage |
-| `Ref[2](T)` | `T **` direct low-level pointer object |
-| `Ref[2](Const(T))` | `const T **` direct low-level pointer object |
-| `Ref[n](T)` | `T` followed by exactly `n` native pointer layers, `n >= 2` |
+| `Addr(T)` | `T *`; writable unrefined one-level pointer storage |
+| `Addr(Const(T))` | `const T *`; read-only unrefined one-level pointer storage |
+| `Addr[2](T)` | `T **` direct low-level pointer object |
+| `Addr[2](Const(T))` | `const T **` direct low-level pointer object |
+| `Addr[n](T)` | `T` followed by exactly `n` native pointer layers, `n >= 2` |
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-`Ref(x)` is the only canonical depth-one spelling. `Ref[1](x)` is invalid.
+`Addr(x)` is the only canonical depth-one spelling. `Addr[1](x)` is invalid.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 For array storage whose dimensions are known, use an array form such as
-`Int[n]` or `Float64[:, :]` rather than `Ref(Int)` or `Ref(Float64)`. When
+`Int[n]` or `Float64[:, :]` rather than `Addr(Int)` or `Addr(Float64)`. When
 the only available C fact is a data pointer with no rank or extent contract,
-retain `Ref(T)`. `Ref[n](T)` is necessary for pointer graphs and for low-level
+retain `Addr(T)`. `Addr[n](T)` is necessary for pointer graphs and for low-level
 pointer values that are not represented by a shaped NumPy storage contract.
 X2PY_C_DOCS_END -->
 
@@ -826,7 +852,7 @@ X2PY_C_DOCS_END -->
 A direct pointer object carries a typed native address. Passing or returning
 it does not imply allocation, copying, ownership or automatic destruction.
 For example, a raw pointer returned by one native function can be passed to a
-second native function under matching `Ref(...)` annotations. Pointer-object
+second native function under matching `Addr(...)` annotations. Pointer-object
 construction/allocation helpers are runtime API work, not additional
 information required in a semantic function signature.
 X2PY_C_DOCS_END -->
@@ -848,8 +874,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def increment(value: Ref(Int)) -> None: ...
-def read_count(value: Ref(Const(Int))) -> None: ...
+def increment(value: Int[()]) -> None: ...
+def read_count(value: Const(Int[()])) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -915,7 +941,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def get_count(out: Ref(Int)) -> None: ...
+def get_count(out: Int[()]) -> None: ...
 def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
@@ -963,7 +989,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def process_raw(values: Ref(Float64)) -> None: ...
+def process_raw(values: Addr(Float64)) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1069,8 +1095,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def use_rows(rows: Ref[2](Int)) -> None: ...
-def update_value(value: Ref[5](Int)) -> None: ...
+def use_rows(rows: Addr[2](Int)) -> None: ...
+def update_value(value: Addr[5](Int)) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1153,8 +1179,8 @@ X2PY_C_DOCS_END -->
 class context(Opaque):
     pass
 
-def raw_values() -> Ref(Float64): ...
-def context_current() -> Ref(context): ...
+def raw_values() -> Addr(Float64): ...
+def context_current() -> Addr(context): ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1211,7 +1237,7 @@ X2PY_C_DOCS_END -->
 def add(a: Int, b: Int) -> Int: ...
 
 @bind("c_increment")
-def increment(value: Ref(Int)) -> None: ...
+def increment(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1265,9 +1291,9 @@ X2PY_C_DOCS_END -->
 class context(Opaque):
     pass
 
-def context_create() -> Ref(context): ...
-def context_destroy(ctx: Ref(context)) -> None: ...
-def context_run(ctx: Ref(context)) -> Int: ...
+def context_create() -> Addr(context): ...
+def context_destroy(ctx: Addr(context)) -> None: ...
+def context_run(ctx: Addr(context)) -> Int: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1308,9 +1334,9 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | Desired behavior | Example C shape | Later mechanism |
 | &#45;&#45;- | &#45;&#45;- | &#45;&#45;- |
-| Pass a Python scalar through a native pointer | `void increment(int *value)` exposed as `value = increment(value)` | `@native_call([Ref(Arg(0))])` plus readback |
+| Pass a Python scalar through a native pointer | `void increment(int *value)` exposed as `value = increment(value)` | `@native_call([Addr(Arg(0))])` plus readback |
 | Generate a hidden length | `double sum(size_t n, const double *x)` exposed as `sum(x)` | `Arg(0).shape[0]` in `@native_call` |
-| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Ref(Return(...))` in `@native_call` |
+| Turn an output pointer into a Python result | `void get_count(int *out)` exposed as `get_count() -> Int` | `Addr(Return(...))` in `@native_call` |
 | Convert native status to exception | `int create(...);` with hidden status | `Status[...]` and `Check(...)` |
 | Wrap a raw opaque pointer with ownership behavior | `struct ctx *` / `struct ctx **` | handle and lifetime policy |
 | Convert Python strings to C strings | `const char *` from `str` | text encoding/termination policy |
@@ -1336,14 +1362,14 @@ X2PY_C_DOCS_END -->
 | Code | Condition |
 | &#45;&#45;- | &#45;&#45;- |
 | `c_non_identity_call_unsupported` | A declaration or semantic interface requires synthesized, omitted, reordered or transformed parameters/results. |
-| `c_pointer_object_mismatch` | A `Ref(T)` argument lacks compatible native pointer-backed storage, or a multi-level pointer argument lacks the declared native pointer topology. |
-| `c_numpy_pointer_return_policy_required` | A native pointer return is exposed as a shaped NumPy result without implemented lifetime handling or explicit required metadata; a direct raw `Ref(T)` return remains identity behavior. |
+| `c_pointer_object_mismatch` | A `Addr(T)` argument lacks compatible native pointer-backed storage, or a multi-level pointer argument lacks the declared native pointer topology. |
+| `c_numpy_pointer_return_policy_required` | A native pointer return is exposed as a shaped NumPy result without implemented lifetime handling or explicit required metadata; a direct raw `Addr(T)` return remains identity behavior. |
 | `c_numpy_dtype_mismatch` | Supplied NumPy storage does not have the exact semantic native element dtype. |
 | `c_numpy_rank_mismatch` | Supplied NumPy storage does not satisfy declared rank or fixed-shape constraints. |
 | `c_numpy_contiguity_required` | An unqualified dense C-contiguous array annotation receives non-contiguous storage. |
 | `c_numpy_stride_mapping_required` | A Pythonic interface hides native stride parameters required for stride-aware storage without an explicit mapping such as `Arg(0).strides[1]`. |
 | `c_numpy_writeability_required` | A mutable native pointer receives read-only NumPy storage. |
-| `c_opaque_handle_conversion_unsupported` | A raw opaque pointer is requested as an owning/high-level Python handle rather than direct `Ref(context)` identity. |
+| `c_opaque_handle_conversion_unsupported` | A raw opaque pointer is requested as an owning/high-level Python handle rather than direct `Addr(context)` identity. |
 | `c_string_conversion_unsupported` | A Python string conversion is requested. |
 | `c_callback_unsupported` | A Python callback-to-native-function-pointer mapping is requested. |
 | `c_union_unsupported` | A callable interface includes an unsupported union. |
@@ -1361,16 +1387,15 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 1. Parse scalar annotations and direct `None`/scalar return annotations.
-2. Parse unrefined one-level pointer forms `Ref(T)` and `Ref(Const(T))`, and
-   accept matching pointer-backed storage; known scalar-reference uses must
-   support the zero-dimensional NumPy convention.
+2. Parse unrefined one-level pointer forms `Addr(T)` and `Addr(Const(T))`, and
+   accept raw address values; known scalar-storage uses should support `T[()]`.
 3. Parse numeric array storage forms: `T[:]`, `Const(T[:])`, `T[:, :]`,
    fixed or symbolic extents such as `T[3, 4]` and `T[n]`, explicit dependent
    ranges or steps such as `T[0:n]` and `T[:, 0:n:m]`, and rank-polymorphic
    forms such as `T[...]`, `T[...][1:4]`, and `T[...][1, 2, 5]`.
-4. Lower each supported one-level scalar-reference or array-storage
+4. Lower each supported one-level scalar-storage or array-storage
    annotation to exactly one native pointer of its leaf type.
-5. Parse and lower direct pointer forms `Ref[n](T)` as exactly `n` native
+5. Parse and lower direct pointer forms `Addr[n](T)` as exactly `n` native
    pointer layers, accepting compatible low-level native pointer objects at
    runtime.
 6. Validate NumPy dtype, rank, fixed dimensions, explicit layout/stride
@@ -1428,14 +1453,14 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def increment(value: Ref(Int)) -> None: ...
+def increment(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-Tests must verify that a writable zero-dimensional NumPy array is passed by
-data address and that native mutation is observed after the call. A plain
-Python `int` must be rejected for this signature.
+Tests must verify that writable rank-zero NumPy storage is accepted, its data
+address is passed to the native call, and native mutation is observed after the
+call. A plain Python `int` must be rejected for this signature.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -1450,12 +1475,12 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def read_count(value: Ref(Const(Int))) -> None: ...
+def read_count(value: Const(Int[()])) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-Tests must verify matching scalar storage/input acceptance and exact native
+Tests must verify matching rank-zero scalar storage acceptance and exact native
 pointer lowering without writable requirements.
 X2PY_C_DOCS_END -->
 
@@ -1493,7 +1518,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def get_count(out: Ref(Int)) -> None: ...
+def get_count(out: Int[()]) -> None: ...
 def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
@@ -1542,8 +1567,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def use_rows(rows: Ref[2](Int)) -> None: ...
-def update_value(value: Ref[5](Int)) -> None: ...
+def use_rows(rows: Addr[2](Int)) -> None: ...
+def update_value(value: Addr[5](Int)) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1570,8 +1595,8 @@ X2PY_C_DOCS_END -->
 class context(Opaque):
     pass
 
-def context_create() -> Ref(context): ...
-def context_destroy(ctx: Ref(context)) -> None: ...
+def context_create() -> Addr(context): ...
+def context_destroy(ctx: Addr(context)) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1614,18 +1639,18 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def increment(value: Int) -> Returns["value", Int]: ...
 ```
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-The proposed Phase 1 spelling for the same C function is:
+The safe Phase 1 spelling for the same C function is:
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def increment(value: Ref(Int)) -> None: ...
+def increment(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1642,11 +1667,11 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 ```python
 # C: void increment(int *value);
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def increment_value(value: Int) -> Returns["value", Int]: ...
 
 # C: void get_count(int *out);
-@native_call([Ref(Return(0))])
+@native_call([Addr(Return(0))])
 def get_count() -> Int: ...
 
 # C: double sum_values(size_t n, const double *values);
@@ -1663,7 +1688,7 @@ def get_values(n: Int) -> Float64[n]: ...
 
 # C: int context_create(struct context **out);
 @native_call(
-    [Ref(Return(0))],
+    [Addr(Return(0))],
     returns=Status[Int, Check(success=0, raises=RuntimeError)],
 )
 def context_create() -> Annotated[context, Owned, FreeWith("context_destroy")]: ...
@@ -1703,9 +1728,9 @@ X2PY_C_DOCS_END -->
 3. Callback policies beyond the basic future design direction.
 4. Convenience construction of pointer rows from nested Python sequences and
    other high-level builders for `T **` and deeper graphs. Direct
-   `Ref[n](T)` pointer objects are already Phase 1 identity values.
+   `Addr[n](T)` pointer objects are already Phase 1 identity values.
 5. Converting native pointer returns into NumPy views beyond explicitly shaped,
-   explicitly owned or borrowed storage. Returning direct `Ref(T)` objects is
+   explicitly owned or borrowed storage. Returning direct `Addr(T)` objects is
    already identity behavior.
 6. Automatic derivation of hidden layout/stride arguments and packing or
    copy-back for storage the native routine does not accept directly.

@@ -72,6 +72,8 @@ __all__ = (
     "PyList_GetItem",
     "PyList_New",
     "PyList_SetItem",
+    "PyLong_AsVoidPtr",
+    "PyLong_Check",
     "PyMemoryError",
     "PyModInitFunc",
     "PyModule",
@@ -1586,6 +1588,22 @@ PyUnicode_AsUTF8AndSize = FunctionDef(
 PyUnicode_Check = FunctionDef(
     name="PyUnicode_Check",
     arguments=[FunctionDefArgument(Variable(PythonObjectType(), "str", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(CNativeInt(), "out")),
+    body=[],
+)
+
+# https://docs.python.org/3/c-api/long.html#c.PyLong_AsVoidPtr
+PyLong_AsVoidPtr = FunctionDef(
+    name="PyLong_AsVoidPtr",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(BindCPointer(), "ptr", memory_handling="alias")),
+    body=[],
+)
+
+# https://docs.python.org/3/c-api/long.html#c.PyLong_Check
+PyLong_Check = FunctionDef(
+    name="PyLong_Check",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(CNativeInt(), "out")),
     body=[],
 )

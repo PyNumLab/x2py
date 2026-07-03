@@ -107,21 +107,45 @@ native storage instead of silently narrowing it.
 
 ## Scalar Values And Native Storage
 
-A bare semantic type is a Python-visible value. `Const(T)` is the read-only
-value form. `Ref(Arg(...))` in `@native_call` means x2py passes the
-Python-visible value through native reference-backed storage. The generated
-declarations for `numeric_types.f90` above demonstrate both value annotations
-and native pointer projection.
+A bare numeric semantic type is a Python-visible value. `Const(T)` is the
+read-only value form. Its default native boundary is pass-by-value.
+`Addr(Arg(...))` in `@native_call` means x2py converts that Python-visible value
+to call-local native scalar storage and passes the storage address to native
+code.
 
-`Ref(T)` remains the visible annotation when the Python API itself exposes
-pointer-like or writable reference-backed storage. Edited native-order
-contracts can use that lower-level form directly.
+Use `T[()]` when the Python API itself exposes safe caller-provided scalar
+storage as a rank-0 NumPy array. Use `Addr(T)` only when the caller passes a raw
+address such as `array.ctypes.data`. For raw array addresses such as
+`Addr(Float64[n])`, every extent must be a fixed literal or a visible argument;
+the address value itself does not carry shape.
+
+Arrays and strings are storage-like at the native boundary. `Float64[n]` already
+passes the NumPy data address, and `String[8]` already passes the address of
+x2py's temporary fixed-width character storage. Do not add `Addr(Arg(...))` for
+those arguments.
 
 These annotations describe the native contract, not implicit Python
 conversions. Use exact NumPy scalar types where the generated call requires
 them. Scalar `intent(out)` values are normally hidden and returned as values;
 caller-provided writable scalar storage is an explicit advanced `.pyi`
 contract, not the default source-generated interface.
+
+Internally x2py treats the Python-extension extraction step and the native handoff step
+as two different completed policies:
+
+| `.pyi` contract shape | Python barrier | Native barrier |
+| --- | --- | --- |
+| `T` | read a Python scalar value | pass the value or call-local scalar storage selected by policy |
+| `@native_call([Addr(Arg(i))])` on bare `T` | read a Python scalar value | pass the address of call-local scalar storage |
+| `T[()]` | validate rank-0 NumPy scalar storage | pass the caller-provided storage address |
+| `T[:]`, `T[n]`, `T[:, :]` | validate NumPy array storage | pass the packed array descriptor/data contract |
+| `String[n]` | read a Python `str` | pass x2py's call-local fixed-width character storage |
+| `Addr(T)` or `Addr(T[n])` | read a raw address value | pass that raw address unchanged |
+
+Those barrier actions are completed after semantic IR is loaded and before
+wrapper lowering. Generated bridges and bindings dispatch from the completed
+actions; they do not reinterpret datatype, `intent`, addressability, or local
+memory details to choose a different behavior.
 
 ## Arrays
 
@@ -156,8 +180,11 @@ native length eight; plain `String` records assumed, deferred, or otherwise
 non-fixed scalar length. The length is a character length, not an array shape.
 
 Returned strings are Python-owned copies. Fixed-length results retain trailing
-Fortran blanks. Mutable scalar character input/output uses replacement: Python
-receives a new `str` because the original string is immutable.
+Fortran blanks. For mutable scalar character input/output, x2py creates
+call-local character storage, passes its address to native code, and returns a
+replacement only when the `.pyi` signature includes `Returns["name", String[n]]`.
+Without that return contract, native mutation is discarded because the original
+Python `str` is immutable.
 
 Character arrays use fixed-width NumPy bytes dtypes. For
 `character(len=5) :: names(:)`, Python passes and receives arrays with

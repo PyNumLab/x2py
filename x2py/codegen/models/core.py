@@ -360,7 +360,8 @@ class Variable:
         True when a native scalar dummy has Fortran ``value`` ABI.
 
     fortran_array_category : str, optional
-        Native Fortran array category preserved for ABI-sensitive declarations.
+        Native Fortran array category preserved as ABI metadata. Python
+        extraction and native handoff policy comes from ``ownership_decision``.
 
     fortran_source_shape : tuple, optional
         Native Fortran source dimensions preserved for ABI-sensitive declarations.
@@ -665,7 +666,7 @@ class Variable:
 
     @property
     def fortran_array_category(self):
-        """Native Fortran array category used by ABI-sensitive printers."""
+        """Native Fortran array category carried as ABI metadata."""
         return self._fortran_array_category
 
     @property

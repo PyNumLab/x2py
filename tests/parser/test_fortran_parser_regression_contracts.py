@@ -9,8 +9,9 @@ import pytest
 from x2py.fortran_parser.models import FortranArgument, FortranDerivedType, FortranModule, FortranProcedureSignature
 from x2py.fortran_parser.parser import (
     FortranParser,
+    SourceUnit,
     _ParserScope,
-    _SourceUnit,
+    _SOURCE_UNIT_TYPES,
     _UnitParts,
     parse_fortran_project,
 )
@@ -21,9 +22,13 @@ def _lines(*values: str) -> list[tuple[str, int, str]]:
     return [(value, lineno, value) for lineno, value in enumerate(values, start=1)]
 
 
-def _unit(kind: str, name: str | None, *values: str) -> _SourceUnit:
+def _unit(kind: str, name: str | None, *values: str) -> SourceUnit:
     lines = _lines(*values)
-    return _SourceUnit(kind=kind, name=name, lines=lines, start_line=1, end_line=len(lines))
+    return _SOURCE_UNIT_TYPES[kind](kind=kind, name=name, lines=lines, start_line=1, end_line=len(lines))
+
+
+def _empty_unit(kind: str, name: str | None, start_line: int | None, end_line: int | None) -> SourceUnit:
+    return _SOURCE_UNIT_TYPES[kind](kind, name, [], start_line, end_line)
 
 
 def test_function_result_assignment_name_with_intrinsic_prefix_starts_execution_part():
@@ -87,7 +92,7 @@ def test_unit_region_helpers_preserve_specification_execution_and_contains_bound
     )
 
     assert parser._helper_direct_contains_line(unit, filename="regions.f90") == 6
-    assert parser._helper_child_unit_region(unit, parts, _SourceUnit("derived_type", "unknown", [], None, None)) == (
+    assert parser._helper_child_unit_region(unit, parts, _empty_unit("derived_type", "unknown", None, None)) == (
         "specification"
     )
     assert parser._helper_child_unit_region(
@@ -97,7 +102,7 @@ def test_unit_region_helpers_preserve_specification_execution_and_contains_bound
         parser._helper_child_unit_region(
             unit,
             parts,
-            _SourceUnit("interface", None, [], start_line=5, end_line=5),
+            _empty_unit("interface", None, 5, 5),
         )
         == "execution"
     )
@@ -105,7 +110,7 @@ def test_unit_region_helpers_preserve_specification_execution_and_contains_bound
         parser._helper_child_unit_region(
             unit,
             parts,
-            _SourceUnit("procedure", "inner", [], start_line=7, end_line=8),
+            _empty_unit("procedure", "inner", 7, 8),
         )
         == "contains"
     )
@@ -793,8 +798,8 @@ end program driver
     assert project.interfaces["child_mod.child_callback"] is project.interfaces["child_callback"]
 
 
-def test_visit_file_preserves_top_level_models_but_limits_file_symbol_registry():
-    parsed = FortranParser().visit_file(
+def test_parse_file_preserves_top_level_models_but_limits_file_symbol_registry():
+    parsed = FortranParser().parse_file(
         """
 type :: file_state_t
 end type file_state_t
@@ -810,7 +815,7 @@ contains
   end subroutine module_step
 end module api_mod
 """,
-        filename="visit_file_contract.f90",
+        filename="parse_file_contract.f90",
     )
 
     assert [dtype.name for dtype in parsed.derived_types] == ["file_state_t"]
@@ -822,7 +827,7 @@ end module api_mod
     assert parsed.symbols["global_step"] is parsed.procedures[0]
 
 
-def test_visit_project_resolves_cross_file_used_module_parameters_once():
+def test_parse_project_resolves_cross_file_used_module_parameters_once():
     project = parse_fortran_project(
         {
             "precision.f90": """
@@ -851,7 +856,7 @@ end module api_mod
     }
 
 
-def test_visit_project_rejects_duplicate_modules_across_files_with_project_scope_metadata():
+def test_parse_project_rejects_duplicate_modules_across_files_with_project_scope_metadata():
     with pytest.raises(FortranParseError) as duplicate:
         parse_fortran_project(
             {
@@ -1086,27 +1091,27 @@ def test_interface_and_enum_validation_keep_scanning_after_valid_lines():
 
 
 @pytest.mark.parametrize(
-    ("visitor_name", "unit", "expected_message"),
+    ("use_enum_validator", "unit", "expected_message"),
     [
         (
-            "_helper_validate_enum_unit",
+            True,
             _unit("enum", None, "enum, bind(c)", "type :: nested", "end type nested", "end enum"),
             "Invalid Fortran syntax in enum '<unnamed>' specification part: type :: nested",
         ),
         (
-            "visit_interface_unit",
+            False,
             _unit(
                 "interface", "callbacks", "interface callbacks", "type :: nested", "end type nested", "end interface"
             ),
             "Invalid Fortran syntax in interface 'callbacks': type :: nested",
         ),
         (
-            "visit_derived_type_unit",
+            False,
             _unit("derived_type", "outer", "type :: outer", "type :: nested", "end type nested", "end type outer"),
             "Invalid Fortran syntax in derived type 'outer' specification part: type :: nested",
         ),
         (
-            "visit_block_data_source_unit",
+            False,
             _unit(
                 "block_data",
                 "init_data",
@@ -1119,15 +1124,20 @@ def test_interface_and_enum_validation_keep_scanning_after_valid_lines():
         ),
     ],
 )
-def test_nested_units_rejected_by_restricted_scopes_preserve_public_metadata(visitor_name, unit, expected_message):
+def test_nested_units_rejected_by_restricted_scopes_preserve_public_metadata(
+    use_enum_validator, unit, expected_message
+):
     parser = FortranParser()
-    visitor = getattr(parser, visitor_name)
 
     with pytest.raises(FortranParseError) as error:
-        if visitor_name == "_helper_validate_enum_unit":
-            visitor(unit, filename="nested_contract.f90")
+        if use_enum_validator:
+            parser._helper_validate_enum_unit(unit, filename="nested_contract.f90")
         else:
-            visitor(unit, parent_scope=_ParserScope(kind="file", name=None), filename="nested_contract.f90")
+            parser._visit(
+                unit,
+                parent_scope=_ParserScope(kind="file", name=None),
+                filename="nested_contract.f90",
+            )
 
     assert error.value.base_message == expected_message
     assert error.value.filename == "nested_contract.f90"
@@ -1172,7 +1182,7 @@ def test_module_like_spec_diagnostics_preserve_public_metadata(line, expected_me
     scope = _ParserScope(kind="module", name=module.name, model=module, module_owner=module.name)
 
     with pytest.raises(FortranParseError) as error:
-        parser._helper_visit_module_like_spec_line(
+        parser._parse_module_like_spec_line(
             scope,
             line,
             filename="module_contract.f90",
@@ -1218,7 +1228,7 @@ def test_type_spec_diagnostics_preserve_public_metadata(line, expected_message, 
     scope = _ParserScope(kind="derived_type", name=dtype.name, model=dtype)
 
     with pytest.raises(FortranParseError) as error:
-        parser._helper_visit_type_spec_line(
+        parser._parse_type_spec_line(
             line,
             scope,
             filename="type_contract.f90",
@@ -1236,12 +1246,12 @@ def test_type_spec_diagnostics_preserve_public_metadata(line, expected_message, 
 @pytest.mark.parametrize(
     ("visitor_name", "entity_name"),
     [
-        ("visit_fortran_module", "module"),
-        ("visit_fortran_submodule", "submodule"),
-        ("visit_fortran_interface", "interface"),
-        ("visit_fortran_derived_type", "derived type"),
-        ("visit_fortran_program", "program"),
-        ("visit_fortran_block_data_unit", "block data unit"),
+        ("parse_module", "module"),
+        ("parse_submodule", "submodule"),
+        ("parse_interface", "interface"),
+        ("parse_derived_type", "derived type"),
+        ("parse_program", "program"),
+        ("parse_block_data", "block data unit"),
     ],
 )
 def test_singular_parser_entrypoint_diagnostics_preserve_names_entities_and_filename(visitor_name, entity_name):
@@ -1256,19 +1266,18 @@ def test_singular_parser_entrypoint_diagnostics_preserve_names_entities_and_file
 
 
 @pytest.mark.parametrize(
-    ("visitor_name", "header_parser", "header_result", "unit_kind", "entity_name"),
+    ("header_parser", "header_result", "unit_kind", "entity_name"),
     [
-        ("visit_module_unit", "_parse_module_header", None, "module", "module"),
-        ("visit_submodule_unit", "_parse_submodule_header", None, "submodule", "submodule"),
-        ("visit_program_unit", "_parse_program_header", None, "program", "program"),
-        ("visit_block_data_source_unit", "_parse_block_data_header", None, "block_data", "block data"),
-        ("visit_derived_type_unit", "_init_derived_type", None, "derived_type", "derived-type"),
-        ("visit_interface_unit", "_parse_interface_header", (False, None), "interface", "interface"),
+        ("_parse_module_header", None, "module", "module"),
+        ("_parse_submodule_header", None, "submodule", "submodule"),
+        ("_parse_program_header", None, "program", "program"),
+        ("_parse_block_data_header", None, "block_data", "block data"),
+        ("_init_derived_type", None, "derived_type", "derived-type"),
+        ("_parse_interface_header", (False, None), "interface", "interface"),
     ],
 )
 def test_source_unit_visitor_defensive_diagnostics_preserve_public_metadata(
     monkeypatch,
-    visitor_name,
     header_parser,
     header_result,
     unit_kind,
@@ -1278,7 +1287,7 @@ def test_source_unit_visitor_defensive_diagnostics_preserve_public_metadata(
     monkeypatch.setattr(parser, header_parser, lambda *args, **kwargs: header_result)
 
     with pytest.raises(FortranParseError) as error:
-        getattr(parser, visitor_name)(
+        parser._visit(
             _unit(unit_kind, "broken", "broken header", "broken footer"),
             parent_scope=_ParserScope(kind="file", name=None),
             filename="visitor_contract.f90",

@@ -34,7 +34,7 @@ end module adjustments
 Inspecting `optional.f90` prints this optional-input contract:
 
 ```python
-@native_call([Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def adjust(
     value: Const(Int32),
     offset: Const(Int32) = ...

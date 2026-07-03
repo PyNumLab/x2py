@@ -1,7 +1,7 @@
-"""Wrapper-oriented Fortran parser with recursive grammar-unit visitors.
+"""Wrapper-oriented Fortran parser with class-based grammar-unit visitors.
 
 Read the module-level wrappers at the bottom first, then `FortranParser`
-public visitors, source-unit visitors, `_helper_*` scoped parsing methods, and
+public parse entrypoints, source-unit visitors, `_helper_*` parsing methods, and
 finally low-level lexical/static utilities. The detailed maintainer guide
 below documents the same file order with a control-flow example.
 """
@@ -13,6 +13,8 @@ import ast
 from copy import deepcopy
 from pathlib import Path
 from dataclasses import dataclass, replace
+
+from x2py.visitor import ClassVisitor
 
 from .lexer import preprocess_lines
 from .models import (
@@ -52,13 +54,13 @@ This module is intentionally centered on two public surfaces:
 Recommended reading order for maintainers:
 - Start from the module-level public wrappers (`parse_fortran_file`,
   `parse_fortran_project`)
-- Then read `FortranParser.visit_file` / `visit_project`
-- Then read the high-level unit visitor methods at the top of the class
+- Then read `FortranParser.parse_file` / `parse_project`
+- Then read the high-level `_visit_<ClassName>` methods at the top of the class
 - Then drill into `_helper_*` implementations and low-level helpers
 
 `FortranParser` class layout (top -> bottom):
-- Public visitor entrypoints and compatibility visitors.
-- One visitor per grammar-level source unit.
+- Public `parse_*` entrypoints.
+- One `_visit_<ClassName>` handler per grammar-level source-unit model.
 - Source preparation, preprocessor handling, source-unit slicing, and unit
   grammar helpers.
 - Header parsers, scope/state helpers, specification visitors, declaration
@@ -76,13 +78,13 @@ The parser flow is intentionally grammar-shaped. Given this source:
       end subroutine scale
     end module m
 
-`visit_file` preprocesses lines, validates obvious malformed headers, and calls
-`_helper_slice_child_units` to create one file-level `_SourceUnit(kind="module",
-name="m", lines=...)`. `visit_module_unit` then receives only that substring,
+`parse_file` preprocesses lines, validates obvious malformed headers, and calls
+`_helper_slice_child_units` to create one file-level `ModuleUnit`. The
+`_visit_ModuleUnit` handler then receives only that substring,
 splits it into header/specification/contains with `_helper_split_unit_parts`,
 visits the module specification part in a module scope, and recursively slices
 its direct children. The contained procedure is dispatched to
-`visit_procedure_unit`, which creates a procedure scope and visits only its
+`_visit_ProcedureUnit`, which creates a procedure scope and visits only its
 specification part; the execution part and internal subprograms are ignored for
 wrapper metadata. Internal subprogram boundaries are still sliced so malformed
 unit structure is rejected before their contents are skipped.
@@ -162,12 +164,64 @@ _SourceOrLines = str | _PreprocessedLines
 
 
 @dataclass(frozen=True)
-class _SourceUnit:
+class SourceUnit:
     kind: str
     name: str | None
     lines: _PreprocessedLines
     start_line: int | None
     end_line: int | None
+
+
+@dataclass(frozen=True)
+class ModuleUnit(SourceUnit):
+    """A sliced module source unit."""
+
+
+@dataclass(frozen=True)
+class SubmoduleUnit(SourceUnit):
+    """A sliced submodule source unit."""
+
+
+@dataclass(frozen=True)
+class ProgramUnit(SourceUnit):
+    """A sliced program source unit."""
+
+
+@dataclass(frozen=True)
+class BlockDataUnit(SourceUnit):
+    """A sliced block-data source unit."""
+
+
+@dataclass(frozen=True)
+class DerivedTypeUnit(SourceUnit):
+    """A sliced derived-type source unit."""
+
+
+@dataclass(frozen=True)
+class InterfaceUnit(SourceUnit):
+    """A sliced interface source unit."""
+
+
+@dataclass(frozen=True)
+class ProcedureUnit(SourceUnit):
+    """A sliced procedure source unit."""
+
+
+@dataclass(frozen=True)
+class EnumUnit(SourceUnit):
+    """A sliced enum source unit."""
+
+
+_SOURCE_UNIT_TYPES = {
+    "module": ModuleUnit,
+    "submodule": SubmoduleUnit,
+    "program": ProgramUnit,
+    "block_data": BlockDataUnit,
+    "derived_type": DerivedTypeUnit,
+    "interface": InterfaceUnit,
+    "procedure": ProcedureUnit,
+    "enum": EnumUnit,
+}
 
 
 @dataclass
@@ -259,18 +313,18 @@ class _CompileTimeResolver:
         return resolved
 
 
-class FortranParser:
+class FortranParser(ClassVisitor):
     """Stateful parser entrypoint and orchestration object.
 
     Raw parser entrypoints preserve all CPP branch alternatives. Branch
     selection belongs to the compiler preprocessing layer.
 
-    Parsing pipeline used by `visit_file`:
+    Parsing pipeline used by `parse_file`:
     1. Preprocess source into normalized lines (`_preprocessed_lines`).
     2. Slice direct file-level source units (`module`, `submodule`,
        `program`, standalone `procedure`, `block data`, file-level
        `interface`, and file-level derived type).
-    3. Dispatch each `_SourceUnit` to a small `visit_*_unit` method.
+    3. Dispatch each `SourceUnit` through its `_visit_<ClassName>` handler.
     4. Each unit visitor parses only that unit's own substring, builds its own
        `_ParserScope`, splits the unit into grammar regions, visits the
        specification part, and recursively slices direct children where the
@@ -280,8 +334,8 @@ class FortranParser:
     6. Build `FortranFile` symbol table and standalone entity lists.
 
     Class section map:
-    - Internal visitor entrypoints first (developer discovery).
-    - Unit visitors next (one visitor per grammar-level source unit).
+    - Public parse entrypoints first.
+    - Unit visitors next (one `_visit_<ClassName>` method per unit model).
     - Internal `_helper_*` methods after that (reusable scoped parsing logic).
     - Lower-level declaration/header helpers and assembly utilities last.
 
@@ -300,15 +354,15 @@ class FortranParser:
     - Same-level unit names are validated by the slicer, while identical names
       in different scopes remain valid.
 
-    `visit_project` composes multiple `FortranFile` objects into one
+    `parse_project` composes multiple `FortranFile` objects into one
     `FortranProject` registry and validates duplicate symbols by scope.
     """
 
     # ------------------------------------------------------------------
-    # Public visitor entrypoints
+    # Public parse entrypoints
     # ------------------------------------------------------------------
 
-    def visit_file(
+    def parse_file(
         self,
         source_or_path: str | Path,
         filename: str | None = None,
@@ -335,7 +389,7 @@ class FortranParser:
         derived_types: list[FortranDerivedType] = []
 
         for unit in top_units:
-            parsed_unit = self.visit_source_unit(unit, parent_scope=root_scope, filename=filename)
+            parsed_unit = self._visit(unit, parent_scope=root_scope, filename=filename)
             if isinstance(parsed_unit, FortranModule):
                 modules.append(parsed_unit)
             elif isinstance(parsed_unit, FortranSubmodule):
@@ -359,7 +413,7 @@ class FortranParser:
         ]
         self._resolve_derived_type_extensions(all_types)
         all_interfaces = [
-            self.visit_interface_unit(unit, parent_scope=scope, filename=filename)
+            self._visit(unit, parent_scope=scope, filename=filename)
             for unit, scope in self._collect_interface_source_units(lines, filename)
         ]
         interfaces = [iface for iface in all_interfaces if iface.module is None]
@@ -412,7 +466,7 @@ class FortranParser:
             self._insert_unique_scope_symbol(file.symbols, p.name.lower(), p, label="file scope", filename=filename)
         return file
 
-    def visit_project(
+    def parse_project(
         self,
         files: dict[str, str] | list[str | Path] | tuple[str | Path, ...] | str | Path,
         *,
@@ -420,12 +474,12 @@ class FortranParser:
     ) -> FortranProject:
         """Parse many sources and merge them into one dependency-aware project model."""
         if isinstance(files, dict):
-            parsed_files = [self.visit_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
+            parsed_files = [self.parse_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
         elif isinstance(files, str | Path):
             namespace = self._helper_collect_namespace(files, encoding=encoding)
-            parsed_files = [self.visit_file(path, encoding=encoding) for path in namespace["files"]]
+            parsed_files = [self.parse_file(path, encoding=encoding) for path in namespace["files"]]
         else:
-            parsed_files = [self.visit_file(path, encoding=encoding) for path in files]
+            parsed_files = [self.parse_file(path, encoding=encoding) for path in files]
 
         module_params: dict[str, dict[str, str]] = {}
         for parsed_file in parsed_files:
@@ -524,115 +578,89 @@ class FortranParser:
                     )
         return project
 
-    def visit_fortran_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
+    def parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
         """Parse exactly one module unit from inline source or normalized lines.
 
         Example:
-            >>> FortranParser().visit_fortran_module("module m\\nend module m\\n").name
+            >>> FortranParser().parse_module("module m\\nend module m\\n").name
             'm'
         """
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         module_units = [unit for unit in all_units if unit.kind == "module"]
         if not module_units and any(unit.kind == "procedure" for unit in all_units):
             raise FortranParseError(
-                "visit_fortran_module() expected a module program unit, but only standalone procedures were found",
+                "parse_module() expected a module program unit, but only standalone procedures were found",
                 filename=filename,
                 code="PARSE_WRONG_ENTRYPOINT",
             )
         unit = self._expect_single_parse_result(
             module_units,
-            parser_name="visit_fortran_module",
+            parser_name="parse_module",
             entity_name="module",
             filename=filename,
         )
-        return self.visit_module_unit(unit, parent_scope=root_scope, filename=filename)
+        return self._visit(unit, parent_scope=root_scope, filename=filename)
 
-    def visit_fortran_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
+    def parse_submodule(self, code: _SourceOrLines, filename: str | None = None) -> FortranSubmodule:
         """Parse exactly one submodule unit from inline source or normalized lines."""
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         unit = self._expect_single_parse_result(
             [unit for unit in all_units if unit.kind == "submodule"],
-            parser_name="visit_fortran_submodule",
+            parser_name="parse_submodule",
             entity_name="submodule",
             filename=filename,
         )
-        return self.visit_submodule_unit(unit, parent_scope=root_scope, filename=filename)
+        return self._visit(unit, parent_scope=root_scope, filename=filename)
 
-    def visit_fortran_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
+    def parse_interface(self, code: _SourceOrLines, filename: str | None = None) -> FortranInterface:
         """Parse exactly one interface block, including nested procedure declarations."""
         unit, scope = self._expect_single_parse_result(
             self._collect_interface_source_units(code, filename),
-            parser_name="visit_fortran_interface",
+            parser_name="parse_interface",
             entity_name="interface",
             filename=filename,
         )
-        return self.visit_interface_unit(unit, parent_scope=scope, filename=filename)
+        return self._visit(unit, parent_scope=scope, filename=filename)
 
-    def visit_fortran_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
+    def parse_derived_type(self, code: _SourceOrLines, filename: str | None = None) -> FortranDerivedType:
         """Parse exactly one derived-type block and its wrapper-relevant fields."""
         unit, scope = self._expect_single_parse_result(
             self._collect_derived_type_source_units(code, filename),
-            parser_name="visit_fortran_derived_type",
+            parser_name="parse_derived_type",
             entity_name="derived type",
             filename=filename,
         )
-        return self.visit_derived_type_unit(unit, parent_scope=scope, filename=filename)
+        return self._visit(unit, parent_scope=scope, filename=filename)
 
-    def visit_fortran_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
+    def parse_program(self, code: _SourceOrLines, filename: str | None = None) -> FortranProgram:
         """Parse exactly one program unit and its specification declarations."""
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         unit = self._expect_single_parse_result(
             [unit for unit in all_units if unit.kind == "program"],
-            parser_name="visit_fortran_program",
+            parser_name="parse_program",
             entity_name="program",
             filename=filename,
         )
-        return self.visit_program_unit(unit, parent_scope=root_scope, filename=filename)
+        return self._visit(unit, parent_scope=root_scope, filename=filename)
 
-    def visit_fortran_block_data_unit(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
+    def parse_block_data(self, code: _SourceOrLines, filename: str | None = None) -> FortranBlockData:
         """Parse exactly one block-data unit and its specification declarations."""
         _lines, root_scope, all_units = self._helper_prepare_source_units(code, filename)
         unit = self._expect_single_parse_result(
             [unit for unit in all_units if unit.kind == "block_data"],
-            parser_name="visit_fortran_block_data_unit",
+            parser_name="parse_block_data",
             entity_name="block data unit",
             filename=filename,
         )
-        return self.visit_block_data_source_unit(unit, parent_scope=root_scope, filename=filename)
+        return self._visit(unit, parent_scope=root_scope, filename=filename)
 
     # ------------------------------------------------------------------
     # Source unit visitors
     # ------------------------------------------------------------------
 
-    def visit_source_unit(
+    def _visit_ModuleUnit(
         self,
-        unit: _SourceUnit,
-        *,
-        parent_scope: _ParserScope,
-        filename: str | None,
-    ):
-        """Visit one already-sliced source unit and dispatch by unit kind."""
-        if unit.kind == "module":
-            return self.visit_module_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "submodule":
-            return self.visit_submodule_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "program":
-            return self.visit_program_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "block_data":
-            return self.visit_block_data_source_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "derived_type":
-            return self.visit_derived_type_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "interface":
-            return self.visit_interface_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "procedure":
-            return self.visit_procedure_unit(unit, parent_scope=parent_scope, filename=filename)
-        if unit.kind == "enum":
-            return self.visit_enum_unit(unit, parent_scope=parent_scope, filename=filename)
-        return None
-
-    def visit_module_unit(
-        self,
-        unit: _SourceUnit,
+        unit: ModuleUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -650,7 +678,7 @@ class FortranParser:
             )
         scope = self._helper_scope_for_model("module", module, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("module"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._parse_specification_part(scope, parts.specification, filename=filename)
 
         child_units = self._helper_slice_child_units(unit.lines[1:-1], parent_scope=scope, filename=filename)
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
@@ -661,9 +689,9 @@ class FortranParser:
         self._apply_module_visibility(module, filename)
         return module
 
-    def visit_submodule_unit(
+    def _visit_SubmoduleUnit(
         self,
-        unit: _SourceUnit,
+        unit: SubmoduleUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -681,7 +709,7 @@ class FortranParser:
             )
         scope = self._helper_scope_for_model("submodule", submodule, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("submodule"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._parse_specification_part(scope, parts.specification, filename=filename)
 
         child_units = self._helper_slice_child_units(unit.lines[1:-1], parent_scope=scope, filename=filename)
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
@@ -691,8 +719,13 @@ class FortranParser:
         self._validate_module_variables(submodule, filename)
         return submodule
 
-    def _visit_children_of_kind(self, child_units, kind, visitor, *, scope, filename):
-        return [visitor(child, parent_scope=scope, filename=filename) for child in child_units if child.kind == kind]
+    def _parse_children_of_type(self, child_units, unit_type, *, scope, filename):
+        """Visit direct children of one source-unit model class."""
+        return [
+            self._visit(child, parent_scope=scope, filename=filename)
+            for child in child_units
+            if isinstance(child, unit_type)
+        ]
 
     @staticmethod
     def _belongs_to_module_like(item, target, *, exclude_interface: bool = False) -> bool:
@@ -700,16 +733,10 @@ class FortranParser:
         return belongs and not (exclude_interface and item.in_interface)
 
     def _populate_module_like_children(self, target, child_units, *, scope, filename) -> None:
-        signatures = self._visit_children_of_kind(
-            child_units, "procedure", self.visit_procedure_unit, scope=scope, filename=filename
-        )
-        types = self._visit_children_of_kind(
-            child_units, "derived_type", self.visit_derived_type_unit, scope=scope, filename=filename
-        )
-        interfaces = self._visit_children_of_kind(
-            child_units, "interface", self.visit_interface_unit, scope=scope, filename=filename
-        )
-        enums = self._visit_children_of_kind(child_units, "enum", self.visit_enum_unit, scope=scope, filename=filename)
+        signatures = self._parse_children_of_type(child_units, ProcedureUnit, scope=scope, filename=filename)
+        types = self._parse_children_of_type(child_units, DerivedTypeUnit, scope=scope, filename=filename)
+        interfaces = self._parse_children_of_type(child_units, InterfaceUnit, scope=scope, filename=filename)
+        enums = self._parse_children_of_type(child_units, EnumUnit, scope=scope, filename=filename)
         target.procedures.extend(
             item for item in signatures if self._belongs_to_module_like(item, target, exclude_interface=True)
         )
@@ -717,9 +744,9 @@ class FortranParser:
         target.interfaces.extend(item for item in interfaces if self._belongs_to_module_like(item, target))
         target.enums.extend(item for item in enums if self._belongs_to_module_like(item, target))
 
-    def visit_program_unit(
+    def _visit_ProgramUnit(
         self,
-        unit: _SourceUnit,
+        unit: ProgramUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -737,7 +764,7 @@ class FortranParser:
             )
         scope = self._helper_scope_for_model("program", program, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("program"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._parse_specification_part(scope, parts.specification, filename=filename)
         child_units = self._helper_nonexecution_child_units(unit, parent_scope=scope, filename=filename)
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
         self._helper_validate_contains_lines(scope, parts.contains, filename=filename)
@@ -749,9 +776,7 @@ class FortranParser:
             parts=parts,
         )
         program.enums.extend(
-            self.visit_enum_unit(child, parent_scope=scope, filename=filename)
-            for child in child_units
-            if child.kind == "enum"
+            self._visit(child, parent_scope=scope, filename=filename) for child in child_units if child.kind == "enum"
         )
         self._validate_variable_declarations(
             program.variables,
@@ -761,9 +786,9 @@ class FortranParser:
         )
         return program
 
-    def visit_block_data_source_unit(
+    def _visit_BlockDataUnit(
         self,
-        unit: _SourceUnit,
+        unit: BlockDataUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -781,7 +806,7 @@ class FortranParser:
             )
         scope = self._helper_scope_for_model("block_data", block_data, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("block_data"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._parse_specification_part(scope, parts.specification, filename=filename)
         child_units = self._helper_slice_child_units(unit.lines[1:-1], parent_scope=scope, filename=filename)
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
         self._validate_variable_declarations(
@@ -792,9 +817,9 @@ class FortranParser:
         )
         return block_data
 
-    def visit_derived_type_unit(
+    def _visit_DerivedTypeUnit(
         self,
-        unit: _SourceUnit,
+        unit: DerivedTypeUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -812,7 +837,7 @@ class FortranParser:
             )
         scope = self._helper_scope_for_model("derived_type", dtype, parent=parent_scope)
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("derived_type"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._parse_specification_part(scope, parts.specification, filename=filename)
         for line, lineno, source_line in parts.contains:
             stripped = line.strip()
             if not stripped:
@@ -829,9 +854,9 @@ class FortranParser:
         self._validate_derived_type_fields(dtype, filename)
         return dtype
 
-    def visit_enum_unit(
+    def _visit_EnumUnit(
         self,
-        unit: _SourceUnit,
+        unit: EnumUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -839,9 +864,9 @@ class FortranParser:
         """Visit an `enum, bind(C)` unit and preserve enumerator constants."""
         return self._helper_parse_enum_unit(unit, filename=filename, module_owner=parent_scope.module_owner)
 
-    def visit_interface_unit(
+    def _visit_InterfaceUnit(
         self,
-        unit: _SourceUnit,
+        unit: InterfaceUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -880,7 +905,7 @@ class FortranParser:
                     lineno=child.start_line,
                     source_line=child.lines[0][2] if child.lines else None,
                 )
-            sig = self.visit_procedure_unit(child, parent_scope=scope, filename=filename, in_interface=True)
+            sig = self._visit(child, parent_scope=scope, filename=filename, in_interface=True)
             self._add_interface_attribute(sig, interface.name)
             interface.procedures.append(sig)
         return interface
@@ -908,9 +933,9 @@ class FortranParser:
                 names.extend(name.strip() for name in split_csv(procedure.group("names")))
         return names
 
-    def visit_procedure_unit(
+    def _visit_ProcedureUnit(
         self,
-        unit: _SourceUnit,
+        unit: ProcedureUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -949,7 +974,7 @@ class FortranParser:
             "procedure", proc_state["signature"], parent=parent_scope, state=proc_state
         )
         parts = self._helper_split_unit_parts(unit, self._helper_unit_grammar("procedure"), filename=filename)
-        self._helper_visit_spec_part(scope, parts.specification, filename=filename)
+        self._parse_specification_part(scope, parts.specification, filename=filename)
         child_units = self._helper_nonexecution_child_units(unit, parent_scope=scope, filename=filename)
         self._helper_validate_child_unit_regions(unit, parts, child_units, filename=filename)
         self._helper_validate_contains_lines(scope, parts.contains, filename=filename)
@@ -1016,9 +1041,9 @@ class FortranParser:
         dependencies, then parses them in that order.
 
         Example:
-            ``visit_project("src")`` calls this helper, receives
+            ``parse_project("src")`` calls this helper, receives
             ``{"files": ordered_files, "module_to_file": ...}``, and then
-            visits each ordered path through the normal file visitor.
+            parses each ordered path through the normal file entrypoint.
         """
         root_path = Path(root)
         files = sorted([p for p in root_path.rglob("*") if p.suffix.lower() in extensions])
@@ -1032,12 +1057,12 @@ class FortranParser:
             lines = file_lines[fname]
             _lines, root_scope, all_units = self._helper_prepare_source_units(lines, fname)
             modules = [
-                self.visit_module_unit(unit, parent_scope=root_scope, filename=fname)
+                self._visit(unit, parent_scope=root_scope, filename=fname)
                 for unit in all_units
                 if unit.kind == "module"
             ]
             submodules = [
-                self.visit_submodule_unit(unit, parent_scope=root_scope, filename=fname)
+                self._visit(unit, parent_scope=root_scope, filename=fname)
                 for unit in all_units
                 if unit.kind == "submodule"
             ]
@@ -1067,7 +1092,7 @@ class FortranParser:
         programs = []
         block_data = []
         for f in ordered_files:
-            parsed_file = self.visit_file(sources[f], filename=f, encoding=encoding)
+            parsed_file = self.parse_file(sources[f], filename=f, encoding=encoding)
             types.extend(parsed_file.derived_types)
             types.extend(dtype for module in parsed_file.modules for dtype in module.derived_types)
             types.extend(dtype for submodule in parsed_file.submodules for dtype in submodule.derived_types)
@@ -1092,17 +1117,17 @@ class FortranParser:
         self,
         code: _SourceOrLines,
         filename: str | None,
-    ) -> tuple[_PreprocessedLines, _ParserScope, list[_SourceUnit]]:
+    ) -> tuple[_PreprocessedLines, _ParserScope, list[SourceUnit]]:
         """Preprocess, validate, and slice file-level source units.
 
-        This is the first grammar-shaped step in `visit_file`: raw source is
+        This is the first grammar-shaped step in `parse_file`: raw source is
         normalized into line tuples, obvious malformed headers are rejected,
         and only direct file-scope units are returned.
 
         Example:
             A file containing ``module constants`` and standalone
             ``subroutine solve`` returns a root file scope plus two
-            `_SourceUnit` objects, one module unit and one procedure unit, both
+            `SourceUnit` objects, one module unit and one procedure unit, both
             carrying original source line numbers.
         """
         lines = self._preprocessed_lines(code, filename)
@@ -1116,7 +1141,7 @@ class FortranParser:
         self,
         code: _SourceOrLines,
         filename: str | None,
-    ) -> list[tuple[_SourceUnit, _ParserScope]]:
+    ) -> list[tuple[SourceUnit, _ParserScope]]:
         """Collect interface units with the parent scope needed to parse them.
 
         Public plural/singular interface visitors both use this collector so
@@ -1124,9 +1149,9 @@ class FortranParser:
         plural result list and checking its length afterward.
         """
         lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
-        interfaces: list[tuple[_SourceUnit, _ParserScope]] = []
+        interfaces: list[tuple[SourceUnit, _ParserScope]] = []
 
-        def collect(scope: _ParserScope, child_units: list[_SourceUnit]) -> None:
+        def collect(scope: _ParserScope, child_units: list[SourceUnit]) -> None:
             """Walk non-execution children and retain interface units."""
             for child in child_units:
                 if child.kind == "interface":
@@ -1163,12 +1188,12 @@ class FortranParser:
         self,
         code: _SourceOrLines,
         filename: str | None,
-    ) -> list[tuple[_SourceUnit, _ParserScope]]:
+    ) -> list[tuple[SourceUnit, _ParserScope]]:
         """Collect derived-type units with their module/program scope context."""
         lines, root_scope, _all_units = self._helper_prepare_source_units(code, filename)
-        types: list[tuple[_SourceUnit, _ParserScope]] = []
+        types: list[tuple[SourceUnit, _ParserScope]] = []
 
-        def collect(scope: _ParserScope, child_units: list[_SourceUnit]) -> None:
+        def collect(scope: _ParserScope, child_units: list[SourceUnit]) -> None:
             """Walk nested grammar units and retain derived-type units."""
             for child in child_units:
                 if child.kind == "derived_type":
@@ -1316,13 +1341,13 @@ class FortranParser:
         allowed_kinds: set[str] | None = None,
         filename: str | None = None,
         skip_execution_region: bool = False,
-    ) -> list[_SourceUnit]:
+    ) -> list[SourceUnit]:
         """Slice direct child units from a parent source substring.
 
         The name says "child" because this helper is recursive by design:
-        `visit_file` calls it for file-level units, `visit_module_unit` calls it
-        for module children, and `visit_interface_unit` calls it for interface
-        procedure declarations. Each returned `_SourceUnit.lines` contains only
+        `parse_file` calls it for file-level units, `_visit_ModuleUnit` calls it
+        for module children, and `_visit_InterfaceUnit` calls it for interface
+        procedure declarations. Each returned `SourceUnit.lines` contains only
         that child unit's substring.
 
         Example:
@@ -1332,7 +1357,7 @@ class FortranParser:
             interface's subroutine is not returned at module level; it is
             returned when the interface visitor asks for its own children.
         """
-        units: list[_SourceUnit] = []
+        units: list[SourceUnit] = []
         index = 0
         region = "specification"
         while index < len(lines):
@@ -1387,7 +1412,7 @@ class FortranParser:
 
             end_line = lines[end_index][1]
             units.append(
-                _SourceUnit(
+                _SOURCE_UNIT_TYPES[kind](
                     kind=kind,
                     name=name,
                     lines=lines[index : end_index + 1],
@@ -1409,7 +1434,7 @@ class FortranParser:
         """Find the matching end line for a source unit.
 
         The helper walks nested parseable units with a small stack. It is used
-        before building a `_SourceUnit`, so every visitor receives only its own
+        before building a `SourceUnit`, so every visitor receives only its own
         substring and original line numbers remain attached to each tuple.
 
         Example:
@@ -1542,7 +1567,7 @@ class FortranParser:
 
     def _helper_split_unit_parts(
         self,
-        unit: _SourceUnit,
+        unit: SourceUnit,
         grammar: _UnitGrammar,
         *,
         filename: str | None = None,
@@ -1628,9 +1653,9 @@ class FortranParser:
 
     def _helper_child_unit_region(
         self,
-        unit: _SourceUnit,
+        unit: SourceUnit,
         parts: _UnitParts,
-        child: _SourceUnit,
+        child: SourceUnit,
     ) -> str:
         """Return the grammar region containing one direct child unit."""
         child_line = child.start_line
@@ -1649,11 +1674,11 @@ class FortranParser:
 
     def _helper_nonexecution_child_units(
         self,
-        unit: _SourceUnit,
+        unit: SourceUnit,
         *,
         parent_scope: _ParserScope,
         filename: str | None,
-    ) -> list[_SourceUnit]:
+    ) -> list[SourceUnit]:
         """Return direct nested units outside an intentionally skipped execution part."""
         grammar = self._helper_unit_grammar(unit.kind)
         child_units = self._helper_slice_child_units(
@@ -1669,7 +1694,7 @@ class FortranParser:
 
     def _helper_direct_contains_line(
         self,
-        unit: _SourceUnit,
+        unit: SourceUnit,
         *,
         filename: str | None,
     ) -> int | None:
@@ -1692,9 +1717,9 @@ class FortranParser:
 
     def _helper_validate_child_unit_regions(
         self,
-        unit: _SourceUnit,
+        unit: SourceUnit,
         parts: _UnitParts,
-        child_units: list[_SourceUnit],
+        child_units: list[SourceUnit],
         *,
         filename: str | None,
     ) -> None:
@@ -1776,7 +1801,7 @@ class FortranParser:
         """Accept syntax from an unselected raw-preprocessor specification alternative."""
         scratch_scope = deepcopy(scope)
         try:
-            self._helper_visit_spec_part(scratch_scope, [(line, None, None)], filename=None)
+            self._parse_specification_part(scratch_scope, [(line, None, None)], filename=None)
         except FortranParseError:
             return False
         return True
@@ -1817,13 +1842,13 @@ class FortranParser:
                 source_line=source_line,
             )
 
-    def _helper_validate_enum_unit(self, unit: _SourceUnit, *, filename: str | None) -> None:
+    def _helper_validate_enum_unit(self, unit: SourceUnit, *, filename: str | None) -> None:
         """Validate an interoperability enum block."""
         self._helper_parse_enum_unit(unit, filename=filename, module_owner=None)
 
     def _helper_parse_enum_unit(
         self,
-        unit: _SourceUnit,
+        unit: SourceUnit,
         *,
         filename: str | None,
         module_owner: str | None,
@@ -1895,11 +1920,11 @@ class FortranParser:
 
     def _helper_validate_ignored_child_units(
         self,
-        child_units: list[_SourceUnit],
+        child_units: list[SourceUnit],
         *,
         parent_scope: _ParserScope,
         filename: str | None,
-        unit: _SourceUnit | None = None,
+        unit: SourceUnit | None = None,
         parts: _UnitParts | None = None,
     ) -> None:
         """Check or skip nested units that are intentionally omitted from metadata."""
@@ -1915,16 +1940,14 @@ class FortranParser:
                 # the caller has checked its grammar region. Internal procedure
                 # declarations and bodies do not affect wrapper metadata.
                 continue
-            if child.kind == "interface":
-                self.visit_interface_unit(child, parent_scope=parent_scope, filename=filename)
-            elif child.kind == "derived_type":
-                self.visit_derived_type_unit(child, parent_scope=parent_scope, filename=filename)
+            if isinstance(child, InterfaceUnit | DerivedTypeUnit):
+                self._visit(child, parent_scope=parent_scope, filename=filename)
             elif child.kind == "enum":
                 self._helper_validate_enum_unit(child, filename=filename)
 
     def _helper_validate_sibling_units(
         self,
-        units: list[_SourceUnit],
+        units: list[SourceUnit],
         *,
         parent_scope: _ParserScope,
         filename: str | None,
@@ -1940,7 +1963,7 @@ class FortranParser:
             error. Two ``subroutine step`` children in one module raise a
             duplicate-procedure error.
         """
-        seen: dict[tuple[str, str], list[_SourceUnit]] = {}
+        seen: dict[tuple[str, str], list[SourceUnit]] = {}
         for unit in units:
             if not unit.name:
                 continue
@@ -1974,7 +1997,7 @@ class FortranParser:
             seen.setdefault(key, []).append(unit)
 
     def _helper_unit_grammar(self, kind: str) -> _UnitGrammar:
-        """Return the grammar profile used by the small `visit_*_unit` methods.
+        """Return the grammar profile used by the source-unit visitor methods.
 
         The name is intentionally explicit: callers ask for the grammar of a
         source unit before splitting its body into the same high-level regions
@@ -2123,7 +2146,7 @@ class FortranParser:
         """Return a human-readable unit kind for diagnostics.
 
         The parser stores normalized kind names such as ``"block_data"`` in
-        `_SourceUnit`; diagnostics should use Fortran-facing text instead.
+        `SourceUnit`; diagnostics should use Fortran-facing text instead.
 
         Example:
             ``_helper_unit_label("derived_type")`` returns
@@ -2614,7 +2637,7 @@ class FortranParser:
     # Specification-part visitors
     # ------------------------------------------------------------------
 
-    def _helper_visit_spec_part(
+    def _parse_specification_part(
         self,
         scope: _ParserScope,
         lines: _PreprocessedLines,
@@ -2641,7 +2664,7 @@ class FortranParser:
             if stripped.startswith("#"):
                 continue
             if scope.kind == "procedure":
-                self._helper_visit_procedure_spec_line(
+                self._parse_procedure_spec_line(
                     stripped,
                     scope.state,
                     filename=filename,
@@ -2649,7 +2672,7 @@ class FortranParser:
                     source_line=source_line,
                 )
             elif scope.kind == "derived_type":
-                self._helper_visit_type_spec_line(
+                self._parse_type_spec_line(
                     stripped,
                     scope,
                     filename,
@@ -2657,7 +2680,7 @@ class FortranParser:
                     source_line=source_line,
                 )
             elif scope.kind in {"module", "submodule", "program", "block_data"}:
-                self._helper_visit_module_like_spec_line(
+                self._parse_module_like_spec_line(
                     scope,
                     stripped,
                     filename=filename,
@@ -2665,7 +2688,7 @@ class FortranParser:
                     source_line=source_line,
                 )
 
-    def _helper_visit_module_like_spec_line(
+    def _parse_module_like_spec_line(
         self,
         scope: _ParserScope,
         line: str,
@@ -2807,7 +2830,7 @@ class FortranParser:
             code="PARSE_UNSUPPORTED_DECLARATION",
         )
 
-    def _helper_visit_procedure_spec_line(
+    def _parse_procedure_spec_line(
         self,
         line: str,
         proc_state: dict,
@@ -2892,7 +2915,7 @@ class FortranParser:
             )
             return
 
-    def _helper_visit_type_spec_line(
+    def _parse_type_spec_line(
         self,
         line: str,
         scope: _ParserScope,
@@ -3013,7 +3036,7 @@ class FortranParser:
     def _helper_apply_local_interface_declarations(
         self,
         proc_state: dict,
-        unit: _SourceUnit,
+        unit: SourceUnit,
         parts: _UnitParts,
         scope: _ParserScope,
         *,
@@ -3042,7 +3065,7 @@ class FortranParser:
         for interface_unit in interface_units:
             if self._helper_child_unit_region(unit, parts, interface_unit) == "execution":
                 continue
-            interface = self.visit_interface_unit(interface_unit, parent_scope=scope, filename=filename)
+            interface = self._visit(interface_unit, parent_scope=scope, filename=filename)
             for signature in interface.procedures:
                 name = signature.name
                 if self._proc_scope_symbol_is_declared(proc_state, name):
@@ -4794,7 +4817,7 @@ def parse_fortran_file(
         >>> parse_fortran_file("subroutine ping()\\nend subroutine ping\\n").procedures[0].name
         'ping'
     """
-    return _DEFAULT_PARSER.visit_file(
+    return _DEFAULT_PARSER.parse_file(
         source_or_path,
         filename=filename,
         encoding=encoding,
@@ -4809,4 +4832,4 @@ def parse_fortran_project(files, *, encoding: str = "utf-8") -> FortranProject:
         >>> sorted(project.modules)
         ['types']
     """
-    return _DEFAULT_PARSER.visit_project(files, encoding=encoding)
+    return _DEFAULT_PARSER.parse_project(files, encoding=encoding)

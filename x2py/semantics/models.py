@@ -10,6 +10,10 @@ INTERNAL_MODULE_VARIABLE_ACCESS_METADATA = "internal_module_variable_access"
 INTERNAL_MODULE_VARIABLE_NAME_METADATA = "internal_module_variable_name"
 PYI_BIND_TARGET_METADATA = "pyi_bind_target"
 PYI_PROJECTED_OUTPUT_METADATA = "pyi_projected_output"
+PYI_ADDRESS_ROLE_METADATA = "pyi_address_role"
+PYI_ADDRESS_ROLE_PROJECTION = "projection"
+PYI_ADDRESS_ROLE_RAW = "raw"
+PYI_SCALAR_STORAGE_CATEGORY = "scalar_storage"
 PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA = "pyi_suppress_default_constructor"
 PYI_USER_PRIVATE_METADATA = "pyi_user_private"
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
@@ -485,7 +489,9 @@ def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
     if mapping.value_kind:
         return True
     if mapping.intent == "inout":
-        return mapping.result_position is not None or mapping.python_position != mapping.native_position
+        return mapping.python_position is None or mapping.python_position != mapping.native_position
+    if mapping.intent == "out" and mapping.result_position is not None:
+        return mapping.python_position is None or mapping.python_position != mapping.native_position
     if mapping.intent != "in":
         return mapping.python_position is None
     if mapping.result_position is not None:

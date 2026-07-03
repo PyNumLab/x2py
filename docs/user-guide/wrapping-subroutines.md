@@ -67,13 +67,12 @@ def bounds(
     values: Const(Float64[::])
 ) -> tuple[Float64, Float64]: ...
 
-@native_call([Arg(0), Ref(Arg(1))])
+@native_call([Arg(0), Addr(Arg(1))])
 def scale_in_place(
     values: Float64[::],
     factor: Const(Float64)
 ) -> None: ...
 
-@native_call([Arg(0)])
 def fill(
     values: Float64[::]
 ) -> Returns["values", Float64[::]]: ...

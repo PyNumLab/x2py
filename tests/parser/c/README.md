@@ -32,7 +32,7 @@ curated fixture workflow.
 
 `test_c_parser_developer_tutorial.py` is an executable reading guide for
 `x2py/c_parser/parser.py`. It shows the shared declaration/declarator gateway, the
-`visit_file` dispatch of declaration roles, and the preprocessed linemarker
+`parse_file` routing of declaration roles, and the preprocessed linemarker
 path without replacing the feature-focused test modules.
 
 `test_c_fixture_suite.py` keeps fixture grouping coverage and verifies that

@@ -1327,7 +1327,7 @@ def test_wrap_readiness_report_reconciles_edited_pyi_file_set(tmp_path: Path):
         """
 from types_mod import particle
 
-def create_particle() -> Ref(particle): ...
+def create_particle() -> Addr(particle): ...
 """,
         encoding="utf-8",
     )

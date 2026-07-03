@@ -45,6 +45,7 @@ from x2py.semantics.models import (
     PYI_PROJECTED_OUTPUT_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
 )
+from x2py.visitor import ClassVisitor
 
 
 _SEMANTIC_ORDER_TO_NUMPY_ORDER = {
@@ -1529,6 +1530,13 @@ def _semantic_variable_type_and_shape(semantic_type, scope, custom_types):
 
 
 def _fortran_array_category_and_source_shape(semantic_type):
+    storage = semantic_type.storage
+    if storage is not None and storage.kind == "address":
+        role = storage.metadata.get(models.PYI_ADDRESS_ROLE_METADATA)
+        if role == models.PYI_ADDRESS_ROLE_PROJECTION:
+            return "address_projection", ()
+        if role == models.PYI_ADDRESS_ROLE_RAW:
+            return "raw_address", ()
     contract = _array_contract(semantic_type)
     if contract is None:
         return None, ()
@@ -1591,6 +1599,97 @@ def _convert_semantic_variable(node, scope, custom_types, cls_base):
     return var
 
 
+class _SemanticIrToCodegenAstVisitor(ClassVisitor):
+    """Dispatch semantic model nodes through one ``_visit_<ClassName>`` protocol."""
+
+    def __init__(
+        self,
+        scope,
+        legacy: bool,
+        *,
+        custom_types: dict[str, object] | None,
+        cls_base: ClassDef | None,
+        class_lookup: dict[str, models.SemanticClass] | None,
+        class_descendants: dict[str, tuple[str, ...]] | None,
+        class_order: dict[str, int] | None,
+        enable_polymorphic_dispatch: bool,
+    ):
+        self.scope = scope
+        self.legacy = legacy
+        self.custom_types = custom_types
+        self.cls_base = cls_base
+        self.class_lookup = class_lookup
+        self.class_descendants = class_descendants
+        self.class_order = class_order
+        self.enable_polymorphic_dispatch = enable_polymorphic_dispatch
+
+    @staticmethod
+    def _visit_not_supported(node):
+        """Reject semantic nodes that have no lowering visitor."""
+        raise NotImplementedError(type(node))
+
+    def _visit_SemanticModule(self, node):
+        if node.metadata.get(models.PYI_LOADED_METADATA) and not node.metadata.get(
+            models.PYI_NATIVE_CONTRACT_PREPARED_METADATA
+        ):
+            from .native_contract import prepare_pyi_native_contract
+
+            prepare_pyi_native_contract([node])
+        return _convert_semantic_module(node, self.scope, self.legacy, self.custom_types)
+
+    def _visit_ProcedureOverloadSet(self, node):
+        return _convert_procedure_overload_set(
+            node,
+            self.scope,
+            self.legacy,
+            self.custom_types,
+            self.cls_base,
+            self.class_lookup,
+            self.class_descendants,
+            self.class_order,
+        )
+
+    def _visit_SemanticFunction(self, node):
+        return _convert_semantic_function(
+            node,
+            self.scope,
+            self.legacy,
+            self.custom_types,
+            self.cls_base,
+            self.class_lookup,
+            self.class_descendants,
+            self.class_order,
+            self.enable_polymorphic_dispatch,
+        )
+
+    def _visit_SemanticClass(self, node):
+        return _convert_semantic_class(
+            node,
+            self.scope,
+            self.legacy,
+            self.custom_types,
+            self.class_lookup,
+            self.class_descendants,
+            self.class_order,
+        )
+
+    def _visit_SemanticArgument(self, node):
+        if node.semantic_type.name == "Callable":
+            return _codegen_callback_argument(
+                node,
+                self.scope,
+                self.legacy,
+                custom_types=self.custom_types,
+                class_lookup=self.class_lookup,
+                class_descendants=self.class_descendants,
+                class_order=self.class_order,
+            )
+        return self._visit_SemanticVariable(node)
+
+    def _visit_SemanticVariable(self, node):
+        return _convert_semantic_variable(node, self.scope, self.custom_types, self.cls_base)
+
+
 def semantic_ir_to_codegen_ast(
     node,
     scope,
@@ -1605,66 +1704,16 @@ def semantic_ir_to_codegen_ast(
 ):
     """Convert one semantic IR node into the current codegen AST representation."""
 
-    if isinstance(node, models.SemanticModule):
-        if node.metadata.get(models.PYI_LOADED_METADATA) and not node.metadata.get(
-            models.PYI_NATIVE_CONTRACT_PREPARED_METADATA
-        ):
-            from .native_contract import prepare_pyi_native_contract
-
-            prepare_pyi_native_contract([node])
-        return _convert_semantic_module(node, scope, legacy, custom_types)
-
-    if isinstance(node, models.ProcedureOverloadSet):
-        return _convert_procedure_overload_set(
-            node,
-            scope,
-            legacy,
-            custom_types,
-            cls_base,
-            class_lookup,
-            class_descendants,
-            class_order,
-        )
-
-    if isinstance(node, models.SemanticFunction):
-        return _convert_semantic_function(
-            node,
-            scope,
-            legacy,
-            custom_types,
-            cls_base,
-            class_lookup,
-            class_descendants,
-            class_order,
-            enable_polymorphic_dispatch,
-        )
-
-    if isinstance(node, models.SemanticClass):
-        return _convert_semantic_class(
-            node,
-            scope,
-            legacy,
-            custom_types,
-            class_lookup,
-            class_descendants,
-            class_order,
-        )
-
-    if isinstance(node, models.SemanticArgument) and node.semantic_type.name == "Callable":
-        return _codegen_callback_argument(
-            node,
-            scope,
-            legacy,
-            custom_types=custom_types,
-            class_lookup=class_lookup,
-            class_descendants=class_descendants,
-            class_order=class_order,
-        )
-
-    if isinstance(node, models.SemanticVariable):
-        return _convert_semantic_variable(node, scope, custom_types, cls_base)
-
-    raise NotImplementedError(type(node))
+    return _SemanticIrToCodegenAstVisitor(
+        scope,
+        legacy,
+        custom_types=custom_types,
+        cls_base=cls_base,
+        class_lookup=class_lookup,
+        class_descendants=class_descendants,
+        class_order=class_order,
+        enable_polymorphic_dispatch=enable_polymorphic_dispatch,
+    )._visit(node)
 
 
 ir_to_ast = semantic_ir_to_codegen_ast

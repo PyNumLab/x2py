@@ -261,7 +261,7 @@ by `x2py/codegen/printers/pyi_printer.py`. Both operate on `x2py/semantics/model
 
 Important implementation rules:
 
-- `Ref(T)` and `Ref(Const(T))` are storage contracts, not just pretty syntax.
+- `Addr(T)` and `Addr(Const(T))` are storage contracts, not just pretty syntax.
 - Array subscriptions such as `Float64[n]` are semantic array contracts.
 - `Annotated[..., ORDER_F]`, `ORDER_ANY`, `Allocatable`, `Pointer`, and
   `Intent("out")` are metadata on the semantic storage contract.
@@ -806,7 +806,7 @@ semantic contract, avoid changing semantic fixtures.
 `@native_call` is stored as projection metadata on `SemanticFunction`. The
 loader and printer currently support `Arg`, `Return`, `Const`, `Len`,
 `IsPresent`, `Work`, and `.shape[...]` value references. They do not currently
-implement future wrapper projection helpers such as `Ref(Arg(...))`, `As[...]`,
+implement future wrapper projection helpers such as `Addr(Arg(...))`, `As[...]`,
 status-return policy, ownership conversion, or coercion execution.
 
 The test ownership is:

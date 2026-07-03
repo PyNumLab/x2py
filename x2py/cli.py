@@ -244,7 +244,7 @@ def _parse_c_path(
 ):
     source_loader = _c_source_loader(preprocessing)
     if source_loader is None:
-        return parser.visit_file(
+        return parser.parse_file(
             path,
             filename=str(path),
             include_dirs=preprocessing.include_dirs,
@@ -252,7 +252,7 @@ def _parse_c_path(
         )
 
     source, preprocessing_recipe = source_loader(path)
-    parsed = parser.visit_file(
+    parsed = parser.parse_file(
         source,
         filename=str(path),
         include_dirs=preprocessing.include_dirs,
@@ -268,7 +268,7 @@ def _parse_c_project(
 ):
     parser = CParser()
     parsed_files = {str(path): _parse_c_path(parser, path, preprocessing) for path in expand_c_paths(paths)}
-    return parser.visit_parsed_project(parsed_files)
+    return parser._assemble_project(parsed_files)
 
 
 def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
@@ -277,7 +277,7 @@ def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = 
     parser = FortranParser()
     for p in _expand_paths(paths):
         code, preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        parsed = parser.visit_file(code, filename=str(p))
+        parsed = parser.parse_file(code, filename=str(p))
         payload = {
             "signatures": [_to_dict_no_parent(s) for s in parsed.procedures],
             "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
@@ -449,7 +449,7 @@ def _parse_fortran_source_files(
     parsed_files = []
     for path in paths:
         code, _preprocessing_recipe = _fortran_source_for_path(path, preprocessing)
-        parsed_files.append((path, parser.visit_file(code, filename=str(path))))
+        parsed_files.append((path, parser.parse_file(code, filename=str(path))))
 
     if len(parsed_files) > 1:
         _resolve_fortran_project_parameters(parser, [parsed for _path, parsed in parsed_files])

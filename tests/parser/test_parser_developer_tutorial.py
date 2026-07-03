@@ -55,7 +55,7 @@ def test_developer_tutorial_recursive_unit_visitors_and_helpers():
     ]
     assert module_parts.contains == []
 
-    module = parser.visit_source_unit(
+    module = parser._visit(
         module_unit,
         parent_scope=root_scope,
         filename="developer_tutorial.f90",

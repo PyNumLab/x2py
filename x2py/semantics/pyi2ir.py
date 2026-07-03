@@ -7,8 +7,8 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, set_ownership_metadata, set_pointer_policy_metadata
+from x2py.visitor import ClassVisitor
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -16,8 +16,13 @@ from .models import (
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
     PYI_BIND_TARGET_METADATA,
+    PYI_ADDRESS_ROLE_METADATA,
+    PYI_ADDRESS_ROLE_PROJECTION,
+    PYI_ADDRESS_ROLE_RAW,
     PYI_LOADED_METADATA,
+    PYI_NATIVE_PROJECTION_METADATA,
     PYI_PROJECTED_OUTPUT_METADATA,
+    PYI_SCALAR_STORAGE_CATEGORY,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -135,7 +140,7 @@ class _PyiAstParser:
         self._pending_overloads: list[_PendingOverload] = []
 
     def parse(self, tree: ast.Module) -> SemanticModule:
-        _ModuleVisitor(self).visit(tree)
+        _ModuleVisitor(self)._visit(tree)
         self._resolve_overloads()
         self._restore_type_bound_targets()
         return self.module
@@ -158,7 +163,7 @@ class _PyiAstParser:
         native_type: dict[str, object] | None = None,
     ) -> SemanticClass:
         body = _ClassBodyVisitor(self, class_name=node.name)
-        body.visit_body(node.body)
+        body._walk_nodes(node.body)
         if body.constructor_from_fields and body.has_bound_constructor:
             raise ValueError("Direct constructor bindings replace the generated field constructor; remove one __init__")
         base_classes = [ast.unparse(base) for base in node.bases]
@@ -242,11 +247,14 @@ class _PyiAstParser:
         projection: list[ProjectionMapping] | None = None,
         native_name: str | None = None,
         external: bool = False,
+        has_native_call: bool = False,
         hold_gil: bool = False,
         error_status_policy: dict[str, object] | None = None,
     ) -> SemanticFunction:
         semantic_args, return_type = self._callable_parts(node, projection=projection or [])
         metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        if has_native_call:
+            metadata[PYI_NATIVE_PROJECTION_METADATA] = True
         if hold_gil:
             metadata[RUNTIME_HOLD_GIL_METADATA] = True
         if error_status_policy is not None:
@@ -279,6 +287,7 @@ class _PyiAstParser:
         native_name: str | None = None,
         class_name: str,
         infer_passed_object: bool = True,
+        has_native_call: bool = False,
         hold_gil: bool = False,
         error_status_policy: dict[str, object] | None = None,
     ) -> SemanticMethod:
@@ -288,6 +297,8 @@ class _PyiAstParser:
             drop_untyped_self=True,
         )
         metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        if has_native_call:
+            metadata[PYI_NATIVE_PROJECTION_METADATA] = True
         passed_object_name = None
         passed_object_position = None
         if infer_passed_object and not is_static and node.name != "__init__":
@@ -345,7 +356,7 @@ class _PyiAstParser:
             elif mapping.python_position is not None and mapping.python_position >= passed_position:
                 old_position = mapping.python_position
                 mapping.python_position += 1
-                _PyiAstParser._shift_pointer_argument_value(mapping, old_position, mapping.python_position)
+                _PyiAstParser._shift_address_argument_value(mapping, old_position, mapping.python_position)
 
     def ann_assign(
         self,
@@ -662,8 +673,11 @@ class _PyiAstParser:
         *,
         bound_position: int | None = None,
     ) -> None:
-        if declaration.arguments == call_arguments and (
-            declaration.return_type == target.return_type
+        visible_declaration_arguments = [_PyiAstParser._visible_overload_argument(arg) for arg in declaration.arguments]
+        visible_call_arguments = [_PyiAstParser._visible_overload_argument(arg) for arg in call_arguments]
+        if visible_declaration_arguments == visible_call_arguments and (
+            _PyiAstParser._visible_overload_type(declaration.return_type)
+            == _PyiAstParser._visible_overload_type(target.return_type)
             or _PyiAstParser._matches_bound_projection_return(declaration, target, bound_position)
         ):
             return
@@ -671,6 +685,33 @@ class _PyiAstParser:
             f"Overload declaration {declaration.name!r} is incompatible with "
             f"specific procedure {target.native_name or target.name!r}"
         )
+
+    @staticmethod
+    def _visible_overload_argument(argument: SemanticArgument) -> SemanticArgument:
+        visible = deepcopy(argument)
+        visible.semantic_type = _PyiAstParser._visible_overload_type(argument.semantic_type)
+        return visible
+
+    @staticmethod
+    def _visible_overload_type(semantic_type: SemanticType | None) -> SemanticType | None:
+        if semantic_type is None:
+            return None
+        storage = semantic_type.storage
+        if (
+            semantic_type.rank == 0
+            and storage is not None
+            and storage.kind == "address"
+            and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) == PYI_ADDRESS_ROLE_PROJECTION
+        ):
+            visible_type = deepcopy(semantic_type)
+            visible_type.storage = SemanticStorageContract(
+                kind="value",
+                read_only=storage.read_only,
+                mutable=not storage.read_only,
+            )
+            visible_type.ownership.mutable = not storage.read_only
+            return visible_type
+        return semantic_type
 
     @staticmethod
     def _matches_bound_projection_return(
@@ -688,10 +729,10 @@ class _PyiAstParser:
         ):
             return False
         expected = deepcopy(target.arguments[bound_position].semantic_type)
-        if expected.rank == 0 and expected.storage is not None and expected.storage.kind == "reference":
+        if expected.rank == 0 and expected.storage is not None and expected.storage.kind in {"address", "reference"}:
             expected.storage = None
         expected.ownership = deepcopy(declaration.return_type.ownership)
-        return declaration.return_type == expected
+        return _PyiAstParser._visible_overload_type(declaration.return_type) == expected
 
     @staticmethod
     def _class_overload_bound_position(
@@ -817,8 +858,8 @@ class _PyiAstParser:
         if node.keywords:
             raise ValueError(f"{self.required_name(node.func)} expects positional arguments only")
 
-        if self._is_ref_call(node):
-            return self.native_pointer_projection_entry(node, native_position)
+        if self._is_addr_call(node):
+            return self.native_address_projection_entry(node, native_position)
 
         helper = self.required_name(node.func)
         if helper == "Arg":
@@ -884,15 +925,15 @@ class _PyiAstParser:
 
         raise ValueError(f"Unsupported native_call projection entry: {helper}")
 
-    def native_pointer_projection_entry(self, node: ast.Call, native_position: int) -> ProjectionMapping:
+    def native_address_projection_entry(self, node: ast.Call, native_position: int) -> ProjectionMapping:
         if len(node.args) != 1:
-            raise ValueError("Ref projection expects one Arg(...), Return(...), or Work(...) reference")
-        if self._ref_depth(node.func) != 1:
-            raise ValueError("native_call reference projection only supports Ref(...)")
+            raise ValueError("Addr projection expects one Arg(...), Return(...), or Work(...) reference")
+        if self._addr_depth(node.func) != 1:
+            raise ValueError("native_call address projection only supports Addr(...)")
         value = self.native_value_ref(node.args[0])
         mapping = ProjectionMapping(
             native_position=native_position,
-            value_kind="ptr",
+            value_kind="addr",
             value=value,
         )
         if value["kind"] == "arg":
@@ -976,8 +1017,8 @@ class _PyiAstParser:
             return self.callable_type(node)
         if isinstance(node, ast.Call) and self.matches_name(node.func, "Const"):
             return self._const_type(node)
-        if isinstance(node, ast.Call) and self._is_ref_call(node):
-            return self._pointer_type(node)
+        if isinstance(node, ast.Call) and self._is_addr_call(node):
+            return self._address_type(node)
 
         if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
             if self._string_subscript_is_array_dimensions(node):
@@ -1013,17 +1054,20 @@ class _PyiAstParser:
         self._mark_storage_read_only(semantic_type)
         return semantic_type
 
-    def _pointer_type(self, node: ast.Call) -> SemanticType:
+    def _address_type(self, node: ast.Call) -> SemanticType:
         if len(node.args) != 1 or node.keywords:
-            raise ValueError(f"Ref type expects one argument: {ast.unparse(node)!r}")
-        pointer_depth = self._ref_depth(node.func)
+            raise ValueError(f"Addr type expects one argument: {ast.unparse(node)!r}")
         pointee = self.semantic_type(node.args[0])
         read_only = pointee.storage.read_only if pointee.storage is not None else False
+        metadata = dict(pointee.storage.metadata) if pointee.storage is not None else {}
+        metadata[PYI_ADDRESS_ROLE_METADATA] = PYI_ADDRESS_ROLE_RAW
+        pointer_depth = self._addr_depth(node.func)
         pointee.storage = SemanticStorageContract(
-            kind="reference" if pointer_depth == 1 else "pointer",
+            kind="address" if pointer_depth == 1 else "pointer",
             read_only=read_only,
             mutable=not read_only,
             pointer_depth=pointer_depth,
+            metadata=metadata,
         )
         pointee.ownership.mutable = not read_only
         return pointee
@@ -1126,6 +1170,8 @@ class _PyiAstParser:
         metadata: dict[str, object] | None = None,
     ) -> SemanticType:
         dims, category, source_shape, lower_bounds, upper_bounds = _PyiAstParser._flat_array_dimensions(dims)
+        if not dims:
+            category = PYI_SCALAR_STORAGE_CATEGORY
         if dims == ["..."]:
             category = "assumed_rank"
             source_shape = [".."]
@@ -1157,6 +1203,8 @@ class _PyiAstParser:
     def _flat_array_dimensions(
         dims: list[str],
     ) -> tuple[list[str], str | None, list[str], list[str | None], list[str | None]]:
+        if not dims:
+            return [], PYI_SCALAR_STORAGE_CATEGORY, [], [], []
         if "Flat" not in dims:
             source_shape = [] if any(dim in {":", "..."} or "Strided" in dim for dim in dims) else list(dims)
             lower_bounds, upper_bounds = _PyiAstParser._bounds_from_source_shape(source_shape)
@@ -1401,7 +1449,7 @@ class _PyiAstParser:
         storage = semantic_type.storage
         if storage is None:
             return "in"
-        if storage.kind in {"reference", "array", "pointer", "callback"} and not storage.read_only:
+        if storage.kind in {"reference", "array", "pointer", "callback", "address"} and not storage.read_only:
             return "inout"
         return "in"
 
@@ -1411,17 +1459,17 @@ class _PyiAstParser:
         return str(value).lower() if value is not None else default
 
     @staticmethod
-    def _is_ref_call(node: ast.Call) -> bool:
-        return _PyiAstParser.matches_name(node.func, "Ref") or (
-            isinstance(node.func, ast.Subscript) and _PyiAstParser.matches_name(node.func.value, "Ref")
+    def _is_addr_call(node: ast.Call) -> bool:
+        return _PyiAstParser.matches_name(node.func, "Addr") or (
+            isinstance(node.func, ast.Subscript) and _PyiAstParser.matches_name(node.func.value, "Addr")
         )
 
     @staticmethod
-    def _ref_depth(node: ast.AST) -> int:
+    def _addr_depth(node: ast.AST) -> int:
         if isinstance(node, ast.Subscript):
             depth = int(ast.literal_eval(node.slice))
             if depth <= 1:
-                raise ValueError("Ref[1](...) is invalid; use Ref(...)")
+                raise ValueError("Addr[1](...) is invalid; use Addr(...)")
             return depth
         return 1
 
@@ -1430,7 +1478,7 @@ class _PyiAstParser:
             return self._is_array_subscript(node.value)
         items = self.subscript_items(node)
         if not items:
-            return False
+            return True
         if any(isinstance(item, ast.Slice | ast.Constant) for item in items):
             return True
         if any(
@@ -1823,27 +1871,8 @@ class _PyiAstParser:
                 continue
             if existing.intent != "out":
                 existing.intent = "inout"
-            immutable_replacement = (
-                existing.semantic_type.metadata.get(PYTHON_VALUE_MUTABILITY_METADATA) == PYTHON_VALUE_IMMUTABLE
-            )
-            if immutable_replacement or _PyiAstParser._is_visible_storage_projection(existing):
-                existing.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
+            existing.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
             existing.semantic_type.ownership.mutable = True
-
-    @staticmethod
-    def _is_visible_storage_projection(argument: SemanticArgument) -> bool:
-        storage = argument.semantic_type.storage
-        array = storage.array if storage is not None else None
-        if storage is None:
-            return False
-        if storage.kind == "array":
-            return bool(array is not None and not array.allocatable and not array.pointer)
-        return bool(
-            storage.kind == "reference"
-            and not storage.read_only
-            and storage.pointer_depth == 1
-            and argument.semantic_type.name not in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
-        )
 
     @staticmethod
     def _apply_native_call_returns(
@@ -1862,7 +1891,12 @@ class _PyiAstParser:
                 mapping.python_name = mapping.native_name
             return_type.ownership.mutable = True
             if return_type.rank == 0 and return_type.storage is None:
-                return_type.storage = SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1)
+                return_type.storage = SemanticStorageContract(
+                    kind="address",
+                    mutable=True,
+                    pointer_depth=1,
+                    metadata={PYI_ADDRESS_ROLE_METADATA: PYI_ADDRESS_ROLE_PROJECTION},
+                )
             returned_args.insert(
                 0,
                 SemanticArgument(
@@ -1904,8 +1938,8 @@ class _PyiAstParser:
             if not 0 <= mapping.python_position < len(semantic_args):
                 raise ValueError(f"native_call argument position is out of range: {mapping.python_position}")
             arg = semantic_args[mapping.python_position]
-            if mapping.value_kind == "ptr":
-                _PyiAstParser._apply_pointer_argument_projection(arg)
+            if mapping.value_kind == "addr":
+                _PyiAstParser._apply_address_argument_projection(arg)
             mapping.python_name = arg.name
             if not mapping.native_name:
                 mapping.native_name = arg.name
@@ -1914,27 +1948,46 @@ class _PyiAstParser:
                 mapping.result_position = return_positions.get(arg.name)
 
     @staticmethod
-    def _apply_pointer_argument_projection(arg: SemanticArgument) -> None:
+    def _apply_address_argument_projection(arg: SemanticArgument) -> None:
         semantic_type = arg.semantic_type
         if semantic_type.rank != 0:
-            raise ValueError(f"Ref(Arg(...)) projection for {arg.name!r} requires a scalar argument")
+            raise ValueError(f"Addr(Arg(...)) projection for {arg.name!r} requires a scalar argument")
         storage = semantic_type.storage
+        if semantic_type.name == "String":
+            raise ValueError(
+                f"Addr(Arg(...)) projection for {arg.name!r} is redundant for String arguments; use Arg(...)"
+            )
+        if storage is not None and storage.kind == "array":
+            raise ValueError(
+                f"Addr(Arg(...)) projection for {arg.name!r} is redundant for storage arguments; use Arg(...)"
+            )
+        if (
+            storage is not None
+            and storage.kind in {"address", "pointer"}
+            and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) == PYI_ADDRESS_ROLE_RAW
+        ):
+            raise ValueError(
+                f"Addr(Arg(...)) projection for {arg.name!r} is redundant for raw address arguments; use Arg(...)"
+            )
         read_only = str(arg.intent).lower() == "in" or bool(storage is not None and storage.read_only)
+        metadata = dict(storage.metadata) if storage is not None else {}
+        metadata[PYI_ADDRESS_ROLE_METADATA] = PYI_ADDRESS_ROLE_PROJECTION
         semantic_type.storage = SemanticStorageContract(
-            kind="reference",
+            kind="address",
             read_only=read_only,
             mutable=not read_only,
             pointer_depth=1,
+            metadata=metadata,
         )
         semantic_type.ownership.mutable = not read_only
 
     @staticmethod
-    def _shift_pointer_argument_value(
+    def _shift_address_argument_value(
         mapping: ProjectionMapping,
         old_position: int,
         new_position: int,
     ) -> None:
-        if mapping.value_kind != "ptr" or not isinstance(mapping.value, dict):
+        if mapping.value_kind != "addr" or not isinstance(mapping.value, dict):
             return
         if mapping.value.get("kind") == "arg" and mapping.value.get("position") == old_position:
             mapping.value["position"] = new_position
@@ -1945,7 +1998,7 @@ class _PyiAstParser:
         return [node]
 
 
-class _ClassBodyVisitor(ast.NodeVisitor):
+class _ClassBodyVisitor(ClassVisitor):
     def __init__(self, parser: _PyiAstParser, *, class_name: str):
         self.parser = parser
         self.class_name = class_name
@@ -1956,17 +2009,21 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         self.constructor_from_fields = False
         self.has_bound_constructor = False
 
-    def visit_body(self, nodes: list[ast.stmt]) -> None:
+    def _walk_nodes(self, nodes: list[ast.stmt]) -> None:
+        """Visit each statement in one class body."""
         for node in nodes:
-            self.visit(node)
+            self._visit(node)
 
-    def visit_Pass(self, node: ast.Pass) -> None:
-        return None
+    def _visit_Pass(self, node: ast.Pass) -> None:
+        """Accept an empty class-body placeholder."""
+        pass
 
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+    def _visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        """Convert an annotated class field declaration."""
         self.fields.append(self.parser.ann_assign(node, default_intent="in", binding_cls=SemanticField))
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+    def _visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        """Convert a method, constructor, or overload declaration."""
         decorators = self.parser.decorators(node.decorator_list, context="class body")
         if decorators.external:
             raise ValueError("external is not valid for a class method")
@@ -1993,6 +2050,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             native_name=decorators.bind_target,
             class_name=self.class_name,
             infer_passed_object=decorators.overload_target is None,
+            has_native_call=decorators.has_native_call,
             hold_gil=decorators.hold_gil,
             error_status_policy=decorators.error_status_policy,
         )
@@ -2031,7 +2089,8 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             and not args.posonlyargs
         )
 
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+    def _visit_ClassDef(self, node: ast.ClassDef) -> None:
+        """Convert a nested class declaration."""
         decorators = self.parser.decorators(node.decorator_list, context="class body")
         if (
             decorators.has_native_call
@@ -2053,31 +2112,38 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             )
         )
 
-    def generic_visit(self, node: ast.AST) -> None:
+    @staticmethod
+    def _visit_not_supported(node: ast.AST) -> None:
+        """Reject unsupported class-body syntax."""
         raise ValueError(f"Unsupported class body node: {_node_text(node)!r}")
 
 
-class _ModuleVisitor(ast.NodeVisitor):
+class _ModuleVisitor(ClassVisitor):
     def __init__(self, parser: _PyiAstParser):
         self.parser = parser
 
-    def visit_Module(self, node: ast.Module) -> None:
+    def _visit_Module(self, node: ast.Module) -> None:
+        """Visit all top-level declarations in source order."""
         for item in node.body:
-            self.visit(item)
+            self._visit(item)
 
-    def visit_Import(self, node: ast.Import) -> None:
+    def _visit_Import(self, node: ast.Import) -> None:
+        """Convert a direct import declaration."""
         self.parser.module.imports.append(self.parser.import_name(node))
 
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+    def _visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        """Convert a from-import declaration."""
         semantic_import = self.parser.import_from(node)
         if semantic_import.module == "typing" and any(item.source == "overload" for item in semantic_import.items):
             raise ValueError('typing.overload is not supported; use x2py @overload("specific")')
         self.parser.module.imports.append(semantic_import)
 
-    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+    def _visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        """Convert a module variable declaration."""
         self.parser.module.variables.append(self.parser.ann_assign(node, default_intent="in"))
 
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+    def _visit_ClassDef(self, node: ast.ClassDef) -> None:
+        """Convert a semantic class declaration."""
         decorators = self.parser.decorators(node.decorator_list, context="class")
         if (
             decorators.has_native_call
@@ -2099,7 +2165,8 @@ class _ModuleVisitor(ast.NodeVisitor):
             )
         )
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+    def _visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        """Convert a function or overload declaration."""
         decorators = self.parser.decorators(node.decorator_list, context=".pyi")
         if decorators.native_type is not None:
             raise ValueError("native_type is only valid for classes")
@@ -2109,6 +2176,7 @@ class _ModuleVisitor(ast.NodeVisitor):
             projection=decorators.projection,
             native_name=decorators.bind_target,
             external=decorators.external,
+            has_native_call=decorators.has_native_call,
             hold_gil=decorators.hold_gil,
             error_status_policy=decorators.error_status_policy,
         )
@@ -2124,7 +2192,9 @@ class _ModuleVisitor(ast.NodeVisitor):
         else:
             self.parser.module.functions.append(function)
 
-    def generic_visit(self, node: ast.AST) -> None:
+    @staticmethod
+    def _visit_not_supported(node: ast.AST) -> None:
+        """Reject unsupported top-level `.pyi` syntax."""
         raise ValueError(f"Unsupported .pyi node: {_node_text(node)!r}")
 
 

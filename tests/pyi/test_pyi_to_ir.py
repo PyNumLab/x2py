@@ -108,8 +108,8 @@ import typing
 public_value: Int32
 bounded: Final[Annotated[Int32, Bounded(1, 8)]]
 callback: typing.Callable
-pointer: Ref(Float64)
-read_only_pointer: Ref(Const(Float64))
+pointer: Addr(Float64)
+read_only_pointer: Addr(Const(Float64))
 """,
         module_name="dispatch",
     )
@@ -122,7 +122,8 @@ read_only_pointer: Ref(Const(Float64))
         SemanticConstraint("Constant"),
     ]
     assert callback.semantic_type.name == "Callable"
-    assert pointer.semantic_type.storage.kind == "reference"
+    assert pointer.semantic_type.storage.kind == "address"
+    assert pointer.semantic_type.storage.metadata["pyi_address_role"] == "raw"
     assert read_only_pointer.semantic_type.storage.mutable is False
 
 
@@ -274,7 +275,7 @@ def test_parse_pyi_text_infers_callback_dimension_argument_names():
     module = parse_pyi_text(
         """
 def apply_transform(
-    callback: Callable[[Ref(Const(Int32)), Const(Float64[count])], Float64[count]]
+    callback: Callable[[Addr(Const(Int32)), Const(Float64[count])], Float64[count]]
 ) -> None: ...
 """,
         module_name="callbacks",
@@ -363,9 +364,9 @@ from types_mod import particle
 
 answer: Int32
 
-def create_particle() -> Ref(particle): ...
+def create_particle() -> Addr(particle): ...
 
-def move(p: Annotated[Ref(particle), CompatibleHandle]) -> None: ...
+def move(p: Annotated[Addr(particle), CompatibleHandle]) -> None: ...
 """,
         encoding="utf-8",
     )
@@ -414,7 +415,7 @@ def test_load_pyi_modules_preserves_dotted_module_names_from_directory(tmp_path:
         """
 from shared.types_mod import particle
 
-def move(p: Ref(particle)) -> None: ...
+def move(p: Addr(particle)) -> None: ...
 """,
         encoding="utf-8",
     )
@@ -565,9 +566,9 @@ class state:
         """
 @private
 def init_state(
-    self: Ref(state),
-    seed: Ref(Const(Int32)),
-    scale: Ref(Const(Float64)) = ...
+    self: Addr(state),
+    seed: Addr(Const(Int32)),
+    scale: Addr(Const(Float64)) = ...
 ) -> None: ...
 
 class state:
@@ -581,8 +582,8 @@ class state:
     @overload("init_state")
     def __init__(
         self,
-        seed: Ref(Const(Int32)),
-        scale: Ref(Const(Float64)) = ...
+        seed: Addr(Const(Int32)),
+        scale: Addr(Const(Float64)) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -672,15 +673,15 @@ class state:
     @private
     def init_state(
         self,
-        seed: Ref(Const(Int32)),
-        scale: Ref(Const(Float64)) = ...
+        seed: Addr(Const(Int32)),
+        scale: Addr(Const(Float64)) = ...
     ) -> None: ...
 
     @bind("init_state")
     def __init__(
         self,
-        seed: Ref(Const(Int32)),
-        scale: Ref(Const(Float64)) = ...
+        seed: Addr(Const(Int32)),
+        scale: Addr(Const(Float64)) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -989,10 +990,10 @@ def make_value(
     assert func.arguments[0].intent == "in"
 
 
-def test_native_call_pointer_argument_projection_restores_native_reference_storage():
+def test_native_call_address_argument_projection_records_native_address_storage():
     module = parse_pyi_text(
         """
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def add_one(value: Const(Int32)) -> Int32: ...
 """,
         module_name="scalar_refs",
@@ -1002,13 +1003,79 @@ def add_one(value: Const(Int32)) -> Int32: ...
     value = function.arguments[0]
 
     assert value.semantic_type.name == "Int32"
-    assert value.semantic_type.storage.kind == "reference"
+    assert value.semantic_type.storage.kind == "address"
     assert value.semantic_type.storage.read_only is True
-    assert function.projection[0].value_kind == "ptr"
+    assert value.semantic_type.storage.metadata["pyi_address_role"] == "projection"
+    assert function.projection[0].value_kind == "addr"
     assert function.projection[0].value == {"kind": "arg", "position": 0}
     assert emit_module(module).strip() == (
-        "@native_call([Ref(Arg(0))])\ndef add_one(\n    value: Const(Int32)\n) -> Int32: ..."
+        "@native_call([Addr(Arg(0))])\ndef add_one(\n    value: Const(Int32)\n) -> Int32: ..."
     )
+
+
+def test_rank_zero_scalar_storage_round_trips_as_empty_tuple_array():
+    module = parse_pyi_text(
+        """
+def update_storage(value: Float64[()]) -> None: ...
+def inspect_storage(value: Const(Int32[()])) -> None: ...
+""",
+        module_name="scalar_storage",
+    )
+
+    update, inspect = module.functions
+    update_type = update.arguments[0].semantic_type
+    inspect_type = inspect.arguments[0].semantic_type
+
+    assert update.arguments[0].intent == "inout"
+    assert update_type.rank == 0
+    assert update_type.storage.kind == "array"
+    assert update_type.storage.array.category == "scalar_storage"
+    assert inspect.arguments[0].intent == "in"
+    assert inspect_type.storage.read_only is True
+
+    emitted = emit_module(module)
+    assert "value: Float64[()]" in emitted
+    assert "value: Const(Int32[()])" in emitted
+    assert parse_pyi_text(emitted, module_name="scalar_storage") == module
+
+
+def test_public_raw_address_contract_round_trips():
+    module = parse_pyi_text(
+        """
+def update_raw(value: Addr(Float64)) -> None: ...
+def inspect_raw(value: Addr(Const(Float64))) -> None: ...
+def raw_values(n: Int32, values: Addr(Float64[n])) -> None: ...
+def raw_label(label: Addr(String[8])) -> None: ...
+""",
+        module_name="raw_address",
+    )
+
+    update, inspect, raw_values, raw_label = module.functions
+    update_storage = update.arguments[0].semantic_type.storage
+    inspect_storage = inspect.arguments[0].semantic_type.storage
+    values_type = raw_values.arguments[1].semantic_type
+    label_type = raw_label.arguments[0].semantic_type
+
+    assert update.arguments[0].intent == "inout"
+    assert update_storage.kind == "address"
+    assert update_storage.metadata["pyi_address_role"] == "raw"
+    assert inspect.arguments[0].intent == "in"
+    assert inspect_storage.read_only is True
+    assert values_type.rank == 1
+    assert values_type.shape == ["n"]
+    assert values_type.storage.kind == "address"
+    assert values_type.storage.metadata["pyi_address_role"] == "raw"
+    assert label_type.name == "String"
+    assert label_type.metadata["fortran_character_length"] == "8"
+    assert label_type.storage.kind == "address"
+    assert label_type.storage.metadata["pyi_address_role"] == "raw"
+
+    emitted = emit_module(module)
+    assert "value: Addr(Float64)" in emitted
+    assert "value: Addr(Const(Float64))" in emitted
+    assert "values: Addr(Float64[n])" in emitted
+    assert "label: Addr(String[8])" in emitted
+    assert parse_pyi_text(emitted, module_name="raw_address") == module
 
 
 def test_function_equality_treats_argument_names_as_placeholders():
@@ -1156,21 +1223,40 @@ def add(
     assert func.projection[2].result_position == 0
 
 
-def test_native_call_projected_inout_keeps_argument_intent():
+def test_projected_inout_without_native_call_keeps_argument_intent():
     from_pyi = parse_pyi_text(
         """
-@native_call([Arg(0)])
 def fixed_inout(
-    name: Ref(String[8])
-) -> Returns["name", Ref(String[8])]: ...
+    name: String[8]
+) -> Returns["name", String[8]]: ...
 """,
         module_name="edited",
     )
     func = from_pyi.functions[0]
 
     assert func.arguments[0].intent == "inout"
-    assert func.projection[0].intent == "inout"
-    assert func.projection[0].result_position == 0
+    assert func.arguments[0].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
+    assert func.projection == []
+
+
+@pytest.mark.parametrize(
+    ("annotation", "message"),
+    [
+        ("String[8]", "redundant for String arguments"),
+        ("Float64[()]", "redundant for storage arguments"),
+        ("Float64[:]", "requires a scalar argument"),
+        ("Addr(Float64)", "redundant for raw address arguments"),
+    ],
+)
+def test_native_call_addr_arg_rejects_storage_like_arguments(annotation: str, message: str):
+    with pytest.raises(ValueError, match=message):
+        parse_pyi_text(
+            f"""
+@native_call([Addr(Arg(0))])
+def invalid(value: {annotation}) -> None: ...
+""",
+            module_name="edited",
+        )
 
 
 def test_native_call_projected_output_keeps_explicit_output_intent():
@@ -1178,7 +1264,7 @@ def test_native_call_projected_output_keeps_explicit_output_intent():
         """
 @native_call([Arg(0), Arg(1)])
 def fill(
-    n: Ref(Const(Int32)),
+    n: Addr(Const(Int32)),
     values: Annotated[Float64[n], Intent("out")]
 ) -> Returns["values", Float64[n]]: ...
 """,
@@ -1196,7 +1282,7 @@ def test_native_call_compact_array_output_marks_projection_without_output_intent
         """
 @native_call([Arg(0), Arg(1)])
 def fill(
-    n: Ref(Const(Int32)),
+    n: Addr(Const(Int32)),
     values: Float64[n]
 ) -> Returns["values", Float64[n]]: ...
 """,
@@ -1221,8 +1307,8 @@ def test_native_order_outputs_do_not_get_projected_without_native_call():
     from_pyi = parse_pyi_text(
         """
 def solve(
-    x: Ref(Const(Float64)),
-    status: Annotated[Ref(Int32), Intent("out")]
+    x: Addr(Const(Float64)),
+    status: Annotated[Addr(Int32), Intent("out")]
 ) -> tuple[Float64, Returns["message", String]]: ...
 """,
         module_name="edited",
@@ -1243,15 +1329,15 @@ class vector:
     @overload("assign_vector_real")
     def assign(
         self,
-        right: Ref(Const(Float64))
+        right: Const(Float64)
     ) -> vector: ...
 
 @private
-@native_call([Arg(0), Arg(1)])
+@native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_real(
-    left: Ref(vector),
-    right: Ref(Const(Float64))
-) -> Returns["left", Ref(vector)]: ...
+    left: Addr(vector),
+    right: Const(Float64)
+) -> Returns["left", Addr(vector)]: ...
 """,
         module_name="edited",
     )
@@ -1278,26 +1364,26 @@ def test_type_bound_method_declarations_restore_root_target_metadata():
 class vector:
     def scale(
         self,
-        factor: Ref(Const(Float64))
+        factor: Addr(Const(Float64))
     ) -> None: ...
 
     @bind("shift_vector")
     @native_call([Arg(0), Pass(), Arg(1)])
     def shift(
         self,
-        dx: Ref(Const(Float64)),
-        dy: Ref(Const(Float64))
+        dx: Addr(Const(Float64)),
+        dy: Addr(Const(Float64))
     ) -> None: ...
 
 def scale(
-    self: Annotated[Ref(vector), Polymorphic],
-    factor: Ref(Const(Float64))
+    self: Annotated[Addr(vector), Polymorphic],
+    factor: Addr(Const(Float64))
 ) -> None: ...
 
 def shift_vector(
-    dx: Ref(Const(Float64)),
-    owner: Annotated[Ref(vector), Polymorphic],
-    dy: Ref(Const(Float64))
+    dx: Addr(Const(Float64)),
+    owner: Annotated[Addr(vector), Polymorphic],
+    dy: Addr(Const(Float64))
 ) -> None: ...
 """,
         module_name="edited",
@@ -1317,12 +1403,12 @@ def test_pyi_codegen_imports_public_generic_not_private_specific_targets():
         """
 @private
 def convert_integer(
-    value: Ref(Const(Int32))
+    value: Addr(Const(Int32))
 ) -> Int32: ...
 
 @overload("convert_integer")
 def convert(
-    value: Ref(Const(Int32))
+    value: Addr(Const(Int32))
 ) -> Int32: ...
 """,
         module_name="foverloads_f90",
@@ -1361,8 +1447,8 @@ def test_native_call_return_entry_preserves_optional_pointer_return():
         """
 @native_call([Arg(0), Return("status", 0)])
 def maybe_status(
-    base: Ref(Const(Int32))
-) -> Ref(Int32) | None: ...
+    base: Addr(Const(Int32))
+) -> Addr(Int32) | None: ...
 """,
         module_name="edited",
     )
@@ -1373,7 +1459,7 @@ def maybe_status(
     assert returned.optional is True
     assert returned.semantic_type.name == "Int32"
     assert returned.semantic_type.storage is not None
-    assert returned.semantic_type.storage.kind == "reference"
+    assert returned.semantic_type.storage.kind == "address"
     assert func.projection[1].python_name == "status"
 
 
@@ -1383,8 +1469,8 @@ def test_native_call_later_return_entry_preserves_native_position_and_name():
 @native_call([Arg(0), Return("status", 1), Arg(1)])
 def fill(
     values: Annotated[Float64[n], Intent("out")],
-    n: Ref(Int32)
-) -> tuple[Returns["values", Float64[n]], Ref(Int32)]: ...
+    n: Addr(Int32)
+) -> tuple[Returns["values", Float64[n]], Addr(Int32)]: ...
 """,
         module_name="edited",
     )
@@ -1757,7 +1843,7 @@ end module solver_mod
     pyi = "\n\n".join(emit_module(module) for module in modules)
     reparsed = parse_pyi_text(pyi, module_name="solver_mod")
 
-    assert "@native_call([Ref(Arg(0)), Return('x', 0), Ref(Arg(1))])" in pyi
+    assert "@native_call([Addr(Arg(0)), Return('x', 0), Addr(Arg(1))])" in pyi
     func = reparsed.functions[0]
     assert func.name == "solve"
     assert [arg.name for arg in func.arguments] == ["a", "x", "b"]
@@ -1836,7 +1922,7 @@ def test_parse_pyi_text_preserves_extended_array_metadata_and_nested_selector():
         """
 value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
 nested: Float64[:, :][rank, kind]
-name: Annotated[Ref(String[16]), FortranAllocatable]
+name: Annotated[String[16], FortranAllocatable]
 
 def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
 """,
@@ -1873,7 +1959,7 @@ plain_callback: Callable
 qualified_callback: typing.Callable
 opaque_callback: Callable[..., Float64]
 constant: Const(Int32)
-deep: Ref[3](Const(Float64))
+deep: Addr[3](Const(Float64))
 rank_any: Float64[...]
 strided: Float64[0:n:]
 computed: Float64[size(xl)]
@@ -1954,8 +2040,8 @@ def helper(value: Int32) -> None: ...
     "source, message",
     [
         ("value: Const(Int32, Float64)\n", "Const type expects one argument: 'Const(Int32, Float64)'"),
-        ("value: Ref(Int32, Float64)\n", "Ref type expects one argument: 'Ref(Int32, Float64)'"),
-        ("value: Ref[1](Int32)\n", "Ref[1](...) is invalid; use Ref(...)"),
+        ("value: Addr(Int32, Float64)\n", "Addr type expects one argument: 'Addr(Int32, Float64)'"),
+        ("value: Addr[1](Int32)\n", "Addr[1](...) is invalid; use Addr(...)"),
         ("value: Callable[Int32]\n", "Callable expects argument types and a return type: 'Callable[Int32]'"),
         ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list: 'Callable[Int32, Float64]'"),
         (
@@ -2008,11 +2094,6 @@ def helper(value: Int32) -> None: ...
         ("value: Annotated[Int32, 'bad']\n", "Unsupported Annotated metadata: \"'bad'\""),
         ("value: Float64[:, foo.bar]\n", "Unsupported array dimension expression: 'foo.bar'"),
         (
-            "value: Int32[()]\n",
-            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
-            "Annotated[...] for constraints or array metadata",
-        ),
-        (
             "@native_call([Arg(0).other[0]])\ndef f(x: Int32) -> None: ...\n",
             "native_call expects projection entry calls",
         ),
@@ -2029,7 +2110,7 @@ def test_pyi_parser_internal_projection_helpers_preserve_native_names():
     return_type, returned_values = parser.return_projection(
         ast.parse("tuple[Float64, Returns['extra', Int32, Optional], Returns['other', Float64]]", mode="eval").body
     )
-    pointer = parser.semantic_type(ast.parse("Ref(Float64)", mode="eval").body)
+    pointer = parser.semantic_type(ast.parse("Addr(Float64)", mode="eval").body)
     returned = SemanticArgument("result", SemanticType("Float64"), intent="out", metadata={"return_position": 1})
     mapping = ProjectionMapping(native_name="native_result", result_position=1, intent="out")
     _, values = parser._apply_native_call_returns(None, [returned], [mapping])

@@ -450,8 +450,8 @@ X2PY_C_DOCS_END &#45;&#45;>
 X2PY_C_DOCS_END &#45;&#45;>
 
 <!&#45;&#45; X2PY_C_DOCS_START
-2. `CParser` public visitors: `visit_file`, `visit_project`, and
-   `visit_parsed_project`.
+2. `CParser` public parse entrypoints: `parse_file` and `parse_project`.
+   `_assemble_project` is the internal already-parsed-file assembly helper.
 8. Thin module-level wrappers: `parse_c_file` and `parse_c_project`.
 X2PY_C_DOCS_END &#45;&#45;>
 
@@ -462,7 +462,7 @@ where call shape or grammar behavior is not obvious.
 X2PY_C_DOCS_END &#45;&#45;>
 
 <!&#45;&#45; X2PY_C_DOCS_START
-`visit_parsed_project(files)` assembles translation units that a caller has
+`_assemble_project(files)` assembles translation units that a caller has
 already parsed individually. The x2py CLI uses it after compiler preprocessing
 and recipe attachment. Most callers should use `parse_c_project(...)`, which
 handles source loading before delegating to the same project assembly path.
@@ -1069,9 +1069,9 @@ X2PY_C_DOCS_END &#45;&#45;>
 ```text
 source path or source text
   -> optional compiler preprocessing and source mapping
-  -> CParser.visit_file(...)
+  -> CParser.parse_file(...)
   -> CFile parser facts
-  -> CParser.visit_parsed_project(...) or parse_c_project(...)
+  -> CParser._assemble_project(...) or parse_c_project(...)
   -> CProject indexes and cross-file resolution facts
   -> semantics.c2ir conversion
   -> readiness and `.pyi`; a C-input runtime wrapper backend comes later

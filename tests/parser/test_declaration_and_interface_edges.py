@@ -510,7 +510,7 @@ program type_stmt_program
 end program type_stmt_program
 """
 
-    module = FortranParser().visit_fortran_module(
+    module = FortranParser().parse_module(
         module_code,
         filename="module_like_edges.f90",
     )

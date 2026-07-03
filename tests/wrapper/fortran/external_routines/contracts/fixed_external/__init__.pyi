@@ -1,4 +1,4 @@
 @external
 def fixed_add(
-    value: Ref(Int32)
+    value: Addr(Int32)
 ) -> Int32: ...

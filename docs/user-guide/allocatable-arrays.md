@@ -101,22 +101,21 @@ contracts:
 shared_values: Annotated[Float64[:], Allocatable, Aliased] | None
 snapshot_values: Annotated[Float64[:], Allocatable] | None
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def make_values(
     count: Const(Int32)
 ) -> Annotated[Float64[:], Allocatable]: ...
 
-@native_call([Arg(0)])
 def replace_values(
     values: Annotated[Float64[:], Allocatable]
 ) -> Returns["values", Annotated[Float64[:], Allocatable], Optional]: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def allocate_shared(
     count: Const(Int32)
 ) -> None: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def allocate_snapshot(
     count: Const(Int32)
 ) -> None: ...
@@ -240,7 +239,6 @@ The generated `.pyi` represents a fixed-length rank-one character array as
 native allocation at runtime:
 
 ```python
-@native_call([Arg(0)])
 def replace_names(
     names: Annotated[String[:], Allocatable]
 ) -> Returns[

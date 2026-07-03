@@ -89,7 +89,7 @@ def parse_c_report(
     parser = CParser()
     for p in expand_c_paths(paths):
         if source_loader is None:
-            parsed = parser.visit_file(
+            parsed = parser.parse_file(
                 p,
                 filename=str(p),
                 include_dirs=include_dirs,
@@ -98,7 +98,7 @@ def parse_c_report(
         else:
             loaded = source_loader(p)
             source, preprocessing_recipe = loaded if isinstance(loaded, tuple) else (loaded, None)
-            parsed = parser.visit_file(
+            parsed = parser.parse_file(
                 source,
                 filename=str(p),
                 include_dirs=include_dirs,

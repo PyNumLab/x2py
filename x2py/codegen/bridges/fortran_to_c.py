@@ -11,6 +11,8 @@ from typing import ClassVar
 from x2py.ownership_policy import (
     AssignmentMode,
     CodegenAction,
+    NativeBarrierAction,
+    NativeBarrierDispatcher,
     ObjectKind,
     PolicyActionDispatcher,
     SetterAction,
@@ -121,23 +123,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     target_language = "C"
     start_language = "Fortran"
-    _ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
+    _NATIVE_BARRIER_DISPATCHER = NativeBarrierDispatcher(
         {
-            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_numeric_direct_argument",
-            (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_numeric_call_local_argument",
-            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_numeric_direct_argument",
-            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_numeric_identity_output_argument",
-            (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_numeric_copy_in_out_argument",
-            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_string_call_argument",
-            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_string_call_argument",
-            (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_string_copy_in_out_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_array_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_array_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_array_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_array_copy_in_out_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_custom_type_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_custom_type_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_custom_type_argument",
+            NativeBarrierAction.PASS_VALUE: "_convert_native_value_argument",
+            NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS: "_convert_native_call_local_address_argument",
+            NativeBarrierAction.PASS_STORAGE_ADDRESS: "_convert_native_storage_address_argument",
+            NativeBarrierAction.PASS_RAW_ADDRESS: "_convert_native_raw_address_argument",
+            NativeBarrierAction.PASS_ARRAY_DESCRIPTOR: "_convert_native_array_descriptor_argument",
+            NativeBarrierAction.PASS_WRAPPER_ADDRESS: "_convert_native_wrapper_address_argument",
         }
     )
     _RESULT_POLICY_DISPATCHER = PolicyActionDispatcher(
@@ -1046,7 +1039,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         var = expr.var
         if isinstance(var, FunctionAddress):
             return self._convert_callback_argument(expr, func)
-        func_def_argument_dict = self._ARGUMENT_POLICY_DISPATCHER.dispatch(self, var, func)
+        func_def_argument_dict = self._NATIVE_BARRIER_DISPATCHER.dispatch(self, var, func)
         new_var = func_def_argument_dict["c_arg"]
         func_def_argument_dict["c_arg"] = FunctionDefArgument(
             new_var,
@@ -1484,20 +1477,65 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             c_scope.insert_variable(dimension)
         return dimensions
 
-    def _convert_numeric_direct_argument(self, var, decision, func):
-        """Convert a direct or in-place numeric argument."""
-        return self._build_numeric_argument(var, decision, needs_pointer_bridge=var.is_optional)
+    def _convert_native_value_argument(self, var, decision, func):
+        """Pass a C-visible scalar value through the native call boundary."""
+        if decision.kind is not ObjectKind.SCALAR:
+            raise ValueError(f"Native value barrier only supports scalar arguments, got {decision.kind.value}")
+        return self._build_numeric_argument(
+            var,
+            decision,
+            needs_pointer_bridge=var.is_optional,
+            direct_memory_handling=var.memory_handling,
+        )
 
-    def _convert_numeric_call_local_argument(self, var, decision, func):
-        """Convert a call-local numeric argument through its completed storage mode."""
-        needs_pointer_bridge = var.is_optional or decision.storage_mode is StorageMode.ALIAS
-        return self._build_numeric_argument(var, decision, needs_pointer_bridge=needs_pointer_bridge)
+    def _convert_native_call_local_address_argument(self, var, decision, func):
+        """Pass the address of bridge-owned call-local native storage."""
+        if decision.kind is ObjectKind.STRING:
+            return self._build_string_argument(
+                var, decision, copy_back=decision.codegen_action is CodegenAction.COPY_IN_OUT
+            )
+        if decision.kind is ObjectKind.SCALAR and decision.codegen_action is CodegenAction.COPY_IN_OUT:
+            return self._convert_native_scalar_replacement_argument(var, decision, func)
+        if decision.kind is not ObjectKind.SCALAR:
+            raise ValueError(
+                f"Native call-local address barrier only supports scalar or string arguments, got {decision.kind.value}"
+            )
+        return self._build_numeric_argument(
+            var,
+            decision,
+            needs_pointer_bridge=var.is_optional,
+            direct_memory_handling=StorageMode.STACK.value,
+        )
 
-    def _convert_numeric_identity_output_argument(self, var, decision, func):
-        """Convert caller-supplied writable scalar output storage."""
-        return self._build_numeric_argument(var, decision, needs_pointer_bridge=True)
+    def _convert_native_storage_address_argument(self, var, decision, func):
+        """Pass caller/Python-backed storage through the native call boundary."""
+        if decision.kind is not ObjectKind.SCALAR:
+            raise ValueError(
+                f"Native storage-address barrier only supports scalar arguments, got {decision.kind.value}"
+            )
+        return self._build_numeric_argument(
+            var,
+            decision,
+            needs_pointer_bridge=True,
+            direct_memory_handling=var.memory_handling,
+        )
 
-    def _build_numeric_argument(self, var, decision, *, needs_pointer_bridge):
+    def _convert_native_raw_address_argument(self, var, decision, func):
+        """Pass a caller-supplied raw address through the native call boundary."""
+        if decision.kind is ObjectKind.STRING:
+            return self._convert_raw_string_argument(var, decision)
+        if decision.kind is ObjectKind.NUMPY_ARRAY:
+            return self._convert_raw_array_argument(var)
+        if decision.kind is not ObjectKind.SCALAR:
+            raise ValueError(f"Native raw-address barrier does not support {decision.kind.value} arguments")
+        return self._build_numeric_argument(
+            var,
+            decision,
+            needs_pointer_bridge=True,
+            direct_memory_handling=var.memory_handling,
+        )
+
+    def _build_numeric_argument(self, var, decision, *, needs_pointer_bridge, direct_memory_handling):
         """Build the numeric bridge representation selected by policy dispatch."""
         name = var.name
         self.scope.insert_symbol(name)
@@ -1519,13 +1557,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
             body = [C_F_Pointer(new_var, f_arg)]
         else:
-            f_arg = var.clone(collisionless_name, new_class=Variable, is_argument=True)
+            f_arg = var.clone(
+                collisionless_name,
+                new_class=Variable,
+                is_argument=True,
+                memory_handling=direct_memory_handling,
+            )
             new_var = f_arg
             body = []
         self.scope.insert_variable(f_arg)
         return {"c_arg": BindCVariable(new_var, var), "f_arg": f_arg, "body": body}
 
-    def _convert_numeric_copy_in_out_argument(self, var, decision, func):
+    def _convert_native_scalar_replacement_argument(self, var, decision, func):
         """Copy an immutable Python scalar into mutable native call storage."""
         name = var.name
         scope = self.scope
@@ -1553,8 +1596,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "body": [Assign(local_var, input_var)],
         }
 
-    def _convert_custom_type_argument(self, var, decision, func):
-        """Convert custom type argument for the current wrapper."""
+    def _convert_native_wrapper_address_argument(self, var, decision, func):
+        """Pass a generated wrapper's native address through the native boundary."""
         name = var.name
         self.scope.insert_symbol(name)
         collisionless_name = self.scope.get_expected_name(name)
@@ -1576,7 +1619,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope.insert_variable(f_arg)
         return {"c_arg": BindCVariable(new_var, var), "f_arg": f_arg, "body": body}
 
-    def _convert_array_copy_in_out_argument(self, var, decision, func):
+    def _convert_native_array_descriptor_argument(self, var, decision, func):
+        """Pass a packed array descriptor through the native call boundary."""
+        if decision.codegen_action is CodegenAction.COPY_IN_OUT:
+            return self._convert_native_array_replacement_argument(var, decision, func)
+        return self._convert_native_array_storage_argument(var, decision, func)
+
+    def _convert_native_array_replacement_argument(self, var, decision, func):
         """Copy an immutable Python array into mutable native call storage."""
         name = var.name
         scope = self.scope
@@ -1657,7 +1706,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": local_var, "body": body}
 
-    def _convert_array_argument(self, var, decision, func):
+    def _convert_native_array_storage_argument(self, var, decision, func):
         """Convert array argument for the current wrapper."""
         name = var.name
         scope = self.scope
@@ -1752,6 +1801,46 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         return {"c_arg": BindCVariable(c_arg_var, var), "f_arg": f_arg, "body": body}
 
+    def _convert_raw_array_argument(self, var):
+        """Associate a caller-supplied raw data address with a Fortran array pointer."""
+        name = var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        collisionless_name = scope.get_expected_name(name)
+        shape = self._raw_array_pointer_shape(var)
+        pointer_shape = shape[::-1] if var.order == "C" else shape
+        bind_var = Variable(
+            BindCPointer(),
+            scope.get_new_name(f"bound_{name}"),
+            is_argument=True,
+            is_optional=False,
+            memory_handling="alias",
+        )
+        f_arg = var.clone(
+            collisionless_name,
+            is_argument=False,
+            is_optional=False,
+            memory_handling="alias",
+            new_class=Variable,
+        )
+        scope.insert_variable(bind_var)
+        scope.insert_variable(f_arg)
+        return {
+            "c_arg": BindCVariable(bind_var, var),
+            "f_arg": f_arg,
+            "body": [C_F_Pointer(bind_var, f_arg, pointer_shape)],
+        }
+
+    @staticmethod
+    def _raw_array_pointer_shape(var):
+        """Return the fixed or visible extents needed to associate a raw pointer."""
+        shape = tuple(var.alloc_shape or ())
+        if len(shape) != var.rank or any(item is None for item in shape):
+            raise ValueError(
+                f"Raw array address argument {var.name!r} requires a fixed or visible extent for every axis"
+            )
+        return list(shape)
+
     def _convert_assumed_rank_array_argument(self, var, collisionless_name, bind_var):
         """Convert assumed rank array argument for the current wrapper."""
         name = var.name
@@ -1832,13 +1921,50 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             },
         }
 
-    def _convert_string_call_argument(self, var, decision, func):
-        """Convert a call-local or identity string without replacement copy-back."""
-        return self._build_string_argument(var, decision, copy_back=False)
-
-    def _convert_string_copy_in_out_argument(self, var, decision, func):
-        """Convert an immutable string and copy native mutation into a replacement."""
-        return self._build_string_argument(var, decision, copy_back=True)
+    def _convert_raw_string_argument(self, var, decision):
+        """Associate a caller-supplied raw character address with fixed string storage."""
+        name = var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        fixed_len = var.alloc_shape[0]
+        if fixed_len is None:
+            raise ValueError(f"Raw string address argument {name!r} requires a fixed String[n] length")
+        bind_var = Variable(
+            BindCPointer(),
+            scope.get_new_name(f"bound_{name}"),
+            is_argument=True,
+            is_optional=False,
+            memory_handling="alias",
+        )
+        array_var = Variable(
+            NumpyNDArrayType.get_new(CharType(), 1, None),
+            scope.get_new_name(name),
+            memory_handling="alias",
+        )
+        f_arg = var.clone(
+            scope.get_expected_name(name),
+            is_argument=False,
+            is_optional=False,
+            memory_handling="stack",
+            new_class=Variable,
+        )
+        scope.insert_variable(bind_var)
+        scope.insert_variable(array_var)
+        scope.insert_variable(f_arg)
+        body = [
+            C_F_Pointer(bind_var, array_var, (fixed_len,)),
+            Assign(f_arg, FortranTransfer(array_var, f_arg)),
+        ]
+        post_body = []
+        if decision.mutates_native:
+            raw_slice = IndexedElement(array_var, Slice(None, fixed_len))
+            post_body = [Assign(raw_slice, FortranTransfer(f_arg, raw_slice, fixed_len))]
+        return {
+            "c_arg": BindCVariable(bind_var, var),
+            "f_arg": f_arg,
+            "body": body,
+            "post_body": post_body,
+        }
 
     def _build_string_argument(self, var, decision, *, copy_back):
         """Build string argument storage selected by strict policy dispatch."""
@@ -1989,6 +2115,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
             is_argument=False,
             is_optional=False,
+            memory_handling=(
+                StorageMode.STACK.value
+                if decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+                else orig_var.memory_handling
+            ),
         )
         return {
             "body": [],

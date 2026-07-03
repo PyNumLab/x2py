@@ -53,7 +53,7 @@ class particle:
     mass: Float64
 
 def scale(
-    n: Ref(Const(Int32)),
+    n: Addr(Const(Int32)),
     values: Float64[n],
 ) -> None: ...
 ```
@@ -87,7 +87,7 @@ Fortran module:
 
 ```python
 # module1.pyi
-def update(value: Ref(Float64)) -> None: ...
+def update(value: Float64[()]) -> None: ...
 ```
 
 The generated Fortran bridge imports the procedure from its retained native
@@ -183,8 +183,8 @@ assume that `name.pyi` is implemented by `name.o`:
   may come from different directories or build systems.
 
 Native inputs form one extension-level link plan. The generated bridge creates
-native references from the immutable `.pyi` binding metadata, and the linker
-resolves those references from caller-supplied artifacts. The `.pyi` filename is
+native symbol uses from the immutable `.pyi` binding metadata, and the linker
+resolves those symbols from caller-supplied artifacts. The `.pyi` filename is
 never used to guess an object, archive, or shared-library name.
 
 The current `.pyi` build subset accepts direct artifact paths through
@@ -379,24 +379,32 @@ Bare types are direct values:
 def dot(a: Float64, b: Float64) -> Float64: ...
 ```
 
-`Ref(T)` represents native pointer-backed or reference storage:
+`T[()]` represents caller-provided rank-zero NumPy scalar storage:
 
 ```python
-def update(value: Ref(Float64)) -> None: ...
-def inspect(value: Ref(Const(Int32))) -> None: ...
+def update(value: Float64[()]) -> None: ...
+def inspect(value: Const(Int32[()])) -> None: ...
 ```
 
-`Const(T)` marks the wrapped storage read-only. For a pointer this means a
-read-only pointee. For an array it means read-only array storage.
+`Addr(T)` represents a raw address supplied by the caller:
+
+```python
+def update_raw(value: Addr(Float64)) -> None: ...
+def inspect_raw(value: Addr(Const(Int32))) -> None: ...
+```
+
+`Const(T)` marks the wrapped value or storage read-only. For `Addr(Const(T))`
+this means a read-only pointee. For `Const(T[()])` it means readable rank-zero
+storage. For an array it means read-only array storage.
 
 Pointer depth is explicit for low-level pointer graphs:
 
 ```python
-handle: Ref[2](OpaqueHandle)
-argv: Ref[3](Const(Int8))
+handle: Addr[2](OpaqueHandle)
+argv: Addr[3](Const(Int8))
 ```
 
-`Ref[1](T)` is invalid; use `Ref(T)`.
+`Addr[1](T)` is invalid; use `Addr(T)`.
 
 Array storage uses NumPy-style subscriptions:
 
@@ -429,7 +437,7 @@ Use local constants or generated `Final[...]` names for shape symbols.
 ```python
 def fill(
     a: Annotated[Float64[:, :], ORDER_F],
-    out: Annotated[Ref(Float64), Intent("out")],
+    out: Annotated[Float64[()], Intent("out")],
 ) -> None: ...
 ```
 
@@ -578,7 +586,7 @@ class particle(Opaque):
 # physics.pyi
 from types_mod import particle
 
-def move(p: Ref(particle)) -> None: ...
+def move(p: Addr(particle)) -> None: ...
 ```
 
 If the owner stub is later edited to include fields, the import is reconciled as
@@ -586,17 +594,18 @@ a wrapped external type without changing the importing file.
 
 ## Functions, Methods And Returns
 
-Generated C and Fortran stubs currently describe exact native interfaces: they
-do not hide length arguments, reorder parameters, synthesize output returns, or
-guess pointer ownership.
+Generated C and Fortran stubs describe native interfaces without guessing
+ownership. Scalar values may be Python-visible values with an `@native_call`
+address projection, caller-provided rank-zero storage, or explicit raw address
+contracts.
 
 Fortran scalar dummy arguments are generated as:
 
 | Source argument | Generated semantic form |
 | --- | --- |
-| no `value`, `intent(in)` | `Ref(Const(T))` |
-| no `value`, `intent(out)` | `Annotated[Ref(T), Intent("out")]` |
-| no `value`, `intent(inout)` | `Ref(T)` |
+| no `value`, `intent(in)` | visible `Const(T)` plus `Addr(Arg(i))` in `@native_call` |
+| no `value`, `intent(out)` | `Annotated[T[()], Intent("out")]` for caller storage, or projected `Returns[...]` |
+| no `value`, `intent(inout)` | `T[()]` for caller storage, or visible `T` plus projected replacement `Returns[...]` |
 | `value` | direct `T` |
 | function result | direct return annotation |
 
@@ -628,23 +637,23 @@ from `typing`.
 
 ```python
 @private
-def convert_integer(value: Ref(Const(Int32))) -> Int32: ...
+def convert_integer(value: Addr(Const(Int32))) -> Int32: ...
 
 @private
-def convert_real(value: Ref(Const(Float64))) -> Float64: ...
+def convert_real(value: Addr(Const(Float64))) -> Float64: ...
 
 @overload("convert_integer")
-def convert(value: Ref(Const(Int32))) -> Int32: ...
+def convert(value: Addr(Const(Int32))) -> Int32: ...
 
 @overload("convert_real")
-def convert(value: Ref(Const(Float64))) -> Float64: ...
+def convert(value: Addr(Const(Float64))) -> Float64: ...
 
 class accumulator:
     @overload("accumulator_add_integer")
-    def add(self, value: Ref(Const(Int32))) -> None: ...
+    def add(self, value: Addr(Const(Int32))) -> None: ...
 
     @overload("accumulator_add_real")
-    def add(self, value: Ref(Const(Float64))) -> None: ...
+    def add(self, value: Addr(Const(Float64))) -> None: ...
 ```
 
 Concrete specifics that remain in a stub are ordinary functions with their
@@ -702,17 +711,17 @@ method call:
 
 ```python
 @private
-def add_vector_real(left: Ref(Const(vector)), right: Ref(Const(Float64))) -> vector: ...
+def add_vector_real(left: Addr(Const(vector)), right: Addr(Const(Float64))) -> vector: ...
 
 @private
-def add_real_vector(left: Ref(Const(Float64)), right: Ref(Const(vector))) -> vector: ...
+def add_real_vector(left: Addr(Const(Float64)), right: Addr(Const(vector))) -> vector: ...
 
 class vector:
     @overload("add_vector_real")
-    def __add__(self, right: Ref(Const(Float64))) -> vector: ...
+    def __add__(self, right: Addr(Const(Float64))) -> vector: ...
 
     @overload("add_real_vector")
-    def __radd__(self, left: Ref(Const(Float64))) -> vector: ...
+    def __radd__(self, left: Addr(Const(Float64))) -> vector: ...
 ```
 
 Operand positions are fixed:
@@ -763,13 +772,13 @@ explicit mutation:
 ```python
 @private
 def assign_vector_real(
-    left: Annotated[Ref(vector), Intent("out")],
-    right: Ref(Const(Float64)),
+    left: Annotated[Addr(vector), Intent("out")],
+    right: Addr(Const(Float64)),
 ) -> None: ...
 
 class vector:
     @overload("assign_vector_real")
-    def assign(self, right: Ref(Const(Float64))) -> None: ...
+    def assign(self, right: Addr(Const(Float64))) -> None: ...
 ```
 
 `lhs.assign(rhs)` invokes native `lhs = rhs`, mutates the existing wrapped
@@ -853,15 +862,15 @@ class state:
     @private
     def init_state(
         self,
-        seed: Ref(Const(Int32)),
-        scale: Ref(Const(Float64)) = ...
+        seed: Addr(Const(Int32)),
+        scale: Addr(Const(Float64)) = ...
     ) -> None: ...
 
     @bind("init_state")
     def __init__(
         self,
-        seed: Ref(Const(Int32)),
-        scale: Ref(Const(Float64)) = ...
+        seed: Addr(Const(Int32)),
+        scale: Addr(Const(Float64)) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -1011,7 +1020,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Fortran intrinsic scalars | compiler-aware semantic dtype names |
 | C primitive scalars | compiler-probed semantic dtype names when a target report is supplied |
 | Functions/subroutines | exact native argument order and direct return type |
-| Fortran scalar references | `Ref(Const(T))`, `Ref(T)`, `Intent("out")` |
+| Fortran scalar storage | `Const(T)`, `T[()]`, `Addr(Arg(...))`, `Returns[...]` |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
 | Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
@@ -1031,7 +1040,7 @@ Loaded but usually not generated from source today:
 | Area | Loaded behavior |
 | --- | --- |
 | `Callable[[...], ...]` | complete callback/procedure signature metadata |
-| `Ref[n](T)` for `n > 1` | direct low-level pointer topology |
+| `Addr[n](T)` for `n > 1` | direct low-level pointer topology |
 | `ORDER_ANY` | edited orientation-independent array contract |
 | generic `Annotated` constraints | preserved semantic constraints |
 | `@native_call` and `Returns[...]` | projection metadata |
@@ -1044,7 +1053,7 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - `Unknown` semantic types.
 - `Constant` or `Shape` as `Annotated` metadata.
 - non-dimensional subscriptions such as `Float64[ORDER_F]`.
-- `Ref[1](T)`.
+- `Addr[1](T)`.
 - untyped callable parameters.
 - positional-only, keyword-only, vararg or kwarg function parameters, except
   for the generated derived-type constructor shape.

@@ -577,7 +577,7 @@ Runtime tests: [`test_optional_arguments.py`](../tests/wrapper/fortran/feature_p
 
 The Python call does not expose Fortran ABI mechanics, but x2py preserves them.
 A scalar `value` dummy is passed as a C value; the same declaration without
-`value` remains a by-reference Fortran dummy.
+`value` remains an address-passed Fortran dummy.
 
 ```fortran
 integer(c_int) function add_one(n) bind(C, name="solver_add_one")
@@ -597,7 +597,7 @@ extension can call the existing symbol `solver_add_one` directly. The
 rename the Python function.
 
 Arrays, character buffers, derived types, optionals, outputs, pointers,
-allocatables, by-reference dummies, or any non-interoperable declaration retain
+allocatables, address-passed dummies, or any non-interoperable declaration retain
 a generated Fortran shim or produce a readiness diagnostic when no safe shim
 contract exists.
 
@@ -879,7 +879,7 @@ C never guesses the memory layout of the type.
 
 ### Scalar Arguments And Results
 
-- `intent(in)` passes the existing native instance by reference without
+- `intent(in)` passes the existing native instance by address without
   transferring ownership;
 - `intent(inout)` mutates that existing instance;
 - hidden `intent(out)` produces a new wrapper-owned object; and

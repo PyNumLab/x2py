@@ -227,7 +227,7 @@ def test_c2ir_maps_const_and_mutable_pointers_to_storage_contracts():
     assert dst.metadata["readiness_blockers"] == [
         _blocker(
             "c_pointer_ownership_ambiguous",
-            "Mutable C pointer parameters need explicit ownership, scalar-reference, or array policy.",
+            "Mutable C pointer parameters need explicit ownership, scalar-storage, or array policy.",
             {"owner": "copy.dst", "parameter": "dst", "type": "double *dst"},
         )
     ]
@@ -259,7 +259,7 @@ def test_c2ir_maps_const_and_mutable_pointers_to_storage_contracts():
             "source_type": "double *dst",
         },
     }
-    restricted = CToIRConverter().visit_type(
+    restricted = CToIRConverter().visit(
         CComposedType(
             components=[CPointer(qualifiers=[CRestrict()]), CDouble()],
             source_text="double *restrict",
@@ -267,7 +267,7 @@ def test_c2ir_maps_const_and_mutable_pointers_to_storage_contracts():
     )
     assert restricted.storage.metadata["restrict"] is True
     assert restricted.ownership.aliasing is False
-    double_pointer = CToIRConverter().visit_type(
+    double_pointer = CToIRConverter().visit(
         CComposedType(components=[CPointer(), CPointer(), CDouble()], source_text="double **")
     )
     assert double_pointer.storage.kind == "pointer"
@@ -802,14 +802,14 @@ int read_values(const double *values, size_t n);
     converter.typedefs = {
         "target_t": CTypedef(name="target_t", type=CUnknownType(spelling="missing_t", source_text="missing_t"))
     }
-    resolved = converter.visit_type(CTypedef(name="target_t"), owner="result")
-    inline = converter.visit_type(
+    resolved = converter.visit(CTypedef(name="target_t"), owner="result")
+    inline = converter.visit(
         CTypedef(name="inline_t", type=CUnknownType(spelling="inline_missing_t", source_text="inline_missing_t")),
         owner="inline_result",
     )
-    unresolved = converter.visit_type(CTypedef(name="absent_t"), owner="result")
+    unresolved = converter.visit(CTypedef(name="absent_t"), owner="result")
     converter.typedefs["cyclic_t"] = CTypedef(name="cyclic_t")
-    cyclic = converter.visit_type(CTypedef(name="cyclic_t"), owner="cycle")
+    cyclic = converter.visit(CTypedef(name="cyclic_t"), owner="cycle")
     assert resolved.metadata == {
         "readiness_blockers": [
             _blocker(
@@ -863,7 +863,7 @@ def test_c2ir_uses_standard_type_probe_facts_when_supplied():
         }
     )
 
-    module = converter.visit_file(parsed)
+    module = converter.visit(parsed)
 
     assert _function(module, "count").return_type.name == "UInt32"
 
@@ -883,7 +883,7 @@ def test_c2ir_preserves_c_int_identity_and_stores_compiler_probed_precision():
         }
     )
 
-    semantic_type = converter.visit_type(CInt())
+    semantic_type = converter.visit(CInt())
 
     assert semantic_type.name == "Int"
     assert semantic_type.dtype == "Int16"
@@ -912,7 +912,7 @@ def test_c2ir_preserves_c_int_identity_and_stores_compiler_probed_precision():
     ],
 )
 def test_c2ir_uses_compiler_probed_primitive_abi_facts(ctype, primitive, fact, expected):
-    semantic_type = CToIRConverter(standard_type_report={"types": {primitive: fact}}).visit_type(ctype)
+    semantic_type = CToIRConverter(standard_type_report={"types": {primitive: fact}}).visit(ctype)
 
     assert semantic_type.name == expected
     assert semantic_type.dtype == expected
@@ -925,7 +925,7 @@ def test_c2ir_uses_compiler_probed_primitive_abi_facts(ctype, primitive, fact, e
 
 def test_c2ir_blocks_compiler_probed_primitive_abi_without_semantic_dtype():
     fact = {"kind": "integer", "signed": True, "bits": 48}
-    semantic_type = CToIRConverter(standard_type_report={"types": {"long": fact}}).visit_type(CLong())
+    semantic_type = CToIRConverter(standard_type_report={"types": {"long": fact}}).visit(CLong())
 
     assert semantic_type.name == "CUnsupported"
     assert semantic_type.metadata["c_primitive"] == "long"
@@ -950,7 +950,7 @@ def test_c2ir_uses_enum_specific_underlying_type_facts_when_supplied():
                 }
             }
         }
-    ).visit_file(parsed)
+    ).visit(parsed)
 
     return_type = _function(module, "get_status").return_type
     assert module.classes == []
@@ -974,7 +974,7 @@ def test_c2ir_uses_standard_type_probe_opaque_handle_facts():
         }
     )
 
-    module = converter.visit_file(parsed)
+    module = converter.visit(parsed)
     close_file = _function(module, "close_file")
 
     assert [(cls.name, cls.base_classes) for cls in module.classes] == [("FILE", ["Opaque"])]
@@ -1080,7 +1080,7 @@ def test_c_compatibility_helpers_forward_standard_type_reports():
     ],
 )
 def test_c_primitive_precisions_map_to_semantic_types(ctype, expected_name, expected_dtype):
-    semantic_type = CToIRConverter().visit_type(ctype)
+    semantic_type = CToIRConverter().visit(ctype)
 
     assert semantic_type.name == expected_name
     assert semantic_type.dtype == expected_dtype
@@ -1100,7 +1100,7 @@ def test_c_primitive_precisions_map_to_semantic_types(ctype, expected_name, expe
     ],
 )
 def test_c_standard_integer_precision_facts_map_to_semantic_types(name, fact, expected):
-    semantic_type = CToIRConverter(standard_type_report={"types": {name: fact}}).visit_type(CTypedef(name=name))
+    semantic_type = CToIRConverter(standard_type_report={"types": {name: fact}}).visit(CTypedef(name=name))
 
     assert semantic_type.name == expected
     assert semantic_type.dtype == expected
@@ -1193,17 +1193,17 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
         source_kind="project",
         metadata={"files": ["a.h", "b.h"]},
     )
-    assert converter.visit_project_module(project).name == "c_project"
+    assert converter.project_to_semantic_module(project).name == "c_project"
     typedef_project = parse_c_project(
         {
             "types.h": "typedef unsigned long count_t;\n",
             "api.h": "count_t count(void);\n",
         }
     )
-    typedef_modules = {module.name: module for module in converter.visit_project(typedef_project)}
+    typedef_modules = {module.name: module for module in converter.visit(typedef_project)}
     assert _function(typedef_modules["api"], "count").return_type.name == "UInt64"
     assert _function(typedef_modules["api"], "count").return_type.metadata == {"c_typedefs": ["count_t"]}
-    typedef_merged = converter.visit_project_module(typedef_project)
+    typedef_merged = converter.project_to_semantic_module(typedef_project)
     assert _function(typedef_merged, "count").return_type.name == "UInt64"
     assert _function(typedef_merged, "count").return_type.metadata == {"c_typedefs": ["count_t"]}
     count_reference = CTypedef(name="global_count_t")
@@ -1213,9 +1213,9 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
         functions={"global_count": count_function},
         typedefs={"global_count_t": CTypedef(name="global_count_t", type=CInt())},
     )
-    reference_modules = converter.visit_project(reference_project)
+    reference_modules = converter.visit(reference_project)
     assert _function(reference_modules[0], "global_count").return_type.name == "Int"
-    reference_merged = converter.visit_project_module(reference_project)
+    reference_merged = converter.project_to_semantic_module(reference_project)
     assert _function(reference_merged, "global_count").return_type.name == "Int"
     record = CStruct(name="global_record", members=[CVariable(name="value", type=CInt())])
     choice = CUnion(name="global_choice", members=[CVariable(name="value", type=CInt())])
@@ -1232,11 +1232,11 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
         structs={"global_record": record},
         unions={"global_choice": choice},
     )
-    registry_modules = converter.visit_project(registry_project)
+    registry_modules = converter.visit(registry_project)
     registry_args = _function(registry_modules[0], "use_global_types").arguments
     assert registry_args[0].semantic_type.metadata == {"c_kind": "struct", "incomplete": False}
     assert registry_args[1].semantic_type.metadata["incomplete"] is False
-    registry_merged = converter.visit_project_module(registry_project)
+    registry_merged = converter.project_to_semantic_module(registry_project)
     registry_merged_args = _function(registry_merged, "use_global_types").arguments
     assert [arg.semantic_type.name for arg in registry_merged_args] == [
         "global_record",
@@ -1254,48 +1254,46 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         source_text="void (*)(int)",
     )
     converter = CToIRConverter()
-    variable = converter.visit_variable(CVariable(name="handler", type=callback, storage=["static"]))
-    field = converter.visit_variable(CVariable(name="bits", type=CInt(), bit_width="3"))
-    mutable_pointer_variable = converter.visit_variable(
+    variable = converter.visit(CVariable(name="handler", type=callback, storage=["static"]))
+    field = converter.visit(CVariable(name="bits", type=CInt(), bit_width="3"))
+    mutable_pointer_variable = converter.visit(
         CVariable(
             name="buffer",
             type=CComposedType(components=[CPointer(), CInt()], source_text="int *buffer"),
         )
     )
-    unresolved_variable = converter.visit_variable(
+    unresolved_variable = converter.visit(
         CVariable(name="missing_value", type=CUnknownType(spelling="missing_t", source_text="missing_t"))
     )
-    function = converter.visit_function(parse_c_file("static int legacy();\n", filename="legacy.h").functions[0])
-    qualified = converter.visit_type(
+    function = converter.visit(parse_c_file("static int legacy();\n", filename="legacy.h").functions[0])
+    qualified = converter.visit(
         CChar(qualifiers=[CConst(), CVolatile(), CAtomic()], source_text="const volatile _Atomic char")
     )
-    unnamed = converter.visit_parameter(CParameter(name=None, type=CInt()))
-    located_parameter = converter.visit_parameter(
+    unnamed = converter.visit(CParameter(name=None, type=CInt()))
+    located_parameter = converter.visit(
         CParameter(
             name="located",
             type=CInt(),
             source_location=CSourceLocation(filename="api.h", line=3, column=5, source_line="int located"),
         )
     )
-    ownerless_missing_parameter = converter.visit_parameter(
+    ownerless_missing_parameter = converter.visit(
         CParameter(name="missing", type=CUnknownType(spelling="missing_t", source_text="missing_t"))
     )
-    callback_parameter = converter.visit_parameter(CParameter(name="callback", type=callback))
-    variadic = converter.visit_function(parse_c_file("int log_value(const char *fmt, ...);\n").functions[0])
-    direct_callback = converter.visit_type(callback)
-    direct_function_type = converter.visit_type(CFunctionType(result_type=CVoid(), parameter_types=[CInt()]))
-    void_type = converter.visit_type(CVoid())
-    missing_parameter = converter.visit_parameter(
+    callback_parameter = converter.visit(CParameter(name="callback", type=callback))
+    variadic = converter.visit(parse_c_file("int log_value(const char *fmt, ...);\n").functions[0])
+    direct_callback = converter.visit(callback)
+    direct_function_type = converter.visit(CFunctionType(result_type=CVoid(), parameter_types=[CInt()]))
+    void_type = converter.visit(CVoid())
+    missing_parameter = converter.visit(
         CParameter(name="missing", type=CUnknownType(spelling="missing_t", source_text="missing_t")),
         owner="load",
     )
-    loose_struct = converter.visit_type(CStruct(name="loose"))
-    missing_return = converter.visit_function(
+    loose_struct = converter.visit(CStruct(name="loose"), as_type=True)
+    missing_return = converter.visit(
         CFunction(name="missing_return", result_type=CUnknownType(spelling="missing_t", source_text="missing_t"))
     )
-    unnamed_function = converter.visit_function(
-        CFunction(name="unnamed", parameters=[CParameter(name=None, type=CInt())])
-    )
+    unnamed_function = converter.visit(CFunction(name="unnamed", parameters=[CParameter(name=None, type=CInt())]))
 
     assert variable.visibility == "private"
     assert variable.semantic_type.name == "CFunctionPointer"
@@ -1402,7 +1400,7 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         {"owner": "missing_return.return", "type": "missing_t"}
     ]
     assert converter._return_type(CVoid(), owner="nothing") is None
-    assert CToIRConverter().visit_type(CTypedef(name="absent_t")).metadata["readiness_blockers"][0]["code"] == (
+    assert CToIRConverter().visit(CTypedef(name="absent_t")).metadata["readiness_blockers"][0]["code"] == (
         "c_unresolved_typedef"
     )
 
@@ -1410,29 +1408,29 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
 def test_c2ir_reports_unsupported_type_and_declarator_compositions():
     converter = CToIRConverter(primitive_type_map={CInt: None})
 
-    unresolved = converter.visit_type(
+    unresolved = converter.visit(
         CUnknownType(spelling="missing_t", source_text="missing_t"),
         owner="missing_owner",
     )
-    unsupported_integer = converter.visit_type(CInt(source_text="int"), owner="integer_owner")
-    empty = converter.visit_type(CComposedType(components=[], source_text="empty"), owner="empty_owner")
-    array_missing_element = converter.visit_type(
+    unsupported_integer = converter.visit(CInt(source_text="int"), owner="integer_owner")
+    empty = converter.visit(CComposedType(components=[], source_text="empty"), owner="empty_owner")
+    array_missing_element = converter.visit(
         CComposedType(components=[CArray(bound="4")], source_text="missing element"),
         owner="array_owner",
     )
-    array_of_pointer = converter.visit_type(
+    array_of_pointer = converter.visit(
         CComposedType(components=[CArray(bound="4"), CPointer(), CDouble()], source_text="double *items[4]"),
         owner="array_pointer_owner",
     )
-    pointer_missing_pointee = converter.visit_type(
+    pointer_missing_pointee = converter.visit(
         CComposedType(components=[CPointer()], source_text="missing pointee"),
         owner="pointer_owner",
     )
-    pointer_composition = converter.visit_type(
+    pointer_composition = converter.visit(
         CComposedType(components=[CPointer(), CInt(), CDouble()], source_text="mixed pointer"),
         owner="pointer_composition_owner",
     )
-    other_composition = converter.visit_type(
+    other_composition = converter.visit(
         CComposedType(components=[CInt(), CDouble()], source_text="mixed declarator"),
         owner="composition_owner",
     )
@@ -1502,22 +1500,22 @@ def test_c2ir_reports_unsupported_type_and_declarator_compositions():
 
 def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_aliases():
     converter = CToIRConverter()
-    direct_array = converter.visit_type(
+    direct_array = converter.visit(
         CComposedType(components=[CArray(bound="2"), CInt()], source_text="int values[2]"),
         owner="values",
     )
-    ownerless_array = converter.visit_type(
+    ownerless_array = converter.visit(
         CComposedType(components=[CArray(bound=None), CInt()], source_text="int values[]")
     )
-    named_unknown_array = converter.visit_type(
+    named_unknown_array = converter.visit(
         CComposedType(components=[CArray(bound=None), CInt()], source_text="int named_values[]"),
         owner="named_values",
     )
-    pointer_array = converter.visit_type(
+    pointer_array = converter.visit(
         CComposedType(components=[CPointer(), CArray(bound=None), CDouble()], source_text="double (*)[]"),
         owner="matrix",
     )
-    pointer_matrix = converter.visit_type(
+    pointer_matrix = converter.visit(
         CComposedType(
             components=[CPointer(), CArray(bound="2"), CArray(bound="3"), CInt()],
             source_text="int (*)[2][3]",
@@ -1530,7 +1528,7 @@ def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_alia
         source_location=CSourceLocation(filename="choice.h", line=1, column=1, source_line="union choice;"),
     )
     converter.unions = {"choice": choice}
-    union_type = converter.visit_type(CUnion(name="choice"), owner="selected")
+    union_type = converter.visit(CUnion(name="choice"), owner="selected", as_type=True)
     anon_struct = CStruct(anonymous_id="anon_struct_1")
     anon_union = CUnion(anonymous_id="anon_union_1")
     converter.typedefs = {
@@ -1583,7 +1581,7 @@ def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_alia
         source_type="union choice",
         metadata={"c_type": "CUnion"},
     )
-    semantic_union = converter.visit_union(choice)
+    semantic_union = converter.visit(choice)
     assert semantic_union.name == "choice"
     assert semantic_union.native_name == "union choice"
     assert [field.name for field in semantic_union.fields] == ["integer"]
@@ -1594,37 +1592,37 @@ def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_alia
         source_type="union choice",
         source_location={"filename": "choice.h", "line": 1, "column": 1, "source_line": "union choice;"},
     )
-    assert converter.visit_struct(anon_struct).name == "record_t"
-    assert converter.visit_union(anon_union).name == "variant_t"
-    assert converter.visit_struct(CStruct()).name == "anonymous_struct"
-    assert converter.visit_union(CUnion()).name == "anonymous_union"
-    assert CToIRConverter().visit_type(CUnion(name="fresh_union")).name == "fresh_union"
+    assert converter.visit(anon_struct).name == "record_t"
+    assert converter.visit(anon_union).name == "variant_t"
+    assert converter.visit(CStruct()).name == "anonymous_struct"
+    assert converter.visit(CUnion()).name == "anonymous_union"
+    assert CToIRConverter().visit(CUnion(name="fresh_union"), as_type=True).name == "fresh_union"
 
 
 def test_c2ir_preserves_nested_unresolved_owners_and_private_opaque_bases():
     converter = CToIRConverter()
-    nested_array = converter.visit_type(
+    nested_array = converter.visit(
         CComposedType(
             components=[CArray(bound="2"), CUnknownType(spelling="missing_t", source_text="missing_t")],
             source_text="missing_t values[2]",
         ),
         owner="values",
     )
-    nested_pointer = converter.visit_type(
+    nested_pointer = converter.visit(
         CComposedType(
             components=[CPointer(), CUnknownType(spelling="missing_t", source_text="missing_t")],
             source_text="missing_t *value",
         ),
         owner="value",
     )
-    nested_pointer_array = converter.visit_type(
+    nested_pointer_array = converter.visit(
         CComposedType(
             components=[CPointer(), CArray(bound="2"), CUnknownType(spelling="missing_t", source_text="missing_t")],
             source_text="missing_t (*)[2]",
         ),
         owner="matrix",
     )
-    singleton = converter.visit_type(
+    singleton = converter.visit(
         CComposedType(components=[CUnknownType(spelling="missing_t", source_text="missing_t")]),
         owner="singleton",
     )
@@ -1652,8 +1650,8 @@ def test_c2ir_marks_incomplete_by_value_structs_and_preserves_initializer_locati
     incomplete = CStruct(name="handle", is_incomplete=True)
     converter = CToIRConverter()
     converter.structs = {"handle": incomplete}
-    parameter = converter.visit_parameter(CParameter(name="handle", type=incomplete), owner="open")
-    pointer_parameter = converter.visit_parameter(
+    parameter = converter.visit(CParameter(name="handle", type=incomplete), owner="open")
+    pointer_parameter = converter.visit(
         CParameter(
             name="handle",
             type=CComposedType(
@@ -1663,7 +1661,7 @@ def test_c2ir_marks_incomplete_by_value_structs_and_preserves_initializer_locati
         ),
         owner="open",
     )
-    array_parameter = converter.visit_parameter(
+    array_parameter = converter.visit(
         CParameter(
             name="handles",
             type=CComposedType(
@@ -1673,7 +1671,7 @@ def test_c2ir_marks_incomplete_by_value_structs_and_preserves_initializer_locati
         ),
         owner="open",
     )
-    variable = converter.visit_variable(
+    variable = converter.visit(
         CVariable(
             name=None,
             type=incomplete,
@@ -1681,8 +1679,8 @@ def test_c2ir_marks_incomplete_by_value_structs_and_preserves_initializer_locati
             source_location=CSourceLocation(filename="api.h", line=2, column=4, source_line="struct handle h;"),
         )
     )
-    named_variable = converter.visit_variable(CVariable(name="handle", type=incomplete))
-    return_type = converter.visit_function(CFunction(name="open_handle", result_type=incomplete)).return_type
+    named_variable = converter.visit(CVariable(name="handle", type=incomplete))
+    return_type = converter.visit(CFunction(name="open_handle", result_type=incomplete)).return_type
 
     assert parameter.semantic_type.metadata["readiness_blockers"] == [
         _blocker(
@@ -1765,7 +1763,7 @@ def test_c2ir_standard_type_facts_and_numeric_constant_edge_cases():
         CMacro(name="RATE", value="1.5"),
         CMacro(name="BAD", value="(MISSING + 1)"),
     ]
-    constants = {variable.name: variable for variable in converter.visit_file(parsed).variables}
+    constants = {variable.name: variable for variable in converter.visit(parsed).variables}
     assert constants["RATE"].semantic_type.name == "Float64"
     assert constants["DEFAULT_OK"].default_value == "0"
     assert constants["DEFAULT_NEXT"].default_value == "1"
@@ -1797,8 +1795,8 @@ def test_c2ir_propagates_file_and_project_diagnostic_blockers():
     project = CProject(files={"bad.h": c_file}, diagnostics=[error, orphan_error])
     converter = CToIRConverter()
 
-    module = converter.visit_file(c_file)
-    merged = converter.visit_project_module(project)
+    module = converter.visit(c_file)
+    merged = converter.project_to_semantic_module(project)
     file_codes = {blocker["code"] for blocker in module.metadata["readiness_blockers"]}
     project_codes = {blocker["code"] for blocker in merged.metadata["readiness_blockers"]}
 

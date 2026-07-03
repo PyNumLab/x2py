@@ -175,7 +175,7 @@ def c_type_mapping_markdown(
     converter = CToIRConverter(standard_type_report=report)
     rows = []
     for spelling, ctype in _C_TYPES:
-        semantic_type = converter.visit_type(ctype)
+        semantic_type = converter.visit(ctype, as_type=True)
         fact = report.types[spelling]
         rows.append((spelling, _c_fact_text(fact), _semantic_text(semantic_type), _numpy_dtype(semantic_type.dtype)))
     return _markdown_table("C type", rows)
@@ -222,7 +222,7 @@ def fortran_type_mapping_markdown(
     converter = FortranToIRConverter(type_facts=evaluate_fortran_type_facts(config, requirements, report=report))
     rows = []
     for spelling, variable, _key, _expression in entries:
-        semantic_type = converter.visit_variable(variable)
+        semantic_type = converter.visit(variable)
         fact = semantic_type.metadata["fortran_type_fact"]
         rows.append(
             (

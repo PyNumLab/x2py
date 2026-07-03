@@ -1,5 +1,5 @@
 from shared_types import box
 
 def box_value(
-    item: Ref(Const(box))
+    item: Addr(Const(box))
 ) -> Int32: ...

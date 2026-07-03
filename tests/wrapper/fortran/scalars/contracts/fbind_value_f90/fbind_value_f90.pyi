@@ -6,7 +6,7 @@ def double_value(
     n: Int32
 ) -> Int32: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def plus_reference(
     n: Const(Int32)
 ) -> Int32: ...

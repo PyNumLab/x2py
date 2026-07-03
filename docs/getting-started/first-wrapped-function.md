@@ -63,7 +63,7 @@ The generated declaration is:
 
 ```python
 @external
-@native_call([Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
     value: Const(Float64),
     factor: Const(Float64)
@@ -72,8 +72,9 @@ def scale(
 
 The contract describes `value` and `factor` as read-only `Float64` values at
 the Python boundary. The `@native_call` decorator records that the native call
-receives reference-backed storage for those values. The semantic `.pyi` is a
-native contract, not an ordinary pure-Python type stub. Read
+receives the address of each converted native scalar slot. It does not mean the
+caller passes references. The semantic `.pyi` is a native contract, not an
+ordinary pure-Python type stub. Read
 [Semantic .pyi Format](../reference/semantic-pyi-format.md) before editing it.
 
 ## Failure Mode: Wrong Scalar Type

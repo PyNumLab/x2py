@@ -8,12 +8,20 @@ from x2py.ownership_policy import (
     AssignmentMode,
     CodegenAction,
     DestructionPolicy,
+    NativeBarrierAction,
+    NativeBarrierDispatcher,
     ObjectKind,
     OwnershipContext,
     OwnershipDecision,
     OwnershipOwner,
     OwnershipPolicyResolver,
+    PYI_ADDRESS_ROLE_METADATA,
+    PYI_ADDRESS_ROLE_PROJECTION,
+    PYI_ADDRESS_ROLE_RAW,
+    PYI_SCALAR_STORAGE_CATEGORY,
     PolicyActionDispatcher,
+    PythonBarrierAction,
+    PythonBarrierDispatcher,
     SetterAction,
     StorageMode,
     TransferMode,
@@ -82,6 +90,26 @@ def _array_type(
                 pointer=pointer,
             ),
         ),
+    )
+
+
+def _scalar_storage_type() -> SemanticType:
+    return SemanticType(
+        name="Int32",
+        dtype="Int32",
+        rank=0,
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(rank=0, shape=[], category=PYI_SCALAR_STORAGE_CATEGORY),
+        ),
+    )
+
+
+def _address_type(role: str) -> SemanticType:
+    return SemanticType(
+        name="Int32",
+        dtype="Int32",
+        storage=SemanticStorageContract(kind="address", metadata={PYI_ADDRESS_ROLE_METADATA: role}),
     )
 
 
@@ -190,6 +218,65 @@ def test_default_policy_decisions_cover_public_object_kinds():
     assert derived_field.destruction is DestructionPolicy.WRAPPER_DEALLOC
 
 
+def test_default_policy_completes_python_and_native_barrier_actions():
+    cases = [
+        (
+            "scalar_value",
+            _scalar_type(),
+            OwnershipContext.argument("in"),
+            PythonBarrierAction.SCALAR_VALUE,
+            NativeBarrierAction.PASS_VALUE,
+        ),
+        (
+            "scalar_address_projection",
+            _address_type(PYI_ADDRESS_ROLE_PROJECTION),
+            OwnershipContext.argument("in"),
+            PythonBarrierAction.SCALAR_VALUE,
+            NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+        ),
+        (
+            "scalar_storage",
+            _scalar_storage_type(),
+            OwnershipContext.argument("inout"),
+            PythonBarrierAction.SCALAR_STORAGE,
+            NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        ),
+        (
+            "array_storage",
+            _array_type(),
+            OwnershipContext.argument("in"),
+            PythonBarrierAction.ARRAY_STORAGE,
+            NativeBarrierAction.PASS_ARRAY_DESCRIPTOR,
+        ),
+        (
+            "string_value",
+            _string_type(),
+            OwnershipContext.argument("inout", projects_result=True),
+            PythonBarrierAction.STRING_VALUE,
+            NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+        ),
+        (
+            "raw_address",
+            _address_type(PYI_ADDRESS_ROLE_RAW),
+            OwnershipContext.argument("in"),
+            PythonBarrierAction.RAW_ADDRESS,
+            NativeBarrierAction.PASS_RAW_ADDRESS,
+        ),
+        (
+            "wrapper_instance",
+            _derived_type(),
+            OwnershipContext.argument("in"),
+            PythonBarrierAction.WRAPPER_INSTANCE,
+            NativeBarrierAction.PASS_WRAPPER_ADDRESS,
+        ),
+    ]
+
+    for label, semantic_type, context, python_action, native_action in cases:
+        decision = default_ownership_policy.decide_semantic_type(semantic_type, context)
+        assert decision.python_barrier_action is python_action, label
+        assert decision.native_barrier_action is native_action, label
+
+
 def test_allocatable_array_field_is_wrapper_owned_borrowed_view():
     decision = default_ownership_policy.decide_semantic_type(
         _array_type(allocatable=True),
@@ -268,6 +355,57 @@ def test_codegen_action_dispatcher_rejects_missing_policy_pairs():
         dispatcher.handler_name(FakeVar())
 
 
+def test_barrier_dispatchers_route_completed_actions_to_named_methods():
+    class FakeVar:
+        ownership_decision = OwnershipDecision(
+            ObjectKind.SCALAR,
+            OwnershipOwner.CALLER,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.NONE,
+            codegen_action=CodegenAction.CALL_LOCAL_INPUT,
+            python_barrier_action=PythonBarrierAction.SCALAR_VALUE,
+            native_barrier_action=NativeBarrierAction.PASS_VALUE,
+        )
+
+    class Target:
+        def python_scalar(self, var, decision, marker):
+            return marker, var.ownership_decision.python_barrier_action, decision.python_barrier_action
+
+        def native_value(self, var, decision, marker):
+            return marker, var.ownership_decision.native_barrier_action, decision.native_barrier_action
+
+    python_dispatcher = PythonBarrierDispatcher({PythonBarrierAction.SCALAR_VALUE: "python_scalar"})
+    native_dispatcher = NativeBarrierDispatcher({NativeBarrierAction.PASS_VALUE: "native_value"})
+
+    assert python_dispatcher.dispatch(Target(), FakeVar(), "py") == (
+        "py",
+        PythonBarrierAction.SCALAR_VALUE,
+        PythonBarrierAction.SCALAR_VALUE,
+    )
+    assert native_dispatcher.dispatch(Target(), FakeVar(), "native") == (
+        "native",
+        NativeBarrierAction.PASS_VALUE,
+        NativeBarrierAction.PASS_VALUE,
+    )
+
+
+def test_barrier_dispatchers_reject_missing_completed_actions():
+    decision = OwnershipDecision(
+        ObjectKind.SCALAR,
+        OwnershipOwner.CALLER,
+        TransferMode.CALL_LOCAL,
+        DestructionPolicy.NONE,
+        codegen_action=CodegenAction.CALL_LOCAL_INPUT,
+        python_barrier_action=PythonBarrierAction.RAW_ADDRESS,
+        native_barrier_action=NativeBarrierAction.PASS_RAW_ADDRESS,
+    )
+
+    with pytest.raises(ValueError, match="Python-barrier handler"):
+        PythonBarrierDispatcher({}).handler_name_for_decision(decision, "x")
+    with pytest.raises(ValueError, match="native-barrier handler"):
+        NativeBarrierDispatcher({}).handler_name_for_decision(decision, "x")
+
+
 def test_bridge_and_binding_generators_expose_ownership_action_maps():
     assert (
         CPythonBindingGenerator._RESULT_DETAIL_DISPATCHER.handlers[
@@ -280,12 +418,20 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         == "_convert_snapshot_policy_scalar_result"
     )
     assert (
-        CPythonBindingGenerator._ARGUMENT_POLICY_DISPATCHER.handlers[(ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT)]
-        == "_convert_identity_scalar_argument"
+        CPythonBindingGenerator._PYTHON_BARRIER_DISPATCHER.handlers[PythonBarrierAction.SCALAR_STORAGE]
+        == "_convert_python_scalar_storage_argument"
     )
     assert (
-        CPythonBindingGenerator._ARGUMENT_POLICY_DISPATCHER.handlers[(ObjectKind.STRING, CodegenAction.COPY_IN_OUT)]
-        == "_convert_replacement_string_argument"
+        CPythonBindingGenerator._PYTHON_BARRIER_DISPATCHER.handlers[PythonBarrierAction.STRING_VALUE]
+        == "_convert_python_string_value_argument"
+    )
+    assert (
+        FortranToCBridgeGenerator._NATIVE_BARRIER_DISPATCHER.handlers[NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS]
+        == "_convert_native_call_local_address_argument"
+    )
+    assert (
+        FortranToCBridgeGenerator._NATIVE_BARRIER_DISPATCHER.handlers[NativeBarrierAction.PASS_RAW_ADDRESS]
+        == "_convert_native_raw_address_argument"
     )
     assert (
         CPythonBindingGenerator._ARGUMENT_CAST_GUARD_DISPATCHER.handlers[
@@ -317,7 +463,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         == "_uses_heap_allocatable_result_helper"
     )
     dispatchers = (
-        (FortranToCBridgeGenerator, "_ARGUMENT_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_NATIVE_BARRIER_DISPATCHER"),
         (FortranToCBridgeGenerator, "_FUNCTION_ARGUMENT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_RESULT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_REPLACEMENT_RESULT_DISPATCHER"),
@@ -329,7 +475,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         (FortranToCBridgeGenerator, "_MODULE_ARRAY_GETTER_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_ARGUMENT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_RESULT_POLICY_DISPATCHER"),
-        (CPythonBindingGenerator, "_ARGUMENT_POLICY_DISPATCHER"),
+        (CPythonBindingGenerator, "_PYTHON_BARRIER_DISPATCHER"),
         (CPythonBindingGenerator, "_ARGUMENT_DETAIL_DISPATCHER"),
         (CPythonBindingGenerator, "_ARGUMENT_CAST_GUARD_DISPATCHER"),
         (CPythonBindingGenerator, "_RESULT_POLICY_DISPATCHER"),
@@ -347,10 +493,22 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         assert dispatcher.handlers
         assert all(hasattr(generator, handler_name) for handler_name in dispatcher.handlers.values())
 
-    assert (
-        FortranToCBridgeGenerator._ARGUMENT_POLICY_DISPATCHER.handlers.keys()
-        == CPythonBindingGenerator._ARGUMENT_POLICY_DISPATCHER.handlers.keys()
-    )
+    assert set(FortranToCBridgeGenerator._NATIVE_BARRIER_DISPATCHER.handlers) == {
+        NativeBarrierAction.PASS_VALUE,
+        NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+        NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        NativeBarrierAction.PASS_RAW_ADDRESS,
+        NativeBarrierAction.PASS_ARRAY_DESCRIPTOR,
+        NativeBarrierAction.PASS_WRAPPER_ADDRESS,
+    }
+    assert set(CPythonBindingGenerator._PYTHON_BARRIER_DISPATCHER.handlers) == {
+        PythonBarrierAction.SCALAR_VALUE,
+        PythonBarrierAction.SCALAR_STORAGE,
+        PythonBarrierAction.ARRAY_STORAGE,
+        PythonBarrierAction.STRING_VALUE,
+        PythonBarrierAction.RAW_ADDRESS,
+        PythonBarrierAction.WRAPPER_INSTANCE,
+    }
     assert (
         FortranToCBridgeGenerator._RESULT_POLICY_DISPATCHER.handlers.keys()
         == CPythonBindingGenerator._RESULT_POLICY_DISPATCHER.handlers.keys()

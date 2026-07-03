@@ -91,7 +91,7 @@ fixed-length `String[n]` `intent(inout)` argument can return `None`; if the
 caller passed an ordinary Python `str`, native mutation happened in temporary
 native storage and is not observable in Python. To request Python-visible
 replacement behavior, write a projected return contract such as
-`Returns["name", Ref(String[n])]` with the required `@native_call` metadata.
+`Returns["name", String[n]]`.
 
 Future unsafe, coercion, or copy/readback modes must be explicit `.pyi` metadata.
 x2py must not infer them from malformed syntax or from a declaration that merely
@@ -121,6 +121,16 @@ and binding then emit the already-selected action without reconsidering the
 datatype, mutability, ownership, or storage mode. Unsupported combinations block
 before `ir2ast.py`.
 
+`@native_call(...)` and `Returns[...]` describe projection and native placement;
+they do not ask the backend to rediscover conversion policy. After `.pyi`
+loading, policy completion records two barrier actions for each argument. The
+Python barrier defines how the generated Python extension consumes the Python object
+(`T`, `T[()]`, arrays, strings, raw addresses, or wrapper instances). The native
+barrier defines how the bridge passes the extracted value onward (value,
+call-local address, caller storage address, raw address, array descriptor, or
+wrapper address). Code generation dispatches from those recorded actions and
+fails closed for missing handlers.
+
 ## File Shape
 
 Loaded files support imports, classes, enums, variables and stub functions:
@@ -134,7 +144,7 @@ class particle:
     id: Int32
     mass: Float64
 
-@native_call([Ref(Arg(0)), Arg(1)])
+@native_call([Addr(Arg(0)), Arg(1)])
 def scale(
     n: Const(Int32),
     values: Float64[n],
@@ -172,17 +182,18 @@ or kind decorator: a declaration returning `None` is a subroutine; an
 unprojected return is a function result; returns named by `@native_call` are
 native output arguments.
 
-The ordinary module-procedure form is intentionally small:
+The ordinary module-procedure form is intentionally small when the Python
+signature already describes the native argument order:
 
 ```python
-def update(value: Ref(Float64)) -> None: ...
+def update(value: Float64[()]) -> None: ...
 ```
 
 Only standalone procedures carry `@external`:
 
 ```python
 @external
-def update(value: Ref(Float64)) -> None: ...
+def update(value: Float64[()]) -> None: ...
 ```
 
 `@bind("native_name")` remains necessary only when the Python declaration name
@@ -191,9 +202,10 @@ Python signature hides, inserts, or reorders native arguments. For type-bound
 methods, `Pass()` records a non-default passed-object position.
 
 Ordinary semantic types are the native type contract. `Int32`, `Float64`,
-`Ref`, `Const`, array rank, shape, and focused metadata such as `Allocatable`
-are not duplicated with source-language spellings. `@native_type(...)` is
-emitted only when a derived type has irreducible attributes or finalizers.
+`Addr`, `Const`, scalar storage rank `()`, array rank, shape, and focused
+metadata such as `Allocatable` are not duplicated with source-language
+spellings. `@native_type(...)` is emitted only when a derived type has
+irreducible attributes or finalizers.
 
 These facts are structurally validated before `.pyi` wrapper code generation.
 They are declarations about the supplied native artifacts, not binary
@@ -208,7 +220,7 @@ Fortran module:
 
 ```python
 # module1.pyi
-def update(value: Ref(Float64)) -> None: ...
+def update(value: Float64[()]) -> None: ...
 ```
 
 The generated Fortran bridge imports the procedure from its retained native
@@ -304,7 +316,7 @@ one with `@external`:
 from . import m1
 
 @external
-def func(value: Ref(Float64)) -> None: ...
+def func(value: Float64[()]) -> None: ...
 ```
 
 This exposes `basic_subroutine.func` and `basic_subroutine.m1.add1`. The
@@ -356,12 +368,12 @@ contracts use `Flat`:
 ```python
 @external
 def DAXPY(
-    N: Ref(Int32),
-    DA: Ref(Float64),
+    N: Addr(Const(Int32)),
+    DA: Addr(Const(Float64)),
     DX: Float64[Flat],
-    INCX: Ref(Int32),
+    INCX: Addr(Const(Int32)),
     DY: Float64[Flat],
-    INCY: Ref(Int32),
+    INCY: Addr(Const(Int32)),
 ) -> None: ...
 ```
 
@@ -382,7 +394,7 @@ from typing import Annotated
 
 @external
 def row_sums(
-    n: Ref(Int32),
+    n: Addr(Const(Int32)),
     values: Annotated[Float64[Flat, 3], ORDER_C],
     result: Float64[Flat],
 ) -> None: ...
@@ -410,8 +422,8 @@ assume that `name.pyi` is implemented by `name.o`:
   may come from different directories or build systems.
 
 Native inputs form one extension-level link plan. The generated bridge creates
-native references from the immutable `.pyi` binding metadata, and the linker
-resolves those references from caller-supplied artifacts. The `.pyi` filename is
+native symbol uses from the immutable `.pyi` binding metadata, and the linker
+resolves those symbols from caller-supplied artifacts. The `.pyi` filename is
 never used to guess an object, archive, or shared-library name.
 
 Build results expose that plan as `WrapperBuildResult.native_build_plan`, not
@@ -673,32 +685,104 @@ kind names are already resolved into semantic dtypes, so generated contracts do
 not import `iso_c_binding`, `iso_fortran_env`, or their kind constants.
 X2PY_C_DOCS_END -->
 
+## Python And Native Boundaries
+
+Semantic `.pyi` annotations describe two related but separate boundaries:
+
+- the Python boundary: what the caller passes to the generated wrapper;
+- the native boundary: how x2py lowers that value into the native call.
+
+Some types have one normal native representation. Array storage, scalar storage,
+and scalar character values are always lowered as storage addresses. Bare numeric
+scalars have two native representations: value by default, or address of
+call-local storage when `@native_call([Addr(Arg(i))])` asks for that projection.
+
+Use `@native_call` only when the native argument order, hidden outputs, inserted
+arguments, or scalar by-address projection differs from the default lowering.
+
+| Contract | Python boundary | Default native boundary |
+| --- | --- | --- |
+| `Float64` | `np.float64(...)` | scalar value |
+| `@native_call([Addr(Arg(i))])` with `Float64` | `np.float64(...)` | address of x2py's call-local native scalar slot |
+| `Float64[()]` | rank-zero NumPy array with dtype `np.float64` | storage address |
+| `Float64[n]`, `Float64[:]`, `Float64[:, :]` | NumPy array storage | data address |
+| `String[n]` | Python `str` | address of x2py's call-local fixed-width character storage |
+| `Addr(Float64)`, `Addr(Float64[n])`, `Addr(String[n])` | raw address such as `array.ctypes.data` or a `ctypes` buffer address | that raw address |
+
+`Arg(i)` in `@native_call` means "use argument `i`'s default native
+representation." For arrays, scalar storage, strings, and raw-address arguments,
+that representation is already address/storage based. `Addr(Arg(i))` is reserved
+for bare numeric scalar values that would otherwise be passed by value.
+
 ## Storage Contracts
 
-Bare types are direct values:
+Bare scalar types are direct values:
 
 ```python
 def dot(a: Float64, b: Float64) -> Float64: ...
 ```
 
-`Ref(T)` represents native pointer-backed or reference storage:
+`T[()]` represents caller-provided scalar storage. The caller passes an
+addressable rank-0 NumPy array with the declared dtype; x2py validates the
+object and uses its data storage for the native call:
 
 ```python
-def update(value: Ref(Float64)) -> None: ...
-def inspect(value: Ref(Const(Int32))) -> None: ...
+def update_storage(value: Float64[()]) -> None: ...
+def inspect_storage(value: Const(Int32[()])) -> None: ...
 ```
 
-`Const(T)` marks the wrapped storage read-only. For a pointer this means a
-read-only pointee. For an array it means read-only array storage.
+The caller writes:
+
+```python
+value = np.array(3.0, dtype=np.float64)
+update_storage(value)
+```
+
+Array annotations such as `T[n]`, `T[:]`, and `T[:, :]` represent
+caller-provided NumPy storage. The native boundary is always the array data
+address; `@native_call([Addr(Arg(i))])` is redundant for these arguments.
+
+`String[n]` represents a Python `str` at the Python boundary. x2py converts it
+to call-local fixed-width character storage and passes that storage address to
+native code. If a returned `Returns["name", String[n]]` item is present, native
+mutation is copied back into a replacement Python `str`; otherwise the mutation
+is discarded.
+
+`Addr(T)` represents a raw address supplied by the Python caller. This includes
+`Addr(Float64)`, `Addr(Float64[n])`, and `Addr(String[n])`. It is an advanced
+unsafe contract: x2py casts the address according to the declared pointee type,
+but it cannot prove the address lifetime, true dtype, alignment, length, or
+ownership. Raw array extents must be fixed literals or visible arguments because
+the pointer value itself does not carry shape:
+
+```python
+def update_raw(value: Addr(Float64)) -> None: ...
+def inspect_raw(value: Addr(Const(Int32))) -> None: ...
+def raw_values(n: Int32, values: Addr(Float64[n])) -> None: ...
+def raw_label(label: Addr(String[8])) -> None: ...
+```
+
+The caller passes an address value, usually from NumPy:
+
+```python
+value = np.array(3.0, dtype=np.float64)
+update_raw(value.ctypes.data)
+```
+
+`Const(T)` marks the wrapped value or storage read-only. For `Addr(Const(T))`
+this means a read-only pointee contract. For `Const(T[()])` it means readable
+rank-0 scalar storage. For `Const(T[:])` it means read-only array storage. For
+`Const(String[n])` it means the native character storage is not expected to be
+mutated.
 
 Pointer depth is explicit for low-level pointer graphs:
 
 ```python
-handle: Ref[2](OpaqueHandle)
-argv: Ref[3](Const(Int8))
+handle: Addr[2](OpaqueHandle)
+argv: Addr[3](Const(Int8))
 ```
 
-`Ref[1](T)` is invalid; use `Ref(T)`.
+`Addr[1](T)` is invalid; use `Addr(T)`.
 
 Array storage uses NumPy-style subscriptions:
 
@@ -757,7 +841,7 @@ Use local constants or generated `Final[...]` names for shape symbols.
 ```python
 def fill(
     a: Annotated[Float64[:, :], ORDER_F],
-    out: Annotated[Ref(Float64), Intent("out")],
+    out: Annotated[Float64[()], Intent("out")],
 ) -> None: ...
 ```
 
@@ -829,7 +913,7 @@ Transfer modes:
 | Transfer mode | Meaning | Usual destruction policy | Example |
 | --- | --- | --- | --- |
 | `Transfer("by_value")` | A scalar value crosses as a Python value; no shared native storage is exposed. | `Destruction("python_refcount")` for the returned Python object. | `def count() -> Annotated[Int32, Ownership("python"), Transfer("by_value"), Destruction("python_refcount")]: ...` |
-| `Transfer("call_local")` | The wrapper creates or associates storage only for one native call. Python does not receive persistent native storage. | `Destruction("call_local")` for bridge temporaries, or `Destruction("none")` when no generated storage is owned. | `def use_value(value: Annotated[Ref(Float64), Ownership("temporary"), Transfer("call_local"), Destruction("call_local")]) -> None: ...` |
+| `Transfer("call_local")` | The wrapper creates or associates storage only for one native call. Python does not receive persistent native storage. | `Destruction("call_local")` for bridge temporaries, or `Destruction("none")` when no generated storage is owned. | `def use_value(value: Annotated[Float64, Ownership("temporary"), Transfer("call_local"), Destruction("call_local")]) -> None: ...` |
 | `Transfer("in_place")` | Native code writes through caller-provided mutable Python storage. The same Python object observes the mutation. | `Destruction("caller")`; x2py must not free caller storage. | `def scale(values: Annotated[Float64[:], Ownership("caller"), Transfer("in_place"), Destruction("caller")]) -> None: ...` |
 | `Transfer("copy_return")` | Native output is copied or read back into a fresh Python-visible return value. The original Python object is not mutated unless separately declared. | `Destruction("python_refcount")` after Python owns the copy. | `def read_values() -> Annotated[Float64[:], Ownership("python"), Transfer("copy_return"), Destruction("python_refcount")]: ...` |
 | `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. | `Destruction("python_refcount")` for the snapshot. | `def current_pointer() -> Annotated[Float64[:], Pointer, Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")] | None: ...` |
@@ -978,7 +1062,7 @@ class particle(Opaque):
 # physics.pyi
 from types_mod import particle
 
-def move(p: Ref(particle)) -> None: ...
+def move(p: Addr(particle)) -> None: ...
 ```
 
 If the owner stub is later edited to include fields, the import is reconciled as
@@ -1000,13 +1084,14 @@ If a caller chooses identity form for a fixed-length `String[n]` argument while
 passing an ordinary Python `str`, any native mutation is made to a temporary
 native buffer and is not observable after a `None` return.
 
-Fortran scalar dummy arguments are generated as:
+Fortran scalar dummy arguments are represented with explicit value, storage, or
+address contracts:
 
 | Source argument | Generated semantic form |
 | --- | --- |
-| no `value`, `intent(in)` | `Ref(Const(T))` |
-| no `value`, `intent(out)` | `Annotated[Ref(T), Intent("out")]` |
-| no `value`, `intent(inout)` | `Ref(T)` |
+| no `value`, `intent(in)` | visible `Const(T)` plus `@native_call([Addr(Arg(i))])` |
+| no `value`, `intent(out)` | `Annotated[T[()], Intent("out")]` for identity storage, or a projected `Returns["name", T]` |
+| no `value`, `intent(inout)` | `T[()]` for caller storage, or visible `T` plus projected `Returns["name", T]` |
 | `value` | direct `T` |
 | function result | direct return annotation |
 
@@ -1033,11 +1118,40 @@ When the name matches an existing Python-visible argument, the argument remains
 an input and the return item represents replacement-style `intent(inout)`
 behavior for immutable public values such as Python `str`.
 
+For bare numeric scalar values, `Addr(Arg(i))` means x2py first converts the
+Python argument to its native scalar representation and then passes the address
+of that native slot. It does not mean the user passed a reference.
+
+```python
+@native_call([Addr(Arg(0))])
+def read_ref(x: Const(Float64)) -> None: ...
+
+@native_call([Addr(Arg(0))])
+def update_value(x: Float64) -> Returns["x", Float64]: ...
+```
+
+`read_ref` creates call-local native scalar storage initialized from `x` and
+passes its address with no readback. `update_value` creates mutable native scalar
+storage initialized from `x`, passes its address, then returns the updated value.
+The caller writes `x = update_value(x)`.
+
+Do not use `Addr(Arg(i))` for `T[()]`, arrays, strings, or raw `Addr(...)`
+arguments. Their default `Arg(i)` representation is already the native storage
+or address representation:
+
+```python
+def string_inout(label: String[8]) -> Returns["label", String[8]]: ...
+```
+
+The caller passes a Python `str`; x2py creates fixed-width character storage,
+passes its address, and returns a replacement string because the signature asks
+for one.
+
 For example, a native subroutine ordered as `(a, status, b)` with hidden scalar
 `status` output is represented as:
 
 ```python
-@native_call([Ref(Arg(0)), Return("status", 0), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Return("status", 0), Addr(Arg(1))])
 def solve(
     a: Const(Float64),
     b: Const(Float64),
@@ -1053,15 +1167,18 @@ The same native routine can be edited into an identity call without projection:
 
 ```python
 def solve(
-    a: Ref(Const(Float64)),
-    status: Annotated[Ref(Int32), Intent("out")],
-    b: Ref(Const(Float64)),
+    a: Addr(Const(Float64)),
+    status: Annotated[Int32[()], Intent("out")],
+    b: Addr(Const(Float64)),
 ) -> None: ...
 ```
 
 This form exposes the native argument order directly. Python callers allocate
-`status` and inspect it after the call; x2py does not synthesize a return value
-for that output slot.
+`status` as a rank-0 NumPy array and inspect it after the call; x2py does not
+synthesize a return value for that output slot. The raw `Addr(Const(Float64))`
+arguments require callers to pass addresses directly; use visible `Const(T)`
+plus `@native_call([Addr(Arg(i))])` when callers should pass ordinary scalar
+values instead.
 
 Class methods use the same stub form. An untyped leading `self` is allowed in a
 method and is not treated as a native argument.
@@ -1075,28 +1192,28 @@ from `typing`.
 
 ```python
 @private
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert_integer(value: Const(Int32)) -> Int32: ...
 
 @private
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert_real(value: Const(Float64)) -> Float64: ...
 
 @overload("convert_integer")
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert(value: Const(Int32)) -> Int32: ...
 
 @overload("convert_real")
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert(value: Const(Float64)) -> Float64: ...
 
 class accumulator:
     @overload("accumulator_add_integer")
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def add(self, value: Const(Int32)) -> None: ...
 
     @overload("accumulator_add_real")
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def add(self, value: Const(Float64)) -> None: ...
 ```
 
@@ -1120,7 +1237,7 @@ native Fortran generic name:
 
 ```python
 @overload("convert_integer", generic="convert")
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert_number(value: Const(Int32)) -> Int32: ...
 ```
 
@@ -1170,20 +1287,20 @@ method call:
 
 ```python
 @private
-@native_call([Arg(0), Ref(Arg(1))])
-def add_vector_real(left: Ref(Const(vector)), right: Const(Float64)) -> vector: ...
+@native_call([Arg(0), Addr(Arg(1))])
+def add_vector_real(left: Addr(Const(vector)), right: Const(Float64)) -> vector: ...
 
 @private
-@native_call([Ref(Arg(0)), Arg(1)])
-def add_real_vector(left: Const(Float64), right: Ref(Const(vector))) -> vector: ...
+@native_call([Addr(Arg(0)), Arg(1)])
+def add_real_vector(left: Const(Float64), right: Addr(Const(vector))) -> vector: ...
 
 class vector:
     @overload("add_vector_real")
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def __add__(self, right: Const(Float64)) -> vector: ...
 
     @overload("add_real_vector")
-    @native_call([Ref(Arg(0)), Pass()])
+    @native_call([Addr(Arg(0)), Pass()])
     def __radd__(self, left: Const(Float64)) -> vector: ...
 ```
 
@@ -1201,7 +1318,7 @@ Return annotations must equal the concrete procedure result. The generated C
 extension dispatches the Python slot before conversion by dtype, rank, and
 wrapped extension class. Operator slots also accept a native Python scalar when
 there is exactly one candidate precision in that integer, real, or complex
-family; this is needed when CPython or NumPy invokes a reflected slot with a
+family; this is needed when Python or NumPy invokes a reflected slot with a
 built-in scalar. No match raises `TypeError`, and indistinguishable candidates
 fail during generation. Three-argument `pow(value, exponent, modulus)` is not a
 Fortran operator form and raises `TypeError`.
@@ -1236,15 +1353,15 @@ explicit mutation:
 
 ```python
 @private
-@native_call([Arg(0), Ref(Arg(1))])
+@native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_real(
-    left: Ref(vector),
+    left: Addr(vector),
     right: Const(Float64),
-) -> Returns["left", Ref(vector)]: ...
+) -> Returns["left", Addr(vector)]: ...
 
 class vector:
     @overload("assign_vector_real")
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def assign(self, right: Const(Float64)) -> vector: ...
 ```
 
@@ -1334,7 +1451,7 @@ instance.
 ```python
 class state:
     @private
-    @native_call([Pass(), Ref(Arg(0)), Ref(Arg(1))])
+    @native_call([Pass(), Addr(Arg(0)), Addr(Arg(1))])
     def init_state(
         self,
         seed: Const(Int32),
@@ -1342,7 +1459,7 @@ class state:
     ) -> None: ...
 
     @bind("init_state")
-    @native_call([Pass(), Ref(Arg(0)), Ref(Arg(1))])
+    @native_call([Pass(), Addr(Arg(0)), Addr(Arg(1))])
     def __init__(
         self,
         seed: Const(Int32),
@@ -1527,11 +1644,11 @@ from native `intent(out)` behavior or written by the user:
 def normalize(values: Float64[:]) -> Float64: ...
 ```
 
-Read-only scalar reference inputs use a Python-visible value type and an
-explicit native reference projection:
+Read-only scalar address inputs use a Python-visible value type and an explicit
+native address projection:
 
 ```python
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def add_one(value: Const(Int32)) -> Int32: ...
 ```
 
@@ -1539,11 +1656,11 @@ Loaded projection entries:
 
 | Entry | Meaning |
 | --- | --- |
-| `Arg(i)` | native argument is Python argument `i` |
-| `Ref(Arg(i))` | native argument is pointer/reference-backed storage for Python argument `i` |
+| `Arg(i)` | native argument is Python argument `i`'s default native representation |
+| `Addr(Arg(i))` | native argument is the address of Python argument `i`'s call-local native scalar representation |
 | `Return(i)` | native argument is supplied by projected return slot `i` |
 | `Return("name", i)` | named native argument is supplied by projected return slot `i` |
-| `Ref(Return(i))` | native argument is pointer/reference-backed storage for projected return slot `i` |
+| `Addr(Return(i))` | native argument is the address of projected return slot `i`'s native storage |
 | `Pass()` | hidden type-bound passed-object argument |
 | `Const(value)` | hidden native literal |
 | `Len(Arg(i))`, `Len(Return(i))`, `Len(Work("name"))` | hidden native length metadata |
@@ -1566,8 +1683,8 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Native scope | module-leaf filename, or `@external` for standalone procedures |
 | Functions/subroutines | declaration return shape, optional native rename, ABI argument order, and direct result |
 | Hidden Fortran outputs | Python returns plus generated `@native_call` in native argument order |
-| Read-only scalar references | Python-visible `Const(T)` plus `Ref(Arg(...))` native-call projection |
-| Writable scalar references | `Ref(T)`, `Intent("out")`, or explicit projection when the Python-visible API differs |
+| Read-only scalar address inputs | Python-visible `Const(T)` plus `Addr(Arg(...))` native-call projection |
+| Writable scalar storage | `T[()]`, explicit `Intent("out")`, or visible `T` plus projected replacement `Returns["name", T]` |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
 | Module variables | direct module-level annotations; native accessors remain internal |
 | Allocatable borrowed views and snapshots | derived-type fields and aliased module arrays as borrowed views; plain module arrays as read-only snapshots; `None` for unallocated storage |
@@ -1592,7 +1709,7 @@ Loaded but usually not generated from source today:
 
 | Area | Loaded behavior |
 | --- | --- |
-| `Ref[n](T)` for `n > 1` | direct low-level pointer topology |
+| `Addr[n](T)` for `n > 1` | direct low-level pointer topology |
 | `ORDER_ANY` | edited orientation-independent array contract |
 | generic `Annotated` constraints | preserved semantic constraints |
 | additional `@native_call` and `Returns[...]` edits | projection metadata beyond generated output mappings |
@@ -1610,7 +1727,7 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 - `Unknown` semantic types.
 - `Constant` or `Shape` as `Annotated` metadata.
 - non-dimensional subscriptions such as `Float64[ORDER_F]`.
-- `Ref[1](T)`.
+- `Addr[1](T)`.
 - untyped callable parameters.
 - positional-only, keyword-only, vararg or kwarg function parameters, except
   for the generated derived-type constructor shape.

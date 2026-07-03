@@ -136,7 +136,7 @@ Root contract: basic_subroutine/basic_subroutine.pyi
 from . import m1
 
 Module contract: m1.pyi
-@native_call([Ref(Arg(0)), Arg(1)])
+@native_call([Addr(Arg(0)), Arg(1)])
 def add1(
     n: Const(Int32),
     x: Float64[n]
@@ -145,7 +145,8 @@ def add1(
 
 Read this as the native boundary x2py must preserve:
 
-- `n` is a read-only integer value in Python and a native reference argument.
+- `n` is a read-only integer value in Python; the native call receives the
+  address of x2py's converted native slot for that value.
 - `x` is a writable rank-one `Float64` array whose size is described by `n`.
 - The subroutine returns `None` because it mutates the caller-provided array.
 

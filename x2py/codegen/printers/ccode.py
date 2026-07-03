@@ -7,6 +7,8 @@ from itertools import chain
 from typing import ClassVar
 
 
+from x2py.ownership_policy import NativeBarrierAction, ObjectKind
+
 from ..bind_c import BindCPointer
 from ..bindings.c_concepts import (
     CStrStr,
@@ -632,6 +634,8 @@ class CCodePrinter(CodePrinter):
 
     def _visit_Variable(self, expr):
         """Render the ``Variable`` model node."""
+        if isinstance(expr.class_type, BindCPointer):
+            return expr.name
         if self._is_c_pointer(expr):
             return f"(*{expr.name})"
         return expr.name
@@ -755,6 +759,8 @@ class CCodePrinter(CodePrinter):
             return self._indexed_element_is_c_pointer(a)
         if not isinstance(a, Variable):
             return False
+        if self._is_scalar_native_value_barrier(a):
+            return False
         additional_argument = self._is_additional_c_argument(a)
         if isinstance(a.class_type, NumpyNDArrayType):
             return a.is_optional or additional_argument or (a.class_type.raw and a.is_alias)
@@ -763,6 +769,22 @@ class CCodePrinter(CodePrinter):
             return True
 
         return a.is_alias or a.is_optional or additional_argument
+
+    @staticmethod
+    def _is_scalar_native_value_barrier(variable):
+        """Return whether scalar address/storage policy still prints as a C value."""
+        if isinstance(variable.class_type, BindCPointer):
+            return False
+        decision = getattr(variable, "ownership_decision", None)
+        return bool(
+            decision is not None
+            and decision.kind is ObjectKind.SCALAR
+            and decision.native_barrier_action
+            in {
+                NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+                NativeBarrierAction.PASS_STORAGE_ADDRESS,
+            }
+        )
 
     @staticmethod
     def _indexed_element_is_c_pointer(element):

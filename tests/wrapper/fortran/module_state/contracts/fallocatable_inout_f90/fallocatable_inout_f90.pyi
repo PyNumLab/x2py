@@ -1,4 +1,4 @@
-@native_call([Arg(0), Ref(Arg(1))])
+@native_call([Arg(0), Addr(Arg(1))])
 def replace_values(
     values: Annotated[Float64[:], Allocatable],
     mode: Const(Int32)

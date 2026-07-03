@@ -23,14 +23,14 @@ class buffer:
 
     def allocate_values(
         self,
-        n: Ref(Const(Int32))
+        n: Addr(Const(Int32))
     ) -> None: ...
 
     def deallocate_values(self) -> None: ...
 
     def scale_values(
         self,
-        scale: Ref(Const(Float64))
+        scale: Addr(Const(Float64))
     ) -> None: ...
 
     def values_sum(self) -> Float64: ...
@@ -45,7 +45,7 @@ module_values: Annotated[
 ] | None
 
 def allocate_module_values(
-    n: Ref(Const(Int32))
+    n: Addr(Const(Int32))
 ) -> None: ...
 
 def deallocate_module_values() -> None: ...
@@ -54,7 +54,7 @@ def module_values_sum() -> Float64: ...
 
 @native_call([Arg(0), Return('values', 0)])
 def build_values(
-    n: Ref(Const(Int32))
+    n: Addr(Const(Int32))
 ) -> Annotated[
     Float64[:],
     Allocatable,

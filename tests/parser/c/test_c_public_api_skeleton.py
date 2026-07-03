@@ -30,11 +30,11 @@ def test_c_parser_public_wrappers_forward_explicit_options(monkeypatch):
     calls = []
 
     class RecordingParser:
-        def visit_file(self, *args, **kwargs):
+        def parse_file(self, *args, **kwargs):
             calls.append(("file", args, kwargs))
             return "file-result"
 
-        def visit_project(self, *args, **kwargs):
+        def parse_project(self, *args, **kwargs):
             calls.append(("project", args, kwargs))
             return "project-result"
 
@@ -302,9 +302,9 @@ def test_c_parser_instance_entrypoints_match_public_functions():
     source = "int answer(void);\n"
     parser = CParser()
 
-    assert parser.visit_file(source, filename="api.h") == parse_c_file(source, filename="api.h")
-    assert parser.visit_project({"api.h": source}) == parse_c_project({"api.h": source})
-    assert parser.visit_parsed_project({"api.h": parser.visit_file(source, filename="api.h")}) == parse_c_project(
+    assert parser.parse_file(source, filename="api.h") == parse_c_file(source, filename="api.h")
+    assert parser.parse_project({"api.h": source}) == parse_c_project({"api.h": source})
+    assert parser._assemble_project({"api.h": parser.parse_file(source, filename="api.h")}) == parse_c_project(
         {"api.h": source}
     )
 

@@ -15,6 +15,11 @@ from x2py.semantics.models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    PYI_ADDRESS_ROLE_METADATA,
+    PYI_ADDRESS_ROLE_PROJECTION,
+    PYI_ADDRESS_ROLE_RAW,
+    PYI_NATIVE_PROJECTION_METADATA,
+    PYI_SCALAR_STORAGE_CATEGORY,
     PYI_BIND_TARGET_METADATA,
     PYI_USER_PRIVATE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
@@ -40,9 +45,10 @@ from x2py.semantics.models import (
     SemanticVariable,
     _iter_module_semantic_types,
 )
+from x2py.visitor import ClassVisitor
 
 
-class PyiPrinter:
+class PyiPrinter(ClassVisitor):
     """Emit Python stub text from semantic IR models.
 
     The class follows the same reading order as ``FortranParser``: its public
@@ -60,6 +66,7 @@ class PyiPrinter:
         self._naming_policy = NamingPolicy()
         self._public_namespace: tuple[str, ...] = ()
         self._reserved_public_names: dict[tuple[tuple[str, ...], str, object], str] = {}
+        self._semantic_class_names: set[str] = set()
 
     def emit(self, node) -> str:
         """Emit the supported semantic model passed by the caller."""
@@ -78,16 +85,9 @@ class PyiPrinter:
                 self._reserved_public_names = previous_reserved
         return self._visit(node)
 
-    # ------------------------------------------------------------------
-    # Model dispatch
-    # ------------------------------------------------------------------
-
-    def _visit(self, node, *args, **kwargs) -> str:
-        """Dispatch a semantic model to its most specific visitor."""
-        for model_type in type(node).__mro__:
-            visitor = getattr(self, f"_visit_{model_type.__name__}", None)
-            if visitor is not None:
-                return visitor(node, *args, **kwargs)
+    @staticmethod
+    def _visit_not_supported(node):
+        """Reject semantic models that have no `.pyi` visitor."""
         raise TypeError(f"Unsupported semantic model for .pyi emission: {type(node)!r}")
 
     # ------------------------------------------------------------------
@@ -239,18 +239,27 @@ class PyiPrinter:
 
     def _visit_SemanticModule(self, module: SemanticModule) -> str:
         """Emit module syntax."""
+        previous_class_names = self._semantic_class_names
+        self._semantic_class_names = {
+            str(cls.name)
+            for cls in module.classes
+            if cls.origin.source_language == "fortran" and cls.origin.source_kind == "derived_type"
+        }
         sections: list[str] = []
-        self._append_imports(sections, module)
-        self._append_items(sections, self._contract_items(module.classes), self.emit)
-        self._append_items(sections, self._contract_items(module.variables), self._emit_module_variable)
-        overload_targets = self._module_overload_target_names(module)
-        self._append_items(
-            sections,
-            self._contract_items(module.functions, keep_names=overload_targets),
-            self._visit,
-        )
-        self._append_items(sections, module.overload_sets, self._visit)
-        return "\n".join(sections)
+        try:
+            self._append_imports(sections, module)
+            self._append_items(sections, self._contract_items(module.classes), self.emit)
+            self._append_items(sections, self._contract_items(module.variables), self._emit_module_variable)
+            overload_targets = self._module_overload_target_names(module)
+            self._append_items(
+                sections,
+                self._contract_items(module.functions, keep_names=overload_targets),
+                self._visit,
+            )
+            self._append_items(sections, module.overload_sets, self._visit)
+            return "\n".join(sections)
+        finally:
+            self._semantic_class_names = previous_class_names
 
     # ------------------------------------------------------------------
     # Shared helpers
@@ -266,13 +275,15 @@ class PyiPrinter:
             if storage.read_only:
                 return f"Const({base_type})"
             return base_type
-        if storage.kind in {"reference", "pointer"}:
-            target = base_type
+        if storage.kind in {"reference", "pointer", "address"}:
+            if self._is_normal_storage_address(semantic_type):
+                return f"Const({base_type})" if storage.read_only else base_type
+            target = self._address_target_type(semantic_type)
             if storage.read_only:
                 target = f"Const({target})"
             if storage.pointer_depth > 1:
-                return f"Ref[{storage.pointer_depth}]({target})"
-            return f"Ref({target})"
+                return f"Addr[{storage.pointer_depth}]({target})"
+            return f"Addr({target})"
         if storage.kind == "array":
             return self._emit_array_type(semantic_type)
         return base_type
@@ -287,10 +298,39 @@ class PyiPrinter:
             return "String"
         return f"String[{length}]"
 
+    def _is_normal_storage_address(self, semantic_type: SemanticType) -> bool:
+        """Return whether address storage is hidden behind the normal Python object."""
+        storage = semantic_type.storage
+        return bool(
+            semantic_type.rank == 0
+            and storage is not None
+            and storage.kind in {"reference", "address"}
+            and storage.pointer_depth == 1
+            and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) != PYI_ADDRESS_ROLE_RAW
+            and (semantic_type.name == "String" or str(semantic_type.name) in self._semantic_class_names)
+        )
+
+    def _address_target_type(self, semantic_type: SemanticType) -> str:
+        """Return the pointee type spelling for a raw address contract."""
+        base_type = self._semantic_base_type(semantic_type)
+        if semantic_type.rank <= 0:
+            return base_type
+        dimensions = semantic_type.shape
+        if not dimensions:
+            storage = semantic_type.storage
+            array = storage.array if storage is not None else None
+            dimensions = tuple(array.source_shape or array.shape) if array is not None else ()
+        return f"{base_type}[{', '.join(str(dimension) for dimension in dimensions)}]"
+
     def _emit_array_type(self, semantic_type: SemanticType) -> str:
         """Emit array type syntax."""
         storage = semantic_type.storage
         array = storage.array if storage is not None else None
+        if array is not None and array.category == PYI_SCALAR_STORAGE_CATEGORY:
+            base = f"{self._semantic_base_type(semantic_type)}[()]"
+            if storage is not None and storage.read_only:
+                base = f"Const({base})"
+            return base
         dimensions = self._array_dimensions(semantic_type, array)
         base = f"{self._semantic_base_type(semantic_type)}[{', '.join(dimensions)}]"
         if storage is not None and storage.read_only:
@@ -514,7 +554,7 @@ class PyiPrinter:
     def _emit_call_argument(self, func: SemanticFunction, arg: SemanticArgument) -> str:
         """Emit a callable argument with compact output metadata when possible."""
         name = self._parameter_target(arg.name)
-        emitted_arg = self._projected_scalar_reference_argument(func, arg)
+        emitted_arg = self._projected_address_argument(func, arg)
         return self._emit_typed_name(
             name,
             emitted_arg,
@@ -523,43 +563,47 @@ class PyiPrinter:
         )
 
     @classmethod
-    def _projected_scalar_reference_argument(
+    def _projected_address_argument(
         cls,
         func: SemanticFunction,
         arg: SemanticArgument,
     ) -> SemanticArgument:
-        """Return the Python-visible value form for projected scalar references."""
-        if not cls._uses_scalar_reference_projection(func, arg):
+        """Return the Python-visible value form for projected scalar addresses."""
+        if not cls._uses_address_projection(func, arg):
             return arg
         emitted_arg = deepcopy(arg)
+        storage = arg.semantic_type.storage
         emitted_arg.semantic_type.storage = SemanticStorageContract(
             kind="value",
-            read_only=True,
-            mutable=False,
+            read_only=bool(storage is not None and storage.read_only),
+            mutable=not bool(storage is not None and storage.read_only),
         )
-        emitted_arg.semantic_type.ownership.mutable = False
+        emitted_arg.semantic_type.ownership.mutable = not bool(storage is not None and storage.read_only)
         return emitted_arg
 
     @classmethod
-    def _uses_scalar_reference_projection(cls, func: SemanticFunction, arg: SemanticArgument) -> bool:
-        """Return whether `arg` is emitted as a value plus `Ref(Arg(...))`."""
-        if not cls._is_read_only_scalar_reference(arg.semantic_type):
-            return False
-        if str(getattr(arg, "intent", "in")).lower() != "in":
+    def _uses_address_projection(cls, func: SemanticFunction, arg: SemanticArgument) -> bool:
+        """Return whether `arg` is emitted as a value plus `Addr(Arg(...))`."""
+        if not cls._is_scalar_address_projection(arg.semantic_type):
             return False
         return any(cls._mapping_projects_argument(mapping, arg) for mapping in func.projection)
 
     @staticmethod
-    def _is_read_only_scalar_reference(semantic_type: SemanticType) -> bool:
-        """Return whether semantic type is a Python-value scalar passed by native reference."""
+    def _is_scalar_address_projection(semantic_type: SemanticType) -> bool:
+        """Return whether semantic type is a Python-value scalar passed by native address."""
         storage = semantic_type.storage
         return bool(
             semantic_type.rank == 0
             and semantic_type.name != "String"
             and semantic_type.dtype in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
             and storage is not None
-            and storage.kind == "reference"
-            and storage.read_only
+            and (
+                (
+                    storage.kind == "address"
+                    and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) == PYI_ADDRESS_ROLE_PROJECTION
+                )
+                or (storage.kind == "reference" and storage.read_only)
+            )
             and storage.pointer_depth == 1
         )
 
@@ -570,7 +614,6 @@ class PyiPrinter:
             mapping.native_position is not None
             and mapping.python_position is not None
             and (mapping.python_name or mapping.native_name) == arg.name
-            and mapping.result_position is None
         )
 
     @staticmethod
@@ -1014,12 +1057,37 @@ class PyiPrinter:
     def _named_return(self, arg: SemanticArgument) -> str:
         """Handle named return for the current generation context."""
         optional = ", Optional" if arg.optional or self._is_allocatable_array(arg.semantic_type) else ""
-        return f'Returns["{arg.name}", {self._visit(arg.semantic_type)}{optional}]'
+        semantic_type = self._visible_projected_type(arg.semantic_type)
+        return f'Returns["{arg.name}", {self._visit(semantic_type)}{optional}]'
+
+    @staticmethod
+    def _visible_projected_type(semantic_type: SemanticType) -> SemanticType:
+        """Return the Python-visible type for address-projected scalars."""
+        storage = semantic_type.storage
+        if (
+            semantic_type.rank == 0
+            and storage is not None
+            and storage.kind == "address"
+            and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) == PYI_ADDRESS_ROLE_PROJECTION
+        ):
+            visible = deepcopy(semantic_type)
+            visible.storage = SemanticStorageContract(
+                kind="value",
+                read_only=storage.read_only,
+                mutable=not storage.read_only,
+            )
+            return visible
+        return semantic_type
 
     def _plain_projected_return(self, arg: SemanticArgument) -> str:
         """Handle plain projected return for the current generation context."""
         semantic_type = deepcopy(arg.semantic_type)
-        if semantic_type.rank == 0 and semantic_type.storage is not None and semantic_type.storage.kind == "reference":
+        storage = semantic_type.storage
+        if (
+            semantic_type.rank == 0
+            and storage is not None
+            and (storage.kind == "reference" or storage.kind == "address")
+        ):
             semantic_type.storage = None
         type_text = self._visit(semantic_type)
         if arg.optional or self._is_allocatable_array(arg.semantic_type):
@@ -1108,7 +1176,7 @@ class PyiPrinter:
     def _pyi_projection(func: SemanticFunction) -> list[ProjectionMapping]:
         """Return projection metadata adjusted for bound instance methods."""
         if not isinstance(func, SemanticMethod) or func.is_static or func.passed_object_position is None:
-            return PyiPrinter._with_scalar_reference_projections(func, deepcopy(func.projection))
+            return PyiPrinter._with_address_projections(func, deepcopy(func.projection))
         passed_position = func.passed_object_position
         projected = deepcopy(func.projection)
         if not projected:
@@ -1130,27 +1198,27 @@ class PyiPrinter:
             if mapping.python_position is not None and mapping.python_position > passed_position:
                 old_position = mapping.python_position
                 mapping.python_position -= 1
-                PyiPrinter._shift_pointer_argument_value(mapping, old_position, mapping.python_position)
-        return PyiPrinter._with_scalar_reference_projections(func, projected)
+                PyiPrinter._shift_address_argument_value(mapping, old_position, mapping.python_position)
+        return PyiPrinter._with_address_projections(func, projected)
 
     @staticmethod
-    def _shift_pointer_argument_value(
+    def _shift_address_argument_value(
         mapping: ProjectionMapping,
         old_position: int,
         new_position: int,
     ) -> None:
-        """Keep `Ref(Arg(...))` value refs aligned with shifted method arguments."""
-        if mapping.value_kind != "ptr" or not isinstance(mapping.value, dict):
+        """Keep `Addr(Arg(...))` value refs aligned with shifted method arguments."""
+        if mapping.value_kind != "addr" or not isinstance(mapping.value, dict):
             return
         if mapping.value.get("kind") == "arg" and mapping.value.get("position") == old_position:
             mapping.value["position"] = new_position
 
     @staticmethod
-    def _with_scalar_reference_projections(
+    def _with_address_projections(
         func: SemanticFunction,
         projection: list[ProjectionMapping],
     ) -> list[ProjectionMapping]:
-        """Mark scalar reference input mappings as explicit native reference projections."""
+        """Mark scalar address mappings as explicit native address projections."""
         by_name = {arg.name: arg for arg in func.arguments}
         for mapping in projection:
             if mapping.value_kind:
@@ -1160,9 +1228,9 @@ class PyiPrinter:
             arg = by_name.get(mapping.python_name or mapping.native_name)
             if arg is None:
                 continue
-            if not PyiPrinter._uses_scalar_reference_projection(func, arg):
+            if not PyiPrinter._uses_address_projection(func, arg):
                 continue
-            mapping.value_kind = "ptr"
+            mapping.value_kind = "addr"
             mapping.value = {"kind": "arg", "position": mapping.python_position}
         return projection
 
@@ -1210,8 +1278,8 @@ class PyiPrinter:
     @staticmethod
     def _native_projection_value(mapping: ProjectionMapping) -> str:
         """Handle native projection value for the current generation context."""
-        if mapping.value_kind == "ptr":
-            return f"Ref({PyiPrinter._native_value_ref(mapping.value)})"
+        if mapping.value_kind == "addr":
+            return f"Addr({PyiPrinter._native_value_ref(mapping.value)})"
         if mapping.value_kind == "const":
             return f"Const({mapping.value!r})"
         if mapping.value_kind == "len":
@@ -1241,9 +1309,13 @@ class PyiPrinter:
     @staticmethod
     def _requires_native_call(func: SemanticFunction) -> bool:
         """Return whether requires native call."""
+        if func.metadata.get(PYI_NATIVE_PROJECTION_METADATA) and any(
+            mapping.result_position is not None for mapping in func.projection
+        ):
+            return True
         if isinstance(func, SemanticMethod) and not func.is_static and func.passed_object_position not in {None, 0}:
             return True
-        projection = PyiPrinter._with_scalar_reference_projections(func, deepcopy(func.projection))
+        projection = PyiPrinter._with_address_projections(func, deepcopy(func.projection))
         return any(
             PyiPrinter._requires_explicit_projection_mapping(mapping)
             for mapping in projection
@@ -1268,9 +1340,9 @@ class PyiPrinter:
         if mapping.value_kind:
             return True
         if mapping.intent == "inout":
-            return mapping.result_position is not None or mapping.python_position != mapping.native_position
+            return mapping.python_position is None or mapping.python_position != mapping.native_position
         if mapping.intent == "out" and mapping.result_position is not None:
-            return True
+            return mapping.python_position is None or mapping.python_position != mapping.native_position
         if mapping.intent != "in":
             return mapping.python_position is None
         if mapping.result_position is not None:

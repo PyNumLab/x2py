@@ -30,9 +30,9 @@ workflows produce.
 
 The visible Python signature follows the semantic `.pyi`, not the raw native
 dummy list. Ordinary scalar inputs are value-shaped, such as `Const(Int32)` or
-`Const(Float64)`, even when the native call passes temporary reference-backed
-storage. Arrays, strings, derived objects, optional values, and callbacks keep
-their explicit semantic annotations.
+`Const(Float64)`, even when `@native_call` passes the address of a converted
+native scalar slot. Arrays, strings, derived objects, optional values, and
+callbacks keep their explicit semantic annotations.
 
 ## Return Projection
 
@@ -45,13 +45,13 @@ contract uses `@native_call(...)` and `Returns[...]` to preserve the native call
 shape:
 
 ```python
-@native_call([Ref(Arg(0)), Arg(1)])
+@native_call([Addr(Arg(0)), Arg(1)])
 def fill_vector(
     n: Const(Int32),
     values: Float64[n]
 ) -> Returns["values", Float64[n]]: ...
 
-@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2), Arg(3)])
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Arg(3)])
 def shift_matrix(
     n: Const(Int32),
     m: Const(Int32),
@@ -62,7 +62,7 @@ def shift_matrix(
 
 `Returns["name", Type]` names a projected Python return. `tuple[...]` is used
 when a callable has more than one Python return value. `@native_call` entries
-such as `Arg(0)`, `Ref(Arg(0))`, `Return("status", 0)`, `Len(...)`,
+such as `Arg(0)`, `Addr(Arg(0))`, `Return("status", 0)`, `Len(...)`,
 `IsPresent(...)`, and `Work(...)` are described in
 [Semantic `.pyi` Format](semantic-pyi-format.md#misuse-diagnostics-and-risk).
 
@@ -97,13 +97,13 @@ specific native procedure:
 
 ```python
 @overload("convert_integer")
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert(
     value: Const(Int32)
 ) -> Int32: ...
 
 @overload("convert_real")
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert(
     value: Const(Float64)
 ) -> Float64: ...

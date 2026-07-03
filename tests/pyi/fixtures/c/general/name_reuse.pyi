@@ -12,7 +12,7 @@ same_name_c: Complex128
 same_name_s: Int8[8]
 
 def do_work_i(
-    same_name: Ref(Int)
+    same_name: Addr(Int)
 ) -> None: ...
 
 def do_work_r(
@@ -21,7 +21,7 @@ def do_work_r(
 
 def do_work_l(
     same_name: Bool,
-    shared: Ref(same_name)
+    shared: Addr(same_name)
 ) -> None: ...
 
 def convert_to_complex(
@@ -33,7 +33,7 @@ def convert_to_string(
     shared: Int8[16]
 ) -> Int: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert_to_logical(
     same_name: Const(Int8)
 ) -> Bool: ...

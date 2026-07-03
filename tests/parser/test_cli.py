@@ -688,8 +688,8 @@ end program driver
 
     pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(module_source), "--pyi"]
     pyi_res = subprocess.run(pyi_cmd, capture_output=True, text=True, check=True)
-    assert "@native_call([Ref(Arg(0)), Return('x', 0), Ref(Arg(1))])" in pyi_res.stdout
-    assert "x: Annotated[Ref(Float64), Intent('out')]" not in pyi_res.stdout
+    assert "@native_call([Addr(Arg(0)), Return('x', 0), Addr(Arg(1))])" in pyi_res.stdout
+    assert "x: Annotated[Addr(Float64), Intent('out')]" not in pyi_res.stdout
     assert "def solve(" in pyi_res.stdout
 
     empty_pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(program_source), "--pyi"]
@@ -2813,7 +2813,7 @@ def test_x2py_readiness_formatting_and_compiler_without_requirements():
     x2py_cli._attach_wrap_readiness(semantic_payload, {"other": {"wrap_readiness": {"wrappable": True}}})
     assert "wrap_readiness" not in semantic_payload["source"]
 
-    parsed = x2py_cli.FortranParser().visit_file("module empty\nend module empty\n", filename="empty.f90")
+    parsed = x2py_cli.FortranParser().parse_file("module empty\nend module empty\n", filename="empty.f90")
     config = x2py_cli.PreprocessingConfig(mode="compiler", compiler="gfortran")
     assert x2py_cli._fortran_compile_time_values(parsed, config) is None
 
@@ -2827,7 +2827,7 @@ def test_x2py_fortran_readiness_helpers_attach_and_compile(monkeypatch):
     x2py_cli._attach_wrap_readiness(None, {"api.f90": {"wrap_readiness": ready}})
     x2py_cli._attach_wrap_readiness({"api.f90": {}}, None)
 
-    parsed = x2py_cli.FortranParser().visit_file(
+    parsed = x2py_cli.FortranParser().parse_file(
         "module api_mod\n  type :: Widget_T\n  end type Widget_T\nend module api_mod\n",
         filename="api.f90",
     )
@@ -2942,7 +2942,7 @@ def test_x2py_parse_report_preserves_fortran_parser_and_recipe_contracts(monkeyp
         return "default source", None
 
     class Parser:
-        def visit_file(self, code, *, filename):
+        def parse_file(self, code, *, filename):
             assert code in {"explicit source", "default source"}
             assert filename == str(path)
             calls.append(("visit", code, filename))
@@ -3080,7 +3080,7 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
     }
 
     class Parser:
-        def visit_file(self, code, *, filename):
+        def parse_file(self, code, *, filename):
             assert code == "fortran source"
             assert filename == str(path)
             return parsed
@@ -3211,7 +3211,7 @@ def test_x2py_wrap_readiness_report_preserves_fortran_and_pyi_contracts(monkeypa
     pyi_report = {str(stub): {"source_kind": "pyi"}}
 
     class Parser:
-        def visit_file(self, code, *, filename):
+        def parse_file(self, code, *, filename):
             assert code == "fortran source"
             assert filename == str(path)
             return parsed
@@ -3281,7 +3281,7 @@ def test_x2py_parse_c_path_preserves_parser_and_preprocessing_arguments(tmp_path
     compiled_parsed = object()
 
     class RawParser:
-        def visit_file(self, source, *, filename, include_dirs, preprocessing):
+        def parse_file(self, source, *, filename, include_dirs, preprocessing):
             assert source == path
             assert filename == str(path)
             assert include_dirs == ["include"]
@@ -3302,7 +3302,7 @@ def test_x2py_parse_c_path_preserves_parser_and_preprocessing_arguments(tmp_path
         return "int add(int x);\n", Recipe()
 
     class CompilerParser:
-        def visit_file(self, source, *, filename, include_dirs, preprocessing):
+        def parse_file(self, source, *, filename, include_dirs, preprocessing):
             assert source == "int add(int x);\n"
             assert filename == str(path)
             assert include_dirs == ["include"]
