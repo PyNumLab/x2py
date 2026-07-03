@@ -252,6 +252,17 @@ class _UnitParts:
     footer: tuple[str, int | None, str | None] | None
 
 
+@dataclass
+class _ParsedFileUnits:
+    modules: list[FortranModule]
+    submodules: list[FortranSubmodule]
+    programs: list[FortranProgram]
+    block_data_units: list[FortranBlockData]
+    procedures: list[FortranProcedureSignature]
+    interfaces: list[FortranInterface]
+    derived_types: list[FortranDerivedType]
+
+
 # -----------------------------------------------------------------------------
 # Compile-time expression and symbol resolution
 # -----------------------------------------------------------------------------
@@ -369,102 +380,13 @@ class FortranParser(ClassVisitor):
         encoding: str = "utf-8",
     ) -> FortranFile:
         """Parse one source string/path into a `FortranFile` aggregate model."""
-        if filename is None and self._looks_like_existing_source_path(source_or_path):
-            path = Path(source_or_path)
-            filename = str(path)
-            code = path.read_text(encoding=encoding)
-        else:
-            code = str(source_or_path)
-
-        lines, root_scope, top_units = self._helper_prepare_source_units(
-            code,
-            filename,
-        )
-        modules: list[FortranModule] = []
-        submodules: list[FortranSubmodule] = []
-        programs: list[FortranProgram] = []
-        block_data_units: list[FortranBlockData] = []
-        standalone_procedures: list[FortranProcedureSignature] = []
-        interfaces: list[FortranInterface] = []
-        derived_types: list[FortranDerivedType] = []
-
-        for unit in top_units:
-            parsed_unit = self._visit(unit, parent_scope=root_scope, filename=filename)
-            if isinstance(parsed_unit, FortranModule):
-                modules.append(parsed_unit)
-            elif isinstance(parsed_unit, FortranSubmodule):
-                submodules.append(parsed_unit)
-            elif isinstance(parsed_unit, FortranProgram):
-                programs.append(parsed_unit)
-            elif isinstance(parsed_unit, FortranBlockData):
-                block_data_units.append(parsed_unit)
-            elif isinstance(parsed_unit, FortranProcedureSignature):
-                if not parsed_unit.in_interface:
-                    standalone_procedures.append(parsed_unit)
-            elif isinstance(parsed_unit, FortranInterface):
-                interfaces.append(parsed_unit)
-            elif isinstance(parsed_unit, FortranDerivedType):
-                derived_types.append(parsed_unit)
-
-        all_types = [
-            *derived_types,
-            *(dtype for module in modules for dtype in module.derived_types),
-            *(dtype for submodule in submodules for dtype in submodule.derived_types),
-        ]
-        self._resolve_derived_type_extensions(all_types)
-        all_interfaces = [
-            self._visit(unit, parent_scope=scope, filename=filename)
-            for unit, scope in self._collect_interface_source_units(lines, filename)
-        ]
-        interfaces = [iface for iface in all_interfaces if iface.module is None]
-        for module in modules:
-            module.interfaces = [
-                iface for iface in all_interfaces if iface.module and iface.module.lower() == module.name.lower()
-            ]
-        for submodule in submodules:
-            submodule.interfaces = [
-                iface for iface in all_interfaces if iface.module and iface.module.lower() == submodule.name.lower()
-            ]
-
-        variable_units = [*modules, *submodules, *programs, *block_data_units]
-        module_params = self._collect_module_parameters(lines, filename)
-        if any(
-            var.kind or var.value is not None or var.symbolic_value is not None
-            for unit in variable_units
-            for var in getattr(unit, "variables", [])
-        ):
-            for unit in variable_units:
-                self._resolve_module_variable_kinds(unit, module_params)
-        for proc in standalone_procedures:
-            self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
-        for module in modules:
-            for proc in module.procedures:
-                self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
-        for submodule in submodules:
-            for proc in submodule.procedures:
-                self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
-
-        file = FortranFile(
-            filename=filename,
-            source=code,
-            encoding=encoding,
-            format=self._source_form(filename),
-            modules=modules,
-            submodules=submodules,
-            programs=programs,
-            block_data_units=block_data_units,
-            procedures=standalone_procedures,
-            interfaces=[iface for iface in interfaces if iface.module is None],
-            derived_types=[dtype for dtype in derived_types if dtype.module is None],
-        )
-
-        for m in modules:
-            self._insert_unique_scope_symbol(file.symbols, m.name.lower(), m, label="file scope", filename=filename)
-        for sm in submodules:
-            self._insert_unique_scope_symbol(file.symbols, sm.name.lower(), sm, label="file scope", filename=filename)
-        for p in standalone_procedures:
-            self._insert_unique_scope_symbol(file.symbols, p.name.lower(), p, label="file scope", filename=filename)
-        return file
+        code, filename = self._helper_read_source(source_or_path, filename, encoding)
+        lines, root_scope, top_units = self._helper_prepare_source_units(code, filename)
+        units = self._helper_parse_file_units(top_units, root_scope, filename)
+        self._helper_resolve_file_types(units)
+        interfaces = self._helper_attach_file_interfaces(lines, filename, units)
+        self._helper_resolve_file_kinds(lines, filename, units)
+        return self._helper_build_fortran_file(code, filename, encoding, units, interfaces)
 
     def parse_project(
         self,
@@ -473,109 +395,11 @@ class FortranParser(ClassVisitor):
         encoding: str = "utf-8",
     ) -> FortranProject:
         """Parse many sources and merge them into one dependency-aware project model."""
-        if isinstance(files, dict):
-            parsed_files = [self.parse_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
-        elif isinstance(files, str | Path):
-            namespace = self._helper_collect_namespace(files, encoding=encoding)
-            parsed_files = [self.parse_file(path, encoding=encoding) for path in namespace["files"]]
-        else:
-            parsed_files = [self.parse_file(path, encoding=encoding) for path in files]
-
-        module_params: dict[str, dict[str, str]] = {}
-        for parsed_file in parsed_files:
-            if parsed_file.source is not None:
-                module_params.update(self._collect_module_parameters(parsed_file.source, parsed_file.filename))
-
-        seen_procedures: set[int] = set()
-        for parsed_file in parsed_files:
-            for proc in parsed_file.procedures:
-                if id(proc) not in seen_procedures:
-                    self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
-                    seen_procedures.add(id(proc))
-            for module in parsed_file.modules:
-                for proc in module.procedures:
-                    if id(proc) not in seen_procedures:
-                        self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
-                        seen_procedures.add(id(proc))
-            for submodule in parsed_file.submodules:
-                for proc in submodule.procedures:
-                    if id(proc) not in seen_procedures:
-                        self._resolve_signature_kinds(proc, module_params, resolve_shapes=False)
-                        seen_procedures.add(id(proc))
-
+        parsed_files = self._helper_parse_project_files(files, encoding)
+        self._helper_resolve_project_kinds(parsed_files)
         project = FortranProject(files=parsed_files)
-
-        for f in parsed_files:
-            for module in f.modules:
-                module_key = module.name.lower()
-                self._insert_unique_scope_symbol(project.modules, module_key, module, label="project module scope")
-                project.dependencies[module_key] = {name.lower() for name in module.uses}
-                for proc in module.procedures:
-                    proc_key = f"{module_key}.{proc.name.lower()}"
-                    self._insert_unique_scope_symbol(
-                        project.procedures, proc_key, proc, label="project procedure scope"
-                    )
-                    project.procedures.setdefault(proc.name.lower(), proc)
-                for dtype in module.derived_types:
-                    dtype_key = f"{module_key}.{dtype.name.lower()}"
-                    self._insert_unique_scope_symbol(
-                        project.derived_types, dtype_key, dtype, label="project derived-type scope"
-                    )
-                    project.derived_types.setdefault(dtype.name.lower(), dtype)
-                for iface in module.interfaces:
-                    if iface.name:
-                        iface_key = f"{module_key}.{iface.name.lower()}"
-                        self._insert_unique_scope_symbol(
-                            project.interfaces, iface_key, iface, label="project interface scope"
-                        )
-                        project.interfaces.setdefault(iface.name.lower(), iface)
-            for submodule in f.submodules:
-                submodule_key = submodule.name.lower()
-                self._insert_unique_scope_symbol(
-                    project.submodules, submodule_key, submodule, label="project submodule scope"
-                )
-                deps = {submodule.parent.lower(), *(name.lower() for name in submodule.uses)}
-                if submodule.ancestor:
-                    deps.add(submodule.ancestor.lower())
-                project.dependencies[submodule_key] = deps
-                for proc in submodule.procedures:
-                    proc_key = f"{submodule_key}.{proc.name.lower()}"
-                    self._insert_unique_scope_symbol(
-                        project.procedures, proc_key, proc, label="project procedure scope"
-                    )
-                    project.procedures.setdefault(proc.name.lower(), proc)
-                for dtype in submodule.derived_types:
-                    dtype_key = f"{submodule_key}.{dtype.name.lower()}"
-                    self._insert_unique_scope_symbol(
-                        project.derived_types, dtype_key, dtype, label="project derived-type scope"
-                    )
-                    project.derived_types.setdefault(dtype.name.lower(), dtype)
-                for iface in submodule.interfaces:
-                    if iface.name:
-                        iface_key = f"{submodule_key}.{iface.name.lower()}"
-                        self._insert_unique_scope_symbol(
-                            project.interfaces, iface_key, iface, label="project interface scope"
-                        )
-                        project.interfaces.setdefault(iface.name.lower(), iface)
-            for program in f.programs:
-                if program.name:
-                    self._insert_unique_scope_symbol(
-                        project.programs, program.name.lower(), program, label="project program scope"
-                    )
-                    project.dependencies[program.name.lower()] = {name.lower() for name in program.uses}
-            for proc in f.procedures:
-                self._insert_unique_scope_symbol(
-                    project.procedures, proc.name.lower(), proc, label="project procedure scope"
-                )
-            for dtype in f.derived_types:
-                self._insert_unique_scope_symbol(
-                    project.derived_types, dtype.name.lower(), dtype, label="project derived-type scope"
-                )
-            for iface in f.interfaces:
-                if iface.name:
-                    self._insert_unique_scope_symbol(
-                        project.interfaces, iface.name.lower(), iface, label="project interface scope"
-                    )
+        for parsed_file in parsed_files:
+            self._helper_index_project_file(project, parsed_file)
         return project
 
     def parse_module(self, code: _SourceOrLines, filename: str | None = None) -> FortranModule:
@@ -987,6 +811,283 @@ class FortranParser(ClassVisitor):
         )
         self._helper_apply_local_interface_declarations(proc_state, unit, parts, scope, filename=filename)
         return self._finalize_proc(proc_state)
+
+    # ------------------------------------------------------------------
+    # File and project orchestration
+    # ------------------------------------------------------------------
+
+    def _helper_read_source(
+        self,
+        source_or_path: str | Path,
+        filename: str | None,
+        encoding: str,
+    ) -> tuple[str, str | None]:
+        """Read a path-like input or preserve an inline source string."""
+        if filename is None and self._looks_like_existing_source_path(source_or_path):
+            path = Path(source_or_path)
+            return path.read_text(encoding=encoding), str(path)
+        return str(source_or_path), filename
+
+    def _helper_parse_file_units(
+        self,
+        top_units: list[SourceUnit],
+        root_scope: _ParserScope,
+        filename: str | None,
+    ) -> _ParsedFileUnits:
+        """Visit and collect each direct file-level source unit."""
+        parsed = _ParsedFileUnits([], [], [], [], [], [], [])
+        for unit in top_units:
+            model = self._visit(unit, parent_scope=root_scope, filename=filename)
+            self._helper_append_file_unit(parsed, model)
+        return parsed
+
+    @staticmethod
+    def _helper_append_file_unit(parsed: _ParsedFileUnits, model: object) -> None:
+        """Append one visited model to its file-level collection."""
+        if isinstance(model, FortranModule):
+            parsed.modules.append(model)
+        elif isinstance(model, FortranSubmodule):
+            parsed.submodules.append(model)
+        elif isinstance(model, FortranProgram):
+            parsed.programs.append(model)
+        elif isinstance(model, FortranBlockData):
+            parsed.block_data_units.append(model)
+        elif isinstance(model, FortranProcedureSignature):
+            if not model.in_interface:
+                parsed.procedures.append(model)
+        elif isinstance(model, FortranInterface):
+            parsed.interfaces.append(model)
+        elif isinstance(model, FortranDerivedType):
+            parsed.derived_types.append(model)
+
+    def _helper_resolve_file_types(self, units: _ParsedFileUnits) -> None:
+        """Resolve derived-type extension links across file-level owners."""
+        all_types = [
+            *units.derived_types,
+            *(dtype for module in units.modules for dtype in module.derived_types),
+            *(dtype for submodule in units.submodules for dtype in submodule.derived_types),
+        ]
+        self._resolve_derived_type_extensions(all_types)
+
+    def _helper_attach_file_interfaces(
+        self,
+        lines: _PreprocessedLines,
+        filename: str | None,
+        units: _ParsedFileUnits,
+    ) -> list[FortranInterface]:
+        """Collect interfaces and attach module-owned blocks to their owners."""
+        interfaces = [
+            self._visit(unit, parent_scope=scope, filename=filename)
+            for unit, scope in self._collect_interface_source_units(lines, filename)
+        ]
+        for module in units.modules:
+            module.interfaces = [
+                iface for iface in interfaces if iface.module and iface.module.lower() == module.name.lower()
+            ]
+        for submodule in units.submodules:
+            submodule.interfaces = [
+                iface for iface in interfaces if iface.module and iface.module.lower() == submodule.name.lower()
+            ]
+        return [iface for iface in interfaces if iface.module is None]
+
+    def _helper_resolve_file_kinds(
+        self,
+        lines: _PreprocessedLines,
+        filename: str | None,
+        units: _ParsedFileUnits,
+    ) -> None:
+        """Resolve variable and procedure kind references within one file."""
+        variable_units = [*units.modules, *units.submodules, *units.programs, *units.block_data_units]
+        module_params = self._collect_module_parameters(lines, filename)
+        if any(
+            var.kind or var.value is not None or var.symbolic_value is not None
+            for unit in variable_units
+            for var in getattr(unit, "variables", [])
+        ):
+            for unit in variable_units:
+                self._resolve_module_variable_kinds(unit, module_params)
+        for procedure in self._helper_file_procedures(units):
+            self._resolve_signature_kinds(procedure, module_params, resolve_shapes=False)
+
+    @staticmethod
+    def _helper_file_procedures(units: _ParsedFileUnits):
+        """Yield file procedures in their established resolution order."""
+        yield from units.procedures
+        for module in units.modules:
+            yield from module.procedures
+        for submodule in units.submodules:
+            yield from submodule.procedures
+
+    def _helper_build_fortran_file(
+        self,
+        code: str,
+        filename: str | None,
+        encoding: str,
+        units: _ParsedFileUnits,
+        interfaces: list[FortranInterface],
+    ) -> FortranFile:
+        """Build the file aggregate and its direct symbol registry."""
+        parsed_file = FortranFile(
+            filename=filename,
+            source=code,
+            encoding=encoding,
+            format=self._source_form(filename),
+            modules=units.modules,
+            submodules=units.submodules,
+            programs=units.programs,
+            block_data_units=units.block_data_units,
+            procedures=units.procedures,
+            interfaces=interfaces,
+            derived_types=[dtype for dtype in units.derived_types if dtype.module is None],
+        )
+        for model in [*units.modules, *units.submodules, *units.procedures]:
+            self._insert_unique_scope_symbol(
+                parsed_file.symbols,
+                model.name.lower(),
+                model,
+                label="file scope",
+                filename=filename,
+            )
+        return parsed_file
+
+    def _helper_parse_project_files(
+        self,
+        files: dict[str, str] | list[str | Path] | tuple[str | Path, ...] | str | Path,
+        encoding: str,
+    ) -> list[FortranFile]:
+        """Normalize project inputs and parse each source file."""
+        if isinstance(files, dict):
+            return [self.parse_file(code, filename=fname, encoding=encoding) for fname, code in files.items()]
+        if isinstance(files, str | Path):
+            namespace = self._helper_collect_namespace(files, encoding=encoding)
+            return [self.parse_file(path, encoding=encoding) for path in namespace["files"]]
+        return [self.parse_file(path, encoding=encoding) for path in files]
+
+    def _helper_resolve_project_kinds(self, parsed_files: list[FortranFile]) -> None:
+        """Resolve cross-file procedure kinds once per procedure model."""
+        module_params: dict[str, dict[str, str]] = {}
+        for parsed_file in parsed_files:
+            if parsed_file.source is not None:
+                module_params.update(self._collect_module_parameters(parsed_file.source, parsed_file.filename))
+
+        seen_procedures: set[int] = set()
+        for parsed_file in parsed_files:
+            for procedure in self._helper_project_file_procedures(parsed_file):
+                if id(procedure) not in seen_procedures:
+                    self._resolve_signature_kinds(procedure, module_params, resolve_shapes=False)
+                    seen_procedures.add(id(procedure))
+
+    @staticmethod
+    def _helper_project_file_procedures(parsed_file: FortranFile):
+        """Yield one parsed file's procedures in established project order."""
+        yield from parsed_file.procedures
+        for module in parsed_file.modules:
+            yield from module.procedures
+        for submodule in parsed_file.submodules:
+            yield from submodule.procedures
+
+    def _helper_index_project_file(self, project: FortranProject, parsed_file: FortranFile) -> None:
+        """Add one parsed file's public models to project registries."""
+        for module in parsed_file.modules:
+            self._helper_index_project_module(project, module)
+        for submodule in parsed_file.submodules:
+            self._helper_index_project_submodule(project, submodule)
+        for program in parsed_file.programs:
+            self._helper_index_project_program(project, program)
+        for procedure in parsed_file.procedures:
+            self._insert_unique_scope_symbol(
+                project.procedures,
+                procedure.name.lower(),
+                procedure,
+                label="project procedure scope",
+            )
+        for dtype in parsed_file.derived_types:
+            self._insert_unique_scope_symbol(
+                project.derived_types,
+                dtype.name.lower(),
+                dtype,
+                label="project derived-type scope",
+            )
+        for interface in parsed_file.interfaces:
+            self._helper_index_project_interface(project, interface)
+
+    def _helper_index_project_module(self, project: FortranProject, module: FortranModule) -> None:
+        """Index one module and its owned public models."""
+        module_key = module.name.lower()
+        self._insert_unique_scope_symbol(project.modules, module_key, module, label="project module scope")
+        project.dependencies[module_key] = {name.lower() for name in module.uses}
+        self._helper_index_project_owner_members(project, module, module_key)
+
+    def _helper_index_project_submodule(self, project: FortranProject, submodule: FortranSubmodule) -> None:
+        """Index one submodule, its dependencies, and its public models."""
+        submodule_key = submodule.name.lower()
+        self._insert_unique_scope_symbol(
+            project.submodules,
+            submodule_key,
+            submodule,
+            label="project submodule scope",
+        )
+        dependencies = {submodule.parent.lower(), *(name.lower() for name in submodule.uses)}
+        if submodule.ancestor:
+            dependencies.add(submodule.ancestor.lower())
+        project.dependencies[submodule_key] = dependencies
+        self._helper_index_project_owner_members(project, submodule, submodule_key)
+
+    def _helper_index_project_owner_members(
+        self,
+        project: FortranProject,
+        owner: FortranModule | FortranSubmodule,
+        owner_key: str,
+    ) -> None:
+        """Index qualified and first-seen unqualified owner members."""
+        for procedure in owner.procedures:
+            qualified_name = f"{owner_key}.{procedure.name.lower()}"
+            self._insert_unique_scope_symbol(
+                project.procedures,
+                qualified_name,
+                procedure,
+                label="project procedure scope",
+            )
+            project.procedures.setdefault(procedure.name.lower(), procedure)
+        for dtype in owner.derived_types:
+            qualified_name = f"{owner_key}.{dtype.name.lower()}"
+            self._insert_unique_scope_symbol(
+                project.derived_types,
+                qualified_name,
+                dtype,
+                label="project derived-type scope",
+            )
+            project.derived_types.setdefault(dtype.name.lower(), dtype)
+        for interface in owner.interfaces:
+            self._helper_index_project_interface(project, interface, owner_key)
+
+    def _helper_index_project_program(self, project: FortranProject, program: FortranProgram) -> None:
+        """Index one named program and its module dependencies."""
+        if not program.name:
+            return
+        program_key = program.name.lower()
+        self._insert_unique_scope_symbol(project.programs, program_key, program, label="project program scope")
+        project.dependencies[program_key] = {name.lower() for name in program.uses}
+
+    def _helper_index_project_interface(
+        self,
+        project: FortranProject,
+        interface: FortranInterface,
+        owner_key: str | None = None,
+    ) -> None:
+        """Index one named interface, qualified when it has an owner."""
+        if not interface.name:
+            return
+        interface_name = interface.name.lower()
+        registry_key = f"{owner_key}.{interface_name}" if owner_key else interface_name
+        self._insert_unique_scope_symbol(
+            project.interfaces,
+            registry_key,
+            interface,
+            label="project interface scope",
+        )
+        if owner_key:
+            project.interfaces.setdefault(interface_name, interface)
 
     # ------------------------------------------------------------------
     # Source preparation and unit slicing
