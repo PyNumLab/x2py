@@ -542,6 +542,7 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         maxsplit=1,
     )[0]
 
+    help_index = quick_start.index("python3 -m x2py --help")
     source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->")
     fortran_block_index = quick_start.index("```fortran", source_index)
     source_build_command_index = quick_start.index(
@@ -584,10 +585,17 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     direct_import_index = quick_start.index("SCALE.scale(", pyi_build_tree_index)
     package_entry_import_section_index = quick_start.index("The package-entry `.pyi` build", direct_import_index)
     pyi_import_index = quick_start.index("SCALE.scale(", package_entry_import_section_index)
-    module_lesson_index = quick_start.index("first wrapped module", pyi_import_index)
     runtime_output_index = quick_start.index("7.5", pyi_import_index)
+    verbose_command_index = quick_start.index(
+        "python3 -m x2py scale.f90 \\\n  --out SCALE_debug",
+        runtime_output_index,
+    )
+    verbose_fortran_flag_index = quick_start.index("--wrapper-fortran-flags=-O2", verbose_command_index)
+    verbose_c_flag_index = quick_start.index("--wrapper-c-flags=-O2", verbose_fortran_flag_index)
+    verbose_output_index = quick_start.index("generated Python binding", verbose_c_flag_index)
+    module_lesson_index = quick_start.index("first wrapped module", verbose_output_index)
 
-    assert source_index < fortran_block_index < source_build_command_index
+    assert help_index < source_index < fortran_block_index < source_build_command_index
     assert source_build_command_index < default_source_build_tree_index < named_source_build_command_index
     assert named_source_build_command_index < source_build_tree_index < explicit_source_build_command_index
     assert explicit_source_build_command_index < explicit_source_build_tree_index < pyi_generation_command_index
@@ -595,7 +603,12 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index < output_name_index
     assert output_name_index < pyi_build_tree_index < direct_import_index < package_entry_import_section_index
     assert package_entry_import_section_index < pyi_import_index
-    assert pyi_import_index < runtime_output_index < module_lesson_index
+    assert pyi_import_index < runtime_output_index < verbose_command_index
+    assert verbose_command_index < verbose_fortran_flag_index < verbose_c_flag_index < verbose_output_index
+    assert verbose_output_index < module_lesson_index
+    assert "--parse" not in readme
+    assert "--semantics" not in readme
+    assert "--wrap-readiness" not in readme
     assert "tests/data/fortran/wrapper/scale.f90" in quick_start
     assert "scale.f90 --json" not in quick_start
     assert "python3 -m x2py solver.f90" not in quick_start

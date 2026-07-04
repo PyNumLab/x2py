@@ -26,8 +26,8 @@ python3 -m x2py --help
 ```
 
 Expected result: the install command completes successfully, and `--help`
-prints the CLI usage with input selection, inspection stages, wrapper builds,
-and output options.
+prints the CLI usage with input selection, wrapper builds, `.pyi` contracts,
+verbose mode, and output options.
 
 The default user-facing action for a single Fortran source is to build a Python
 extension. Create `scale.f90` with this input:
@@ -179,6 +179,29 @@ Both calls print:
 7.5
 ```
 
+Use `--verbose` when you want to see the compiler commands and confirm which
+wrapper flags reached the build:
+
+```bash
+python3 -m x2py scale.f90 \
+  --out SCALE_debug \
+  --out-dir build/SCALE_debug \
+  --verbose \
+  --compiler gfortran \
+  --wrapper-fortran-flags=-O2 \
+  --wrapper-c-flags=-O2
+```
+
+The verbose output includes native source compilation, generated bridge
+compilation, generated Python binding compilation, and the final link command.
+The custom wrapper flags appear in the relevant command lines:
+
+```text
+<fortran compiler> ... -O2 ... generated bridge ...
+<python-binding compiler> ... -O2 ... generated Python binding ...
+<fortran compiler> -shared ... -O2 ... SCALE_debug ...
+```
+
 Standalone procedures are the smallest wrapper surface and therefore come
 first. Contained Fortran module procedures are preserved under Python child
 modules; continue with the
@@ -210,25 +233,9 @@ Fortran sources
 ```
 X2PY_C_DOCS_END -->
 
-The inspection workflow also has four explicit stages:
-
-```text
-native source
-  -> parser facts
-  -> semantic IR
-  -> editable .pyi
-  -> readiness report
-```
-
-| Goal | Command flag |
-| --- | --- |
-| Inspect native declarations and diagnostics | `--parse` |
-| Consume language-neutral semantic facts | `--semantics` |
-| Generate an editable semantic interface | `--pyi` |
-| Find missing information or unsupported contracts | `--wrap-readiness` |
-
-`Wrappable: yes` means the Fortran semantic contract has no known readiness
-blockers. Native compilation and runtime verification remain separate steps.
+For diagnostic and inspection commands beyond the main build path, start with
+`python3 -m x2py --help`, then continue to the
+[Fortran wrapper guide](docs/user-guide/fortran-wrapper.md).
 
 <!-- X2PY_C_DOCS_START
 `Wrappable: yes` means the semantic contract has no known readiness blockers.
@@ -239,76 +246,6 @@ Fortran wrapper is not that future C-input backend.
 The [generated target datatype mapping example](docs/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
 shows how the GitHub Actions C and Fortran scalar types map to NumPy dtypes.
 X2PY_C_DOCS_END -->
-
-### Fortran
-
-Recognizable Fortran files do not require an explicit language. Parse the same
-checked source used in the Quick Start:
-
-Input (`scale.f90`):
-
-<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
-```fortran
-real(8) function scale(value, factor) result(output)
-  real(8), intent(in) :: value
-  real(8), intent(in) :: factor
-  output = value * factor
-end function scale
-```
-
-```bash
-python3 -m x2py scale.f90 --parse
-```
-
-```text
-File: scale.f90
-  Procedures: 1
-    - function scale(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
-```
-
-Generate its editable `.pyi` contract package:
-
-```bash
-python3 -m x2py scale.f90 --pyi --out contracts
-```
-
-Expected contract (`contracts/__init__.pyi`):
-
-```python
-@external
-@native_call([Addr(Arg(0)), Addr(Arg(1))])
-def scale(
-    value: Float64,
-    factor: Float64
-) -> Float64: ...
-```
-
-Check semantic readiness:
-
-```bash
-python3 -m x2py scale.f90 --wrap-readiness
-```
-
-```text
-File: scale.f90
-  Source: fortran
-  Semantic modules: scale
-  Wrappable: yes
-  Public functions: 1
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
-```
-
-Edit the draft interface when source facts are not enough, then check the
-edited contract:
-
-```bash
-python3 -m x2py contracts/__init__.pyi --wrap-readiness
-```
-
-Expected result: the command reports `Wrappable: yes` for
-`contracts/__init__.pyi`.
 
 <!-- X2PY_C_DOCS_START
 ### C
@@ -399,21 +336,10 @@ X2PY_C_DOCS_END -->
 
 ## Native Project Inputs
 
-Fortran preprocessing defaults to `gfortran`. Pass the native project's include
-directories, definitions, language standard, and target flags when inspecting
-or building a real source tree:
-
-```bash
-python3 -m x2py scale.f90 --parse \
-  --compiler gfortran \
-  --std f2018
-```
-
-Expected result: the command prints the same parser report shape shown in the
-Fortran inspection example, with preprocessing routed through `gfortran`.
-
-For a real project, replace the checked input path with your source path and
-add the project's include directories, definitions, and target flags.
+Fortran builds default to `gfortran`. For a real project, replace the checked
+input path with your source path, use `--help` to choose the compiler and native
+project options you need, and enable `--verbose` when you want to audit the
+exact compiler and linker commands.
 
 <!-- X2PY_C_DOCS_START
 The CLI uses compiler preprocessing for native source. C defaults to `cc` and
@@ -449,8 +375,8 @@ python3 -m x2py src/api.c &#45;&#45;language c &#45;&#45;semantics \
 ```
 X2PY_C_DOCS_END -->
 
-Use `--parse --json` for complete machine-readable parser facts and `--out`
-to write selected output to a file or beside each source.
+Use `--out` to select generated contract locations, wrapper module names, or
+explicit build directories, depending on the command mode.
 
 ## Python API
 

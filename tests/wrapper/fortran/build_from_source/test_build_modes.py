@@ -58,6 +58,42 @@ def test_verbose_mode_prints_full_direct_build_commands(tmp_path: Path):
     assert "Built extension:" in result.stdout
 
 
+def test_verbose_mode_prints_custom_wrapper_flags(tmp_path: Path):
+    source = tmp_path / SCALE_SOURCE.name
+    shutil.copyfile(SCALE_SOURCE, source)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--out",
+            "SCALE_debug",
+            "--out-dir",
+            str(tmp_path / "build" / "SCALE_debug"),
+            "--verbose",
+            "--compiler",
+            "gfortran",
+            "--wrapper-fortran-flags=-O2",
+            "--wrapper-c-flags=-O2",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    command_lines = result.stdout.splitlines()
+
+    fortran_wrapper_command = next(
+        line for line in command_lines if "bind_c_SCALE_debug_wrapper.f90" in line and "-c" in line
+    )
+    c_wrapper_command = next(line for line in command_lines if "SCALE_debug_wrapper.c" in line and "-c" in line)
+    link_command = next(line for line in command_lines if "-shared" in line and "SCALE_debug" in line)
+    assert "-O2" in shlex.split(fortran_wrapper_command)
+    assert "-O2" in shlex.split(c_wrapper_command)
+    assert "-O2" in shlex.split(link_command)
+
+
 def test_fortran_wrapper_default_places_extension_beside_source(tmp_path: Path):
     source = tmp_path / DEFAULT_OUTPUT_SOURCE.name
     shutil.copyfile(DEFAULT_OUTPUT_SOURCE, source)
