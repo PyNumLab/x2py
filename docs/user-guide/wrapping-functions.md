@@ -17,7 +17,6 @@ For this example, we'll use `scale.f90` (from [README Quick Start](../../README.
 
 ```bash
 python3 -m x2py scale.f90 --pyi
-python3 -m x2py scale.f90 --wrap-readiness
 python3 -m x2py scale.f90 --out-dir build/scale
 ```
 

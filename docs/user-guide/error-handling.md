@@ -59,6 +59,7 @@ Build that contract against the same simple native source:
 
 ```bash
 python3 -m x2py contracts/solver/__init__.pyi \
+  --wrap \
   --native-fortran-sources solver.f90 \
   --out-dir build/solver \
 ```

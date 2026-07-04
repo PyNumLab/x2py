@@ -47,6 +47,9 @@ python3 -m x2py contracts/edited_solver/__init__.pyi \
   --out-dir build/edited-solver
 ```
 
+The explicit `--wrap` is required here because the entry input is a semantic
+`.pyi` contract, not a Fortran source file.
+
 The entry `.pyi` is the sole semantic input to wrapper generation. x2py does
 not reparse the native source to restore a removed declaration, projection, or
 policy. Objects, archives, shared libraries, module files, and optional native

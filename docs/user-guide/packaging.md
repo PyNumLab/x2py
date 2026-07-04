@@ -61,15 +61,9 @@ The extension module name normally comes from the first source filename.
 Contained native modules become child Python modules; standalone procedures
 remain at the extension root. `--out NAME` selects a different extension name.
 
-The JSON build result records:
-
-- `module_name`;
-- `output_dir`;
-- the importable `shared_library`;
-- all `generated_files`; and
-- the structured native build plan.
-
-Use those fields instead of guessing artifact names or platform suffixes.
+Use the selected output directory as the import location during development.
+The shared-library filename is platform-specific, so avoid hard-coding a suffix
+outside project-specific build scripts.
 
 ## Generated Artifacts
 
@@ -91,11 +85,12 @@ flags:
 python3 -m x2py src/scale.f90 \
   --wrap \
   --makefile \
-  --out-dir build/scale \
+  --out-dir build/scale
 
 make -f build/scale/Makefile.x2py X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
+Makefile mode is an explicit wrapper submode, so the command keeps `--wrap`.
 Makefile mode and verbose direct compilation are separate modes. The generated
 Makefile expects GNU Make and a POSIX-style shell. Semantic `.pyi` Makefile
 builds also write `x2py-build.json`, which can regenerate or replay the build.
@@ -109,7 +104,7 @@ mask the new build:
 
 ```bash
 rm -rf build/scale
-python3 -m x2py src/scale.f90 --wrap --out-dir build/scale --json
+python3 -m x2py src/scale.f90 --out-dir build/scale
 ```
 
 Keep sources, explicit contracts, build commands, and Python assertions under
@@ -133,8 +128,8 @@ editable Python installs automatically.
 
 ## Evidence And Troubleshooting
 
-Output names, directories, JSON results, native build plans, verbose mode, and
-Makefile option validation are exercised by
+Output names, directories, native build plans, verbose mode, and Makefile option
+validation are exercised by
 [`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py).
 Multi-source package shape is exercised by
 [`test_multi_source_builds.py`](../../tests/wrapper/fortran/multiple_files/test_multi_source_builds.py).

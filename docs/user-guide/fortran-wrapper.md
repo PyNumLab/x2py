@@ -82,8 +82,7 @@ X2PY_C_DOCS_END -->
 
 The direct wrapper path accepts fixed-form and free-form Fortran sources and
 requires a working GNU native toolchain, Python development headers, and NumPy
-development files. Recognizable Fortran sources default to a wrapper build;
-`--wrap` makes that choice explicit.
+development files. Recognizable Fortran sources default to a wrapper build.
 
 <!-- X2PY_C_DOCS_START
 The direct wrapper path accepts fixed-form and free-form Fortran sources and
@@ -96,14 +95,11 @@ Build the checked scalar example:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
-  --wrap \
-  --out-dir build/fruntime_abi \
-  --json
+  --out-dir build/fruntime_abi
 ```
 
-The JSON result reports the module name, generated files, output directory, and
-shared-library path. Add the output directory to `sys.path` or run Python from a
-location where the extension can be imported:
+Add the output directory to `sys.path` or run Python from a location where the
+extension can be imported:
 
 ```python
 import sys
@@ -204,12 +200,12 @@ The semantic `.pyi` described in [Semantic `.pyi` format](../reference/semantic-
 editable semantic contract and readiness surface. The supported edit workflow,
 including removal, addition, call projection, ownership, and destruction, is
 documented in [Editing semantic `.pyi` contracts](editing-semantic-pyi-contracts.md).
-The normal CLI build is
-source-driven: `--wrap` accepts Fortran sources and cannot be combined with
-`--pyi`. For the implemented `.pyi` subset, `--wrap` can instead accept a
-semantic `.pyi` file and native build artifacts such as `.o`, `.a`, or `.so`
-inputs. In that mode the `.pyi` is the Python API source of truth; native source
-is not reparsed during wrapper generation.
+The normal CLI build is source-driven: recognizable Fortran sources build
+wrappers without a stage flag and cannot be combined with `--pyi`. For the
+implemented `.pyi` subset, pass `--wrap` with a semantic `.pyi` file and native
+build artifacts such as `.o`, `.a`, or `.so` inputs. In that mode the `.pyi` is
+the Python API source of truth; native source is not reparsed during wrapper
+generation.
 
 The current `.pyi` build subset requires the contract filename stem to match
 the native Fortran module name. Supply the native module file directory as an
@@ -247,8 +243,7 @@ python3 -m x2py contracts/module.pyi \
   --native-fortran-sources native/module.f90 \
   --native-fortran-flags="-O3 -fopenmp" \
   --out-dir build/module \
-  --makefile \
-  --json
+  --makefile
 
 python3 -m x2py --build-manifest build/module/x2py-build.json --wrap
 python3 -m x2py --build-manifest build/module/x2py-build.json --wrap --makefile
@@ -1628,9 +1623,7 @@ X2PY_C_DOCS_END -->
 python3 -m x2py \
   solver.f90 \
   diagnostics.f90 \
-  --wrap \
-  --out-dir build \
-  --json
+  --out-dir build
 ```
 
 ```python
@@ -1736,7 +1729,7 @@ module contracts; the entry only changes the Python-facing export tree.
 ### Editable Makefile
 
 ```bash
-python3 -m x2py mesh.f90 solver.f90 --wrap --makefile --out-dir build --json
+python3 -m x2py mesh.f90 solver.f90 --wrap --makefile --out-dir build
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
@@ -1757,8 +1750,7 @@ python3 -m x2py contracts/solver.pyi \
   --wrap \
   --native-fortran-sources native/solver.f90 \
   --out-dir build/solver \
-  --makefile \
-  --json
+  --makefile
 
 python3 -m x2py --build-manifest build/solver/x2py-build.json --wrap
 ```
@@ -1975,7 +1967,7 @@ uses the normal GIL-release policy. For GNU Fortran, pass OpenMP flags to both
 compile and link steps:
 
 ```bash
-python3 -m x2py parallel_api.f90 --wrap --makefile --out-dir build --json
+python3 -m x2py parallel_api.f90 --wrap --makefile --out-dir build
 make -f build/Makefile.x2py \
   X2PY_FFLAGS=-fopenmp \
   X2PY_LDFLAGS=-fopenmp

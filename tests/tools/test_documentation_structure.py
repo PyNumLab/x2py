@@ -782,6 +782,21 @@ def test_getting_started_pages_keep_advanced_stage_flags_out_of_beginner_path() 
     assert "--json" not in content
 
 
+def test_user_guide_keeps_default_source_builds_free_of_redundant_stage_flags() -> None:
+    content = "\n".join(
+        _visible_documentation_source(DOCS_ROOT / relative_path) for relative_path in REQUIRED_USER_GUIDE_PAGES
+    )
+
+    assert "--json" not in content
+    assert "--wrap-readiness" not in content
+    assert "points.f90 --wrap" not in content
+    assert "src/scale.f90 --wrap --out-dir" not in content
+    assert "fruntime_abi_f90.f90 \\\n  --wrap" not in content
+    assert "solver.f90 \\\n  diagnostics.f90 \\\n  --wrap" not in content
+    assert "python3 -m x2py contracts/solver/__init__.pyi \\\n  --wrap" in content
+    assert "Makefile mode is an explicit wrapper submode" in content
+
+
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)
 def test_cli_help_uses_documented_option_groups(heading: str) -> None:
     assert heading in _x2py_cli_help()

@@ -55,8 +55,8 @@ producer and consumer must match at least:
 - linked native library versions and load paths; and
 - extension module name and expected package namespace.
 
-Use the build JSON result to identify the actual `shared_library`; do not rename
-the file without also preserving its Python initialization symbol.
+Use the produced extension file as-is; do not rename it without also preserving
+its Python initialization symbol.
 
 Even when these facts appear to match, import and runtime smoke tests on the
 target environment are required. Current CI evidence does not establish a
@@ -100,7 +100,8 @@ Before distributing a wrapper project:
 1. Generate and review semantic `.pyi` output.
 2. Run readiness before native compilation.
 3. Build from a clean output directory with recorded source order and flags.
-4. Preserve the JSON build result or Makefile manifest.
+4. Preserve the exact build command, source order, flags, and Makefile manifest
+   when one is generated.
 5. Run asserted calls for every public routine used by the application.
 6. Test expected invalid dtype, rank, shape, and ownership cases.
 7. Rebuild and rerun on every claimed target environment.

@@ -53,7 +53,7 @@ end module points
 Build it:
 
 ```bash
-python3 -m x2py points.f90 --wrap --out geometry --out-dir build/geometry
+python3 -m x2py points.f90 --out geometry --out-dir build/geometry
 ```
 
 Then construct, mutate, return, and borrow generated objects:
