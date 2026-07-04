@@ -179,6 +179,91 @@ Both calls print:
 7.5
 ```
 
+For a small derived-type wrapper, create `points.f90`:
+
+```fortran
+module points
+  implicit none
+  type :: point
+    real(8) :: x
+    real(8) :: y
+  end type point
+contains
+  subroutine move(item, dx, dy)
+    type(point), intent(inout) :: item
+    real(8), intent(in) :: dx
+    real(8), intent(in) :: dy
+    item%x = item%x + dx
+    item%y = item%y + dy
+  end subroutine move
+
+  real(8) function norm_squared(item) result(value)
+    type(point), intent(in) :: item
+    value = item%x * item%x + item%y * item%y
+  end function norm_squared
+end module points
+```
+
+Generate its semantic contract:
+
+```bash
+python3 -m x2py points.f90 --pyi --out contracts
+```
+
+Expected contract (`contracts/points.pyi`):
+
+```python
+class point:
+    def __init__(
+        self,
+        *,
+        x: Float64 = ...,
+        y: Float64 = ...
+    ) -> None: ...
+
+    x: Float64
+    y: Float64
+
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
+def move(
+    item: point,
+    dx: Float64,
+    dy: Float64
+) -> None: ...
+
+def norm_squared(
+    item: point
+) -> Float64: ...
+```
+
+Build and import it with a clean Python module name:
+
+```bash
+python3 -m x2py points.f90 --out geometry --out-dir build/geometry
+```
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/geometry")
+import geometry
+
+p = geometry.points.point(x=np.float64(3.0), y=np.float64(4.0))
+geometry.points.move(p, np.float64(1.0), np.float64(-2.0))
+
+print(p.x, p.y)
+print(geometry.points.norm_squared(p))
+```
+
+Expected result:
+
+```text
+4.0 2.0
+20.0
+```
+
 Use `--verbose` when you want to see the compiler commands and confirm which
 wrapper flags reached the build:
 

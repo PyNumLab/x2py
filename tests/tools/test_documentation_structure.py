@@ -586,9 +586,32 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     package_entry_import_section_index = quick_start.index("The package-entry `.pyi` build", direct_import_index)
     pyi_import_index = quick_start.index("SCALE.scale(", package_entry_import_section_index)
     runtime_output_index = quick_start.index("7.5", pyi_import_index)
+    points_source_index = quick_start.index("For a small derived-type wrapper", runtime_output_index)
+    points_fortran_index = quick_start.index("module points", points_source_index)
+    points_pyi_command_index = quick_start.index(
+        "python3 -m x2py points.f90 --pyi --out contracts",
+        points_fortran_index,
+    )
+    points_contract_index = quick_start.index(
+        "class point:\n"
+        "    def __init__(\n"
+        "        self,\n"
+        "        *,\n"
+        "        x: Float64 = ...,\n"
+        "        y: Float64 = ...",
+        points_pyi_command_index,
+    )
+    points_norm_contract_index = quick_start.index("def norm_squared(", points_contract_index)
+    points_build_command_index = quick_start.index(
+        "python3 -m x2py points.f90 --out geometry --out-dir build/geometry",
+        points_norm_contract_index,
+    )
+    points_import_index = quick_start.index("import geometry", points_build_command_index)
+    points_norm_call_index = quick_start.index("geometry.points.norm_squared(p)", points_import_index)
+    points_output_index = quick_start.index("4.0 2.0\n20.0", points_norm_call_index)
     verbose_command_index = quick_start.index(
         "python3 -m x2py scale.f90 \\\n  --out SCALE_debug",
-        runtime_output_index,
+        points_output_index,
     )
     verbose_fortran_flag_index = quick_start.index("--wrapper-fortran-flags=-O2", verbose_command_index)
     verbose_c_flag_index = quick_start.index("--wrapper-c-flags=-O2", verbose_fortran_flag_index)
@@ -603,7 +626,10 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index < output_name_index
     assert output_name_index < pyi_build_tree_index < direct_import_index < package_entry_import_section_index
     assert package_entry_import_section_index < pyi_import_index
-    assert pyi_import_index < runtime_output_index < verbose_command_index
+    assert pyi_import_index < runtime_output_index < points_source_index
+    assert points_source_index < points_fortran_index < points_pyi_command_index < points_contract_index
+    assert points_contract_index < points_norm_contract_index < points_build_command_index < points_import_index
+    assert points_import_index < points_norm_call_index < points_output_index < verbose_command_index
     assert verbose_command_index < verbose_fortran_flag_index < verbose_c_flag_index < verbose_output_index
     assert verbose_output_index < module_lesson_index
     assert "--parse" not in readme
@@ -616,6 +642,10 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     assert "fruntime_abi_f90" not in readme
     assert "solver.f90" not in readme
     assert "add1" not in readme
+    assert "distance2" not in readme
+    assert "points_api" not in readme
+    assert "point_api" not in readme
+    assert "build/points" not in readme
     assert "tests/data/fortran/general/basic_subroutine.f90" not in readme
     assert "contracts/basic_subroutine/basic_subroutine.pyi" not in readme
 

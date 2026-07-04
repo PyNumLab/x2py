@@ -17,7 +17,7 @@ generated native operations rather than assuming a public memory layout.
 Create `points.f90`:
 
 ```fortran
-module points_api
+module points
   implicit none
   type :: point
     real(8) :: x = 0.0_8
@@ -47,13 +47,13 @@ contains
     type(point), intent(in) :: item
     container%origin = item
   end subroutine set_origin
-end module points_api
+end module points
 ```
 
 Build it:
 
 ```bash
-python3 -m x2py points.f90 --wrap --out-dir build/points
+python3 -m x2py points.f90 --wrap --out geometry --out-dir build/geometry
 ```
 
 Then construct, mutate, return, and borrow generated objects:
@@ -62,20 +62,20 @@ Then construct, mutate, return, and borrow generated objects:
 import sys
 import numpy as np
 
-sys.path.insert(0, "build/points")
-import points
+sys.path.insert(0, "build/geometry")
+import geometry
 
-api = points.points_api
-item = api.point(x=np.float64(1.0), y=np.float64(2.0))
-api.move(item, np.float64(3.0), np.float64(4.0))
+points = geometry.points
+item = points.point(x=np.float64(1.0), y=np.float64(2.0))
+points.move(item, np.float64(3.0), np.float64(4.0))
 assert item.x == np.float64(4.0)
 assert item.y == np.float64(6.0)
 
-made = api.make_point(np.float64(8.0), np.float64(9.0))
-assert isinstance(made, api.point)
+made = points.make_point(np.float64(8.0), np.float64(9.0))
+assert isinstance(made, points.point)
 
-container = api.holder()
-api.set_origin(container, made)
+container = points.holder()
+points.set_origin(container, made)
 origin = container.origin
 origin.x = np.float64(12.0)
 assert container.origin.x == np.float64(12.0)

@@ -23,9 +23,9 @@ A derived type declared in a Fortran module is exposed from the generated child
 module for that native module:
 
 ```python
-import points
+import geometry
 
-point = points.points_api.point
+point = geometry.points.point
 item = point(x=np.float64(1.0), y=np.float64(2.0))
 ```
 
