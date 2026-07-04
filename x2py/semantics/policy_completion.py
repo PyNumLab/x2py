@@ -4,13 +4,20 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
+from dataclasses import replace
 
 from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.ownership_policy import (
+    DestructionPolicy,
     OWNERSHIP_POLICY_METADATA,
+    ObjectKind,
     PYI_SCALAR_STORAGE_CATEGORY,
+    OwnershipDecision,
     OwnershipContext,
+    OwnershipOwner,
     SetterAction,
+    SnapshotFieldAction,
+    TransferMode,
     default_ownership_policy,
     ownership_context_for_argument,
 )
@@ -74,12 +81,16 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
     signatures are known and before ``ir2ast`` lowering.
     """
 
+    class_lookup = _semantic_class_lookup(module)
     for variable in module.variables:
         _complete_variable(variable, OwnershipContext.module_variable())
         _complete_accessor_policies(variable, OwnershipContext.module_variable())
         _complete_module_variable_initializer(variable)
     for semantic_class in module.classes:
         _complete_class(semantic_class)
+    _clear_snapshot_field_actions(module.classes)
+    for variable in module.variables:
+        _complete_module_snapshot_policy(variable, class_lookup)
     for function in module.functions:
         _complete_function(function)
     for overload_set in module.overload_sets:
@@ -87,6 +98,180 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
             _complete_function(procedure)
     module.metadata[models.POLICY_COMPLETION_PREPARED_METADATA] = True
     return module
+
+
+def _semantic_class_lookup(module: models.SemanticModule) -> dict[str, models.SemanticClass]:
+    """Return all classes addressable by semantic type name in this module."""
+    lookup: dict[str, models.SemanticClass] = {}
+
+    def visit(semantic_class: models.SemanticClass) -> None:
+        lookup.setdefault(semantic_class.name, semantic_class)
+        if semantic_class.native_name:
+            lookup.setdefault(semantic_class.native_name, semantic_class)
+        for nested in semantic_class.classes:
+            visit(nested)
+
+    for semantic_class in module.classes:
+        visit(semantic_class)
+    return lookup
+
+
+def _complete_module_snapshot_policy(
+    variable: models.SemanticVariable,
+    class_lookup: dict[str, models.SemanticClass],
+) -> None:
+    """Complete recursive snapshot eligibility for a derived module variable."""
+    decision = variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA]
+    if not _is_module_derived_snapshot(decision, variable.semantic_type):
+        if variable.semantic_type.metadata.get(models.PYI_SNAPSHOT_TYPE_METADATA):
+            blocker = _invalid_snapshot_annotation_blocker(variable, decision)
+            blocked = _blocked_snapshot_decision(decision, blocker)
+            variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = blocked
+            variable.metadata[models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA] = blocked
+            variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = replace(
+                blocked,
+                setter_action=SetterAction.OMIT,
+            )
+        else:
+            variable.semantic_type.metadata.pop(models.PYI_SNAPSHOT_TYPE_METADATA, None)
+        return
+
+    blocker, actions = _snapshot_plan(variable.semantic_type, class_lookup, (variable.semantic_type.name,))
+    if blocker is not None:
+        blocked = _blocked_snapshot_decision(decision, blocker)
+        variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = blocked
+        variable.metadata[models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA] = blocked
+        variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = replace(
+            blocked,
+            setter_action=SetterAction.OMIT,
+        )
+        variable.semantic_type.metadata.pop(models.PYI_SNAPSHOT_TYPE_METADATA, None)
+        return
+
+    for field, action in actions:
+        field.metadata[models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA] = action
+    variable.semantic_type.metadata[models.PYI_SNAPSHOT_TYPE_METADATA] = True
+
+
+def _is_module_derived_snapshot(decision: OwnershipDecision, semantic_type: models.SemanticType) -> bool:
+    return bool(
+        decision.kind is ObjectKind.DERIVED_TYPE
+        and decision.transfer is TransferMode.SNAPSHOT_COPY
+        and semantic_type.rank == 0
+    )
+
+
+def _invalid_snapshot_annotation_blocker(
+    variable: models.SemanticVariable,
+    decision: OwnershipDecision,
+) -> str:
+    if decision.kind is not ObjectKind.DERIVED_TYPE or variable.semantic_type.rank != 0:
+        return "Snapshot[T] is supported only for scalar derived module variables"
+    return (
+        f"Snapshot[{variable.semantic_type.name}] conflicts with the completed "
+        f"{decision.transfer.value} transfer policy"
+    )
+
+
+def _blocked_snapshot_decision(decision: OwnershipDecision, blocker: str) -> OwnershipDecision:
+    return replace(
+        decision,
+        owner=OwnershipOwner.UNKNOWN,
+        transfer=TransferMode.BLOCKED,
+        destruction=DestructionPolicy.BLOCKED,
+        borrowed=False,
+        blocker=blocker,
+        reason="recursive derived module snapshot policy is incomplete",
+    )
+
+
+def _clear_snapshot_field_actions(classes: Iterable[models.SemanticClass]) -> None:
+    for semantic_class in classes:
+        for field in semantic_class.fields:
+            field.metadata.pop(models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA, None)
+        _clear_snapshot_field_actions(semantic_class.classes)
+
+
+def _snapshot_plan(
+    semantic_type: models.SemanticType,
+    class_lookup: dict[str, models.SemanticClass],
+    stack: tuple[str, ...],
+) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
+    semantic_class = class_lookup.get(semantic_type.name)
+    if semantic_class is None:
+        return f"snapshot type {semantic_type.name!r} is not declared in this module", []
+    actions: list[tuple[models.SemanticField, SnapshotFieldAction]] = []
+    for field in semantic_class.fields:
+        blocker, field_actions = _snapshot_field_plan(field, class_lookup, stack)
+        if blocker is not None:
+            return blocker, []
+        actions.extend(field_actions)
+    return None, actions
+
+
+def _snapshot_field_plan(
+    field: models.SemanticField,
+    class_lookup: dict[str, models.SemanticClass],
+    stack: tuple[str, ...],
+) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
+    path = ".".join((*stack, field.name))
+    semantic_type = field.semantic_type
+    blocker = _snapshot_field_storage_blocker(semantic_type, path)
+    if blocker is not None:
+        return blocker, []
+    if semantic_type.name in class_lookup:
+        return _snapshot_derived_field_plan(field, class_lookup, stack, path)
+    return _snapshot_value_field_plan(field, path)
+
+
+def _snapshot_field_storage_blocker(semantic_type: models.SemanticType, path: str) -> str | None:
+    storage = semantic_type.storage
+    array = storage.array if storage is not None else None
+    if semantic_type.name in {"Callable", "Procedure", "Callback", "FunctionPointer", "CFunctionPointer"}:
+        return f"snapshot field {path} is a procedure or callback"
+    if semantic_type.metadata.get("fortran_assumed_type") or semantic_type.metadata.get("fortran_polymorphic"):
+        return f"snapshot field {path} uses unsupported polymorphic or assumed-type storage"
+    if array is not None and array.pointer:
+        return f"snapshot field {path} is a pointer array without a completed pointer snapshot policy"
+    if semantic_type.metadata.get("fortran_pointer") or (storage is not None and storage.pointer_depth > 0):
+        return f"snapshot field {path} is pointer storage without a completed pointer snapshot policy"
+    return None
+
+
+def _snapshot_derived_field_plan(
+    field: models.SemanticField,
+    class_lookup: dict[str, models.SemanticClass],
+    stack: tuple[str, ...],
+    path: str,
+) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
+    semantic_type = field.semantic_type
+    if semantic_type.rank > 0 and semantic_type.name in class_lookup:
+        return f"snapshot field {path} is an array of derived values", []
+    if semantic_type.metadata.get("fortran_allocatable"):
+        return f"snapshot field {path} is an allocatable derived scalar without a nullable copy policy", []
+    if semantic_type.name in stack:
+        return f"snapshot field {path} creates a recursive derived snapshot cycle", []
+    blocker, nested_actions = _snapshot_plan(semantic_type, class_lookup, (*stack, semantic_type.name))
+    if blocker is not None:
+        return blocker, []
+    return None, [(field, SnapshotFieldAction.NESTED_SNAPSHOT), *nested_actions]
+
+
+def _snapshot_value_field_plan(
+    field: models.SemanticField,
+    path: str,
+) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
+    semantic_type = field.semantic_type
+    scalar_name = semantic_type.dtype or semantic_type.name
+    if semantic_type.rank > 0:
+        if scalar_name not in SEMANTIC_SCALAR_TYPE_NAMES or scalar_name == "Void":
+            return f"snapshot field {path} has unsupported array element type {scalar_name!r}", []
+        return None, [(field, SnapshotFieldAction.ARRAY_COPY)]
+    if semantic_type.metadata.get("fortran_allocatable"):
+        return f"snapshot field {path} is an allocatable scalar without a nullable copy policy", []
+    if scalar_name not in SEMANTIC_SCALAR_TYPE_NAMES or scalar_name == "Void":
+        return f"snapshot field {path} has no safe scalar copy policy for type {scalar_name!r}", []
+    return None, [(field, SnapshotFieldAction.SCALAR_COPY)]
 
 
 def _complete_class(semantic_class: models.SemanticClass) -> None:

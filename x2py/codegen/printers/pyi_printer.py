@@ -21,6 +21,7 @@ from x2py.semantics.models import (
     PYI_ADDRESS_ROLE_RAW,
     PYI_NATIVE_PROJECTION_METADATA,
     PYI_SCALAR_STORAGE_CATEGORY,
+    PYI_SNAPSHOT_TYPE_METADATA,
     PYI_BIND_TARGET_METADATA,
     PYI_USER_PRIVATE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
@@ -118,6 +119,10 @@ class PyiPrinter(ClassVisitor):
         """Emit semantic type syntax."""
         if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
             raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
+        if semantic_type.metadata.get(PYI_SNAPSHOT_TYPE_METADATA):
+            inner_type = deepcopy(semantic_type)
+            inner_type.metadata.pop(PYI_SNAPSHOT_TYPE_METADATA, None)
+            return f"Snapshot[{self._visit(inner_type)}]"
         if semantic_type.name == "Callable":
             text = self._emit_callable_type(semantic_type)
         elif semantic_type.storage is not None:
@@ -1547,6 +1552,8 @@ def emit_module_stubs(
     normalize_fortran_public_names: bool = False,
 ) -> dict[str, str]:
     """Emit a mapping of module names to complete stub texts."""
+    from x2py.semantics.policy_completion import complete_semantic_policies
+
     source_modules = PyiPrinter._module_list(modules)
     emitted_modules: dict[str, SemanticModule] = {}
     for module in source_modules:
@@ -1562,6 +1569,7 @@ def emit_module_stubs(
         existing = {cls.name for cls in target.classes}
         target.classes.extend(cls for cls in dependency.classes if cls.name not in existing)
 
+    complete_semantic_policies(emitted_modules.values())
     return {
         module_name: emit_module(
             module,

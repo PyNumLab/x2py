@@ -84,9 +84,13 @@ __all__ = (
     "PyModule",
     "PyModule_AddObject",
     "PyModule_Create",
+    "PyModule_GetDict",
     "PyModule_SetPropertyType",
     "PyNotImplementedError",
+    "PyObject_CallObject",
+    "PyObject_GetAttrString",
     "PyObject_TypeCheck",
+    "PyRun_String",
     "PyRuntimeError",
     "PyRuntimeWarning",
     "PySys_GetObject",
@@ -1569,6 +1573,49 @@ PyDict_SetItem = FunctionDef(
     ],
     results=FunctionDefResult(Variable(NumpyInt64Type(), "i")),
     body=[],
+)
+
+
+PyModule_GetDict = FunctionDef(
+    name="PyModule_GetDict",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "module", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "dict", memory_handling="alias")),
+    body=[],
+)
+
+
+PyRun_String = FunctionDef(
+    name="PyRun_String",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(CharType(), name="code", memory_handling="alias")),
+        FunctionDefArgument(Variable(CNativeInt(), name="start")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="globals", memory_handling="alias")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="locals", memory_handling="alias")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="result", memory_handling="alias")),
+)
+
+
+PyObject_GetAttrString = FunctionDef(
+    name="PyObject_GetAttrString",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), name="object", memory_handling="alias")),
+        FunctionDefArgument(Variable(CharType(), name="attr", memory_handling="alias")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="result", memory_handling="alias")),
+)
+
+
+PyObject_CallObject = FunctionDef(
+    name="PyObject_CallObject",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), name="callable", memory_handling="alias")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="args", memory_handling="alias")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="result", memory_handling="alias")),
 )
 
 

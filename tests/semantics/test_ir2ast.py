@@ -13,7 +13,7 @@ from x2py.codegen.models.datatypes import (
     NumpyNDArrayType,
 )
 from x2py.codegen.scope import Scope
-from x2py.ownership_policy import CodegenAction
+from x2py.ownership_policy import CodegenAction, SnapshotFieldAction
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import SemanticModule
@@ -291,6 +291,33 @@ end module alloc_mod
     values = codegen_module.variables[0]
     assert values.ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
     assert values.getter_ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+
+
+def test_derived_snapshot_field_actions_are_completed_before_lowering():
+    module = parse_pyi_text(
+        """
+class child:
+    value: Int32
+
+class box:
+    scalar: Int32
+    values: Annotated[Float64[:], Allocatable, Aliased]
+    nested: child
+
+current: box
+""",
+        module_name="snapshot_mod",
+    )
+
+    lowered = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    box = next(cls for cls in lowered.classes if str(cls.name) == "box")
+    actions = {str(field.name): field.snapshot_field_action for field in box.attributes}
+
+    assert actions == {
+        "scalar": SnapshotFieldAction.SCALAR_COPY,
+        "values": SnapshotFieldAction.ARRAY_COPY,
+        "nested": SnapshotFieldAction.NESTED_SNAPSHOT,
+    }
 
 
 def test_allocatable_result_and_output_lower_for_copy_return_codegen():

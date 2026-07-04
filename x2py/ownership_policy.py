@@ -130,6 +130,12 @@ class SetterAction(str, Enum):
     OMIT = "omit"
 
 
+class SnapshotFieldAction(str, Enum):
+    SCALAR_COPY = "scalar_copy"
+    ARRAY_COPY = "array_copy"
+    NESTED_SNAPSHOT = "nested_snapshot"
+
+
 @dataclass(frozen=True)
 class PolicyActionDispatcher:
     handlers: Mapping[tuple[ObjectKind, CodegenAction], str]
@@ -998,11 +1004,11 @@ class OwnershipPolicyResolver:
             if not (facts.metadata or {}).get("aliased"):
                 return OwnershipDecision(
                     ObjectKind.DERIVED_TYPE,
-                    OwnershipOwner.UNKNOWN,
-                    TransferMode.BLOCKED,
-                    DestructionPolicy.BLOCKED,
-                    blocker="borrowed derived module objects require Aliased storage",
-                    reason="native module objects need object-level addressability before they can be borrowed",
+                    OwnershipOwner.PYTHON,
+                    TransferMode.SNAPSHOT_COPY,
+                    DestructionPolicy.PYTHON_REFCOUNT,
+                    storage_mode=StorageMode.STACK,
+                    reason="plain derived module storage is copied into a read-only Python snapshot",
                 )
             return OwnershipDecision(
                 ObjectKind.DERIVED_TYPE,

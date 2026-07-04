@@ -25,6 +25,7 @@ from .models import (
     PYI_NATIVE_PROJECTION_METADATA,
     PYI_PROJECTED_OUTPUT_METADATA,
     PYI_SCALAR_STORAGE_CATEGORY,
+    PYI_SNAPSHOT_TYPE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -1084,6 +1085,8 @@ class _PyiAstParser:
         if self.is_subscript_of(node, "Annotated"):
             semantic_type, _ = self.semantic_type_annotation(node)
             return semantic_type
+        if self.is_subscript_of(node, "Snapshot"):
+            return self._snapshot_type(node)
         if self.is_subscript_of(node, "Final"):
             return self._final_type(node)
         if self.matches_name(node, "Callable") or self.is_subscript_of(node, "Callable"):
@@ -1121,6 +1124,14 @@ class _PyiAstParser:
         semantic_type = self.semantic_type(items[0])
         if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
             semantic_type.constraints.append(SemanticConstraint("Constant"))
+        return semantic_type
+
+    def _snapshot_type(self, node: ast.Subscript) -> SemanticType:
+        items = self.subscript_items(node)
+        if len(items) != 1:
+            raise ValueError(f"Snapshot expects exactly one type: {ast.unparse(node)!r}")
+        semantic_type = self.semantic_type(items[0])
+        semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] = True
         return semantic_type
 
     def _address_type(self, node: ast.Call) -> SemanticType:

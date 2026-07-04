@@ -378,6 +378,9 @@ class Variable:
     setter_ownership_decision : object, default: None
         Completed policy used when this field is assigned through a generated setter.
 
+    snapshot_field_action : object, default: None
+        Completed copy action used when this field appears in a derived snapshot.
+
     shape : tuple, default: None
         The shape of the array. A tuple whose elements indicate the number of elements along
         each of the dimensions of an array. The elements of the tuple should be None or model objects.
@@ -428,6 +431,7 @@ class Variable:
         "_projected_output",
         "_setter_ownership_decision",
         "_shape",
+        "_snapshot_field_action",
     )
     _attribute_nodes = ()
 
@@ -448,6 +452,7 @@ class Variable:
         getter_ownership_decision=None,
         ownership_decision=None,
         setter_ownership_decision=None,
+        snapshot_field_action=None,
         projected_output=False,
         assumed_rank=False,
         shape=None,
@@ -500,6 +505,7 @@ class Variable:
         self._getter_ownership_decision = getter_ownership_decision
         self._ownership_decision = ownership_decision
         self._setter_ownership_decision = setter_ownership_decision
+        self._snapshot_field_action = snapshot_field_action
         if not isinstance(projected_output, bool):
             raise TypeError("projected_output must be a boolean.")
         self._projected_output = projected_output
@@ -697,6 +703,11 @@ class Variable:
     def setter_ownership_decision(self):
         """Completed ownership policy used by a generated field setter."""
         return self._setter_ownership_decision
+
+    @property
+    def snapshot_field_action(self):
+        """Completed copy action used when this field appears in a snapshot."""
+        return self._snapshot_field_action
 
     @property
     def assumed_rank(self):

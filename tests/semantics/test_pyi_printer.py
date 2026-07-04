@@ -23,6 +23,7 @@ from x2py.codegen.printers.pyi_printer import (
 from x2py.semantics.models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
+    PYI_SNAPSHOT_TYPE_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
     SemanticArgument,
@@ -75,6 +76,26 @@ def normalize(text: str) -> str:
 # ============================================================
 # Basic scalar function
 # ============================================================
+
+
+def test_emit_snapshot_type_wrapper_round_trips():
+    module = SemanticModule(
+        name="snapshot_mod",
+        classes=[SemanticClass(name="box", fields=[SemanticField("value", SemanticType("Float64"))])],
+        variables=[
+            SemanticArgument(
+                "current",
+                SemanticType("box", dtype="box", metadata={PYI_SNAPSHOT_TYPE_METADATA: True}),
+            )
+        ],
+    )
+
+    code = emit_module(module)
+
+    assert "current: Snapshot[box]" in code
+    parsed = parse_pyi_text(code, module_name="snapshot_mod")
+    assert parsed.variables[0].semantic_type.name == "box"
+    assert parsed.variables[0].semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
 
 
 def test_emit_basic_scalar_function():
@@ -1259,6 +1280,25 @@ end module derived_module_state
         Scope(name=loaded.name, scope_type="module"),
     )
     assert codegen_module.variables[0].is_target is True
+
+
+def test_emit_module_stubs_prints_plain_derived_module_variable_as_snapshot():
+    source = """
+module derived_module_snapshot
+  type :: box
+    real(8) :: value
+  end type box
+  type(box) :: current
+end module derived_module_snapshot
+"""
+    parsed = parse_fortran_source(source)
+    semantic_module = fortran_module_to_semantic_module(parsed)
+
+    code = emit_module_stubs(semantic_module)["derived_module_snapshot"]
+
+    assert "current: Snapshot[box]" in code
+    loaded = parse_pyi_text(code, module_name="derived_module_snapshot")
+    assert loaded.variables[0].semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
 
 
 def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():

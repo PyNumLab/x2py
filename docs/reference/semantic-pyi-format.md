@@ -1048,6 +1048,22 @@ For example, a pointer array function result can be made a Python-owned
 snapshot only when the stub also supplies enough shape, nullability, lifetime,
 and release facts for the backend path being enabled.
 
+`Snapshot[T]` wraps a derived type in the Python-visible contract when a native
+module variable is copied into a detached read-only object graph:
+
+```python
+class box:
+    values: Annotated[Float64[:], Allocatable]
+
+current: Snapshot[box]
+```
+
+`Snapshot[T]` is not an aliasing marker. It selects a recursive snapshot of the
+current native value. Snapshot classes expose copied data fields only, do not
+expose type-bound methods, and reject mutation through a clear read-only
+snapshot error. If any nested field lacks a complete copy policy, wrapper
+generation fails before lowering.
+
 `Final[T]` is the only public constant spelling. Do not use
 `Annotated[T, Constant]` or `T[Constant]`.
 
@@ -1590,17 +1606,19 @@ object:
 class box:
     values: Annotated[Float64[:], Allocatable]
 
-current: Annotated[box, Aliased]
+live_current: Annotated[box, Aliased]
+current: Snapshot[box]
 ```
 
-The annotation belongs to `current`, not to `box`. An x2py-created `box()` is
-addressable because its generated constructor allocates pointer-backed native
-storage. A native module declaration is a different object origin and requires
-its own `target`/`Aliased` fact before the wrapper may retain its native address.
-The borrowed Python wrapper is native-owned, rejects whole-object replacement,
-and may expose supported fields and component views. A derived module variable
-without `Aliased` is a readiness blocker; x2py does not silently substitute a
-detached copy.
+The annotation belongs to the module variable, not to `box`. An x2py-created
+`box()` is addressable because its generated constructor allocates
+pointer-backed native storage. A native module declaration is a different object
+origin. `Annotated[box, Aliased]` lets the wrapper retain that object's native
+address and return a live borrowed `box` wrapper. `Snapshot[box]` returns a
+fresh Python-owned snapshot object instead. Snapshot fields are copied
+recursively, arrays are read-only NumPy arrays or `None` when unallocated, and
+type-bound methods are not part of the snapshot surface. Unsupported nested
+fields block the whole snapshot.
 
 Public scalar Fortran module variables are emitted directly with their resolved
 semantic type:

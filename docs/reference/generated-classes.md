@@ -72,6 +72,10 @@ owning parent. Allocatable fields can expose borrowed NumPy views when
 ownership and lifetime are explicit. Pointer fields use snapshot-or-block
 policy. Arrays of derived types are unsupported.
 
+Snapshot classes generated for plain derived module variables expose copied data
+fields only. They do not expose type-bound procedures or writable setters, and
+their `snapshot_type` attribute points at the live wrapper class they snapshot.
+
 Type-bound procedures become methods. The generated semantic contract uses
 `Pass()` when the native passed-object position is not the default and
 `@overload(...)` when a generic method has multiple specific procedures:
@@ -100,7 +104,8 @@ releases that native instance exactly once.
 Borrowed child wrappers, borrowed module objects, and borrowed component views
 do not destroy the storage they reference. They retain the owning wrapper or
 module reference needed for Python lifetime, but explicit native deallocation
-or reallocation can still invalidate borrowed storage.
+or reallocation can still invalidate borrowed storage. Snapshot objects are
+Python-owned copies and do not retain or mutate native storage.
 
 Native finalizers do not provide a recoverable Python status channel during
 object destruction. Use ordinary wrapped procedures for recoverable cleanup

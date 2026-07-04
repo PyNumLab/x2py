@@ -92,8 +92,8 @@ snapshot-or-block policy.
 A derived-type module variable is not automatically addressable just because
 the same type can be constructed from Python. Python construction asks x2py to
 allocate a new pointer-backed native instance. A pre-existing module variable
-has its own source attributes and is borrowed only when that particular
-declaration has `target`, represented by `Aliased` in the semantic `.pyi`:
+has its own source attributes. `Aliased` on that declaration selects a live
+borrowed wrapper:
 
 ```python
 class box:
@@ -108,11 +108,26 @@ allows supported component access such as `module.current.values`.
 An allocatable component view is writable and reaches native module state until
 native code reallocates or deallocates that component.
 
-Without `Aliased`, x2py blocks the derived module variable. It does not create
-a pointer-owned copy because `module.current.values[...] = ...` would then
-modify detached storage instead of the authoritative module object. Whole
-object replacement through `module.current = other` is not exposed; mutate the
-borrowed object's supported fields or call a wrapped native procedure.
+Without `Aliased`, x2py exposes a detached recursive snapshot when every field
+has a safe copy policy:
+
+```python
+current: Snapshot[box]
+```
+
+Reading `module.current` returns a generated snapshot object such as
+`module.box_snapshot`. It is an instance of `module.Snapshot`, not `module.box`,
+and `module.current.snapshot_type is module.box`. Scalar fields are copied,
+fixed-shape and allocated allocatable arrays become Python-owned read-only
+NumPy arrays, unallocated allocatable arrays become `None`, and nested derived
+fields become nested snapshots. Type-bound methods and write setters are not
+available on snapshots because snapshots are detached read-only data. If any
+field has no safe copy rule, x2py blocks the whole module variable instead of
+returning a partial snapshot.
+
+Whole object replacement through `module.current = other` is not exposed.
+Mutate native module state through an `Aliased` borrowed object or a wrapped
+native procedure, then read a new snapshot when Python needs a detached copy.
 
 ## Common Blocks
 
@@ -135,9 +150,8 @@ code.
 - Common-block variables have no generated attribute surface.
 - Pointer state is exposed only when snapshot policy is complete; general
   borrowed pointer variables are blocked.
-- Derived-type module variables require `Aliased` on that module declaration;
-  constructible instances of the same type do not make native module storage
-  addressable.
+- Plain derived-type module variables are exposed only when the recursive
+  snapshot policy covers every field; `Aliased` is required for live borrowing.
 - Source ordering and external dependency discovery remain the caller's job.
 
 ## Evidence And Troubleshooting

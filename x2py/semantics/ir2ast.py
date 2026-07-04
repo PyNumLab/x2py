@@ -1678,6 +1678,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             getter_ownership_decision=node.metadata.get(models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA),
             ownership_decision=ownership_decision,
             setter_ownership_decision=node.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA),
+            snapshot_field_action=node.metadata.get(models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA),
             projected_output=bool(node.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)),
             assumed_rank=_is_assumed_rank(semantic_type),
             cls_base=self.cls_base,

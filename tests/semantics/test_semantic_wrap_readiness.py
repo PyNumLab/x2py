@@ -177,7 +177,7 @@ values: Annotated[
     ]
 
 
-def test_derived_module_object_requires_object_level_aliased_storage():
+def test_plain_derived_module_object_uses_snapshot_and_borrowing_requires_aliased_storage():
     plain = _readiness_from_pyi(
         """
 class box:
@@ -187,17 +187,8 @@ current: box
 """
     )
 
-    assert plain["wrappable"] is False
-    blocker = next(
-        item for item in plain["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
-    )
-    assert blocker["items"] == [
-        {
-            "owner": "solver.current",
-            "item": "current",
-            "policy": "borrowed derived module objects require Aliased storage",
-        }
-    ]
+    assert plain["wrappable"] is True
+    assert plain["wrappability_blockers"] == []
 
     explicit_borrow = _readiness_from_pyi(
         """
@@ -228,6 +219,27 @@ current: Annotated[box, Aliased]
 
     assert aliased["wrappable"] is True
     assert aliased["wrappability_blockers"] == []
+
+
+def test_derived_module_snapshot_blocks_unsupported_nested_pointer_fields():
+    report = _readiness_from_pyi(
+        """
+class box:
+    values: Annotated[Float64[:], Pointer]
+
+current: box
+"""
+    )
+
+    assert report["wrappable"] is False
+    blocker = next(
+        item for item in report["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
+    )
+    assert {
+        "owner": "solver.current",
+        "item": "current",
+        "policy": "snapshot field box.values is a pointer array without a completed pointer snapshot policy",
+    } in blocker["items"]
 
 
 def test_pointer_module_variable_uses_snapshot_or_block_ownership_policy():

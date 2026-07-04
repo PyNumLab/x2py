@@ -151,6 +151,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_convert_array_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_owned_custom_type_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_convert_owned_custom_type_result",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_convert_owned_custom_type_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_convert_borrowed_custom_type_result",
         }
     )
@@ -227,6 +228,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_scalar_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_array_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_array_module_variable",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_snapshot_derived_module_variable",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_derived_module_variable",
         }
     )
@@ -3010,6 +3012,92 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=BindCScalarModuleVariable,
             getter_function=self._derived_module_getter(expr),
             setter_function=None,
+        )
+
+    def _snapshot_derived_module_variable(self, expr, decision):
+        """Expose one native module object through a detached snapshot getter."""
+        if decision.boundary_storage_mode is StorageMode.ALIAS:
+            raise ValueError(f"Derived module snapshot {expr.name!r} unexpectedly uses alias boundary storage")
+        if expr.setter_ownership_decision.setter_action is not SetterAction.REJECT_REPLACEMENT:
+            raise ValueError(f"Derived module snapshot {expr.name!r} unexpectedly exposes replacement")
+        return expr.clone(
+            expr.name,
+            new_class=BindCScalarModuleVariable,
+            getter_function=self._derived_module_snapshot_getter(expr),
+            setter_function=None,
+        )
+
+    def _derived_module_snapshot_getter(self, expr):
+        """Return a pointer to an owned copy of a non-aliased derived module object."""
+        getter_policy = expr.getter_ownership_decision
+        if getter_policy is None:
+            raise ValueError(f"Module variable {expr.name!r} is missing completed getter policy")
+        scope = self.scope
+        public_name = f"get_{expr.name}"
+        original_name = self._generated_module_function_name(public_name)
+        func_name = scope.get_new_name("bind_c_" + public_name.lower())
+        func_scope = scope.new_child_scope(func_name, "function")
+        self.scope = func_scope
+        source_value = expr.clone(
+            expr.name,
+            is_argument=False,
+            is_optional=False,
+            memory_handling=getter_policy.storage_mode.value,
+            ownership_decision=getter_policy,
+            new_class=Variable,
+        )
+        local_var = expr.clone(
+            f"{expr.name}_snapshot",
+            is_argument=False,
+            is_optional=False,
+            memory_handling=getter_policy.storage_mode.value,
+            ownership_decision=getter_policy,
+            new_class=Variable,
+        )
+        pointer_var = Variable(
+            expr.class_type,
+            func_scope.get_new_name(f"{expr.name}_snapshot_ptr"),
+            memory_handling="alias",
+        )
+        bind_var = Variable(BindCPointer(), func_scope.get_new_name(f"bound_{expr.name}"), memory_handling="alias")
+        for variable in (local_var, pointer_var):
+            func_scope.insert_variable(variable, name=str(variable.name))
+        func_scope.imports["variables"][expr.name] = expr
+        self.exit_scope()
+
+        original_result = expr.clone(
+            f"{expr.name}_value",
+            is_argument=False,
+            is_optional=False,
+            memory_handling=getter_policy.storage_mode.value,
+            ownership_decision=getter_policy,
+            new_class=Variable,
+        )
+        original_function = FunctionDef(
+            original_name,
+            [],
+            [],
+            FunctionDefResult(original_result),
+            scope=scope,
+            decorators={
+                RUNTIME_HOLD_GIL_METADATA: True,
+                INTERNAL_MODULE_VARIABLE_NAME_METADATA: expr.name,
+                INTERNAL_MODULE_VARIABLE_ACCESS_METADATA: "get",
+            },
+        )
+        return BindCFunctionDef(
+            func_name,
+            [],
+            [
+                Assign(local_var, source_value),
+                Allocate(pointer_var, shape=None, status="unallocated"),
+                Assign(pointer_var, local_var),
+                CLocFunc(pointer_var, bind_var),
+            ],
+            FunctionDefResult(BindCVariable(bind_var, local_var)),
+            imports=self._module_variable_imports(expr),
+            scope=func_scope,
+            original_function=original_function,
         )
 
     def _derived_module_getter(self, expr):

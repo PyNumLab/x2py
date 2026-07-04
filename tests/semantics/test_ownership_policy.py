@@ -23,6 +23,7 @@ from x2py.ownership_policy import (
     PythonBarrierAction,
     PythonBarrierDispatcher,
     SetterAction,
+    SnapshotFieldAction,
     StorageMode,
     TransferMode,
     codegen_action_for_variable,
@@ -35,11 +36,13 @@ from x2py.semantics.models import (
     MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
     PYTHON_EXPORTS_METADATA,
     PYTHON_EXPORTS_PREPARED_METADATA,
+    PYI_SNAPSHOT_TYPE_METADATA,
     RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA,
     RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA,
     ProjectionMapping,
     SemanticArgument,
     SemanticArrayContract,
@@ -220,8 +223,9 @@ def test_default_policy_decisions_cover_public_object_kinds():
         _derived_type(),
         OwnershipContext.module_variable(),
     )
-    assert plain_module_object.is_blocked
-    assert plain_module_object.blocker == "borrowed derived module objects require Aliased storage"
+    assert plain_module_object.owner is OwnershipOwner.PYTHON
+    assert plain_module_object.transfer is TransferMode.SNAPSHOT_COPY
+    assert plain_module_object.destruction is DestructionPolicy.PYTHON_REFCOUNT
 
     projected_derived_output = resolver.decide_semantic_type(
         _derived_type(),
@@ -459,6 +463,17 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         == "_convert_snapshot_policy_scalar_result"
     )
     assert (
+        CPythonBindingGenerator._RESULT_POLICY_DISPATCHER.handlers[
+            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY)
+        ]
+        == "_convert_snapshot_policy_custom_result"
+    )
+    assert CPythonBindingGenerator._SNAPSHOT_FIELD_DISPATCHER == {
+        SnapshotFieldAction.SCALAR_COPY: "_snapshot_scalar_field_value_expr",
+        SnapshotFieldAction.ARRAY_COPY: "_snapshot_array_field_value_expr",
+        SnapshotFieldAction.NESTED_SNAPSHOT: "_snapshot_nested_field_value_expr",
+    }
+    assert (
         CPythonBindingGenerator._PYTHON_BARRIER_DISPATCHER.handlers[PythonBarrierAction.SCALAR_STORAGE]
         == "_convert_python_scalar_storage_argument"
     )
@@ -596,6 +611,12 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW)
         ]
         == "_derived_module_variable"
+    )
+    assert (
+        FortranToCBridgeGenerator._MODULE_VARIABLE_POLICY_DISPATCHER.handlers[
+            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY)
+        ]
+        == "_snapshot_derived_module_variable"
     )
     assert (
         CPythonBindingGenerator._ARRAY_RELEASE_POLICY_DISPATCHER.handlers[DestructionPolicy.PYTHON_REFCOUNT]
@@ -1185,6 +1206,127 @@ def test_aliased_derived_module_object_is_borrowed_and_rejects_replacement():
     assert codegen_variable.is_target is True
     assert codegen_variable.ownership_decision.owner is OwnershipOwner.NATIVE
     assert codegen_variable.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
+
+
+def test_plain_derived_module_object_is_completed_as_snapshot_contract():
+    module = SemanticModule(
+        name="state",
+        variables=[SemanticVariable("current", _derived_type("box"))],
+        classes=[
+            SemanticClass("point", fields=[SemanticField("x", _scalar_type())]),
+            SemanticClass(
+                "box",
+                fields=[
+                    SemanticField("value", _scalar_type()),
+                    SemanticField("origin", _derived_type("point")),
+                    SemanticField("values", _array_type(allocatable=True, metadata={"aliased": True})),
+                ],
+            ),
+        ],
+    )
+
+    complete_semantic_policies(module)
+
+    variable = module.variables[0]
+    storage = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    getter = variable.metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA]
+    setter = variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    assert storage.owner is OwnershipOwner.PYTHON
+    assert storage.transfer is TransferMode.SNAPSHOT_COPY
+    assert storage.destruction is DestructionPolicy.PYTHON_REFCOUNT
+    assert variable.semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
+    assert getter.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert setter.setter_action is SetterAction.REJECT_REPLACEMENT
+    point, box = module.classes
+    assert point.fields[0].metadata[RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA] is SnapshotFieldAction.SCALAR_COPY
+    assert box.fields[0].metadata[RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA] is SnapshotFieldAction.SCALAR_COPY
+    assert box.fields[1].metadata[RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA] is SnapshotFieldAction.NESTED_SNAPSHOT
+    assert box.fields[2].metadata[RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA] is SnapshotFieldAction.ARRAY_COPY
+
+
+def test_plain_derived_module_snapshot_blocks_unsupported_nested_pointer_field():
+    pointer_field = _array_type(pointer=True)
+    module = SemanticModule(
+        name="state",
+        variables=[SemanticVariable("current", _derived_type("box"))],
+        classes=[
+            SemanticClass(
+                "box",
+                fields=[
+                    SemanticField("value", _scalar_type()),
+                    SemanticField("values", pointer_field),
+                ],
+            )
+        ],
+    )
+
+    complete_semantic_policies(module)
+
+    variable = module.variables[0]
+    storage = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    getter = variable.metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA]
+    assert storage.is_blocked
+    assert storage.blocker == "snapshot field box.values is a pointer array without a completed pointer snapshot policy"
+    assert getter.is_blocked
+    assert PYI_SNAPSHOT_TYPE_METADATA not in variable.semantic_type.metadata
+    assert all(RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA not in field.metadata for field in module.classes[0].fields)
+
+
+@pytest.mark.parametrize(
+    ("field", "extra_classes", "expected_blocker"),
+    [
+        (
+            SemanticField("nested", _derived_type("box")),
+            [],
+            "snapshot field box.nested creates a recursive derived snapshot cycle",
+        ),
+        (
+            SemanticField("payload", SemanticType("Opaque", dtype="Opaque")),
+            [],
+            "snapshot field box.payload has no safe scalar copy policy for type 'Opaque'",
+        ),
+        (
+            SemanticField("nested", _derived_type("child", metadata={"fortran_polymorphic": True})),
+            [SemanticClass("child", fields=[SemanticField("value", _scalar_type())])],
+            "snapshot field box.nested uses unsupported polymorphic or assumed-type storage",
+        ),
+    ],
+)
+def test_plain_derived_module_snapshot_blocks_incomplete_recursive_copy_policy(
+    field: SemanticField,
+    extra_classes: list[SemanticClass],
+    expected_blocker: str,
+):
+    module = SemanticModule(
+        name="state",
+        variables=[SemanticVariable("current", _derived_type("box"))],
+        classes=[SemanticClass("box", fields=[field]), *extra_classes],
+    )
+
+    complete_semantic_policies(module)
+
+    decision = module.variables[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert decision.is_blocked
+    assert decision.blocker == expected_blocker
+    assert RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA not in field.metadata
+
+
+def test_snapshot_annotation_conflicting_with_aliased_storage_blocks_in_policy_completion():
+    module = parse_pyi_text(
+        """
+class box:
+    value: Int32
+
+current: Snapshot[Annotated[box, Aliased]]
+""",
+        module_name="state",
+    )
+
+    complete_semantic_policies(module)
+
+    decision = module.variables[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert decision.is_blocked
+    assert decision.blocker == "Snapshot[box] conflicts with the completed borrowed_view transfer policy"
 
 
 def test_explicit_borrowed_derived_field_setter_rejects_replacement():

@@ -11,6 +11,7 @@ from x2py.semantics.models import (
     ProjectionMapping,
     PYI_BIND_TARGET_METADATA,
     PYI_PROJECTED_OUTPUT_METADATA,
+    PYI_SNAPSHOT_TYPE_METADATA,
     PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     PYI_USER_PRIVATE_METADATA,
     PYTHON_VALUE_IMMUTABLE,
@@ -1033,6 +1034,27 @@ alias: Annotated[Int32, Name("native_alias"), Finite]
     emitted = emit_module(SemanticModule(name="constraints", variables=[module.variables[0]]))
     assert "value: Annotated[Int32, Bounded(1, 8), Finite]" in emitted
     assert parse_pyi_text(emitted, module_name="constraints").variables[0] == module.variables[0]
+
+
+def test_parse_pyi_text_round_trips_snapshot_type_wrapper():
+    module = parse_pyi_text(
+        """
+class box:
+    value: Float64
+
+current: Snapshot[box]
+""",
+        module_name="snapshots",
+    )
+
+    current = module.variables[0]
+    assert current.name == "current"
+    assert current.semantic_type.name == "box"
+    assert current.semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
+
+    emitted = emit_module(module)
+    assert "current: Snapshot[box]" in emitted
+    assert parse_pyi_text(emitted, module_name="snapshots") == module
 
 
 def test_parse_pyi_text_accepts_qualified_ast_wrapper_names():

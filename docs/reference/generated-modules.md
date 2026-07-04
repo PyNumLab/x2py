@@ -82,8 +82,11 @@ Python, but it does not mutate the native parameter.
 
 Supported module arrays, allocatables, pointers, and derived objects follow the
 ownership rules in [Memory Management](../user-guide/memory-management.md) and
-the topic-specific user-guide pages. Missing addressability, ownership,
-release, or mutability facts block generation.
+the topic-specific user-guide pages. `Aliased` derived module variables return
+live borrowed wrappers. Plain derived module variables return generated
+`Snapshot[T]` objects when every field can be copied safely. Missing
+addressability, ownership, release, mutability, or snapshot-copy facts block
+generation.
 
 ## Visibility, Binding Names, And Imports
 
