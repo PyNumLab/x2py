@@ -52,10 +52,28 @@ evidence section instead of leaving completed and incomplete work interleaved.
 
 ## Remaining implementation queue
 
-Only unfinished work belongs in this section. No Stage 8 implementation items
-are currently open. When a new editable-contract gap is found, add it here with
-the exact missing runtime fixture, diagnostic, or policy-dispatch evidence
-before starting implementation.
+Only unfinished work belongs in this section. When a new editable-contract gap
+is found, add it here with the exact missing runtime fixture, diagnostic, or
+policy-dispatch evidence before starting implementation.
+
+### Callback Adapter Policy Contracts
+
+Callbacks are the inverse of wrapped procedures: Fortran calls the generated
+adapter, the adapter converts Fortran arguments into Python objects, Python
+executes the callable, and the adapter converts Python results or mutations
+back to Fortran. Future callback contract work should make that adapter policy
+explicit without changing `Callable[[...], T]` into a Python-facing argument
+projection language.
+
+- [ ] Define callback-specific policy metadata for copy-in, copy-out,
+  borrowed-view, zero-copy, dtype conversion, fixed-length character writeback,
+  ownership, lifetime, and result/error conversion.
+- [ ] Preserve callback argument order and Fortran value/reference/storage
+  shape as the callback interface contract; do not add argument reordering,
+  hidden native-call projection, or Python convenience mapping unless a later
+  design proves it is necessary.
+- [ ] Add runtime fixtures and generated `.pyi` parity evidence for each
+  supported callback policy shape before moving it to completed evidence.
 
 ## Completed evidence
 

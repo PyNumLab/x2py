@@ -174,6 +174,32 @@ survive such failures.
 - asynchronous or cross-thread callback invocation; and
 - persistent callback ownership during object or library teardown.
 
+## Future Contract Policy
+
+Future callback contract work should enrich adapter policy, not reshape the
+callback call signature. A `Callable[[...], T]` must continue to describe the
+Fortran procedure interface that Fortran calls: argument order, value/reference
+passing, storage shape, character length, and result type. The Python callable
+can adapt argument names or order itself, so callback contracts should not grow
+normal wrapper features such as argument reordering or hidden native-call
+projection.
+
+The useful future work is explicit policy for how the adapter crosses the
+Fortran-to-Python-to-Fortran boundary:
+
+- copy-in, copy-out, borrowed-view, and zero-copy choices;
+- dtype conversion, overflow checks, and result coercion;
+- fixed-length character encoding, padding, truncation, and writeback rules;
+- ownership and lifetime rules for arrays, scalar storage, derived wrappers,
+  and temporary callback values;
+- writeback protocols for output or inout values that cannot be mutated
+  directly by the Python object currently passed to the callback; and
+- callback-specific error/result policy beyond the current fatal native
+  callback boundary.
+
+This is planned design work, not current support. Track it in the
+[semantic `.pyi` wrapper roadmap](../roadmap/semantic-pyi-wrapper-checklist.md#callback-adapter-policy-contracts).
+
 ## Evidence And Troubleshooting
 
 Scalar lifetime, nesting, GIL behavior, invalid callbacks, and fatal exception

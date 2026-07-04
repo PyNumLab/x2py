@@ -470,7 +470,8 @@ print(result.module_name)
 print(result.shared_library)
 ```
 
-Parser and semantic entrypoints remain available independently:
+Parser and semantic entrypoints remain available independently for controlled
+strings, focused tests, and already-preprocessed inputs.
 
 <!-- X2PY_C_DOCS_START
 ```python
@@ -488,10 +489,8 @@ report = assess_semantic_wrap_readiness(modules, source="api.h")
 ```
 X2PY_C_DOCS_END -->
 
-Direct Python parser entrypoints are useful for controlled strings, focused
-tests, and already-preprocessed inputs. For native projects with macros,
-includes, or target flags, use the compiler-preprocessed CLI path or an
-equivalent preprocessing configuration.
+For native projects with macros, includes, or target flags, use the
+compiler-preprocessed CLI path or an equivalent preprocessing configuration.
 
 ## Supported Scope
 
@@ -502,9 +501,14 @@ Current support includes:
 - free-form and fixed-form Fortran, procedures, modules, derived types,
   imports, arrays, and wrapper-relevant declaration attributes;
 - language-neutral semantic IR, editable `.pyi` interfaces, and semantic
-  readiness reports.
+  readiness reports;
 - compiled Python extensions from one or more ordered fixed-form or free-form
-  Fortran sources, with an optional GNU Make build.
+  Fortran sources, with an optional GNU Make build;
+- documented runtime wrapper behavior for scalar and array calls, strings,
+  module state, derived types, generic interfaces, optional and output
+  arguments, and immediate call-scoped Python callbacks. The
+  [language feature matrix](docs/language-support/feature-matrix.md) is the
+  authoritative support-status summary.
 
 <!-- X2PY_C_DOCS_START
 - compiled CPython extensions from one or more ordered fixed-form or free-form
@@ -530,8 +534,8 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 - [Getting started](docs/getting-started/index.md): installation, verification,
   standalone procedures, modules, and the normal rebuild workflow.
 - [User guide](docs/user-guide/index.md): feature-focused wrapper guidance for
-  data types, functions, subroutines, modules, arrays, ownership, runtime
-  behavior, packaging, and distribution.
+  data types, functions, subroutines, modules, arrays, callbacks, ownership,
+  runtime behavior, packaging, and distribution.
 - [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported Fortran
   workflow from source inspection to an imported extension.
 - [Examples cookbook](docs/examples-gallery/verified-cookbook.md): checked Fortran wrapper builds and
