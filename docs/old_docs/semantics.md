@@ -362,7 +362,7 @@ def dot_value(a: Float64, b: Float64) -> Float64: ...
 Native scalar storage and pointer-backed storage are explicit:
 
 ```python
-def inspect(value: Const(Int32[()])) -> None: ...
+def inspect(value: Int32[()]) -> None: ...
 def update(value: Float64[()]) -> None: ...
 def update_raw(value: Addr(Float64)) -> None: ...
 ```
@@ -371,8 +371,8 @@ Array storage uses NumPy-style subscriptions. The dimensions inside `T[...]`
 are the storage contract:
 
 ```python
-def scale(n: Addr(Const(Int32)), x: Float64[n]) -> None: ...
-def matrix(a: Annotated[Const(Float64[n, m]), ORDER_F]) -> None: ...
+def scale(n: Addr(Int32), x: Float64[n]) -> None: ...
+def matrix(a: Annotated[Float64[n, m], ORDER_F]) -> None: ...
 def assumed(x: Annotated[Float64[::, ::], ORDER_F]) -> None: ...
 ```
 
@@ -393,9 +393,9 @@ use `Annotated[T[...], Constraint, ...]`.
   contract chosen explicitly by an edited interface or later projection.
 - `Allocatable` for a Fortran allocatable array.
 - `Pointer` for a Fortran pointer array.
-- `Intent("out")` when a visible exact-native argument has source intent
-  `out`; `intent(inout)` is the default writable reference/array spelling and
-  does not need metadata. Immutable Python-visible values can still use
+- projected returns when a visible exact-native argument produces Python output
+  values; writable reference/array storage does not need separate direction
+  metadata. Immutable Python-visible values can still use
   replacement projection, where the argument remains visible and a
   `Returns["name", T]` item carries the post-call value.
 
@@ -418,13 +418,13 @@ or for ordinary Python-to-Fortran array argument association.
 
 Generated Fortran `.pyi` currently represents the exact native dummy-argument
 interface. It does not synthesize, reorder or hide arguments and it does not
-turn `intent(out)` or `intent(inout)` dummy arguments into Python return
-values.
+turn source output or writable dummy arguments into Python return values unless
+the contract explicitly projects them.
 
 Fortran scalar dummy arguments are represented as follows:
 
-- Scalar dummy without `value`, `intent(in)`: `Addr(Const(T))`.
-- Scalar dummy without `value`, `intent(out)` or `intent(inout)`: `Addr(T)`.
+- Scalar read-only dummy without `value`: `Addr(T)`.
+- Scalar output or writable dummy without `value`: `Addr(T)`.
 - Scalar dummy with `value`: direct `T`.
 - Function result: direct return annotation.
 
@@ -442,7 +442,7 @@ end subroutine
 def update(
     scale: Float64,
     value: Float64[()],
-    result: Annotated[Float64[()], Intent("out")]
+    result: Float64[()]
 ) -> None: ...
 ```
 
@@ -488,12 +488,12 @@ Explicit-shape and adjustable arrays use shaped storage. Multidimensional
 Fortran-contiguous storage carries `ORDER_F`; vectors omit order metadata:
 
 ```python
-def scale(n: Addr(Const(Int32)), x: Float64[n]) -> None: ...
+def scale(n: Addr(Int32), x: Float64[n]) -> None: ...
 
 def apply(
-    n: Addr(Const(Int32)),
-    m: Addr(Const(Int32)),
-    a: Annotated[Const(Float64[n, m]), ORDER_F],
+    n: Addr(Int32),
+    m: Addr(Int32),
+    a: Annotated[Float64[n, m], ORDER_F],
 ) -> None: ...
 ```
 
@@ -506,7 +506,7 @@ unknown rank:
 def legacy(values: Float64[:]) -> None: ...
 
 def legacy_matrix(
-    n: Addr(Const(Int32)),
+    n: Addr(Int32),
     a: Annotated[Float64[n, :], ORDER_F]
 ) -> None: ...
 ```
@@ -521,7 +521,7 @@ def vector(x: Float64[::]) -> None: ...
 
 def matrix(
     a: Annotated[
-        Const(Float64[::, ::]),
+        Float64[::, ::],
         ORDER_F,
     ]
 ) -> None: ...
@@ -572,9 +572,9 @@ The shared semantic model separates:
   source-level type/category information and lowering-relevant facts).
 
 The Fortran converter currently preserves public storage dimensions, order,
-`intent`, optionality, `value`, constants, `allocatable` and `pointer` in the
-visible semantic contract. It retains source declaration dimensions, bounds,
-dummy category and `contiguous` provenance internally where the parser
+read/write access, optionality, `value`, constants, `allocatable` and `pointer`
+in the visible semantic contract. It retains source declaration dimensions,
+bounds, dummy category and `contiguous` provenance internally where the parser
 supplies those facts for diagnostics or native-interface provenance; those
 facts do not add visible array requirements.
 
@@ -601,7 +601,7 @@ later optional generation or editing mode, for example `--pythonic`, may
 expose a friendlier Python API whose arguments or results differ from that
 native contract. Such a projected interface must retain a mapping back to the
 exact semantic/native interface; it must not discard source origin, storage,
-intent, shape, ownership or lowering facts needed to issue the call.
+shape, ownership or lowering facts needed to issue the call.
 
 A projection is allowed to be more restrictive or more expressive than the
 exact native interface, according to the Python API the user wants to expose.
@@ -613,8 +613,9 @@ requirements encoded by the exact native contract.
 
 The Fortran converter does not automatically generate a projected interface.
 The loader and printer retain explicit projection mappings for edited semantic
-stubs, including `@native_call` entries formed from `Arg`, `Return`, `Const`,
-`Len`, `IsPresent`, `Work` and `.shape[...]`, plus `Returns[...]`. The
+stubs, including `@native_call` entries formed from `Arg`, `Return`, ABI-typed
+literal calls such as `Int32(1)`, `Len`, `IsPresent`, `Work` and
+`.shape[...]`, plus `Returns[...]`. The
 address-projection adaptation examples below (`Addr(Arg(...))` and
 `Addr(Return(...))`), `As[...]`, `.strides[...]`, coercion policy and
 validation contracts describe extensions required for the fuller Pythonic
@@ -643,12 +644,11 @@ native call and read the updated value back as a Python result:
 def advance(value: Float64) -> Returns["value", Float64]: ...
 ```
 
-Similarly, an `intent(out)` scalar may remain explicit writable storage with
-its preserved source intent:
+Similarly, an output scalar may remain explicit writable storage:
 
 ```python
 # Implemented exact form.
-def get_count(result: Annotated[Int32[()], Intent("out")]) -> None: ...
+def get_count(result: Int32[()]) -> None: ...
 
 # Projected form, not currently implemented.
 @native_call([Addr(Return(0))])
@@ -660,11 +660,11 @@ future native interface with a by-value length parameter, for example:
 
 ```python
 # Exact contract for a future supported native frontend.
-def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
+def sum_values(n: SizeT, values: Float64[n]) -> Float64: ...
 
 # Projected form, not currently implemented.
 @native_call([As[SizeT](Arg(0).shape[0]), Arg(0)])
-def sum_values(values: Const(Float64[:])) -> Float64: ...
+def sum_values(values: Float64[:]) -> Float64: ...
 ```
 
 `Arg(i).shape[dim]` denotes a zero-based array extent.
@@ -672,7 +672,7 @@ def sum_values(values: Const(Float64[:])) -> Float64: ...
 
 ```python
 @native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
-def process_columns(values: Const(Float64[:, ::])) -> None: ...
+def process_columns(values: Float64[:, ::]) -> None: ...
 ```
 
 Dimension steps such as `::m` are expressed in elements; deriving a native
@@ -696,7 +696,7 @@ Coercions and constraints serve different purposes:
   mutability, device residence, alignment or ownership.
 
 The exact notation already records native-facing local constraints, including
-`Addr(Const(T))`, `Const(T[...])`, dimensions, `ORDER_F`, `ORDER_ANY`,
+`Addr(T)`, `T[...]`, dimensions, `ORDER_F`, `ORDER_ANY`,
 `Allocatable` and `Pointer`. A projected API may add allowed conversion
 policy, for example a future `From(np.ndarray, copy=True)` spelling, but it
 cannot silently weaken the exact native contract.
@@ -843,7 +843,7 @@ starter exact-contract stubs from that model. Remaining C work includes:
   present in exact contracts.
 
 Future C conversion should use the same notation: by-value scalars as bare
-types, unrefined pointers as `Addr(T)` or `Addr(Const(T))`, and array notation
+types, unrefined pointers as `Addr(T)` or `Addr(T)`, and array notation
 only when a real array storage contract is known.
 
 ## Design Proposal: Self-Contained C Semantic `.pyi` Runtime Contract
@@ -895,7 +895,7 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
 5. A C pointer parameter is never silently represented by a plain immutable
    Python scalar. The caller supplies pointer-backed storage.
 6. A bare numeric pointer uses `Addr(T)` for a raw writable address and
-   `Addr(Const(T))` for a raw read-only address. For an API known to use that
+   `Addr(T)` for a raw read-only address. For an API known to use that
    pointer as scalar storage, use `T[()]` so callers pass rank-zero NumPy
    storage. Numeric pointer parameters with a recorded array shape contract use
    `T[dimension-specs]` or `T[...]`. All these one-level storage forms lower to
@@ -921,7 +921,7 @@ and execute direct C signatures reliably before adding Pythonic adaptations.
    `Float64[:, ::]` or `Float64[:, 0:n:]`. It is a direct
    interface when any native extent or stride values remain visible arguments;
    the exact interface must not generate them.
-9. `Const(...)` is the canonical spelling for a read-only C pointee/storage
+9. `...` is the canonical spelling for a read-only C pointee/storage
    contract.
 10. Pointer graphs such as `T **` and deeper are not inferred from NumPy
     arrays. They are represented directly as `Addr[n](T)` and require the
@@ -993,15 +993,15 @@ described in this document.
 | Semantic annotation | Python caller supplies | Native parameter |
 | --- | --- | --- |
 | `T[()]` | writable rank-zero NumPy scalar storage | `T *` |
-| `Const(T[()])` | read-only rank-zero NumPy scalar storage | `const T *` |
+| `T[()]` | read-only rank-zero NumPy scalar storage | `const T *` |
 | `Addr(T)` | raw address to compatible writable storage, for example `array.ctypes.data` | `T *` |
-| `Addr(Const(T))` | raw address to compatible read-only storage, for example `array.ctypes.data` | `const T *` |
+| `Addr(T)` | raw address to compatible read-only storage, for example `array.ctypes.data` | `const T *` |
 | `Int[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `int *` |
-| `Const(Int[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const int *` |
+| `Int[:]` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const int *` |
 | `Float64[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `double *` |
-| `Const(Float64[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const double *` |
+| `Float64[:]` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const double *` |
 | `Float64[n]` | writable one-dimensional array whose size is validated against visible argument or semantic constant `n` | `double *` |
-| `Const(Float64[n])` | read-only one-dimensional array whose size is validated against visible argument or semantic constant `n` | `const double *` |
+| `Float64[n]` | read-only one-dimensional array whose size is validated against visible argument or semantic constant `n` | `const double *` |
 | `Float64[0:n]` | writable one-dimensional array with explicit half-open range `0:n` | `double *` |
 | `Float64[:, :]` | writable rank-two C-contiguous NumPy array | `double *` |
 | `Float64[3, 4]` | writable C-contiguous NumPy array with exact shape `(3, 4)` | `double *` |
@@ -1013,7 +1013,7 @@ described in this document.
 selector restricts that set: `Float64[...][1:4]` accepts ranks 1 through 3
 because the stop value is exclusive, while `Float64[...][1, 2, 5]` accepts
 only ranks 1, 2, and 5. The same forms apply to other numeric element types
-and inside `Const(...)`.
+and inside `...`.
 
 An axis entry without colons is an extent. `Float64[n]` means a rank-one
 array of size `n`, and `Float64[n, m]` means an array with shape `(n, m)`;
@@ -1022,7 +1022,7 @@ expresses an explicit NumPy-style half-open range. It has the same size as
 `Float64[n]` in this simple zero-based case, but retains range semantics for
 forms with a lower bound or step.
 
-`Addr(T)` and `Addr(Const(T))` preserve an unrefined one-level C pointer as a
+`Addr(T)` and `Addr(T)` preserve an unrefined one-level C pointer as a
 raw address. For a known primitive scalar-storage API, use `T[()]` so the Python
 caller supplies a rank-zero NumPy array. `T[dimension-specs]` and `T[...]`
 with an optional rank selector are NumPy-backed array-pointer spellings once
@@ -1097,9 +1097,9 @@ typed low-level native pointer object:
 | Semantic annotation | Native parameter |
 | --- | --- |
 | `Addr(T)` | `T *`; writable unrefined one-level pointer storage |
-| `Addr(Const(T))` | `const T *`; read-only unrefined one-level pointer storage |
+| `Addr(T)` | `const T *`; read-only unrefined one-level pointer storage |
 | `Addr[2](T)` | `T **` direct low-level pointer object |
-| `Addr[2](Const(T))` | `const T **` direct low-level pointer object |
+| `Addr[2](T)` | `const T **` direct low-level pointer object |
 | `Addr[n](T)` | `T` followed by exactly `n` native pointer layers, `n >= 2` |
 
 `Addr(x)` is the only canonical depth-one spelling. `Addr[1](x)` is invalid.
@@ -1128,7 +1128,7 @@ Phase 1 interface:
 
 ```python
 def increment(value: Int[()]) -> None: ...
-def read_count(value: Const(Int[()])) -> None: ...
+def read_count(value: Int[()]) -> None: ...
 ```
 
 Python use is intentionally storage-oriented:
@@ -1154,7 +1154,7 @@ Phase 1 interface:
 
 ```python
 def negate(n: Int, values: Float64[n]) -> None: ...
-def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
+def sum_values(n: SizeT, values: Float64[n]) -> Float64: ...
 ```
 
 The caller supplies `n` explicitly because it is an actual C parameter. The
@@ -1250,7 +1250,7 @@ void process_columns(const double *values, size_t columns, size_t stride_bytes);
 ```python
 def process_bounded_step(n: Int, m: Int, values: Float64[:, 0:n:m]) -> None: ...
 def process_columns(
-    values: Const(Float64[:, ::]),
+    values: Float64[:, ::],
     columns: SizeT,
     stride_bytes: SizeT,
 ) -> None: ...
@@ -1486,9 +1486,9 @@ unsupported behavior instead of silently changing the interface.
 The proposed Phase 1 implementation would need to:
 
 1. Parse scalar annotations and direct `None`/scalar return annotations.
-2. Parse unrefined one-level pointer forms `Addr(T)` and `Addr(Const(T))`, and
+2. Parse unrefined one-level pointer forms `Addr(T)` and `Addr(T)`, and
    accept raw address values; known scalar-storage uses should support `T[()]`.
-3. Parse numeric array storage forms: `T[:]`, `Const(T[:])`, `T[:, :]`,
+3. Parse numeric array storage forms: `T[:]`, `T[:]`, `T[:, :]`,
    fixed or symbolic extents such as `T[3, 4]` and `T[n]`, explicit dependent
    ranges or steps such as `T[0:n]` and `T[:, 0:n:m]`, and rank-polymorphic
    forms such as `T[...]`, `T[...][1:4]`, and `T[...][1, 2, 5]`.
@@ -1550,7 +1550,7 @@ void read_count(const int *value);
 ```
 
 ```python
-def read_count(value: Const(Int[()])) -> None: ...
+def read_count(value: Int[()]) -> None: ...
 ```
 
 Tests must verify matching rank-zero scalar storage acceptance and exact native
@@ -1563,7 +1563,7 @@ double sum_values(size_t n, const double *values);
 ```
 
 ```python
-def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
+def sum_values(n: SizeT, values: Float64[n]) -> Float64: ...
 ```
 
 Tests must verify that the caller passes `n`, that the wrapper passes it
@@ -1685,11 +1685,11 @@ def get_count() -> Int: ...
 
 # C: double sum_values(size_t n, const double *values);
 @native_call([As[SizeT](Arg(0).shape[0]), Arg(0)])
-def sum_values(values: Const(Float64[:])) -> Float64: ...
+def sum_values(values: Float64[:]) -> Float64: ...
 
 # C: void process_columns(const double *values, size_t n, ptrdiff_t stride_bytes);
 @native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
-def process_columns(values: Const(Float64[:, ::])) -> None: ...
+def process_columns(values: Float64[:, ::]) -> None: ...
 
 # C: void get_values(int n, double *out);
 @native_call([Arg(0), Return(0)])

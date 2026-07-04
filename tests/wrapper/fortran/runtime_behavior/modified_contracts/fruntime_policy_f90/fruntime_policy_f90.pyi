@@ -7,5 +7,5 @@ def pause_with_gil() -> None: ...
 @raises(status="status", message="message", success=0)
 @native_call([Addr(Arg(0)), Return('status', 0), Return('message', 1)])
 def solve(
-    value: Const(Int32)
+    value: Int32
 ) -> tuple[Int32, String[32]]: ...

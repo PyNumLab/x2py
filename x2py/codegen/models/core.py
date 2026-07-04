@@ -349,12 +349,9 @@ class Variable:
     is_private : bool, default: False
         Indicates if object is private within a Module.
 
-    intent : str, default: "in"
-        Native intent metadata preserved for wrapper projection decisions.
-
     projected_output : bool, default: False
         True when a compact semantic contract projects this visible writable
-        argument into Python returns without preserving native ``intent(out)``.
+        argument into Python returns without preserving source-level output syntax.
 
     passes_by_value : bool, default: False
         True when a native scalar dummy has Fortran ``value`` ABI.
@@ -363,11 +360,14 @@ class Variable:
         Native Fortran array category preserved as ABI metadata. Python
         extraction and native handoff policy comes from ``ownership_decision``.
 
-    fortran_source_shape : tuple, optional
-        Native Fortran source dimensions preserved for ABI-sensitive declarations.
+    fortran_callback_access : str, optional
+        Exact callback dummy declaration access for Fortran adapter signatures.
 
     fortran_character_length : object, optional
         Native Fortran character element length for character scalars and arrays.
+
+    fortran_source_shape : tuple, optional
+        Native Fortran source dimensions preserved for ABI-sensitive declarations.
 
     ownership_decision : object, default: None
         Central ownership policy decision preserved from semantic lowering.
@@ -412,10 +412,10 @@ class Variable:
         "_cls_base",
         "_default_value",
         "_fortran_array_category",
+        "_fortran_callback_access",
         "_fortran_character_length",
         "_fortran_source_shape",
         "_getter_ownership_decision",
-        "_intent",
         "_is_argument",
         "_is_optional",
         "_is_private",
@@ -440,9 +440,9 @@ class Variable:
         is_target=False,
         is_optional=False,
         is_private=False,
-        intent="in",
         passes_by_value=False,
         fortran_array_category=None,
+        fortran_callback_access=None,
         fortran_character_length=None,
         fortran_source_shape=None,
         getter_ownership_decision=None,
@@ -486,11 +486,15 @@ class Variable:
             raise TypeError("is_private must be a boolean.")
         self._is_private = is_private
 
-        self._intent = str(intent).lower()
         if not isinstance(passes_by_value, bool):
             raise TypeError("passes_by_value must be a boolean.")
         self._passes_by_value = passes_by_value
         self._fortran_array_category = fortran_array_category
+        if fortran_callback_access not in (None, "read", "write", "readwrite", "unspecified"):
+            raise ValueError(
+                "fortran_callback_access must be one of None, 'read', 'write', 'readwrite', or 'unspecified'"
+            )
+        self._fortran_callback_access = fortran_callback_access
         self._fortran_character_length = fortran_character_length
         self._fortran_source_shape = tuple(fortran_source_shape or ())
         self._getter_ownership_decision = getter_ownership_decision
@@ -650,11 +654,6 @@ class Variable:
         return self._is_private
 
     @property
-    def intent(self):
-        """Native intent metadata used by wrapper projection."""
-        return self._intent
-
-    @property
     def passes_by_value(self):
         """True when the native scalar dummy uses Fortran ``value`` ABI."""
         return self._passes_by_value
@@ -668,6 +667,11 @@ class Variable:
     def fortran_array_category(self):
         """Native Fortran array category carried as ABI metadata."""
         return self._fortran_array_category
+
+    @property
+    def fortran_callback_access(self):
+        """Exact callback dummy declaration access for Fortran adapter signatures."""
+        return self._fortran_callback_access
 
     @property
     def fortran_character_length(self):
@@ -1951,7 +1955,6 @@ class FunctionDefArgument:
         "_annotation",
         "_bound_argument",
         "_bound_argument_position",
-        "_inout",
         "_is_kwarg",
         "_is_vararg",
         "_kwonly",
@@ -1960,6 +1963,7 @@ class FunctionDefArgument:
         "_posonly",
         "_value",
         "_var",
+        "_writable",
     )
     _attribute_nodes = ("_value", "_var")
 
@@ -2005,14 +2009,14 @@ class FunctionDefArgument:
             name.declare_as_argument()
 
         if isinstance(self.var, Variable):
-            self._inout = (
+            self._writable = (
                 (self.var.rank > 0 or isinstance(self.var.class_type, CustomDataType))
                 and not isinstance(self.var.class_type, FinalType)
                 and not isinstance(self.var.class_type, TupleType)
             )
         else:
             # If var is not a Variable it is a FunctionAddress
-            self._inout = False
+            self._writable = False
 
         init_model_object(self)
 
@@ -2068,23 +2072,23 @@ class FunctionDefArgument:
         return self._value is not None
 
     @property
-    def inout(self):
+    def writable(self):
         """
         Indicates whether the argument may be modified by the function.
 
         True if the argument may be modified in the function. False if
         the argument remains constant in the function.
         """
-        return self._inout
+        return self._writable
 
     def make_const(self):
         """
         Indicate that the argument does not change in the function.
 
         Indicate that the argument does not change in the function by
-        modifying the inout flag.
+        modifying the writable flag.
         """
-        self._inout = False
+        self._writable = False
 
     @property
     def persistent_target(self):
@@ -2232,7 +2236,7 @@ class FunctionDefResult:
 
         Indicates if the result of the function was initially declared
         as an argument of the same function. If this is the case then
-        the result may be printed simply as an inout argument.
+        the result may be printed simply as a writable argument.
         """
         return self._is_argument
 
@@ -3961,8 +3965,10 @@ class Declare:
     ----------
     variable : Variable
         A single variable which should be declared.
-    intent : str, optional
-        One among {'in', 'out', 'inout'}.
+    access : str, optional
+        Read/write access used by language printers for declaration attributes.
+    by_value : bool, default=False
+        True when the declaration must include the Fortran ``value`` ABI attribute.
     value : model object, optional
         The initialisation value of the variable.
     static : bool, default=False
@@ -3976,14 +3982,13 @@ class Declare:
     --------
     >>> from x2py.ast.core import Declare, Variable
     >>> Declare(Variable(NumpyInt64Type(), 'n'))
-    Declare(n, None)
-    >>> Declare(Variable(NumpyFloat64Type(), 'x'), intent='out')
-    Declare(x, out)
+    Declare(n)
     """
 
     __slots__ = (
+        "_access",
+        "_by_value",
         "_external",
-        "_intent",
         "_module_variable",
         "_static",
         "_value",
@@ -3994,7 +3999,8 @@ class Declare:
     def __init__(
         self,
         variable,
-        intent=None,
+        access=None,
+        by_value=False,
         value=None,
         static=False,
         external=False,
@@ -4003,8 +4009,11 @@ class Declare:
         if not isinstance(variable, Variable):
             raise TypeError(f"var must be of type Variable, given {variable}")
 
-        if intent and intent not in ["in", "out", "inout"]:
-            raise ValueError("intent must be one among {'in', 'out', 'inout'}")
+        if access not in (None, "read", "write", "readwrite", "unspecified"):
+            raise ValueError("access must be one of None, 'read', 'write', 'readwrite', or 'unspecified'")
+
+        if not isinstance(by_value, bool):
+            raise TypeError("Expecting a boolean for by_value attribute")
 
         if not isinstance(static, bool):
             raise TypeError("Expecting a boolean for static attribute")
@@ -4016,7 +4025,8 @@ class Declare:
             raise TypeError("Expecting a boolean for module_variable attribute")
 
         self._variable = variable
-        self._intent = intent
+        self._access = access
+        self._by_value = by_value
         self._value = value
         self._static = static
         self._external = external
@@ -4028,8 +4038,12 @@ class Declare:
         return self._variable
 
     @property
-    def intent(self):
-        return self._intent
+    def access(self):
+        return self._access
+
+    @property
+    def by_value(self):
+        return self._by_value
 
     @property
     def value(self):

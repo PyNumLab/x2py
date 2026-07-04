@@ -260,6 +260,7 @@ class CPythonBindingGenerator(BindingGenerator):
             PythonBarrierAction.SCALAR_STORAGE: "_convert_python_scalar_storage_argument",
             PythonBarrierAction.ARRAY_STORAGE: "_convert_python_array_storage_argument",
             PythonBarrierAction.STRING_VALUE: "_convert_python_string_value_argument",
+            PythonBarrierAction.STRING_STORAGE: "_convert_python_string_storage_argument",
             PythonBarrierAction.RAW_ADDRESS: "_convert_python_raw_address_argument",
             PythonBarrierAction.WRAPPER_INSTANCE: "_convert_python_wrapper_instance_argument",
         }
@@ -272,6 +273,7 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_identity_output_detail_lines",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_replacement_value_detail_lines",
             (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_call_local_argument_detail_lines",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT): "_in_place_argument_detail_lines",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_discarded_identity_output_detail_lines",
             (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_replacement_value_detail_lines",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_call_local_argument_detail_lines",
@@ -291,6 +293,7 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_append_unchecked_argument_cast",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_append_replacement_argument_cast",
             (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_append_checked_argument_cast",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT): "_append_checked_argument_cast",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_append_checked_argument_cast",
             (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_append_replacement_argument_cast",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_append_checked_argument_cast",
@@ -395,7 +398,9 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT, True): "_project_native_argument_return",
             (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT, True): "_project_native_argument_return",
             (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT, False): "_skip_argument_return_projection",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT, False): "_skip_argument_return_projection",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT, False): "_skip_argument_return_projection",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT, True): "_project_visible_argument_return",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT, True): "_project_visible_argument_return",
             (ObjectKind.STRING, CodegenAction.COPY_IN_OUT, True): "_project_native_argument_return",
             (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT, True): "_project_native_argument_return",
@@ -424,7 +429,9 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT, True): "_record_projected_argument_object",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT, True): "_skip_projected_argument_object",
             (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT, False): "_skip_projected_argument_object",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT, False): "_skip_projected_argument_object",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT, False): "_skip_projected_argument_object",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT, True): "_record_projected_argument_object",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT, True): "_record_projected_argument_object",
             (ObjectKind.STRING, CodegenAction.COPY_IN_OUT, True): "_skip_projected_argument_object",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT, False): "_skip_projected_argument_object",
@@ -1334,6 +1341,7 @@ class CPythonBindingGenerator(BindingGenerator):
         decision = ownership_decision_for_codegen_variable(orig_var)
         return decision.python_barrier_action in {
             PythonBarrierAction.SCALAR_STORAGE,
+            PythonBarrierAction.STRING_STORAGE,
             PythonBarrierAction.RAW_ADDRESS,
         }
 
@@ -1906,6 +1914,48 @@ class CPythonBindingGenerator(BindingGenerator):
         if arg_var is not None:
             raise ValueError(f"Raw address argument {orig_var.name!r} cannot reuse an existing conversion target")
         return self._convert_raw_address_argument(orig_var, collect_arg)
+
+    def _convert_python_string_storage_argument(
+        self,
+        orig_var,
+        decision,
+        collect_arg,
+        bound_argument,
+        _is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
+        """Validate rank-0 NumPy bytes storage for a fixed-length string contract."""
+        assert not bound_argument
+        if arg_var is not None:
+            raise ValueError(f"String storage argument {orig_var.name!r} cannot reuse an existing conversion target")
+        data_var = Variable(
+            VoidType(),
+            self.scope.get_new_name(f"{orig_var.name}_data"),
+            memory_handling="alias",
+        )
+        self.scope.insert_variable(data_var)
+        pyarray = PointerCast(collect_arg, Variable(NumpyArrayObjectType(), "_", memory_handling="alias"))
+        pyarray_address = ObjectAddress(pyarray)
+        check = pyarray_check(
+            CStrStr(convert_to_literal(orig_var.name)),
+            collect_arg,
+            numpy_string_type,
+            convert_to_literal(0),
+            no_order_check,
+            convert_to_literal(False),
+        )
+        itemsize = cast_to(PyArray_ITEMSIZE(pyarray_address), NumpyInt64Type())
+        body = [
+            If(IfSection(Not(check), [Return(self._error_exit_code)])),
+            *self._array_itemsize_validation(orig_var, itemsize, collect_arg),
+        ]
+        if decision.mutates_native:
+            body.extend(self._writable_array_access_validation(orig_var, decision, collect_arg))
+        else:
+            body.extend(self._readable_array_access_validation(orig_var, decision, collect_arg))
+        body.append(AliasAssign(data_var, PyArray_DATA(pyarray_address)))
+        return {"body": body, "args": [data_var], "clean_up": []}
 
     def _convert_scalar_argument(
         self,
@@ -3289,7 +3339,6 @@ class CPythonBindingGenerator(BindingGenerator):
     def _argument_detail_lines(self, var):
         """Handle argument detail lines for the current generation context."""
         lines = self._value_detail_lines(var)
-        lines.append(f"    Intent: {getattr(var, 'intent', 'in')}")
         lines.extend(self._ARGUMENT_DETAIL_DISPATCHER.dispatch(self, var))
         return lines
 
@@ -3432,6 +3481,13 @@ class CPythonBindingGenerator(BindingGenerator):
     def _value_detail_lines(self, var):
         """Handle value detail lines for the current generation context."""
         lines = []
+        decision = getattr(var, "ownership_decision", None)
+        if decision is not None and decision.python_barrier_action is PythonBarrierAction.STRING_STORAGE:
+            itemsize = self._fixed_character_itemsize(var)
+            if itemsize is not None:
+                lines.append(f"    Dtype: S{itemsize}")
+            lines.append("    Rank: 0")
+            return lines
         if var.rank:
             shape_doc = self._shape_doc(var)
             if shape_doc:
@@ -3448,7 +3504,10 @@ class CPythonBindingGenerator(BindingGenerator):
     @staticmethod
     def _type_doc(var, *, include_none=False, signature=False):
         """Handle type doc for the current generation context."""
-        if getattr(var, "is_ndarray", False):
+        decision = getattr(var, "ownership_decision", None)
+        if decision is not None and decision.python_barrier_action is PythonBarrierAction.STRING_STORAGE:
+            doc_type = "ndarray[bytes]"
+        elif getattr(var, "is_ndarray", False):
             doc_type = f"ndarray[{CPythonBindingGenerator._dtype_doc(var)}]"
         else:
             doc_type = str(var.class_type).removeprefix("numpy.")
@@ -5510,8 +5569,31 @@ class CPythonBindingGenerator(BindingGenerator):
                     ],
                 )
             ),
+            *self._fixed_string_length_validation(orig_var, source_size),
         ]
         return source_var, source_size, body
+
+    def _fixed_string_length_validation(self, orig_var, source_size):
+        """Validate exact Python string length for a fixed-length character contract."""
+        expected = self._fixed_character_itemsize(orig_var)
+        if expected is None:
+            return []
+        return [
+            If(
+                IfSection(
+                    Ne(source_size, convert_to_literal(expected, dtype=NumpyInt64Type())),
+                    [
+                        PyErr_SetString(
+                            PyTypeError,
+                            CStrStr(
+                                convert_to_literal(f"Argument {orig_var.name} must encode to exactly {expected} bytes")
+                            ),
+                        ),
+                        Return(self._error_exit_code),
+                    ],
+                )
+            )
+        ]
 
     def _string_replacement_payload_size(self, orig_var, source_size):
         """Handle string replacement payload size for the current generation context."""

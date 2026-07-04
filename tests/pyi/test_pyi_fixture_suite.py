@@ -122,7 +122,7 @@ def test_generated_standalone_contract_marks_every_procedure_external():
     assert "def standalone_ping() -> None: ..." in text
     assert "def standalone_double(" in text
     assert "@native_call([Addr(Arg(0))])" in text
-    assert "value: Const(Int32)" in text
+    assert "value: Int32" in text
     assert ") -> Int32: ..." in text
 
 

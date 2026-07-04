@@ -313,14 +313,12 @@ end module alloc_mod
 
     fill = next(function for function in codegen_module.funcs if str(function.name) == "fill")
     values = fill.arguments[0].var
-    assert values.intent == "out"
     assert values.memory_handling == "heap"
     assert isinstance(values.class_type, NumpyNDArrayType)
     assert values.class_type.rank == 1
 
     make_values = next(function for function in codegen_module.funcs if str(function.name) == "make_values")
     result = make_values.results.var
-    assert result.intent == "out"
     assert result.memory_handling == "heap"
     assert isinstance(result.class_type, NumpyNDArrayType)
     assert result.class_type.rank == 1
@@ -344,28 +342,26 @@ end module alloc_mod
 
     replace = next(function for function in codegen_module.funcs if str(function.name) == "replace")
     values = replace.arguments[0].var
-    assert values.intent == "inout"
     assert values.memory_handling == "heap"
     assert isinstance(values.class_type, NumpyNDArrayType)
     assert values.class_type.rank == 1
 
 
-@pytest.mark.parametrize("intent", ["out", "inout"])
-def test_allocatable_scalar_derived_outputs_raise_before_codegen(intent):
-    source = f"""
+def test_allocatable_scalar_derived_outputs_raise_before_codegen():
+    source = """
 module alloc_scalar_mod
   type :: item
     integer :: value
   end type item
 contains
   subroutine replace(value)
-    type(item), allocatable, intent({intent}) :: value
+    type(item), allocatable :: value
   end subroutine replace
 end module alloc_scalar_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match=rf"allocatable scalar {intent} argument 'value'"):
+    with pytest.raises(ValueError, match="writable allocatable scalar argument 'value'"):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),
@@ -377,7 +373,7 @@ def test_bind_c_scalar_without_iso_c_kind_raises_before_codegen():
 module bad_bind_mod
 contains
   integer function unsafe(n) bind(C) result(res)
-    integer, value, intent(in) :: n
+    integer, value :: n
     res = n
   end function unsafe
 end module bad_bind_mod
@@ -391,20 +387,19 @@ end module bad_bind_mod
         )
 
 
-@pytest.mark.parametrize("intent", ["out", "inout"])
 @pytest.mark.parametrize("shape", ["", "(:)"])
-def test_pointer_output_arguments_raise_before_codegen_without_policy(intent, shape):
+def test_pointer_output_arguments_raise_before_codegen_without_policy(shape):
     source = f"""
 module pointer_mod
 contains
   subroutine attach(values)
-    real(8), pointer, intent({intent}) :: values{shape}
+    real(8), pointer :: values{shape}
   end subroutine attach
 end module pointer_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match=rf"pointer {intent} argument 'values'"):
+    with pytest.raises(ValueError, match="pointer argument 'values'"):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),
@@ -539,15 +534,14 @@ end module polymorphic_codegen_mod
     assert [func.arguments[0].var.class_type.name for func in dispatch.functions] == ["child", "base"]
 
 
-@pytest.mark.parametrize("intent", ["out", "inout"])
-def test_polymorphic_replacement_arguments_raise_before_codegen_without_policy(intent):
-    source = f"""
+def test_polymorphic_replacement_arguments_raise_before_codegen_without_policy():
+    source = """
 module polymorphic_codegen_mod
   type :: base
   end type base
 contains
   subroutine replace(value)
-    class(base), intent({intent}) :: value
+    class(base) :: value
   end subroutine replace
 end module polymorphic_codegen_mod
 """
@@ -682,7 +676,6 @@ end module alloc_mod
     )
 
     make_pair = next(function for function in codegen_module.funcs if str(function.name) == "make_pair")
-    assert [argument.var.intent for argument in make_pair.arguments] == ["out", "out"]
     assert all(argument.var.memory_handling == "heap" for argument in make_pair.arguments)
 
 

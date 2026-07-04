@@ -51,6 +51,47 @@ def test_cast_to_uses_shared_cast_concept_with_requested_datatype():
     assert cast.dtype is NumpyInt32Type()
 
 
+def test_fortran_declaration_access_prints_intent_and_value_suppresses_it():
+    value = Variable(NumpyFloat64Type(), "value", is_argument=True)
+    printer = FCodePrinter("test.f90", verbose=0)
+    printer._kind = lambda expr: "f64"
+
+    assert printer._visit(Declare(value, access="readwrite")) == "real(f64), intent(inout) :: value\n"
+    assert printer._visit(Declare(value, access="write")) == "real(f64), intent(out) :: value\n"
+    assert printer._visit(Declare(value, access="readwrite", by_value=True)) == "real(f64), value :: value\n"
+
+
+def test_callback_adapter_declaration_preserves_missing_access():
+    value = Variable(NumpyFloat64Type(), "value", is_argument=True, fortran_callback_access="unspecified")
+    read_value = Variable(NumpyFloat64Type(), "read_value", is_argument=True, fortran_callback_access="read")
+    scalar_value = Variable(
+        NumpyFloat64Type(),
+        "scalar_value",
+        is_argument=True,
+        fortran_callback_access="read",
+        passes_by_value=True,
+    )
+    missing_value = Variable(
+        NumpyFloat64Type(),
+        "missing_value",
+        is_argument=True,
+        fortran_callback_access="unspecified",
+        passes_by_value=True,
+    )
+    printer = FCodePrinter("test.f90", verbose=0)
+    printer._kind = lambda expr: "f64"
+
+    assert printer._callback_native_argument_declaration(value) == "real(f64) :: value\n"
+    assert printer._callback_native_argument_declaration(read_value) == "real(f64), intent(in) :: read_value\n"
+    assert (
+        printer._callback_native_argument_declaration(scalar_value) == "real(f64), intent(in), value :: scalar_value\n"
+    )
+    assert (
+        printer._callback_native_argument_declaration(missing_value)
+        == "real(f64), intent(in), value :: missing_value\n"
+    )
+
+
 def test_bind_c_array_type_describes_packed_strided_layout():
     array_type = BindCArrayType.get_new(2, has_strides=True)
 
@@ -144,7 +185,6 @@ def test_external_interface_preserves_multidimensional_assumed_size_source_shape
         array_type,
         "A",
         memory_handling="alias",
-        intent="inout",
         fortran_array_category="assumed_size",
         fortran_source_shape=("LDA", "*"),
         is_argument=True,
@@ -153,4 +193,4 @@ def test_external_interface_preserves_multidimensional_assumed_size_source_shape
     printer = FCodePrinter("test.f90", verbose=0)
     printer._kind = lambda expr: "f64"
 
-    assert printer._external_interface_argument_declaration(array) == "real(f64), intent(inout) :: A(LDA, *)"
+    assert printer._external_interface_argument_declaration(array) == "real(f64) :: A(LDA, *)"

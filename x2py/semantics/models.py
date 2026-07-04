@@ -6,6 +6,7 @@ from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
+CALLBACK_DECLARATION_ACCESS_METADATA = "callback_declaration_access"
 INTERNAL_MODULE_VARIABLE_ACCESS_METADATA = "internal_module_variable_access"
 INTERNAL_MODULE_VARIABLE_NAME_METADATA = "internal_module_variable_name"
 PYI_BIND_TARGET_METADATA = "pyi_bind_target"
@@ -156,20 +157,6 @@ class SemanticVariable:
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
 
     @property
-    def intent(self) -> str:
-        """Compatibility view for data declarations carrying .pyi Intent metadata."""
-        value = self.metadata.get("intent", "in")
-        return str(value)
-
-    @intent.setter
-    def intent(self, value: str) -> None:
-        text = str(value)
-        if text == "in":
-            self.metadata.pop("intent", None)
-        else:
-            self.metadata["intent"] = text
-
-    @property
     def optional(self) -> bool:
         """Compatibility view for data declarations parsed from ``= ...``."""
         return bool(self.metadata.get("optional", False))
@@ -184,15 +171,12 @@ class SemanticVariable:
 
 @dataclass(init=False)
 class SemanticArgument(SemanticVariable):
-    intent: str = "in"
-
     optional: bool = False
 
     def __init__(
         self,
         name: str,
         semantic_type: SemanticType,
-        intent: str = "in",
         optional: bool = False,
         visibility: str = "public",
         default_value: str | None = None,
@@ -201,11 +185,10 @@ class SemanticArgument(SemanticVariable):
     ) -> None:
         self.name = name
         self.semantic_type = semantic_type
-        self.intent = intent
-        self.optional = optional
         self.visibility = visibility
         self.default_value = default_value
         self.metadata = {} if metadata is None else metadata
+        self.optional = optional
         self.origin = SemanticOrigin() if origin is None else origin
 
 
@@ -244,7 +227,6 @@ class ProjectionMapping:
     result_position: int | None = None
     value_kind: str = ""
     value: Any = None
-    intent: str = "in"
 
 
 # ============================================================
@@ -374,7 +356,6 @@ def _function_argument_key(
 ) -> tuple[Any, ...]:
     return (
         _semantic_type_key(arg.semantic_type, name_map),
-        arg.intent,
         arg.optional,
         arg.visibility,
         _canonical_expression(arg.default_value, name_map),
@@ -478,7 +459,6 @@ def _projection_key(
             mapping.result_position,
             mapping.value_kind,
             _native_projection_value_key(mapping.value, name_map),
-            mapping.intent,
         )
         for mapping in projection
         if _requires_explicit_projection_mapping(mapping)
@@ -488,14 +468,8 @@ def _projection_key(
 def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
     if mapping.value_kind:
         return True
-    if mapping.intent == "inout":
-        return mapping.python_position is None or mapping.python_position != mapping.native_position
-    if mapping.intent == "out" and mapping.result_position is not None:
-        return mapping.python_position is None or mapping.python_position != mapping.native_position
-    if mapping.intent != "in":
-        return mapping.python_position is None
     if mapping.result_position is not None:
-        return True
+        return mapping.python_position is None or mapping.python_position != mapping.native_position
     if mapping.python_position is None:
         return True
     return mapping.native_position is not None and mapping.python_position != mapping.native_position

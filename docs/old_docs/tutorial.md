@@ -165,7 +165,7 @@ Expected output:
 File: tests/data/fortran/general/basic_subroutine.f90
 @native_call([Addr(Arg(0)), Arg(1)])
 def add1(
-    n: Const(Int32),
+    n: Int32,
     x: Float64[n]
 ) -> None: ...
 ```
@@ -353,7 +353,7 @@ Expected output:
 File: tests/data/c/general/math_api.h
 def norm2(
     n: Int,
-    x: Const(Float64[1])
+    x: Float64[1]
 ) -> Float64: ...
 
 def scale(
@@ -364,8 +364,8 @@ def scale(
 
 def dot(
     n: Int,
-    x: Addr(Const(Float64)),
-    y: Addr(Const(Float64))
+    x: Addr(Float64),
+    y: Addr(Float64)
 ) -> Float64: ...
 
 def fill_identity3(

@@ -134,15 +134,12 @@ end module linalg_mod
 
     n, a, x, y = sig.arguments
     assert n.base_type == "integer"
-    assert n.intent == "in"
     assert a.base_type == "real"
     assert a.kind == "8"
-    assert a.intent == "in"
     assert x.rank == 1
     assert x.shape == [":"]
     assert y.rank == 1
     assert y.shape == [":"]
-    assert y.intent == "inout"
 
 
 def test_function_result_and_use_statement():
@@ -1027,7 +1024,6 @@ end subroutine step
     arg = sig.arguments[0]
     assert arg.base_type == "derived"
     assert arg.kind == "sim_state"
-    assert arg.intent == "inout"
 
 
 def test_compile_time_parameter_expressions_are_evaluated_in_shapes():

@@ -22,13 +22,16 @@ from x2py.fortran_parser.models import (
     FortranUseMapping,
     FortranVariable,
 )
+from x2py.ownership_policy import PYI_SCALAR_STORAGE_CATEGORY, set_ownership_metadata
 from x2py.visitor import ClassVisitor
 
 from .models import (
+    CALLBACK_DECLARATION_ACCESS_METADATA,
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    PYI_PROJECTED_OUTPUT_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -274,7 +277,6 @@ class FortranToIRConverter(ClassVisitor):
         derived_type_context: _DerivedTypeContext | None = None,
         as_type: bool = False,
         as_data_member: bool = False,
-        intent: str = "in",
         binding_cls: type[SemanticVariable] = SemanticVariable,
         source_kind: str = "variable",
     ) -> SemanticType | SemanticVariable:
@@ -284,7 +286,6 @@ class FortranToIRConverter(ClassVisitor):
         if as_data_member:
             return self._convert_data_member(
                 var,
-                intent=intent,
                 derived_type_context=derived_type_context,
                 binding_cls=binding_cls,
                 source_kind=source_kind,
@@ -350,7 +351,6 @@ class FortranToIRConverter(ClassVisitor):
         self,
         arg: FortranArgument | FortranVariable,
         *,
-        intent: str | None = None,
         derived_type_context: _DerivedTypeContext | None = None,
         callback_interfaces: dict[str, FortranProcedureSignature] | None = None,
         as_data_member: bool = False,
@@ -363,7 +363,6 @@ class FortranToIRConverter(ClassVisitor):
         if as_data_member:
             return self._convert_data_member(
                 arg,
-                intent=intent or "in",
                 derived_type_context=derived_type_context,
                 binding_cls=binding_cls,
                 source_kind=source_kind,
@@ -376,25 +375,22 @@ class FortranToIRConverter(ClassVisitor):
             )
         else:
             semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
-        raw_intent = getattr(arg, "intent", "in")
-        resolved_intent = intent if intent is not None else raw_intent
-        resolved_intent = str(resolved_intent).lower().replace(" ", "")
-        if resolved_intent == "unknown":
-            resolved_intent = "in" if semantic_type.name == "String" and semantic_type.rank == 0 else "inout"
+        access = self._argument_access(arg, semantic_type)
         if semantic_type.name == "Callable":
             pass
         elif semantic_type.rank > 0:
-            self._apply_array_argument_contract(semantic_type, arg, resolved_intent)
+            self._apply_array_argument_contract(semantic_type, arg, writes_argument=access[1])
         elif not getattr(arg, "pass_by_value", False):
-            semantic_type.storage = self._reference_storage_contract(resolved_intent)
+            semantic_type.storage = self._reference_storage_contract(writes_argument=access[1])
             if getattr(arg, "pointer", False):
                 semantic_type.storage.pointer_depth = 1
-        self._apply_argument_ownership(semantic_type, resolved_intent)
+        if getattr(arg, "pointer", False) and not access[1]:
+            self._apply_pointer_input_policy(semantic_type)
+        self._apply_argument_ownership(semantic_type, writes_argument=access[1])
 
         return SemanticArgument(
             name=arg.name,
             semantic_type=semantic_type,
-            intent=resolved_intent,
             optional=getattr(arg, "optional", False),
             visibility=getattr(arg, "visibility", "public"),
             origin=self._argument_origin(arg),
@@ -404,7 +400,6 @@ class FortranToIRConverter(ClassVisitor):
         self,
         var: FortranArgument | FortranVariable,
         *,
-        intent: str = "in",
         derived_type_context: _DerivedTypeContext | None = None,
         binding_cls: type[SemanticVariable] = SemanticVariable,
         source_kind: str = "variable",
@@ -424,7 +419,6 @@ class FortranToIRConverter(ClassVisitor):
             metadata=metadata,
             origin=self._data_origin(var, source_kind=source_kind),
         )
-        binding.intent = intent
         binding.optional = getattr(var, "optional", False)
         return binding
 
@@ -480,9 +474,12 @@ class FortranToIRConverter(ClassVisitor):
             return self._convert_variable_type(arg, derived_type_context=derived_type_context)
 
         context = self._procedure_derived_type_context(signature, derived_type_context)
-        callback_arguments = [
-            self.visit(item, derived_type_context=context) for item in self._projected_procedure_arguments(signature)
-        ]
+        projected_arguments = list(signature.arguments)
+        callback_arguments = [self.visit(item, derived_type_context=context) for item in projected_arguments]
+        for source_argument, callback_argument in zip(projected_arguments, callback_arguments, strict=True):
+            access = self._callback_declaration_access(source_argument)
+            callback_argument.metadata[CALLBACK_DECLARATION_ACCESS_METADATA] = access
+            self._normalize_callback_character_storage(callback_argument, source_argument, access)
         callback_return = (
             self.visit(signature.result, derived_type_context=context, as_type=True)
             if signature.result
@@ -515,6 +512,45 @@ class FortranToIRConverter(ClassVisitor):
                 metadata={"interface": signature.name},
             ),
         )
+
+    @staticmethod
+    def _callback_declaration_access(arg: FortranArgument | FortranVariable) -> str:
+        """Return exact callback declaration access for Fortran adapter printing."""
+        match getattr(arg, "intent", None):
+            case "in":
+                return "read"
+            case "out":
+                return "write"
+            case "inout":
+                return "readwrite"
+            case _:
+                return "unspecified"
+
+    @staticmethod
+    def _normalize_callback_character_storage(
+        callback_argument: SemanticArgument,
+        source_argument: FortranArgument | FortranVariable,
+        access: str,
+    ) -> None:
+        """Use mutable scalar bytes storage for writable callback character dummies."""
+        semantic_type = callback_argument.semantic_type
+        if semantic_type.name != "String" or semantic_type.rank != 0:
+            return
+        if getattr(source_argument, "pass_by_value", False):
+            return
+        if access == "read":
+            return
+        semantic_type.storage = SemanticStorageContract(
+            kind="array",
+            read_only=False,
+            mutable=True,
+            array=SemanticArrayContract(
+                rank=0,
+                shape=[],
+                category=PYI_SCALAR_STORAGE_CATEGORY,
+            ),
+        )
+        semantic_type.ownership.mutable = True
 
     @staticmethod
     def _visit_FortranEnumerator(enumerator: FortranEnumerator, *, enum: FortranEnum) -> SemanticVariable:
@@ -566,11 +602,14 @@ class FortranToIRConverter(ClassVisitor):
             for arg in self._projected_procedure_arguments(proc)
         ]
         metadata = self._procedure_metadata(proc)
+        return_type = self.visit(proc.result, derived_type_context=context, as_type=True) if proc.result else None
+        if return_type is not None and getattr(proc.result, "pointer", False):
+            self._apply_pointer_result_policy(return_type)
         return SemanticFunction(
             name=proc.name,
             native_name=proc.name,
             arguments=arguments,
-            return_type=self.visit(proc.result, derived_type_context=context, as_type=True) if proc.result else None,
+            return_type=return_type,
             projection=self._procedure_projection(proc, arguments),
             metadata=metadata,
             visibility=visibility,
@@ -625,7 +664,6 @@ class FortranToIRConverter(ClassVisitor):
                 self.visit(
                     field,
                     as_data_member=True,
-                    intent="in",
                     derived_type_context=context,
                     binding_cls=SemanticField,
                     source_kind="field",
@@ -712,7 +750,7 @@ class FortranToIRConverter(ClassVisitor):
             overload_sets=overload_sets,
             classes=semantic_classes,
             variables=[
-                self.visit(var, as_data_member=True, intent="in", derived_type_context=context)
+                self.visit(var, as_data_member=True, derived_type_context=context)
                 for var in getattr(module, "variables", [])
                 if var.name.casefold() not in common_variables
             ]
@@ -1036,7 +1074,6 @@ class FortranToIRConverter(ClassVisitor):
         if isinstance(var, FortranArgument):
             metadata.update(
                 {
-                    "intent": var.intent,
                     "optional": var.optional,
                     "value": var.pass_by_value,
                 }
@@ -1197,8 +1234,8 @@ class FortranToIRConverter(ClassVisitor):
         return "Strided" in axis
 
     @staticmethod
-    def _reference_storage_contract(intent: str) -> SemanticStorageContract:
-        read_only = str(intent).lower() == "in"
+    def _reference_storage_contract(*, writes_argument: bool) -> SemanticStorageContract:
+        read_only = not writes_argument
         return SemanticStorageContract(
             kind="reference",
             read_only=read_only,
@@ -1210,11 +1247,12 @@ class FortranToIRConverter(ClassVisitor):
     def _apply_array_argument_contract(
         semantic_type: SemanticType,
         arg: FortranArgument | FortranVariable,
-        intent: str,
+        *,
+        writes_argument: bool,
     ) -> None:
         if semantic_type.storage is None:
             return
-        read_only = str(intent).lower() == "in"
+        read_only = not writes_argument
         semantic_type.storage.read_only = read_only
         semantic_type.storage.mutable = not read_only
         if semantic_type.storage.array is not None:
@@ -1229,8 +1267,47 @@ class FortranToIRConverter(ClassVisitor):
             semantic_type.constraints.append(SemanticConstraint("Constant"))
 
     @staticmethod
-    def _apply_argument_ownership(semantic_type: SemanticType, intent: str) -> None:
-        semantic_type.ownership.mutable = str(intent).lower() != "in"
+    def _apply_argument_ownership(semantic_type: SemanticType, *, writes_argument: bool) -> None:
+        semantic_type.ownership.mutable = writes_argument
+
+    @staticmethod
+    def _apply_pointer_input_policy(semantic_type: SemanticType) -> None:
+        set_ownership_metadata(
+            semantic_type.metadata,
+            owner="caller",
+            transfer="call_local",
+            destruction="none" if semantic_type.rank > 0 else "call_local",
+        )
+
+    @staticmethod
+    def _apply_pointer_result_policy(semantic_type: SemanticType) -> None:
+        set_ownership_metadata(
+            semantic_type.metadata,
+            owner="python",
+            transfer="snapshot_copy",
+            destruction="python_refcount",
+        )
+
+    @staticmethod
+    def _argument_access(
+        arg: FortranArgument | FortranVariable,
+        semantic_type: SemanticType,
+    ) -> tuple[bool, bool]:
+        reads = getattr(arg, "reads_argument", None)
+        writes = getattr(arg, "writes_argument", None)
+        if reads is None or writes is None:
+            if semantic_type.name == "String" and semantic_type.rank == 0:
+                return True, False
+            return True, True
+        return bool(reads), bool(writes)
+
+    @staticmethod
+    def _argument_has_writable_storage(argument: SemanticArgument) -> bool:
+        storage = argument.semantic_type.storage
+        return bool(
+            argument.semantic_type.ownership.mutable
+            or (storage is not None and (storage.mutable or not storage.read_only))
+        )
 
     def _bound_methods(
         self,
@@ -1563,10 +1640,10 @@ class FortranToIRConverter(ClassVisitor):
             lhs = arguments[0]
             if lhs.semantic_type.name.casefold() not in classes:
                 return "defined assignment left-hand side must be a wrapped derived type"
-            if lhs.intent.casefold() not in {"out", "inout"}:
-                return "defined assignment left-hand side must have intent(out) or intent(inout)"
-            if arguments[1].intent.casefold() not in {"in", ""}:
-                return "defined assignment right-hand side must have intent(in)"
+            if not FortranToIRConverter._argument_has_writable_storage(lhs):
+                return "defined assignment left-hand side must be writable"
+            if FortranToIRConverter._argument_has_writable_storage(arguments[1]):
+                return "defined assignment right-hand side must be read-only"
             return None
 
         expected_arities = (
@@ -1668,7 +1745,6 @@ class FortranToIRConverter(ClassVisitor):
                         result_position=0,
                         value_kind=mapping.value_kind,
                         value=deepcopy(mapping.value),
-                        intent="inout",
                     )
                 )
                 python_position += 1
@@ -1683,7 +1759,6 @@ class FortranToIRConverter(ClassVisitor):
                     result_position=mapping.result_position,
                     value_kind=mapping.value_kind,
                     value=deepcopy(mapping.value),
-                    intent=mapping.intent,
                 )
             )
             if not is_hidden:
@@ -1824,14 +1899,14 @@ class FortranToIRConverter(ClassVisitor):
         result_position = 1 if proc.result is not None else 0
         for native_position, native_arg in enumerate(proc.arguments):
             arg = by_name[native_arg.name]
-            intent = getattr(arg, "intent", "in")
-            is_output = intent == "out"
-            is_allocatable_replacement = intent == "inout" and FortranToIRConverter._is_allocatable_array(
-                arg.semantic_type
+            reads_argument, writes_argument = FortranToIRConverter._argument_access(native_arg, arg.semantic_type)
+            is_output = writes_argument and not reads_argument
+            is_allocatable_replacement = (
+                reads_argument and writes_argument and FortranToIRConverter._is_allocatable_array(arg.semantic_type)
             )
             is_scalar_copy_return = FortranToIRConverter._is_scalar_copy_return(arg.semantic_type)
-            is_character_replacement = intent == "inout" and FortranToIRConverter._is_scalar_character(
-                arg.semantic_type
+            is_character_replacement = (
+                reads_argument and writes_argument and FortranToIRConverter._is_scalar_character(arg.semantic_type)
             )
             is_returned_output = (
                 (is_output and (is_scalar_copy_return or arg.semantic_type.rank > 0))
@@ -1843,6 +1918,8 @@ class FortranToIRConverter(ClassVisitor):
             )
             mapping_python_position = None if is_hidden_output else python_position
             mapping_result_position = result_position if is_returned_output else None
+            if is_returned_output:
+                arg.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
             projection.append(
                 ProjectionMapping(
                     python_name=arg.name,
@@ -1850,7 +1927,6 @@ class FortranToIRConverter(ClassVisitor):
                     native_position=native_position,
                     python_position=mapping_python_position,
                     result_position=mapping_result_position,
-                    intent=intent,
                 )
             )
             if is_returned_output:
@@ -1937,35 +2013,50 @@ def _iter_fortran_variable_contexts(
 class _FortranVariableContextVisitor(ClassVisitor):
     """Traverse parsed Fortran models through the shared class visitor protocol."""
 
-    @staticmethod
-    def _visit_FortranProject(node: FortranProject, **_context):
+    def _visit_FortranProject(self, node: FortranProject, **_context):
         """Yield variable contexts from every project file."""
-        return _iter_project_variable_contexts(node)
+        for parsed_file in node.files:
+            yield from self._visit(parsed_file)
 
-    @staticmethod
-    def _visit_FortranFile(node: FortranFile, **_context):
+    def _visit_FortranFile(self, node: FortranFile, **_context):
         """Yield file, module, and standalone variable contexts."""
-        return _iter_file_variable_contexts(node)
+        file_unit = node.filename or "<source>"
+        for variable in getattr(node, "variables", []):
+            yield _variable_context(variable, unit_kind="file", unit=file_unit, module=None, role="variable")
+        collections = (
+            node.modules,
+            node.submodules,
+            node.programs,
+            node.block_data_units,
+            node.procedures,
+            node.derived_types,
+        )
+        for collection in collections:
+            for child in collection:
+                yield from self._visit(child)
 
-    @staticmethod
-    def _visit_FortranModule(node: FortranModule, **_context):
+    def _visit_FortranModule(self, node: FortranModule, **_context):
         """Yield module-owned variable contexts."""
-        return _iter_module_variable_contexts(node, unit_kind="module")
+        yield from self._module_variable_contexts(node, unit_kind="module")
 
-    @staticmethod
-    def _visit_FortranSubmodule(node: FortranSubmodule, **_context):
+    def _visit_FortranSubmodule(self, node: FortranSubmodule, **_context):
         """Yield submodule-owned variable contexts."""
-        return _iter_module_variable_contexts(node, unit_kind="submodule")
+        yield from self._module_variable_contexts(node, unit_kind="submodule")
 
-    @staticmethod
-    def _visit_FortranProgram(node: FortranProgram, **_context):
+    def _visit_FortranProgram(self, node: FortranProgram, **_context):
         """Yield program-owned variable contexts."""
-        return _iter_program_variable_contexts(node)
+        owner = node.name or "<program>"
+        for variable in node.variables:
+            yield _variable_context(variable, unit_kind="program", unit=owner, module=None, role="variable")
+        for procedure in node.procedures:
+            yield from self._visit(procedure, unit_kind="program", unit_name=owner)
 
     @staticmethod
     def _visit_FortranBlockData(node: FortranBlockData, **_context):
         """Yield block-data variable contexts."""
-        return _iter_block_data_variable_contexts(node)
+        owner = node.name or "<block_data>"
+        for variable in node.variables:
+            yield _variable_context(variable, unit_kind="block_data", unit=owner, module=None, role="variable")
 
     @staticmethod
     def _visit_FortranProcedureSignature(
@@ -1975,7 +2066,20 @@ class _FortranVariableContextVisitor(ClassVisitor):
         **_context,
     ):
         """Yield procedure argument, result, and local contexts."""
-        return _iter_procedure_variable_contexts(node, module_name)
+        procedure_module = module_name or node.module
+        owner = _requirement_unit_name(module=procedure_module, unit_name=node.name)
+        context = {
+            "unit_kind": "procedure",
+            "unit": owner,
+            "module": procedure_module,
+            "procedure": node.name,
+        }
+        for argument in node.arguments:
+            yield _variable_context(argument, **context, role="argument")
+        if node.result is not None:
+            yield _variable_context(node.result, **context, role="result")
+        for variable in node.variables.values():
+            yield _variable_context(variable, **context, role="variable")
 
     @staticmethod
     def _visit_FortranDerivedType(
@@ -1985,7 +2089,31 @@ class _FortranVariableContextVisitor(ClassVisitor):
         **_context,
     ):
         """Yield derived-type field contexts."""
-        return _iter_derived_type_variable_contexts(node, module_name)
+        owner_module = module_name or node.module
+        owner = _requirement_unit_name(module=owner_module, unit_name=node.name)
+        for field in node.fields:
+            yield _variable_context(
+                field,
+                unit_kind="derived_type",
+                unit=owner,
+                module=owner_module,
+                type_owner=node.name,
+                role="field",
+            )
+
+    def _module_variable_contexts(
+        self,
+        node: FortranModule | FortranSubmodule,
+        *,
+        unit_kind: str,
+    ):
+        owner = node.name
+        for variable in node.variables:
+            yield _variable_context(variable, unit_kind=unit_kind, unit=owner, module=owner, role="variable")
+        for procedure in node.procedures:
+            yield from self._visit(procedure, module_name=owner)
+        for derived_type in node.derived_types:
+            yield from self._visit(derived_type, module_name=owner)
 
 
 def _variable_context(variable, *, unit_kind, unit, module, role, **extra):
@@ -1997,87 +2125,6 @@ def _variable_context(variable, *, unit_kind, unit, module, role, **extra):
         "symbol": variable.name,
         "role": role,
     }
-
-
-def _iter_project_variable_contexts(project: FortranProject):
-    for parsed_file in project.files:
-        yield from _iter_fortran_variable_contexts(parsed_file)
-
-
-def _iter_file_variable_contexts(parsed_file: FortranFile):
-    file_unit = parsed_file.filename or "<source>"
-    for variable in getattr(parsed_file, "variables", []):
-        yield _variable_context(variable, unit_kind="file", unit=file_unit, module=None, role="variable")
-    collections = (
-        parsed_file.modules,
-        parsed_file.submodules,
-        parsed_file.programs,
-        parsed_file.block_data_units,
-        parsed_file.procedures,
-        parsed_file.derived_types,
-    )
-    for collection in collections:
-        for child in collection:
-            yield from _iter_fortran_variable_contexts(child)
-
-
-def _iter_module_variable_contexts(
-    node: FortranModule | FortranSubmodule,
-    *,
-    unit_kind: str,
-):
-    owner = node.name
-    for variable in node.variables:
-        yield _variable_context(variable, unit_kind=unit_kind, unit=owner, module=owner, role="variable")
-    for procedure in node.procedures:
-        yield from _iter_fortran_variable_contexts(procedure, module_name=owner)
-    for derived_type in node.derived_types:
-        yield from _iter_fortran_variable_contexts(derived_type, module_name=owner)
-
-
-def _iter_program_variable_contexts(program: FortranProgram):
-    owner = program.name or "<program>"
-    for variable in program.variables:
-        yield _variable_context(variable, unit_kind="program", unit=owner, module=None, role="variable")
-    for procedure in program.procedures:
-        yield from _iter_fortran_variable_contexts(procedure, unit_kind="program", unit_name=owner)
-
-
-def _iter_block_data_variable_contexts(block_data: FortranBlockData):
-    owner = block_data.name or "<block_data>"
-    for variable in block_data.variables:
-        yield _variable_context(variable, unit_kind="block_data", unit=owner, module=None, role="variable")
-
-
-def _iter_procedure_variable_contexts(procedure: FortranProcedureSignature, module_name: str | None):
-    procedure_module = module_name or procedure.module
-    owner = _requirement_unit_name(module=procedure_module, unit_name=procedure.name)
-    context = {
-        "unit_kind": "procedure",
-        "unit": owner,
-        "module": procedure_module,
-        "procedure": procedure.name,
-    }
-    for argument in procedure.arguments:
-        yield _variable_context(argument, **context, role="argument")
-    if procedure.result is not None:
-        yield _variable_context(procedure.result, **context, role="result")
-    for variable in procedure.variables.values():
-        yield _variable_context(variable, **context, role="variable")
-
-
-def _iter_derived_type_variable_contexts(derived_type: FortranDerivedType, module_name: str | None):
-    owner_module = module_name or derived_type.module
-    owner = _requirement_unit_name(module=owner_module, unit_name=derived_type.name)
-    for field in derived_type.fields:
-        yield _variable_context(
-            field,
-            unit_kind="derived_type",
-            unit=owner,
-            module=owner_module,
-            type_owner=derived_type.name,
-            role="field",
-        )
 
 
 def _compile_time_requirement_message(code: str, symbol: str, expression: str) -> str:

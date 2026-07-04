@@ -48,20 +48,20 @@ Inspecting `arrays.f90` prints these array contracts:
 ```python
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2)])
 def scale_matrix(
-    rows: Const(Int32),
-    columns: Const(Int32),
+    rows: Int32,
+    columns: Int32,
     values: Annotated[Float64[rows, columns], ORDER_F]
 ) -> None: ...
 
 @native_call([Addr(Arg(0)), Arg(1)])
 def shift(
-    size: Const(Int32),
+    size: Int32,
     values: Float64[size - 1 - 0 + 1]
 ) -> None: ...
 
 @native_call([Addr(Arg(0))])
 def automatic_vector(
-    size: Const(Int32)
+    size: Int32
 ) -> Float64[size]: ...
 ```
 

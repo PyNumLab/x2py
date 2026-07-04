@@ -36,8 +36,8 @@ Inspecting `optional.f90` prints this optional-input contract:
 ```python
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def adjust(
-    value: Const(Int32),
-    offset: Const(Int32) = ...
+    value: Int32,
+    offset: Int32 = ...
 ) -> Int32: ...
 ```
 

@@ -11,6 +11,6 @@ class point_t:
 
 @native_call([Arg(0), Arg(1), Return('output', 0)])
 def apply_point(
-    callback: Callable[[Const(point_t)], point_t],
-    value: Const(point_t)
+    callback: Callable[[In(point_t)], point_t],
+    value: point_t
 ) -> point_t: ...

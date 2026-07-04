@@ -1,7 +1,7 @@
 @bind("SQUARE_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -9,7 +9,7 @@ def square_r4_contiguous(
 @bind("SQUARE_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -17,7 +17,7 @@ def square_r8_contiguous(
 @bind("SQUARE_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     R: Int32[:]
 ) -> None: ...
@@ -25,7 +25,7 @@ def square_i4_contiguous(
 @bind("SQUARE_C4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_c4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[:],
     R: Complex64[:]
 ) -> None: ...
@@ -33,7 +33,7 @@ def square_c4_contiguous(
 @bind("SQUARE_C8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_c8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[:],
     R: Complex128[:]
 ) -> None: ...
@@ -41,7 +41,7 @@ def square_c8_contiguous(
 @bind("CUBE_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cube_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -49,7 +49,7 @@ def cube_r4_contiguous(
 @bind("CUBE_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cube_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -57,7 +57,7 @@ def cube_r8_contiguous(
 @bind("CUBE_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cube_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     R: Int32[:]
 ) -> None: ...
@@ -65,7 +65,7 @@ def cube_i4_contiguous(
 @bind("ADD_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -74,7 +74,7 @@ def add_r4_contiguous(
 @bind("ADD_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -83,7 +83,7 @@ def add_r8_contiguous(
 @bind("ADD_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     Y: Int32[:],
     R: Int32[:]
@@ -92,7 +92,7 @@ def add_i4_contiguous(
 @bind("ADD_C4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_c4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Complex64[:],
     Y: Complex64[:],
     R: Complex64[:]
@@ -101,7 +101,7 @@ def add_c4_contiguous(
 @bind("ADD_C8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_c8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Complex128[:],
     Y: Complex128[:],
     R: Complex128[:]
@@ -110,7 +110,7 @@ def add_c8_contiguous(
 @bind("SUB_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sub_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -119,7 +119,7 @@ def sub_r4_contiguous(
 @bind("SUB_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sub_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -128,7 +128,7 @@ def sub_r8_contiguous(
 @bind("SUB_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sub_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     Y: Int32[:],
     R: Int32[:]
@@ -137,7 +137,7 @@ def sub_i4_contiguous(
 @bind("MUL_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mul_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -146,7 +146,7 @@ def mul_r4_contiguous(
 @bind("MUL_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mul_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -155,7 +155,7 @@ def mul_r8_contiguous(
 @bind("MUL_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mul_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     Y: Int32[:],
     R: Int32[:]
@@ -164,7 +164,7 @@ def mul_i4_contiguous(
 @bind("DIV_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def div_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -173,7 +173,7 @@ def div_r4_contiguous(
 @bind("DIV_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def div_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -182,7 +182,7 @@ def div_r8_contiguous(
 @bind("POW_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def pow_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -191,7 +191,7 @@ def pow_r4_contiguous(
 @bind("POW_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def pow_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -200,7 +200,7 @@ def pow_r8_contiguous(
 @bind("ABS_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -208,7 +208,7 @@ def abs_r4_contiguous(
 @bind("ABS_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -216,7 +216,7 @@ def abs_r8_contiguous(
 @bind("ABS_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     R: Int32[:]
 ) -> None: ...
@@ -224,7 +224,7 @@ def abs_i4_contiguous(
 @bind("NEG_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def neg_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -232,7 +232,7 @@ def neg_r4_contiguous(
 @bind("NEG_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def neg_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -240,7 +240,7 @@ def neg_r8_contiguous(
 @bind("NEG_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def neg_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     R: Int32[:]
 ) -> None: ...
@@ -248,7 +248,7 @@ def neg_i4_contiguous(
 @bind("SIN_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sin_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -256,7 +256,7 @@ def sin_r4_contiguous(
 @bind("SIN_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sin_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -264,7 +264,7 @@ def sin_r8_contiguous(
 @bind("COS_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cos_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -272,7 +272,7 @@ def cos_r4_contiguous(
 @bind("COS_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cos_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -280,7 +280,7 @@ def cos_r8_contiguous(
 @bind("TAN_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def tan_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -288,7 +288,7 @@ def tan_r4_contiguous(
 @bind("TAN_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def tan_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -296,7 +296,7 @@ def tan_r8_contiguous(
 @bind("ASIN_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def asin_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -304,7 +304,7 @@ def asin_r4_contiguous(
 @bind("ASIN_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def asin_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -312,7 +312,7 @@ def asin_r8_contiguous(
 @bind("ACOS_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def acos_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -320,7 +320,7 @@ def acos_r4_contiguous(
 @bind("ACOS_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def acos_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -328,7 +328,7 @@ def acos_r8_contiguous(
 @bind("ATAN_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def atan_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -336,7 +336,7 @@ def atan_r4_contiguous(
 @bind("ATAN_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def atan_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -344,7 +344,7 @@ def atan_r8_contiguous(
 @bind("ATAN2_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def atan2_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Y: Float32[:],
     X: Float32[:],
     R: Float32[:]
@@ -353,7 +353,7 @@ def atan2_r4_contiguous(
 @bind("ATAN2_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def atan2_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Y: Float64[:],
     X: Float64[:],
     R: Float64[:]
@@ -362,7 +362,7 @@ def atan2_r8_contiguous(
 @bind("EXP_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def exp_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -370,7 +370,7 @@ def exp_r4_contiguous(
 @bind("EXP_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def exp_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -378,7 +378,7 @@ def exp_r8_contiguous(
 @bind("LOG_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -386,7 +386,7 @@ def log_r4_contiguous(
 @bind("LOG_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -394,7 +394,7 @@ def log_r8_contiguous(
 @bind("LOG10_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log10_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -402,7 +402,7 @@ def log10_r4_contiguous(
 @bind("LOG10_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log10_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -410,7 +410,7 @@ def log10_r8_contiguous(
 @bind("SQRT_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sqrt_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -418,7 +418,7 @@ def sqrt_r4_contiguous(
 @bind("SQRT_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sqrt_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -426,7 +426,7 @@ def sqrt_r8_contiguous(
 @bind("HYPOT_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def hypot_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -435,7 +435,7 @@ def hypot_r4_contiguous(
 @bind("HYPOT_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def hypot_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -444,7 +444,7 @@ def hypot_r8_contiguous(
 @bind("MIN_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def min_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -453,7 +453,7 @@ def min_r4_contiguous(
 @bind("MIN_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def min_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -462,7 +462,7 @@ def min_r8_contiguous(
 @bind("MIN_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def min_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     Y: Int32[:],
     R: Int32[:]
@@ -471,7 +471,7 @@ def min_i4_contiguous(
 @bind("MAX_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def max_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -480,7 +480,7 @@ def max_r4_contiguous(
 @bind("MAX_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def max_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -489,7 +489,7 @@ def max_r8_contiguous(
 @bind("MAX_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def max_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     Y: Int32[:],
     R: Int32[:]
@@ -498,7 +498,7 @@ def max_i4_contiguous(
 @bind("SIGN_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sign_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -507,7 +507,7 @@ def sign_r4_contiguous(
 @bind("SIGN_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sign_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -516,7 +516,7 @@ def sign_r8_contiguous(
 @bind("MOD_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mod_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     Y: Int32[:],
     R: Int32[:]
@@ -525,7 +525,7 @@ def mod_i4_contiguous(
 @bind("MOD_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mod_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -534,7 +534,7 @@ def mod_r4_contiguous(
 @bind("MOD_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mod_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -543,7 +543,7 @@ def mod_r8_contiguous(
 @bind("DEG2RAD_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def deg2rad_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -551,7 +551,7 @@ def deg2rad_r4_contiguous(
 @bind("DEG2RAD_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def deg2rad_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -559,7 +559,7 @@ def deg2rad_r8_contiguous(
 @bind("RAD2DEG_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def rad2deg_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Float32[:]
 ) -> None: ...
@@ -567,7 +567,7 @@ def rad2deg_r4_contiguous(
 @bind("RAD2DEG_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def rad2deg_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Float64[:]
 ) -> None: ...
@@ -575,7 +575,7 @@ def rad2deg_r8_contiguous(
 @bind("DIST2_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def dist2_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     Y: Float32[:],
     R: Float32[:]
@@ -584,7 +584,7 @@ def dist2_r4_contiguous(
 @bind("DIST2_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def dist2_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     Y: Float64[:],
     R: Float64[:]
@@ -593,7 +593,7 @@ def dist2_r8_contiguous(
 @bind("DOT2_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5)])
 def dot2_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float32[:],
     X2: Float32[:],
     Y1: Float32[:],
@@ -604,7 +604,7 @@ def dot2_r4_contiguous(
 @bind("DOT2_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5)])
 def dot2_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float64[:],
     X2: Float64[:],
     Y1: Float64[:],
@@ -615,7 +615,7 @@ def dot2_r8_contiguous(
 @bind("DOT3_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Arg(6), Arg(7)])
 def dot3_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float32[:],
     X2: Float32[:],
     X3: Float32[:],
@@ -628,7 +628,7 @@ def dot3_r4_contiguous(
 @bind("DOT3_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Arg(6), Arg(7)])
 def dot3_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float64[:],
     X2: Float64[:],
     X3: Float64[:],
@@ -641,7 +641,7 @@ def dot3_r8_contiguous(
 @bind("CONJ_C4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def conj_c4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[:],
     R: Complex64[:]
 ) -> None: ...
@@ -649,7 +649,7 @@ def conj_c4_contiguous(
 @bind("CONJ_C8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def conj_c8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[:],
     R: Complex128[:]
 ) -> None: ...
@@ -657,7 +657,7 @@ def conj_c8_contiguous(
 @bind("REAL_C4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def real_c4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[:],
     R: Float32[:]
 ) -> None: ...
@@ -665,7 +665,7 @@ def real_c4_contiguous(
 @bind("REAL_C8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def real_c8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[:],
     R: Float64[:]
 ) -> None: ...
@@ -673,7 +673,7 @@ def real_c8_contiguous(
 @bind("AIMAG_C4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def aimag_c4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[:],
     R: Float32[:]
 ) -> None: ...
@@ -681,7 +681,7 @@ def aimag_c4_contiguous(
 @bind("AIMAG_C8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def aimag_c8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[:],
     R: Float64[:]
 ) -> None: ...
@@ -689,7 +689,7 @@ def aimag_c8_contiguous(
 @bind("ABS_C4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_c4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[:],
     R: Float32[:]
 ) -> None: ...
@@ -697,7 +697,7 @@ def abs_c4_contiguous(
 @bind("ABS_C8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_c8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[:],
     R: Float64[:]
 ) -> None: ...
@@ -705,7 +705,7 @@ def abs_c8_contiguous(
 @bind("IS_POSITIVE_R4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def is_positive_r4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[:],
     R: Bool[:]
 ) -> None: ...
@@ -713,7 +713,7 @@ def is_positive_r4_contiguous(
 @bind("IS_POSITIVE_R8_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def is_positive_r8_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[:],
     R: Bool[:]
 ) -> None: ...
@@ -721,7 +721,7 @@ def is_positive_r8_contiguous(
 @bind("IS_EVEN_I4_CONTIGUOUS")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def is_even_i4_contiguous(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[:],
     R: Bool[:]
 ) -> None: ...
@@ -729,7 +729,7 @@ def is_even_i4_contiguous(
 @bind("SQUARE_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -737,7 +737,7 @@ def square_r4_strided(
 @bind("SQUARE_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -745,7 +745,7 @@ def square_r8_strided(
 @bind("SQUARE_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     R: Int32[::]
 ) -> None: ...
@@ -753,7 +753,7 @@ def square_i4_strided(
 @bind("SQUARE_C4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_c4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[::],
     R: Complex64[::]
 ) -> None: ...
@@ -761,7 +761,7 @@ def square_c4_strided(
 @bind("SQUARE_C8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def square_c8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[::],
     R: Complex128[::]
 ) -> None: ...
@@ -769,7 +769,7 @@ def square_c8_strided(
 @bind("CUBE_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cube_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -777,7 +777,7 @@ def cube_r4_strided(
 @bind("CUBE_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cube_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -785,7 +785,7 @@ def cube_r8_strided(
 @bind("CUBE_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cube_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     R: Int32[::]
 ) -> None: ...
@@ -793,7 +793,7 @@ def cube_i4_strided(
 @bind("ADD_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -802,7 +802,7 @@ def add_r4_strided(
 @bind("ADD_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -811,7 +811,7 @@ def add_r8_strided(
 @bind("ADD_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     Y: Int32[::],
     R: Int32[::]
@@ -820,7 +820,7 @@ def add_i4_strided(
 @bind("ADD_C4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_c4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Complex64[::],
     Y: Complex64[::],
     R: Complex64[::]
@@ -829,7 +829,7 @@ def add_c4_strided(
 @bind("ADD_C8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def add_c8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Complex128[::],
     Y: Complex128[::],
     R: Complex128[::]
@@ -838,7 +838,7 @@ def add_c8_strided(
 @bind("SUB_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sub_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -847,7 +847,7 @@ def sub_r4_strided(
 @bind("SUB_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sub_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -856,7 +856,7 @@ def sub_r8_strided(
 @bind("SUB_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sub_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     Y: Int32[::],
     R: Int32[::]
@@ -865,7 +865,7 @@ def sub_i4_strided(
 @bind("MUL_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mul_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -874,7 +874,7 @@ def mul_r4_strided(
 @bind("MUL_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mul_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -883,7 +883,7 @@ def mul_r8_strided(
 @bind("MUL_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mul_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     Y: Int32[::],
     R: Int32[::]
@@ -892,7 +892,7 @@ def mul_i4_strided(
 @bind("DIV_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def div_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -901,7 +901,7 @@ def div_r4_strided(
 @bind("DIV_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def div_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -910,7 +910,7 @@ def div_r8_strided(
 @bind("POW_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def pow_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -919,7 +919,7 @@ def pow_r4_strided(
 @bind("POW_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def pow_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -928,7 +928,7 @@ def pow_r8_strided(
 @bind("ABS_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -936,7 +936,7 @@ def abs_r4_strided(
 @bind("ABS_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -944,7 +944,7 @@ def abs_r8_strided(
 @bind("ABS_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     R: Int32[::]
 ) -> None: ...
@@ -952,7 +952,7 @@ def abs_i4_strided(
 @bind("NEG_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def neg_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -960,7 +960,7 @@ def neg_r4_strided(
 @bind("NEG_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def neg_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -968,7 +968,7 @@ def neg_r8_strided(
 @bind("NEG_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def neg_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     R: Int32[::]
 ) -> None: ...
@@ -976,7 +976,7 @@ def neg_i4_strided(
 @bind("SIN_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sin_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -984,7 +984,7 @@ def sin_r4_strided(
 @bind("SIN_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sin_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -992,7 +992,7 @@ def sin_r8_strided(
 @bind("COS_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cos_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1000,7 +1000,7 @@ def cos_r4_strided(
 @bind("COS_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def cos_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1008,7 +1008,7 @@ def cos_r8_strided(
 @bind("TAN_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def tan_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1016,7 +1016,7 @@ def tan_r4_strided(
 @bind("TAN_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def tan_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1024,7 +1024,7 @@ def tan_r8_strided(
 @bind("ASIN_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def asin_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1032,7 +1032,7 @@ def asin_r4_strided(
 @bind("ASIN_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def asin_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1040,7 +1040,7 @@ def asin_r8_strided(
 @bind("ACOS_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def acos_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1048,7 +1048,7 @@ def acos_r4_strided(
 @bind("ACOS_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def acos_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1056,7 +1056,7 @@ def acos_r8_strided(
 @bind("ATAN_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def atan_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1064,7 +1064,7 @@ def atan_r4_strided(
 @bind("ATAN_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def atan_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1072,7 +1072,7 @@ def atan_r8_strided(
 @bind("ATAN2_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def atan2_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Y: Float32[::],
     X: Float32[::],
     R: Float32[::]
@@ -1081,7 +1081,7 @@ def atan2_r4_strided(
 @bind("ATAN2_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def atan2_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Y: Float64[::],
     X: Float64[::],
     R: Float64[::]
@@ -1090,7 +1090,7 @@ def atan2_r8_strided(
 @bind("EXP_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def exp_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1098,7 +1098,7 @@ def exp_r4_strided(
 @bind("EXP_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def exp_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1106,7 +1106,7 @@ def exp_r8_strided(
 @bind("LOG_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1114,7 +1114,7 @@ def log_r4_strided(
 @bind("LOG_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1122,7 +1122,7 @@ def log_r8_strided(
 @bind("LOG10_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log10_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1130,7 +1130,7 @@ def log10_r4_strided(
 @bind("LOG10_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def log10_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1138,7 +1138,7 @@ def log10_r8_strided(
 @bind("SQRT_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sqrt_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1146,7 +1146,7 @@ def sqrt_r4_strided(
 @bind("SQRT_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def sqrt_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1154,7 +1154,7 @@ def sqrt_r8_strided(
 @bind("HYPOT_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def hypot_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -1163,7 +1163,7 @@ def hypot_r4_strided(
 @bind("HYPOT_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def hypot_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -1172,7 +1172,7 @@ def hypot_r8_strided(
 @bind("MIN_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def min_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -1181,7 +1181,7 @@ def min_r4_strided(
 @bind("MIN_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def min_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -1190,7 +1190,7 @@ def min_r8_strided(
 @bind("MIN_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def min_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     Y: Int32[::],
     R: Int32[::]
@@ -1199,7 +1199,7 @@ def min_i4_strided(
 @bind("MAX_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def max_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -1208,7 +1208,7 @@ def max_r4_strided(
 @bind("MAX_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def max_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -1217,7 +1217,7 @@ def max_r8_strided(
 @bind("MAX_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def max_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     Y: Int32[::],
     R: Int32[::]
@@ -1226,7 +1226,7 @@ def max_i4_strided(
 @bind("SIGN_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sign_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -1235,7 +1235,7 @@ def sign_r4_strided(
 @bind("SIGN_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def sign_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -1244,7 +1244,7 @@ def sign_r8_strided(
 @bind("MOD_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mod_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     Y: Int32[::],
     R: Int32[::]
@@ -1253,7 +1253,7 @@ def mod_i4_strided(
 @bind("MOD_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mod_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -1262,7 +1262,7 @@ def mod_r4_strided(
 @bind("MOD_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def mod_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -1271,7 +1271,7 @@ def mod_r8_strided(
 @bind("DEG2RAD_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def deg2rad_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1279,7 +1279,7 @@ def deg2rad_r4_strided(
 @bind("DEG2RAD_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def deg2rad_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1287,7 +1287,7 @@ def deg2rad_r8_strided(
 @bind("RAD2DEG_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def rad2deg_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Float32[::]
 ) -> None: ...
@@ -1295,7 +1295,7 @@ def rad2deg_r4_strided(
 @bind("RAD2DEG_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def rad2deg_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Float64[::]
 ) -> None: ...
@@ -1303,7 +1303,7 @@ def rad2deg_r8_strided(
 @bind("DIST2_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def dist2_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     Y: Float32[::],
     R: Float32[::]
@@ -1312,7 +1312,7 @@ def dist2_r4_strided(
 @bind("DIST2_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3)])
 def dist2_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     Y: Float64[::],
     R: Float64[::]
@@ -1321,7 +1321,7 @@ def dist2_r8_strided(
 @bind("DOT2_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5)])
 def dot2_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float32[::],
     X2: Float32[::],
     Y1: Float32[::],
@@ -1332,7 +1332,7 @@ def dot2_r4_strided(
 @bind("DOT2_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5)])
 def dot2_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float64[::],
     X2: Float64[::],
     Y1: Float64[::],
@@ -1343,7 +1343,7 @@ def dot2_r8_strided(
 @bind("DOT3_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Arg(6), Arg(7)])
 def dot3_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float32[::],
     X2: Float32[::],
     X3: Float32[::],
@@ -1356,7 +1356,7 @@ def dot3_r4_strided(
 @bind("DOT3_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Arg(6), Arg(7)])
 def dot3_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X1: Float64[::],
     X2: Float64[::],
     X3: Float64[::],
@@ -1369,7 +1369,7 @@ def dot3_r8_strided(
 @bind("CONJ_C4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def conj_c4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[::],
     R: Complex64[::]
 ) -> None: ...
@@ -1377,7 +1377,7 @@ def conj_c4_strided(
 @bind("CONJ_C8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def conj_c8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[::],
     R: Complex128[::]
 ) -> None: ...
@@ -1385,7 +1385,7 @@ def conj_c8_strided(
 @bind("REAL_C4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def real_c4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[::],
     R: Float32[::]
 ) -> None: ...
@@ -1393,7 +1393,7 @@ def real_c4_strided(
 @bind("REAL_C8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def real_c8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[::],
     R: Float64[::]
 ) -> None: ...
@@ -1401,7 +1401,7 @@ def real_c8_strided(
 @bind("AIMAG_C4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def aimag_c4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[::],
     R: Float32[::]
 ) -> None: ...
@@ -1409,7 +1409,7 @@ def aimag_c4_strided(
 @bind("AIMAG_C8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def aimag_c8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[::],
     R: Float64[::]
 ) -> None: ...
@@ -1417,7 +1417,7 @@ def aimag_c8_strided(
 @bind("ABS_C4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_c4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex64[::],
     R: Float32[::]
 ) -> None: ...
@@ -1425,7 +1425,7 @@ def abs_c4_strided(
 @bind("ABS_C8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def abs_c8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     Z: Complex128[::],
     R: Float64[::]
 ) -> None: ...
@@ -1433,7 +1433,7 @@ def abs_c8_strided(
 @bind("IS_POSITIVE_R4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def is_positive_r4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float32[::],
     R: Bool[::]
 ) -> None: ...
@@ -1441,7 +1441,7 @@ def is_positive_r4_strided(
 @bind("IS_POSITIVE_R8_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def is_positive_r8_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Float64[::],
     R: Bool[::]
 ) -> None: ...
@@ -1449,7 +1449,7 @@ def is_positive_r8_strided(
 @bind("IS_EVEN_I4_STRIDED")
 @native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def is_even_i4_strided(
-    N: Annotated[Int32, Intent('inout')],
+    N: Int32,
     X: Int32[::],
     R: Bool[::]
 ) -> None: ...

@@ -42,6 +42,8 @@ VISITOR_IMPLEMENTATION_PATHS = (
     REPO_ROOT / "x2py" / "semantics" / "ir2ast.py",
     REPO_ROOT / "x2py" / "semantics" / "pyi2ir.py",
     REPO_ROOT / "x2py" / "codegen" / "generator.py",
+    REPO_ROOT / "x2py" / "codegen" / "bindings" / "c_to_python.py",
+    REPO_ROOT / "x2py" / "codegen" / "bridges" / "fortran_to_c.py",
     REPO_ROOT / "x2py" / "codegen" / "printers" / "codeprinter.py",
     REPO_ROOT / "x2py" / "codegen" / "printers" / "pyi_printer.py",
 )
@@ -52,20 +54,58 @@ def test_model_visitors_share_one_class_visitor_base():
     assert all(issubclass(visitor, ClassVisitor) for visitor in VISITOR_CLASSES)
 
 
-def test_model_visitor_handlers_use_class_names():
+def test_class_visitor_supports_configured_handler_prefix():
+    """Allow specialized visitors to use names such as ``_print_<ClassName>``."""
+
+    class Node:
+        pass
+
+    class SpecificNode(Node):
+        pass
+
+    class ParserVisitor(ClassVisitor):
+        visitor_method_prefix = "_parse"
+
+        @staticmethod
+        def _parse_Node(node):
+            return type(node).__name__
+
+    assert ParserVisitor()._visit(SpecificNode()) == "SpecificNode"
+
+
+def test_model_visitor_handlers_use_configured_class_names():
     """Reject the stdlib-style ``visit_Class`` protocol and lowercase handlers."""
     invalid = []
     lowercase_model_names = {"int", "str", "tuple"}
     for visitor in VISITOR_CLASSES:
+        handler_prefix = f"{visitor.visitor_method_prefix}_"
         for name, _method in inspect.getmembers(visitor, predicate=inspect.isfunction):
             if name.startswith("visit_"):
                 invalid.append(f"{visitor.__name__}.{name}")
-            if not name.startswith("_visit_") or name == "_visit_not_supported":
+            if name == "_visit_not_supported" or not name.startswith(handler_prefix):
                 continue
-            model_name = name.removeprefix("_visit_")
+            model_name = name.removeprefix(handler_prefix)
             if model_name[:1].islower() and model_name not in lowercase_model_names:
                 invalid.append(f"{visitor.__name__}.{name}")
-    assert not invalid, "Use _visit_<ClassName> handlers:\n" + "\n".join(invalid)
+    assert not invalid, "Use configured <prefix>_<ClassName> handlers:\n" + "\n".join(invalid)
+
+
+def test_ir2ast_visitor_methods_own_their_conversion_bodies():
+    """Keep semantic lowering in the visitor instead of one-line module-private shims."""
+    invalid = []
+    for name in (
+        "_visit_SemanticModule",
+        "_visit_ProcedureOverloadSet",
+        "_visit_SemanticFunction",
+        "_visit_SemanticClass",
+        "_visit_SemanticArgument",
+        "_visit_SemanticVariable",
+    ):
+        source = inspect.getsource(getattr(_SemanticIrToCodegenAstVisitor, name))
+        for forbidden in ("_convert_", "_codegen_callback_argument("):
+            if forbidden in source:
+                invalid.append(f"_SemanticIrToCodegenAstVisitor.{name} uses {forbidden}")
+    assert not invalid, "Move visitor conversion bodies onto _SemanticIrToCodegenAstVisitor:\n" + "\n".join(invalid)
 
 
 def test_parser_entrypoints_are_not_misnamed_as_visitors():

@@ -9,8 +9,16 @@ status: maintained
 # Callbacks
 
 x2py supports Python callbacks invoked immediately during one wrapped native
-call. The callback contract records argument order, resolved dtypes, intents,
-array rank and shape, derived wrapper types, and optional result type.
+call. Callback annotations are Fortran-facing: they describe the procedure
+signature that Fortran will call, then x2py lifts those arguments into Python
+objects for the callback invocation.
+
+This is the opposite direction from a normal `.pyi` function signature. A
+normal function signature describes how Python calls the wrapper; x2py may
+lower that call into any compatible native bridge shape. A `Callable[[...], T]`
+argument describes how Fortran calls the callback adapter, so the argument
+order, value/reference passing, explicit or missing callback intent, rank,
+shape, character length, and result shape are part of the callback contract.
 
 ## Complete Callback Example
 
@@ -66,12 +74,74 @@ is unsupported unless the value is explicitly copied.
 
 ## Callback Values
 
-- Scalars use the matching semantic dtype conversion.
-- Arrays require exact dtype, rank, declared shape, alignment, and required
-  Fortran contiguity.
-- Derived values require the generated wrapper class.
-- Array and derived output/inout callback values are copied back before the
-  callback adapter returns.
+Callback argument wrappers are valid only inside `Callable[[...], T]`:
+
+```python
+callback: Callable[
+    [
+        Int32,
+        PassByRef(Float64),
+        In(Float64),
+        Out(Float64),
+        InOut(Float64),
+        In(Float64[n]),
+    ],
+    None,
+]
+```
+
+The wrappers mean:
+
+| Callback spelling | Fortran callback dummy | Python callback object |
+| --- | --- | --- |
+| `Int32` | scalar `value` dummy | Python scalar value |
+| `PassByRef(Float64)` | scalar by reference with missing intent | rank-zero NumPy scalar storage |
+| `In(Float64)` | scalar by reference with `intent(in)` | Python scalar value |
+| `Out(Float64)` | scalar by reference with `intent(out)` | rank-zero NumPy scalar storage |
+| `InOut(Float64)` | scalar by reference with `intent(inout)` | rank-zero NumPy scalar storage |
+| `Float64[n]` | array with missing intent | NumPy array view |
+| `In(Float64[n])` | array with `intent(in)` | read-only NumPy array view |
+| `Out(Float64[n])` | array with `intent(out)` | writable NumPy array view |
+| `InOut(Float64[n])` | array with `intent(inout)` | writable NumPy array view |
+
+Array callback arguments require exact dtype, rank, declared shape, alignment,
+and required Fortran contiguity. Derived values use the generated wrapper class.
+Array, scalar-storage, character-storage, and derived output/inout callback
+values are copied back before the callback adapter returns.
+
+## Character Callback Arguments
+
+Read-only fixed-length character callback arguments use Python `str`:
+
+```python
+callback: Callable[[In(String[8])], None]
+```
+
+The callback receives a Python string with exactly eight encoded bytes. Writable
+character callback arguments cannot use plain `String[8]`, because Python
+strings are immutable. Use mutable rank-zero fixed-width bytes storage instead:
+
+```python
+callback: Callable[[InOut(String[8][()])], None]
+callback: Callable[[Out(String[8][()])], None]
+```
+
+The callback receives a NumPy scalar bytes array, for example an object with
+shape `()` and dtype `S8`. The Python callback writes through that storage:
+
+```python
+def rewrite_label(label):
+    label[...] = b"done    "
+```
+
+Generated `.pyi` contracts use `String[n][()]` automatically for Fortran
+callback character dummies with `intent(out)` or `intent(inout)`. Manual
+contracts reject these writable immutable forms:
+
+```python
+Callable[[Out(String[8])], None]     # invalid
+Callable[[InOut(String[8])], None]   # invalid
+```
 
 A non-callable argument raises `TypeError` before native execution.
 

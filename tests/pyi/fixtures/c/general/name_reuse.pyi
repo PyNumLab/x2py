@@ -13,7 +13,7 @@ same_name_s: Int8[8]
 
 @native_call([Addr(Arg(0))])
 def do_work_i(
-    same_name: Annotated[Int, Intent('inout')]
+    same_name: Int
 ) -> None: ...
 
 def do_work_r(
@@ -36,5 +36,5 @@ def convert_to_string(
 
 @native_call([Addr(Arg(0))])
 def convert_to_logical(
-    same_name: Const(Int8)
+    same_name: Int8
 ) -> Bool: ...

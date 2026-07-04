@@ -77,7 +77,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -108,12 +107,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -186,7 +183,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -217,12 +213,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -295,7 +289,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -326,12 +319,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -404,7 +395,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -435,12 +425,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -513,7 +501,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -544,12 +531,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -624,7 +609,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -655,12 +639,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -733,7 +715,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -764,12 +745,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -842,7 +821,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -873,12 +851,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -951,7 +927,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -982,12 +957,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             }
           ],
@@ -1002,8 +975,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x2",
@@ -1012,8 +984,7 @@
               "python_position": 1,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x3",
@@ -1022,8 +993,7 @@
               "python_position": 2,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x4",
@@ -1032,8 +1002,7 @@
               "python_position": 3,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x5",
@@ -1042,8 +1011,7 @@
               "python_position": 4,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x6",
@@ -1052,8 +1020,7 @@
               "python_position": 5,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x7",
@@ -1062,8 +1029,7 @@
               "python_position": 6,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x8",
@@ -1072,8 +1038,7 @@
               "python_position": 7,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "x9",
@@ -1082,8 +1047,7 @@
               "python_position": 8,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             }
           ],
           "metadata": {},
@@ -1139,7 +1103,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1167,7 +1130,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1211,7 +1173,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1239,7 +1200,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1283,7 +1243,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1311,7 +1270,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1355,7 +1313,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1383,7 +1340,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1427,7 +1383,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1455,7 +1410,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1499,7 +1453,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1527,7 +1480,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1571,7 +1523,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1599,7 +1550,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1643,7 +1593,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1671,7 +1620,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true
@@ -1715,7 +1663,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false,
                 "constant": true
@@ -1743,7 +1690,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false,
               "constant": true

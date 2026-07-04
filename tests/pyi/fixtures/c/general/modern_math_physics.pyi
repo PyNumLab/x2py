@@ -33,8 +33,8 @@ def scale_vector(
 ) -> None: ...
 
 def dot3(
-    a: Const(Float64[3]),
-    b: Const(Float64[3])
+    a: Float64[3],
+    b: Float64[3]
 ) -> Float64: ...
 
 def fill_identity3_modern(

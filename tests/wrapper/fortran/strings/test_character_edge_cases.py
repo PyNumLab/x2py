@@ -58,11 +58,14 @@ def test_fortran_character_edge_cases_follow_copy_in_copy_out_policy(
         pyi_parity_build_mode,
     )
 
-    original = "abc"
+    original = "abc     "
     assert module.fixed_inout(original) == "Zbc    !"
-    assert original == "abc"
+    assert original == "abc     "
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.fixed_inout("abc")
     assert module.fixed_inout("abcdefgh") == "Zbcdefg!"
-    assert module.fixed_inout("abcdefghi") == "Zbcdefg!"
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.fixed_inout("abcdefghi")
     assert module.assumed_inout("abc") == "Qbc"
     assert module.assumed_inout("") == ""
     assert module.optional_inout() is None

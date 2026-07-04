@@ -571,7 +571,7 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     pyi_contract_tree_index = quick_start.index("contracts/\n  __init__.pyi", pyi_generation_command_index)
     pyi_contract_body_index = quick_start.index(
         "@external\n@native_call([Addr(Arg(0)), Addr(Arg(1))])\ndef scale(\n"
-        "    value: Const(Float64),\n    factor: Const(Float64)\n) -> Float64: ...",
+        "    value: Float64,\n    factor: Float64\n) -> Float64: ...",
         pyi_contract_tree_index,
     )
     pyi_build_command_index = quick_start.index(
@@ -692,7 +692,7 @@ def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_cen
     command_index = page.index("python3 -m x2py scale.f90 --pyi")
     contract_index = page.index(
         "@external\n@native_call([Addr(Arg(0)), Addr(Arg(1))])\ndef scale(\n"
-        "    value: Const(Float64),\n    factor: Const(Float64)\n) -> Float64: ..."
+        "    value: Float64,\n    factor: Float64\n) -> Float64: ..."
     )
 
     assert source_index < build_index < command_index < contract_index

@@ -7,6 +7,7 @@ import pytest
 
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 from x2py.semantics.models import (
+    CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
     PYI_BIND_TARGET_METADATA,
     PYI_PROJECTED_OUTPUT_METADATA,
@@ -109,12 +110,12 @@ public_value: Int32
 bounded: Final[Annotated[Int32, Bounded(1, 8)]]
 callback: typing.Callable
 pointer: Addr(Float64)
-read_only_pointer: Addr(Const(Float64))
+raw_pointer: Addr(Float64)
 """,
         module_name="dispatch",
     )
 
-    public_value, bounded, callback, pointer, read_only_pointer = module.variables
+    public_value, bounded, callback, pointer, raw_pointer = module.variables
     assert isinstance(public_value, SemanticVariable)
     assert public_value.visibility == "public"
     assert bounded.semantic_type.constraints == [
@@ -124,7 +125,7 @@ read_only_pointer: Addr(Const(Float64))
     assert callback.semantic_type.name == "Callable"
     assert pointer.semantic_type.storage.kind == "address"
     assert pointer.semantic_type.storage.metadata["pyi_address_role"] == "raw"
-    assert read_only_pointer.semantic_type.storage.mutable is False
+    assert raw_pointer.semantic_type.storage.read_only is False
 
 
 def test_parse_pyi_text_preserves_immutable_python_value_metadata():
@@ -191,7 +192,6 @@ def touch(
     assert [c.name for c in module.variables[2].semantic_type.constraints] == ["Constant"]
     assert module.variables[3].name == "literal_answer"
     assert module.variables[3].default_value == "42"
-    assert module.functions[0].arguments[0].intent == "inout"
 
 
 def test_parse_pyi_text_accepts_mutable_module_literal_defaults():
@@ -271,11 +271,103 @@ def integrate(
     assert callback_type.metadata["return"].name == "Float64"
 
 
+def test_parse_pyi_text_preserves_callback_argument_abi_wrappers():
+    module = parse_pyi_text(
+        """
+class particle:
+    mass: Float64
+
+def register(
+    callback: Callable[
+        [
+            Int32,
+            Float64[:],
+            Float64[()],
+            PassByRef(Float64),
+            In(Int32),
+            Out(Float64[:]),
+            InOut(Float64[()]),
+        ],
+        None,
+    ]
+) -> None: ...
+""",
+        module_name="callbacks",
+    )
+
+    callback_type = module.functions[0].arguments[0].semantic_type
+    callback_arguments = callback_type.metadata["callback_arguments"]
+
+    assert [arg.metadata[CALLBACK_DECLARATION_ACCESS_METADATA] for arg in callback_arguments] == [
+        "unspecified",
+        "unspecified",
+        "unspecified",
+        "unspecified",
+        "read",
+        "write",
+        "readwrite",
+    ]
+    assert [arg.origin.metadata["value"] for arg in callback_arguments] == [
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+    ]
+    assert callback_arguments[0].semantic_type.storage is None
+    assert callback_arguments[1].semantic_type.storage.kind == "array"
+    assert callback_arguments[2].semantic_type.storage.kind == "array"
+    assert callback_arguments[3].semantic_type.storage.kind == "reference"
+    assert callback_arguments[4].semantic_type.storage.read_only is True
+    assert callback_arguments[5].semantic_type.storage.mutable is True
+    assert callback_arguments[6].semantic_type.storage.mutable is True
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "Callable[[Out(String[8])], None]",
+        "Callable[[InOut(String[8])], None]",
+        "Callable[[PassByRef(String[8])], None]",
+    ],
+)
+def test_callback_writable_plain_string_requires_scalar_storage(annotation: str):
+    module = parse_pyi_text(
+        f"def register(callback: {annotation}) -> None: ...",
+        module_name="callbacks",
+    )
+
+    with pytest.raises(ValueError, match="Writable callback strings require mutable scalar character storage"):
+        complete_semantic_policies(module)
+
+
+@pytest.mark.parametrize(
+    "annotation",
+    [
+        "Callable[[In(String[8])], None]",
+        "Callable[[Out(String[8][()])], None]",
+        "Callable[[InOut(String[8][()])], None]",
+    ],
+)
+def test_callback_string_storage_contracts_complete(annotation: str):
+    module = parse_pyi_text(
+        f"def register(callback: {annotation}) -> None: ...",
+        module_name="callbacks",
+    )
+
+    complete_semantic_policies(module)
+    callback_type = module.functions[0].arguments[0].semantic_type
+    callback_argument = callback_type.metadata["callback_arguments"][0]
+    assert callback_argument.semantic_type.name == "String"
+
+
 def test_parse_pyi_text_infers_callback_dimension_argument_names():
     module = parse_pyi_text(
         """
 def apply_transform(
-    callback: Callable[[Addr(Const(Int32)), Const(Float64[count])], Float64[count]]
+    callback: Callable[[PassByRef(Int32), Float64[count]], Float64[count]]
 ) -> None: ...
 """,
         module_name="callbacks",
@@ -531,7 +623,6 @@ class particle:
         "result_position": None,
         "value_kind": None,
         "value": None,
-        "intent": "inout",
     }
     emitted = emit_module(module)
     assert "    @private\n    def reset(self) -> Int32: ..." in emitted
@@ -568,8 +659,8 @@ class state:
 @native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
 def init_state(
     self: state,
-    seed: Const(Int32),
-    scale: Const(Float64) = ...
+    seed: Int32,
+    scale: Float64 = ...
 ) -> None: ...
 
 class state:
@@ -583,8 +674,8 @@ class state:
     @overload("init_state")
     def __init__(
         self,
-        seed: Const(Int32),
-        scale: Const(Float64) = ...
+        seed: Int32,
+        scale: Float64 = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -676,15 +767,15 @@ class state:
     @private
     def init_state(
         self,
-        seed: Addr(Const(Int32)),
-        scale: Addr(Const(Float64)) = ...
+        seed: Addr(Int32),
+        scale: Addr(Float64) = ...
     ) -> None: ...
 
     @bind("init_state")
     def __init__(
         self,
-        seed: Addr(Const(Int32)),
-        scale: Addr(Const(Float64)) = ...
+        seed: Addr(Int32),
+        scale: Addr(Float64) = ...
     ) -> None: ...
 
     id: Int32 = 7
@@ -961,7 +1052,6 @@ def f() -> typing.Tuple[Float64, typing.Returns["y", Float64]]: ...
     assert module.functions[0].return_type is not None
     assert module.functions[0].return_type.name == "Float64"
     assert module.functions[0].arguments[0].name == "y"
-    assert module.functions[0].arguments[0].intent == "out"
 
 
 def test_parse_pyi_text_accepts_ast_only_projection_value_refs():
@@ -990,14 +1080,13 @@ def make_value(
     func = module.functions[0]
     assert func.return_type is not None
     assert func.return_type.name == "Float64"
-    assert func.arguments[0].intent == "in"
 
 
 def test_native_call_address_argument_projection_records_native_address_storage():
     module = parse_pyi_text(
         """
 @native_call([Addr(Arg(0))])
-def add_one(value: Const(Int32)) -> Int32: ...
+def add_one(value: Int32) -> Int32: ...
 """,
         module_name="scalar_refs",
     )
@@ -1006,17 +1095,18 @@ def add_one(value: Const(Int32)) -> Int32: ...
     value = function.arguments[0]
 
     assert value.semantic_type.name == "Int32"
-    assert value.semantic_type.storage.kind == "value"
+    assert value.semantic_type.storage is None
     assert function.projection[0].value_kind == "addr"
     assert function.projection[0].value == {"kind": "arg", "position": 0}
 
     complete_semantic_policies(module)
 
     assert value.semantic_type.storage.kind == "address"
-    assert value.semantic_type.storage.read_only is True
+    assert value.semantic_type.storage.read_only is False
+    assert value.semantic_type.storage.mutable is True
     assert value.semantic_type.storage.metadata["pyi_address_role"] == "projection"
     assert emit_module(module).strip() == (
-        "@native_call([Addr(Arg(0))])\ndef add_one(\n    value: Const(Int32)\n) -> Int32: ..."
+        "@native_call([Addr(Arg(0))])\ndef add_one(\n    value: Int32\n) -> Int32: ..."
     )
 
 
@@ -1024,7 +1114,7 @@ def test_rank_zero_scalar_storage_round_trips_as_empty_tuple_array():
     module = parse_pyi_text(
         """
 def update_storage(value: Float64[()]) -> None: ...
-def inspect_storage(value: Const(Int32[()])) -> None: ...
+def inspect_storage(value: Int32[()]) -> None: ...
 """,
         module_name="scalar_storage",
     )
@@ -1033,24 +1123,45 @@ def inspect_storage(value: Const(Int32[()])) -> None: ...
     update_type = update.arguments[0].semantic_type
     inspect_type = inspect.arguments[0].semantic_type
 
-    assert update.arguments[0].intent == "inout"
     assert update_type.rank == 0
     assert update_type.storage.kind == "array"
     assert update_type.storage.array.category == "scalar_storage"
-    assert inspect.arguments[0].intent == "in"
-    assert inspect_type.storage.read_only is True
+    assert inspect_type.storage.read_only is False
+    assert inspect_type.storage.mutable is True
 
     emitted = emit_module(module)
     assert "value: Float64[()]" in emitted
-    assert "value: Const(Int32[()])" in emitted
+    assert "value: Int32[()]" in emitted
     assert parse_pyi_text(emitted, module_name="scalar_storage") == module
+
+
+def test_rank_zero_string_storage_round_trips_as_empty_tuple_array():
+    module = parse_pyi_text(
+        """
+def rewrite_label(label: String[8][()]) -> None: ...
+""",
+        module_name="string_storage",
+    )
+
+    label_type = module.functions[0].arguments[0].semantic_type
+
+    assert label_type.name == "String"
+    assert label_type.rank == 0
+    assert label_type.shape == []
+    assert label_type.metadata["fortran_character_length"] == "8"
+    assert label_type.storage.kind == "array"
+    assert label_type.storage.array.category == "scalar_storage"
+
+    emitted = emit_module(module)
+    assert "label: String[8][()]" in emitted
+    assert parse_pyi_text(emitted, module_name="string_storage") == module
 
 
 def test_public_raw_address_contract_round_trips():
     module = parse_pyi_text(
         """
 def update_raw(value: Addr(Float64)) -> None: ...
-def inspect_raw(value: Addr(Const(Float64))) -> None: ...
+def inspect_raw(value: Addr(Float64)) -> None: ...
 def raw_values(n: Int32, values: Addr(Float64[n])) -> None: ...
 def raw_label(label: Addr(String[8])) -> None: ...
 """,
@@ -1063,11 +1174,10 @@ def raw_label(label: Addr(String[8])) -> None: ...
     values_type = raw_values.arguments[1].semantic_type
     label_type = raw_label.arguments[0].semantic_type
 
-    assert update.arguments[0].intent == "inout"
     assert update_storage.kind == "address"
     assert update_storage.metadata["pyi_address_role"] == "raw"
-    assert inspect.arguments[0].intent == "in"
-    assert inspect_storage.read_only is True
+    assert inspect_storage.read_only is False
+    assert inspect_storage.mutable is True
     assert values_type.rank == 1
     assert values_type.shape == ["n"]
     assert values_type.storage.kind == "address"
@@ -1079,7 +1189,7 @@ def raw_label(label: Addr(String[8])) -> None: ...
 
     emitted = emit_module(module)
     assert "value: Addr(Float64)" in emitted
-    assert "value: Addr(Const(Float64))" in emitted
+    assert "value: Addr(Float64)" in emitted
     assert "values: Addr(Float64[n])" in emitted
     assert "label: Addr(String[8])" in emitted
     assert parse_pyi_text(emitted, module_name="raw_address") == module
@@ -1114,10 +1224,10 @@ def raw_access(
     scalar: Addr(Float64),
     label: Addr(String[8]),
     values: Addr(Float64[n])
-) -> Addr(Const(Int32)): ...
+) -> Addr(Int32): ...
 
 def raw_access_with_storage_extent(
-    n: Const(Int32[()]),
+    n: Int32[()],
     values: Addr(Float64[n])
 ) -> None: ...
 """,
@@ -1137,7 +1247,6 @@ def raw_access_with_storage_extent(
         ("Addr(Float64[:])", "raw arrays require a fully resolved rank and shape"),
         ("Addr(Float64[missing])", "raw arrays require a fully resolved rank and shape"),
         ("Addr[2](Float64)", r"callable Addr\(T\) supports depth one only"),
-        ("Callable[[Addr(particle)], None]", r"Addr\(WrappedType\) is not allowed"),
     ],
 )
 def test_raw_address_policy_rejects_incomplete_or_wrapped_pointees(annotation: str, message: str):
@@ -1153,6 +1262,22 @@ def invalid(n: Int32, value: {annotation}) -> None: ...
 
     with pytest.raises(ValueError, match=message):
         complete_semantic_policies(module)
+
+
+@pytest.mark.parametrize(
+    ("annotation", "message"),
+    [
+        ("Callable[[In(Addr(Int32))], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
+        ("Callable[[Out(Addr(Float64))], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
+        ("Callable[[InOut(Addr(Float64))], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
+        ("Callable[[Addr(Float64)], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
+        ("Callable[[Addr(Float64[n])], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
+        ("Callable[[Addr[2](Float64)], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
+    ],
+)
+def test_parse_pyi_text_rejects_invalid_callback_reference_wrappers(annotation: str, message: str):
+    with pytest.raises(ValueError, match=message):
+        parse_pyi_text(f"def register(callback: {annotation}) -> None: ...", module_name="callbacks")
 
 
 def test_identity_returns_reconstruct_native_projection_without_decorator():
@@ -1274,7 +1399,6 @@ def add(
                     SemanticArgument(
                         "c",
                         SemanticType("Float64", dtype="Float64"),
-                        intent="out",
                     ),
                 ],
                 projection=[
@@ -1282,7 +1406,6 @@ def add(
                         native_name="c",
                         native_position=2,
                         result_position=0,
-                        intent="out",
                     )
                 ],
             )
@@ -1290,7 +1413,6 @@ def add(
     )
 
     assert from_pyi != from_ir
-    assert from_pyi.functions[0].arguments[2].intent == "out"
     assert from_pyi.functions[0].projection[2].native_position == 2
 
 
@@ -1308,13 +1430,12 @@ def add(
     func = from_pyi.functions[0]
 
     assert [arg.name for arg in func.arguments] == ["a", "b", "c"]
-    assert func.arguments[2].intent == "out"
     assert func.projection[2].native_name == "c"
     assert func.projection[2].python_name == "c"
     assert func.projection[2].result_position == 0
 
 
-def test_projected_inout_without_native_call_keeps_argument_intent():
+def test_projected_replacement_without_native_call_keeps_writable_argument_storage():
     from_pyi = parse_pyi_text(
         """
 def fixed_inout(
@@ -1325,7 +1446,6 @@ def fixed_inout(
     )
     func = from_pyi.functions[0]
 
-    assert func.arguments[0].intent == "inout"
     assert func.arguments[0].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
     assert len(func.projection) == 1
     assert func.projection[0].native_position == 0
@@ -1379,30 +1499,12 @@ def invalid() -> {return_type}: ...
         complete_semantic_policies(module)
 
 
-def test_native_call_projected_output_keeps_explicit_output_intent():
+def test_native_call_projected_output_keeps_visible_storage_writable():
     from_pyi = parse_pyi_text(
         """
 @native_call([Arg(0), Arg(1)])
 def fill(
-    n: Addr(Const(Int32)),
-    values: Annotated[Float64[n], Intent("out")]
-) -> Returns["values", Float64[n]]: ...
-""",
-        module_name="edited",
-    )
-    func = from_pyi.functions[0]
-
-    assert func.arguments[1].intent == "out"
-    assert func.projection[1].intent == "out"
-    assert func.projection[1].result_position == 0
-
-
-def test_native_call_compact_array_output_marks_projection_without_output_intent():
-    from_pyi = parse_pyi_text(
-        """
-@native_call([Arg(0), Arg(1)])
-def fill(
-    n: Addr(Const(Int32)),
+    n: Addr(Int32),
     values: Float64[n]
 ) -> Returns["values", Float64[n]]: ...
 """,
@@ -1410,16 +1512,29 @@ def fill(
     )
     func = from_pyi.functions[0]
 
-    assert func.arguments[1].intent == "inout"
+    assert func.projection[1].result_position == 0
+
+
+def test_native_call_compact_array_output_marks_projection_without_direction_label():
+    from_pyi = parse_pyi_text(
+        """
+@native_call([Arg(0), Arg(1)])
+def fill(
+    n: Addr(Int32),
+    values: Float64[n]
+) -> Returns["values", Float64[n]]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
     assert func.arguments[1].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
-    assert func.projection[1].intent == "inout"
     assert func.projection[1].result_position == 0
 
     codegen_module = semantic_ir_to_codegen_ast(
         from_pyi,
         Scope(name=from_pyi.name, scope_type="module"),
     )
-    assert codegen_module.funcs[0].arguments[1].var.intent == "inout"
     assert codegen_module.funcs[0].arguments[1].var.projected_output is True
 
 
@@ -1427,8 +1542,8 @@ def test_native_order_outputs_do_not_get_projected_without_native_call():
     from_pyi = parse_pyi_text(
         """
 def solve(
-    x: Addr(Const(Float64)),
-    status: Annotated[Addr(Int32), Intent("out")]
+    x: Addr(Float64),
+    status: Addr(Int32)
 ) -> tuple[Float64, Returns["message", String]]: ...
 """,
         module_name="edited",
@@ -1440,7 +1555,7 @@ def solve(
     assert func.arguments[2].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
 
 
-def test_compact_assignment_overload_projects_visible_destination_without_output_intent():
+def test_compact_assignment_overload_projects_visible_destination_without_direction_label():
     from_pyi = parse_pyi_text(
         """
 class vector:
@@ -1449,23 +1564,21 @@ class vector:
     @overload("assign_vector_real")
     def assign(
         self,
-        right: Const(Float64)
+        right: Float64
     ) -> vector: ...
 
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_real(
     left: vector,
-    right: Const(Float64)
+    right: Float64
 ) -> Returns["left", vector]: ...
 """,
         module_name="edited",
     )
     func = from_pyi.functions[0]
 
-    assert func.arguments[0].intent == "inout"
     assert func.arguments[0].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
-    assert func.projection[0].intent == "inout"
     assert func.projection[0].result_position == 0
     assert from_pyi.classes[0].overload_sets[0].procedures[0].metadata["overload_kind"] == "assignment"
 
@@ -1474,7 +1587,6 @@ def assign_vector_real(
         Scope(name=from_pyi.name, scope_type="module"),
     )
     assign = next(item for item in codegen_module.classes[0].overload_sets if item.name == "assign")
-    assert assign.functions[0].arguments[0].var.intent == "inout"
     assert assign.functions[0].arguments[0].var.projected_output is True
 
 
@@ -1484,26 +1596,26 @@ def test_type_bound_method_declarations_restore_root_target_metadata():
 class vector:
     def scale(
         self,
-        factor: Addr(Const(Float64))
+        factor: Addr(Float64)
     ) -> None: ...
 
     @bind("shift_vector")
     @native_call([Arg(0), Pass(), Arg(1)])
     def shift(
         self,
-        dx: Addr(Const(Float64)),
-        dy: Addr(Const(Float64))
+        dx: Addr(Float64),
+        dy: Addr(Float64)
     ) -> None: ...
 
 def scale(
     self: Annotated[vector, Polymorphic],
-    factor: Addr(Const(Float64))
+    factor: Addr(Float64)
 ) -> None: ...
 
 def shift_vector(
-    dx: Addr(Const(Float64)),
+    dx: Addr(Float64),
     owner: Annotated[vector, Polymorphic],
-    dy: Addr(Const(Float64))
+    dy: Addr(Float64)
 ) -> None: ...
 """,
         module_name="edited",
@@ -1523,12 +1635,12 @@ def test_pyi_codegen_imports_public_generic_not_private_specific_targets():
         """
 @private
 def convert_integer(
-    value: Addr(Const(Int32))
+    value: Addr(Int32)
 ) -> Int32: ...
 
 @overload("convert_integer")
 def convert(
-    value: Addr(Const(Int32))
+    value: Addr(Int32)
 ) -> Int32: ...
 """,
         module_name="foverloads_f90",
@@ -1567,7 +1679,7 @@ def test_native_call_return_entry_preserves_optional_pointer_return():
         """
 @native_call([Arg(0), Return("status", 0)])
 def maybe_status(
-    base: Addr(Const(Int32))
+    base: Addr(Int32)
 ) -> Addr(Int32) | None: ...
 """,
         module_name="edited",
@@ -1588,7 +1700,7 @@ def test_native_call_later_return_entry_preserves_native_position_and_name():
         """
 @native_call([Arg(0), Return("status", 1), Arg(1)])
 def fill(
-    values: Annotated[Float64[n], Intent("out")],
+    values: Float64[n],
     n: Addr(Int32)
 ) -> tuple[Returns["values", Float64[n]], Addr(Int32)]: ...
 """,
@@ -1597,7 +1709,6 @@ def fill(
     func = from_pyi.functions[0]
 
     assert [arg.name for arg in func.arguments] == ["values", "status", "n"]
-    assert [arg.intent for arg in func.arguments] == ["out", "out", "inout"]
     assert func.projection[1].python_name == "status"
     assert func.projection[1].native_name == "status"
     assert func.projection[1].result_position == 1
@@ -1608,7 +1719,10 @@ def test_native_call_accepts_hidden_native_values():
         """
 @native_call([
     Arg(0),
-    Const(1),
+    Int32(1),
+    Float64(0.5),
+    Bool(False),
+    String[1]("N"),
     Len(Arg(0)),
     Arg(0).shape[0],
     IsPresent(Arg(1)),
@@ -1633,7 +1747,6 @@ def wrapper(
             "result_position": None,
             "value_kind": "",
             "value": None,
-            "intent": "inout",
         },
         {
             "python_name": None,
@@ -1641,9 +1754,8 @@ def wrapper(
             "native_position": 1,
             "python_position": None,
             "result_position": None,
-            "value_kind": "const",
-            "value": 1,
-            "intent": "in",
+            "value_kind": "literal",
+            "value": {"type": "Int32", "value": 1},
         },
         {
             "python_name": None,
@@ -1651,9 +1763,8 @@ def wrapper(
             "native_position": 2,
             "python_position": None,
             "result_position": None,
-            "value_kind": "len",
-            "value": {"kind": "arg", "position": 0},
-            "intent": "in",
+            "value_kind": "literal",
+            "value": {"type": "Float64", "value": 0.5},
         },
         {
             "python_name": None,
@@ -1661,9 +1772,8 @@ def wrapper(
             "native_position": 3,
             "python_position": None,
             "result_position": None,
-            "value_kind": "shape",
-            "value": {"value": {"kind": "arg", "position": 0}, "dim": 0},
-            "intent": "in",
+            "value_kind": "literal",
+            "value": {"type": "Bool", "value": False},
         },
         {
             "python_name": None,
@@ -1671,9 +1781,8 @@ def wrapper(
             "native_position": 4,
             "python_position": None,
             "result_position": None,
-            "value_kind": "is_present",
-            "value": {"kind": "arg", "position": 1},
-            "intent": "in",
+            "value_kind": "literal",
+            "value": {"type": "String[1]", "value": "N"},
         },
         {
             "python_name": None,
@@ -1681,21 +1790,48 @@ def wrapper(
             "native_position": 5,
             "python_position": None,
             "result_position": None,
+            "value_kind": "len",
+            "value": {"kind": "arg", "position": 0},
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 6,
+            "python_position": None,
+            "result_position": None,
+            "value_kind": "shape",
+            "value": {"value": {"kind": "arg", "position": 0}, "dim": 0},
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 7,
+            "python_position": None,
+            "result_position": None,
+            "value_kind": "is_present",
+            "value": {"kind": "arg", "position": 1},
+        },
+        {
+            "python_name": None,
+            "native_name": "",
+            "native_position": 8,
+            "python_position": None,
+            "result_position": None,
             "value_kind": "work",
             "value": "tmp",
-            "intent": "in",
         },
     ]
-    assert projection[1].value_kind == "const"
-    assert projection[1].value == 1
-    assert projection[2].value_kind == "len"
-    assert projection[2].value == {"kind": "arg", "position": 0}
-    assert projection[3].value_kind == "shape"
-    assert projection[3].value == {"value": {"kind": "arg", "position": 0}, "dim": 0}
-    assert projection[4].value_kind == "is_present"
-    assert projection[4].value == {"kind": "arg", "position": 1}
-    assert projection[5].value_kind == "work"
-    assert projection[5].value == "tmp"
+    assert projection[1].value_kind == "literal"
+    assert projection[1].value == {"type": "Int32", "value": 1}
+    assert projection[4].value == {"type": "String[1]", "value": "N"}
+    assert projection[5].value_kind == "len"
+    assert projection[5].value == {"kind": "arg", "position": 0}
+    assert projection[6].value_kind == "shape"
+    assert projection[6].value == {"value": {"kind": "arg", "position": 0}, "dim": 0}
+    assert projection[7].value_kind == "is_present"
+    assert projection[7].value == {"kind": "arg", "position": 1}
+    assert projection[8].value_kind == "work"
+    assert projection[8].value == "tmp"
     assert module.functions[0].arguments[1].optional
 
 
@@ -1712,7 +1848,11 @@ def test_emit_native_call_hidden_native_values():
                 ],
                 projection=[
                     ProjectionMapping(native_position=0, python_position=0),
-                    ProjectionMapping(native_position=1, value_kind="const", value=1),
+                    ProjectionMapping(
+                        native_position=1,
+                        value_kind="literal",
+                        value={"type": "Int32", "value": 1},
+                    ),
                     ProjectionMapping(
                         native_position=2,
                         value_kind="len",
@@ -1736,7 +1876,7 @@ def test_emit_native_call_hidden_native_values():
 
     pyi = emit_module(module)
 
-    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Arg(0).shape[0], IsPresent(Arg(1)), Work('tmp')])" in pyi
+    assert "@native_call([Arg(0), Int32(1), Len(Arg(0)), Arg(0).shape[0], IsPresent(Arg(1)), Work('tmp')])" in pyi
 
 
 def test_plain_return_without_native_call_does_not_preserve_native_output_position():
@@ -1761,7 +1901,6 @@ def add(
                     SemanticArgument(
                         "c",
                         SemanticType("Float64", dtype="Float64"),
-                        intent="out",
                     ),
                 ],
                 projection=[
@@ -1769,7 +1908,6 @@ def add(
                         native_name="c",
                         native_position=2,
                         result_position=0,
-                        intent="out",
                     )
                 ],
             )
@@ -1791,7 +1929,6 @@ def split(
     func = from_pyi.functions[0]
     assert func.return_type.name == "Float64"
     assert [arg.name for arg in func.arguments] == ["x", "__return_1"]
-    assert func.arguments[1].intent == "out"
 
 
 def test_return_projection_preserves_multiple_plain_output_components():
@@ -1805,7 +1942,6 @@ def test_return_projection_preserves_multiple_plain_output_components():
             SemanticArgument(
                 "__return_1",
                 SemanticType("Int32", dtype="Int32"),
-                intent="out",
                 metadata={"return_position": 1},
             )
         ),
@@ -1813,7 +1949,6 @@ def test_return_projection_preserves_multiple_plain_output_components():
             SemanticArgument(
                 "__return_2",
                 SemanticType("Logical", dtype="Logical"),
-                intent="out",
                 metadata={"return_position": 2},
             )
         ),
@@ -1890,14 +2025,20 @@ class vector:
         ("@native_call([])\nclass C:\n    pass\n", "Unsupported class decorator: 'native_call([])'"),
         ("@native_call(Arg(0))\ndef f(x: Int32) -> None: ...\n", "native_call expects a list of projection entries"),
         ("@native_call([Arg(0)], foo=1)\ndef f(x: Int32) -> None: ...\n", "native_call expects a single list argument"),
-        ("@native_call([1])\ndef f(x: Int32) -> None: ...\n", "native_call expects projection entry calls"),
+        (
+            "@native_call([1])\ndef f(x: Int32) -> None: ...\n",
+            'native_call hidden literals require typed calls such as Int32(1) or String[1]("N")',
+        ),
         ("@native_call([Arg(1)])\ndef f(x: Int32) -> None: ...\n", "native_call argument position is out of range: 1"),
         ("@native_call([Arg()])\ndef f(x: Int32) -> None: ...\n", "Arg expects one positional index"),
         (
             "@native_call([Return()])\ndef f(x: Int32) -> None: ...\n",
             "Return expects one positional index or a name and index",
         ),
-        ("@native_call([Const()])\ndef f(x: Int32) -> None: ...\n", "Const expects one value"),
+        (
+            '@native_call([String("N")])\ndef f(x: Int32) -> None: ...\n',
+            'native_call string literals require String[length](value), for example String[1]("N")',
+        ),
         ("@native_call([Len()])\ndef f(x: Int32) -> None: ...\n", "Len expects one value reference"),
         ("@native_call([IsPresent()])\ndef f(x: Int32) -> None: ...\n", "IsPresent expects one value reference"),
         ("@native_call([Work()])\ndef f(x: Int32) -> None: ...\n", "Work expects one workspace name"),
@@ -1943,7 +2084,6 @@ def wrapper(
     assert func.name == "wrapper"
     assert func.projection[0].python_position == 0
     assert func.projection[1].result_position == 0
-    assert func.projection[1].intent == "out"
 
 
 def test_fortran_to_pyi_and_back_preserves_mixed_input_output_projection():
@@ -1967,7 +2107,6 @@ end module solver_mod
     func = reparsed.functions[0]
     assert func.name == "solve"
     assert [arg.name for arg in func.arguments] == ["a", "x", "b"]
-    assert func.arguments[1].intent == "out"
 
 
 def test_parse_pyi_text_accepts_c_and_fortran_order_constraints():
@@ -2044,7 +2183,7 @@ value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCatego
 nested: Float64[:, :][rank, kind]
 name: Annotated[String[16], FortranAllocatable]
 
-def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
+def fill(x: Float64[:]) -> None: ...
 """,
         module_name="metadata",
     )
@@ -2053,7 +2192,6 @@ def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
     value = value_type.storage.array
     nested = module.variables[1].semantic_type
     name = module.variables[2].semantic_type
-    output = module.functions[0].arguments[0]
     assert value.order == "ORDER_F"
     assert value.allocatable is True
     assert value.pointer is True
@@ -2067,7 +2205,6 @@ def fill(x: Annotated[Float64[:], Intent("out")]) -> None: ...
     assert nested.storage.array.metadata["rank_selector"] == "rank, kind"
     assert name.metadata["fortran_character_length"] == "16"
     assert name.metadata["fortran_allocatable"] is True
-    assert output.intent == "out"
 
 
 def test_parse_pyi_text_handles_callable_and_pointer_storage_variants():
@@ -2078,8 +2215,8 @@ import typing
 plain_callback: Callable
 qualified_callback: typing.Callable
 opaque_callback: Callable[..., Float64]
-constant: Const(Int32)
-deep: Addr[3](Const(Float64))
+constant: Int32
+deep: Addr[3](Float64)
 rank_any: Float64[...]
 strided: Float64[0:n:]
 computed: Float64[size(xl)]
@@ -2099,12 +2236,11 @@ nested_answer: Final[Final[Int32]]
     assert callback.metadata["arguments"] is None
     assert callback.dtype == "Callable"
     assert callback.metadata["return"].name == "Float64"
-    assert constant.storage.kind == "value"
-    assert constant.storage.read_only is True
+    assert constant.storage is None
     assert deep.storage.kind == "pointer"
     assert deep.storage.pointer_depth == 3
-    assert deep.storage.read_only is True
-    assert deep.storage.mutable is False
+    assert deep.storage.read_only is False
+    assert deep.storage.mutable is True
     assert rank_any.storage.array.rank == 1
     assert rank_any.storage.array.category == "assumed_rank"
     assert rank_any.storage.array.source_shape == [".."]
@@ -2122,14 +2258,13 @@ nested_answer: Final[Final[Int32]]
 def test_parse_pyi_text_preserves_module_fields_and_private_callable_arguments():
     module = parse_pyi_text(
         """
-output: Annotated[Float64[:], Intent("out")] = ...
+output: Float64[:] = ...
 
 def consume(value: private[Int32]) -> None: ...
 """,
         module_name="fields",
     )
 
-    assert module.variables[0].intent == "out"
     assert module.variables[0].optional is True
     assert module.functions[0].arguments[0].visibility == "private"
 
@@ -2159,15 +2294,10 @@ def helper(value: Int32) -> None: ...
 @pytest.mark.parametrize(
     "source, message",
     [
-        ("value: Const(Int32, Float64)\n", "Const type expects one argument: 'Const(Int32, Float64)'"),
         ("value: Addr(Int32, Float64)\n", "Addr type expects one argument: 'Addr(Int32, Float64)'"),
         ("value: Addr[1](Int32)\n", "Addr[1](...) is invalid; use Addr(...)"),
         ("value: Callable[Int32]\n", "Callable expects argument types and a return type: 'Callable[Int32]'"),
         ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list: 'Callable[Int32, Float64]'"),
-        (
-            "value: Annotated[Float64[:], Intent('out', 'extra')]\n",
-            "Intent metadata expects one argument: \"Intent('out', 'extra')\"",
-        ),
         ("value: Annotated[Float64[:], SourceShape('n')]\n", "SourceShape metadata is not supported; use SourceDims"),
         (
             "value: Int32[Constant]\n",
@@ -2231,8 +2361,8 @@ def test_pyi_parser_internal_projection_helpers_preserve_native_names():
         ast.parse("tuple[Float64, Returns['extra', Int32, Optional], Returns['other', Float64]]", mode="eval").body
     )
     pointer = parser.semantic_type(ast.parse("Addr(Float64)", mode="eval").body)
-    returned = SemanticArgument("result", SemanticType("Float64"), intent="out", metadata={"return_position": 1})
-    mapping = ProjectionMapping(native_name="native_result", result_position=1, intent="out")
+    returned = SemanticArgument("result", SemanticType("Float64"), metadata={"return_position": 1})
+    mapping = ProjectionMapping(native_name="native_result", result_position=1)
     _, values = parser._apply_native_call_returns(None, [returned], [mapping])
     native_arg = SemanticArgument("python_name", SemanticType("Int32"))
     arg_mapping = ProjectionMapping(native_name="native_name", python_position=0)
@@ -2240,7 +2370,6 @@ def test_pyi_parser_internal_projection_helpers_preserve_native_names():
 
     assert return_type.name == "Float64"
     assert returned_values[0].name == "extra"
-    assert returned_values[0].intent == "out"
     assert returned_values[0].optional is True
     assert returned_values[0].metadata == {"return_position": 1}
     assert returned_values[0].semantic_type.ownership.mutable is True
@@ -2343,11 +2472,11 @@ end module solver_mod
     )
     generated = emit_module(fortran_file_to_semantic_modules(parsed)[0])
     constrained = generated.replace(
-        "Const(Float64)",
-        "Annotated[Const(Float64), Finite]",
+        "Float64",
+        "Annotated[Float64, Finite]",
         1,
     )
-    changed_abi = generated.replace("Const(Float64)", "Const(Int32)", 1)
+    changed_abi = generated.replace("Float64", "Int32", 1)
 
     assert native_contract_issues(parse_pyi_text(constrained, module_name="solver_mod")) == []
     assert native_contract_issues(parse_pyi_text(changed_abi, module_name="solver_mod")) == []

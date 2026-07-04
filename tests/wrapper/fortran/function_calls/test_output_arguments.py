@@ -34,12 +34,8 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert "scalar_status(n) -> int32" in module.scalar_status.__doc__
     assert "status : int32" in module.scalar_status.__doc__
     assert "fill_vector(n, values) -> ndarray[float64]" in module.fill_vector.__doc__
-    if pyi_parity_build_mode == "source":
-        assert "Intent: out" in module.fill_vector.__doc__
-        assert "Initial contents are ignored." in module.fill_vector.__doc__
-    else:
-        assert "Intent: out" not in module.fill_vector.__doc__
-        assert "Initial contents are ignored." not in module.fill_vector.__doc__
+    assert "Direction:" not in module.fill_vector.__doc__
+    assert "Initial contents are ignored." not in module.fill_vector.__doc__
     assert "Ownership: Caller-owned" in module.fill_vector.__doc__
     assert "Allocatable array outputs and replacements are copied into Python-owned NumPy arrays." in (
         module.build_alloc.__doc__

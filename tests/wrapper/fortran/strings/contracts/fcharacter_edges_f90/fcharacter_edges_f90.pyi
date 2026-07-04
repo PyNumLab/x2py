@@ -14,5 +14,5 @@ def optional_inout(
 def make_out() -> String[6]: ...
 
 def unicode_echo(
-    label: Const(String)
+    label: String
 ) -> String[5]: ...

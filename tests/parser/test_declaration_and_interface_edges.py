@@ -48,10 +48,15 @@ end subroutine c_step
     args = {arg.name: arg for arg in sig.arguments}
 
     assert "bind(c)" in sig.attributes
+    assert args["n"].intent == "in"
     assert args["n"].pass_by_value is True
+    assert args["x"].intent == "inout"
     assert args["x"].optional is True
+    assert args["y"].intent == "out"
     assert args["y"].pointer is True
+    assert args["work"].intent == "inout"
     assert args["work"].allocatable is True
+    assert args["cb"].intent is None
     assert args["cb"].base_type == "real"
 
 

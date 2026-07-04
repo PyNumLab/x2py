@@ -15,6 +15,7 @@ from x2py.ownership_policy import (
     NativeBarrierDispatcher,
     ObjectKind,
     PolicyActionDispatcher,
+    PythonBarrierAction,
     SetterAction,
     SetterActionDispatcher,
     StorageMode,
@@ -162,6 +163,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
             (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
             (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
             (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
             (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
@@ -240,12 +242,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     }
     _CALLBACK_ARGUMENT_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_callback_scalar_argument",
             (ObjectKind.SCALAR, CodegenAction.CALL_LOCAL_INPUT): "_convert_callback_scalar_argument",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_scalar_storage_writable_argument",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_callback_scalar_storage_output_argument",
+            (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_callback_string_input_argument",
+            (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_string_storage_writable_argument",
+            (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_callback_string_storage_output_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_callback_array_input_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_array_inout_argument",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_array_writable_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_callback_array_output_argument",
             (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_callback_derived_input_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_derived_inout_argument",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_callback_derived_writable_argument",
             (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_callback_derived_output_argument",
         }
     )
@@ -849,7 +857,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         setter_value = expr.clone(
             expr.name,
             lhs=expr.lhs,
-            intent="in",
             memory_handling=setter_policy.storage_mode.value,
             ownership_decision=setter_policy,
         )
@@ -1275,16 +1282,27 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "abi": {"kind": kind, "native": native_result, "abi": c_result_var},
         }
 
-    @staticmethod
     def _convert_callback_scalar_argument(
+        self,
         native_var,
-        _decision,
-        _callback_name,
+        decision,
+        callback_name,
         adapter_var,
         c_scope,
-        _adapter_scope,
+        adapter_scope,
     ):
         """Convert a scalar callback argument to its interoperable ABI."""
+        if decision.python_barrier_action is PythonBarrierAction.SCALAR_STORAGE:
+            return self._convert_callback_scalar_storage_argument(
+                native_var,
+                decision,
+                callback_name,
+                adapter_var,
+                c_scope,
+                adapter_scope,
+                copy_in=True,
+                copy_out=False,
+            )
         c_var = native_var.clone(
             str(native_var.name),
             new_class=Variable,
@@ -1300,6 +1318,177 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             "post_body": [],
             "abi": {"kind": "scalar", "native": native_var, "abi": (c_var,)},
         }
+
+    def _convert_callback_scalar_storage_writable_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Expose a writable scalar callback dummy as rank-0 NumPy storage."""
+        return self._convert_callback_scalar_storage_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            copy_in=True,
+            copy_out=True,
+        )
+
+    def _convert_callback_scalar_storage_output_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Expose a scalar callback output dummy as rank-0 NumPy storage."""
+        return self._convert_callback_scalar_storage_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            copy_in=False,
+            copy_out=True,
+        )
+
+    def _convert_callback_scalar_storage_argument(
+        self,
+        native_var,
+        _decision,
+        _callback_name,
+        adapter_var,
+        c_scope,
+        adapter_scope,
+        *,
+        copy_in,
+        copy_out,
+    ):
+        """Convert a scalar callback argument to pointer-backed Python storage."""
+        data = Variable(
+            BindCPointer(),
+            c_scope.get_new_name(f"{native_var.name}_data"),
+            is_argument=True,
+            memory_handling="stack",
+        )
+        c_scope.insert_variable(data)
+        data_value, callback_storage = self._callback_pointer_storage(native_var, adapter_var, adapter_scope)
+        body = []
+        post_body = []
+        if copy_in:
+            body.append(Assign(callback_storage, adapter_var))
+        body.append(CLocFunc(callback_storage, data_value))
+        if copy_out:
+            post_body.append(Assign(adapter_var, callback_storage))
+        return {
+            "c_arguments": [FunctionDefArgument(data)],
+            "call_arguments": [data_value],
+            "body": body,
+            "post_body": post_body,
+            "abi": {"kind": "scalar_storage", "native": native_var, "abi": (data,)},
+        }
+
+    def _convert_callback_string_input_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Expose a read-only character callback dummy as a Python string."""
+        return self._convert_callback_string_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            kind="string",
+            copy_in=True,
+            copy_out=False,
+        )
+
+    def _convert_callback_string_storage_writable_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Expose a writable character callback dummy as rank-0 bytes storage."""
+        return self._convert_callback_string_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            kind="string_storage",
+            copy_in=True,
+            copy_out=True,
+        )
+
+    def _convert_callback_string_storage_output_argument(
+        self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
+    ):
+        """Expose a character callback output dummy as rank-0 bytes storage."""
+        return self._convert_callback_string_argument(
+            native_var,
+            decision,
+            callback_name,
+            adapter_var,
+            c_scope,
+            adapter_scope,
+            kind="string_storage",
+            copy_in=False,
+            copy_out=True,
+        )
+
+    def _convert_callback_string_argument(
+        self,
+        native_var,
+        _decision,
+        _callback_name,
+        adapter_var,
+        c_scope,
+        adapter_scope,
+        *,
+        kind,
+        copy_in,
+        copy_out,
+    ):
+        """Convert a fixed-length character callback argument to pointer ABI data."""
+        fixed_len = self._callback_string_length(native_var)
+        data = Variable(
+            BindCPointer(),
+            c_scope.get_new_name(f"{native_var.name}_data"),
+            is_argument=True,
+            memory_handling="stack",
+        )
+        length = Variable(
+            NumpyInt64Type(),
+            c_scope.get_new_name(f"{native_var.name}_length"),
+            is_argument=True,
+            passes_by_value=True,
+        )
+        c_scope.insert_variable(data)
+        c_scope.insert_variable(length)
+        data_value, callback_storage = self._callback_pointer_storage(native_var, adapter_var, adapter_scope)
+        body = []
+        post_body = []
+        if copy_in:
+            body.append(Assign(callback_storage, adapter_var))
+        body.append(CLocFunc(callback_storage, data_value))
+        if copy_out:
+            post_body.append(Assign(adapter_var, callback_storage))
+        return {
+            "c_arguments": [FunctionDefArgument(data), FunctionDefArgument(length)],
+            "call_arguments": [
+                data_value,
+                cast_to(FortranCharacterLength(callback_storage), NumpyInt64Type()),
+            ],
+            "body": body,
+            "post_body": post_body,
+            "abi": {"kind": kind, "native": native_var, "abi": (data, length), "length": fixed_len},
+        }
+
+    @staticmethod
+    def _callback_string_length(native_var):
+        """Return a fixed callback character length for diagnostics and ABI metadata."""
+        if native_var.fortran_character_length not in (None, "*", ":"):
+            return native_var.fortran_character_length
+        if native_var.alloc_shape and native_var.alloc_shape[0] is not None:
+            return native_var.alloc_shape[0]
+        raise ValueError(f"Callback string argument {native_var.name!r} requires a fixed character length")
 
     def _convert_callback_array_input_argument(
         self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
@@ -1317,7 +1506,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             copy_out=False,
         )
 
-    def _convert_callback_array_inout_argument(
+    def _convert_callback_array_writable_argument(
         self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
     ):
         """Copy an array callback argument into and out of pointer storage."""
@@ -1365,7 +1554,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             copy_out=False,
         )
 
-    def _convert_callback_derived_inout_argument(
+    def _convert_callback_derived_writable_argument(
         self, native_var, decision, callback_name, adapter_var, c_scope, adapter_scope
     ):
         """Copy a derived callback argument into and out of pointer storage."""
@@ -1509,6 +1698,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _convert_native_storage_address_argument(self, var, decision, func):
         """Pass caller/Python-backed storage through the native call boundary."""
+        if decision.kind is ObjectKind.STRING:
+            return self._build_string_storage_argument(var, decision)
         if decision.kind is not ObjectKind.SCALAR:
             raise ValueError(
                 f"Native storage-address barrier only supports scalar arguments, got {decision.kind.value}"
@@ -1578,7 +1769,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
             is_argument=True,
             is_optional=False,
-            intent="in",
             memory_handling=StorageMode.STACK.value,
         )
         local_var = var.clone(
@@ -1957,8 +2147,53 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         ]
         post_body = []
         if decision.mutates_native:
-            raw_slice = IndexedElement(array_var, Slice(None, fixed_len))
+            raw_slice = IndexedElement(array_var, Slice(None, Add(fixed_len, convert_to_literal(1))))
             post_body = [Assign(raw_slice, FortranTransfer(f_arg, raw_slice, fixed_len))]
+        return {
+            "c_arg": BindCVariable(bind_var, var),
+            "f_arg": f_arg,
+            "body": body,
+            "post_body": post_body,
+        }
+
+    def _build_string_storage_argument(self, var, decision):
+        """Associate caller-provided rank-0 NumPy bytes storage with fixed string storage."""
+        name = var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        fixed_len = var.alloc_shape[0]
+        if fixed_len is None:
+            raise ValueError(f"String storage argument {name!r} requires a fixed String[n] length")
+        bind_var = Variable(
+            BindCPointer(),
+            scope.get_new_name(f"bound_{name}"),
+            is_argument=True,
+            is_optional=False,
+            memory_handling="alias",
+        )
+        array_var = Variable(
+            NumpyNDArrayType.get_new(CharType(), 1, None),
+            scope.get_new_name(name),
+            memory_handling="alias",
+        )
+        f_arg = var.clone(
+            scope.get_expected_name(name),
+            is_argument=False,
+            is_optional=False,
+            memory_handling="stack",
+            new_class=Variable,
+        )
+        scope.insert_variable(bind_var)
+        scope.insert_variable(array_var)
+        scope.insert_variable(f_arg)
+        body = [
+            C_F_Pointer(bind_var, array_var, (fixed_len,)),
+            Assign(f_arg, FortranTransfer(array_var, f_arg)),
+        ]
+        post_body = []
+        if decision.mutates_native:
+            storage_slice = IndexedElement(array_var, Slice(None, Add(fixed_len, convert_to_literal(1))))
+            post_body = [Assign(storage_slice, FortranTransfer(f_arg, storage_slice, fixed_len))]
         return {
             "c_arg": BindCVariable(bind_var, var),
             "f_arg": f_arg,
@@ -1991,10 +2226,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         scope.insert_variable(array_var)
 
         fixed_len = var.alloc_shape[0]
-        buffer_extent = Add(shape_var, convert_to_literal(1))
-        if fixed_len == 1:
+        has_fixed_length = fixed_len is not None
+        buffer_extent = Add(fixed_len if has_fixed_length else shape_var, convert_to_literal(1))
+        pointer_extent = buffer_extent if copy_back else fixed_len if has_fixed_length else buffer_extent
+        if has_fixed_length:
             fixed_var = var.clone(
-                scope.get_new_name(f"{name}_fixed"),
+                collisionless_name,
                 is_argument=False,
                 is_optional=False,
                 memory_handling="stack",
@@ -2002,7 +2239,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             )
             scope.insert_variable(fixed_var)
             body = [
-                C_F_Pointer(bind_var, array_var, (buffer_extent,)),
+                C_F_Pointer(bind_var, array_var, (pointer_extent,)),
                 Assign(fixed_var, FortranTransfer(array_var, fixed_var)),
             ]
             f_arg = fixed_var
@@ -2020,19 +2257,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 C_F_Pointer(bind_var, array_var, (buffer_extent,)),
                 Assign(arg_var, FortranTransfer(array_var, arg_var)),
             ]
-            if fixed_len is not None:
-                fixed_var = var.clone(
-                    scope.get_new_name(f"{name}_fixed"),
-                    is_argument=False,
-                    is_optional=False,
-                    memory_handling="stack",
-                    new_class=Variable,
-                )
-                scope.insert_variable(fixed_var)
-                body.append(Assign(fixed_var, arg_var))
-                f_arg = fixed_var
-            else:
-                f_arg = arg_var
+            f_arg = arg_var
 
         post_body = []
         absent_body = []
@@ -2706,7 +2931,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         return (
             var.rank == 0
             and var.memory_handling == "stack"
-            and getattr(var, "intent", "in") == "in"
             and getattr(var, "passes_by_value", False)
             and isinstance(var.class_type, FixedSizeNumericType)
         )

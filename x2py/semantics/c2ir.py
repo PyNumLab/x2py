@@ -377,7 +377,6 @@ class CToIRConverter(ClassVisitor):
                     native_name=parameter.name or argument.name,
                     native_position=index,
                     python_position=index,
-                    intent=argument.intent,
                 )
                 for index, (parameter, argument) in enumerate(zip(function.parameters, arguments, strict=False))
             ],
@@ -420,14 +419,12 @@ class CToIRConverter(ClassVisitor):
                         },
                     )
                 )
-        intent = self._inferred_intent(semantic_type)
         if blockers:
             metadata["readiness_blockers"] = blockers
 
         return SemanticArgument(
             name=name,
             semantic_type=semantic_type,
-            intent=intent,
             metadata=metadata,
             origin=SemanticOrigin(
                 source_language="c",
@@ -459,7 +456,7 @@ class CToIRConverter(ClassVisitor):
             )
         if variable.callback_candidate:
             semantic_type = self._callback_placeholder(variable.type)
-        binding = binding_cls(
+        return binding_cls(
             name=name,
             semantic_type=semantic_type,
             visibility="private" if "static" in variable.storage else "public",
@@ -473,8 +470,6 @@ class CToIRConverter(ClassVisitor):
                 metadata={"storage": list(variable.storage), "bit_width": variable.bit_width},
             ),
         )
-        binding.intent = self._inferred_intent(semantic_type)
-        return binding
 
     def _visit_CStruct(
         self, struct: CStruct, *, as_type: bool = False, owner: str | None = None
@@ -661,7 +656,7 @@ class CToIRConverter(ClassVisitor):
     ) -> SemanticField:
         if anonymous_member:
             semantic_type.constraints.append(SemanticConstraint("CAnonymousMember"))
-        binding = SemanticField(
+        return SemanticField(
             name=name,
             semantic_type=semantic_type,
             visibility="private" if "static" in member.storage else "public",
@@ -675,8 +670,6 @@ class CToIRConverter(ClassVisitor):
                 metadata={"storage": list(member.storage), "bit_width": member.bit_width},
             ),
         )
-        binding.intent = self._inferred_intent(semantic_type)
-        return binding
 
     def _visit_CType(
         self,
@@ -1620,15 +1613,6 @@ class CToIRConverter(ClassVisitor):
     @staticmethod
     def _has_qualifier(type_: CType, qualifier_type: type[CQualifier]) -> bool:
         return any(isinstance(qualifier, qualifier_type) for qualifier in getattr(type_, "qualifiers", []))
-
-    @staticmethod
-    def _inferred_intent(semantic_type: SemanticType) -> str:
-        storage = semantic_type.storage
-        if storage is None:
-            return "in"
-        if storage.kind in {"array", "reference", "pointer"} and not storage.read_only:
-            return "inout"
-        return "in"
 
     @staticmethod
     def _ambiguous_pointer_argument(semantic_type: SemanticType) -> bool:

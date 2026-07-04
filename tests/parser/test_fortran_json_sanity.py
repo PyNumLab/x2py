@@ -131,7 +131,7 @@ def _is_literal_json_parameter_value(value) -> bool:
 def _is_valid_shape_info(entry: dict) -> bool:
     """Enforce non-ambiguous shape metadata with clear scalar/array exception rules.
 
-    Rule: rank must match the intent of shape metadata.
+    Rule: rank must match the shape metadata.
     - scalar (rank == 0): `shape`, `dimensions`, `lbound`, and `ubound` may be
       omitted/None/[] only.
     - array  (rank > 0): `shape`, `dimensions`, `lbound`, and `ubound` can be

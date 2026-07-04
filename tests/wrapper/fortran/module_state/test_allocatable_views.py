@@ -115,7 +115,7 @@ def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(
     assert "buffer" in module.__doc__
     assert "build_values(n) -> ndarray[float64] | None" in module.build_values.__doc__
     assert "n : int32" in module.build_values.__doc__
-    assert "Intent: in" in module.build_values.__doc__
+    assert "Direction:" not in module.build_values.__doc__
     assert "values : ndarray[float64] or None" in module.build_values.__doc__
     assert "Rank: 1" in module.build_values.__doc__
     assert "Ownership: Python-owned" in module.build_values.__doc__

@@ -13,7 +13,7 @@ class summary_point:
 
 @native_call([Addr(Arg(0)), Return("status", 0)])
 def scalar_status(
-    base: Const(Int32)
+    base: Int32
 ) -> Returns["status", Int32]: ...
 
 def fixed_inout(
@@ -22,10 +22,10 @@ def fixed_inout(
 
 def scale_with_status(
     values: Annotated[Float64[:], Immutable],
-    status: Annotated[Int32[()], Intent("out")]
+    status: Int32[()]
 ) -> Returns["values", Float64[:]]: ...
 
 @native_call([Addr(Arg(0)), Return("point", 0)])
 def make_point(
-    scale: Const(Int32)
+    scale: Int32
 ) -> Returns["point", summary_point]: ...

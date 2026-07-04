@@ -258,7 +258,7 @@ An edited class may bind `__init__` to one concrete native initializer:
 class state:
     @bind("init_state")
     @native_call([Pass(), Addr(Arg(0))])
-    def __init__(self, size: Const(Int32)) -> None: ...
+    def __init__(self, size: Int32) -> None: ...
 ```
 
 The generated field-keyword constructor and a bound native initializer are
@@ -273,8 +273,8 @@ does not need `@native_call`:
 
 ```python
 def scalar_status(
-    base: Const(Int32[()]),
-    status: Annotated[Int32[()], Intent("out")],
+    base: Int32[()],
+    status: Int32[()],
 ) -> None: ...
 ```
 
@@ -319,7 +319,7 @@ lengths, presence flags, shapes, or work buffers:
 ```python
 @native_call([Addr(Arg(0)), Return("status", 0)])
 def scalar_status(
-    base: Const(Int32),
+    base: Int32,
 ) -> Returns["status", Int32]: ...
 ```
 
@@ -336,7 +336,7 @@ or an explicit call-local discarded-mutation policy:
 ```python
 def scale_with_status(
     values: Annotated[Float64[:], Immutable],
-    status: Annotated[Int32[()], Intent("out")],
+    status: Int32[()],
 ) -> Returns["values", Float64[:]]: ...
 ```
 
@@ -407,7 +407,7 @@ otherwise requires the current Python thread to retain the GIL:
 
 ```python
 @hold_gil
-def invoke_callback(callback: Callable[[Float64], Float64]) -> Float64: ...
+def invoke_callback(callback: Callable[[In(Float64)], Float64]) -> Float64: ...
 ```
 
 These decorators change wrapper runtime policy; they do not change the native
@@ -504,7 +504,7 @@ wrapper allocates instance -> component allocates -> NumPy view retains wrapper
 ```python
 @native_call([Addr(Arg(0)), Return("values", 0)])
 def build_values(
-    n: Const(Int32),
+    n: Int32,
 ) -> Annotated[
     Float64[:],
     Allocatable,
@@ -568,7 +568,7 @@ Examples include:
 
 - `Immutable` writable storage with `Transfer("borrowed_view")`;
 - `Transfer("copy_return")` on an argument with no projected replacement;
-- pointer `intent(out)` or `intent(inout)` reassociation without implemented
+- pointer reassociation for projected or writable arguments without implemented
   owner, shape, lifetime, and release behavior;
 - pointer module variables or derived-type pointer fields without an
   implemented snapshot or borrowed-accessor path;

@@ -165,7 +165,6 @@ def test_c2ir_converts_scalar_function_signatures_and_preserves_native_order():
             "result_position": None,
             "value_kind": "",
             "value": None,
-            "intent": "in",
         },
         {
             "python_name": "b",
@@ -175,7 +174,6 @@ def test_c2ir_converts_scalar_function_signatures_and_preserves_native_order():
             "result_position": None,
             "value_kind": "",
             "value": None,
-            "intent": "in",
         },
     ]
     assert asdict(add.arguments[0].origin) == _c_origin(
@@ -215,13 +213,10 @@ def test_c2ir_maps_const_and_mutable_pointers_to_storage_contracts():
     assert src.semantic_type.name == "Float64"
     assert src.semantic_type.storage.kind == "reference"
     assert src.semantic_type.storage.read_only is True
-    assert src.intent == "in"
 
     assert dst.semantic_type.name == "Float64"
     assert dst.semantic_type.storage.kind == "reference"
     assert dst.semantic_type.storage.read_only is False
-    assert dst.intent == "inout"
-    assert copy.projection[1].intent == "inout"
     assert asdict(src.semantic_type.ownership) == {"ownership": "borrowed", "mutable": False, "aliasing": True}
     assert asdict(dst.semantic_type.ownership) == {"ownership": "borrowed", "mutable": True, "aliasing": True}
     assert dst.metadata["readiness_blockers"] == [
@@ -286,11 +281,9 @@ def test_c2ir_uses_declared_c_array_bounds_before_parameter_adjustment():
     assert a.semantic_type.storage.kind == "array"
     assert a.semantic_type.storage.array.shape == ["4"]
     assert a.semantic_type.storage.array.metadata["c_static_minimum"] == [True]
-    assert a.intent == "inout"
 
     assert shape.semantic_type.storage.read_only is True
     assert shape.semantic_type.storage.array.shape == ["2"]
-    assert shape.intent == "in"
 
     assert matrix.semantic_type.rank == 2
     assert matrix.semantic_type.shape == ["3", "4"]
@@ -1256,12 +1249,6 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
     converter = CToIRConverter()
     variable = converter.visit(CVariable(name="handler", type=callback, storage=["static"]))
     field = converter.visit(CVariable(name="bits", type=CInt(), bit_width="3"))
-    mutable_pointer_variable = converter.visit(
-        CVariable(
-            name="buffer",
-            type=CComposedType(components=[CPointer(), CInt()], source_text="int *buffer"),
-        )
-    )
     unresolved_variable = converter.visit(
         CVariable(name="missing_value", type=CUnknownType(spelling="missing_t", source_text="missing_t"))
     )
@@ -1312,9 +1299,7 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
             {"owner": "bits", "field": "bits", "bit_width": "3"},
         )
     ]
-    assert field.intent == "in"
     assert field.visibility == "public"
-    assert mutable_pointer_variable.intent == "inout"
     assert unresolved_variable.semantic_type.metadata["readiness_blockers"][0]["items"] == [
         {"owner": "missing_value", "type": "missing_t"}
     ]

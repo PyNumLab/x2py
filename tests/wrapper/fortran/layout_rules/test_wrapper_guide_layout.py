@@ -80,6 +80,7 @@ SUBJECT_TEST_MODULES = {
         "test_pointers.py",
     ),
     "callbacks": (
+        "test_all_callback_shapes.py",
         "test_array_callbacks.py",
         "test_callback_generated_pyi_contracts.py",
         "test_derived_callbacks.py",

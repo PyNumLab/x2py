@@ -53,6 +53,7 @@ nav:
       - Python API: reference/python-api.md
       - Semantic IR: reference/semantic-ir.md
       - Semantic .pyi Format: reference/semantic-pyi-format.md
+      - Callbacks: reference/callbacks.md
       - Diagnostic Codes: reference/diagnostic-codes.md
       - Generated Functions: reference/generated-functions.md
       - Generated Modules: reference/generated-modules.md

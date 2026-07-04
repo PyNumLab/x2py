@@ -34,7 +34,6 @@ from ..models.core import (
 )
 from ..models.datatypes import (
     CustomDataType,
-    FinalType,
     FixedSizeNumericType,
     FixedSizeType,
     PrimitiveBooleanType,
@@ -64,10 +63,25 @@ from ..models.core import (
 
 from ..models.core import Variable
 from .codeprinter import CodePrinter
+from ...ownership_policy import CodegenAction, ownership_decision_for_codegen_variable
 
 # TODO: add examples
 
 __all__ = ["FCodePrinter"]
+
+
+_FORTRAN_ACCESS_BY_CODEGEN_ACTION = {
+    CodegenAction.DIRECT_VALUE: "read",
+    CodegenAction.CALL_LOCAL_INPUT: "read",
+    CodegenAction.IN_PLACE_ARGUMENT: "readwrite",
+    CodegenAction.IDENTITY_OUTPUT: "write",
+    CodegenAction.HIDDEN_OUTPUT: "write",
+    CodegenAction.COPY_IN_OUT: "readwrite",
+    CodegenAction.COPY_OUT: "write",
+    CodegenAction.SNAPSHOT_COPY: "read",
+    CodegenAction.BORROWED_VIEW: "read",
+    CodegenAction.WRAPPER_INSTANCE: "write",
+}
 
 
 # ==============================================================================
@@ -281,7 +295,7 @@ class FCodePrinter(CodePrinter):
                 "interface\n"
                 'function c_malloc(size) bind(C,name="x2py_malloc") result(ptr)\n'
                 "use iso_c_binding\n"
-                "integer(c_size_t), value, intent(in) :: size\n"
+                "integer(c_size_t), value :: size\n"
                 "type(c_ptr) :: ptr\n"
                 "end function c_malloc\n"
                 f"{external_interfaces}"
@@ -472,12 +486,9 @@ class FCodePrinter(CodePrinter):
             return ""
         # ...
 
-        # ... TODO improve
-        # Group the variables by intent
         dtype = var.dtype
         rank = var.rank
         shape = var.alloc_shape
-        is_const = isinstance(expr_type, FinalType)
         is_optional = var.is_optional
         is_private = var.is_private
         is_alias = var.is_alias and not isinstance(dtype, BindCPointer)
@@ -486,10 +497,10 @@ class FCodePrinter(CodePrinter):
         is_static = expr.static
         is_external = expr.external
         is_target = var.is_target and not var.is_alias
-        intent = expr.intent
-        intent_in = intent and intent != "out"
+        by_value = expr.by_value
+        accepts_assumed_length = var.is_argument and not getattr(var, "projected_output", False)
         deferred_string = (
-            isinstance(dtype, StringType) and not intent_in and (not shape or shape[0] is None)
+            isinstance(dtype, StringType) and not accepts_assumed_length and (not shape or shape[0] is None)
         ) or self._is_deferred_character_array(var)
         # ...
 
@@ -503,7 +514,7 @@ class FCodePrinter(CodePrinter):
             on_heap=on_heap,
             on_stack=on_stack,
             is_static=is_static,
-            intent_in=intent_in,
+            accepts_assumed_length=accepts_assumed_length,
         )
 
         code_value = ""
@@ -513,7 +524,8 @@ class FCodePrinter(CodePrinter):
         vstr = self._visit(expr.variable.name)
 
         # Default empty strings
-        intentstr = self._fortran_intent_attribute(intent, rank, is_optional, expr_type, is_const)
+        intentstr = self._fortran_intent_attribute(expr.access, by_value)
+        valuestr = self._fortran_value_attribute(by_value, rank, is_optional, expr_type)
         allocatablestr = self._fortran_allocation_attributes(
             is_static,
             is_alias,
@@ -543,7 +555,7 @@ class FCodePrinter(CodePrinter):
             mod_str = ", bind(c)"
 
         # Construct declaration
-        left = dtype_str + allocatablestr + optionalstr + privatestr + externalstr + mod_str + intentstr
+        left = dtype_str + allocatablestr + optionalstr + intentstr + privatestr + externalstr + mod_str + valuestr
         right = vstr + rankstr + code_value
         return f"{left} :: {right}\n"
 
@@ -559,7 +571,7 @@ class FCodePrinter(CodePrinter):
         on_heap,
         on_stack,
         is_static,
-        intent_in,
+        accepts_assumed_length,
     ):
         """Render a variable datatype and rank declaration."""
         if isinstance(expr_type, CustomDataType):
@@ -569,7 +581,7 @@ class FCodePrinter(CodePrinter):
             return "type(c_ptr)", ""
         if isinstance(dtype, FixedSizeType) and isinstance(expr_type, NumpyNDArrayType | FixedSizeType):
             if self._is_character_array(var):
-                type_code = self._fortran_character_array_type(var, dtype, intent_in)
+                type_code = self._fortran_character_array_type(var, dtype, accepts_assumed_length)
             else:
                 type_code = self._visit(dtype.primitive_type)
             if isinstance(dtype, FixedSizeNumericType):
@@ -582,11 +594,11 @@ class FCodePrinter(CodePrinter):
                 on_heap=on_heap,
                 on_stack=on_stack,
                 is_static=is_static,
-                intent_in=intent_in,
+                accepts_assumed_length=accepts_assumed_length,
             )
             return type_code, rank_code
         if isinstance(dtype, StringType):
-            return self._fortran_string_type(dtype, shape, intent_in), ""
+            return self._fortran_string_type(dtype, shape, accepts_assumed_length), ""
         raise TypeError(f"Don't know how to print type {expr_type} in Fortran")
 
     def _custom_declaration_type(self, var, expr_type):
@@ -609,7 +621,7 @@ class FCodePrinter(CodePrinter):
         on_heap,
         on_stack,
         is_static,
-        intent_in,
+        accepts_assumed_length,
     ):
         """Render Fortran bounds for an array declaration."""
         if rank == 0:
@@ -617,7 +629,7 @@ class FCodePrinter(CodePrinter):
         start = self._visit(convert_to_literal(0))
         if is_alias or on_heap:
             dimensions = [":"] * rank
-        elif intent_in:
+        elif accepts_assumed_length:
             dimensions = [f"{start}:"] * rank
         elif is_static or on_stack:
             ordered_shape = shape[::-1] if var.order == "C" else shape
@@ -627,12 +639,12 @@ class FCodePrinter(CodePrinter):
             raise NotImplementedError("Fortran rank string undetermined")
         return f"({', '.join(dimensions)})"
 
-    def _fortran_string_type(self, dtype, shape, intent_in):
+    def _fortran_string_type(self, dtype, shape, accepts_assumed_length):
         """Render a Fortran character type and length contract."""
         type_code = self._visit(dtype)
         if shape and shape[0] is not None:
             return f"{type_code}(len = {self._visit(shape[0])})"
-        if intent_in:
+        if accepts_assumed_length:
             return f"{type_code}(len = *)"
         return f"{type_code}(len = :)"
 
@@ -647,25 +659,34 @@ class FCodePrinter(CodePrinter):
         """Return whether ``var`` needs an allocatable deferred character length."""
         return self._is_character_array(var) and var.fortran_character_length == ":"
 
-    def _fortran_character_array_type(self, var, dtype, intent_in):
+    def _fortran_character_array_type(self, var, dtype, accepts_assumed_length):
         """Render a Fortran character array element type and length contract."""
         type_code = self._visit(dtype.primitive_type)
         length = var.fortran_character_length
         if length == ":":
             return f"{type_code}(len = :)"
         if length is None:
-            return f"{type_code}(len = *)" if intent_in else type_code
+            return f"{type_code}(len = *)" if accepts_assumed_length else type_code
         length_code = self._visit(length) if is_model_object(length) else self._visit(convert_to_literal(length))
         return f"{type_code}(len = {length_code})"
 
     @staticmethod
-    def _fortran_intent_attribute(intent, rank, is_optional, expr_type, is_const):
-        """Render intent and value attributes for a declaration."""
-        if not intent:
+    def _fortran_value_attribute(by_value, rank, is_optional, expr_type):
+        """Render the Fortran value ABI attribute for a declaration."""
+        if by_value and rank == 0 and not is_optional and not isinstance(expr_type, CustomDataType):
+            return ", value"
+        return ""
+
+    @staticmethod
+    def _fortran_intent_attribute(access, by_value):
+        """Render a Fortran INTENT attribute from declaration access metadata."""
+        if by_value or access in (None, "unspecified"):
             return ""
-        if intent == "in" and rank == 0 and not is_optional and not isinstance(expr_type, CustomDataType):
-            return ", value, intent(in)" if is_const else ", value"
-        return f", intent({intent})"
+        return {
+            "read": ", intent(in)",
+            "write": ", intent(out)",
+            "readwrite": ", intent(inout)",
+        }[access]
 
     @staticmethod
     def _fortran_allocation_attributes(is_static, is_alias, on_heap, expr_type, deferred_string, is_target):
@@ -1321,8 +1342,7 @@ class FCodePrinter(CodePrinter):
     def _external_interface_argument_declaration(self, var):
         """Declare an external native argument without changing its call ABI."""
         if isinstance(var.class_type, StringType):
-            intent = getattr(var, "intent", None) if var.rank > 0 or isinstance(var.class_type, StringType) else None
-            return self._visit(Declare(var, intent=intent)).rstrip()
+            return self._visit(Declare(var)).rstrip()
         if isinstance(var.class_type, CustomDataType):
             type_code = f"type({self._visit(var.class_type)})"
         elif isinstance(var.class_type, NumpyNDArrayType | FixedSizeType):
@@ -1335,9 +1355,6 @@ class FCodePrinter(CodePrinter):
         attributes = []
         if getattr(var, "is_optional", False):
             attributes.append("optional")
-        intent = getattr(var, "intent", None)
-        if intent:
-            attributes.append(f"intent({intent})")
         attribute_code = f", {', '.join(attributes)}" if attributes else ""
         shape_code = ""
         if var.rank:
@@ -1462,7 +1479,7 @@ class FCodePrinter(CodePrinter):
         out_args, args_decs, func_type, func_end, callback_result = self._fortran_result_signature(
             expr, out_args, callback_adapter
         )
-        callback_interfaces = self._fortran_argument_declarations(arguments, callback_adapter, args_decs)
+        callback_interfaces = self._fortran_argument_declarations(expr, arguments, callback_adapter, args_decs)
         if callback_result is not None:
             result, declaration = callback_result
             args_decs[result] = declaration
@@ -1493,7 +1510,7 @@ class FCodePrinter(CodePrinter):
         )
         if uses_output_arguments:
             for result in out_args:
-                declarations[result] = Declare(result, intent="out")
+                declarations[result] = Declare(result, access="write")
             return out_args, declarations, "subroutine", "", None
         result = out_args[0]
         declaration = Declare(result)
@@ -1502,21 +1519,72 @@ class FCodePrinter(CodePrinter):
             declarations[result] = declaration
         return [], declarations, "function", f"result({result.name})", callback_result
 
-    def _fortran_argument_declarations(self, arguments, callback_adapter, declarations):
+    def _fortran_argument_declarations(self, function, arguments, callback_adapter, declarations):
         """Populate argument declarations and callback interfaces."""
         callback_interfaces = []
+        bind_c_function = isinstance(function, BindCFunctionDef)
+        callback_c_abi_function = bool(function.decorators.get("x2py_callback_abi"))
         for argument in arguments:
             variable = argument.var
             if isinstance(variable, Variable):
                 if callback_adapter:
                     declarations[variable] = self._callback_native_argument_declaration(variable)
                     continue
-                intent = "inout" if argument.inout and not isinstance(variable, BindCVariable) else "in"
+                is_c_abi_argument = isinstance(variable, BindCVariable) or callback_c_abi_function
                 for element in self.scope.collect_all_tuple_elements(variable):
-                    declarations[element] = Declare(element, intent=intent)
+                    by_value = self._fortran_argument_passes_by_value(
+                        element,
+                        bind_c_function=bind_c_function,
+                        c_abi_argument=is_c_abi_argument,
+                    )
+                    declarations[element] = Declare(
+                        element,
+                        access=self._fortran_argument_access(element) if bind_c_function else None,
+                        by_value=by_value,
+                    )
             elif isinstance(variable, FunctionAddress) and variable.decorators.get("x2py_callback_abi"):
                 callback_interfaces.append(self._callback_c_interface(variable))
         return callback_interfaces
+
+    @staticmethod
+    def _fortran_argument_passes_by_value(var, *, bind_c_function, c_abi_argument):
+        """Return whether a Fortran declaration needs the C ``value`` ABI attribute."""
+        if var.rank != 0 or var.is_optional or isinstance(var.class_type, CustomDataType):
+            return False
+        if c_abi_argument or getattr(var, "passes_by_value", False):
+            return True
+        return (
+            bind_c_function
+            and var.memory_handling == "stack"
+            and isinstance(
+                var.class_type,
+                FixedSizeType | BindCPointer,
+            )
+        )
+
+    @staticmethod
+    def _fortran_argument_access(var):
+        """Derive bridge declaration access from completed ownership policy."""
+        try:
+            action = ownership_decision_for_codegen_variable(var).codegen_action
+        except ValueError:
+            return None
+        return _FORTRAN_ACCESS_BY_CODEGEN_ACTION.get(action)
+
+    @staticmethod
+    def _fortran_callback_intent_attribute(access, by_value):
+        """Render callback adapter INTENT without hiding value input intent."""
+        if by_value:
+            if access in {"write", "readwrite"}:
+                raise ValueError("Fortran VALUE callback arguments cannot have output or readwrite access")
+            return ", intent(in)"
+        if access in (None, "unspecified"):
+            return ""
+        return {
+            "read": ", intent(in)",
+            "write": ", intent(out)",
+            "readwrite": ", intent(inout)",
+        }[access]
 
     @staticmethod
     def _fortran_signature_prefix(function, func_type, name):
@@ -1530,7 +1598,9 @@ class FCodePrinter(CodePrinter):
 
     def _callback_native_argument_declaration(self, var):
         """Declare an internal callback adapter argument with its native Fortran ABI."""
-        if isinstance(var.class_type, CustomDataType):
+        if isinstance(var.class_type, StringType):
+            type_code = self._callback_character_type(var)
+        elif isinstance(var.class_type, CustomDataType):
             type_code = f"type({self._visit(var.class_type)})"
         elif isinstance(var.class_type, NumpyNDArrayType | FixedSizeType):
             type_code = self._visit(var.dtype.primitive_type)
@@ -1540,11 +1610,24 @@ class FCodePrinter(CodePrinter):
             raise TypeError(f"Unsupported native callback argument type {var.class_type}")
 
         shape_code = ""
-        if var.rank:
+        if var.rank and not isinstance(var.class_type, StringType):
             dimensions = [":" if item is None else self._visit(item) for item in var.alloc_shape]
             shape_code = f"({', '.join(dimensions)})"
-        intent = getattr(var, "intent", "in")
-        return f"{type_code}, intent({intent}) :: {var.name}{shape_code}\n"
+        access = getattr(var, "fortran_callback_access", None) or "read"
+        by_value = getattr(var, "passes_by_value", False)
+        intent_code = self._fortran_callback_intent_attribute(access, by_value=by_value)
+        value_code = self._fortran_value_attribute(by_value, var.rank, var.is_optional, var.class_type)
+        return f"{type_code}{intent_code}{value_code} :: {var.name}{shape_code}\n"
+
+    def _callback_character_type(self, var):
+        """Render the character type for a callback adapter dummy."""
+        length = var.fortran_character_length
+        if length in (None, "*", ":") and var.alloc_shape and var.alloc_shape[0] is not None:
+            length = var.alloc_shape[0]
+        if length in (None, "*", ":"):
+            return "character(len = *)"
+        length_code = self._visit(length) if is_model_object(length) else self._visit(convert_to_literal(length))
+        return f"character(len = {length_code})"
 
     def _callback_c_interface(self, callback):
         """Emit the interoperable interface for a C callback dummy procedure."""

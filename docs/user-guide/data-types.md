@@ -107,7 +107,7 @@ native storage instead of silently narrowing it.
 
 ## Scalar Values And Native Storage
 
-A bare numeric semantic type is a Python-visible value. `Const(T)` is the
+A bare numeric semantic type is a Python-visible value. `T` is the
 read-only value form. Its default native boundary is pass-by-value.
 `Addr(Arg(...))` in `@native_call` means x2py converts that Python-visible value
 to call-local native scalar storage and passes the storage address to native
@@ -178,6 +178,8 @@ silently cast, byte-swap, realign, or repair an incompatible array. See
 Scalar Fortran character values use Python `str`. `String[8]` records fixed
 native length eight; plain `String` records assumed, deferred, or otherwise
 non-fixed scalar length. The length is a character length, not an array shape.
+For `String[8]`, the encoded Python string length must be exactly eight; pass
+`"aa      "` when the native argument is an eight-character value.
 
 Returned strings are Python-owned copies. Fixed-length results retain trailing
 Fortran blanks. For mutable scalar character input/output, x2py creates
@@ -185,6 +187,16 @@ call-local character storage, passes its address to native code, and returns a
 replacement only when the `.pyi` signature includes `Returns["name", String[n]]`.
 Without that return contract, native mutation is discarded because the original
 Python `str` is immutable.
+
+Mutable scalar character storage uses a rank-zero fixed-width NumPy bytes array:
+
+```python
+label = np.array("abcdefgh", dtype="S8")
+```
+
+The matching `.pyi` annotation is `String[8][()]`. Native mutation writes back
+into the NumPy array, and Python reads the scalar storage as bytes, for example
+`label[()]`.
 
 Character arrays use fixed-width NumPy bytes dtypes. For
 `character(len=5) :: names(:)`, Python passes and receives arrays with

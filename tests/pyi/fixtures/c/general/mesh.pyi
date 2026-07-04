@@ -8,7 +8,7 @@ class mesh(CStruct):
 
 def node_move(
     node: node,
-    delta: Const(Float64[3])
+    delta: Float64[3]
 ) -> None: ...
 
 def mesh_init(

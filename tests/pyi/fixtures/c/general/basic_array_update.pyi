@@ -6,6 +6,6 @@ def add1(
 @native_call([Arg(0), Addr(Arg(1)), Arg(2)])
 def add1_strided(
     n: Int,
-    x: Annotated[Float64, Intent('inout')],
+    x: Float64,
     incx: Int
 ) -> None: ...

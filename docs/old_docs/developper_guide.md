@@ -231,7 +231,8 @@ data moves through it:
    sections.
 2. Construction and public entrypoints come first.
 3. Dispatched model handlers follow, grouped by feature and pipeline order.
-   Their names are `_visit_<ModelType>` in bridges, bindings, and printers.
+   Their names use the class's configured visitor prefix, for example
+   `_visit_<ModelType>`, `_print_<ModelType>`, or `_parse_<ModelType>`.
 4. Helpers immediately follow the visitor group that owns them, or appear in
    a final low-level helper section when several visitor groups share them.
 5. Every method has a short contract docstring. The docstring explains the
@@ -242,12 +243,12 @@ Use the same visible section banners as `FortranParser`, for example
 helpers`. Keep related visitors adjacent instead of sorting methods merely by
 name.
 
-All model-type dispatch goes through the class's `_visit` entrypoint. Use an
-explicit dispatch table for a second dispatch dimension such as datatype or
-ownership action. Do not add parallel `_print_*`, `_extract_*`, dynamic method
-name, or scattered `isinstance` dispatch schemes. A method that performs
-ordinary work but is not a dispatch target must have a descriptive helper
-name rather than a visitor-shaped name.
+All model-type dispatch goes through the class's `_visit` entrypoint and the
+class's configured visitor prefix. Use an explicit dispatch table for a second
+dispatch dimension such as datatype or ownership action. Do not add a second
+independent visitor family, dynamic method name, or scattered `isinstance`
+dispatch schemes. A method that performs ordinary work but is not a dispatch
+target must have a descriptive helper name rather than a visitor-shaped name.
 
 Keep functionality on the class that owns its state and policy. A module-level
 function is justified only when it is a deliberate public functional API or a
@@ -261,10 +262,10 @@ by `x2py/codegen/printers/pyi_printer.py`. Both operate on `x2py/semantics/model
 
 Important implementation rules:
 
-- `Addr(T)` and `Addr(Const(T))` are storage contracts, not just pretty syntax.
+- `Addr(T)` and `Addr(T)` are storage contracts, not just pretty syntax.
 - Array subscriptions such as `Float64[n]` are semantic array contracts.
 - `Annotated[..., ORDER_F]`, `ORDER_ANY`, `Allocatable`, `Pointer`, and
-  `Intent("out")` are metadata on the semantic storage contract.
+  output behavior is represented by storage and projected returns.
 - `Final[T]` is the public constant spelling. Do not reintroduce
   `Constant` as user-facing `.pyi` syntax.
 - `@native_call` is projection metadata. Use it only when the Python-visible
@@ -804,8 +805,9 @@ semantic contract, avoid changing semantic fixtures.
 ### `.pyi` Projection Internals
 
 `@native_call` is stored as projection metadata on `SemanticFunction`. The
-loader and printer currently support `Arg`, `Return`, `Const`, `Len`,
-`IsPresent`, `Work`, and `.shape[...]` value references. They do not currently
+loader and printer currently support `Arg`, `Return`, ABI-typed literal calls
+such as `Int32(1)`, `Len`, `IsPresent`, `Work`, and `.shape[...]` value
+references. They do not currently
 implement future wrapper projection helpers such as `Addr(Arg(...))`, `As[...]`,
 status-return policy, ownership conversion, or coercion execution.
 

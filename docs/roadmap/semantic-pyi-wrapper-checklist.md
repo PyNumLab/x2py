@@ -78,8 +78,9 @@ argument handoff from the native barrier action.
   `fortran_array_category`; the remaining category field is ABI metadata.
 - [x] Parser grammar units, parser-model converters, `.pyi` AST conversion,
   semantic lowering, bridges, bindings, and printers now share
-  `x2py.visitor.ClassVisitor` and `_visit_<ClassName>` handlers instead of
-  parallel visitor names or local `isinstance` dispatch ladders.
+  `x2py.visitor.ClassVisitor` and configured `<prefix>_<ClassName>` handlers
+  instead of parallel visitor implementations or local `isinstance` dispatch
+  ladders.
 - [x] Structural evidence lives in `tests/semantics/test_visitor_protocol.py`
   and `tests/semantics/test_ownership_policy.py`; runtime evidence covers scalar
   value/address projection, rank-0 scalar storage, arrays, strings, raw

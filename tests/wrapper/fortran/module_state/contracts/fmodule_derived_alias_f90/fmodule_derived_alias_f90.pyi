@@ -6,7 +6,7 @@ class box:
     @native_call([Pass(), Addr(Arg(0))])
     def allocate_values(
         self,
-        n: Const(Int32)
+        n: Int32
     ) -> None: ...
 
     def values_sum(self) -> Float64: ...
@@ -15,7 +15,7 @@ current: Annotated[box, Aliased]
 
 @native_call([Addr(Arg(0))])
 def allocate_current(
-    n: Const(Int32)
+    n: Int32
 ) -> None: ...
 
 def deallocate_current() -> None: ...

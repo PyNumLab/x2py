@@ -14,7 +14,7 @@ def particle_reset(
 
 def particle_move(
     p: particle,
-    delta: Const(Float64[3])
+    delta: Float64[3]
 ) -> None: ...
 
-def particle_current() -> Const(particle): ...
+def particle_current() -> particle: ...

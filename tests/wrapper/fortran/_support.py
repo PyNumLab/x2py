@@ -322,8 +322,11 @@ def _assert_array_rejects_strided_views(module, function_name):
 def _assert_legacy_string_examples(module):
     assert module.char_code_default("A") == ord("A")
     assert module.char_code_star1(np.str_("B")) == ord("B")
-    assert module.string_len_star8("short") == 5
-    assert module.string_len_star8("too-long-value") == 8
+    assert module.string_len_star8("short   ") == 5
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_star8("short")
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_star8("too-long-value")
     assert module.string_len_assumed("variable length") == 15
     assert module.string_len_entity("python") == 6
     assert module.char_result_default() == "L"
@@ -337,10 +340,13 @@ def _assert_modern_string_examples(module):
     assert module.char_code_len1(np.str_("B")) == ord("B")
     assert module.char_code_kind1("C") == ord("C")
     assert module.char_code_c_char("D") == ord("D")
-    assert module.string_len_fixed("short") == 5
-    assert module.string_len_fixed("too-long-value") == 8
+    assert module.string_len_fixed("short   ") == 5
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_fixed("short")
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_fixed("too-long-value")
     assert module.string_len_assumed("variable length") == 15
-    assert module.string_len_c_char("c-char") == 6
+    assert module.string_len_c_char("c-char  ") == 6
     assert module.char_result_default() == "M"
     assert module.char_result_c_char() == "C"
     assert module.string_result_fixed() == "MODERN!!"

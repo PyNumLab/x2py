@@ -100,6 +100,7 @@ class PythonBarrierAction(str, Enum):
     SCALAR_STORAGE = "scalar_storage"
     ARRAY_STORAGE = "array_storage"
     STRING_VALUE = "string_value"
+    STRING_STORAGE = "string_storage"
     RAW_ADDRESS = "raw_address"
     WRAPPER_INSTANCE = "wrapper_instance"
     NONE = "none"
@@ -315,7 +316,8 @@ _VALID_DESTRUCTION_BY_OWNER_TRANSFER = {
 @dataclass(frozen=True)
 class OwnershipContext:
     location: str = "value"
-    intent: str = "in"
+    reads_argument: bool = True
+    writes_argument: bool = False
     is_result: bool = False
     is_argument: bool = False
     is_field: bool = False
@@ -325,19 +327,21 @@ class OwnershipContext:
 
     @classmethod
     def result(cls) -> OwnershipContext:
-        return cls(location="result", intent="out", is_result=True)
+        return cls(location="result", reads_argument=False, writes_argument=True, is_result=True)
 
     @classmethod
     def argument(
         cls,
-        intent: str,
         *,
+        reads_argument: bool = True,
+        writes_argument: bool = False,
         projects_result: bool = False,
         python_visible: bool = True,
     ) -> OwnershipContext:
         return cls(
             location="argument",
-            intent=str(intent).lower(),
+            reads_argument=bool(reads_argument),
+            writes_argument=bool(writes_argument),
             is_argument=True,
             projects_result=projects_result,
             python_visible=python_visible,
@@ -345,11 +349,11 @@ class OwnershipContext:
 
     @classmethod
     def field(cls) -> OwnershipContext:
-        return cls(location="derived_field", intent="in", is_field=True)
+        return cls(location="derived_field", is_field=True)
 
     @classmethod
     def module_variable(cls) -> OwnershipContext:
-        return cls(location="module_variable", intent="in", is_module_variable=True)
+        return cls(location="module_variable", is_module_variable=True)
 
 
 def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipContext:
@@ -364,8 +368,30 @@ def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipCon
     projects_result = bool(metadata.get(PYI_PROJECTED_OUTPUT_METADATA))
     projects_result |= mapping is not None and getattr(mapping, "result_position", None) is not None
     python_visible = mapping is None or getattr(mapping, "python_position", None) is not None
+    storage = getattr(getattr(argument, "semantic_type", None), "storage", None)
+    type_metadata = getattr(getattr(argument, "semantic_type", None), "metadata", {}) or {}
+    explicit_policy = type_metadata.get(OWNERSHIP_POLICY_METADATA)
+    transfer = explicit_policy.get("transfer") if isinstance(explicit_policy, Mapping) else None
+    explicit_call_local_input = transfer == TransferMode.CALL_LOCAL.value and not projects_result
+    writes_argument = bool(
+        projects_result
+        or (
+            not explicit_call_local_input
+            and (
+                (
+                    getattr(getattr(argument, "semantic_type", None), "ownership", None)
+                    and getattr(argument.semantic_type.ownership, "mutable", False)
+                )
+                or (
+                    storage is not None
+                    and (getattr(storage, "mutable", False) or not getattr(storage, "read_only", False))
+                )
+            )
+        )
+    )
     return OwnershipContext.argument(
-        getattr(argument, "intent", "in"),
+        reads_argument=python_visible,
+        writes_argument=writes_argument,
         projects_result=projects_result,
         python_visible=python_visible,
     )
@@ -489,7 +515,7 @@ class OwnershipPolicyResolver:
                 assignment_mode=AssignmentMode.NONE,
                 setter_action=SetterAction.OMIT,
             )
-        incoming = self.decide_semantic_type(variable.semantic_type, OwnershipContext.argument("in"))
+        incoming = self.decide_semantic_type(variable.semantic_type, OwnershipContext.argument())
         return replace(
             incoming,
             assignment_mode=(
@@ -590,7 +616,7 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="scalar output is returned as a Python value",
             )
-        if context.intent == "out":
+        if context.writes_argument and not context.reads_argument:
             if not context.projects_result:
                 return OwnershipDecision(
                     ObjectKind.SCALAR,
@@ -608,14 +634,14 @@ class OwnershipPolicyResolver:
                 mutates_native=True,
                 reason="scalar output is returned as a Python value",
             )
-        if context.intent == "inout":
+        if context.writes_argument and context.reads_argument:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
                 OwnershipOwner.CALLER,
                 TransferMode.IN_PLACE,
                 DestructionPolicy.CALLER,
                 mutates_native=True,
-                reason="scalar inout updates caller-visible storage",
+                reason="scalar update mutates caller-visible storage",
             )
         return OwnershipDecision(
             ObjectKind.SCALAR,
@@ -635,7 +661,7 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="scalar storage is returned as a Python value",
             )
-        if context.intent in {"out", "inout"}:
+        if context.writes_argument:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
                 OwnershipOwner.CALLER,
@@ -662,7 +688,7 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="address-projected scalar result is returned as a Python value",
             )
-        if context.intent == "inout" and context.projects_result:
+        if context.writes_argument and context.reads_argument and context.projects_result:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
                 OwnershipOwner.PYTHON,
@@ -677,7 +703,7 @@ class OwnershipPolicyResolver:
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
             storage_mode=StorageMode.ALIAS,
-            mutates_native=context.intent in {"out", "inout"},
+            mutates_native=context.writes_argument,
             reason="address-projected scalar value passes the address of call-local native storage",
         )
 
@@ -693,7 +719,7 @@ class OwnershipPolicyResolver:
                 nullable=True,
                 reason="pointer scalar result is copied into a detached Python value",
             )
-        if context.is_field or context.is_module_variable or context.intent in {"out", "inout"}:
+        if context.is_field or context.is_module_variable or context.writes_argument:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
                 OwnershipOwner.UNKNOWN,
@@ -714,6 +740,33 @@ class OwnershipPolicyResolver:
         )
 
     def _string_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.scalar_storage:
+            if context.is_result:
+                return OwnershipDecision(
+                    ObjectKind.STRING,
+                    OwnershipOwner.PYTHON,
+                    TransferMode.COPY_RETURN,
+                    DestructionPolicy.PYTHON_REFCOUNT,
+                    reason="scalar string storage result is copied into a Python string",
+                )
+            if context.writes_argument:
+                return OwnershipDecision(
+                    ObjectKind.STRING,
+                    OwnershipOwner.CALLER,
+                    TransferMode.IN_PLACE,
+                    DestructionPolicy.CALLER,
+                    storage_mode=StorageMode.ALIAS,
+                    mutates_native=True,
+                    reason="rank-0 string storage mutates caller-provided NumPy bytes storage",
+                )
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.CALLER,
+                TransferMode.CALL_LOCAL,
+                DestructionPolicy.NONE,
+                storage_mode=StorageMode.ALIAS,
+                reason="rank-0 string storage is borrowed for the duration of the call",
+            )
         if context.is_result:
             return OwnershipDecision(
                 ObjectKind.STRING,
@@ -722,7 +775,7 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="string output is copied into a Python string",
             )
-        if context.intent == "out":
+        if context.writes_argument and not context.reads_argument:
             if not context.projects_result:
                 return OwnershipDecision(
                     ObjectKind.STRING,
@@ -740,7 +793,7 @@ class OwnershipPolicyResolver:
                 mutates_native=True,
                 reason="string output is copied into a Python string",
             )
-        if context.intent == "inout":
+        if context.writes_argument and context.reads_argument:
             if not context.projects_result:
                 return OwnershipDecision(
                     ObjectKind.STRING,
@@ -748,7 +801,7 @@ class OwnershipPolicyResolver:
                     TransferMode.CALL_LOCAL,
                     DestructionPolicy.CALL_LOCAL,
                     mutates_native=True,
-                    reason="string inout uses a mutable call-local copy and discards native mutation",
+                    reason="string update uses a mutable call-local copy and discards native mutation",
                 )
             return OwnershipDecision(
                 ObjectKind.STRING,
@@ -756,7 +809,7 @@ class OwnershipPolicyResolver:
                 TransferMode.COPY_RETURN,
                 DestructionPolicy.PYTHON_REFCOUNT,
                 mutates_native=True,
-                reason="immutable Python strings use copy-in/copy-out replacement for inout",
+                reason="immutable Python strings use copy-in/copy-out replacement for updates",
             )
         return OwnershipDecision(
             ObjectKind.STRING,
@@ -779,7 +832,7 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="array result is returned as Python-owned NumPy storage",
             )
-        if context.intent in {"out", "inout"}:
+        if context.writes_argument:
             return OwnershipDecision(
                 ObjectKind.NUMPY_ARRAY,
                 OwnershipOwner.CALLER,
@@ -831,7 +884,7 @@ class OwnershipPolicyResolver:
                 nullable=True,
                 reason="plain allocatable module storage is copied into a read-only Python snapshot",
             )
-        if context.is_result or context.intent in {"out", "inout"}:
+        if context.is_result or context.writes_argument:
             return OwnershipDecision(
                 ObjectKind.NUMPY_ARRAY,
                 OwnershipOwner.PYTHON,
@@ -873,7 +926,7 @@ class OwnershipPolicyResolver:
                 nullable=True,
                 reason="pointer array result is copied into Python-owned NumPy storage",
             )
-        if context.intent in {"out", "inout"}:
+        if context.writes_argument:
             return OwnershipDecision(
                 ObjectKind.NUMPY_ARRAY,
                 OwnershipOwner.UNKNOWN,
@@ -881,7 +934,7 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.BLOCKED,
                 storage_mode=StorageMode.ALIAS,
                 nullable=True,
-                blocker=f"pointer array {context.intent} reassociation policy is unknown",
+                blocker="pointer array writable reassociation policy is unknown",
                 reason="pointer array dummy reassociation needs explicit policy metadata",
             )
         return OwnershipDecision(
@@ -894,7 +947,12 @@ class OwnershipPolicyResolver:
         )
 
     def _derived_type_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
-        if context.is_result or (context.intent == "out" and context.projects_result and not context.python_visible):
+        if context.is_result or (
+            context.writes_argument
+            and not context.reads_argument
+            and context.projects_result
+            and not context.python_visible
+        ):
             return OwnershipDecision(
                 ObjectKind.DERIVED_TYPE,
                 OwnershipOwner.WRAPPER,
@@ -904,7 +962,7 @@ class OwnershipPolicyResolver:
                 boundary_storage_mode=StorageMode.ALIAS,
                 reason="derived output is represented by a wrapper-owned native instance",
             )
-        if context.intent == "out":
+        if context.writes_argument and not context.reads_argument:
             return OwnershipDecision(
                 ObjectKind.DERIVED_TYPE,
                 OwnershipOwner.WRAPPER,
@@ -914,7 +972,7 @@ class OwnershipPolicyResolver:
                 mutates_native=True,
                 reason="identity derived output mutates the supplied wrapper instance",
             )
-        if context.intent == "inout":
+        if context.writes_argument and context.reads_argument:
             return OwnershipDecision(
                 ObjectKind.DERIVED_TYPE,
                 OwnershipOwner.WRAPPER,
@@ -922,7 +980,7 @@ class OwnershipPolicyResolver:
                 DestructionPolicy.WRAPPER_DEALLOC,
                 storage_mode=StorageMode.ALIAS,
                 mutates_native=True,
-                reason="derived inout mutates the wrapper-owned native instance",
+                reason="derived update mutates the wrapper-owned native instance",
             )
         return OwnershipDecision(
             ObjectKind.DERIVED_TYPE,
@@ -1084,7 +1142,7 @@ class OwnershipPolicyResolver:
         if not facts.pointer or decision.is_blocked:
             return decision
         blocker = None
-        if context.is_argument and context.intent in {"out", "inout"}:
+        if context.is_argument and context.writes_argument:
             blocker = "pointer output and reassociation code generation is not implemented"
         elif facts.rank > 0 and (context.is_field or context.is_module_variable):
             blocker = "pointer array field and module snapshot accessors are not implemented"
@@ -1092,7 +1150,7 @@ class OwnershipPolicyResolver:
             blocker = "scalar pointer field and module accessors are not implemented"
         elif context.is_result and decision.transfer is not TransferMode.SNAPSHOT_COPY:
             blocker = "pointer results currently require snapshot_copy transfer"
-        elif context.is_argument and context.intent == "in" and decision.transfer is not TransferMode.CALL_LOCAL:
+        elif context.is_argument and not context.writes_argument and decision.transfer is not TransferMode.CALL_LOCAL:
             blocker = "pointer input arguments currently require call_local transfer"
         if blocker is None:
             return decision
@@ -1115,11 +1173,11 @@ class OwnershipPolicyResolver:
         metadata = facts.metadata or {}
         if metadata.get(PYTHON_VALUE_MUTABILITY_METADATA) != PYTHON_VALUE_IMMUTABLE:
             return decision
-        if not context.is_argument or context.intent not in {"out", "inout"} or decision.is_blocked:
+        if not context.is_argument or not context.writes_argument or decision.is_blocked:
             return decision
 
         if facts.is_custom:
-            if context.intent == "out" and context.projects_result:
+            if context.writes_argument and not context.reads_argument and context.projects_result:
                 return replace(
                     decision,
                     owner=OwnershipOwner.WRAPPER,
@@ -1137,7 +1195,7 @@ class OwnershipPolicyResolver:
                 transfer=TransferMode.BLOCKED,
                 destruction=DestructionPolicy.BLOCKED,
                 borrowed=False,
-                blocker="immutable derived inout replacement is not implemented",
+                blocker="immutable derived replacement is not implemented",
                 reason="derived replacement needs an explicit native copy/finalization policy",
             )
 
@@ -1244,13 +1302,18 @@ class OwnershipPolicyResolver:
     def _codegen_action(decision: OwnershipDecision, context: OwnershipContext) -> CodegenAction:
         if decision.is_blocked:
             return CodegenAction.BLOCKED
-        if context.is_argument and context.intent == "out":
+        if context.is_argument and context.writes_argument and not context.reads_argument:
             if not context.projects_result:
                 return CodegenAction.IDENTITY_OUTPUT
             if context.python_visible and decision.transfer is TransferMode.IN_PLACE:
                 return CodegenAction.IDENTITY_OUTPUT
             return CodegenAction.HIDDEN_OUTPUT
-        if context.is_argument and context.intent == "inout" and decision.transfer is TransferMode.COPY_RETURN:
+        if (
+            context.is_argument
+            and context.writes_argument
+            and context.reads_argument
+            and decision.transfer is TransferMode.COPY_RETURN
+        ):
             return CodegenAction.COPY_IN_OUT
         return _CODEGEN_ACTION_BY_TRANSFER[decision.transfer]
 
@@ -1269,6 +1332,8 @@ class OwnershipPolicyResolver:
         if facts.scalar_storage or (
             decision.kind is ObjectKind.SCALAR and decision.codegen_action is CodegenAction.IDENTITY_OUTPUT
         ):
+            if decision.kind is ObjectKind.STRING:
+                return PythonBarrierAction.STRING_STORAGE
             return PythonBarrierAction.SCALAR_STORAGE
         if decision.kind is ObjectKind.SCALAR:
             return PythonBarrierAction.SCALAR_VALUE
@@ -1375,8 +1440,15 @@ class OwnershipPolicyResolver:
         if class_name == "SemanticField":
             return OwnershipContext.field()
         if class_name == "SemanticArgument":
-            return OwnershipContext.argument(getattr(variable, "intent", "in"))
-        return OwnershipContext(location="value", intent=getattr(variable, "intent", "in"))
+            storage = variable.semantic_type.storage
+            return OwnershipContext.argument(
+                writes_argument=bool(
+                    variable.semantic_type.ownership.mutable
+                    or (storage is not None and (storage.mutable or not storage.read_only))
+                    or variable.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)
+                )
+            )
+        return OwnershipContext(location="value")
 
 
 def set_ownership_metadata(

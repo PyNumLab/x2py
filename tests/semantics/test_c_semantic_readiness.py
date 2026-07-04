@@ -72,12 +72,12 @@ def test_completed_pyi_callback_policy_can_make_c_api_semantically_ready():
 
     module = parse_pyi_text(
         """
-from typing import Any, Callable
+from typing import Callable
 
 def each_item(
-    items: Addr(Any),
-    visit: Callable[[Addr(Any), Addr(Any)], None],
-    userdata: Addr(Any),
+    items: Addr(Int8),
+    visit: Callable[[Int8, Int8], None],
+    userdata: Addr(Int8),
 ) -> None: ...
 """,
         module_name="callback_api",

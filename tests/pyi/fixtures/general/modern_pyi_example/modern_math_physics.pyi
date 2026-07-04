@@ -19,30 +19,30 @@ counter: Int32
 
 @native_call([Return('p', 0), Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4))])
 def init_particle(
-    pid: Const(Int32),
-    mass: Const(Float64),
-    x: Const(Float64),
-    y: Const(Float64),
-    z: Const(Float64)
+    pid: Int32,
+    mass: Float64,
+    x: Float64,
+    y: Float64,
+    z: Float64
 ) -> particle: ...
 
 @native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3))])
 def kinetic_energy(
-    p: Const(particle),
-    vx: Const(Float64),
-    vy: Const(Float64),
-    vz: Const(Float64)
+    p: particle,
+    vx: Float64,
+    vy: Float64,
+    vz: Float64
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def scale_vector(
     v: Float64[::],
-    alpha: Const(Float64)
+    alpha: Float64
 ) -> None: ...
 
 def dot3(
-    a: Const(Float64[3]),
-    b: Const(Float64[3])
+    a: Float64[3],
+    b: Float64[3]
 ) -> Float64: ...
 
 def fill_identity3(

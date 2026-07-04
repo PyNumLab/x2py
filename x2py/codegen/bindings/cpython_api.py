@@ -28,8 +28,13 @@ from ..models.datatypes import (
     PrimitiveFloatingPointType,
     PrimitiveIntegerType,
     NumpyBoolType,
+    NumpyComplex64Type,
     NumpyComplex128Type,
+    NumpyFloat32Type,
     NumpyFloat64Type,
+    NumpyInt8Type,
+    NumpyInt16Type,
+    NumpyInt32Type,
     NumpyInt64Type,
     attach_model_child,
     detach_model_child,
@@ -1425,8 +1430,13 @@ def C_to_Python(c_object):
 # Functions definitions are defined in x2py/stdlib/x2py_runtime/python_runtime.c
 c_to_py_registry = {
     NumpyBoolType(): "Bool_to_PyBool",
+    NumpyInt8Type(): "Int8_to_NumpyLong",
+    NumpyInt16Type(): "Int16_to_NumpyLong",
+    NumpyInt32Type(): "Int32_to_PyLong",
     NumpyInt64Type(): "Int" + str(NumpyInt64Type().precision * 8) + "_to_PyLong",
+    NumpyFloat32Type(): "Float_to_NumpyDouble",
     NumpyFloat64Type(): "Double_to_PyDouble",
+    NumpyComplex64Type(): "Complex64_to_NumpyComplex",
     NumpyComplex128Type(): "Complex128_to_PyComplex",
 }
 

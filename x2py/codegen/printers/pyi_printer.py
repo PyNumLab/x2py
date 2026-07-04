@@ -11,6 +11,7 @@ from x2py.naming import NamingPolicy
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_FIELDS, POINTER_POLICY_METADATA
 from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE, SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.semantics.models import (
+    CALLBACK_DECLARATION_ACCESS_METADATA,
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
@@ -48,6 +49,11 @@ from x2py.semantics.models import (
 from x2py.visitor import ClassVisitor
 
 _WRAPPED_CALLABLE_TYPE_METADATA = "pyi_wrapped_callable_type"
+_CALLABLE_ACCESS_WRAPPER = {
+    "read": "In",
+    "write": "Out",
+    "readwrite": "InOut",
+}
 
 
 class PyiPrinter(ClassVisitor):
@@ -274,15 +280,11 @@ class PyiPrinter(ClassVisitor):
         if storage is None:
             return base_type
         if storage.kind == "value":
-            if storage.read_only:
-                return f"Const({base_type})"
             return base_type
         if storage.kind in {"reference", "pointer", "address"}:
             if self._is_normal_storage_address(semantic_type):
-                return f"Const({base_type})" if storage.read_only else base_type
+                return base_type
             target = self._address_target_type(semantic_type)
-            if storage.read_only:
-                target = f"Const({target})"
             if storage.pointer_depth > 1:
                 return f"Addr[{storage.pointer_depth}]({target})"
             return f"Addr({target})"
@@ -333,14 +335,9 @@ class PyiPrinter(ClassVisitor):
         storage = semantic_type.storage
         array = storage.array if storage is not None else None
         if array is not None and array.category == PYI_SCALAR_STORAGE_CATEGORY:
-            base = f"{self._semantic_base_type(semantic_type)}[()]"
-            if storage is not None and storage.read_only:
-                base = f"Const({base})"
-            return base
+            return f"{self._semantic_base_type(semantic_type)}[()]"
         dimensions = self._array_dimensions(semantic_type, array)
         base = f"{self._semantic_base_type(semantic_type)}[{', '.join(dimensions)}]"
-        if storage is not None and storage.read_only:
-            base = f"Const({base})"
 
         metadata = self._array_annotation_metadata(array)
         if metadata:
@@ -483,11 +480,45 @@ class PyiPrinter(ClassVisitor):
         arguments = semantic_type.metadata.get("arguments")
         return_type = semantic_type.metadata.get("return")
         if isinstance(arguments, list) and return_type is not None:
-            args = ", ".join(self._visit(arg) for arg in arguments)
+            callback_arguments = semantic_type.metadata.get("callback_arguments")
+            if (
+                isinstance(callback_arguments, list)
+                and len(callback_arguments) == len(arguments)
+                and all(isinstance(arg, SemanticArgument) for arg in callback_arguments)
+            ):
+                args = ", ".join(self._emit_callable_argument(arg) for arg in callback_arguments)
+            else:
+                args = ", ".join(self._visit(arg) for arg in arguments)
             return f"Callable[[{args}], {self._visit(return_type)}]"
         if return_type is not None:
             return f"Callable[..., {self._visit(return_type)}]"
         return "Callable"
+
+    def _emit_callable_argument(self, argument: SemanticArgument) -> str:
+        """Emit one callback dummy argument with its callback ABI wrapper."""
+        inner = self._callable_argument_inner_type(argument.semantic_type)
+        if bool(getattr(argument.origin, "metadata", {}).get("value")):
+            return inner
+        access = argument.metadata.get(CALLBACK_DECLARATION_ACCESS_METADATA, "unspecified")
+        wrapper = _CALLABLE_ACCESS_WRAPPER.get(access)
+        if wrapper is None:
+            if self._callable_argument_requires_pass_by_ref_wrapper(argument.semantic_type):
+                return f"PassByRef({inner})"
+            return inner
+        return f"{wrapper}({inner})"
+
+    def _callable_argument_inner_type(self, semantic_type: SemanticType) -> str:
+        """Return the native callback dummy type without callback ABI wrappers."""
+        storage = semantic_type.storage
+        if storage is not None and storage.kind in {"reference", "address", "pointer"}:
+            return self._address_target_type(semantic_type)
+        return self._visit(semantic_type)
+
+    @staticmethod
+    def _callable_argument_requires_pass_by_ref_wrapper(semantic_type: SemanticType) -> bool:
+        """Return whether missing callback access needs an explicit scalar reference wrapper."""
+        storage = semantic_type.storage
+        return bool(storage is not None and storage.kind in {"reference", "pointer"} and semantic_type.rank == 0)
 
     def _emit_data_member(self, variable: SemanticVariable) -> str:
         """Emit a variable in class-field context rather than argument context."""
@@ -531,7 +562,6 @@ class PyiPrinter(ClassVisitor):
         arg: SemanticVariable,
         *,
         original_name: str | None = None,
-        omit_output_intent: bool = False,
     ) -> str:
         """Emit typed name syntax."""
         semantic_type = self._without_constant_constraint(arg.semantic_type)
@@ -539,8 +569,6 @@ class PyiPrinter(ClassVisitor):
         annotation_metadata = []
         if original_name is not None:
             annotation_metadata.append(f"Name({json.dumps(original_name)})")
-        if self._requires_intent_metadata(arg, omit_output_intent=omit_output_intent):
-            annotation_metadata.append(f"Intent({arg.intent!r})")
         if annotation_metadata:
             type_text = self._annotated_type_text(type_text, annotation_metadata)
         if self._is_constant(arg.semantic_type):
@@ -569,7 +597,6 @@ class PyiPrinter(ClassVisitor):
             name,
             emitted_arg,
             original_name=arg.name if name != arg.name else None,
-            omit_output_intent=self._can_omit_visible_projected_output_intent(func, arg),
         )
 
     @classmethod
@@ -1217,7 +1244,6 @@ class PyiPrinter(ClassVisitor):
                     native_name=argument.name,
                     native_position=index,
                     python_position=index,
-                    intent=argument.intent,
                 )
                 for index, argument in enumerate(func.arguments)
             ]
@@ -1311,8 +1337,8 @@ class PyiPrinter(ClassVisitor):
         """Handle native projection value for the current generation context."""
         if mapping.value_kind == "addr":
             return f"Addr({PyiPrinter._native_value_ref(mapping.value)})"
-        if mapping.value_kind == "const":
-            return f"Const({mapping.value!r})"
+        if mapping.value_kind == "literal":
+            return PyiPrinter._native_literal_value(mapping.value)
         if mapping.value_kind == "len":
             return f"Len({PyiPrinter._native_value_ref(mapping.value)})"
         if mapping.value_kind == "shape":
@@ -1324,6 +1350,15 @@ class PyiPrinter(ClassVisitor):
         if mapping.value_kind == "pass":
             return "Pass()"
         raise ValueError(f"Unsupported native_call projection entry: {mapping.value_kind!r}")
+
+    @staticmethod
+    def _native_literal_value(value: object) -> str:
+        """Emit a hidden native literal with its ABI type."""
+        if not isinstance(value, dict) or "type" not in value or "value" not in value:
+            raise ValueError("native_call literal entries require 'type' and 'value'")
+        literal = value["value"]
+        rendered = json.dumps(literal) if isinstance(literal, str) else repr(literal)
+        return f"{value['type']}({rendered})"
 
     @staticmethod
     def _native_value_ref(value: dict[str, int | str]) -> str:
@@ -1370,14 +1405,8 @@ class PyiPrinter(ClassVisitor):
         """Return whether requires explicit projection mapping."""
         if mapping.value_kind:
             return True
-        if mapping.intent == "inout":
-            return mapping.python_position is None or mapping.python_position != mapping.native_position
-        if mapping.intent == "out" and mapping.result_position is not None:
-            return mapping.python_position is None or mapping.python_position != mapping.native_position
-        if mapping.intent != "in":
-            return mapping.python_position is None
         if mapping.result_position is not None:
-            return True
+            return mapping.python_position is None or mapping.python_position != mapping.native_position
         if mapping.python_position is None:
             return True
         return mapping.native_position is not None and mapping.python_position != mapping.native_position
@@ -1391,56 +1420,6 @@ class PyiPrinter(ClassVisitor):
             if mapping.native_position is not None and mapping.python_position is None
         }
         return [arg for arg in func.arguments if arg.name not in hidden_names]
-
-    @staticmethod
-    def _requires_intent_metadata(arg: SemanticVariable, *, omit_output_intent: bool = False) -> bool:
-        """Return whether requires intent metadata."""
-        intent = getattr(arg, "intent", "in")
-        if intent == "out":
-            return not omit_output_intent
-        storage = arg.semantic_type.storage
-        return bool(
-            intent == "inout"
-            and arg.semantic_type.rank == 0
-            and (arg.semantic_type.dtype or arg.semantic_type.name) in SEMANTIC_SCALAR_TYPE_NAMES
-            and (storage is None or storage.kind == "value")
-        )
-
-    @staticmethod
-    def _can_omit_visible_projected_output_intent(func: SemanticFunction, arg: SemanticArgument) -> bool:
-        """Return whether compact `.pyi` can omit behavior-neutral output intent."""
-        if getattr(arg, "intent", "in") != "out":
-            return False
-        if not PyiPrinter._has_visible_projection_result(func, arg):
-            return False
-        return PyiPrinter._is_compact_visible_projection_storage(arg)
-
-    @staticmethod
-    def _has_visible_projection_result(func: SemanticFunction, arg: SemanticArgument) -> bool:
-        """Return whether an argument is passed visibly and also projected as a result."""
-        return any(
-            (mapping.python_name or mapping.native_name) == arg.name
-            and mapping.native_position is not None
-            and mapping.python_position is not None
-            and mapping.result_position is not None
-            for mapping in func.projection
-        )
-
-    @staticmethod
-    def _is_compact_visible_projection_storage(arg: SemanticArgument) -> bool:
-        """Return whether storage can carry compact visible projection semantics."""
-        storage = arg.semantic_type.storage
-        array = storage.array if storage is not None else None
-        if storage is None:
-            return False
-        if storage.kind == "array":
-            return bool(array is not None and not array.allocatable and not array.pointer)
-        return bool(
-            storage.kind == "reference"
-            and not storage.read_only
-            and storage.pointer_depth == 1
-            and arg.semantic_type.name not in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
-        )
 
     @classmethod
     def _method_call_arguments(cls, method: SemanticMethod) -> list[SemanticArgument]:

@@ -2,7 +2,7 @@
 title: Reference
 audience: users, developers
 prerequisites: getting started
-related: cli-commands.md, python-api.md, semantic-ir.md, semantic-pyi-format.md
+related: cli-commands.md, python-api.md, semantic-ir.md, semantic-pyi-format.md, callbacks.md
 status: maintained
 ---
 
@@ -18,6 +18,7 @@ and user guides; this section stays close to the public surfaces.
 - [Python API](python-api.md)
 - [Semantic IR](semantic-ir.md)
 - [Semantic .pyi format](semantic-pyi-format.md)
+- [Callbacks](callbacks.md)
 - [Diagnostic codes](diagnostic-codes.md)
 - [Generated functions](generated-functions.md)
 - [Generated modules](generated-modules.md)

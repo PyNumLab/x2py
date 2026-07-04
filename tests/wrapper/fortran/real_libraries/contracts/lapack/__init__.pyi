@@ -4,11 +4,11 @@ from . import LA_XISNAN
 @bind("CBBCSD")
 @external
 def cbbcsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -38,7 +38,7 @@ def cbbcsd(
 @bind("CBDSQR")
 @external
 def cbdsqr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NCVT: Addr(Int32),
     NRU: Addr(Int32),
@@ -58,7 +58,7 @@ def cbdsqr(
 @bind("CGBBRD")
 @external
 def cgbbrd(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NCC: Addr(Int32),
@@ -82,7 +82,7 @@ def cgbbrd(
 @bind("CGBCON")
 @external
 def cgbcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -133,7 +133,7 @@ def cgbequb(
 @bind("CGBRFS")
 @external
 def cgbrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -157,8 +157,8 @@ def cgbrfs(
 @bind("CGBRFSX")
 @external
 def cgbrfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -204,8 +204,8 @@ def cgbsv(
 @bind("CGBSVX")
 @external
 def cgbsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -215,7 +215,7 @@ def cgbsvx(
     AFB: Complex64[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Complex64[LDB, Flat],
@@ -233,8 +233,8 @@ def cgbsvx(
 @bind("CGBSVXX")
 @external
 def cgbsvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -244,7 +244,7 @@ def cgbsvxx(
     AFB: Complex64[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Complex64[LDB, Flat],
@@ -293,7 +293,7 @@ def cgbtrf(
 @bind("CGBTRS")
 @external
 def cgbtrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -309,8 +309,8 @@ def cgbtrs(
 @bind("CGEBAK")
 @external
 def cgebak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -324,7 +324,7 @@ def cgebak(
 @bind("CGEBAL")
 @external
 def cgebal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -368,7 +368,7 @@ def cgebrd(
 @bind("CGECON")
 @external
 def cgecon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -383,74 +383,74 @@ def cgecon(
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Addr(Arg(11)), Addr(Arg(12)), Return('K', 0), Arg(13), Arg(14), Addr(Arg(15)), Arg(16), Arg(17), Addr(Arg(18)), Arg(19), Addr(Arg(20)), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Arg(25), Addr(Arg(26)), Arg(27), Addr(Arg(28)), Return('INFO', 10)])
 def cgedmd(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     X: Complex64[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Complex64[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float32),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float32,
     EIGS: Complex64[Flat],
     Z: Complex64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float32[Flat],
     B: Complex64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     W: Complex64[LDW, Flat],
-    LDW: Const(Int32),
+    LDW: Int32,
     S: Complex64[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     ZWORK: Complex64[Flat],
-    LZWORK: Const(Int32),
+    LZWORK: Int32,
     RWORK: Float32[Flat],
-    LRWORK: Const(Int32),
+    LRWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Int32, Returns["EIGS", Complex64[Flat]], Returns["Z", Complex64[LDZ, Flat]], Returns["RES", Float32[Flat]], Returns["B", Complex64[LDB, Flat]], Returns["W", Complex64[LDW, Flat]], Returns["S", Complex64[LDS, Flat]], Returns["ZWORK", Complex64[Flat]], Returns["RWORK", Float32[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("CGEDMDQ")
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Addr(Arg(15)), Addr(Arg(16)), Return('K', 2), Arg(17), Arg(18), Addr(Arg(19)), Arg(20), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Arg(25), Addr(Arg(26)), Arg(27), Addr(Arg(28)), Arg(29), Addr(Arg(30)), Arg(31), Addr(Arg(32)), Return('INFO', 12)])
 def cgedmdq(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBQ: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     F: Complex64[LDF, Flat],
-    LDF: Const(Int32),
+    LDF: Int32,
     X: Complex64[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Complex64[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float32),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float32,
     EIGS: Complex64[Flat],
     Z: Complex64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float32[Flat],
     B: Complex64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     V: Complex64[LDV, Flat],
-    LDV: Const(Int32),
+    LDV: Int32,
     S: Complex64[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     ZWORK: Complex64[Flat],
-    LZWORK: Const(Int32),
+    LZWORK: Int32,
     WORK: Float32[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Returns["X", Complex64[LDX, Flat]], Returns["Y", Complex64[LDY, Flat]], Int32, Returns["EIGS", Complex64[Flat]], Returns["Z", Complex64[LDZ, Flat]], Returns["RES", Float32[Flat]], Returns["B", Complex64[LDB, Flat]], Returns["V", Complex64[LDV, Flat]], Returns["S", Complex64[LDS, Flat]], Returns["ZWORK", Complex64[Flat]], Returns["WORK", Float32[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("CGEEQU")
@@ -486,8 +486,8 @@ def cgeequb(
 @bind("CGEES")
 @external
 def cgees(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -506,10 +506,10 @@ def cgees(
 @bind("CGEESX")
 @external
 def cgeesx(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -529,8 +529,8 @@ def cgeesx(
 @bind("CGEEV")
 @external
 def cgeev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -548,10 +548,10 @@ def cgeev(
 @bind("CGEEVX")
 @external
 def cgeevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -602,12 +602,12 @@ def cgehrd(
 @bind("CGEJSV")
 @external
 def cgejsv(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBP: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -693,7 +693,7 @@ def cgelqt3(
 @bind("CGELS")
 @external
 def cgels(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -748,7 +748,7 @@ def cgelss(
 @bind("CGELST")
 @external
 def cgelst(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -783,8 +783,8 @@ def cgelsy(
 @bind("CGEMLQ")
 @external
 def cgemlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -802,8 +802,8 @@ def cgemlq(
 @bind("CGEMLQT")
 @external
 def cgemlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -821,8 +821,8 @@ def cgemlqt(
 @bind("CGEMQR")
 @external
 def cgemqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -840,8 +840,8 @@ def cgemqr(
 @bind("CGEMQRT")
 @external
 def cgemqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -1024,7 +1024,7 @@ def cgeqrt3(
 @bind("CGERFS")
 @external
 def cgerfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1046,8 +1046,8 @@ def cgerfs(
 @bind("CGERFSX")
 @external
 def cgerfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1113,7 +1113,7 @@ def cgesc2(
 @bind("CGESDD")
 @external
 def cgesdd(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1146,8 +1146,8 @@ def cgesv(
 @bind("CGESVD")
 @external
 def cgesvd(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1166,11 +1166,11 @@ def cgesvd(
 @bind("CGESVDQ")
 @external
 def cgesvdq(
-    JOBA: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBP: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1193,9 +1193,9 @@ def cgesvdq(
 @bind("CGESVDX")
 @external
 def cgesvdx(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
+    RANGE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1220,9 +1220,9 @@ def cgesvdx(
 @bind("CGESVJ")
 @external
 def cgesvj(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1241,8 +1241,8 @@ def cgesvj(
 @bind("CGESVX")
 @external
 def cgesvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1250,7 +1250,7 @@ def cgesvx(
     AF: Complex64[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Complex64[LDB, Flat],
@@ -1268,8 +1268,8 @@ def cgesvx(
 @bind("CGESVXX")
 @external
 def cgesvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1277,7 +1277,7 @@ def cgesvxx(
     AF: Complex64[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Complex64[LDB, Flat],
@@ -1356,7 +1356,7 @@ def cgetri(
 @bind("CGETRS")
 @external
 def cgetrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1370,7 +1370,7 @@ def cgetrs(
 @bind("CGETSLS")
 @external
 def cgetsls(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -1403,8 +1403,8 @@ def cgetsqrhrt(
 @bind("CGGBAK")
 @external
 def cggbak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -1419,7 +1419,7 @@ def cggbak(
 @bind("CGGBAL")
 @external
 def cggbal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -1436,9 +1436,9 @@ def cggbal(
 @bind("CGGES")
 @external
 def cgges(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1462,9 +1462,9 @@ def cgges(
 @bind("CGGES3")
 @external
 def cgges3(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1488,11 +1488,11 @@ def cgges3(
 @bind("CGGESX")
 @external
 def cggesx(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -1519,8 +1519,8 @@ def cggesx(
 @bind("CGGEV")
 @external
 def cggev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -1541,8 +1541,8 @@ def cggev(
 @bind("CGGEV3")
 @external
 def cggev3(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -1563,10 +1563,10 @@ def cggev3(
 @bind("CGGEVX")
 @external
 def cggevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -1615,8 +1615,8 @@ def cggglm(
 @bind("CGGHD3")
 @external
 def cgghd3(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -1636,8 +1636,8 @@ def cgghd3(
 @bind("CGGHRD")
 @external
 def cgghrd(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -1707,9 +1707,9 @@ def cggrqf(
 @bind("CGGSVD3")
 @external
 def cggsvd3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     P: Addr(Int32),
@@ -1737,9 +1737,9 @@ def cggsvd3(
 @bind("CGGSVP3")
 @external
 def cggsvp3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -1768,7 +1768,7 @@ def cggsvp3(
 @bind("CGSVJ0")
 @external
 def cgsvj0(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -1790,7 +1790,7 @@ def cgsvj0(
 @bind("CGSVJ1")
 @external
 def cgsvj1(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -1813,7 +1813,7 @@ def cgsvj1(
 @bind("CGTCON")
 @external
 def cgtcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Complex64[Flat],
     D: Complex64[Flat],
@@ -1829,7 +1829,7 @@ def cgtcon(
 @bind("CGTRFS")
 @external
 def cgtrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Complex64[Flat],
@@ -1867,8 +1867,8 @@ def cgtsv(
 @bind("CGTSVX")
 @external
 def cgtsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Complex64[Flat],
@@ -1906,7 +1906,7 @@ def cgttrf(
 @bind("CGTTRS")
 @external
 def cgttrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Complex64[Flat],
@@ -1937,7 +1937,7 @@ def cgtts2(
 @bind("CHB2ST_KERNELS")
 @external
 def chb2st_kernels(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     WANTZ: Addr(Bool),
     TTYPE: Addr(Int32),
     ST: Addr(Int32),
@@ -1957,8 +1957,8 @@ def chb2st_kernels(
 @bind("CHBEV")
 @external
 def chbev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -1974,8 +1974,8 @@ def chbev(
 @bind("CHBEV_2STAGE")
 @external
 def chbev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -1992,8 +1992,8 @@ def chbev_2stage(
 @bind("CHBEVD")
 @external
 def chbevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -2013,8 +2013,8 @@ def chbevd(
 @bind("CHBEVD_2STAGE")
 @external
 def chbevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -2034,9 +2034,9 @@ def chbevd_2stage(
 @bind("CHBEVX")
 @external
 def chbevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -2062,9 +2062,9 @@ def chbevx(
 @bind("CHBEVX_2STAGE")
 @external
 def chbevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -2091,8 +2091,8 @@ def chbevx_2stage(
 @bind("CHBGST")
 @external
 def chbgst(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -2110,8 +2110,8 @@ def chbgst(
 @bind("CHBGV")
 @external
 def chbgv(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -2130,8 +2130,8 @@ def chbgv(
 @bind("CHBGVD")
 @external
 def chbgvd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -2154,9 +2154,9 @@ def chbgvd(
 @bind("CHBGVX")
 @external
 def chbgvx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -2185,8 +2185,8 @@ def chbgvx(
 @bind("CHBTRD")
 @external
 def chbtrd(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -2202,7 +2202,7 @@ def chbtrd(
 @bind("CHECON")
 @external
 def checon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2216,7 +2216,7 @@ def checon(
 @bind("CHECON_3")
 @external
 def checon_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2231,7 +2231,7 @@ def checon_3(
 @bind("CHECON_ROOK")
 @external
 def checon_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2245,7 +2245,7 @@ def checon_rook(
 @bind("CHEEQUB")
 @external
 def cheequb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2259,8 +2259,8 @@ def cheequb(
 @bind("CHEEV")
 @external
 def cheev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2274,8 +2274,8 @@ def cheev(
 @bind("CHEEV_2STAGE")
 @external
 def cheev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2289,8 +2289,8 @@ def cheev_2stage(
 @bind("CHEEVD")
 @external
 def cheevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2307,8 +2307,8 @@ def cheevd(
 @bind("CHEEVD_2STAGE")
 @external
 def cheevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2325,9 +2325,9 @@ def cheevd_2stage(
 @bind("CHEEVR")
 @external
 def cheevr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2353,9 +2353,9 @@ def cheevr(
 @bind("CHEEVR_2STAGE")
 @external
 def cheevr_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2381,9 +2381,9 @@ def cheevr_2stage(
 @bind("CHEEVX")
 @external
 def cheevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2407,9 +2407,9 @@ def cheevx(
 @bind("CHEEVX_2STAGE")
 @external
 def cheevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2434,7 +2434,7 @@ def cheevx_2stage(
 @external
 def chegs2(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2447,7 +2447,7 @@ def chegs2(
 @external
 def chegst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2460,8 +2460,8 @@ def chegst(
 @external
 def chegv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2478,8 +2478,8 @@ def chegv(
 @external
 def chegv_2stage(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2496,8 +2496,8 @@ def chegv_2stage(
 @external
 def chegvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2517,9 +2517,9 @@ def chegvd(
 @external
 def chegvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2545,7 +2545,7 @@ def chegvx(
 @bind("CHERFS")
 @external
 def cherfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2567,8 +2567,8 @@ def cherfs(
 @bind("CHERFSX")
 @external
 def cherfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2596,7 +2596,7 @@ def cherfsx(
 @bind("CHESV")
 @external
 def chesv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2612,7 +2612,7 @@ def chesv(
 @bind("CHESV_AA")
 @external
 def chesv_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2628,7 +2628,7 @@ def chesv_aa(
 @bind("CHESV_AA_2STAGE")
 @external
 def chesv_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2647,7 +2647,7 @@ def chesv_aa_2stage(
 @bind("CHESV_RK")
 @external
 def chesv_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2664,7 +2664,7 @@ def chesv_rk(
 @bind("CHESV_ROOK")
 @external
 def chesv_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2680,8 +2680,8 @@ def chesv_rook(
 @bind("CHESVX")
 @external
 def chesvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2705,8 +2705,8 @@ def chesvx(
 @bind("CHESVXX")
 @external
 def chesvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2714,7 +2714,7 @@ def chesvxx(
     AF: Complex64[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Complex64[LDB, Flat],
     LDB: Addr(Int32),
@@ -2736,7 +2736,7 @@ def chesvxx(
 @bind("CHESWAPR")
 @external
 def cheswapr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex64[LDA, N], ORDER_F],
     LDA: Addr(Int32),
@@ -2747,7 +2747,7 @@ def cheswapr(
 @bind("CHETD2")
 @external
 def chetd2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2760,7 +2760,7 @@ def chetd2(
 @bind("CHETF2")
 @external
 def chetf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2771,7 +2771,7 @@ def chetf2(
 @bind("CHETF2_RK")
 @external
 def chetf2_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2783,7 +2783,7 @@ def chetf2_rk(
 @bind("CHETF2_ROOK")
 @external
 def chetf2_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2794,7 +2794,7 @@ def chetf2_rook(
 @bind("CHETRD")
 @external
 def chetrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2809,8 +2809,8 @@ def chetrd(
 @bind("CHETRD_2STAGE")
 @external
 def chetrd_2stage(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2827,9 +2827,9 @@ def chetrd_2stage(
 @bind("CHETRD_HB2ST")
 @external
 def chetrd_hb2st(
-    STAGE1: Addr(Const(String[1])),
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    STAGE1: Addr(String[1]),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -2846,7 +2846,7 @@ def chetrd_hb2st(
 @bind("CHETRD_HE2HB")
 @external
 def chetrd_he2hb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -2862,7 +2862,7 @@ def chetrd_he2hb(
 @bind("CHETRF")
 @external
 def chetrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2875,7 +2875,7 @@ def chetrf(
 @bind("CHETRF_AA")
 @external
 def chetrf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2888,7 +2888,7 @@ def chetrf_aa(
 @bind("CHETRF_AA_2STAGE")
 @external
 def chetrf_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2904,7 +2904,7 @@ def chetrf_aa_2stage(
 @bind("CHETRF_RK")
 @external
 def chetrf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2918,7 +2918,7 @@ def chetrf_rk(
 @bind("CHETRF_ROOK")
 @external
 def chetrf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2931,7 +2931,7 @@ def chetrf_rook(
 @bind("CHETRI")
 @external
 def chetri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2943,7 +2943,7 @@ def chetri(
 @bind("CHETRI2")
 @external
 def chetri2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2956,7 +2956,7 @@ def chetri2(
 @bind("CHETRI2X")
 @external
 def chetri2x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2969,7 +2969,7 @@ def chetri2x(
 @bind("CHETRI_3")
 @external
 def chetri_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2983,7 +2983,7 @@ def chetri_3(
 @bind("CHETRI_3X")
 @external
 def chetri_3x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -2997,7 +2997,7 @@ def chetri_3x(
 @bind("CHETRI_ROOK")
 @external
 def chetri_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3009,7 +3009,7 @@ def chetri_rook(
 @bind("CHETRS")
 @external
 def chetrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3023,7 +3023,7 @@ def chetrs(
 @bind("CHETRS2")
 @external
 def chetrs2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3038,7 +3038,7 @@ def chetrs2(
 @bind("CHETRS_3")
 @external
 def chetrs_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3053,7 +3053,7 @@ def chetrs_3(
 @bind("CHETRS_AA")
 @external
 def chetrs_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3069,7 +3069,7 @@ def chetrs_aa(
 @bind("CHETRS_AA_2STAGE")
 @external
 def chetrs_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3086,7 +3086,7 @@ def chetrs_aa_2stage(
 @bind("CHETRS_ROOK")
 @external
 def chetrs_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3100,9 +3100,9 @@ def chetrs_rook(
 @bind("CHFRK")
 @external
 def chfrk(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     ALPHA: Addr(Float32),
@@ -3115,9 +3115,9 @@ def chfrk(
 @bind("CHGEQZ")
 @external
 def chgeqz(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -3146,7 +3146,7 @@ def chla_transtype(
 @bind("CHPCON")
 @external
 def chpcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     IPIV: Int32[Flat],
@@ -3159,8 +3159,8 @@ def chpcon(
 @bind("CHPEV")
 @external
 def chpev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     W: Float32[Flat],
@@ -3174,8 +3174,8 @@ def chpev(
 @bind("CHPEVD")
 @external
 def chpevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     W: Float32[Flat],
@@ -3193,9 +3193,9 @@ def chpevd(
 @bind("CHPEVX")
 @external
 def chpevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     VL: Addr(Float32),
@@ -3218,7 +3218,7 @@ def chpevx(
 @external
 def chpgst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     BP: Complex64[Flat],
@@ -3229,8 +3229,8 @@ def chpgst(
 @external
 def chpgv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     BP: Complex64[Flat],
@@ -3246,8 +3246,8 @@ def chpgv(
 @external
 def chpgvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     BP: Complex64[Flat],
@@ -3267,9 +3267,9 @@ def chpgvd(
 @external
 def chpgvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     BP: Complex64[Flat],
@@ -3292,7 +3292,7 @@ def chpgvx(
 @bind("CHPRFS")
 @external
 def chprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -3312,7 +3312,7 @@ def chprfs(
 @bind("CHPSV")
 @external
 def chpsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -3325,8 +3325,8 @@ def chpsv(
 @bind("CHPSVX")
 @external
 def chpsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -3347,7 +3347,7 @@ def chpsvx(
 @bind("CHPTRD")
 @external
 def chptrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     D: Float32[Flat],
@@ -3359,7 +3359,7 @@ def chptrd(
 @bind("CHPTRF")
 @external
 def chptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     IPIV: Int32[Flat],
@@ -3369,7 +3369,7 @@ def chptrf(
 @bind("CHPTRI")
 @external
 def chptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     IPIV: Int32[Flat],
@@ -3380,7 +3380,7 @@ def chptri(
 @bind("CHPTRS")
 @external
 def chptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -3393,9 +3393,9 @@ def chptrs(
 @bind("CHSEIN")
 @external
 def chsein(
-    SIDE: Addr(Const(String[1])),
-    EIGSRC: Addr(Const(String[1])),
-    INITV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    EIGSRC: Addr(String[1]),
+    INITV: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     H: Complex64[LDH, Flat],
@@ -3417,8 +3417,8 @@ def chsein(
 @bind("CHSEQR")
 @external
 def chseqr(
-    JOB: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -3453,7 +3453,7 @@ def cla_gbamv(
 @bind("CLA_GBRCOND_C")
 @external
 def cla_gbrcond_c(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -3472,7 +3472,7 @@ def cla_gbrcond_c(
 @bind("CLA_GBRCOND_X")
 @external
 def cla_gbrcond_x(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -3555,7 +3555,7 @@ def cla_geamv(
 @bind("CLA_GERCOND_C")
 @external
 def cla_gercond_c(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3572,7 +3572,7 @@ def cla_gercond_c(
 @bind("CLA_GERCOND_X")
 @external
 def cla_gercond_x(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3648,7 +3648,7 @@ def cla_heamv(
 @bind("CLA_HERCOND_C")
 @external
 def cla_hercond_c(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3665,7 +3665,7 @@ def cla_hercond_c(
 @bind("CLA_HERCOND_X")
 @external
 def cla_hercond_x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3682,7 +3682,7 @@ def cla_hercond_x(
 @external
 def cla_herfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3715,7 +3715,7 @@ def cla_herfsx_extended(
 @bind("CLA_HERPVGRW")
 @external
 def cla_herpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     INFO: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3740,7 +3740,7 @@ def cla_lin_berr(
 @bind("CLA_PORCOND_C")
 @external
 def cla_porcond_c(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3756,7 +3756,7 @@ def cla_porcond_c(
 @bind("CLA_PORCOND_X")
 @external
 def cla_porcond_x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3772,7 +3772,7 @@ def cla_porcond_x(
 @external
 def cla_porfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3804,7 +3804,7 @@ def cla_porfsx_extended(
 @bind("CLA_PORPVGRW")
 @external
 def cla_porpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     NCOLS: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3831,7 +3831,7 @@ def cla_syamv(
 @bind("CLA_SYRCOND_C")
 @external
 def cla_syrcond_c(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3848,7 +3848,7 @@ def cla_syrcond_c(
 @bind("CLA_SYRCOND_X")
 @external
 def cla_syrcond_x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -3865,7 +3865,7 @@ def cla_syrcond_x(
 @external
 def cla_syrfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3898,7 +3898,7 @@ def cla_syrfsx_extended(
 @bind("CLA_SYRPVGRW")
 @external
 def cla_syrpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     INFO: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -3968,7 +3968,7 @@ def clacon(
 @bind("CLACP2")
 @external
 def clacp2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -3980,7 +3980,7 @@ def clacp2(
 @bind("CLACPY")
 @external
 def clacpy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -4167,7 +4167,7 @@ def clags2(
 @bind("CLAGTM")
 @external
 def clagtm(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     ALPHA: Addr(Float32),
@@ -4184,7 +4184,7 @@ def clagtm(
 @bind("CLAHEF")
 @external
 def clahef(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -4199,7 +4199,7 @@ def clahef(
 @bind("CLAHEF_AA")
 @external
 def clahef_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     J1: Addr(Int32),
     M: Addr(Int32),
     NB: Addr(Int32),
@@ -4214,7 +4214,7 @@ def clahef_aa(
 @bind("CLAHEF_RK")
 @external
 def clahef_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -4230,7 +4230,7 @@ def clahef_rk(
 @bind("CLAHEF_ROOK")
 @external
 def clahef_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -4352,7 +4352,7 @@ def clalsa(
 @bind("CLALSD")
 @external
 def clalsd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     SMLSIZ: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -4371,8 +4371,8 @@ def clalsd(
 @bind("CLAMSWLQ")
 @external
 def clamswlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -4392,8 +4392,8 @@ def clamswlq(
 @bind("CLAMTSQR")
 @external
 def clamtsqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -4413,7 +4413,7 @@ def clamtsqr(
 @bind("CLANGB")
 @external
 def clangb(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -4425,7 +4425,7 @@ def clangb(
 @bind("CLANGE")
 @external
 def clange(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -4436,7 +4436,7 @@ def clange(
 @bind("CLANGT")
 @external
 def clangt(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Complex64[Flat],
     D: Complex64[Flat],
@@ -4446,8 +4446,8 @@ def clangt(
 @bind("CLANHB")
 @external
 def clanhb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -4458,8 +4458,8 @@ def clanhb(
 @bind("CLANHE")
 @external
 def clanhe(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -4469,9 +4469,9 @@ def clanhe(
 @bind("CLANHF")
 @external
 def clanhf(
-    NORM: Addr(Const(String[1])),
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex64[Flat], SourceDims("0:*")],
     WORK: Annotated[Float32[Flat], SourceDims("0:*")]
@@ -4480,8 +4480,8 @@ def clanhf(
 @bind("CLANHP")
 @external
 def clanhp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     WORK: Float32[Flat]
@@ -4490,7 +4490,7 @@ def clanhp(
 @bind("CLANHS")
 @external
 def clanhs(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -4500,7 +4500,7 @@ def clanhs(
 @bind("CLANHT")
 @external
 def clanht(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Complex64[Flat]
@@ -4509,8 +4509,8 @@ def clanht(
 @bind("CLANSB")
 @external
 def clansb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -4521,8 +4521,8 @@ def clansb(
 @bind("CLANSP")
 @external
 def clansp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     WORK: Float32[Flat]
@@ -4531,8 +4531,8 @@ def clansp(
 @bind("CLANSY")
 @external
 def clansy(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -4542,9 +4542,9 @@ def clansy(
 @bind("CLANTB")
 @external
 def clantb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -4555,9 +4555,9 @@ def clantb(
 @bind("CLANTP")
 @external
 def clantp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     WORK: Float32[Flat]
@@ -4566,9 +4566,9 @@ def clantp(
 @bind("CLANTR")
 @external
 def clantr(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -4623,7 +4623,7 @@ def claqgb(
     ROWCND: Addr(Float32),
     COLCND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQGE")
@@ -4638,13 +4638,13 @@ def claqge(
     ROWCND: Addr(Float32),
     COLCND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQHB")
 @external
 def claqhb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -4652,32 +4652,32 @@ def claqhb(
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQHE")
 @external
 def claqhe(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQHP")
 @external
 def claqhp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQP2")
@@ -4911,7 +4911,7 @@ def claqr5(
 @bind("CLAQSB")
 @external
 def claqsb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -4919,143 +4919,143 @@ def claqsb(
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQSP")
 @external
 def claqsp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQSY")
 @external
 def claqsy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("CLAQZ0")
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Arg(10), Arg(11), Arg(12), Addr(Arg(13)), Arg(14), Addr(Arg(15)), Arg(16), Addr(Arg(17)), Arg(18), Addr(Arg(19)), Return('INFO', 1)])
 def claqz0(
-    WANTS: Addr(Const(String[1])),
-    WANTQ: Addr(Const(String[1])),
-    WANTZ: Addr(Const(String[1])),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
+    WANTS: Addr(String[1]),
+    WANTQ: Addr(String[1]),
+    WANTZ: Addr(String[1]),
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
     A: Complex64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     ALPHA: Complex64[Flat],
     BETA: Complex64[Flat],
     Q: Complex64[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Complex64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     WORK: Complex64[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     RWORK: Float32[Flat],
-    REC: Const(Int32)
+    REC: Int32
 ) -> tuple[Returns["RWORK", Float32[Flat]], Int32]: ...
 
 @bind("CLAQZ1")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Addr(Arg(11)), Arg(12), Addr(Arg(13)), Addr(Arg(14)), Addr(Arg(15)), Arg(16), Addr(Arg(17))])
 def claqz1(
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    K: Const(Int32),
-    ISTARTM: Const(Int32),
-    ISTOPM: Const(Int32),
-    IHI: Const(Int32),
+    ILQ: Bool,
+    ILZ: Bool,
+    K: Int32,
+    ISTARTM: Int32,
+    ISTOPM: Int32,
+    IHI: Int32,
     A: Complex64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex64[LDB, Flat],
-    LDB: Const(Int32),
-    NQ: Const(Int32),
-    QSTART: Const(Int32),
+    LDB: Int32,
+    NQ: Int32,
+    QSTART: Int32,
     Q: Complex64[LDQ, Flat],
-    LDQ: Const(Int32),
-    NZ: Const(Int32),
-    ZSTART: Const(Int32),
+    LDQ: Int32,
+    NZ: Int32,
+    ZSTART: Int32,
     Z: Complex64[LDZ, Flat],
-    LDZ: Const(Int32)
+    LDZ: Int32
 ) -> None: ...
 
 @bind("CLAQZ2")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Return('NS', 0), Return('ND', 1), Arg(15), Arg(16), Arg(17), Addr(Arg(18)), Arg(19), Addr(Arg(20)), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Return('INFO', 2)])
 def claqz2(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NW: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NW: Int32,
     A: Complex64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Complex64[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Complex64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     ALPHA: Complex64[Flat],
     BETA: Complex64[Flat],
     QC: Complex64[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Complex64[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Complex64[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     RWORK: Float32[Flat],
-    REC: Const(Int32)
+    REC: Int32
 ) -> tuple[Int32, Int32, Int32]: ...
 
 @bind("CLAQZ3")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Arg(9), Arg(10), Addr(Arg(11)), Arg(12), Addr(Arg(13)), Arg(14), Addr(Arg(15)), Arg(16), Addr(Arg(17)), Arg(18), Addr(Arg(19)), Arg(20), Addr(Arg(21)), Arg(22), Addr(Arg(23)), Return('INFO', 0)])
 def claqz3(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NSHIFTS: Const(Int32),
-    NBLOCK_DESIRED: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NSHIFTS: Int32,
+    NBLOCK_DESIRED: Int32,
     ALPHA: Complex64[Flat],
     BETA: Complex64[Flat],
     A: Complex64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Complex64[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Complex64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     QC: Complex64[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Complex64[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Complex64[Flat],
-    LWORK: Const(Int32)
+    LWORK: Int32
 ) -> Int32: ...
 
 @bind("CLAR1V")
@@ -5114,7 +5114,7 @@ def clarcm(
 @bind("CLARF")
 @external
 def clarf(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex64[Flat],
@@ -5128,7 +5128,7 @@ def clarf(
 @bind("CLARF1F")
 @external
 def clarf1f(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex64[Flat],
@@ -5142,7 +5142,7 @@ def clarf1f(
 @bind("CLARF1L")
 @external
 def clarf1l(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex64[Flat],
@@ -5156,10 +5156,10 @@ def clarf1l(
 @bind("CLARFB")
 @external
 def clarfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -5176,7 +5176,7 @@ def clarfb(
 @bind("CLARFB_GETT")
 @external
 def clarfb_gett(
-    IDENT: Addr(Const(String[1])),
+    IDENT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -5213,8 +5213,8 @@ def clarfgp(
 @bind("CLARFT")
 @external
 def clarft(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Complex64[LDV, Flat],
@@ -5227,7 +5227,7 @@ def clarft(
 @bind("CLARFX")
 @external
 def clarfx(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex64[Flat],
@@ -5240,7 +5240,7 @@ def clarfx(
 @bind("CLARFY")
 @external
 def clarfy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     V: Complex64[Flat],
     INCV: Addr(Int32),
@@ -5337,7 +5337,7 @@ def clartv(
 @bind("CLARZ")
 @external
 def clarz(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     L: Addr(Int32),
@@ -5352,10 +5352,10 @@ def clarz(
 @bind("CLARZB")
 @external
 def clarzb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -5373,8 +5373,8 @@ def clarzb(
 @bind("CLARZT")
 @external
 def clarzt(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Complex64[LDV, Flat],
@@ -5387,7 +5387,7 @@ def clarzt(
 @bind("CLASCL")
 @external
 def clascl(
-    TYPE: Addr(Const(String[1])),
+    TYPE: Addr(String[1]),
     KL: Addr(Int32),
     KU: Addr(Int32),
     CFROM: Addr(Float32),
@@ -5412,7 +5412,7 @@ def clascl2(
 @bind("CLASET")
 @external
 def claset(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Complex64),
@@ -5424,9 +5424,9 @@ def claset(
 @bind("CLASR")
 @external
 def clasr(
-    SIDE: Addr(Const(String[1])),
-    PIVOT: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    PIVOT: Addr(String[1]),
+    DIRECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     C: Float32[Flat],
@@ -5476,7 +5476,7 @@ def claswp(
 @bind("CLASYF")
 @external
 def clasyf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -5491,7 +5491,7 @@ def clasyf(
 @bind("CLASYF_AA")
 @external
 def clasyf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     J1: Addr(Int32),
     M: Addr(Int32),
     NB: Addr(Int32),
@@ -5506,7 +5506,7 @@ def clasyf_aa(
 @bind("CLASYF_RK")
 @external
 def clasyf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -5522,7 +5522,7 @@ def clasyf_rk(
 @bind("CLASYF_ROOK")
 @external
 def clasyf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -5537,10 +5537,10 @@ def clasyf_rook(
 @bind("CLATBS")
 @external
 def clatbs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -5568,10 +5568,10 @@ def clatdf(
 @bind("CLATPS")
 @external
 def clatps(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     X: Complex64[Flat],
@@ -5583,7 +5583,7 @@ def clatps(
 @bind("CLATRD")
 @external
 def clatrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -5597,10 +5597,10 @@ def clatrd(
 @bind("CLATRS")
 @external
 def clatrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -5613,10 +5613,10 @@ def clatrs(
 @bind("CLATRS3")
 @external
 def clatrs3(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -5683,7 +5683,7 @@ def claunhr_col_getrfnp2(
 @bind("CLAUU2")
 @external
 def clauu2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -5693,7 +5693,7 @@ def clauu2(
 @bind("CLAUUM")
 @external
 def clauum(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -5703,7 +5703,7 @@ def clauum(
 @bind("CPBCON")
 @external
 def cpbcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -5718,7 +5718,7 @@ def cpbcon(
 @bind("CPBEQU")
 @external
 def cpbequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -5732,7 +5732,7 @@ def cpbequ(
 @bind("CPBRFS")
 @external
 def cpbrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -5754,7 +5754,7 @@ def cpbrfs(
 @bind("CPBSTF")
 @external
 def cpbstf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -5765,7 +5765,7 @@ def cpbstf(
 @bind("CPBSV")
 @external
 def cpbsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -5779,8 +5779,8 @@ def cpbsv(
 @bind("CPBSVX")
 @external
 def cpbsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -5788,7 +5788,7 @@ def cpbsvx(
     LDAB: Addr(Int32),
     AFB: Complex64[LDAFB, Flat],
     LDAFB: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Complex64[LDB, Flat],
     LDB: Addr(Int32),
@@ -5805,7 +5805,7 @@ def cpbsvx(
 @bind("CPBTF2")
 @external
 def cpbtf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -5816,7 +5816,7 @@ def cpbtf2(
 @bind("CPBTRF")
 @external
 def cpbtrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -5827,7 +5827,7 @@ def cpbtrf(
 @bind("CPBTRS")
 @external
 def cpbtrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -5841,8 +5841,8 @@ def cpbtrs(
 @bind("CPFTRF")
 @external
 def cpftrf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex64[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -5851,8 +5851,8 @@ def cpftrf(
 @bind("CPFTRI")
 @external
 def cpftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex64[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -5861,8 +5861,8 @@ def cpftri(
 @bind("CPFTRS")
 @external
 def cpftrs(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Annotated[Complex64[Flat], SourceDims("0:*")],
@@ -5874,7 +5874,7 @@ def cpftrs(
 @bind("CPOCON")
 @external
 def cpocon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -5912,7 +5912,7 @@ def cpoequb(
 @bind("CPORFS")
 @external
 def cporfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -5933,8 +5933,8 @@ def cporfs(
 @bind("CPORFSX")
 @external
 def cporfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -5961,7 +5961,7 @@ def cporfsx(
 @bind("CPOSV")
 @external
 def cposv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -5974,15 +5974,15 @@ def cposv(
 @bind("CPOSVX")
 @external
 def cposvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
     AF: Complex64[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Complex64[LDB, Flat],
     LDB: Addr(Int32),
@@ -5999,15 +5999,15 @@ def cposvx(
 @bind("CPOSVXX")
 @external
 def cposvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
     AF: Complex64[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Complex64[LDB, Flat],
     LDB: Addr(Int32),
@@ -6029,7 +6029,7 @@ def cposvxx(
 @bind("CPOTF2")
 @external
 def cpotf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6039,7 +6039,7 @@ def cpotf2(
 @bind("CPOTRF")
 @external
 def cpotrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6049,7 +6049,7 @@ def cpotrf(
 @bind("CPOTRF2")
 @external
 def cpotrf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6059,7 +6059,7 @@ def cpotrf2(
 @bind("CPOTRI")
 @external
 def cpotri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6069,7 +6069,7 @@ def cpotri(
 @bind("CPOTRS")
 @external
 def cpotrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6082,7 +6082,7 @@ def cpotrs(
 @bind("CPPCON")
 @external
 def cppcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     ANORM: Addr(Float32),
@@ -6095,7 +6095,7 @@ def cppcon(
 @bind("CPPEQU")
 @external
 def cppequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     S: Float32[Flat],
@@ -6107,7 +6107,7 @@ def cppequ(
 @bind("CPPRFS")
 @external
 def cpprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -6126,7 +6126,7 @@ def cpprfs(
 @bind("CPPSV")
 @external
 def cppsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -6138,13 +6138,13 @@ def cppsv(
 @bind("CPPSVX")
 @external
 def cppsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
     AFP: Complex64[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Complex64[LDB, Flat],
     LDB: Addr(Int32),
@@ -6161,7 +6161,7 @@ def cppsvx(
 @bind("CPPTRF")
 @external
 def cpptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     INFO: Addr(Int32)
@@ -6170,7 +6170,7 @@ def cpptrf(
 @bind("CPPTRI")
 @external
 def cpptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     INFO: Addr(Int32)
@@ -6179,7 +6179,7 @@ def cpptri(
 @bind("CPPTRS")
 @external
 def cpptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -6191,7 +6191,7 @@ def cpptrs(
 @bind("CPSTF2")
 @external
 def cpstf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6205,7 +6205,7 @@ def cpstf2(
 @bind("CPSTRF")
 @external
 def cpstrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6231,7 +6231,7 @@ def cptcon(
 @bind("CPTEQR")
 @external
 def cpteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -6244,7 +6244,7 @@ def cpteqr(
 @bind("CPTRFS")
 @external
 def cptrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float32[Flat],
@@ -6277,7 +6277,7 @@ def cptsv(
 @bind("CPTSVX")
 @external
 def cptsvx(
-    FACT: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float32[Flat],
@@ -6308,7 +6308,7 @@ def cpttrf(
 @bind("CPTTRS")
 @external
 def cpttrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float32[Flat],
@@ -6354,7 +6354,7 @@ def crscl(
 @bind("CSPCON")
 @external
 def cspcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     IPIV: Int32[Flat],
@@ -6367,7 +6367,7 @@ def cspcon(
 @bind("CSPMV")
 @external
 def cspmv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex64),
     AP: Complex64[Flat],
@@ -6381,7 +6381,7 @@ def cspmv(
 @bind("CSPR")
 @external
 def cspr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex64),
     X: Complex64[Flat],
@@ -6392,7 +6392,7 @@ def cspr(
 @bind("CSPRFS")
 @external
 def csprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -6412,7 +6412,7 @@ def csprfs(
 @bind("CSPSV")
 @external
 def cspsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -6425,8 +6425,8 @@ def cspsv(
 @bind("CSPSVX")
 @external
 def cspsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -6447,7 +6447,7 @@ def cspsvx(
 @bind("CSPTRF")
 @external
 def csptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     IPIV: Int32[Flat],
@@ -6457,7 +6457,7 @@ def csptrf(
 @bind("CSPTRI")
 @external
 def csptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     IPIV: Int32[Flat],
@@ -6468,7 +6468,7 @@ def csptri(
 @bind("CSPTRS")
 @external
 def csptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -6490,7 +6490,7 @@ def csrscl(
 @bind("CSTEDC")
 @external
 def cstedc(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -6508,8 +6508,8 @@ def cstedc(
 @bind("CSTEGR")
 @external
 def cstegr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -6551,8 +6551,8 @@ def cstein(
 @bind("CSTEMR")
 @external
 def cstemr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -6577,7 +6577,7 @@ def cstemr(
 @bind("CSTEQR")
 @external
 def csteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -6590,7 +6590,7 @@ def csteqr(
 @bind("CSYCON")
 @external
 def csycon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6604,7 +6604,7 @@ def csycon(
 @bind("CSYCON_3")
 @external
 def csycon_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6619,7 +6619,7 @@ def csycon_3(
 @bind("CSYCON_ROOK")
 @external
 def csycon_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6633,8 +6633,8 @@ def csycon_rook(
 @bind("CSYCONV")
 @external
 def csyconv(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6646,8 +6646,8 @@ def csyconv(
 @bind("CSYCONVF")
 @external
 def csyconvf(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6659,8 +6659,8 @@ def csyconvf(
 @bind("CSYCONVF_ROOK")
 @external
 def csyconvf_rook(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6672,7 +6672,7 @@ def csyconvf_rook(
 @bind("CSYEQUB")
 @external
 def csyequb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6686,7 +6686,7 @@ def csyequb(
 @bind("CSYMV")
 @external
 def csymv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex64),
     A: Complex64[LDA, Flat],
@@ -6701,7 +6701,7 @@ def csymv(
 @bind("CSYR")
 @external
 def csyr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex64),
     X: Complex64[Flat],
@@ -6713,7 +6713,7 @@ def csyr(
 @bind("CSYRFS")
 @external
 def csyrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6735,8 +6735,8 @@ def csyrfs(
 @bind("CSYRFSX")
 @external
 def csyrfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6764,7 +6764,7 @@ def csyrfsx(
 @bind("CSYSV")
 @external
 def csysv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6780,7 +6780,7 @@ def csysv(
 @bind("CSYSV_AA")
 @external
 def csysv_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6796,7 +6796,7 @@ def csysv_aa(
 @bind("CSYSV_AA_2STAGE")
 @external
 def csysv_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6815,7 +6815,7 @@ def csysv_aa_2stage(
 @bind("CSYSV_RK")
 @external
 def csysv_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6832,7 +6832,7 @@ def csysv_rk(
 @bind("CSYSV_ROOK")
 @external
 def csysv_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6848,8 +6848,8 @@ def csysv_rook(
 @bind("CSYSVX")
 @external
 def csysvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6873,8 +6873,8 @@ def csysvx(
 @bind("CSYSVXX")
 @external
 def csysvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -6882,7 +6882,7 @@ def csysvxx(
     AF: Complex64[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Complex64[LDB, Flat],
     LDB: Addr(Int32),
@@ -6904,7 +6904,7 @@ def csysvxx(
 @bind("CSYSWAPR")
 @external
 def csyswapr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex64[LDA, N], ORDER_F],
     LDA: Addr(Int32),
@@ -6915,7 +6915,7 @@ def csyswapr(
 @bind("CSYTF2")
 @external
 def csytf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6926,7 +6926,7 @@ def csytf2(
 @bind("CSYTF2_RK")
 @external
 def csytf2_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6938,7 +6938,7 @@ def csytf2_rk(
 @bind("CSYTF2_ROOK")
 @external
 def csytf2_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6949,7 +6949,7 @@ def csytf2_rook(
 @bind("CSYTRF")
 @external
 def csytrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6962,7 +6962,7 @@ def csytrf(
 @bind("CSYTRF_AA")
 @external
 def csytrf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6975,7 +6975,7 @@ def csytrf_aa(
 @bind("CSYTRF_AA_2STAGE")
 @external
 def csytrf_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -6991,7 +6991,7 @@ def csytrf_aa_2stage(
 @bind("CSYTRF_RK")
 @external
 def csytrf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7005,7 +7005,7 @@ def csytrf_rk(
 @bind("CSYTRF_ROOK")
 @external
 def csytrf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7018,7 +7018,7 @@ def csytrf_rook(
 @bind("CSYTRI")
 @external
 def csytri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7030,7 +7030,7 @@ def csytri(
 @bind("CSYTRI2")
 @external
 def csytri2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7043,7 +7043,7 @@ def csytri2(
 @bind("CSYTRI2X")
 @external
 def csytri2x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7056,7 +7056,7 @@ def csytri2x(
 @bind("CSYTRI_3")
 @external
 def csytri_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7070,7 +7070,7 @@ def csytri_3(
 @bind("CSYTRI_3X")
 @external
 def csytri_3x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7084,7 +7084,7 @@ def csytri_3x(
 @bind("CSYTRI_ROOK")
 @external
 def csytri_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7096,7 +7096,7 @@ def csytri_rook(
 @bind("CSYTRS")
 @external
 def csytrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7110,7 +7110,7 @@ def csytrs(
 @bind("CSYTRS2")
 @external
 def csytrs2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7125,7 +7125,7 @@ def csytrs2(
 @bind("CSYTRS_3")
 @external
 def csytrs_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7140,7 +7140,7 @@ def csytrs_3(
 @bind("CSYTRS_AA")
 @external
 def csytrs_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7156,7 +7156,7 @@ def csytrs_aa(
 @bind("CSYTRS_AA_2STAGE")
 @external
 def csytrs_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7173,7 +7173,7 @@ def csytrs_aa_2stage(
 @bind("CSYTRS_ROOK")
 @external
 def csytrs_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7187,9 +7187,9 @@ def csytrs_rook(
 @bind("CTBCON")
 @external
 def ctbcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex64[LDAB, Flat],
@@ -7203,9 +7203,9 @@ def ctbcon(
 @bind("CTBRFS")
 @external
 def ctbrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -7225,9 +7225,9 @@ def ctbrfs(
 @bind("CTBTRS")
 @external
 def ctbtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -7241,11 +7241,11 @@ def ctbtrs(
 @bind("CTFSM")
 @external
 def ctfsm(
-    TRANSR: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Complex64),
@@ -7257,9 +7257,9 @@ def ctfsm(
 @bind("CTFTRI")
 @external
 def ctftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex64[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -7268,8 +7268,8 @@ def ctftri(
 @bind("CTFTTP")
 @external
 def ctfttp(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Complex64[Flat], SourceDims("0:*")],
     AP: Annotated[Complex64[Flat], SourceDims("0:*")],
@@ -7279,8 +7279,8 @@ def ctfttp(
 @bind("CTFTTR")
 @external
 def ctfttr(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Complex64[Flat], SourceDims("0:*")],
     A: Annotated[Complex64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
@@ -7291,8 +7291,8 @@ def ctfttr(
 @bind("CTGEVC")
 @external
 def ctgevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     S: Complex64[LDS, Flat],
@@ -7379,9 +7379,9 @@ def ctgsen(
 @bind("CTGSJA")
 @external
 def ctgsja(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -7409,8 +7409,8 @@ def ctgsja(
 @bind("CTGSNA")
 @external
 def ctgsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7434,7 +7434,7 @@ def ctgsna(
 @bind("CTGSY2")
 @external
 def ctgsy2(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -7459,7 +7459,7 @@ def ctgsy2(
 @bind("CTGSYL")
 @external
 def ctgsyl(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -7486,9 +7486,9 @@ def ctgsyl(
 @bind("CTPCON")
 @external
 def ctpcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     RCOND: Addr(Float32),
@@ -7532,8 +7532,8 @@ def ctplqt2(
 @bind("CTPMLQT")
 @external
 def ctpmlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -7554,8 +7554,8 @@ def ctpmlqt(
 @bind("CTPMQRT")
 @external
 def ctpmqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -7608,10 +7608,10 @@ def ctpqrt2(
 @bind("CTPRFB")
 @external
 def ctprfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -7631,9 +7631,9 @@ def ctprfb(
 @bind("CTPRFS")
 @external
 def ctprfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -7651,8 +7651,8 @@ def ctprfs(
 @bind("CTPTRI")
 @external
 def ctptri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     INFO: Addr(Int32)
@@ -7661,9 +7661,9 @@ def ctptri(
 @bind("CTPTRS")
 @external
 def ctptrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex64[Flat],
@@ -7675,8 +7675,8 @@ def ctptrs(
 @bind("CTPTTF")
 @external
 def ctpttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Annotated[Complex64[Flat], SourceDims("0:*")],
     ARF: Annotated[Complex64[Flat], SourceDims("0:*")],
@@ -7686,7 +7686,7 @@ def ctpttf(
 @bind("CTPTTR")
 @external
 def ctpttr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     A: Complex64[LDA, Flat],
@@ -7697,9 +7697,9 @@ def ctpttr(
 @bind("CTRCON")
 @external
 def ctrcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7712,8 +7712,8 @@ def ctrcon(
 @bind("CTREVC")
 @external
 def ctrevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex64[LDT, Flat],
@@ -7732,8 +7732,8 @@ def ctrevc(
 @bind("CTREVC3")
 @external
 def ctrevc3(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex64[LDT, Flat],
@@ -7754,7 +7754,7 @@ def ctrevc3(
 @bind("CTREXC")
 @external
 def ctrexc(
-    COMPQ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
     N: Addr(Int32),
     T: Complex64[LDT, Flat],
     LDT: Addr(Int32),
@@ -7768,9 +7768,9 @@ def ctrexc(
 @bind("CTRRFS")
 @external
 def ctrrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7789,8 +7789,8 @@ def ctrrfs(
 @bind("CTRSEN")
 @external
 def ctrsen(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex64[LDT, Flat],
@@ -7809,8 +7809,8 @@ def ctrsen(
 @bind("CTRSNA")
 @external
 def ctrsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex64[LDT, Flat],
@@ -7832,8 +7832,8 @@ def ctrsna(
 @bind("CTRSYL")
 @external
 def ctrsyl(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -7850,8 +7850,8 @@ def ctrsyl(
 @bind("CTRSYL3")
 @external
 def ctrsyl3(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -7870,8 +7870,8 @@ def ctrsyl3(
 @bind("CTRTI2")
 @external
 def ctrti2(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7881,8 +7881,8 @@ def ctrti2(
 @bind("CTRTRI")
 @external
 def ctrtri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7892,9 +7892,9 @@ def ctrtri(
 @bind("CTRTRS")
 @external
 def ctrtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -7907,8 +7907,8 @@ def ctrtrs(
 @bind("CTRTTF")
 @external
 def ctrttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
     LDA: Addr(Int32),
@@ -7919,7 +7919,7 @@ def ctrttf(
 @bind("CTRTTP")
 @external
 def ctrttp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -7943,8 +7943,8 @@ def ctzrzf(
 @bind("CUNBDB")
 @external
 def cunbdb(
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -8089,12 +8089,12 @@ def cunbdb6(
 @bind("CUNCSD")
 @external
 def cuncsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -8126,9 +8126,9 @@ def cuncsd(
 @bind("CUNCSD2BY1")
 @external
 def cuncsd2by1(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -8180,7 +8180,7 @@ def cung2r(
 @bind("CUNGBR")
 @external
 def cungbr(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8291,7 +8291,7 @@ def cungrq(
 @bind("CUNGTR")
 @external
 def cungtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
     LDA: Addr(Int32),
@@ -8350,8 +8350,8 @@ def cunhr_col(
 @bind("CUNM22")
 @external
 def cunm22(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -8368,8 +8368,8 @@ def cunm22(
 @bind("CUNM2L")
 @external
 def cunm2l(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8385,8 +8385,8 @@ def cunm2l(
 @bind("CUNM2R")
 @external
 def cunm2r(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8402,9 +8402,9 @@ def cunm2r(
 @bind("CUNMBR")
 @external
 def cunmbr(
-    VECT: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8421,8 +8421,8 @@ def cunmbr(
 @bind("CUNMHR")
 @external
 def cunmhr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ILO: Addr(Int32),
@@ -8440,8 +8440,8 @@ def cunmhr(
 @bind("CUNML2")
 @external
 def cunml2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8457,8 +8457,8 @@ def cunml2(
 @bind("CUNMLQ")
 @external
 def cunmlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8475,8 +8475,8 @@ def cunmlq(
 @bind("CUNMQL")
 @external
 def cunmql(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8493,8 +8493,8 @@ def cunmql(
 @bind("CUNMQR")
 @external
 def cunmqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8511,8 +8511,8 @@ def cunmqr(
 @bind("CUNMR2")
 @external
 def cunmr2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8528,8 +8528,8 @@ def cunmr2(
 @bind("CUNMR3")
 @external
 def cunmr3(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8546,8 +8546,8 @@ def cunmr3(
 @bind("CUNMRQ")
 @external
 def cunmrq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8564,8 +8564,8 @@ def cunmrq(
 @bind("CUNMRZ")
 @external
 def cunmrz(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -8583,9 +8583,9 @@ def cunmrz(
 @bind("CUNMTR")
 @external
 def cunmtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex64[LDA, Flat],
@@ -8601,7 +8601,7 @@ def cunmtr(
 @bind("CUPGTR")
 @external
 def cupgtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex64[Flat],
     TAU: Complex64[Flat],
@@ -8614,9 +8614,9 @@ def cupgtr(
 @bind("CUPMTR")
 @external
 def cupmtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     AP: Complex64[Flat],
@@ -8630,11 +8630,11 @@ def cupmtr(
 @bind("DBBCSD")
 @external
 def dbbcsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -8664,8 +8664,8 @@ def dbbcsd(
 @bind("DBDSDC")
 @external
 def dbdsdc(
-    UPLO: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    COMPQ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -8683,7 +8683,7 @@ def dbdsdc(
 @bind("DBDSQR")
 @external
 def dbdsqr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NCVT: Addr(Int32),
     NRU: Addr(Int32),
@@ -8703,9 +8703,9 @@ def dbdsqr(
 @bind("DBDSVDX")
 @external
 def dbdsvdx(
-    UPLO: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -8725,7 +8725,7 @@ def dbdsvdx(
 @bind("DDISNA")
 @external
 def ddisna(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     D: Float64[Flat],
@@ -8736,7 +8736,7 @@ def ddisna(
 @bind("DGBBRD")
 @external
 def dgbbrd(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NCC: Addr(Int32),
@@ -8759,7 +8759,7 @@ def dgbbrd(
 @bind("DGBCON")
 @external
 def dgbcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -8810,7 +8810,7 @@ def dgbequb(
 @bind("DGBRFS")
 @external
 def dgbrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -8834,8 +8834,8 @@ def dgbrfs(
 @bind("DGBRFSX")
 @external
 def dgbrfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -8881,8 +8881,8 @@ def dgbsv(
 @bind("DGBSVX")
 @external
 def dgbsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -8892,7 +8892,7 @@ def dgbsvx(
     AFB: Float64[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Float64[LDB, Flat],
@@ -8910,8 +8910,8 @@ def dgbsvx(
 @bind("DGBSVXX")
 @external
 def dgbsvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -8921,7 +8921,7 @@ def dgbsvxx(
     AFB: Float64[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Float64[LDB, Flat],
@@ -8970,7 +8970,7 @@ def dgbtrf(
 @bind("DGBTRS")
 @external
 def dgbtrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -8986,8 +8986,8 @@ def dgbtrs(
 @bind("DGEBAK")
 @external
 def dgebak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -9001,7 +9001,7 @@ def dgebak(
 @bind("DGEBAL")
 @external
 def dgebal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -9045,7 +9045,7 @@ def dgebrd(
 @bind("DGECON")
 @external
 def dgecon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -9060,72 +9060,72 @@ def dgecon(
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Addr(Arg(11)), Addr(Arg(12)), Return('K', 0), Arg(13), Arg(14), Arg(15), Addr(Arg(16)), Arg(17), Arg(18), Addr(Arg(19)), Arg(20), Addr(Arg(21)), Arg(22), Addr(Arg(23)), Arg(24), Addr(Arg(25)), Arg(26), Addr(Arg(27)), Return('INFO', 10)])
 def dgedmd(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     X: Float64[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Float64[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float64),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float64,
     REIG: Float64[Flat],
     IMEIG: Float64[Flat],
     Z: Float64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float64[Flat],
     B: Float64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     W: Float64[LDW, Flat],
-    LDW: Const(Int32),
+    LDW: Int32,
     S: Float64[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     WORK: Float64[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Int32, Returns["REIG", Float64[Flat]], Returns["IMEIG", Float64[Flat]], Returns["Z", Float64[LDZ, Flat]], Returns["RES", Float64[Flat]], Returns["B", Float64[LDB, Flat]], Returns["W", Float64[LDW, Flat]], Returns["S", Float64[LDS, Flat]], Returns["WORK", Float64[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("DGEDMDQ")
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Addr(Arg(15)), Addr(Arg(16)), Return('K', 2), Arg(17), Arg(18), Arg(19), Addr(Arg(20)), Arg(21), Arg(22), Addr(Arg(23)), Arg(24), Addr(Arg(25)), Arg(26), Addr(Arg(27)), Arg(28), Addr(Arg(29)), Arg(30), Addr(Arg(31)), Return('INFO', 12)])
 def dgedmdq(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBQ: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     F: Float64[LDF, Flat],
-    LDF: Const(Int32),
+    LDF: Int32,
     X: Float64[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Float64[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float64),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float64,
     REIG: Float64[Flat],
     IMEIG: Float64[Flat],
     Z: Float64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float64[Flat],
     B: Float64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     V: Float64[LDV, Flat],
-    LDV: Const(Int32),
+    LDV: Int32,
     S: Float64[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     WORK: Float64[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Returns["X", Float64[LDX, Flat]], Returns["Y", Float64[LDY, Flat]], Int32, Returns["REIG", Float64[Flat]], Returns["IMEIG", Float64[Flat]], Returns["Z", Float64[LDZ, Flat]], Returns["RES", Float64[Flat]], Returns["B", Float64[LDB, Flat]], Returns["V", Float64[LDV, Flat]], Returns["S", Float64[LDS, Flat]], Returns["WORK", Float64[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("DGEEQU")
@@ -9161,8 +9161,8 @@ def dgeequb(
 @bind("DGEES")
 @external
 def dgees(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9181,10 +9181,10 @@ def dgees(
 @bind("DGEESX")
 @external
 def dgeesx(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -9206,8 +9206,8 @@ def dgeesx(
 @bind("DGEEV")
 @external
 def dgeev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -9225,10 +9225,10 @@ def dgeev(
 @bind("DGEEVX")
 @external
 def dgeevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -9280,12 +9280,12 @@ def dgehrd(
 @bind("DGEJSV")
 @external
 def dgejsv(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBP: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9369,7 +9369,7 @@ def dgelqt3(
 @bind("DGELS")
 @external
 def dgels(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -9422,7 +9422,7 @@ def dgelss(
 @bind("DGELST")
 @external
 def dgelst(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -9456,8 +9456,8 @@ def dgelsy(
 @bind("DGEMLQ")
 @external
 def dgemlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -9475,8 +9475,8 @@ def dgemlq(
 @bind("DGEMLQT")
 @external
 def dgemlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -9494,8 +9494,8 @@ def dgemlqt(
 @bind("DGEMQR")
 @external
 def dgemqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -9513,8 +9513,8 @@ def dgemqr(
 @bind("DGEMQRT")
 @external
 def dgemqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -9695,7 +9695,7 @@ def dgeqrt3(
 @bind("DGERFS")
 @external
 def dgerfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9717,8 +9717,8 @@ def dgerfs(
 @bind("DGERFSX")
 @external
 def dgerfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9784,7 +9784,7 @@ def dgesc2(
 @bind("DGESDD")
 @external
 def dgesdd(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9816,8 +9816,8 @@ def dgesv(
 @bind("DGESVD")
 @external
 def dgesvd(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9835,11 +9835,11 @@ def dgesvd(
 @bind("DGESVDQ")
 @external
 def dgesvdq(
-    JOBA: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBP: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9862,9 +9862,9 @@ def dgesvdq(
 @bind("DGESVDX")
 @external
 def dgesvdx(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
+    RANGE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9888,9 +9888,9 @@ def dgesvdx(
 @bind("DGESVJ")
 @external
 def dgesvj(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9907,8 +9907,8 @@ def dgesvj(
 @bind("DGESVX")
 @external
 def dgesvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9916,7 +9916,7 @@ def dgesvx(
     AF: Float64[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Float64[LDB, Flat],
@@ -9934,8 +9934,8 @@ def dgesvx(
 @bind("DGESVXX")
 @external
 def dgesvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -9943,7 +9943,7 @@ def dgesvxx(
     AF: Float64[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Float64[LDB, Flat],
@@ -10022,7 +10022,7 @@ def dgetri(
 @bind("DGETRS")
 @external
 def dgetrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -10036,7 +10036,7 @@ def dgetrs(
 @bind("DGETSLS")
 @external
 def dgetsls(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -10069,8 +10069,8 @@ def dgetsqrhrt(
 @bind("DGGBAK")
 @external
 def dggbak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -10085,7 +10085,7 @@ def dggbak(
 @bind("DGGBAL")
 @external
 def dggbal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10102,9 +10102,9 @@ def dggbal(
 @bind("DGGES")
 @external
 def dgges(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -10128,9 +10128,9 @@ def dgges(
 @bind("DGGES3")
 @external
 def dgges3(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -10154,11 +10154,11 @@ def dgges3(
 @bind("DGGESX")
 @external
 def dggesx(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10185,8 +10185,8 @@ def dggesx(
 @bind("DGGEV")
 @external
 def dggev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10207,8 +10207,8 @@ def dggev(
 @bind("DGGEV3")
 @external
 def dggev3(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10229,10 +10229,10 @@ def dggev3(
 @bind("DGGEVX")
 @external
 def dggevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10281,8 +10281,8 @@ def dggglm(
 @bind("DGGHD3")
 @external
 def dgghd3(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -10302,8 +10302,8 @@ def dgghd3(
 @bind("DGGHRD")
 @external
 def dgghrd(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -10373,9 +10373,9 @@ def dggrqf(
 @bind("DGGSVD3")
 @external
 def dggsvd3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     P: Addr(Int32),
@@ -10402,9 +10402,9 @@ def dggsvd3(
 @bind("DGGSVP3")
 @external
 def dggsvp3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -10432,7 +10432,7 @@ def dggsvp3(
 @bind("DGSVJ0")
 @external
 def dgsvj0(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -10454,7 +10454,7 @@ def dgsvj0(
 @bind("DGSVJ1")
 @external
 def dgsvj1(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -10477,7 +10477,7 @@ def dgsvj1(
 @bind("DGTCON")
 @external
 def dgtcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Float64[Flat],
     D: Float64[Flat],
@@ -10494,7 +10494,7 @@ def dgtcon(
 @bind("DGTRFS")
 @external
 def dgtrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Float64[Flat],
@@ -10532,8 +10532,8 @@ def dgtsv(
 @bind("DGTSVX")
 @external
 def dgtsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Float64[Flat],
@@ -10571,7 +10571,7 @@ def dgttrf(
 @bind("DGTTRS")
 @external
 def dgttrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Float64[Flat],
@@ -10602,9 +10602,9 @@ def dgtts2(
 @bind("DHGEQZ")
 @external
 def dhgeqz(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -10627,9 +10627,9 @@ def dhgeqz(
 @bind("DHSEIN")
 @external
 def dhsein(
-    SIDE: Addr(Const(String[1])),
-    EIGSRC: Addr(Const(String[1])),
-    INITV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    EIGSRC: Addr(String[1]),
+    INITV: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     H: Float64[LDH, Flat],
@@ -10651,8 +10651,8 @@ def dhsein(
 @bind("DHSEQR")
 @external
 def dhseqr(
-    JOB: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -10671,7 +10671,7 @@ def dhseqr(
 @external
 @native_call([Addr(Arg(0))])
 def disnan(
-    DIN: Const(Float64)
+    DIN: Float64
 ) -> Bool: ...
 
 @bind("DLA_GBAMV")
@@ -10695,7 +10695,7 @@ def dla_gbamv(
 @bind("DLA_GBRCOND")
 @external
 def dla_gbrcond(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -10779,7 +10779,7 @@ def dla_geamv(
 @bind("DLA_GERCOND")
 @external
 def dla_gercond(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10852,7 +10852,7 @@ def dla_lin_berr(
 @bind("DLA_PORCOND")
 @external
 def dla_porcond(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10869,7 +10869,7 @@ def dla_porcond(
 @external
 def dla_porfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -10901,7 +10901,7 @@ def dla_porfsx_extended(
 @bind("DLA_PORPVGRW")
 @external
 def dla_porpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     NCOLS: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10928,7 +10928,7 @@ def dla_syamv(
 @bind("DLA_SYRCOND")
 @external
 def dla_syrcond(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -10946,7 +10946,7 @@ def dla_syrcond(
 @external
 def dla_syrfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -10979,7 +10979,7 @@ def dla_syrfsx_extended(
 @bind("DLA_SYRPVGRW")
 @external
 def dla_syrpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     INFO: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -11050,7 +11050,7 @@ def dlacon(
 @bind("DLACPY")
 @external
 def dlacpy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -11439,7 +11439,7 @@ def dlagtf(
 @bind("DLAGTM")
 @external
 def dlagtm(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     ALPHA: Addr(Float64),
@@ -11536,8 +11536,8 @@ def dlaic1(
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def dlaisnan(
-    DIN1: Const(Float64),
-    DIN2: Const(Float64)
+    DIN1: Float64,
+    DIN2: Float64
 ) -> Bool: ...
 
 @bind("DLALN2")
@@ -11626,7 +11626,7 @@ def dlalsa(
 @bind("DLALSD")
 @external
 def dlalsd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     SMLSIZ: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -11655,8 +11655,8 @@ def dlamrg(
 @bind("DLAMSWLQ")
 @external
 def dlamswlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -11676,8 +11676,8 @@ def dlamswlq(
 @bind("DLAMTSQR")
 @external
 def dlamtsqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -11708,7 +11708,7 @@ def dlaneg(
 @bind("DLANGB")
 @external
 def dlangb(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -11720,7 +11720,7 @@ def dlangb(
 @bind("DLANGE")
 @external
 def dlange(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -11731,7 +11731,7 @@ def dlange(
 @bind("DLANGT")
 @external
 def dlangt(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Float64[Flat],
     D: Float64[Flat],
@@ -11741,7 +11741,7 @@ def dlangt(
 @bind("DLANHS")
 @external
 def dlanhs(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -11751,8 +11751,8 @@ def dlanhs(
 @bind("DLANSB")
 @external
 def dlansb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -11763,9 +11763,9 @@ def dlansb(
 @bind("DLANSF")
 @external
 def dlansf(
-    NORM: Addr(Const(String[1])),
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float64[Flat], SourceDims("0:*")],
     WORK: Annotated[Float64[Flat], SourceDims("0:*")]
@@ -11774,8 +11774,8 @@ def dlansf(
 @bind("DLANSP")
 @external
 def dlansp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     WORK: Float64[Flat]
@@ -11784,7 +11784,7 @@ def dlansp(
 @bind("DLANST")
 @external
 def dlanst(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat]
@@ -11793,8 +11793,8 @@ def dlanst(
 @bind("DLANSY")
 @external
 def dlansy(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -11804,9 +11804,9 @@ def dlansy(
 @bind("DLANTB")
 @external
 def dlantb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -11817,9 +11817,9 @@ def dlantb(
 @bind("DLANTP")
 @external
 def dlantp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     WORK: Float64[Flat]
@@ -11828,9 +11828,9 @@ def dlantp(
 @bind("DLANTR")
 @external
 def dlantr(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -11937,7 +11937,7 @@ def dlaqgb(
     ROWCND: Addr(Float64),
     COLCND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("DLAQGE")
@@ -11952,7 +11952,7 @@ def dlaqge(
     ROWCND: Addr(Float64),
     COLCND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("DLAQP2")
@@ -12193,7 +12193,7 @@ def dlaqr5(
 @bind("DLAQSB")
 @external
 def dlaqsb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -12201,32 +12201,32 @@ def dlaqsb(
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("DLAQSP")
 @external
 def dlaqsp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("DLAQSY")
 @external
 def dlaqsy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("DLAQTR")
@@ -12249,41 +12249,41 @@ def dlaqtr(
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Arg(10), Arg(11), Arg(12), Arg(13), Addr(Arg(14)), Arg(15), Addr(Arg(16)), Arg(17), Addr(Arg(18)), Addr(Arg(19)), Return('INFO', 0)])
 def dlaqz0(
-    WANTS: Addr(Const(String[1])),
-    WANTQ: Addr(Const(String[1])),
-    WANTZ: Addr(Const(String[1])),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
+    WANTS: Addr(String[1]),
+    WANTQ: Addr(String[1]),
+    WANTZ: Addr(String[1]),
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
     A: Float64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     ALPHAR: Float64[Flat],
     ALPHAI: Float64[Flat],
     BETA: Float64[Flat],
     Q: Float64[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Float64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     WORK: Float64[Flat],
-    LWORK: Const(Int32),
-    REC: Const(Int32)
+    LWORK: Int32,
+    REC: Int32
 ) -> Int32: ...
 
 @bind("DLAQZ1")
 @external
 @native_call([Arg(0), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Addr(Arg(7)), Addr(Arg(8)), Arg(9)])
 def dlaqz1(
-    A: Const(Float64[LDA, Flat]),
-    LDA: Const(Int32),
-    B: Const(Float64[LDB, Flat]),
-    LDB: Const(Int32),
-    SR1: Const(Float64),
-    SR2: Const(Float64),
-    SI: Const(Float64),
-    BETA1: Const(Float64),
-    BETA2: Const(Float64),
+    A: Float64[LDA, Flat],
+    LDA: Int32,
+    B: Float64[LDB, Flat],
+    LDB: Int32,
+    SR1: Float64,
+    SR2: Float64,
+    SI: Float64,
+    BETA1: Float64,
+    BETA2: Float64,
     V: Float64[Flat]
 ) -> Returns["V", Float64[Flat]]: ...
 
@@ -12291,86 +12291,86 @@ def dlaqz1(
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Addr(Arg(11)), Arg(12), Addr(Arg(13)), Addr(Arg(14)), Addr(Arg(15)), Arg(16), Addr(Arg(17))])
 def dlaqz2(
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    K: Const(Int32),
-    ISTARTM: Const(Int32),
-    ISTOPM: Const(Int32),
-    IHI: Const(Int32),
+    ILQ: Bool,
+    ILZ: Bool,
+    K: Int32,
+    ISTARTM: Int32,
+    ISTOPM: Int32,
+    IHI: Int32,
     A: Float64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float64[LDB, Flat],
-    LDB: Const(Int32),
-    NQ: Const(Int32),
-    QSTART: Const(Int32),
+    LDB: Int32,
+    NQ: Int32,
+    QSTART: Int32,
     Q: Float64[LDQ, Flat],
-    LDQ: Const(Int32),
-    NZ: Const(Int32),
-    ZSTART: Const(Int32),
+    LDQ: Int32,
+    NZ: Int32,
+    ZSTART: Int32,
     Z: Float64[LDZ, Flat],
-    LDZ: Const(Int32)
+    LDZ: Int32
 ) -> None: ...
 
 @bind("DLAQZ3")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Return('NS', 0), Return('ND', 1), Arg(15), Arg(16), Arg(17), Arg(18), Addr(Arg(19)), Arg(20), Addr(Arg(21)), Arg(22), Addr(Arg(23)), Addr(Arg(24)), Return('INFO', 2)])
 def dlaqz3(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NW: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NW: Int32,
     A: Float64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Float64[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Float64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     ALPHAR: Float64[Flat],
     ALPHAI: Float64[Flat],
     BETA: Float64[Flat],
     QC: Float64[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Float64[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Float64[Flat],
-    LWORK: Const(Int32),
-    REC: Const(Int32)
+    LWORK: Int32,
+    REC: Int32
 ) -> tuple[Int32, Int32, Int32]: ...
 
 @bind("DLAQZ4")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Arg(9), Arg(10), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Arg(15), Addr(Arg(16)), Arg(17), Addr(Arg(18)), Arg(19), Addr(Arg(20)), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Return('INFO', 0)])
 def dlaqz4(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NSHIFTS: Const(Int32),
-    NBLOCK_DESIRED: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NSHIFTS: Int32,
+    NBLOCK_DESIRED: Int32,
     SR: Float64[Flat],
     SI: Float64[Flat],
     SS: Float64[Flat],
     A: Float64[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float64[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Float64[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Float64[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     QC: Float64[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Float64[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Float64[Flat],
-    LWORK: Const(Int32)
+    LWORK: Int32
 ) -> Int32: ...
 
 @bind("DLAR1V")
@@ -12415,7 +12415,7 @@ def dlar2v(
 @bind("DLARF")
 @external
 def dlarf(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float64[Flat],
@@ -12429,7 +12429,7 @@ def dlarf(
 @bind("DLARF1F")
 @external
 def dlarf1f(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float64[Flat],
@@ -12443,7 +12443,7 @@ def dlarf1f(
 @bind("DLARF1L")
 @external
 def dlarf1l(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float64[Flat],
@@ -12457,10 +12457,10 @@ def dlarf1l(
 @bind("DLARFB")
 @external
 def dlarfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -12477,7 +12477,7 @@ def dlarfb(
 @bind("DLARFB_GETT")
 @external
 def dlarfb_gett(
-    IDENT: Addr(Const(String[1])),
+    IDENT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -12514,8 +12514,8 @@ def dlarfgp(
 @bind("DLARFT")
 @external
 def dlarft(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Float64[LDV, Flat],
@@ -12528,7 +12528,7 @@ def dlarft(
 @bind("DLARFX")
 @external
 def dlarfx(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float64[Flat],
@@ -12541,7 +12541,7 @@ def dlarfx(
 @bind("DLARFY")
 @external
 def dlarfy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     V: Float64[Flat],
     INCV: Addr(Int32),
@@ -12619,7 +12619,7 @@ def dlarrb(
 @bind("DLARRC")
 @external
 def dlarrc(
-    JOBT: Addr(Const(String[1])),
+    JOBT: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float64),
     VU: Addr(Float64),
@@ -12635,8 +12635,8 @@ def dlarrc(
 @bind("DLARRD")
 @external
 def dlarrd(
-    RANGE: Addr(Const(String[1])),
-    ORDER: Addr(Const(String[1])),
+    RANGE: Addr(String[1]),
+    ORDER: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float64),
     VU: Addr(Float64),
@@ -12665,7 +12665,7 @@ def dlarrd(
 @bind("DLARRE")
 @external
 def dlarre(
-    RANGE: Addr(Const(String[1])),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float64),
     VU: Addr(Float64),
@@ -12853,7 +12853,7 @@ def dlaruv(
 @bind("DLARZ")
 @external
 def dlarz(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     L: Addr(Int32),
@@ -12868,10 +12868,10 @@ def dlarz(
 @bind("DLARZB")
 @external
 def dlarzb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -12889,8 +12889,8 @@ def dlarzb(
 @bind("DLARZT")
 @external
 def dlarzt(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Float64[LDV, Flat],
@@ -12913,7 +12913,7 @@ def dlas2(
 @bind("DLASCL")
 @external
 def dlascl(
-    TYPE: Addr(Const(String[1])),
+    TYPE: Addr(String[1]),
     KL: Addr(Int32),
     KU: Addr(Int32),
     CFROM: Addr(Float64),
@@ -13162,7 +13162,7 @@ def dlasda(
 @bind("DLASDQ")
 @external
 def dlasdq(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     SQRE: Addr(Int32),
     N: Addr(Int32),
     NCVT: Addr(Int32),
@@ -13195,7 +13195,7 @@ def dlasdt(
 @bind("DLASET")
 @external
 def dlaset(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Float64),
@@ -13303,9 +13303,9 @@ def dlasq6(
 @bind("DLASR")
 @external
 def dlasr(
-    SIDE: Addr(Const(String[1])),
-    PIVOT: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    PIVOT: Addr(String[1]),
+    DIRECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     C: Float64[Flat],
@@ -13317,7 +13317,7 @@ def dlasr(
 @bind("DLASRT")
 @external
 def dlasrt(
-    ID: Addr(Const(String[1])),
+    ID: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     INFO: Addr(Int32)
@@ -13399,7 +13399,7 @@ def dlasy2(
 @bind("DLASYF")
 @external
 def dlasyf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -13414,7 +13414,7 @@ def dlasyf(
 @bind("DLASYF_AA")
 @external
 def dlasyf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     J1: Addr(Int32),
     M: Addr(Int32),
     NB: Addr(Int32),
@@ -13429,7 +13429,7 @@ def dlasyf_aa(
 @bind("DLASYF_RK")
 @external
 def dlasyf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -13445,7 +13445,7 @@ def dlasyf_rk(
 @bind("DLASYF_ROOK")
 @external
 def dlasyf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -13460,7 +13460,7 @@ def dlasyf_rook(
 @bind("DLAT2S")
 @external
 def dlat2s(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -13472,10 +13472,10 @@ def dlat2s(
 @bind("DLATBS")
 @external
 def dlatbs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -13503,10 +13503,10 @@ def dlatdf(
 @bind("DLATPS")
 @external
 def dlatps(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     X: Float64[Flat],
@@ -13518,7 +13518,7 @@ def dlatps(
 @bind("DLATRD")
 @external
 def dlatrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -13532,10 +13532,10 @@ def dlatrd(
 @bind("DLATRS")
 @external
 def dlatrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -13548,10 +13548,10 @@ def dlatrs(
 @bind("DLATRS3")
 @external
 def dlatrs3(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -13596,7 +13596,7 @@ def dlatsqr(
 @bind("DLAUU2")
 @external
 def dlauu2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -13606,7 +13606,7 @@ def dlauu2(
 @bind("DLAUUM")
 @external
 def dlauum(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -13616,7 +13616,7 @@ def dlauum(
 @bind("DOPGTR")
 @external
 def dopgtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     TAU: Float64[Flat],
@@ -13629,9 +13629,9 @@ def dopgtr(
 @bind("DOPMTR")
 @external
 def dopmtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     AP: Float64[Flat],
@@ -13645,8 +13645,8 @@ def dopmtr(
 @bind("DORBDB")
 @external
 def dorbdb(
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -13791,12 +13791,12 @@ def dorbdb6(
 @bind("DORCSD")
 @external
 def dorcsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -13826,9 +13826,9 @@ def dorcsd(
 @bind("DORCSD2BY1")
 @external
 def dorcsd2by1(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -13878,7 +13878,7 @@ def dorg2r(
 @bind("DORGBR")
 @external
 def dorgbr(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -13989,7 +13989,7 @@ def dorgrq(
 @bind("DORGTR")
 @external
 def dorgtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14048,8 +14048,8 @@ def dorhr_col(
 @bind("DORM22")
 @external
 def dorm22(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -14066,8 +14066,8 @@ def dorm22(
 @bind("DORM2L")
 @external
 def dorm2l(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14083,8 +14083,8 @@ def dorm2l(
 @bind("DORM2R")
 @external
 def dorm2r(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14100,9 +14100,9 @@ def dorm2r(
 @bind("DORMBR")
 @external
 def dormbr(
-    VECT: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14119,8 +14119,8 @@ def dormbr(
 @bind("DORMHR")
 @external
 def dormhr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ILO: Addr(Int32),
@@ -14138,8 +14138,8 @@ def dormhr(
 @bind("DORML2")
 @external
 def dorml2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14155,8 +14155,8 @@ def dorml2(
 @bind("DORMLQ")
 @external
 def dormlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14173,8 +14173,8 @@ def dormlq(
 @bind("DORMQL")
 @external
 def dormql(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14191,8 +14191,8 @@ def dormql(
 @bind("DORMQR")
 @external
 def dormqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14209,8 +14209,8 @@ def dormqr(
 @bind("DORMR2")
 @external
 def dormr2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14226,8 +14226,8 @@ def dormr2(
 @bind("DORMR3")
 @external
 def dormr3(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14244,8 +14244,8 @@ def dormr3(
 @bind("DORMRQ")
 @external
 def dormrq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14262,8 +14262,8 @@ def dormrq(
 @bind("DORMRZ")
 @external
 def dormrz(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -14281,9 +14281,9 @@ def dormrz(
 @bind("DORMTR")
 @external
 def dormtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -14299,7 +14299,7 @@ def dormtr(
 @bind("DPBCON")
 @external
 def dpbcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -14314,7 +14314,7 @@ def dpbcon(
 @bind("DPBEQU")
 @external
 def dpbequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -14328,7 +14328,7 @@ def dpbequ(
 @bind("DPBRFS")
 @external
 def dpbrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -14350,7 +14350,7 @@ def dpbrfs(
 @bind("DPBSTF")
 @external
 def dpbstf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -14361,7 +14361,7 @@ def dpbstf(
 @bind("DPBSV")
 @external
 def dpbsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -14375,8 +14375,8 @@ def dpbsv(
 @bind("DPBSVX")
 @external
 def dpbsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -14384,7 +14384,7 @@ def dpbsvx(
     LDAB: Addr(Int32),
     AFB: Float64[LDAFB, Flat],
     LDAFB: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Float64[LDB, Flat],
     LDB: Addr(Int32),
@@ -14401,7 +14401,7 @@ def dpbsvx(
 @bind("DPBTF2")
 @external
 def dpbtf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -14412,7 +14412,7 @@ def dpbtf2(
 @bind("DPBTRF")
 @external
 def dpbtrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -14423,7 +14423,7 @@ def dpbtrf(
 @bind("DPBTRS")
 @external
 def dpbtrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -14437,8 +14437,8 @@ def dpbtrs(
 @bind("DPFTRF")
 @external
 def dpftrf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float64[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -14447,8 +14447,8 @@ def dpftrf(
 @bind("DPFTRI")
 @external
 def dpftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float64[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -14457,8 +14457,8 @@ def dpftri(
 @bind("DPFTRS")
 @external
 def dpftrs(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Annotated[Float64[Flat], SourceDims("0:*")],
@@ -14470,7 +14470,7 @@ def dpftrs(
 @bind("DPOCON")
 @external
 def dpocon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14508,7 +14508,7 @@ def dpoequb(
 @bind("DPORFS")
 @external
 def dporfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -14529,8 +14529,8 @@ def dporfs(
 @bind("DPORFSX")
 @external
 def dporfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -14557,7 +14557,7 @@ def dporfsx(
 @bind("DPOSV")
 @external
 def dposv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -14570,15 +14570,15 @@ def dposv(
 @bind("DPOSVX")
 @external
 def dposvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
     AF: Float64[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Float64[LDB, Flat],
     LDB: Addr(Int32),
@@ -14595,15 +14595,15 @@ def dposvx(
 @bind("DPOSVXX")
 @external
 def dposvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
     AF: Float64[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Float64[LDB, Flat],
     LDB: Addr(Int32),
@@ -14625,7 +14625,7 @@ def dposvxx(
 @bind("DPOTF2")
 @external
 def dpotf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14635,7 +14635,7 @@ def dpotf2(
 @bind("DPOTRF")
 @external
 def dpotrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14645,7 +14645,7 @@ def dpotrf(
 @bind("DPOTRF2")
 @external
 def dpotrf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14655,7 +14655,7 @@ def dpotrf2(
 @bind("DPOTRI")
 @external
 def dpotri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14665,7 +14665,7 @@ def dpotri(
 @bind("DPOTRS")
 @external
 def dpotrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -14678,7 +14678,7 @@ def dpotrs(
 @bind("DPPCON")
 @external
 def dppcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     ANORM: Addr(Float64),
@@ -14691,7 +14691,7 @@ def dppcon(
 @bind("DPPEQU")
 @external
 def dppequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     S: Float64[Flat],
@@ -14703,7 +14703,7 @@ def dppequ(
 @bind("DPPRFS")
 @external
 def dpprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -14722,7 +14722,7 @@ def dpprfs(
 @bind("DPPSV")
 @external
 def dppsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -14734,13 +14734,13 @@ def dppsv(
 @bind("DPPSVX")
 @external
 def dppsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
     AFP: Float64[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Float64[LDB, Flat],
     LDB: Addr(Int32),
@@ -14757,7 +14757,7 @@ def dppsvx(
 @bind("DPPTRF")
 @external
 def dpptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     INFO: Addr(Int32)
@@ -14766,7 +14766,7 @@ def dpptrf(
 @bind("DPPTRI")
 @external
 def dpptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     INFO: Addr(Int32)
@@ -14775,7 +14775,7 @@ def dpptri(
 @bind("DPPTRS")
 @external
 def dpptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -14787,7 +14787,7 @@ def dpptrs(
 @bind("DPSTF2")
 @external
 def dpstf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14801,7 +14801,7 @@ def dpstf2(
 @bind("DPSTRF")
 @external
 def dpstrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -14827,7 +14827,7 @@ def dptcon(
 @bind("DPTEQR")
 @external
 def dpteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -14871,7 +14871,7 @@ def dptsv(
 @bind("DPTSVX")
 @external
 def dptsvx(
-    FACT: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float64[Flat],
@@ -14933,7 +14933,7 @@ def drscl(
 @bind("DSB2ST_KERNELS")
 @external
 def dsb2st_kernels(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     WANTZ: Addr(Bool),
     TTYPE: Addr(Int32),
     ST: Addr(Int32),
@@ -14953,8 +14953,8 @@ def dsb2st_kernels(
 @bind("DSBEV")
 @external
 def dsbev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -14969,8 +14969,8 @@ def dsbev(
 @bind("DSBEV_2STAGE")
 @external
 def dsbev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -14986,8 +14986,8 @@ def dsbev_2stage(
 @bind("DSBEVD")
 @external
 def dsbevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -15005,8 +15005,8 @@ def dsbevd(
 @bind("DSBEVD_2STAGE")
 @external
 def dsbevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -15024,9 +15024,9 @@ def dsbevd_2stage(
 @bind("DSBEVX")
 @external
 def dsbevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -15051,9 +15051,9 @@ def dsbevx(
 @bind("DSBEVX_2STAGE")
 @external
 def dsbevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -15079,8 +15079,8 @@ def dsbevx_2stage(
 @bind("DSBGST")
 @external
 def dsbgst(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -15097,8 +15097,8 @@ def dsbgst(
 @bind("DSBGV")
 @external
 def dsbgv(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -15116,8 +15116,8 @@ def dsbgv(
 @bind("DSBGVD")
 @external
 def dsbgvd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -15138,9 +15138,9 @@ def dsbgvd(
 @bind("DSBGVX")
 @external
 def dsbgvx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -15168,8 +15168,8 @@ def dsbgvx(
 @bind("DSBTRD")
 @external
 def dsbtrd(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -15185,9 +15185,9 @@ def dsbtrd(
 @bind("DSFRK")
 @external
 def dsfrk(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     ALPHA: Addr(Float64),
@@ -15218,7 +15218,7 @@ def dsgesv(
 @bind("DSPCON")
 @external
 def dspcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     IPIV: Int32[Flat],
@@ -15232,8 +15232,8 @@ def dspcon(
 @bind("DSPEV")
 @external
 def dspev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     W: Float64[Flat],
@@ -15246,8 +15246,8 @@ def dspev(
 @bind("DSPEVD")
 @external
 def dspevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     W: Float64[Flat],
@@ -15263,9 +15263,9 @@ def dspevd(
 @bind("DSPEVX")
 @external
 def dspevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     VL: Addr(Float64),
@@ -15287,7 +15287,7 @@ def dspevx(
 @external
 def dspgst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     BP: Float64[Flat],
@@ -15298,8 +15298,8 @@ def dspgst(
 @external
 def dspgv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     BP: Float64[Flat],
@@ -15314,8 +15314,8 @@ def dspgv(
 @external
 def dspgvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     BP: Float64[Flat],
@@ -15333,9 +15333,9 @@ def dspgvd(
 @external
 def dspgvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     BP: Float64[Flat],
@@ -15357,7 +15357,7 @@ def dspgvx(
 @bind("DSPOSV")
 @external
 def dsposv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -15375,7 +15375,7 @@ def dsposv(
 @bind("DSPRFS")
 @external
 def dsprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -15395,7 +15395,7 @@ def dsprfs(
 @bind("DSPSV")
 @external
 def dspsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -15408,8 +15408,8 @@ def dspsv(
 @bind("DSPSVX")
 @external
 def dspsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -15430,7 +15430,7 @@ def dspsvx(
 @bind("DSPTRD")
 @external
 def dsptrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     D: Float64[Flat],
@@ -15442,7 +15442,7 @@ def dsptrd(
 @bind("DSPTRF")
 @external
 def dsptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     IPIV: Int32[Flat],
@@ -15452,7 +15452,7 @@ def dsptrf(
 @bind("DSPTRI")
 @external
 def dsptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     IPIV: Int32[Flat],
@@ -15463,7 +15463,7 @@ def dsptri(
 @bind("DSPTRS")
 @external
 def dsptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -15476,8 +15476,8 @@ def dsptrs(
 @bind("DSTEBZ")
 @external
 def dstebz(
-    RANGE: Addr(Const(String[1])),
-    ORDER: Addr(Const(String[1])),
+    RANGE: Addr(String[1]),
+    ORDER: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float64),
     VU: Addr(Float64),
@@ -15499,7 +15499,7 @@ def dstebz(
 @bind("DSTEDC")
 @external
 def dstedc(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15515,8 +15515,8 @@ def dstedc(
 @bind("DSTEGR")
 @external
 def dstegr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15558,8 +15558,8 @@ def dstein(
 @bind("DSTEMR")
 @external
 def dstemr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15584,7 +15584,7 @@ def dstemr(
 @bind("DSTEQR")
 @external
 def dsteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15606,7 +15606,7 @@ def dsterf(
 @bind("DSTEV")
 @external
 def dstev(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15619,7 +15619,7 @@ def dstev(
 @bind("DSTEVD")
 @external
 def dstevd(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15635,8 +15635,8 @@ def dstevd(
 @bind("DSTEVR")
 @external
 def dstevr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15660,8 +15660,8 @@ def dstevr(
 @bind("DSTEVX")
 @external
 def dstevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -15683,7 +15683,7 @@ def dstevx(
 @bind("DSYCON")
 @external
 def dsycon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15698,7 +15698,7 @@ def dsycon(
 @bind("DSYCON_3")
 @external
 def dsycon_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15714,7 +15714,7 @@ def dsycon_3(
 @bind("DSYCON_ROOK")
 @external
 def dsycon_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15729,8 +15729,8 @@ def dsycon_rook(
 @bind("DSYCONV")
 @external
 def dsyconv(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15742,8 +15742,8 @@ def dsyconv(
 @bind("DSYCONVF")
 @external
 def dsyconvf(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15755,8 +15755,8 @@ def dsyconvf(
 @bind("DSYCONVF_ROOK")
 @external
 def dsyconvf_rook(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15768,7 +15768,7 @@ def dsyconvf_rook(
 @bind("DSYEQUB")
 @external
 def dsyequb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15782,8 +15782,8 @@ def dsyequb(
 @bind("DSYEV")
 @external
 def dsyev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15796,8 +15796,8 @@ def dsyev(
 @bind("DSYEV_2STAGE")
 @external
 def dsyev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15810,8 +15810,8 @@ def dsyev_2stage(
 @bind("DSYEVD")
 @external
 def dsyevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15826,8 +15826,8 @@ def dsyevd(
 @bind("DSYEVD_2STAGE")
 @external
 def dsyevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15842,9 +15842,9 @@ def dsyevd_2stage(
 @bind("DSYEVR")
 @external
 def dsyevr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15868,9 +15868,9 @@ def dsyevr(
 @bind("DSYEVR_2STAGE")
 @external
 def dsyevr_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15894,9 +15894,9 @@ def dsyevr_2stage(
 @bind("DSYEVX")
 @external
 def dsyevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15919,9 +15919,9 @@ def dsyevx(
 @bind("DSYEVX_2STAGE")
 @external
 def dsyevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15945,7 +15945,7 @@ def dsyevx_2stage(
 @external
 def dsygs2(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15958,7 +15958,7 @@ def dsygs2(
 @external
 def dsygst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15971,8 +15971,8 @@ def dsygst(
 @external
 def dsygv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -15988,8 +15988,8 @@ def dsygv(
 @external
 def dsygv_2stage(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16005,8 +16005,8 @@ def dsygv_2stage(
 @external
 def dsygvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16024,9 +16024,9 @@ def dsygvd(
 @external
 def dsygvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16051,7 +16051,7 @@ def dsygvx(
 @bind("DSYRFS")
 @external
 def dsyrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16073,8 +16073,8 @@ def dsyrfs(
 @bind("DSYRFSX")
 @external
 def dsyrfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16102,7 +16102,7 @@ def dsyrfsx(
 @bind("DSYSV")
 @external
 def dsysv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16118,7 +16118,7 @@ def dsysv(
 @bind("DSYSV_AA")
 @external
 def dsysv_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16134,7 +16134,7 @@ def dsysv_aa(
 @bind("DSYSV_AA_2STAGE")
 @external
 def dsysv_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16153,7 +16153,7 @@ def dsysv_aa_2stage(
 @bind("DSYSV_RK")
 @external
 def dsysv_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16170,7 +16170,7 @@ def dsysv_rk(
 @bind("DSYSV_ROOK")
 @external
 def dsysv_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16186,8 +16186,8 @@ def dsysv_rook(
 @bind("DSYSVX")
 @external
 def dsysvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16211,8 +16211,8 @@ def dsysvx(
 @bind("DSYSVXX")
 @external
 def dsysvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16220,7 +16220,7 @@ def dsysvxx(
     AF: Float64[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Float64[LDB, Flat],
     LDB: Addr(Int32),
@@ -16242,7 +16242,7 @@ def dsysvxx(
 @bind("DSYSWAPR")
 @external
 def dsyswapr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16253,7 +16253,7 @@ def dsyswapr(
 @bind("DSYTD2")
 @external
 def dsytd2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16266,7 +16266,7 @@ def dsytd2(
 @bind("DSYTF2")
 @external
 def dsytf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16277,7 +16277,7 @@ def dsytf2(
 @bind("DSYTF2_RK")
 @external
 def dsytf2_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16289,7 +16289,7 @@ def dsytf2_rk(
 @bind("DSYTF2_ROOK")
 @external
 def dsytf2_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16300,7 +16300,7 @@ def dsytf2_rook(
 @bind("DSYTRD")
 @external
 def dsytrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16315,8 +16315,8 @@ def dsytrd(
 @bind("DSYTRD_2STAGE")
 @external
 def dsytrd_2stage(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16333,9 +16333,9 @@ def dsytrd_2stage(
 @bind("DSYTRD_SB2ST")
 @external
 def dsytrd_sb2st(
-    STAGE1: Addr(Const(String[1])),
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    STAGE1: Addr(String[1]),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -16352,7 +16352,7 @@ def dsytrd_sb2st(
 @bind("DSYTRD_SY2SB")
 @external
 def dsytrd_sy2sb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16368,7 +16368,7 @@ def dsytrd_sy2sb(
 @bind("DSYTRF")
 @external
 def dsytrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16381,7 +16381,7 @@ def dsytrf(
 @bind("DSYTRF_AA")
 @external
 def dsytrf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16394,7 +16394,7 @@ def dsytrf_aa(
 @bind("DSYTRF_AA_2STAGE")
 @external
 def dsytrf_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16410,7 +16410,7 @@ def dsytrf_aa_2stage(
 @bind("DSYTRF_RK")
 @external
 def dsytrf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16424,7 +16424,7 @@ def dsytrf_rk(
 @bind("DSYTRF_ROOK")
 @external
 def dsytrf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16437,7 +16437,7 @@ def dsytrf_rook(
 @bind("DSYTRI")
 @external
 def dsytri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16449,7 +16449,7 @@ def dsytri(
 @bind("DSYTRI2")
 @external
 def dsytri2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16462,7 +16462,7 @@ def dsytri2(
 @bind("DSYTRI2X")
 @external
 def dsytri2x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16475,7 +16475,7 @@ def dsytri2x(
 @bind("DSYTRI_3")
 @external
 def dsytri_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16489,7 +16489,7 @@ def dsytri_3(
 @bind("DSYTRI_3X")
 @external
 def dsytri_3x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16503,7 +16503,7 @@ def dsytri_3x(
 @bind("DSYTRI_ROOK")
 @external
 def dsytri_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -16515,7 +16515,7 @@ def dsytri_rook(
 @bind("DSYTRS")
 @external
 def dsytrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16529,7 +16529,7 @@ def dsytrs(
 @bind("DSYTRS2")
 @external
 def dsytrs2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16544,7 +16544,7 @@ def dsytrs2(
 @bind("DSYTRS_3")
 @external
 def dsytrs_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16559,7 +16559,7 @@ def dsytrs_3(
 @bind("DSYTRS_AA")
 @external
 def dsytrs_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16575,7 +16575,7 @@ def dsytrs_aa(
 @bind("DSYTRS_AA_2STAGE")
 @external
 def dsytrs_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16592,7 +16592,7 @@ def dsytrs_aa_2stage(
 @bind("DSYTRS_ROOK")
 @external
 def dsytrs_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16606,9 +16606,9 @@ def dsytrs_rook(
 @bind("DTBCON")
 @external
 def dtbcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float64[LDAB, Flat],
@@ -16622,9 +16622,9 @@ def dtbcon(
 @bind("DTBRFS")
 @external
 def dtbrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -16644,9 +16644,9 @@ def dtbrfs(
 @bind("DTBTRS")
 @external
 def dtbtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -16660,11 +16660,11 @@ def dtbtrs(
 @bind("DTFSM")
 @external
 def dtfsm(
-    TRANSR: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Float64),
@@ -16676,9 +16676,9 @@ def dtfsm(
 @bind("DTFTRI")
 @external
 def dtftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float64[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -16687,8 +16687,8 @@ def dtftri(
 @bind("DTFTTP")
 @external
 def dtfttp(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Float64[Flat], SourceDims("0:*")],
     AP: Annotated[Float64[Flat], SourceDims("0:*")],
@@ -16698,8 +16698,8 @@ def dtfttp(
 @bind("DTFTTR")
 @external
 def dtfttr(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Float64[Flat], SourceDims("0:*")],
     A: Annotated[Float64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
@@ -16710,8 +16710,8 @@ def dtfttr(
 @bind("DTGEVC")
 @external
 def dtgevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     S: Float64[LDS, Flat],
@@ -16804,9 +16804,9 @@ def dtgsen(
 @bind("DTGSJA")
 @external
 def dtgsja(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -16834,8 +16834,8 @@ def dtgsja(
 @bind("DTGSNA")
 @external
 def dtgsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -16859,7 +16859,7 @@ def dtgsna(
 @bind("DTGSY2")
 @external
 def dtgsy2(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -16886,7 +16886,7 @@ def dtgsy2(
 @bind("DTGSYL")
 @external
 def dtgsyl(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -16913,9 +16913,9 @@ def dtgsyl(
 @bind("DTPCON")
 @external
 def dtpcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     RCOND: Addr(Float64),
@@ -16959,8 +16959,8 @@ def dtplqt2(
 @bind("DTPMLQT")
 @external
 def dtpmlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -16981,8 +16981,8 @@ def dtpmlqt(
 @bind("DTPMQRT")
 @external
 def dtpmqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -17035,10 +17035,10 @@ def dtpqrt2(
 @bind("DTPRFB")
 @external
 def dtprfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -17058,9 +17058,9 @@ def dtprfb(
 @bind("DTPRFS")
 @external
 def dtprfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -17078,8 +17078,8 @@ def dtprfs(
 @bind("DTPTRI")
 @external
 def dtptri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     INFO: Addr(Int32)
@@ -17088,9 +17088,9 @@ def dtptri(
 @bind("DTPTRS")
 @external
 def dtptrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float64[Flat],
@@ -17102,8 +17102,8 @@ def dtptrs(
 @bind("DTPTTF")
 @external
 def dtpttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Annotated[Float64[Flat], SourceDims("0:*")],
     ARF: Annotated[Float64[Flat], SourceDims("0:*")],
@@ -17113,7 +17113,7 @@ def dtpttf(
 @bind("DTPTTR")
 @external
 def dtpttr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float64[Flat],
     A: Float64[LDA, Flat],
@@ -17124,9 +17124,9 @@ def dtpttr(
 @bind("DTRCON")
 @external
 def dtrcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -17139,8 +17139,8 @@ def dtrcon(
 @bind("DTREVC")
 @external
 def dtrevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float64[LDT, Flat],
@@ -17158,8 +17158,8 @@ def dtrevc(
 @bind("DTREVC3")
 @external
 def dtrevc3(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float64[LDT, Flat],
@@ -17178,7 +17178,7 @@ def dtrevc3(
 @bind("DTREXC")
 @external
 def dtrexc(
-    COMPQ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
     N: Addr(Int32),
     T: Float64[LDT, Flat],
     LDT: Addr(Int32),
@@ -17193,9 +17193,9 @@ def dtrexc(
 @bind("DTRRFS")
 @external
 def dtrrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -17214,8 +17214,8 @@ def dtrrfs(
 @bind("DTRSEN")
 @external
 def dtrsen(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float64[LDT, Flat],
@@ -17237,8 +17237,8 @@ def dtrsen(
 @bind("DTRSNA")
 @external
 def dtrsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float64[LDT, Flat],
@@ -17260,8 +17260,8 @@ def dtrsna(
 @bind("DTRSYL")
 @external
 def dtrsyl(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -17278,8 +17278,8 @@ def dtrsyl(
 @bind("DTRSYL3")
 @external
 def dtrsyl3(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -17300,8 +17300,8 @@ def dtrsyl3(
 @bind("DTRTI2")
 @external
 def dtrti2(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -17311,8 +17311,8 @@ def dtrti2(
 @bind("DTRTRI")
 @external
 def dtrtri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -17322,9 +17322,9 @@ def dtrtri(
 @bind("DTRTRS")
 @external
 def dtrtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -17337,8 +17337,8 @@ def dtrtrs(
 @bind("DTRTTF")
 @external
 def dtrttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
     LDA: Addr(Int32),
@@ -17349,7 +17349,7 @@ def dtrttf(
 @bind("DTRTTP")
 @external
 def dtrttp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
     LDA: Addr(Int32),
@@ -17415,7 +17415,7 @@ def ilaclr(
 @bind("ILADIAG")
 @external
 def iladiag(
-    DIAG: Addr(Const(String[1]))
+    DIAG: Addr(String[1])
 ) -> Int32: ...
 
 @bind("ILADLC")
@@ -17440,8 +17440,8 @@ def iladlr(
 @external
 def ilaenv(
     ISPEC: Addr(Int32),
-    NAME: Addr(Const(String)),
-    OPTS: Addr(Const(String)),
+    NAME: Addr(String),
+    OPTS: Addr(String),
     N1: Addr(Int32),
     N2: Addr(Int32),
     N3: Addr(Int32),
@@ -17452,8 +17452,8 @@ def ilaenv(
 @external
 def ilaenv2stage(
     ISPEC: Addr(Int32),
-    NAME: Addr(Const(String)),
-    OPTS: Addr(Const(String)),
+    NAME: Addr(String),
+    OPTS: Addr(String),
     N1: Addr(Int32),
     N2: Addr(Int32),
     N3: Addr(Int32),
@@ -17463,7 +17463,7 @@ def ilaenv2stage(
 @bind("ILAPREC")
 @external
 def ilaprec(
-    PREC: Addr(Const(String[1]))
+    PREC: Addr(String[1])
 ) -> Int32: ...
 
 @bind("ILASLC")
@@ -17487,13 +17487,13 @@ def ilaslr(
 @bind("ILATRANS")
 @external
 def ilatrans(
-    TRANS: Addr(Const(String[1]))
+    TRANS: Addr(String[1])
 ) -> Int32: ...
 
 @bind("ILAUPLO")
 @external
 def ilauplo(
-    UPLO: Addr(Const(String[1]))
+    UPLO: Addr(String[1])
 ) -> Int32: ...
 
 @bind("ILAZLC")
@@ -17518,8 +17518,8 @@ def ilazlr(
 @external
 def iparam2stage(
     ISPEC: Addr(Int32),
-    NAME: Addr(Const(String)),
-    OPTS: Addr(Const(String)),
+    NAME: Addr(String),
+    OPTS: Addr(String),
     NI: Addr(Int32),
     NBI: Addr(Int32),
     IBI: Addr(Int32),
@@ -17550,18 +17550,18 @@ def izmax1(
 @external
 def lsamen(
     N: Addr(Int32),
-    CA: Addr(Const(String)),
-    CB: Addr(Const(String))
+    CA: Addr(String),
+    CB: Addr(String)
 ) -> Bool: ...
 
 @bind("SBBCSD")
 @external
 def sbbcsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -17591,8 +17591,8 @@ def sbbcsd(
 @bind("SBDSDC")
 @external
 def sbdsdc(
-    UPLO: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    COMPQ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -17610,7 +17610,7 @@ def sbdsdc(
 @bind("SBDSQR")
 @external
 def sbdsqr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NCVT: Addr(Int32),
     NRU: Addr(Int32),
@@ -17630,9 +17630,9 @@ def sbdsqr(
 @bind("SBDSVDX")
 @external
 def sbdsvdx(
-    UPLO: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -17660,7 +17660,7 @@ def scsum1(
 @bind("SDISNA")
 @external
 def sdisna(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     D: Float32[Flat],
@@ -17671,7 +17671,7 @@ def sdisna(
 @bind("SGBBRD")
 @external
 def sgbbrd(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NCC: Addr(Int32),
@@ -17694,7 +17694,7 @@ def sgbbrd(
 @bind("SGBCON")
 @external
 def sgbcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -17745,7 +17745,7 @@ def sgbequb(
 @bind("SGBRFS")
 @external
 def sgbrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -17769,8 +17769,8 @@ def sgbrfs(
 @bind("SGBRFSX")
 @external
 def sgbrfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -17816,8 +17816,8 @@ def sgbsv(
 @bind("SGBSVX")
 @external
 def sgbsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -17827,7 +17827,7 @@ def sgbsvx(
     AFB: Float32[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Float32[LDB, Flat],
@@ -17845,8 +17845,8 @@ def sgbsvx(
 @bind("SGBSVXX")
 @external
 def sgbsvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -17856,7 +17856,7 @@ def sgbsvxx(
     AFB: Float32[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Float32[LDB, Flat],
@@ -17905,7 +17905,7 @@ def sgbtrf(
 @bind("SGBTRS")
 @external
 def sgbtrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -17921,8 +17921,8 @@ def sgbtrs(
 @bind("SGEBAK")
 @external
 def sgebak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -17936,7 +17936,7 @@ def sgebak(
 @bind("SGEBAL")
 @external
 def sgebal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -17980,7 +17980,7 @@ def sgebrd(
 @bind("SGECON")
 @external
 def sgecon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -17995,72 +17995,72 @@ def sgecon(
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Addr(Arg(11)), Addr(Arg(12)), Return('K', 0), Arg(13), Arg(14), Arg(15), Addr(Arg(16)), Arg(17), Arg(18), Addr(Arg(19)), Arg(20), Addr(Arg(21)), Arg(22), Addr(Arg(23)), Arg(24), Addr(Arg(25)), Arg(26), Addr(Arg(27)), Return('INFO', 10)])
 def sgedmd(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     X: Float32[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Float32[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float32),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float32,
     REIG: Float32[Flat],
     IMEIG: Float32[Flat],
     Z: Float32[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float32[Flat],
     B: Float32[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     W: Float32[LDW, Flat],
-    LDW: Const(Int32),
+    LDW: Int32,
     S: Float32[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     WORK: Float32[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Int32, Returns["REIG", Float32[Flat]], Returns["IMEIG", Float32[Flat]], Returns["Z", Float32[LDZ, Flat]], Returns["RES", Float32[Flat]], Returns["B", Float32[LDB, Flat]], Returns["W", Float32[LDW, Flat]], Returns["S", Float32[LDS, Flat]], Returns["WORK", Float32[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("SGEDMDQ")
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Addr(Arg(15)), Addr(Arg(16)), Return('K', 2), Arg(17), Arg(18), Arg(19), Addr(Arg(20)), Arg(21), Arg(22), Addr(Arg(23)), Arg(24), Addr(Arg(25)), Arg(26), Addr(Arg(27)), Arg(28), Addr(Arg(29)), Arg(30), Addr(Arg(31)), Return('INFO', 12)])
 def sgedmdq(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBQ: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     F: Float32[LDF, Flat],
-    LDF: Const(Int32),
+    LDF: Int32,
     X: Float32[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Float32[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float32),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float32,
     REIG: Float32[Flat],
     IMEIG: Float32[Flat],
     Z: Float32[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float32[Flat],
     B: Float32[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     V: Float32[LDV, Flat],
-    LDV: Const(Int32),
+    LDV: Int32,
     S: Float32[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     WORK: Float32[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Returns["X", Float32[LDX, Flat]], Returns["Y", Float32[LDY, Flat]], Int32, Returns["REIG", Float32[Flat]], Returns["IMEIG", Float32[Flat]], Returns["Z", Float32[LDZ, Flat]], Returns["RES", Float32[Flat]], Returns["B", Float32[LDB, Flat]], Returns["V", Float32[LDV, Flat]], Returns["S", Float32[LDS, Flat]], Returns["WORK", Float32[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("SGEEQU")
@@ -18096,8 +18096,8 @@ def sgeequb(
 @bind("SGEES")
 @external
 def sgees(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18116,10 +18116,10 @@ def sgees(
 @bind("SGEESX")
 @external
 def sgeesx(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -18141,8 +18141,8 @@ def sgeesx(
 @bind("SGEEV")
 @external
 def sgeev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -18160,10 +18160,10 @@ def sgeev(
 @bind("SGEEVX")
 @external
 def sgeevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -18215,12 +18215,12 @@ def sgehrd(
 @bind("SGEJSV")
 @external
 def sgejsv(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBP: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18304,7 +18304,7 @@ def sgelqt3(
 @bind("SGELS")
 @external
 def sgels(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -18357,7 +18357,7 @@ def sgelss(
 @bind("SGELST")
 @external
 def sgelst(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -18391,8 +18391,8 @@ def sgelsy(
 @bind("SGEMLQ")
 @external
 def sgemlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -18410,8 +18410,8 @@ def sgemlq(
 @bind("SGEMLQT")
 @external
 def sgemlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -18429,8 +18429,8 @@ def sgemlqt(
 @bind("SGEMQR")
 @external
 def sgemqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -18448,8 +18448,8 @@ def sgemqr(
 @bind("SGEMQRT")
 @external
 def sgemqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -18630,7 +18630,7 @@ def sgeqrt3(
 @bind("SGERFS")
 @external
 def sgerfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18652,8 +18652,8 @@ def sgerfs(
 @bind("SGERFSX")
 @external
 def sgerfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18719,7 +18719,7 @@ def sgesc2(
 @bind("SGESDD")
 @external
 def sgesdd(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18751,8 +18751,8 @@ def sgesv(
 @bind("SGESVD")
 @external
 def sgesvd(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18770,11 +18770,11 @@ def sgesvd(
 @bind("SGESVDQ")
 @external
 def sgesvdq(
-    JOBA: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBP: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18797,9 +18797,9 @@ def sgesvdq(
 @bind("SGESVDX")
 @external
 def sgesvdx(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
+    RANGE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18823,9 +18823,9 @@ def sgesvdx(
 @bind("SGESVJ")
 @external
 def sgesvj(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18842,8 +18842,8 @@ def sgesvj(
 @bind("SGESVX")
 @external
 def sgesvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18851,7 +18851,7 @@ def sgesvx(
     AF: Float32[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Float32[LDB, Flat],
@@ -18869,8 +18869,8 @@ def sgesvx(
 @bind("SGESVXX")
 @external
 def sgesvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18878,7 +18878,7 @@ def sgesvxx(
     AF: Float32[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float32[Flat],
     C: Float32[Flat],
     B: Float32[LDB, Flat],
@@ -18957,7 +18957,7 @@ def sgetri(
 @bind("SGETRS")
 @external
 def sgetrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -18971,7 +18971,7 @@ def sgetrs(
 @bind("SGETSLS")
 @external
 def sgetsls(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -19004,8 +19004,8 @@ def sgetsqrhrt(
 @bind("SGGBAK")
 @external
 def sggbak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -19020,7 +19020,7 @@ def sggbak(
 @bind("SGGBAL")
 @external
 def sggbal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19037,9 +19037,9 @@ def sggbal(
 @bind("SGGES")
 @external
 def sgges(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -19063,9 +19063,9 @@ def sgges(
 @bind("SGGES3")
 @external
 def sgges3(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -19089,11 +19089,11 @@ def sgges3(
 @bind("SGGESX")
 @external
 def sggesx(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19120,8 +19120,8 @@ def sggesx(
 @bind("SGGEV")
 @external
 def sggev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19142,8 +19142,8 @@ def sggev(
 @bind("SGGEV3")
 @external
 def sggev3(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19164,10 +19164,10 @@ def sggev3(
 @bind("SGGEVX")
 @external
 def sggevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19216,8 +19216,8 @@ def sggglm(
 @bind("SGGHD3")
 @external
 def sgghd3(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -19237,8 +19237,8 @@ def sgghd3(
 @bind("SGGHRD")
 @external
 def sgghrd(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -19308,9 +19308,9 @@ def sggrqf(
 @bind("SGGSVD3")
 @external
 def sggsvd3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     P: Addr(Int32),
@@ -19337,9 +19337,9 @@ def sggsvd3(
 @bind("SGGSVP3")
 @external
 def sggsvp3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -19367,7 +19367,7 @@ def sggsvp3(
 @bind("SGSVJ0")
 @external
 def sgsvj0(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -19389,7 +19389,7 @@ def sgsvj0(
 @bind("SGSVJ1")
 @external
 def sgsvj1(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -19412,7 +19412,7 @@ def sgsvj1(
 @bind("SGTCON")
 @external
 def sgtcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Float32[Flat],
     D: Float32[Flat],
@@ -19429,7 +19429,7 @@ def sgtcon(
 @bind("SGTRFS")
 @external
 def sgtrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Float32[Flat],
@@ -19467,8 +19467,8 @@ def sgtsv(
 @bind("SGTSVX")
 @external
 def sgtsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Float32[Flat],
@@ -19506,7 +19506,7 @@ def sgttrf(
 @bind("SGTTRS")
 @external
 def sgttrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Float32[Flat],
@@ -19537,9 +19537,9 @@ def sgtts2(
 @bind("SHGEQZ")
 @external
 def shgeqz(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -19562,9 +19562,9 @@ def shgeqz(
 @bind("SHSEIN")
 @external
 def shsein(
-    SIDE: Addr(Const(String[1])),
-    EIGSRC: Addr(Const(String[1])),
-    INITV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    EIGSRC: Addr(String[1]),
+    INITV: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     H: Float32[LDH, Flat],
@@ -19586,8 +19586,8 @@ def shsein(
 @bind("SHSEQR")
 @external
 def shseqr(
-    JOB: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -19606,7 +19606,7 @@ def shseqr(
 @external
 @native_call([Addr(Arg(0))])
 def sisnan(
-    SIN: Const(Float32)
+    SIN: Float32
 ) -> Bool: ...
 
 @bind("SLA_GBAMV")
@@ -19630,7 +19630,7 @@ def sla_gbamv(
 @bind("SLA_GBRCOND")
 @external
 def sla_gbrcond(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -19714,7 +19714,7 @@ def sla_geamv(
 @bind("SLA_GERCOND")
 @external
 def sla_gercond(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19787,7 +19787,7 @@ def sla_lin_berr(
 @bind("SLA_PORCOND")
 @external
 def sla_porcond(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19804,7 +19804,7 @@ def sla_porcond(
 @external
 def sla_porfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -19836,7 +19836,7 @@ def sla_porfsx_extended(
 @bind("SLA_PORPVGRW")
 @external
 def sla_porpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     NCOLS: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19863,7 +19863,7 @@ def sla_syamv(
 @bind("SLA_SYRCOND")
 @external
 def sla_syrcond(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -19881,7 +19881,7 @@ def sla_syrcond(
 @external
 def sla_syrfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -19914,7 +19914,7 @@ def sla_syrfsx_extended(
 @bind("SLA_SYRPVGRW")
 @external
 def sla_syrpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     INFO: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -19985,7 +19985,7 @@ def slacon(
 @bind("SLACPY")
 @external
 def slacpy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -20374,7 +20374,7 @@ def slagtf(
 @bind("SLAGTM")
 @external
 def slagtm(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     ALPHA: Addr(Float32),
@@ -20471,8 +20471,8 @@ def slaic1(
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def slaisnan(
-    SIN1: Const(Float32),
-    SIN2: Const(Float32)
+    SIN1: Float32,
+    SIN2: Float32
 ) -> Bool: ...
 
 @bind("SLALN2")
@@ -20561,7 +20561,7 @@ def slalsa(
 @bind("SLALSD")
 @external
 def slalsd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     SMLSIZ: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -20590,8 +20590,8 @@ def slamrg(
 @bind("SLAMSWLQ")
 @external
 def slamswlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -20611,8 +20611,8 @@ def slamswlq(
 @bind("SLAMTSQR")
 @external
 def slamtsqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -20643,7 +20643,7 @@ def slaneg(
 @bind("SLANGB")
 @external
 def slangb(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -20655,7 +20655,7 @@ def slangb(
 @bind("SLANGE")
 @external
 def slange(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -20666,7 +20666,7 @@ def slange(
 @bind("SLANGT")
 @external
 def slangt(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Float32[Flat],
     D: Float32[Flat],
@@ -20676,7 +20676,7 @@ def slangt(
 @bind("SLANHS")
 @external
 def slanhs(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -20686,8 +20686,8 @@ def slanhs(
 @bind("SLANSB")
 @external
 def slansb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -20698,9 +20698,9 @@ def slansb(
 @bind("SLANSF")
 @external
 def slansf(
-    NORM: Addr(Const(String[1])),
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float32[Flat], SourceDims("0:*")],
     WORK: Annotated[Float32[Flat], SourceDims("0:*")]
@@ -20709,8 +20709,8 @@ def slansf(
 @bind("SLANSP")
 @external
 def slansp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     WORK: Float32[Flat]
@@ -20719,7 +20719,7 @@ def slansp(
 @bind("SLANST")
 @external
 def slanst(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat]
@@ -20728,8 +20728,8 @@ def slanst(
 @bind("SLANSY")
 @external
 def slansy(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -20739,9 +20739,9 @@ def slansy(
 @bind("SLANTB")
 @external
 def slantb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -20752,9 +20752,9 @@ def slantb(
 @bind("SLANTP")
 @external
 def slantp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     WORK: Float32[Flat]
@@ -20763,9 +20763,9 @@ def slantp(
 @bind("SLANTR")
 @external
 def slantr(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -20872,7 +20872,7 @@ def slaqgb(
     ROWCND: Addr(Float32),
     COLCND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("SLAQGE")
@@ -20887,7 +20887,7 @@ def slaqge(
     ROWCND: Addr(Float32),
     COLCND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("SLAQP2")
@@ -21128,7 +21128,7 @@ def slaqr5(
 @bind("SLAQSB")
 @external
 def slaqsb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -21136,32 +21136,32 @@ def slaqsb(
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("SLAQSP")
 @external
 def slaqsp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("SLAQSY")
 @external
 def slaqsy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
     S: Float32[Flat],
     SCOND: Addr(Float32),
     AMAX: Addr(Float32),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("SLAQTR")
@@ -21184,41 +21184,41 @@ def slaqtr(
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Arg(10), Arg(11), Arg(12), Arg(13), Addr(Arg(14)), Arg(15), Addr(Arg(16)), Arg(17), Addr(Arg(18)), Addr(Arg(19)), Return('INFO', 0)])
 def slaqz0(
-    WANTS: Addr(Const(String[1])),
-    WANTQ: Addr(Const(String[1])),
-    WANTZ: Addr(Const(String[1])),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
+    WANTS: Addr(String[1]),
+    WANTQ: Addr(String[1]),
+    WANTZ: Addr(String[1]),
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
     A: Float32[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float32[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     ALPHAR: Float32[Flat],
     ALPHAI: Float32[Flat],
     BETA: Float32[Flat],
     Q: Float32[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Float32[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     WORK: Float32[Flat],
-    LWORK: Const(Int32),
-    REC: Const(Int32)
+    LWORK: Int32,
+    REC: Int32
 ) -> Int32: ...
 
 @bind("SLAQZ1")
 @external
 @native_call([Arg(0), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Addr(Arg(7)), Addr(Arg(8)), Arg(9)])
 def slaqz1(
-    A: Const(Float32[LDA, Flat]),
-    LDA: Const(Int32),
-    B: Const(Float32[LDB, Flat]),
-    LDB: Const(Int32),
-    SR1: Const(Float32),
-    SR2: Const(Float32),
-    SI: Const(Float32),
-    BETA1: Const(Float32),
-    BETA2: Const(Float32),
+    A: Float32[LDA, Flat],
+    LDA: Int32,
+    B: Float32[LDB, Flat],
+    LDB: Int32,
+    SR1: Float32,
+    SR2: Float32,
+    SI: Float32,
+    BETA1: Float32,
+    BETA2: Float32,
     V: Float32[Flat]
 ) -> Returns["V", Float32[Flat]]: ...
 
@@ -21226,86 +21226,86 @@ def slaqz1(
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Addr(Arg(11)), Arg(12), Addr(Arg(13)), Addr(Arg(14)), Addr(Arg(15)), Arg(16), Addr(Arg(17))])
 def slaqz2(
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    K: Const(Int32),
-    ISTARTM: Const(Int32),
-    ISTOPM: Const(Int32),
-    IHI: Const(Int32),
+    ILQ: Bool,
+    ILZ: Bool,
+    K: Int32,
+    ISTARTM: Int32,
+    ISTOPM: Int32,
+    IHI: Int32,
     A: Float32[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float32[LDB, Flat],
-    LDB: Const(Int32),
-    NQ: Const(Int32),
-    QSTART: Const(Int32),
+    LDB: Int32,
+    NQ: Int32,
+    QSTART: Int32,
     Q: Float32[LDQ, Flat],
-    LDQ: Const(Int32),
-    NZ: Const(Int32),
-    ZSTART: Const(Int32),
+    LDQ: Int32,
+    NZ: Int32,
+    ZSTART: Int32,
     Z: Float32[LDZ, Flat],
-    LDZ: Const(Int32)
+    LDZ: Int32
 ) -> None: ...
 
 @bind("SLAQZ3")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Return('NS', 0), Return('ND', 1), Arg(15), Arg(16), Arg(17), Arg(18), Addr(Arg(19)), Arg(20), Addr(Arg(21)), Arg(22), Addr(Arg(23)), Addr(Arg(24)), Return('INFO', 2)])
 def slaqz3(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NW: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NW: Int32,
     A: Float32[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float32[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Float32[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Float32[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     ALPHAR: Float32[Flat],
     ALPHAI: Float32[Flat],
     BETA: Float32[Flat],
     QC: Float32[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Float32[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Float32[Flat],
-    LWORK: Const(Int32),
-    REC: Const(Int32)
+    LWORK: Int32,
+    REC: Int32
 ) -> tuple[Int32, Int32, Int32]: ...
 
 @bind("SLAQZ4")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Arg(9), Arg(10), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Arg(15), Addr(Arg(16)), Arg(17), Addr(Arg(18)), Arg(19), Addr(Arg(20)), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Return('INFO', 0)])
 def slaqz4(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NSHIFTS: Const(Int32),
-    NBLOCK_DESIRED: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NSHIFTS: Int32,
+    NBLOCK_DESIRED: Int32,
     SR: Float32[Flat],
     SI: Float32[Flat],
     SS: Float32[Flat],
     A: Float32[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Float32[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Float32[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Float32[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     QC: Float32[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Float32[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Float32[Flat],
-    LWORK: Const(Int32)
+    LWORK: Int32
 ) -> Int32: ...
 
 @bind("SLAR1V")
@@ -21350,7 +21350,7 @@ def slar2v(
 @bind("SLARF")
 @external
 def slarf(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float32[Flat],
@@ -21364,7 +21364,7 @@ def slarf(
 @bind("SLARF1F")
 @external
 def slarf1f(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float32[Flat],
@@ -21378,7 +21378,7 @@ def slarf1f(
 @bind("SLARF1L")
 @external
 def slarf1l(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float32[Flat],
@@ -21392,10 +21392,10 @@ def slarf1l(
 @bind("SLARFB")
 @external
 def slarfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -21412,7 +21412,7 @@ def slarfb(
 @bind("SLARFB_GETT")
 @external
 def slarfb_gett(
-    IDENT: Addr(Const(String[1])),
+    IDENT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -21449,8 +21449,8 @@ def slarfgp(
 @bind("SLARFT")
 @external
 def slarft(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Float32[LDV, Flat],
@@ -21463,7 +21463,7 @@ def slarft(
 @bind("SLARFX")
 @external
 def slarfx(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Float32[Flat],
@@ -21476,7 +21476,7 @@ def slarfx(
 @bind("SLARFY")
 @external
 def slarfy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     V: Float32[Flat],
     INCV: Addr(Int32),
@@ -21554,7 +21554,7 @@ def slarrb(
 @bind("SLARRC")
 @external
 def slarrc(
-    JOBT: Addr(Const(String[1])),
+    JOBT: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float32),
     VU: Addr(Float32),
@@ -21570,8 +21570,8 @@ def slarrc(
 @bind("SLARRD")
 @external
 def slarrd(
-    RANGE: Addr(Const(String[1])),
-    ORDER: Addr(Const(String[1])),
+    RANGE: Addr(String[1]),
+    ORDER: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float32),
     VU: Addr(Float32),
@@ -21600,7 +21600,7 @@ def slarrd(
 @bind("SLARRE")
 @external
 def slarre(
-    RANGE: Addr(Const(String[1])),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float32),
     VU: Addr(Float32),
@@ -21788,7 +21788,7 @@ def slaruv(
 @bind("SLARZ")
 @external
 def slarz(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     L: Addr(Int32),
@@ -21803,10 +21803,10 @@ def slarz(
 @bind("SLARZB")
 @external
 def slarzb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -21824,8 +21824,8 @@ def slarzb(
 @bind("SLARZT")
 @external
 def slarzt(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Float32[LDV, Flat],
@@ -21848,7 +21848,7 @@ def slas2(
 @bind("SLASCL")
 @external
 def slascl(
-    TYPE: Addr(Const(String[1])),
+    TYPE: Addr(String[1]),
     KL: Addr(Int32),
     KU: Addr(Int32),
     CFROM: Addr(Float32),
@@ -22097,7 +22097,7 @@ def slasda(
 @bind("SLASDQ")
 @external
 def slasdq(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     SQRE: Addr(Int32),
     N: Addr(Int32),
     NCVT: Addr(Int32),
@@ -22130,7 +22130,7 @@ def slasdt(
 @bind("SLASET")
 @external
 def slaset(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Float32),
@@ -22238,9 +22238,9 @@ def slasq6(
 @bind("SLASR")
 @external
 def slasr(
-    SIDE: Addr(Const(String[1])),
-    PIVOT: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    PIVOT: Addr(String[1]),
+    DIRECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     C: Float32[Flat],
@@ -22252,7 +22252,7 @@ def slasr(
 @bind("SLASRT")
 @external
 def slasrt(
-    ID: Addr(Const(String[1])),
+    ID: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     INFO: Addr(Int32)
@@ -22334,7 +22334,7 @@ def slasy2(
 @bind("SLASYF")
 @external
 def slasyf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -22349,7 +22349,7 @@ def slasyf(
 @bind("SLASYF_AA")
 @external
 def slasyf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     J1: Addr(Int32),
     M: Addr(Int32),
     NB: Addr(Int32),
@@ -22364,7 +22364,7 @@ def slasyf_aa(
 @bind("SLASYF_RK")
 @external
 def slasyf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -22380,7 +22380,7 @@ def slasyf_rk(
 @bind("SLASYF_ROOK")
 @external
 def slasyf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -22395,10 +22395,10 @@ def slasyf_rook(
 @bind("SLATBS")
 @external
 def slatbs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -22426,10 +22426,10 @@ def slatdf(
 @bind("SLATPS")
 @external
 def slatps(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     X: Float32[Flat],
@@ -22441,7 +22441,7 @@ def slatps(
 @bind("SLATRD")
 @external
 def slatrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -22455,10 +22455,10 @@ def slatrd(
 @bind("SLATRS")
 @external
 def slatrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -22471,10 +22471,10 @@ def slatrs(
 @bind("SLATRS3")
 @external
 def slatrs3(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -22519,7 +22519,7 @@ def slatsqr(
 @bind("SLAUU2")
 @external
 def slauu2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -22529,7 +22529,7 @@ def slauu2(
 @bind("SLAUUM")
 @external
 def slauum(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -22539,7 +22539,7 @@ def slauum(
 @bind("SOPGTR")
 @external
 def sopgtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     TAU: Float32[Flat],
@@ -22552,9 +22552,9 @@ def sopgtr(
 @bind("SOPMTR")
 @external
 def sopmtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     AP: Float32[Flat],
@@ -22568,8 +22568,8 @@ def sopmtr(
 @bind("SORBDB")
 @external
 def sorbdb(
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -22714,12 +22714,12 @@ def sorbdb6(
 @bind("SORCSD")
 @external
 def sorcsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -22749,9 +22749,9 @@ def sorcsd(
 @bind("SORCSD2BY1")
 @external
 def sorcsd2by1(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -22801,7 +22801,7 @@ def sorg2r(
 @bind("SORGBR")
 @external
 def sorgbr(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -22912,7 +22912,7 @@ def sorgrq(
 @bind("SORGTR")
 @external
 def sorgtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -22971,8 +22971,8 @@ def sorhr_col(
 @bind("SORM22")
 @external
 def sorm22(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -22989,8 +22989,8 @@ def sorm22(
 @bind("SORM2L")
 @external
 def sorm2l(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23006,8 +23006,8 @@ def sorm2l(
 @bind("SORM2R")
 @external
 def sorm2r(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23023,9 +23023,9 @@ def sorm2r(
 @bind("SORMBR")
 @external
 def sormbr(
-    VECT: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23042,8 +23042,8 @@ def sormbr(
 @bind("SORMHR")
 @external
 def sormhr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ILO: Addr(Int32),
@@ -23061,8 +23061,8 @@ def sormhr(
 @bind("SORML2")
 @external
 def sorml2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23078,8 +23078,8 @@ def sorml2(
 @bind("SORMLQ")
 @external
 def sormlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23096,8 +23096,8 @@ def sormlq(
 @bind("SORMQL")
 @external
 def sormql(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23114,8 +23114,8 @@ def sormql(
 @bind("SORMQR")
 @external
 def sormqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23132,8 +23132,8 @@ def sormqr(
 @bind("SORMR2")
 @external
 def sormr2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23149,8 +23149,8 @@ def sormr2(
 @bind("SORMR3")
 @external
 def sormr3(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23167,8 +23167,8 @@ def sormr3(
 @bind("SORMRQ")
 @external
 def sormrq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23185,8 +23185,8 @@ def sormrq(
 @bind("SORMRZ")
 @external
 def sormrz(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -23204,9 +23204,9 @@ def sormrz(
 @bind("SORMTR")
 @external
 def sormtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -23222,7 +23222,7 @@ def sormtr(
 @bind("SPBCON")
 @external
 def spbcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23237,7 +23237,7 @@ def spbcon(
 @bind("SPBEQU")
 @external
 def spbequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23251,7 +23251,7 @@ def spbequ(
 @bind("SPBRFS")
 @external
 def spbrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -23273,7 +23273,7 @@ def spbrfs(
 @bind("SPBSTF")
 @external
 def spbstf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23284,7 +23284,7 @@ def spbstf(
 @bind("SPBSV")
 @external
 def spbsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -23298,8 +23298,8 @@ def spbsv(
 @bind("SPBSVX")
 @external
 def spbsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -23307,7 +23307,7 @@ def spbsvx(
     LDAB: Addr(Int32),
     AFB: Float32[LDAFB, Flat],
     LDAFB: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Float32[LDB, Flat],
     LDB: Addr(Int32),
@@ -23324,7 +23324,7 @@ def spbsvx(
 @bind("SPBTF2")
 @external
 def spbtf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23335,7 +23335,7 @@ def spbtf2(
 @bind("SPBTRF")
 @external
 def spbtrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23346,7 +23346,7 @@ def spbtrf(
 @bind("SPBTRS")
 @external
 def spbtrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -23360,8 +23360,8 @@ def spbtrs(
 @bind("SPFTRF")
 @external
 def spftrf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float32[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -23370,8 +23370,8 @@ def spftrf(
 @bind("SPFTRI")
 @external
 def spftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float32[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -23380,8 +23380,8 @@ def spftri(
 @bind("SPFTRS")
 @external
 def spftrs(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Annotated[Float32[Flat], SourceDims("0:*")],
@@ -23393,7 +23393,7 @@ def spftrs(
 @bind("SPOCON")
 @external
 def spocon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -23431,7 +23431,7 @@ def spoequb(
 @bind("SPORFS")
 @external
 def sporfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -23452,8 +23452,8 @@ def sporfs(
 @bind("SPORFSX")
 @external
 def sporfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -23480,7 +23480,7 @@ def sporfsx(
 @bind("SPOSV")
 @external
 def sposv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -23493,15 +23493,15 @@ def sposv(
 @bind("SPOSVX")
 @external
 def sposvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
     AF: Float32[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Float32[LDB, Flat],
     LDB: Addr(Int32),
@@ -23518,15 +23518,15 @@ def sposvx(
 @bind("SPOSVXX")
 @external
 def sposvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
     AF: Float32[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Float32[LDB, Flat],
     LDB: Addr(Int32),
@@ -23548,7 +23548,7 @@ def sposvxx(
 @bind("SPOTF2")
 @external
 def spotf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -23558,7 +23558,7 @@ def spotf2(
 @bind("SPOTRF")
 @external
 def spotrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -23568,7 +23568,7 @@ def spotrf(
 @bind("SPOTRF2")
 @external
 def spotrf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -23578,7 +23578,7 @@ def spotrf2(
 @bind("SPOTRI")
 @external
 def spotri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -23588,7 +23588,7 @@ def spotri(
 @bind("SPOTRS")
 @external
 def spotrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -23601,7 +23601,7 @@ def spotrs(
 @bind("SPPCON")
 @external
 def sppcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     ANORM: Addr(Float32),
@@ -23614,7 +23614,7 @@ def sppcon(
 @bind("SPPEQU")
 @external
 def sppequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     S: Float32[Flat],
@@ -23626,7 +23626,7 @@ def sppequ(
 @bind("SPPRFS")
 @external
 def spprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -23645,7 +23645,7 @@ def spprfs(
 @bind("SPPSV")
 @external
 def sppsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -23657,13 +23657,13 @@ def sppsv(
 @bind("SPPSVX")
 @external
 def sppsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
     AFP: Float32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Float32[LDB, Flat],
     LDB: Addr(Int32),
@@ -23680,7 +23680,7 @@ def sppsvx(
 @bind("SPPTRF")
 @external
 def spptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     INFO: Addr(Int32)
@@ -23689,7 +23689,7 @@ def spptrf(
 @bind("SPPTRI")
 @external
 def spptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     INFO: Addr(Int32)
@@ -23698,7 +23698,7 @@ def spptri(
 @bind("SPPTRS")
 @external
 def spptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -23710,7 +23710,7 @@ def spptrs(
 @bind("SPSTF2")
 @external
 def spstf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -23724,7 +23724,7 @@ def spstf2(
 @bind("SPSTRF")
 @external
 def spstrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -23750,7 +23750,7 @@ def sptcon(
 @bind("SPTEQR")
 @external
 def spteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -23794,7 +23794,7 @@ def sptsv(
 @bind("SPTSVX")
 @external
 def sptsvx(
-    FACT: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float32[Flat],
@@ -23856,7 +23856,7 @@ def srscl(
 @bind("SSB2ST_KERNELS")
 @external
 def ssb2st_kernels(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     WANTZ: Addr(Bool),
     TTYPE: Addr(Int32),
     ST: Addr(Int32),
@@ -23876,8 +23876,8 @@ def ssb2st_kernels(
 @bind("SSBEV")
 @external
 def ssbev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23892,8 +23892,8 @@ def ssbev(
 @bind("SSBEV_2STAGE")
 @external
 def ssbev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23909,8 +23909,8 @@ def ssbev_2stage(
 @bind("SSBEVD")
 @external
 def ssbevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23928,8 +23928,8 @@ def ssbevd(
 @bind("SSBEVD_2STAGE")
 @external
 def ssbevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23947,9 +23947,9 @@ def ssbevd_2stage(
 @bind("SSBEVX")
 @external
 def ssbevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -23974,9 +23974,9 @@ def ssbevx(
 @bind("SSBEVX_2STAGE")
 @external
 def ssbevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -24002,8 +24002,8 @@ def ssbevx_2stage(
 @bind("SSBGST")
 @external
 def ssbgst(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -24020,8 +24020,8 @@ def ssbgst(
 @bind("SSBGV")
 @external
 def ssbgv(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -24039,8 +24039,8 @@ def ssbgv(
 @bind("SSBGVD")
 @external
 def ssbgvd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -24061,9 +24061,9 @@ def ssbgvd(
 @bind("SSBGVX")
 @external
 def ssbgvx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -24091,8 +24091,8 @@ def ssbgvx(
 @bind("SSBTRD")
 @external
 def ssbtrd(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -24108,9 +24108,9 @@ def ssbtrd(
 @bind("SSFRK")
 @external
 def ssfrk(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     ALPHA: Addr(Float32),
@@ -24123,7 +24123,7 @@ def ssfrk(
 @bind("SSPCON")
 @external
 def sspcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     IPIV: Int32[Flat],
@@ -24137,8 +24137,8 @@ def sspcon(
 @bind("SSPEV")
 @external
 def sspev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     W: Float32[Flat],
@@ -24151,8 +24151,8 @@ def sspev(
 @bind("SSPEVD")
 @external
 def sspevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     W: Float32[Flat],
@@ -24168,9 +24168,9 @@ def sspevd(
 @bind("SSPEVX")
 @external
 def sspevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     VL: Addr(Float32),
@@ -24192,7 +24192,7 @@ def sspevx(
 @external
 def sspgst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     BP: Float32[Flat],
@@ -24203,8 +24203,8 @@ def sspgst(
 @external
 def sspgv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     BP: Float32[Flat],
@@ -24219,8 +24219,8 @@ def sspgv(
 @external
 def sspgvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     BP: Float32[Flat],
@@ -24238,9 +24238,9 @@ def sspgvd(
 @external
 def sspgvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     BP: Float32[Flat],
@@ -24262,7 +24262,7 @@ def sspgvx(
 @bind("SSPRFS")
 @external
 def ssprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -24282,7 +24282,7 @@ def ssprfs(
 @bind("SSPSV")
 @external
 def sspsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -24295,8 +24295,8 @@ def sspsv(
 @bind("SSPSVX")
 @external
 def sspsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -24317,7 +24317,7 @@ def sspsvx(
 @bind("SSPTRD")
 @external
 def ssptrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     D: Float32[Flat],
@@ -24329,7 +24329,7 @@ def ssptrd(
 @bind("SSPTRF")
 @external
 def ssptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     IPIV: Int32[Flat],
@@ -24339,7 +24339,7 @@ def ssptrf(
 @bind("SSPTRI")
 @external
 def ssptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     IPIV: Int32[Flat],
@@ -24350,7 +24350,7 @@ def ssptri(
 @bind("SSPTRS")
 @external
 def ssptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -24363,8 +24363,8 @@ def ssptrs(
 @bind("SSTEBZ")
 @external
 def sstebz(
-    RANGE: Addr(Const(String[1])),
-    ORDER: Addr(Const(String[1])),
+    RANGE: Addr(String[1]),
+    ORDER: Addr(String[1]),
     N: Addr(Int32),
     VL: Addr(Float32),
     VU: Addr(Float32),
@@ -24386,7 +24386,7 @@ def sstebz(
 @bind("SSTEDC")
 @external
 def sstedc(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24402,8 +24402,8 @@ def sstedc(
 @bind("SSTEGR")
 @external
 def sstegr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24445,8 +24445,8 @@ def sstein(
 @bind("SSTEMR")
 @external
 def sstemr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24471,7 +24471,7 @@ def sstemr(
 @bind("SSTEQR")
 @external
 def ssteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24493,7 +24493,7 @@ def ssterf(
 @bind("SSTEV")
 @external
 def sstev(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24506,7 +24506,7 @@ def sstev(
 @bind("SSTEVD")
 @external
 def sstevd(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24522,8 +24522,8 @@ def sstevd(
 @bind("SSTEVR")
 @external
 def sstevr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24547,8 +24547,8 @@ def sstevr(
 @bind("SSTEVX")
 @external
 def sstevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float32[Flat],
     E: Float32[Flat],
@@ -24570,7 +24570,7 @@ def sstevx(
 @bind("SSYCON")
 @external
 def ssycon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24585,7 +24585,7 @@ def ssycon(
 @bind("SSYCON_3")
 @external
 def ssycon_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24601,7 +24601,7 @@ def ssycon_3(
 @bind("SSYCON_ROOK")
 @external
 def ssycon_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24616,8 +24616,8 @@ def ssycon_rook(
 @bind("SSYCONV")
 @external
 def ssyconv(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24629,8 +24629,8 @@ def ssyconv(
 @bind("SSYCONVF")
 @external
 def ssyconvf(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24642,8 +24642,8 @@ def ssyconvf(
 @bind("SSYCONVF_ROOK")
 @external
 def ssyconvf_rook(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24655,7 +24655,7 @@ def ssyconvf_rook(
 @bind("SSYEQUB")
 @external
 def ssyequb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24669,8 +24669,8 @@ def ssyequb(
 @bind("SSYEV")
 @external
 def ssyev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24683,8 +24683,8 @@ def ssyev(
 @bind("SSYEV_2STAGE")
 @external
 def ssyev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24697,8 +24697,8 @@ def ssyev_2stage(
 @bind("SSYEVD")
 @external
 def ssyevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24713,8 +24713,8 @@ def ssyevd(
 @bind("SSYEVD_2STAGE")
 @external
 def ssyevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24729,9 +24729,9 @@ def ssyevd_2stage(
 @bind("SSYEVR")
 @external
 def ssyevr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24755,9 +24755,9 @@ def ssyevr(
 @bind("SSYEVR_2STAGE")
 @external
 def ssyevr_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24781,9 +24781,9 @@ def ssyevr_2stage(
 @bind("SSYEVX")
 @external
 def ssyevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24806,9 +24806,9 @@ def ssyevx(
 @bind("SSYEVX_2STAGE")
 @external
 def ssyevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24832,7 +24832,7 @@ def ssyevx_2stage(
 @external
 def ssygs2(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24845,7 +24845,7 @@ def ssygs2(
 @external
 def ssygst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24858,8 +24858,8 @@ def ssygst(
 @external
 def ssygv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24875,8 +24875,8 @@ def ssygv(
 @external
 def ssygv_2stage(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24892,8 +24892,8 @@ def ssygv_2stage(
 @external
 def ssygvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24911,9 +24911,9 @@ def ssygvd(
 @external
 def ssygvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -24938,7 +24938,7 @@ def ssygvx(
 @bind("SSYRFS")
 @external
 def ssyrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -24960,8 +24960,8 @@ def ssyrfs(
 @bind("SSYRFSX")
 @external
 def ssyrfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -24989,7 +24989,7 @@ def ssyrfsx(
 @bind("SSYSV")
 @external
 def ssysv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25005,7 +25005,7 @@ def ssysv(
 @bind("SSYSV_AA")
 @external
 def ssysv_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25021,7 +25021,7 @@ def ssysv_aa(
 @bind("SSYSV_AA_2STAGE")
 @external
 def ssysv_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25040,7 +25040,7 @@ def ssysv_aa_2stage(
 @bind("SSYSV_RK")
 @external
 def ssysv_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25057,7 +25057,7 @@ def ssysv_rk(
 @bind("SSYSV_ROOK")
 @external
 def ssysv_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25073,8 +25073,8 @@ def ssysv_rook(
 @bind("SSYSVX")
 @external
 def ssysvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25098,8 +25098,8 @@ def ssysvx(
 @bind("SSYSVXX")
 @external
 def ssysvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25107,7 +25107,7 @@ def ssysvxx(
     AF: Float32[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float32[Flat],
     B: Float32[LDB, Flat],
     LDB: Addr(Int32),
@@ -25129,7 +25129,7 @@ def ssysvxx(
 @bind("SSYSWAPR")
 @external
 def ssyswapr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25140,7 +25140,7 @@ def ssyswapr(
 @bind("SSYTD2")
 @external
 def ssytd2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25153,7 +25153,7 @@ def ssytd2(
 @bind("SSYTF2")
 @external
 def ssytf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25164,7 +25164,7 @@ def ssytf2(
 @bind("SSYTF2_RK")
 @external
 def ssytf2_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25176,7 +25176,7 @@ def ssytf2_rk(
 @bind("SSYTF2_ROOK")
 @external
 def ssytf2_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25187,7 +25187,7 @@ def ssytf2_rook(
 @bind("SSYTRD")
 @external
 def ssytrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25202,8 +25202,8 @@ def ssytrd(
 @bind("SSYTRD_2STAGE")
 @external
 def ssytrd_2stage(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25220,9 +25220,9 @@ def ssytrd_2stage(
 @bind("SSYTRD_SB2ST")
 @external
 def ssytrd_sb2st(
-    STAGE1: Addr(Const(String[1])),
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    STAGE1: Addr(String[1]),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -25239,7 +25239,7 @@ def ssytrd_sb2st(
 @bind("SSYTRD_SY2SB")
 @external
 def ssytrd_sy2sb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25255,7 +25255,7 @@ def ssytrd_sy2sb(
 @bind("SSYTRF")
 @external
 def ssytrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25268,7 +25268,7 @@ def ssytrf(
 @bind("SSYTRF_AA")
 @external
 def ssytrf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25281,7 +25281,7 @@ def ssytrf_aa(
 @bind("SSYTRF_AA_2STAGE")
 @external
 def ssytrf_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25297,7 +25297,7 @@ def ssytrf_aa_2stage(
 @bind("SSYTRF_RK")
 @external
 def ssytrf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25311,7 +25311,7 @@ def ssytrf_rk(
 @bind("SSYTRF_ROOK")
 @external
 def ssytrf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25324,7 +25324,7 @@ def ssytrf_rook(
 @bind("SSYTRI")
 @external
 def ssytri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25336,7 +25336,7 @@ def ssytri(
 @bind("SSYTRI2")
 @external
 def ssytri2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25349,7 +25349,7 @@ def ssytri2(
 @bind("SSYTRI2X")
 @external
 def ssytri2x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25362,7 +25362,7 @@ def ssytri2x(
 @bind("SSYTRI_3")
 @external
 def ssytri_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25376,7 +25376,7 @@ def ssytri_3(
 @bind("SSYTRI_3X")
 @external
 def ssytri_3x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25390,7 +25390,7 @@ def ssytri_3x(
 @bind("SSYTRI_ROOK")
 @external
 def ssytri_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -25402,7 +25402,7 @@ def ssytri_rook(
 @bind("SSYTRS")
 @external
 def ssytrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25416,7 +25416,7 @@ def ssytrs(
 @bind("SSYTRS2")
 @external
 def ssytrs2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25431,7 +25431,7 @@ def ssytrs2(
 @bind("SSYTRS_3")
 @external
 def ssytrs_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25446,7 +25446,7 @@ def ssytrs_3(
 @bind("SSYTRS_AA")
 @external
 def ssytrs_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25462,7 +25462,7 @@ def ssytrs_aa(
 @bind("SSYTRS_AA_2STAGE")
 @external
 def ssytrs_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25479,7 +25479,7 @@ def ssytrs_aa_2stage(
 @bind("SSYTRS_ROOK")
 @external
 def ssytrs_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25493,9 +25493,9 @@ def ssytrs_rook(
 @bind("STBCON")
 @external
 def stbcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Float32[LDAB, Flat],
@@ -25509,9 +25509,9 @@ def stbcon(
 @bind("STBRFS")
 @external
 def stbrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -25531,9 +25531,9 @@ def stbrfs(
 @bind("STBTRS")
 @external
 def stbtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -25547,11 +25547,11 @@ def stbtrs(
 @bind("STFSM")
 @external
 def stfsm(
-    TRANSR: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Float32),
@@ -25563,9 +25563,9 @@ def stfsm(
 @bind("STFTRI")
 @external
 def stftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float32[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -25574,8 +25574,8 @@ def stftri(
 @bind("STFTTP")
 @external
 def stfttp(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Float32[Flat], SourceDims("0:*")],
     AP: Annotated[Float32[Flat], SourceDims("0:*")],
@@ -25585,8 +25585,8 @@ def stfttp(
 @bind("STFTTR")
 @external
 def stfttr(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Float32[Flat], SourceDims("0:*")],
     A: Annotated[Float32[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
@@ -25597,8 +25597,8 @@ def stfttr(
 @bind("STGEVC")
 @external
 def stgevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     S: Float32[LDS, Flat],
@@ -25691,9 +25691,9 @@ def stgsen(
 @bind("STGSJA")
 @external
 def stgsja(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -25721,8 +25721,8 @@ def stgsja(
 @bind("STGSNA")
 @external
 def stgsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -25746,7 +25746,7 @@ def stgsna(
 @bind("STGSY2")
 @external
 def stgsy2(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -25773,7 +25773,7 @@ def stgsy2(
 @bind("STGSYL")
 @external
 def stgsyl(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -25800,9 +25800,9 @@ def stgsyl(
 @bind("STPCON")
 @external
 def stpcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     RCOND: Addr(Float32),
@@ -25846,8 +25846,8 @@ def stplqt2(
 @bind("STPMLQT")
 @external
 def stpmlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -25868,8 +25868,8 @@ def stpmlqt(
 @bind("STPMQRT")
 @external
 def stpmqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -25922,10 +25922,10 @@ def stpqrt2(
 @bind("STPRFB")
 @external
 def stprfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -25945,9 +25945,9 @@ def stprfb(
 @bind("STPRFS")
 @external
 def stprfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -25965,8 +25965,8 @@ def stprfs(
 @bind("STPTRI")
 @external
 def stptri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     INFO: Addr(Int32)
@@ -25975,9 +25975,9 @@ def stptri(
 @bind("STPTRS")
 @external
 def stptrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Float32[Flat],
@@ -25989,8 +25989,8 @@ def stptrs(
 @bind("STPTTF")
 @external
 def stpttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Annotated[Float32[Flat], SourceDims("0:*")],
     ARF: Annotated[Float32[Flat], SourceDims("0:*")],
@@ -26000,7 +26000,7 @@ def stpttf(
 @bind("STPTTR")
 @external
 def stpttr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Float32[Flat],
     A: Float32[LDA, Flat],
@@ -26011,9 +26011,9 @@ def stpttr(
 @bind("STRCON")
 @external
 def strcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -26026,8 +26026,8 @@ def strcon(
 @bind("STREVC")
 @external
 def strevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float32[LDT, Flat],
@@ -26045,8 +26045,8 @@ def strevc(
 @bind("STREVC3")
 @external
 def strevc3(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float32[LDT, Flat],
@@ -26065,7 +26065,7 @@ def strevc3(
 @bind("STREXC")
 @external
 def strexc(
-    COMPQ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
     N: Addr(Int32),
     T: Float32[LDT, Flat],
     LDT: Addr(Int32),
@@ -26080,9 +26080,9 @@ def strexc(
 @bind("STRRFS")
 @external
 def strrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -26101,8 +26101,8 @@ def strrfs(
 @bind("STRSEN")
 @external
 def strsen(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float32[LDT, Flat],
@@ -26124,8 +26124,8 @@ def strsen(
 @bind("STRSNA")
 @external
 def strsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Float32[LDT, Flat],
@@ -26147,8 +26147,8 @@ def strsna(
 @bind("STRSYL")
 @external
 def strsyl(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -26165,8 +26165,8 @@ def strsyl(
 @bind("STRSYL3")
 @external
 def strsyl3(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -26187,8 +26187,8 @@ def strsyl3(
 @bind("STRTI2")
 @external
 def strti2(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -26198,8 +26198,8 @@ def strti2(
 @bind("STRTRI")
 @external
 def strtri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -26209,9 +26209,9 @@ def strtri(
 @bind("STRTRS")
 @external
 def strtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Float32[LDA, Flat],
@@ -26224,8 +26224,8 @@ def strtrs(
 @bind("STRTTF")
 @external
 def strttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Float32[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
     LDA: Addr(Int32),
@@ -26236,7 +26236,7 @@ def strttf(
 @bind("STRTTP")
 @external
 def strttp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Float32[LDA, Flat],
     LDA: Addr(Int32),
@@ -26260,7 +26260,7 @@ def stzrzf(
 @bind("XERBLA")
 @external
 def xerbla(
-    SRNAME: Addr(Const(String)),
+    SRNAME: Addr(String),
     INFO: Addr(Int32)
 ) -> None: ...
 
@@ -26275,11 +26275,11 @@ def xerbla_array(
 @bind("ZBBCSD")
 @external
 def zbbcsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -26309,7 +26309,7 @@ def zbbcsd(
 @bind("ZBDSQR")
 @external
 def zbdsqr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NCVT: Addr(Int32),
     NRU: Addr(Int32),
@@ -26348,7 +26348,7 @@ def zcgesv(
 @bind("ZCPOSV")
 @external
 def zcposv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -26376,7 +26376,7 @@ def zdrscl(
 @bind("ZGBBRD")
 @external
 def zgbbrd(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NCC: Addr(Int32),
@@ -26400,7 +26400,7 @@ def zgbbrd(
 @bind("ZGBCON")
 @external
 def zgbcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -26451,7 +26451,7 @@ def zgbequb(
 @bind("ZGBRFS")
 @external
 def zgbrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -26475,8 +26475,8 @@ def zgbrfs(
 @bind("ZGBRFSX")
 @external
 def zgbrfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -26522,8 +26522,8 @@ def zgbsv(
 @bind("ZGBSVX")
 @external
 def zgbsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -26533,7 +26533,7 @@ def zgbsvx(
     AFB: Complex128[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Complex128[LDB, Flat],
@@ -26551,8 +26551,8 @@ def zgbsvx(
 @bind("ZGBSVXX")
 @external
 def zgbsvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -26562,7 +26562,7 @@ def zgbsvxx(
     AFB: Complex128[LDAFB, Flat],
     LDAFB: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Complex128[LDB, Flat],
@@ -26611,7 +26611,7 @@ def zgbtrf(
 @bind("ZGBTRS")
 @external
 def zgbtrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -26627,8 +26627,8 @@ def zgbtrs(
 @bind("ZGEBAK")
 @external
 def zgebak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -26642,7 +26642,7 @@ def zgebak(
 @bind("ZGEBAL")
 @external
 def zgebal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -26686,7 +26686,7 @@ def zgebrd(
 @bind("ZGECON")
 @external
 def zgecon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -26701,74 +26701,74 @@ def zgecon(
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Addr(Arg(11)), Addr(Arg(12)), Return('K', 0), Arg(13), Arg(14), Addr(Arg(15)), Arg(16), Arg(17), Addr(Arg(18)), Arg(19), Addr(Arg(20)), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Arg(25), Addr(Arg(26)), Arg(27), Addr(Arg(28)), Return('INFO', 10)])
 def zgedmd(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     X: Complex128[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Complex128[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float64),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float64,
     EIGS: Complex128[Flat],
     Z: Complex128[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float64[Flat],
     B: Complex128[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     W: Complex128[LDW, Flat],
-    LDW: Const(Int32),
+    LDW: Int32,
     S: Complex128[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     ZWORK: Complex128[Flat],
-    LZWORK: Const(Int32),
+    LZWORK: Int32,
     RWORK: Float64[Flat],
-    LRWORK: Const(Int32),
+    LRWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Int32, Returns["EIGS", Complex128[Flat]], Returns["Z", Complex128[LDZ, Flat]], Returns["RES", Float64[Flat]], Returns["B", Complex128[LDB, Flat]], Returns["W", Complex128[LDW, Flat]], Returns["S", Complex128[LDS, Flat]], Returns["ZWORK", Complex128[Flat]], Returns["RWORK", Float64[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("ZGEDMDQ")
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Arg(3), Arg(4), Arg(5), Addr(Arg(6)), Addr(Arg(7)), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Addr(Arg(15)), Addr(Arg(16)), Return('K', 2), Arg(17), Arg(18), Addr(Arg(19)), Arg(20), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Arg(25), Addr(Arg(26)), Arg(27), Addr(Arg(28)), Arg(29), Addr(Arg(30)), Arg(31), Addr(Arg(32)), Return('INFO', 12)])
 def zgedmdq(
-    JOBS: Addr(Const(String[1])),
-    JOBZ: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBF: Addr(Const(String[1])),
-    WHTSVD: Const(Int32),
-    M: Const(Int32),
-    N: Const(Int32),
+    JOBS: Addr(String[1]),
+    JOBZ: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBQ: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBF: Addr(String[1]),
+    WHTSVD: Int32,
+    M: Int32,
+    N: Int32,
     F: Complex128[LDF, Flat],
-    LDF: Const(Int32),
+    LDF: Int32,
     X: Complex128[LDX, Flat],
-    LDX: Const(Int32),
+    LDX: Int32,
     Y: Complex128[LDY, Flat],
-    LDY: Const(Int32),
-    NRNK: Const(Int32),
-    TOL: Const(Float64),
+    LDY: Int32,
+    NRNK: Int32,
+    TOL: Float64,
     EIGS: Complex128[Flat],
     Z: Complex128[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     RES: Float64[Flat],
     B: Complex128[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     V: Complex128[LDV, Flat],
-    LDV: Const(Int32),
+    LDV: Int32,
     S: Complex128[LDS, Flat],
-    LDS: Const(Int32),
+    LDS: Int32,
     ZWORK: Complex128[Flat],
-    LZWORK: Const(Int32),
+    LZWORK: Int32,
     WORK: Float64[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     IWORK: Int32[Flat],
-    LIWORK: Const(Int32)
+    LIWORK: Int32
 ) -> tuple[Returns["X", Complex128[LDX, Flat]], Returns["Y", Complex128[LDY, Flat]], Int32, Returns["EIGS", Complex128[Flat]], Returns["Z", Complex128[LDZ, Flat]], Returns["RES", Float64[Flat]], Returns["B", Complex128[LDB, Flat]], Returns["V", Complex128[LDV, Flat]], Returns["S", Complex128[LDS, Flat]], Returns["ZWORK", Complex128[Flat]], Returns["WORK", Float64[Flat]], Returns["IWORK", Int32[Flat]], Int32]: ...
 
 @bind("ZGEEQU")
@@ -26804,8 +26804,8 @@ def zgeequb(
 @bind("ZGEES")
 @external
 def zgees(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -26824,10 +26824,10 @@ def zgees(
 @bind("ZGEESX")
 @external
 def zgeesx(
-    JOBVS: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVS: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELECT: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -26847,8 +26847,8 @@ def zgeesx(
 @bind("ZGEEV")
 @external
 def zgeev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -26866,10 +26866,10 @@ def zgeev(
 @bind("ZGEEVX")
 @external
 def zgeevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -26920,12 +26920,12 @@ def zgehrd(
 @bind("ZGEJSV")
 @external
 def zgejsv(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBT: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBT: Addr(String[1]),
+    JOBP: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27011,7 +27011,7 @@ def zgelqt3(
 @bind("ZGELS")
 @external
 def zgels(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -27066,7 +27066,7 @@ def zgelss(
 @bind("ZGELST")
 @external
 def zgelst(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -27101,8 +27101,8 @@ def zgelsy(
 @bind("ZGEMLQ")
 @external
 def zgemlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -27120,8 +27120,8 @@ def zgemlq(
 @bind("ZGEMLQT")
 @external
 def zgemlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -27139,8 +27139,8 @@ def zgemlqt(
 @bind("ZGEMQR")
 @external
 def zgemqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -27158,8 +27158,8 @@ def zgemqr(
 @bind("ZGEMQRT")
 @external
 def zgemqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -27342,7 +27342,7 @@ def zgeqrt3(
 @bind("ZGERFS")
 @external
 def zgerfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27364,8 +27364,8 @@ def zgerfs(
 @bind("ZGERFSX")
 @external
 def zgerfsx(
-    TRANS: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27431,7 +27431,7 @@ def zgesc2(
 @bind("ZGESDD")
 @external
 def zgesdd(
-    JOBZ: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27464,8 +27464,8 @@ def zgesv(
 @bind("ZGESVD")
 @external
 def zgesvd(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27484,11 +27484,11 @@ def zgesvd(
 @bind("ZGESVDQ")
 @external
 def zgesvdq(
-    JOBA: Addr(Const(String[1])),
-    JOBP: Addr(Const(String[1])),
-    JOBR: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBP: Addr(String[1]),
+    JOBR: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27511,9 +27511,9 @@ def zgesvdq(
 @bind("ZGESVDX")
 @external
 def zgesvdx(
-    JOBU: Addr(Const(String[1])),
-    JOBVT: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBVT: Addr(String[1]),
+    RANGE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27538,9 +27538,9 @@ def zgesvdx(
 @bind("ZGESVJ")
 @external
 def zgesvj(
-    JOBA: Addr(Const(String[1])),
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
+    JOBA: Addr(String[1]),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27559,8 +27559,8 @@ def zgesvj(
 @bind("ZGESVX")
 @external
 def zgesvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27568,7 +27568,7 @@ def zgesvx(
     AF: Complex128[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Complex128[LDB, Flat],
@@ -27586,8 +27586,8 @@ def zgesvx(
 @bind("ZGESVXX")
 @external
 def zgesvxx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27595,7 +27595,7 @@ def zgesvxx(
     AF: Complex128[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     R: Float64[Flat],
     C: Float64[Flat],
     B: Complex128[LDB, Flat],
@@ -27674,7 +27674,7 @@ def zgetri(
 @bind("ZGETRS")
 @external
 def zgetrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27688,7 +27688,7 @@ def zgetrs(
 @bind("ZGETSLS")
 @external
 def zgetsls(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -27721,8 +27721,8 @@ def zgetsqrhrt(
 @bind("ZGGBAK")
 @external
 def zggbak(
-    JOB: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    SIDE: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -27737,7 +27737,7 @@ def zggbak(
 @bind("ZGGBAL")
 @external
 def zggbal(
-    JOB: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -27754,9 +27754,9 @@ def zggbal(
 @bind("ZGGES")
 @external
 def zgges(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27780,9 +27780,9 @@ def zgges(
 @bind("ZGGES3")
 @external
 def zgges3(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -27806,11 +27806,11 @@ def zgges3(
 @bind("ZGGESX")
 @external
 def zggesx(
-    JOBVSL: Addr(Const(String[1])),
-    JOBVSR: Addr(Const(String[1])),
-    SORT: Addr(Const(String[1])),
+    JOBVSL: Addr(String[1]),
+    JOBVSR: Addr(String[1]),
+    SORT: Addr(String[1]),
     SELCTG: Addr(Bool),
-    SENSE: Addr(Const(String[1])),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -27837,8 +27837,8 @@ def zggesx(
 @bind("ZGGEV")
 @external
 def zggev(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -27859,8 +27859,8 @@ def zggev(
 @bind("ZGGEV3")
 @external
 def zggev3(
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -27881,10 +27881,10 @@ def zggev3(
 @bind("ZGGEVX")
 @external
 def zggevx(
-    BALANC: Addr(Const(String[1])),
-    JOBVL: Addr(Const(String[1])),
-    JOBVR: Addr(Const(String[1])),
-    SENSE: Addr(Const(String[1])),
+    BALANC: Addr(String[1]),
+    JOBVL: Addr(String[1]),
+    JOBVR: Addr(String[1]),
+    SENSE: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -27933,8 +27933,8 @@ def zggglm(
 @bind("ZGGHD3")
 @external
 def zgghd3(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -27954,8 +27954,8 @@ def zgghd3(
 @bind("ZGGHRD")
 @external
 def zgghrd(
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -28025,9 +28025,9 @@ def zggrqf(
 @bind("ZGGSVD3")
 @external
 def zggsvd3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     P: Addr(Int32),
@@ -28055,9 +28055,9 @@ def zggsvd3(
 @bind("ZGGSVP3")
 @external
 def zggsvp3(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -28086,7 +28086,7 @@ def zggsvp3(
 @bind("ZGSVJ0")
 @external
 def zgsvj0(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28108,7 +28108,7 @@ def zgsvj0(
 @bind("ZGSVJ1")
 @external
 def zgsvj1(
-    JOBV: Addr(Const(String[1])),
+    JOBV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -28131,7 +28131,7 @@ def zgsvj1(
 @bind("ZGTCON")
 @external
 def zgtcon(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Complex128[Flat],
     D: Complex128[Flat],
@@ -28147,7 +28147,7 @@ def zgtcon(
 @bind("ZGTRFS")
 @external
 def zgtrfs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Complex128[Flat],
@@ -28185,8 +28185,8 @@ def zgtsv(
 @bind("ZGTSVX")
 @external
 def zgtsvx(
-    FACT: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Complex128[Flat],
@@ -28224,7 +28224,7 @@ def zgttrf(
 @bind("ZGTTRS")
 @external
 def zgttrs(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     DL: Complex128[Flat],
@@ -28255,7 +28255,7 @@ def zgtts2(
 @bind("ZHB2ST_KERNELS")
 @external
 def zhb2st_kernels(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     WANTZ: Addr(Bool),
     TTYPE: Addr(Int32),
     ST: Addr(Int32),
@@ -28275,8 +28275,8 @@ def zhb2st_kernels(
 @bind("ZHBEV")
 @external
 def zhbev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -28292,8 +28292,8 @@ def zhbev(
 @bind("ZHBEV_2STAGE")
 @external
 def zhbev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -28310,8 +28310,8 @@ def zhbev_2stage(
 @bind("ZHBEVD")
 @external
 def zhbevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -28331,8 +28331,8 @@ def zhbevd(
 @bind("ZHBEVD_2STAGE")
 @external
 def zhbevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -28352,9 +28352,9 @@ def zhbevd_2stage(
 @bind("ZHBEVX")
 @external
 def zhbevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -28380,9 +28380,9 @@ def zhbevx(
 @bind("ZHBEVX_2STAGE")
 @external
 def zhbevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -28409,8 +28409,8 @@ def zhbevx_2stage(
 @bind("ZHBGST")
 @external
 def zhbgst(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -28428,8 +28428,8 @@ def zhbgst(
 @bind("ZHBGV")
 @external
 def zhbgv(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -28448,8 +28448,8 @@ def zhbgv(
 @bind("ZHBGVD")
 @external
 def zhbgvd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -28472,9 +28472,9 @@ def zhbgvd(
 @bind("ZHBGVX")
 @external
 def zhbgvx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KA: Addr(Int32),
     KB: Addr(Int32),
@@ -28503,8 +28503,8 @@ def zhbgvx(
 @bind("ZHBTRD")
 @external
 def zhbtrd(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -28520,7 +28520,7 @@ def zhbtrd(
 @bind("ZHECON")
 @external
 def zhecon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28534,7 +28534,7 @@ def zhecon(
 @bind("ZHECON_3")
 @external
 def zhecon_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28549,7 +28549,7 @@ def zhecon_3(
 @bind("ZHECON_ROOK")
 @external
 def zhecon_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28563,7 +28563,7 @@ def zhecon_rook(
 @bind("ZHEEQUB")
 @external
 def zheequb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28577,8 +28577,8 @@ def zheequb(
 @bind("ZHEEV")
 @external
 def zheev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28592,8 +28592,8 @@ def zheev(
 @bind("ZHEEV_2STAGE")
 @external
 def zheev_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28607,8 +28607,8 @@ def zheev_2stage(
 @bind("ZHEEVD")
 @external
 def zheevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28625,8 +28625,8 @@ def zheevd(
 @bind("ZHEEVD_2STAGE")
 @external
 def zheevd_2stage(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28643,9 +28643,9 @@ def zheevd_2stage(
 @bind("ZHEEVR")
 @external
 def zheevr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28671,9 +28671,9 @@ def zheevr(
 @bind("ZHEEVR_2STAGE")
 @external
 def zheevr_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28699,9 +28699,9 @@ def zheevr_2stage(
 @bind("ZHEEVX")
 @external
 def zheevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28725,9 +28725,9 @@ def zheevx(
 @bind("ZHEEVX_2STAGE")
 @external
 def zheevx_2stage(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28752,7 +28752,7 @@ def zheevx_2stage(
 @external
 def zhegs2(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28765,7 +28765,7 @@ def zhegs2(
 @external
 def zhegst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28778,8 +28778,8 @@ def zhegst(
 @external
 def zhegv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28796,8 +28796,8 @@ def zhegv(
 @external
 def zhegv_2stage(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28814,8 +28814,8 @@ def zhegv_2stage(
 @external
 def zhegvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28835,9 +28835,9 @@ def zhegvd(
 @external
 def zhegvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -28863,7 +28863,7 @@ def zhegvx(
 @bind("ZHERFS")
 @external
 def zherfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28885,8 +28885,8 @@ def zherfs(
 @bind("ZHERFSX")
 @external
 def zherfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28914,7 +28914,7 @@ def zherfsx(
 @bind("ZHESV")
 @external
 def zhesv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28930,7 +28930,7 @@ def zhesv(
 @bind("ZHESV_AA")
 @external
 def zhesv_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28946,7 +28946,7 @@ def zhesv_aa(
 @bind("ZHESV_AA_2STAGE")
 @external
 def zhesv_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28965,7 +28965,7 @@ def zhesv_aa_2stage(
 @bind("ZHESV_RK")
 @external
 def zhesv_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28982,7 +28982,7 @@ def zhesv_rk(
 @bind("ZHESV_ROOK")
 @external
 def zhesv_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -28998,8 +28998,8 @@ def zhesv_rook(
 @bind("ZHESVX")
 @external
 def zhesvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29023,8 +29023,8 @@ def zhesvx(
 @bind("ZHESVXX")
 @external
 def zhesvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29032,7 +29032,7 @@ def zhesvxx(
     AF: Complex128[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Complex128[LDB, Flat],
     LDB: Addr(Int32),
@@ -29054,7 +29054,7 @@ def zhesvxx(
 @bind("ZHESWAPR")
 @external
 def zheswapr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex128[LDA, N], ORDER_F],
     LDA: Addr(Int32),
@@ -29065,7 +29065,7 @@ def zheswapr(
 @bind("ZHETD2")
 @external
 def zhetd2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29078,7 +29078,7 @@ def zhetd2(
 @bind("ZHETF2")
 @external
 def zhetf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29089,7 +29089,7 @@ def zhetf2(
 @bind("ZHETF2_RK")
 @external
 def zhetf2_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29101,7 +29101,7 @@ def zhetf2_rk(
 @bind("ZHETF2_ROOK")
 @external
 def zhetf2_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29112,7 +29112,7 @@ def zhetf2_rook(
 @bind("ZHETRD")
 @external
 def zhetrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29127,8 +29127,8 @@ def zhetrd(
 @bind("ZHETRD_2STAGE")
 @external
 def zhetrd_2stage(
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29145,9 +29145,9 @@ def zhetrd_2stage(
 @bind("ZHETRD_HB2ST")
 @external
 def zhetrd_hb2st(
-    STAGE1: Addr(Const(String[1])),
-    VECT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    STAGE1: Addr(String[1]),
+    VECT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -29164,7 +29164,7 @@ def zhetrd_hb2st(
 @bind("ZHETRD_HE2HB")
 @external
 def zhetrd_he2hb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29180,7 +29180,7 @@ def zhetrd_he2hb(
 @bind("ZHETRF")
 @external
 def zhetrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29193,7 +29193,7 @@ def zhetrf(
 @bind("ZHETRF_AA")
 @external
 def zhetrf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29206,7 +29206,7 @@ def zhetrf_aa(
 @bind("ZHETRF_AA_2STAGE")
 @external
 def zhetrf_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29222,7 +29222,7 @@ def zhetrf_aa_2stage(
 @bind("ZHETRF_RK")
 @external
 def zhetrf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29236,7 +29236,7 @@ def zhetrf_rk(
 @bind("ZHETRF_ROOK")
 @external
 def zhetrf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29249,7 +29249,7 @@ def zhetrf_rook(
 @bind("ZHETRI")
 @external
 def zhetri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29261,7 +29261,7 @@ def zhetri(
 @bind("ZHETRI2")
 @external
 def zhetri2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29274,7 +29274,7 @@ def zhetri2(
 @bind("ZHETRI2X")
 @external
 def zhetri2x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29287,7 +29287,7 @@ def zhetri2x(
 @bind("ZHETRI_3")
 @external
 def zhetri_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29301,7 +29301,7 @@ def zhetri_3(
 @bind("ZHETRI_3X")
 @external
 def zhetri_3x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29315,7 +29315,7 @@ def zhetri_3x(
 @bind("ZHETRI_ROOK")
 @external
 def zhetri_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29327,7 +29327,7 @@ def zhetri_rook(
 @bind("ZHETRS")
 @external
 def zhetrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29341,7 +29341,7 @@ def zhetrs(
 @bind("ZHETRS2")
 @external
 def zhetrs2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29356,7 +29356,7 @@ def zhetrs2(
 @bind("ZHETRS_3")
 @external
 def zhetrs_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29371,7 +29371,7 @@ def zhetrs_3(
 @bind("ZHETRS_AA")
 @external
 def zhetrs_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29387,7 +29387,7 @@ def zhetrs_aa(
 @bind("ZHETRS_AA_2STAGE")
 @external
 def zhetrs_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29404,7 +29404,7 @@ def zhetrs_aa_2stage(
 @bind("ZHETRS_ROOK")
 @external
 def zhetrs_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -29418,9 +29418,9 @@ def zhetrs_rook(
 @bind("ZHFRK")
 @external
 def zhfrk(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     ALPHA: Addr(Float64),
@@ -29433,9 +29433,9 @@ def zhfrk(
 @bind("ZHGEQZ")
 @external
 def zhgeqz(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -29458,7 +29458,7 @@ def zhgeqz(
 @bind("ZHPCON")
 @external
 def zhpcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     IPIV: Int32[Flat],
@@ -29471,8 +29471,8 @@ def zhpcon(
 @bind("ZHPEV")
 @external
 def zhpev(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     W: Float64[Flat],
@@ -29486,8 +29486,8 @@ def zhpev(
 @bind("ZHPEVD")
 @external
 def zhpevd(
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     W: Float64[Flat],
@@ -29505,9 +29505,9 @@ def zhpevd(
 @bind("ZHPEVX")
 @external
 def zhpevx(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     VL: Addr(Float64),
@@ -29530,7 +29530,7 @@ def zhpevx(
 @external
 def zhpgst(
     ITYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     BP: Complex128[Flat],
@@ -29541,8 +29541,8 @@ def zhpgst(
 @external
 def zhpgv(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     BP: Complex128[Flat],
@@ -29558,8 +29558,8 @@ def zhpgv(
 @external
 def zhpgvd(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     BP: Complex128[Flat],
@@ -29579,9 +29579,9 @@ def zhpgvd(
 @external
 def zhpgvx(
     ITYPE: Addr(Int32),
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     BP: Complex128[Flat],
@@ -29604,7 +29604,7 @@ def zhpgvx(
 @bind("ZHPRFS")
 @external
 def zhprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -29624,7 +29624,7 @@ def zhprfs(
 @bind("ZHPSV")
 @external
 def zhpsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -29637,8 +29637,8 @@ def zhpsv(
 @bind("ZHPSVX")
 @external
 def zhpsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -29659,7 +29659,7 @@ def zhpsvx(
 @bind("ZHPTRD")
 @external
 def zhptrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     D: Float64[Flat],
@@ -29671,7 +29671,7 @@ def zhptrd(
 @bind("ZHPTRF")
 @external
 def zhptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     IPIV: Int32[Flat],
@@ -29681,7 +29681,7 @@ def zhptrf(
 @bind("ZHPTRI")
 @external
 def zhptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     IPIV: Int32[Flat],
@@ -29692,7 +29692,7 @@ def zhptri(
 @bind("ZHPTRS")
 @external
 def zhptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -29705,9 +29705,9 @@ def zhptrs(
 @bind("ZHSEIN")
 @external
 def zhsein(
-    SIDE: Addr(Const(String[1])),
-    EIGSRC: Addr(Const(String[1])),
-    INITV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    EIGSRC: Addr(String[1]),
+    INITV: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     H: Complex128[LDH, Flat],
@@ -29729,8 +29729,8 @@ def zhsein(
 @bind("ZHSEQR")
 @external
 def zhseqr(
-    JOB: Addr(Const(String[1])),
-    COMPZ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     ILO: Addr(Int32),
     IHI: Addr(Int32),
@@ -29765,7 +29765,7 @@ def zla_gbamv(
 @bind("ZLA_GBRCOND_C")
 @external
 def zla_gbrcond_c(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -29784,7 +29784,7 @@ def zla_gbrcond_c(
 @bind("ZLA_GBRCOND_X")
 @external
 def zla_gbrcond_x(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -29867,7 +29867,7 @@ def zla_geamv(
 @bind("ZLA_GERCOND_C")
 @external
 def zla_gercond_c(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29884,7 +29884,7 @@ def zla_gercond_c(
 @bind("ZLA_GERCOND_X")
 @external
 def zla_gercond_x(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29960,7 +29960,7 @@ def zla_heamv(
 @bind("ZLA_HERCOND_C")
 @external
 def zla_hercond_c(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29977,7 +29977,7 @@ def zla_hercond_c(
 @bind("ZLA_HERCOND_X")
 @external
 def zla_hercond_x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -29994,7 +29994,7 @@ def zla_hercond_x(
 @external
 def zla_herfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30027,7 +30027,7 @@ def zla_herfsx_extended(
 @bind("ZLA_HERPVGRW")
 @external
 def zla_herpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     INFO: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30052,7 +30052,7 @@ def zla_lin_berr(
 @bind("ZLA_PORCOND_C")
 @external
 def zla_porcond_c(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30068,7 +30068,7 @@ def zla_porcond_c(
 @bind("ZLA_PORCOND_X")
 @external
 def zla_porcond_x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30084,7 +30084,7 @@ def zla_porcond_x(
 @external
 def zla_porfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30116,7 +30116,7 @@ def zla_porfsx_extended(
 @bind("ZLA_PORPVGRW")
 @external
 def zla_porpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     NCOLS: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30143,7 +30143,7 @@ def zla_syamv(
 @bind("ZLA_SYRCOND_C")
 @external
 def zla_syrcond_c(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30160,7 +30160,7 @@ def zla_syrcond_c(
 @bind("ZLA_SYRCOND_X")
 @external
 def zla_syrcond_x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30177,7 +30177,7 @@ def zla_syrcond_x(
 @external
 def zla_syrfsx_extended(
     PREC_TYPE: Addr(Int32),
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30210,7 +30210,7 @@ def zla_syrfsx_extended(
 @bind("ZLA_SYRPVGRW")
 @external
 def zla_syrpvgrw(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     INFO: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30280,7 +30280,7 @@ def zlacon(
 @bind("ZLACP2")
 @external
 def zlacp2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Float64[LDA, Flat],
@@ -30292,7 +30292,7 @@ def zlacp2(
 @bind("ZLACPY")
 @external
 def zlacpy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30479,7 +30479,7 @@ def zlags2(
 @bind("ZLAGTM")
 @external
 def zlagtm(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     ALPHA: Addr(Float64),
@@ -30496,7 +30496,7 @@ def zlagtm(
 @bind("ZLAHEF")
 @external
 def zlahef(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -30511,7 +30511,7 @@ def zlahef(
 @bind("ZLAHEF_AA")
 @external
 def zlahef_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     J1: Addr(Int32),
     M: Addr(Int32),
     NB: Addr(Int32),
@@ -30526,7 +30526,7 @@ def zlahef_aa(
 @bind("ZLAHEF_RK")
 @external
 def zlahef_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -30542,7 +30542,7 @@ def zlahef_rk(
 @bind("ZLAHEF_ROOK")
 @external
 def zlahef_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -30664,7 +30664,7 @@ def zlalsa(
 @bind("ZLALSD")
 @external
 def zlalsd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     SMLSIZ: Addr(Int32),
     N: Addr(Int32),
     NRHS: Addr(Int32),
@@ -30683,8 +30683,8 @@ def zlalsd(
 @bind("ZLAMSWLQ")
 @external
 def zlamswlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -30704,8 +30704,8 @@ def zlamswlq(
 @bind("ZLAMTSQR")
 @external
 def zlamtsqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -30725,7 +30725,7 @@ def zlamtsqr(
 @bind("ZLANGB")
 @external
 def zlangb(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     KL: Addr(Int32),
     KU: Addr(Int32),
@@ -30737,7 +30737,7 @@ def zlangb(
 @bind("ZLANGE")
 @external
 def zlange(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30748,7 +30748,7 @@ def zlange(
 @bind("ZLANGT")
 @external
 def zlangt(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     DL: Complex128[Flat],
     D: Complex128[Flat],
@@ -30758,8 +30758,8 @@ def zlangt(
 @bind("ZLANHB")
 @external
 def zlanhb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -30770,8 +30770,8 @@ def zlanhb(
 @bind("ZLANHE")
 @external
 def zlanhe(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30781,9 +30781,9 @@ def zlanhe(
 @bind("ZLANHF")
 @external
 def zlanhf(
-    NORM: Addr(Const(String[1])),
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex128[Flat], SourceDims("0:*")],
     WORK: Annotated[Float64[Flat], SourceDims("0:*")]
@@ -30792,8 +30792,8 @@ def zlanhf(
 @bind("ZLANHP")
 @external
 def zlanhp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     WORK: Float64[Flat]
@@ -30802,7 +30802,7 @@ def zlanhp(
 @bind("ZLANHS")
 @external
 def zlanhs(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30812,7 +30812,7 @@ def zlanhs(
 @bind("ZLANHT")
 @external
 def zlanht(
-    NORM: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Complex128[Flat]
@@ -30821,8 +30821,8 @@ def zlanht(
 @bind("ZLANSB")
 @external
 def zlansb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -30833,8 +30833,8 @@ def zlansb(
 @bind("ZLANSP")
 @external
 def zlansp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     WORK: Float64[Flat]
@@ -30843,8 +30843,8 @@ def zlansp(
 @bind("ZLANSY")
 @external
 def zlansy(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -30854,9 +30854,9 @@ def zlansy(
 @bind("ZLANTB")
 @external
 def zlantb(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -30867,9 +30867,9 @@ def zlantb(
 @bind("ZLANTP")
 @external
 def zlantp(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     WORK: Float64[Flat]
@@ -30878,9 +30878,9 @@ def zlantp(
 @bind("ZLANTR")
 @external
 def zlantr(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -30935,7 +30935,7 @@ def zlaqgb(
     ROWCND: Addr(Float64),
     COLCND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQGE")
@@ -30950,13 +30950,13 @@ def zlaqge(
     ROWCND: Addr(Float64),
     COLCND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQHB")
 @external
 def zlaqhb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -30964,32 +30964,32 @@ def zlaqhb(
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQHE")
 @external
 def zlaqhe(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQHP")
 @external
 def zlaqhp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQP2")
@@ -31223,7 +31223,7 @@ def zlaqr5(
 @bind("ZLAQSB")
 @external
 def zlaqsb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -31231,143 +31231,143 @@ def zlaqsb(
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQSP")
 @external
 def zlaqsp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQSY")
 @external
 def zlaqsy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
     S: Float64[Flat],
     SCOND: Addr(Float64),
     AMAX: Addr(Float64),
-    EQUED: Addr(Const(String[1]))
+    EQUED: Addr(String[1])
 ) -> None: ...
 
 @bind("ZLAQZ0")
 @external
 @native_call([Arg(0), Arg(1), Arg(2), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Arg(10), Arg(11), Arg(12), Addr(Arg(13)), Arg(14), Addr(Arg(15)), Arg(16), Addr(Arg(17)), Arg(18), Addr(Arg(19)), Return('INFO', 1)])
 def zlaqz0(
-    WANTS: Addr(Const(String[1])),
-    WANTQ: Addr(Const(String[1])),
-    WANTZ: Addr(Const(String[1])),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
+    WANTS: Addr(String[1]),
+    WANTQ: Addr(String[1]),
+    WANTZ: Addr(String[1]),
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
     A: Complex128[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex128[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     ALPHA: Complex128[Flat],
     BETA: Complex128[Flat],
     Q: Complex128[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Complex128[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     WORK: Complex128[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     RWORK: Float64[Flat],
-    REC: Const(Int32)
+    REC: Int32
 ) -> tuple[Returns["RWORK", Float64[Flat]], Int32]: ...
 
 @bind("ZLAQZ1")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Arg(6), Addr(Arg(7)), Arg(8), Addr(Arg(9)), Addr(Arg(10)), Addr(Arg(11)), Arg(12), Addr(Arg(13)), Addr(Arg(14)), Addr(Arg(15)), Arg(16), Addr(Arg(17))])
 def zlaqz1(
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    K: Const(Int32),
-    ISTARTM: Const(Int32),
-    ISTOPM: Const(Int32),
-    IHI: Const(Int32),
+    ILQ: Bool,
+    ILZ: Bool,
+    K: Int32,
+    ISTARTM: Int32,
+    ISTOPM: Int32,
+    IHI: Int32,
     A: Complex128[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex128[LDB, Flat],
-    LDB: Const(Int32),
-    NQ: Const(Int32),
-    QSTART: Const(Int32),
+    LDB: Int32,
+    NQ: Int32,
+    QSTART: Int32,
     Q: Complex128[LDQ, Flat],
-    LDQ: Const(Int32),
-    NZ: Const(Int32),
-    ZSTART: Const(Int32),
+    LDQ: Int32,
+    NZ: Int32,
+    ZSTART: Int32,
     Z: Complex128[LDZ, Flat],
-    LDZ: Const(Int32)
+    LDZ: Int32
 ) -> None: ...
 
 @bind("ZLAQZ2")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Arg(7), Addr(Arg(8)), Arg(9), Addr(Arg(10)), Arg(11), Addr(Arg(12)), Arg(13), Addr(Arg(14)), Return('NS', 0), Return('ND', 1), Arg(15), Arg(16), Arg(17), Addr(Arg(18)), Arg(19), Addr(Arg(20)), Arg(21), Addr(Arg(22)), Arg(23), Addr(Arg(24)), Return('INFO', 2)])
 def zlaqz2(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NW: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NW: Int32,
     A: Complex128[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex128[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Complex128[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Complex128[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     ALPHA: Complex128[Flat],
     BETA: Complex128[Flat],
     QC: Complex128[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Complex128[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Complex128[Flat],
-    LWORK: Const(Int32),
+    LWORK: Int32,
     RWORK: Float64[Flat],
-    REC: Const(Int32)
+    REC: Int32
 ) -> tuple[Int32, Int32, Int32]: ...
 
 @bind("ZLAQZ3")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4)), Addr(Arg(5)), Addr(Arg(6)), Addr(Arg(7)), Arg(8), Arg(9), Arg(10), Addr(Arg(11)), Arg(12), Addr(Arg(13)), Arg(14), Addr(Arg(15)), Arg(16), Addr(Arg(17)), Arg(18), Addr(Arg(19)), Arg(20), Addr(Arg(21)), Arg(22), Addr(Arg(23)), Return('INFO', 0)])
 def zlaqz3(
-    ILSCHUR: Const(Bool),
-    ILQ: Const(Bool),
-    ILZ: Const(Bool),
-    N: Const(Int32),
-    ILO: Const(Int32),
-    IHI: Const(Int32),
-    NSHIFTS: Const(Int32),
-    NBLOCK_DESIRED: Const(Int32),
+    ILSCHUR: Bool,
+    ILQ: Bool,
+    ILZ: Bool,
+    N: Int32,
+    ILO: Int32,
+    IHI: Int32,
+    NSHIFTS: Int32,
+    NBLOCK_DESIRED: Int32,
     ALPHA: Complex128[Flat],
     BETA: Complex128[Flat],
     A: Complex128[LDA, Flat],
-    LDA: Const(Int32),
+    LDA: Int32,
     B: Complex128[LDB, Flat],
-    LDB: Const(Int32),
+    LDB: Int32,
     Q: Complex128[LDQ, Flat],
-    LDQ: Const(Int32),
+    LDQ: Int32,
     Z: Complex128[LDZ, Flat],
-    LDZ: Const(Int32),
+    LDZ: Int32,
     QC: Complex128[LDQC, Flat],
-    LDQC: Const(Int32),
+    LDQC: Int32,
     ZC: Complex128[LDZC, Flat],
-    LDZC: Const(Int32),
+    LDZC: Int32,
     WORK: Complex128[Flat],
-    LWORK: Const(Int32)
+    LWORK: Int32
 ) -> Int32: ...
 
 @bind("ZLAR1V")
@@ -31426,7 +31426,7 @@ def zlarcm(
 @bind("ZLARF")
 @external
 def zlarf(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex128[Flat],
@@ -31440,7 +31440,7 @@ def zlarf(
 @bind("ZLARF1F")
 @external
 def zlarf1f(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex128[Flat],
@@ -31454,7 +31454,7 @@ def zlarf1f(
 @bind("ZLARF1L")
 @external
 def zlarf1l(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex128[Flat],
@@ -31468,10 +31468,10 @@ def zlarf1l(
 @bind("ZLARFB")
 @external
 def zlarfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -31488,7 +31488,7 @@ def zlarfb(
 @bind("ZLARFB_GETT")
 @external
 def zlarfb_gett(
-    IDENT: Addr(Const(String[1])),
+    IDENT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -31525,8 +31525,8 @@ def zlarfgp(
 @bind("ZLARFT")
 @external
 def zlarft(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Complex128[LDV, Flat],
@@ -31539,7 +31539,7 @@ def zlarft(
 @bind("ZLARFX")
 @external
 def zlarfx(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     V: Complex128[Flat],
@@ -31552,7 +31552,7 @@ def zlarfx(
 @bind("ZLARFY")
 @external
 def zlarfy(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     V: Complex128[Flat],
     INCV: Addr(Int32),
@@ -31649,7 +31649,7 @@ def zlartv(
 @bind("ZLARZ")
 @external
 def zlarz(
-    SIDE: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     L: Addr(Int32),
@@ -31664,10 +31664,10 @@ def zlarz(
 @bind("ZLARZB")
 @external
 def zlarzb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -31685,8 +31685,8 @@ def zlarzb(
 @bind("ZLARZT")
 @external
 def zlarzt(
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     N: Addr(Int32),
     K: Addr(Int32),
     V: Complex128[LDV, Flat],
@@ -31699,7 +31699,7 @@ def zlarzt(
 @bind("ZLASCL")
 @external
 def zlascl(
-    TYPE: Addr(Const(String[1])),
+    TYPE: Addr(String[1]),
     KL: Addr(Int32),
     KU: Addr(Int32),
     CFROM: Addr(Float64),
@@ -31724,7 +31724,7 @@ def zlascl2(
 @bind("ZLASET")
 @external
 def zlaset(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Complex128),
@@ -31736,9 +31736,9 @@ def zlaset(
 @bind("ZLASR")
 @external
 def zlasr(
-    SIDE: Addr(Const(String[1])),
-    PIVOT: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    PIVOT: Addr(String[1]),
+    DIRECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     C: Float64[Flat],
@@ -31788,7 +31788,7 @@ def zlaswp(
 @bind("ZLASYF")
 @external
 def zlasyf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -31803,7 +31803,7 @@ def zlasyf(
 @bind("ZLASYF_AA")
 @external
 def zlasyf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     J1: Addr(Int32),
     M: Addr(Int32),
     NB: Addr(Int32),
@@ -31818,7 +31818,7 @@ def zlasyf_aa(
 @bind("ZLASYF_RK")
 @external
 def zlasyf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -31834,7 +31834,7 @@ def zlasyf_rk(
 @bind("ZLASYF_ROOK")
 @external
 def zlasyf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     KB: Addr(Int32),
@@ -31849,7 +31849,7 @@ def zlasyf_rook(
 @bind("ZLAT2C")
 @external
 def zlat2c(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -31861,10 +31861,10 @@ def zlat2c(
 @bind("ZLATBS")
 @external
 def zlatbs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -31892,10 +31892,10 @@ def zlatdf(
 @bind("ZLATPS")
 @external
 def zlatps(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     X: Complex128[Flat],
@@ -31907,7 +31907,7 @@ def zlatps(
 @bind("ZLATRD")
 @external
 def zlatrd(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NB: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -31921,10 +31921,10 @@ def zlatrd(
 @bind("ZLATRS")
 @external
 def zlatrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -31937,10 +31937,10 @@ def zlatrs(
 @bind("ZLATRS3")
 @external
 def zlatrs3(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
-    NORMIN: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
+    NORMIN: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -32007,7 +32007,7 @@ def zlaunhr_col_getrfnp2(
 @bind("ZLAUU2")
 @external
 def zlauu2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32017,7 +32017,7 @@ def zlauu2(
 @bind("ZLAUUM")
 @external
 def zlauum(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32027,7 +32027,7 @@ def zlauum(
 @bind("ZPBCON")
 @external
 def zpbcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -32042,7 +32042,7 @@ def zpbcon(
 @bind("ZPBEQU")
 @external
 def zpbequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -32056,7 +32056,7 @@ def zpbequ(
 @bind("ZPBRFS")
 @external
 def zpbrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -32078,7 +32078,7 @@ def zpbrfs(
 @bind("ZPBSTF")
 @external
 def zpbstf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -32089,7 +32089,7 @@ def zpbstf(
 @bind("ZPBSV")
 @external
 def zpbsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -32103,8 +32103,8 @@ def zpbsv(
 @bind("ZPBSVX")
 @external
 def zpbsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -32112,7 +32112,7 @@ def zpbsvx(
     LDAB: Addr(Int32),
     AFB: Complex128[LDAFB, Flat],
     LDAFB: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Complex128[LDB, Flat],
     LDB: Addr(Int32),
@@ -32129,7 +32129,7 @@ def zpbsvx(
 @bind("ZPBTF2")
 @external
 def zpbtf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -32140,7 +32140,7 @@ def zpbtf2(
 @bind("ZPBTRF")
 @external
 def zpbtrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -32151,7 +32151,7 @@ def zpbtrf(
 @bind("ZPBTRS")
 @external
 def zpbtrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -32165,8 +32165,8 @@ def zpbtrs(
 @bind("ZPFTRF")
 @external
 def zpftrf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex128[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -32175,8 +32175,8 @@ def zpftrf(
 @bind("ZPFTRI")
 @external
 def zpftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex128[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -32185,8 +32185,8 @@ def zpftri(
 @bind("ZPFTRS")
 @external
 def zpftrs(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Annotated[Complex128[Flat], SourceDims("0:*")],
@@ -32198,7 +32198,7 @@ def zpftrs(
 @bind("ZPOCON")
 @external
 def zpocon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32236,7 +32236,7 @@ def zpoequb(
 @bind("ZPORFS")
 @external
 def zporfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -32257,8 +32257,8 @@ def zporfs(
 @bind("ZPORFSX")
 @external
 def zporfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -32285,7 +32285,7 @@ def zporfsx(
 @bind("ZPOSV")
 @external
 def zposv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -32298,15 +32298,15 @@ def zposv(
 @bind("ZPOSVX")
 @external
 def zposvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
     AF: Complex128[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Complex128[LDB, Flat],
     LDB: Addr(Int32),
@@ -32323,15 +32323,15 @@ def zposvx(
 @bind("ZPOSVXX")
 @external
 def zposvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
     AF: Complex128[LDAF, Flat],
     LDAF: Addr(Int32),
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Complex128[LDB, Flat],
     LDB: Addr(Int32),
@@ -32353,7 +32353,7 @@ def zposvxx(
 @bind("ZPOTF2")
 @external
 def zpotf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32363,7 +32363,7 @@ def zpotf2(
 @bind("ZPOTRF")
 @external
 def zpotrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32373,7 +32373,7 @@ def zpotrf(
 @bind("ZPOTRF2")
 @external
 def zpotrf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32383,7 +32383,7 @@ def zpotrf2(
 @bind("ZPOTRI")
 @external
 def zpotri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32393,7 +32393,7 @@ def zpotri(
 @bind("ZPOTRS")
 @external
 def zpotrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -32406,7 +32406,7 @@ def zpotrs(
 @bind("ZPPCON")
 @external
 def zppcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     ANORM: Addr(Float64),
@@ -32419,7 +32419,7 @@ def zppcon(
 @bind("ZPPEQU")
 @external
 def zppequ(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     S: Float64[Flat],
@@ -32431,7 +32431,7 @@ def zppequ(
 @bind("ZPPRFS")
 @external
 def zpprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -32450,7 +32450,7 @@ def zpprfs(
 @bind("ZPPSV")
 @external
 def zppsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -32462,13 +32462,13 @@ def zppsv(
 @bind("ZPPSVX")
 @external
 def zppsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
     AFP: Complex128[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Complex128[LDB, Flat],
     LDB: Addr(Int32),
@@ -32485,7 +32485,7 @@ def zppsvx(
 @bind("ZPPTRF")
 @external
 def zpptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     INFO: Addr(Int32)
@@ -32494,7 +32494,7 @@ def zpptrf(
 @bind("ZPPTRI")
 @external
 def zpptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     INFO: Addr(Int32)
@@ -32503,7 +32503,7 @@ def zpptri(
 @bind("ZPPTRS")
 @external
 def zpptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -32515,7 +32515,7 @@ def zpptrs(
 @bind("ZPSTF2")
 @external
 def zpstf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32529,7 +32529,7 @@ def zpstf2(
 @bind("ZPSTRF")
 @external
 def zpstrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32555,7 +32555,7 @@ def zptcon(
 @bind("ZPTEQR")
 @external
 def zpteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -32568,7 +32568,7 @@ def zpteqr(
 @bind("ZPTRFS")
 @external
 def zptrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float64[Flat],
@@ -32601,7 +32601,7 @@ def zptsv(
 @bind("ZPTSVX")
 @external
 def zptsvx(
-    FACT: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float64[Flat],
@@ -32632,7 +32632,7 @@ def zpttrf(
 @bind("ZPTTRS")
 @external
 def zpttrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     D: Float64[Flat],
@@ -32678,7 +32678,7 @@ def zrscl(
 @bind("ZSPCON")
 @external
 def zspcon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     IPIV: Int32[Flat],
@@ -32691,7 +32691,7 @@ def zspcon(
 @bind("ZSPMV")
 @external
 def zspmv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex128),
     AP: Complex128[Flat],
@@ -32705,7 +32705,7 @@ def zspmv(
 @bind("ZSPR")
 @external
 def zspr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex128),
     X: Complex128[Flat],
@@ -32716,7 +32716,7 @@ def zspr(
 @bind("ZSPRFS")
 @external
 def zsprfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -32736,7 +32736,7 @@ def zsprfs(
 @bind("ZSPSV")
 @external
 def zspsv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -32749,8 +32749,8 @@ def zspsv(
 @bind("ZSPSVX")
 @external
 def zspsvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -32771,7 +32771,7 @@ def zspsvx(
 @bind("ZSPTRF")
 @external
 def zsptrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     IPIV: Int32[Flat],
@@ -32781,7 +32781,7 @@ def zsptrf(
 @bind("ZSPTRI")
 @external
 def zsptri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     IPIV: Int32[Flat],
@@ -32792,7 +32792,7 @@ def zsptri(
 @bind("ZSPTRS")
 @external
 def zsptrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -32805,7 +32805,7 @@ def zsptrs(
 @bind("ZSTEDC")
 @external
 def zstedc(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -32823,8 +32823,8 @@ def zstedc(
 @bind("ZSTEGR")
 @external
 def zstegr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -32866,8 +32866,8 @@ def zstein(
 @bind("ZSTEMR")
 @external
 def zstemr(
-    JOBZ: Addr(Const(String[1])),
-    RANGE: Addr(Const(String[1])),
+    JOBZ: Addr(String[1]),
+    RANGE: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -32892,7 +32892,7 @@ def zstemr(
 @bind("ZSTEQR")
 @external
 def zsteqr(
-    COMPZ: Addr(Const(String[1])),
+    COMPZ: Addr(String[1]),
     N: Addr(Int32),
     D: Float64[Flat],
     E: Float64[Flat],
@@ -32905,7 +32905,7 @@ def zsteqr(
 @bind("ZSYCON")
 @external
 def zsycon(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32919,7 +32919,7 @@ def zsycon(
 @bind("ZSYCON_3")
 @external
 def zsycon_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32934,7 +32934,7 @@ def zsycon_3(
 @bind("ZSYCON_ROOK")
 @external
 def zsycon_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32948,8 +32948,8 @@ def zsycon_rook(
 @bind("ZSYCONV")
 @external
 def zsyconv(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32961,8 +32961,8 @@ def zsyconv(
 @bind("ZSYCONVF")
 @external
 def zsyconvf(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32974,8 +32974,8 @@ def zsyconvf(
 @bind("ZSYCONVF_ROOK")
 @external
 def zsyconvf_rook(
-    UPLO: Addr(Const(String[1])),
-    WAY: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    WAY: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -32987,7 +32987,7 @@ def zsyconvf_rook(
 @bind("ZSYEQUB")
 @external
 def zsyequb(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33001,7 +33001,7 @@ def zsyequb(
 @bind("ZSYMV")
 @external
 def zsymv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex128),
     A: Complex128[LDA, Flat],
@@ -33016,7 +33016,7 @@ def zsymv(
 @bind("ZSYR")
 @external
 def zsyr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ALPHA: Addr(Complex128),
     X: Complex128[Flat],
@@ -33028,7 +33028,7 @@ def zsyr(
 @bind("ZSYRFS")
 @external
 def zsyrfs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33050,8 +33050,8 @@ def zsyrfs(
 @bind("ZSYRFSX")
 @external
 def zsyrfsx(
-    UPLO: Addr(Const(String[1])),
-    EQUED: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    EQUED: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33079,7 +33079,7 @@ def zsyrfsx(
 @bind("ZSYSV")
 @external
 def zsysv(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33095,7 +33095,7 @@ def zsysv(
 @bind("ZSYSV_AA")
 @external
 def zsysv_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33111,7 +33111,7 @@ def zsysv_aa(
 @bind("ZSYSV_AA_2STAGE")
 @external
 def zsysv_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33130,7 +33130,7 @@ def zsysv_aa_2stage(
 @bind("ZSYSV_RK")
 @external
 def zsysv_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33147,7 +33147,7 @@ def zsysv_rk(
 @bind("ZSYSV_ROOK")
 @external
 def zsysv_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33163,8 +33163,8 @@ def zsysv_rook(
 @bind("ZSYSVX")
 @external
 def zsysvx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33188,8 +33188,8 @@ def zsysvx(
 @bind("ZSYSVXX")
 @external
 def zsysvxx(
-    FACT: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    FACT: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33197,7 +33197,7 @@ def zsysvxx(
     AF: Complex128[LDAF, Flat],
     LDAF: Addr(Int32),
     IPIV: Int32[Flat],
-    EQUED: Addr(Const(String[1])),
+    EQUED: Addr(String[1]),
     S: Float64[Flat],
     B: Complex128[LDB, Flat],
     LDB: Addr(Int32),
@@ -33219,7 +33219,7 @@ def zsysvxx(
 @bind("ZSYSWAPR")
 @external
 def zsyswapr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33230,7 +33230,7 @@ def zsyswapr(
 @bind("ZSYTF2")
 @external
 def zsytf2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33241,7 +33241,7 @@ def zsytf2(
 @bind("ZSYTF2_RK")
 @external
 def zsytf2_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33253,7 +33253,7 @@ def zsytf2_rk(
 @bind("ZSYTF2_ROOK")
 @external
 def zsytf2_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33264,7 +33264,7 @@ def zsytf2_rook(
 @bind("ZSYTRF")
 @external
 def zsytrf(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33277,7 +33277,7 @@ def zsytrf(
 @bind("ZSYTRF_AA")
 @external
 def zsytrf_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33290,7 +33290,7 @@ def zsytrf_aa(
 @bind("ZSYTRF_AA_2STAGE")
 @external
 def zsytrf_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33306,7 +33306,7 @@ def zsytrf_aa_2stage(
 @bind("ZSYTRF_RK")
 @external
 def zsytrf_rk(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33320,7 +33320,7 @@ def zsytrf_rk(
 @bind("ZSYTRF_ROOK")
 @external
 def zsytrf_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33333,7 +33333,7 @@ def zsytrf_rook(
 @bind("ZSYTRI")
 @external
 def zsytri(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33345,7 +33345,7 @@ def zsytri(
 @bind("ZSYTRI2")
 @external
 def zsytri2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33358,7 +33358,7 @@ def zsytri2(
 @bind("ZSYTRI2X")
 @external
 def zsytri2x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33371,7 +33371,7 @@ def zsytri2x(
 @bind("ZSYTRI_3")
 @external
 def zsytri_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33385,7 +33385,7 @@ def zsytri_3(
 @bind("ZSYTRI_3X")
 @external
 def zsytri_3x(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33399,7 +33399,7 @@ def zsytri_3x(
 @bind("ZSYTRI_ROOK")
 @external
 def zsytri_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -33411,7 +33411,7 @@ def zsytri_rook(
 @bind("ZSYTRS")
 @external
 def zsytrs(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33425,7 +33425,7 @@ def zsytrs(
 @bind("ZSYTRS2")
 @external
 def zsytrs2(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33440,7 +33440,7 @@ def zsytrs2(
 @bind("ZSYTRS_3")
 @external
 def zsytrs_3(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33455,7 +33455,7 @@ def zsytrs_3(
 @bind("ZSYTRS_AA")
 @external
 def zsytrs_aa(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33471,7 +33471,7 @@ def zsytrs_aa(
 @bind("ZSYTRS_AA_2STAGE")
 @external
 def zsytrs_aa_2stage(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33488,7 +33488,7 @@ def zsytrs_aa_2stage(
 @bind("ZSYTRS_ROOK")
 @external
 def zsytrs_rook(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33502,9 +33502,9 @@ def zsytrs_rook(
 @bind("ZTBCON")
 @external
 def ztbcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     AB: Complex128[LDAB, Flat],
@@ -33518,9 +33518,9 @@ def ztbcon(
 @bind("ZTBRFS")
 @external
 def ztbrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -33540,9 +33540,9 @@ def ztbrfs(
 @bind("ZTBTRS")
 @external
 def ztbtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     KD: Addr(Int32),
     NRHS: Addr(Int32),
@@ -33556,11 +33556,11 @@ def ztbtrs(
 @bind("ZTFSM")
 @external
 def ztfsm(
-    TRANSR: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ALPHA: Addr(Complex128),
@@ -33572,9 +33572,9 @@ def ztfsm(
 @bind("ZTFTRI")
 @external
 def ztftri(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex128[Flat], SourceDims("0:*")],
     INFO: Addr(Int32)
@@ -33583,8 +33583,8 @@ def ztftri(
 @bind("ZTFTTP")
 @external
 def ztfttp(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Complex128[Flat], SourceDims("0:*")],
     AP: Annotated[Complex128[Flat], SourceDims("0:*")],
@@ -33594,8 +33594,8 @@ def ztfttp(
 @bind("ZTFTTR")
 @external
 def ztfttr(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     ARF: Annotated[Complex128[Flat], SourceDims("0:*")],
     A: Annotated[Complex128[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
@@ -33606,8 +33606,8 @@ def ztfttr(
 @bind("ZTGEVC")
 @external
 def ztgevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     S: Complex128[LDS, Flat],
@@ -33694,9 +33694,9 @@ def ztgsen(
 @bind("ZTGSJA")
 @external
 def ztgsja(
-    JOBU: Addr(Const(String[1])),
-    JOBV: Addr(Const(String[1])),
-    JOBQ: Addr(Const(String[1])),
+    JOBU: Addr(String[1]),
+    JOBV: Addr(String[1]),
+    JOBQ: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     N: Addr(Int32),
@@ -33724,8 +33724,8 @@ def ztgsja(
 @bind("ZTGSNA")
 @external
 def ztgsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -33749,7 +33749,7 @@ def ztgsna(
 @bind("ZTGSY2")
 @external
 def ztgsy2(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -33774,7 +33774,7 @@ def ztgsy2(
 @bind("ZTGSYL")
 @external
 def ztgsyl(
-    TRANS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
     IJOB: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -33801,9 +33801,9 @@ def ztgsyl(
 @bind("ZTPCON")
 @external
 def ztpcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     RCOND: Addr(Float64),
@@ -33847,8 +33847,8 @@ def ztplqt2(
 @bind("ZTPMLQT")
 @external
 def ztpmlqt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -33869,8 +33869,8 @@ def ztpmlqt(
 @bind("ZTPMQRT")
 @external
 def ztpmqrt(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -33923,10 +33923,10 @@ def ztpqrt2(
 @bind("ZTPRFB")
 @external
 def ztprfb(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIRECT: Addr(Const(String[1])),
-    STOREV: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIRECT: Addr(String[1]),
+    STOREV: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -33946,9 +33946,9 @@ def ztprfb(
 @bind("ZTPRFS")
 @external
 def ztprfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -33966,8 +33966,8 @@ def ztprfs(
 @bind("ZTPTRI")
 @external
 def ztptri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     INFO: Addr(Int32)
@@ -33976,9 +33976,9 @@ def ztptri(
 @bind("ZTPTRS")
 @external
 def ztptrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     AP: Complex128[Flat],
@@ -33990,8 +33990,8 @@ def ztptrs(
 @bind("ZTPTTF")
 @external
 def ztpttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Annotated[Complex128[Flat], SourceDims("0:*")],
     ARF: Annotated[Complex128[Flat], SourceDims("0:*")],
@@ -34001,7 +34001,7 @@ def ztpttf(
 @bind("ZTPTTR")
 @external
 def ztpttr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     A: Complex128[LDA, Flat],
@@ -34012,9 +34012,9 @@ def ztpttr(
 @bind("ZTRCON")
 @external
 def ztrcon(
-    NORM: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    NORM: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -34027,8 +34027,8 @@ def ztrcon(
 @bind("ZTREVC")
 @external
 def ztrevc(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex128[LDT, Flat],
@@ -34047,8 +34047,8 @@ def ztrevc(
 @bind("ZTREVC3")
 @external
 def ztrevc3(
-    SIDE: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex128[LDT, Flat],
@@ -34069,7 +34069,7 @@ def ztrevc3(
 @bind("ZTREXC")
 @external
 def ztrexc(
-    COMPQ: Addr(Const(String[1])),
+    COMPQ: Addr(String[1]),
     N: Addr(Int32),
     T: Complex128[LDT, Flat],
     LDT: Addr(Int32),
@@ -34083,9 +34083,9 @@ def ztrexc(
 @bind("ZTRRFS")
 @external
 def ztrrfs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -34104,8 +34104,8 @@ def ztrrfs(
 @bind("ZTRSEN")
 @external
 def ztrsen(
-    JOB: Addr(Const(String[1])),
-    COMPQ: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    COMPQ: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex128[LDT, Flat],
@@ -34124,8 +34124,8 @@ def ztrsen(
 @bind("ZTRSNA")
 @external
 def ztrsna(
-    JOB: Addr(Const(String[1])),
-    HOWMNY: Addr(Const(String[1])),
+    JOB: Addr(String[1]),
+    HOWMNY: Addr(String[1]),
     SELECT: Bool[Flat],
     N: Addr(Int32),
     T: Complex128[LDT, Flat],
@@ -34147,8 +34147,8 @@ def ztrsna(
 @bind("ZTRSYL")
 @external
 def ztrsyl(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -34165,8 +34165,8 @@ def ztrsyl(
 @bind("ZTRSYL3")
 @external
 def ztrsyl3(
-    TRANA: Addr(Const(String[1])),
-    TRANB: Addr(Const(String[1])),
+    TRANA: Addr(String[1]),
+    TRANB: Addr(String[1]),
     ISGN: Addr(Int32),
     M: Addr(Int32),
     N: Addr(Int32),
@@ -34185,8 +34185,8 @@ def ztrsyl3(
 @bind("ZTRTI2")
 @external
 def ztrti2(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -34196,8 +34196,8 @@ def ztrti2(
 @bind("ZTRTRI")
 @external
 def ztrtri(
-    UPLO: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -34207,9 +34207,9 @@ def ztrtri(
 @bind("ZTRTRS")
 @external
 def ztrtrs(
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    DIAG: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    DIAG: Addr(String[1]),
     N: Addr(Int32),
     NRHS: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -34222,8 +34222,8 @@ def ztrtrs(
 @bind("ZTRTTF")
 @external
 def ztrttf(
-    TRANSR: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
+    TRANSR: Addr(String[1]),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Annotated[Complex128[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
     LDA: Addr(Int32),
@@ -34234,7 +34234,7 @@ def ztrttf(
 @bind("ZTRTTP")
 @external
 def ztrttp(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -34258,8 +34258,8 @@ def ztzrzf(
 @bind("ZUNBDB")
 @external
 def zunbdb(
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -34404,12 +34404,12 @@ def zunbdb6(
 @bind("ZUNCSD")
 @external
 def zuncsd(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
-    JOBV2T: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
-    SIGNS: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
+    JOBV2T: Addr(String[1]),
+    TRANS: Addr(String[1]),
+    SIGNS: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -34441,9 +34441,9 @@ def zuncsd(
 @bind("ZUNCSD2BY1")
 @external
 def zuncsd2by1(
-    JOBU1: Addr(Const(String[1])),
-    JOBU2: Addr(Const(String[1])),
-    JOBV1T: Addr(Const(String[1])),
+    JOBU1: Addr(String[1]),
+    JOBU2: Addr(String[1]),
+    JOBV1T: Addr(String[1]),
     M: Addr(Int32),
     P: Addr(Int32),
     Q: Addr(Int32),
@@ -34495,7 +34495,7 @@ def zung2r(
 @bind("ZUNGBR")
 @external
 def zungbr(
-    VECT: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34606,7 +34606,7 @@ def zungrq(
 @bind("ZUNGTR")
 @external
 def zungtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
     LDA: Addr(Int32),
@@ -34665,8 +34665,8 @@ def zunhr_col(
 @bind("ZUNM22")
 @external
 def zunm22(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     N1: Addr(Int32),
@@ -34683,8 +34683,8 @@ def zunm22(
 @bind("ZUNM2L")
 @external
 def zunm2l(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34700,8 +34700,8 @@ def zunm2l(
 @bind("ZUNM2R")
 @external
 def zunm2r(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34717,9 +34717,9 @@ def zunm2r(
 @bind("ZUNMBR")
 @external
 def zunmbr(
-    VECT: Addr(Const(String[1])),
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    VECT: Addr(String[1]),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34736,8 +34736,8 @@ def zunmbr(
 @bind("ZUNMHR")
 @external
 def zunmhr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     ILO: Addr(Int32),
@@ -34755,8 +34755,8 @@ def zunmhr(
 @bind("ZUNML2")
 @external
 def zunml2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34772,8 +34772,8 @@ def zunml2(
 @bind("ZUNMLQ")
 @external
 def zunmlq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34790,8 +34790,8 @@ def zunmlq(
 @bind("ZUNMQL")
 @external
 def zunmql(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34808,8 +34808,8 @@ def zunmql(
 @bind("ZUNMQR")
 @external
 def zunmqr(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34826,8 +34826,8 @@ def zunmqr(
 @bind("ZUNMR2")
 @external
 def zunmr2(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34843,8 +34843,8 @@ def zunmr2(
 @bind("ZUNMR3")
 @external
 def zunmr3(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34861,8 +34861,8 @@ def zunmr3(
 @bind("ZUNMRQ")
 @external
 def zunmrq(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34879,8 +34879,8 @@ def zunmrq(
 @bind("ZUNMRZ")
 @external
 def zunmrz(
-    SIDE: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     K: Addr(Int32),
@@ -34898,9 +34898,9 @@ def zunmrz(
 @bind("ZUNMTR")
 @external
 def zunmtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     A: Complex128[LDA, Flat],
@@ -34916,7 +34916,7 @@ def zunmtr(
 @bind("ZUPGTR")
 @external
 def zupgtr(
-    UPLO: Addr(Const(String[1])),
+    UPLO: Addr(String[1]),
     N: Addr(Int32),
     AP: Complex128[Flat],
     TAU: Complex128[Flat],
@@ -34929,9 +34929,9 @@ def zupgtr(
 @bind("ZUPMTR")
 @external
 def zupmtr(
-    SIDE: Addr(Const(String[1])),
-    UPLO: Addr(Const(String[1])),
-    TRANS: Addr(Const(String[1])),
+    SIDE: Addr(String[1]),
+    UPLO: Addr(String[1]),
+    TRANS: Addr(String[1]),
     M: Addr(Int32),
     N: Addr(Int32),
     AP: Complex128[Flat],

@@ -337,7 +337,6 @@ _FORTRAN_KEYWORDS = frozenset(
         "exit",
         "include",
         "interface",
-        "intent",
         "module",
         "namelist",
         "nullify",

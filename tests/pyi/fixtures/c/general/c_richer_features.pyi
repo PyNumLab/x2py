@@ -34,7 +34,7 @@ def x2py_register_callback(
 
 def x2py_status_message(
     status: Int
-) -> Addr(Const(Int8)): ...
+) -> Addr(Int8): ...
 
 def x2py_fill_matrix(
     rows: SizeT,

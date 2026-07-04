@@ -1,11 +1,11 @@
 @external
 @native_call([Addr(Arg(0))])
 def triple_value(
-    value: Const(Int32)
+    value: Int32
 ) -> Int32: ...
 
 @external
 @native_call([Addr(Arg(0))])
 def offset_value(
-    value: Const(Int32)
+    value: Int32
 ) -> Int32: ...

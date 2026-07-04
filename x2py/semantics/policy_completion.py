@@ -7,6 +7,8 @@ from collections.abc import Iterable
 
 from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.ownership_policy import (
+    OWNERSHIP_POLICY_METADATA,
+    PYI_SCALAR_STORAGE_CATEGORY,
     OwnershipContext,
     SetterAction,
     default_ownership_policy,
@@ -94,7 +96,7 @@ def _complete_class(semantic_class: models.SemanticClass) -> None:
     )
     semantic_class.metadata[models.RESOLVED_CLASS_SELF_POLICY_METADATA] = default_ownership_policy.decide_semantic_type(
         class_type,
-        OwnershipContext.argument("inout"),
+        OwnershipContext.argument(writes_argument=True),
     )
     for field in semantic_class.fields:
         _complete_variable(field, OwnershipContext.field())
@@ -170,19 +172,23 @@ def _complete_native_address_projections(function: models.SemanticFunction) -> N
 def _apply_scalar_address_projection(argument: models.SemanticArgument) -> None:
     semantic_type = argument.semantic_type
     storage = semantic_type.storage
-    read_only = str(argument.intent).lower() == "in" or bool(storage is not None and storage.read_only)
     metadata = dict(storage.metadata) if storage is not None else {}
     metadata[models.PYI_ADDRESS_ROLE_METADATA] = models.PYI_ADDRESS_ROLE_PROJECTION
+    explicit_policy = semantic_type.metadata.get(OWNERSHIP_POLICY_METADATA)
+    transfer = explicit_policy.get("transfer") if isinstance(explicit_policy, dict) else None
+    projects_output = bool(argument.metadata.get(models.PYI_PROJECTED_OUTPUT_METADATA))
+    read_only = transfer == "call_local" and not projects_output
+    mutable = not read_only
     semantic_type.storage = models.SemanticStorageContract(
         kind="address",
         read_only=read_only,
-        mutable=not read_only,
+        mutable=mutable,
         pointer_depth=1,
         ownership=storage.ownership if storage is not None else "borrowed",
         calling_convention=storage.calling_convention if storage is not None else None,
         metadata=metadata,
     )
-    semantic_type.ownership.mutable = not read_only
+    semantic_type.ownership.mutable = mutable
 
 
 def _is_primitive_scalar_value(
@@ -371,13 +377,17 @@ def _complete_callable_policy(semantic_type: models.SemanticType) -> None:
         }
         for argument in callback_arguments:
             if isinstance(argument, models.SemanticArgument):
+                _validate_callback_argument_contract(argument)
                 _validate_raw_address_type(
                     argument.semantic_type,
                     owner="Callable",
                     item=argument.name,
                     visible_scalar_names=visible_scalar_names,
                 )
-                _complete_variable(argument, OwnershipContext.argument(argument.intent))
+                _complete_variable(
+                    argument,
+                    _callback_argument_ownership_context(argument),
+                )
 
     return_type = semantic_type.metadata.get("return")
     if isinstance(return_type, models.SemanticType) and return_type.name != "None":
@@ -389,3 +399,45 @@ def _complete_callable_policy(semantic_type: models.SemanticType) -> None:
         )
         decision = default_ownership_policy.decide_semantic_type(return_type, OwnershipContext.result())
         return_type.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = decision
+
+
+def _callback_argument_ownership_context(argument: models.SemanticArgument) -> OwnershipContext:
+    if bool(getattr(argument.origin, "metadata", {}).get("value")):
+        return OwnershipContext.argument(reads_argument=True, writes_argument=False)
+    access = argument.metadata.get(models.CALLBACK_DECLARATION_ACCESS_METADATA, "read")
+    match access:
+        case "write":
+            return OwnershipContext.argument(reads_argument=False, writes_argument=True)
+        case "readwrite" | "unspecified":
+            return OwnershipContext.argument(reads_argument=True, writes_argument=True)
+        case _:
+            return OwnershipContext.argument(reads_argument=True, writes_argument=False)
+
+
+def _validate_callback_argument_contract(argument: models.SemanticArgument) -> None:
+    semantic_type = argument.semantic_type
+    if semantic_type.name != "String":
+        return
+    access = argument.metadata.get(models.CALLBACK_DECLARATION_ACCESS_METADATA, "read")
+    if access == "read":
+        return
+    if bool(getattr(argument.origin, "metadata", {}).get("value")):
+        return
+    if _is_scalar_string_storage(semantic_type):
+        return
+    raise ValueError(
+        "Writable callback strings require mutable scalar character storage; "
+        "use String[n][()] inside Out(...), InOut(...), or missing-intent callback arguments"
+    )
+
+
+def _is_scalar_string_storage(semantic_type: models.SemanticType) -> bool:
+    storage = semantic_type.storage
+    array = storage.array if storage is not None else None
+    return bool(
+        storage is not None
+        and storage.kind == "array"
+        and array is not None
+        and array.rank == 0
+        and array.category == PYI_SCALAR_STORAGE_CATEGORY
+    )

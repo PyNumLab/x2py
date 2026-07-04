@@ -74,7 +74,7 @@ The parser flow is intentionally grammar-shaped. Given this source:
       integer, parameter :: n = 4
     contains
       subroutine scale(x)
-        real, intent(inout) :: x(n)
+        real :: x(n)
       end subroutine scale
     end module m
 
@@ -2943,12 +2943,12 @@ class FortranParser(ClassVisitor):
 
         The method mutates `proc_state` in-place by:
         - registering typed symbols and parameter constants,
-        - annotating argument metadata (type/kind/intent/rank/shape),
+        - annotating argument metadata (type/kind/access/rank/shape),
         - recording imports/includes/external callbacks,
         - transitioning unsupported/unknown declarations into explicit errors.
 
         Example:
-            ``real, intent(in) :: x(n)`` goes through
+            ``real :: x(n)`` goes through
             `_helper_parse_declaration_line` with role ``"procedure_symbol"``
             and updates the existing dummy argument ``x`` in the procedure
             scope.
@@ -3004,7 +3004,7 @@ class FortranParser(ClassVisitor):
             filename=proc_state.get("filename") or filename,
             lineno=lineno,
             source_line=source_line,
-            include_intent=True,
+            include_argument_access=True,
         )
         if not parsed:
             self._handle_unknown_proc_declaration(
@@ -3197,7 +3197,7 @@ class FortranParser(ClassVisitor):
         filename: str | None,
         lineno: int | None,
         source_line: str | None,
-        include_intent: bool = False,
+        include_argument_access: bool = False,
         parse_character_star: bool = True,
     ) -> bool:
         """Parse one declaration line and store it in `scope`.
@@ -3208,7 +3208,7 @@ class FortranParser(ClassVisitor):
         in where the parsed symbol is pushed.
 
         Example:
-            ``real, intent(in) :: x(:)`` with role ``procedure_symbol`` updates
+            ``real :: x(:)`` with role ``procedure_symbol`` updates
             the active procedure argument. ``real :: x(:)`` with role
             ``module_variable`` appends a `FortranVariable` to the module.
         """
@@ -3229,7 +3229,7 @@ class FortranParser(ClassVisitor):
             if legacy_right is not None:
                 right = legacy_right
                 attrs = []
-        self._apply_decl_attrs(meta, attrs, include_intent=include_intent)
+        self._apply_decl_attrs(meta, attrs, include_argument_access=include_argument_access)
         self._helper_push_declaration_to_scope(
             scope,
             meta=meta,
@@ -3429,7 +3429,9 @@ class FortranParser(ClassVisitor):
             "kind": kind or "",
             "rank": 0,
             "shape": [],
-            "intent": "unknown",
+            "intent": None,
+            "reads_argument": None,
+            "writes_argument": None,
             "optional": False,
             "value": False,
             "allocatable": False,
@@ -3481,12 +3483,15 @@ class FortranParser(ClassVisitor):
             var._character_length_syntax = True
 
     @staticmethod
-    def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_intent: bool = False) -> None:
+    def _apply_decl_attrs(meta: dict, attrs: list[str], *, include_argument_access: bool = False) -> None:
         """Merge declaration attributes into normalized metadata."""
         for a in attrs:
             la = a.lower()
-            if include_intent and la.startswith("intent") and "(" in la and ")" in la:
-                meta["intent"] = la.split("(", 1)[1].rsplit(")", 1)[0].strip()
+            if include_argument_access and la.startswith("intent") and "(" in la and ")" in la:
+                content = re.sub(r"\s+", "", la.split("(", 1)[1].rsplit(")", 1)[0])
+                meta["intent"] = content
+                meta["reads_argument"] = content.startswith("in")
+                meta["writes_argument"] = content.endswith("out")
             elif la == "optional":
                 meta["optional"] = True
             elif la == "value":
@@ -3551,6 +3556,8 @@ class FortranParser(ClassVisitor):
         arg.base_type = meta["base_type"]
         arg.kind = meta["kind"] or ""
         arg.intent = meta["intent"]
+        arg.reads_argument = meta["reads_argument"]
+        arg.writes_argument = meta["writes_argument"]
         arg.optional = meta["optional"]
         arg.pass_by_value = meta["value"]
         arg.allocatable = meta["allocatable"]

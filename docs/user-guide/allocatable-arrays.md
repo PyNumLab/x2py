@@ -103,7 +103,7 @@ snapshot_values: Annotated[Float64[:], Allocatable] | None
 
 @native_call([Addr(Arg(0))])
 def make_values(
-    count: Const(Int32)
+    count: Int32
 ) -> Annotated[Float64[:], Allocatable]: ...
 
 def replace_values(
@@ -112,18 +112,18 @@ def replace_values(
 
 @native_call([Addr(Arg(0))])
 def allocate_shared(
-    count: Const(Int32)
+    count: Int32
 ) -> None: ...
 
 @native_call([Addr(Arg(0))])
 def allocate_snapshot(
-    count: Const(Int32)
+    count: Int32
 ) -> None: ...
 
 def release_shared() -> None: ...
 
 def scale_snapshot(
-    scale: Const(Float64)
+    scale: Float64
 ) -> None: ...
 
 def release_snapshot() -> None: ...

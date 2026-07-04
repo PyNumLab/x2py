@@ -64,13 +64,13 @@ Inspecting `outputs.f90` prints these subroutine contracts:
 ```python
 @native_call([Arg(0), Return('smallest', 0), Return('largest', 1)])
 def bounds(
-    values: Const(Float64[::])
+    values: Float64[::]
 ) -> tuple[Float64, Float64]: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def scale_in_place(
     values: Float64[::],
-    factor: Const(Float64)
+    factor: Float64
 ) -> None: ...
 
 def fill(

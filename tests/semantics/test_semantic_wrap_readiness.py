@@ -277,7 +277,7 @@ end module alloc_scalar_mod
         if blocker["code"] == "allocatable_scalar_replacement_unsupported"
     )
     assert blocker["items"] == [
-        {"owner": "alloc_scalar_mod.replace", "item": "value", "intent": "inout"},
+        {"owner": "alloc_scalar_mod.replace", "item": "value"},
     ]
 
 
@@ -301,14 +301,14 @@ end module alloc_character_mod
         if blocker["code"] == "allocatable_scalar_replacement_unsupported"
     )
     assert blocker["items"] == [
-        {"owner": "alloc_character_mod.replace", "item": "label", "intent": "inout"},
+        {"owner": "alloc_character_mod.replace", "item": "label"},
     ]
 
 
-def test_pointer_output_policy_blockers_are_reported_for_output_dummies():
+def test_pointer_write_policy_blockers_are_reported_for_writable_dummies():
     report = _readiness_from_pyi(
         """
-def inspect(values: Annotated[Float64[:], Pointer, Intent("in")]) -> None: ...
+def inspect(values: Annotated[Float64[:], Pointer]) -> None: ...
 
 def attach() -> Returns["values", Annotated[Float64[:], Pointer]]: ...
 
@@ -324,8 +324,9 @@ def choose() -> Annotated[Float64[:], Pointer]: ...
         if blocker["code"] == "fortran_pointer_output_policy_missing"
     )
     assert pointer_blocker["items"] == [
-        {"owner": "solver.attach", "item": "values", "intent": "out"},
-        {"owner": "solver.replace", "item": "values", "intent": "inout"},
+        {"owner": "solver.inspect", "item": "values"},
+        {"owner": "solver.attach", "item": "values"},
+        {"owner": "solver.replace", "item": "values"},
     ]
 
 

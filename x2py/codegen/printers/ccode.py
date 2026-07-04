@@ -779,11 +779,12 @@ class CCodePrinter(CodePrinter):
         return bool(
             decision is not None
             and not variable.is_optional
-            and variable.intent != "out"
+            and not decision.mutates_native
             and decision.kind is ObjectKind.SCALAR
             and decision.native_barrier_action
             in {
                 NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+                NativeBarrierAction.PASS_RAW_ADDRESS,
                 NativeBarrierAction.PASS_STORAGE_ADDRESS,
             }
         )

@@ -1,31 +1,31 @@
 @bind("CHAR_CODE_DEFAULT")
 @external
 def char_code_default(
-    C: Const(String[1])
+    C: String[1]
 ) -> Int32: ...
 
 @bind("CHAR_CODE_STAR1")
 @external
 def char_code_star1(
-    C: Const(String[1])
+    C: String[1]
 ) -> Int32: ...
 
 @bind("STRING_LEN_STAR8")
 @external
 def string_len_star8(
-    TEXT: Const(String[8])
+    TEXT: String[8]
 ) -> Int32: ...
 
 @bind("STRING_LEN_ASSUMED")
 @external
 def string_len_assumed(
-    TEXT: Const(String)
+    TEXT: String
 ) -> Int32: ...
 
 @bind("STRING_LEN_ENTITY")
 @external
 def string_len_entity(
-    TEXT: Const(String[6])
+    TEXT: String[6]
 ) -> Int32: ...
 
 @bind("CHAR_RESULT_DEFAULT")

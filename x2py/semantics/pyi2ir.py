@@ -7,10 +7,12 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, set_ownership_metadata, set_pointer_policy_metadata
 from x2py.visitor import ClassVisitor
 
 from .models import (
+    CALLBACK_DECLARATION_ACCESS_METADATA,
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
@@ -56,7 +58,13 @@ __all__ = ("convert_pyi_to_ir", "load_pyi_file", "load_pyi_modules", "parse_pyi_
 
 
 _PYI_OPTIONAL_RETURN_METADATA = "_pyi_optional_return"
-_WRITABLE_INTENTS = {"out", "inout"}
+
+
+@dataclass(frozen=True)
+class _CallbackArgumentSpec:
+    semantic_type: SemanticType
+    access: str
+    passes_by_value: bool
 
 
 def load_pyi_file(path: str | Path, *, module_name: str | None = None, encoding: str = "utf-8") -> SemanticModule:
@@ -320,7 +328,6 @@ class _PyiAstParser:
                         dtype=class_name,
                         storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
                     ),
-                    intent="inout",
                 ),
             )
             self._restore_pass_projection(actual_projection, passed_object_position)
@@ -354,7 +361,6 @@ class _PyiAstParser:
                 mapping.python_position = passed_position
                 mapping.python_name = "self"
                 mapping.native_name = mapping.native_name or "self"
-                mapping.intent = "inout"
             elif mapping.python_position is not None and mapping.python_position >= passed_position:
                 old_position = mapping.python_position
                 mapping.python_position += 1
@@ -364,18 +370,17 @@ class _PyiAstParser:
         self,
         node: ast.AnnAssign,
         *,
-        default_intent: str,
         binding_cls: type[SemanticVariable] = SemanticVariable,
     ) -> SemanticVariable:
         name = self.annotation_target(node.target)
         visibility, semantic_type, original_name = self.visible_type(node.annotation)
         if original_name is not None:
             name = original_name
-        intent = self._pop_intent_metadata(semantic_type, default_intent)
-        semantic_type.ownership.mutable = intent.lower() != "in"
-        if semantic_type.storage is not None:
-            semantic_type.storage.mutable = intent.lower() != "in"
-        self._validate_python_value_policy(semantic_type, intent=intent, owner=name)
+        self._validate_python_value_policy(
+            semantic_type,
+            writable=self._type_uses_writable_storage(semantic_type),
+            owner=name,
+        )
         binding = binding_cls(
             name=name,
             semantic_type=semantic_type,
@@ -384,7 +389,6 @@ class _PyiAstParser:
         )
         if visibility == "private":
             binding.origin.metadata[PYI_USER_PRIVATE_METADATA] = True
-        binding.intent = intent
         binding.optional = self.default_marks_optional(node.value)
         return binding
 
@@ -855,77 +859,145 @@ class _PyiAstParser:
         shape_mapping = self.native_shape_projection_entry(node, native_position)
         if shape_mapping is not None:
             return shape_mapping
+        if isinstance(node, ast.Constant):
+            raise ValueError('native_call hidden literals require typed calls such as Int32(1) or String[1]("N")')
         if not isinstance(node, ast.Call):
             raise ValueError("native_call expects projection entry calls")
         if node.keywords:
+            if self._native_literal_type(node.func) is not None:
+                raise ValueError("native_call typed literals accept one positional value")
             raise ValueError(f"{self.required_name(node.func)} expects positional arguments only")
 
         if self._is_addr_call(node):
             return self.native_address_projection_entry(node, native_position)
 
-        helper = self.required_name(node.func)
-        if helper == "Arg":
-            if len(node.args) != 1:
-                raise ValueError("Arg expects one positional index")
-            return ProjectionMapping(
-                native_position=native_position,
-                python_position=int(ast.literal_eval(node.args[0])),
-            )
-        if helper == "Return":
-            if len(node.args) not in {1, 2}:
-                raise ValueError("Return expects one positional index or a name and index")
-            native_name = ""
-            position_arg = node.args[0]
-            if len(node.args) == 2:
-                native_name = str(ast.literal_eval(node.args[0]))
-                position_arg = node.args[1]
-            return ProjectionMapping(
-                native_name=native_name,
-                native_position=native_position,
-                result_position=int(ast.literal_eval(position_arg)),
-                intent="out",
-            )
-        if helper == "Pass":
-            if node.args:
-                raise ValueError("Pass does not accept arguments")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="pass",
-            )
-        if helper == "Const":
-            if len(node.args) != 1:
-                raise ValueError("Const expects one value")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="const",
-                value=ast.literal_eval(node.args[0]),
-            )
-        if helper == "Len":
-            if len(node.args) != 1:
-                raise ValueError("Len expects one value reference")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="len",
-                value=self.native_value_ref(node.args[0]),
-            )
-        if helper == "IsPresent":
-            if len(node.args) != 1:
-                raise ValueError("IsPresent expects one value reference")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="is_present",
-                value=self.native_value_ref(node.args[0]),
-            )
-        if helper == "Work":
-            if len(node.args) != 1:
-                raise ValueError("Work expects one workspace name")
-            return ProjectionMapping(
-                native_position=native_position,
-                value_kind="work",
-                value=str(ast.literal_eval(node.args[0])),
-            )
+        literal = self.native_literal_projection_entry(node, native_position)
+        if literal is not None:
+            return literal
 
-        raise ValueError(f"Unsupported native_call projection entry: {helper}")
+        helper = self.required_name(node.func)
+        return self._native_helper_projection_entry(helper, node, native_position)
+
+    def _native_helper_projection_entry(
+        self,
+        helper: str,
+        node: ast.Call,
+        native_position: int,
+    ) -> ProjectionMapping:
+        handlers = {
+            "Arg": self._native_arg_projection_entry,
+            "Return": self._native_return_projection_entry,
+            "Pass": self._native_pass_projection_entry,
+            "Len": self._native_len_projection_entry,
+            "IsPresent": self._native_is_present_projection_entry,
+            "Work": self._native_work_projection_entry,
+        }
+        try:
+            handler = handlers[helper]
+        except KeyError as exc:
+            raise ValueError(f"Unsupported native_call projection entry: {helper}") from exc
+        return handler(node, native_position)
+
+    @staticmethod
+    def _native_arg_projection_entry(node: ast.Call, native_position: int) -> ProjectionMapping:
+        if len(node.args) != 1:
+            raise ValueError("Arg expects one positional index")
+        return ProjectionMapping(
+            native_position=native_position,
+            python_position=int(ast.literal_eval(node.args[0])),
+        )
+
+    @staticmethod
+    def _native_return_projection_entry(node: ast.Call, native_position: int) -> ProjectionMapping:
+        if len(node.args) not in {1, 2}:
+            raise ValueError("Return expects one positional index or a name and index")
+        native_name = ""
+        position_arg = node.args[0]
+        if len(node.args) == 2:
+            native_name = str(ast.literal_eval(node.args[0]))
+            position_arg = node.args[1]
+        return ProjectionMapping(
+            native_name=native_name,
+            native_position=native_position,
+            result_position=int(ast.literal_eval(position_arg)),
+        )
+
+    @staticmethod
+    def _native_pass_projection_entry(node: ast.Call, native_position: int) -> ProjectionMapping:
+        if node.args:
+            raise ValueError("Pass does not accept arguments")
+        return ProjectionMapping(
+            native_position=native_position,
+            value_kind="pass",
+        )
+
+    def _native_len_projection_entry(self, node: ast.Call, native_position: int) -> ProjectionMapping:
+        if len(node.args) != 1:
+            raise ValueError("Len expects one value reference")
+        return ProjectionMapping(
+            native_position=native_position,
+            value_kind="len",
+            value=self.native_value_ref(node.args[0]),
+        )
+
+    def _native_is_present_projection_entry(self, node: ast.Call, native_position: int) -> ProjectionMapping:
+        if len(node.args) != 1:
+            raise ValueError("IsPresent expects one value reference")
+        return ProjectionMapping(
+            native_position=native_position,
+            value_kind="is_present",
+            value=self.native_value_ref(node.args[0]),
+        )
+
+    @staticmethod
+    def _native_work_projection_entry(node: ast.Call, native_position: int) -> ProjectionMapping:
+        if len(node.args) != 1:
+            raise ValueError("Work expects one workspace name")
+        return ProjectionMapping(
+            native_position=native_position,
+            value_kind="work",
+            value=str(ast.literal_eval(node.args[0])),
+        )
+
+    def native_literal_projection_entry(
+        self,
+        node: ast.Call,
+        native_position: int,
+    ) -> ProjectionMapping | None:
+        native_type = self._native_literal_type(node.func)
+        if native_type is None:
+            return None
+        if node.keywords or len(node.args) != 1:
+            raise ValueError("native_call typed literals accept one positional value")
+        return ProjectionMapping(
+            native_position=native_position,
+            value_kind="literal",
+            value={
+                "type": native_type,
+                "value": ast.literal_eval(node.args[0]),
+            },
+        )
+
+    def _native_literal_type(self, node: ast.AST) -> str | None:
+        if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
+            length = self._native_literal_string_length(node)
+            return f"String[{length}]"
+        if not isinstance(node, ast.Name):
+            return None
+        if node.id == "String":
+            raise ValueError('native_call string literals require String[length](value), for example String[1]("N")')
+        if node.id in SEMANTIC_SCALAR_TYPE_NAMES and node.id not in {"String", "Void"}:
+            return node.id
+        return None
+
+    def _native_literal_string_length(self, node: ast.Subscript) -> str:
+        items = self.subscript_items(node)
+        if len(items) != 1:
+            raise ValueError("native_call string literals require exactly one String length")
+        item = items[0]
+        if isinstance(item, ast.Slice) or (isinstance(item, ast.Constant) and item.value is Ellipsis):
+            raise ValueError("native_call string literals require a fixed String length")
+        return self.dimension_text(item)
 
     def native_address_projection_entry(self, node: ast.Call, native_position: int) -> ProjectionMapping:
         if len(node.args) != 1:
@@ -942,7 +1014,6 @@ class _PyiAstParser:
             mapping.python_position = int(value["position"])
         elif value["kind"] == "return":
             mapping.result_position = int(value["position"])
-            mapping.intent = "out"
         return mapping
 
     def native_shape_projection_entry(
@@ -1017,10 +1088,10 @@ class _PyiAstParser:
             return self._final_type(node)
         if self.matches_name(node, "Callable") or self.is_subscript_of(node, "Callable"):
             return self.callable_type(node)
-        if isinstance(node, ast.Call) and self.matches_name(node.func, "Const"):
-            return self._const_type(node)
         if isinstance(node, ast.Call) and self._is_addr_call(node):
             return self._address_type(node)
+        if isinstance(node, ast.Call):
+            raise ValueError(f"Unsupported semantic type call: {ast.unparse(node)!r}")
 
         if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
             if self._string_subscript_is_array_dimensions(node):
@@ -1047,13 +1118,6 @@ class _PyiAstParser:
         semantic_type = self.semantic_type(items[0])
         if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
             semantic_type.constraints.append(SemanticConstraint("Constant"))
-        return semantic_type
-
-    def _const_type(self, node: ast.Call) -> SemanticType:
-        if len(node.args) != 1 or node.keywords:
-            raise ValueError(f"Const type expects one argument: {ast.unparse(node)!r}")
-        semantic_type = self.semantic_type(node.args[0])
-        self._mark_storage_read_only(semantic_type)
         return semantic_type
 
     def _address_type(self, node: ast.Call) -> SemanticType:
@@ -1262,9 +1326,6 @@ class _PyiAstParser:
 
     def _apply_annotation_metadata_call(self, semantic_type: SemanticType, node: ast.Call) -> None:
         helper = self.required_name(node.func)
-        if helper == "Intent":
-            self._apply_scalar_annotation_metadata(semantic_type, node, helper)
-            return
         if helper in {"FortranType", "FortranCallback"}:
             raise ValueError(f"{helper} metadata is no longer part of the semantic .pyi contract")
         if helper == "PointerAssociation":
@@ -1311,9 +1372,6 @@ class _PyiAstParser:
         if len(node.args) != 1 or node.keywords:
             raise ValueError(f"{helper} metadata expects one argument: {ast.unparse(node)!r}")
         return ast.literal_eval(node.args[0])
-
-    def _apply_scalar_annotation_metadata(self, semantic_type: SemanticType, node: ast.Call, helper: str) -> None:
-        semantic_type.metadata["_pyi_intent"] = str(self._require_single_metadata_argument(node, helper))
 
     def _apply_pointer_association_metadata(self, semantic_type: SemanticType, node: ast.Call) -> None:
         value = self._require_single_metadata_argument(node, "PointerAssociation")
@@ -1393,10 +1451,10 @@ class _PyiAstParser:
         semantic_type.constraints.append(SemanticConstraint(name=name, arguments=arguments))
 
     @staticmethod
-    def _validate_python_value_policy(semantic_type: SemanticType, *, intent: str, owner: str) -> None:
+    def _validate_python_value_policy(semantic_type: SemanticType, *, writable: bool, owner: str) -> None:
         if semantic_type.metadata.get(PYTHON_VALUE_MUTABILITY_METADATA) != PYTHON_VALUE_IMMUTABLE:
             return
-        if intent.lower() not in _WRITABLE_INTENTS:
+        if not writable:
             return
         policy = semantic_type.metadata.get(OWNERSHIP_POLICY_METADATA)
         transfer = policy.get("transfer") if isinstance(policy, dict) else None
@@ -1404,7 +1462,7 @@ class _PyiAstParser:
             return
         raise ValueError(
             f"Invalid .pyi contract for {owner}: Immutable values cannot request "
-            'Transfer("borrowed_view") for writable native intent. Use a projected '
+            'Transfer("borrowed_view") for writable native storage. Use a projected '
             "replacement return or remove Immutable."
         )
 
@@ -1439,26 +1497,11 @@ class _PyiAstParser:
         return lower_bounds, upper_bounds
 
     @staticmethod
-    def _mark_storage_read_only(semantic_type: SemanticType) -> None:
-        if semantic_type.storage is None:
-            semantic_type.storage = SemanticStorageContract(kind="value")
-        semantic_type.storage.read_only = True
-        semantic_type.storage.mutable = False
-        semantic_type.ownership.mutable = False
-
-    @staticmethod
-    def _inferred_argument_intent(semantic_type: SemanticType) -> str:
+    def _type_uses_writable_storage(semantic_type: SemanticType) -> bool:
         storage = semantic_type.storage
         if storage is None:
-            return "in"
-        if storage.kind in {"reference", "array", "pointer", "callback", "address"} and not storage.read_only:
-            return "inout"
-        return "in"
-
-    @staticmethod
-    def _pop_intent_metadata(semantic_type: SemanticType, default: str) -> str:
-        value = semantic_type.metadata.pop("_pyi_intent", None)
-        return str(value).lower() if value is not None else default
+            return False
+        return storage.kind in {"reference", "array", "pointer", "callback", "address"} and not storage.read_only
 
     @staticmethod
     def _is_addr_call(node: ast.Call) -> bool:
@@ -1555,10 +1598,11 @@ class _PyiAstParser:
         if not isinstance(raw_args, ast.List):
             raise ValueError(f"Callable arguments must be a list: {ast.unparse(node)!r}")
 
-        argument_types = [self.semantic_type(item) for item in raw_args.elts]
+        argument_specs = [self._callback_argument_spec(item) for item in raw_args.elts]
+        argument_types = [item.semantic_type for item in argument_specs]
         return_type = self.semantic_type(raw_return)
         metadata = self._callback_metadata(argument_types, return_type)
-        metadata["callback_arguments"] = self._callback_arguments(argument_types, return_type)
+        metadata["callback_arguments"] = self._callback_arguments(argument_specs, return_type)
         return SemanticType(
             name="Callable",
             dtype="Callable",
@@ -1566,23 +1610,88 @@ class _PyiAstParser:
             storage=self._callback_storage(),
         )
 
+    def _callback_argument_spec(self, node: ast.expr) -> _CallbackArgumentSpec:
+        if isinstance(node, ast.Call):
+            wrapper = self._callback_reference_wrapper_access(node)
+            if wrapper is not None:
+                if len(node.args) != 1 or node.keywords:
+                    raise ValueError(f"{self.required_name(node.func)} expects one callback argument type")
+                if isinstance(node.args[0], ast.Call) and self._is_addr_call(node.args[0]):
+                    raise ValueError(
+                        "Addr(...) is not valid inside Callable callback signatures; "
+                        f"{self.required_name(node.func)}(...) already describes callback reference passing"
+                    )
+                semantic_type = self.semantic_type(node.args[0])
+                self._mark_callback_reference_type(semantic_type, wrapper)
+                return _CallbackArgumentSpec(semantic_type, wrapper, False)
+            if self._is_addr_call(node):
+                raise ValueError(
+                    "Addr(...) is not valid inside Callable callback signatures; "
+                    "use PassByRef(...) for scalar reference callbacks without intent"
+                )
+
+        semantic_type = self.semantic_type(node)
+        passes_by_value = semantic_type.storage is None
+        if not passes_by_value:
+            self._mark_callback_reference_type(semantic_type, "unspecified")
+        return _CallbackArgumentSpec(semantic_type, "unspecified", passes_by_value)
+
+    @staticmethod
+    def _callback_reference_wrapper_access(node: ast.Call) -> str | None:
+        qualified = _PyiAstParser.qualified_name(node.func)
+        if qualified is None:
+            return None
+        wrapper = qualified[-1]
+        return {
+            "PassByRef": "unspecified",
+            "In": "read",
+            "Out": "write",
+            "InOut": "readwrite",
+        }.get(wrapper)
+
+    @staticmethod
+    def _mark_callback_reference_type(semantic_type: SemanticType, access: str) -> None:
+        read_only = access == "read"
+        mutable = not read_only
+        storage = semantic_type.storage
+        if storage is None:
+            semantic_type.storage = SemanticStorageContract(
+                kind="reference",
+                read_only=read_only,
+                mutable=mutable,
+                pointer_depth=1,
+            )
+        else:
+            storage.read_only = read_only
+            storage.mutable = mutable
+        semantic_type.ownership.mutable = mutable
+
     @classmethod
     def _callback_arguments(
         cls,
-        argument_types: list[SemanticType],
+        argument_specs: list[_CallbackArgumentSpec],
         return_type: SemanticType,
     ) -> list[SemanticArgument]:
+        argument_types = [item.semantic_type for item in argument_specs]
         shape_names = cls._callback_shape_names([*argument_types, return_type])
         used_names: set[str] = set()
         arguments = []
-        for index, semantic_type in enumerate(argument_types):
+        for index, spec in enumerate(argument_specs):
+            semantic_type = spec.semantic_type
             name = f"arg_{index}"
             if cls._is_dimension_scalar_callback_type(semantic_type):
                 inferred_name = next((item for item in shape_names if item not in used_names), None)
                 if inferred_name is not None:
                     name = inferred_name
                     used_names.add(inferred_name)
-            arguments.append(SemanticArgument(name, semantic_type))
+            arguments.append(
+                SemanticArgument(
+                    name,
+                    semantic_type,
+                    metadata={CALLBACK_DECLARATION_ACCESS_METADATA: spec.access},
+                    origin=SemanticOrigin(metadata={"value": spec.passes_by_value}),
+                )
+            )
         return arguments
 
     @classmethod
@@ -1661,7 +1770,6 @@ class _PyiAstParser:
                     SemanticArgument(
                         name=f"__return_{plain_return_index}",
                         semantic_type=semantic_type,
-                        intent="out",
                         optional=optional,
                         metadata={"return_position": item_index},
                     )
@@ -1700,7 +1808,6 @@ class _PyiAstParser:
         return SemanticArgument(
             name=str(ast.literal_eval(items[0])),
             semantic_type=semantic_type,
-            intent="out",
             optional=len(items) == 3 and isinstance(items[2], ast.Name) and items[2].id == "Optional",
         )
 
@@ -1829,15 +1936,14 @@ class _PyiAstParser:
         if arg.annotation is None:
             raise ValueError(f"Expected typed argument: {arg.arg!r}")
         visibility, semantic_type, original_name = self.visible_type(arg.annotation)
-        intent = self._pop_intent_metadata(semantic_type, self._inferred_argument_intent(semantic_type))
-        semantic_type.ownership.mutable = intent.lower() != "in"
+        writable = self._type_uses_writable_storage(semantic_type)
+        semantic_type.ownership.mutable = writable
         if semantic_type.storage is not None:
-            semantic_type.storage.mutable = intent.lower() != "in"
-        self._validate_python_value_policy(semantic_type, intent=intent, owner=arg.arg)
+            semantic_type.storage.mutable = writable
+        self._validate_python_value_policy(semantic_type, writable=writable, owner=arg.arg)
         return SemanticArgument(
             name=original_name or arg.arg,
             semantic_type=semantic_type,
-            intent=intent,
             optional=self.default_marks_optional(default),
             visibility=visibility,
             origin=self._origin(user_private=visibility == "private"),
@@ -1863,8 +1969,7 @@ class _PyiAstParser:
         for returned in returned_args:
             existing = by_name.get(returned.name)
             if existing is None:
-                returned.intent = "out"
-                returned.semantic_type.ownership.mutable = True
+                _PyiAstParser._mark_projected_output(returned.semantic_type)
                 returned.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
                 returned.metadata.pop("return_position", None)
                 native_position = returned.metadata.pop("native_position", None)
@@ -1873,10 +1978,15 @@ class _PyiAstParser:
                 else:
                     semantic_args.append(returned)
                 continue
-            if existing.intent != "out":
-                existing.intent = "inout"
             existing.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
-            existing.semantic_type.ownership.mutable = True
+            _PyiAstParser._mark_projected_output(existing.semantic_type)
+
+    @staticmethod
+    def _mark_projected_output(semantic_type: SemanticType) -> None:
+        semantic_type.ownership.mutable = True
+        if semantic_type.storage is not None:
+            semantic_type.storage.read_only = False
+            semantic_type.storage.mutable = True
 
     @staticmethod
     def _identity_return_projection(
@@ -1893,7 +2003,6 @@ class _PyiAstParser:
                 native_position=native_position,
                 python_position=visible_positions.get(argument.name),
                 result_position=return_positions.get(argument.name),
-                intent=argument.intent,
             )
             for native_position, argument in enumerate(semantic_args)
         ]
@@ -1926,7 +2035,6 @@ class _PyiAstParser:
                 SemanticArgument(
                     name=mapping.native_name or f"__return_{mapping.result_position}",
                     semantic_type=return_type,
-                    intent=mapping.intent,
                     optional=bool(return_type.metadata.pop(_PYI_OPTIONAL_RETURN_METADATA, False)),
                     metadata={"native_position": mapping.native_position},
                 ),
@@ -1941,8 +2049,7 @@ class _PyiAstParser:
                     mapping.python_name = mapping.native_name
                 if mapping.native_name:
                     returned.name = mapping.native_name
-                returned.intent = mapping.intent
-                returned.semantic_type.ownership.mutable = True
+                _PyiAstParser._mark_projected_output(returned.semantic_type)
                 returned.metadata["native_position"] = mapping.native_position
         return return_type, returned_args
 
@@ -1965,8 +2072,7 @@ class _PyiAstParser:
             mapping.python_name = arg.name
             if not mapping.native_name:
                 mapping.native_name = arg.name
-            mapping.intent = arg.intent
-            if arg.intent in {"out", "inout"} and mapping.result_position is None:
+            if arg.metadata.get(PYI_PROJECTED_OUTPUT_METADATA) and mapping.result_position is None:
                 mapping.result_position = return_positions.get(arg.name)
 
     @staticmethod
@@ -2008,7 +2114,7 @@ class _ClassBodyVisitor(ClassVisitor):
 
     def _visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         """Convert an annotated class field declaration."""
-        self.fields.append(self.parser.ann_assign(node, default_intent="in", binding_cls=SemanticField))
+        self.fields.append(self.parser.ann_assign(node, binding_cls=SemanticField))
 
     def _visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         """Convert a method, constructor, or overload declaration."""
@@ -2128,7 +2234,7 @@ class _ModuleVisitor(ClassVisitor):
 
     def _visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         """Convert a module variable declaration."""
-        self.parser.module.variables.append(self.parser.ann_assign(node, default_intent="in"))
+        self.parser.module.variables.append(self.parser.ann_assign(node))
 
     def _visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Convert a semantic class declaration."""

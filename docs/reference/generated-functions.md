@@ -29,8 +29,8 @@ workflows produce.
 | Private or removed declaration | Not exported | `@private`, `private[...]`, or omitted |
 
 The visible Python signature follows the semantic `.pyi`, not the raw native
-dummy list. Ordinary scalar inputs are value-shaped, such as `Const(Int32)` or
-`Const(Float64)`, even when `@native_call` passes the address of a converted
+dummy list. Ordinary scalar inputs are value-shaped, such as `Int32` or
+`Float64`, even when `@native_call` passes the address of a converted
 native scalar slot. Arrays, strings, derived objects, optional values, and
 callbacks keep their explicit semantic annotations.
 
@@ -47,15 +47,15 @@ shape:
 ```python
 @native_call([Addr(Arg(0)), Arg(1)])
 def fill_vector(
-    n: Const(Int32),
+    n: Int32,
     values: Float64[n]
 ) -> Returns["values", Float64[n]]: ...
 
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Arg(3)])
 def shift_matrix(
-    n: Const(Int32),
-    m: Const(Int32),
-    values: Annotated[Const(Float64[n, m]), ORDER_F],
+    n: Int32,
+    m: Int32,
+    values: Annotated[Float64[n, m], ORDER_F],
     out: Annotated[Float64[n, m], ORDER_F]
 ) -> Returns["out", Annotated[Float64[n, m], ORDER_F]]: ...
 ```
@@ -99,13 +99,13 @@ specific native procedure:
 @overload("convert_integer")
 @native_call([Addr(Arg(0))])
 def convert(
-    value: Const(Int32)
+    value: Int32
 ) -> Int32: ...
 
 @overload("convert_real")
 @native_call([Addr(Arg(0))])
 def convert(
-    value: Const(Float64)
+    value: Float64
 ) -> Float64: ...
 ```
 

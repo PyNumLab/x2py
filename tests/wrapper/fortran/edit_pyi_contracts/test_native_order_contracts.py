@@ -67,12 +67,19 @@ def test_editable_contract_can_use_native_order_arguments_without_native_call(tm
     np.testing.assert_allclose(inout, np.array([4.0, 10.0, 14.0], dtype=np.float64))
 
     assert module.fixed_inout("abc     ") is None
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.fixed_inout("abc")
     raw_label = ctypes.create_string_buffer(8)
     raw_label.raw = b"abc     "
     assert module.fixed_inout_raw(ctypes.addressof(raw_label)) is None
     assert raw_label.raw == b"Xbc    !"
     with pytest.raises(TypeError):
         module.fixed_inout_raw("abc     ")
+    storage_label = np.array("abc     ", dtype="S8")
+    assert module.fixed_inout_storage(storage_label) is None
+    assert storage_label[()] == b"Xbc    !"
+    with pytest.raises(TypeError, match="itemsize 8"):
+        module.fixed_inout_storage(np.array("abc", dtype="S3"))
     assert module.make_label("      ") is None
 
     mixed_size = np.array(3, dtype=np.int32)

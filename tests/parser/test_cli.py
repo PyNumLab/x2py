@@ -689,7 +689,7 @@ end program driver
     pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(module_source), "--pyi"]
     pyi_res = subprocess.run(pyi_cmd, capture_output=True, text=True, check=True)
     assert "@native_call([Addr(Arg(0)), Return('x', 0), Addr(Arg(1))])" in pyi_res.stdout
-    assert "x: Annotated[Addr(Float64), Intent('out')]" not in pyi_res.stdout
+    assert "x: Addr(Float64)" not in pyi_res.stdout
     assert "def solve(" in pyi_res.stdout
 
     empty_pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(program_source), "--pyi"]

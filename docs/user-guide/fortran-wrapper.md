@@ -1478,10 +1478,10 @@ end subroutine edit_name
 ```
 
 ```python
-original = "alpha"
+original = "alpha   "
 replacement = edit_name(original)
 
-assert original == "alpha"       # Python str is immutable
+assert original == "alpha   "    # Python str is immutable
 assert replacement.startswith("X")
 ```
 
@@ -1493,10 +1493,10 @@ other scalar output.
 
 <!-- X2PY_C_DOCS_START
 Python input uses CPython's UTF-8 bytes at the ABI boundary. For a fixed-length
-dummy, longer input is truncated to the declared byte length and shorter input
-is blank-padded. The returned Python value reflects the complete post-call
-Fortran buffer, including trailing blanks. An assumed-length `intent(inout)`
-dummy uses the encoded input byte length.
+dummy, the encoded input length must exactly match the declared byte length;
+x2py does not pad or truncate the public value. The returned Python value
+reflects the complete post-call Fortran buffer, including trailing blanks. An
+assumed-length `intent(inout)` dummy uses the encoded input byte length.
 X2PY_C_DOCS_END -->
 
 ```fortran
@@ -1911,7 +1911,8 @@ X2PY_C_DOCS_END -->
 Stored callbacks, callback registration, optional dummy procedures, procedure
 pointers, and invocation after the wrapped call are not supported.
 
-Runtime tests: [`test_scalar_callbacks.py`](../../tests/wrapper/fortran/callbacks/test_scalar_callbacks.py),
+Runtime tests: [`test_all_callback_shapes.py`](../../tests/wrapper/fortran/callbacks/test_all_callback_shapes.py),
+[`test_scalar_callbacks.py`](../../tests/wrapper/fortran/callbacks/test_scalar_callbacks.py),
 [`test_array_callbacks.py`](../../tests/wrapper/fortran/callbacks/test_array_callbacks.py), and
 [`test_derived_callbacks.py`](../../tests/wrapper/fortran/callbacks/test_derived_callbacks.py).
 

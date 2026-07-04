@@ -105,6 +105,19 @@ def _scalar_storage_type() -> SemanticType:
     )
 
 
+def _string_storage_type() -> SemanticType:
+    return SemanticType(
+        name="String",
+        dtype="String",
+        rank=0,
+        metadata={"fortran_character_length": "8"},
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(rank=0, shape=[], category=PYI_SCALAR_STORAGE_CATEGORY),
+        ),
+    )
+
+
 def _address_type(role: str) -> SemanticType:
     return SemanticType(
         name="Int32",
@@ -121,6 +134,18 @@ def _derived_type(
     return SemanticType(name=name, dtype=name, metadata=metadata or {})
 
 
+def _read_only_argument_context(**kwargs) -> OwnershipContext:
+    return OwnershipContext.argument(**kwargs)
+
+
+def _writable_argument_context(**kwargs) -> OwnershipContext:
+    return OwnershipContext.argument(writes_argument=True, **kwargs)
+
+
+def _hidden_output_context(**kwargs) -> OwnershipContext:
+    return OwnershipContext.argument(reads_argument=False, writes_argument=True, **kwargs)
+
+
 def test_default_policy_decisions_cover_public_object_kinds():
     resolver = default_ownership_policy
 
@@ -135,27 +160,27 @@ def test_default_policy_decisions_cover_public_object_kinds():
 
     string_replacement = resolver.decide_semantic_type(
         _string_type(),
-        OwnershipContext.argument("inout", projects_result=True),
+        _writable_argument_context(projects_result=True),
     )
     assert string_replacement.owner is OwnershipOwner.PYTHON
     assert string_replacement.transfer is TransferMode.COPY_RETURN
     assert "immutable Python strings" in string_replacement.reason
 
-    caller_array = resolver.decide_semantic_type(_array_type(), OwnershipContext.argument("out"))
+    caller_array = resolver.decide_semantic_type(_array_type(), _hidden_output_context())
     assert caller_array.owner is OwnershipOwner.CALLER
     assert caller_array.transfer is TransferMode.IN_PLACE
     assert caller_array.codegen_action is CodegenAction.IDENTITY_OUTPUT
 
     projected_caller_array = resolver.decide_semantic_type(
         _array_type(),
-        OwnershipContext.argument("out", projects_result=True, python_visible=True),
+        _hidden_output_context(projects_result=True, python_visible=True),
     )
     assert projected_caller_array.transfer is TransferMode.IN_PLACE
     assert projected_caller_array.codegen_action is CodegenAction.IDENTITY_OUTPUT
 
     allocatable_output = resolver.decide_semantic_type(
         _array_type(allocatable=True),
-        OwnershipContext.argument("out", projects_result=True, python_visible=False),
+        _hidden_output_context(projects_result=True, python_visible=False),
     )
     assert allocatable_output.owner is OwnershipOwner.PYTHON
     assert allocatable_output.transfer is TransferMode.COPY_RETURN
@@ -200,14 +225,14 @@ def test_default_policy_decisions_cover_public_object_kinds():
 
     projected_derived_output = resolver.decide_semantic_type(
         _derived_type(),
-        OwnershipContext.argument("out", projects_result=True, python_visible=True),
+        _hidden_output_context(projects_result=True, python_visible=True),
     )
     assert projected_derived_output.transfer is TransferMode.IN_PLACE
     assert projected_derived_output.codegen_action is CodegenAction.IDENTITY_OUTPUT
 
     hidden_derived_output = resolver.decide_semantic_type(
         _derived_type(),
-        OwnershipContext.argument("out", projects_result=True, python_visible=False),
+        _hidden_output_context(projects_result=True, python_visible=False),
     )
     assert hidden_derived_output.transfer is TransferMode.WRAPPER_INSTANCE
     assert hidden_derived_output.codegen_action is CodegenAction.HIDDEN_OUTPUT
@@ -225,56 +250,63 @@ def test_default_policy_completes_python_and_native_barrier_actions():
         (
             "scalar_value",
             _scalar_type(),
-            OwnershipContext.argument("in"),
+            _read_only_argument_context(),
             PythonBarrierAction.SCALAR_VALUE,
             NativeBarrierAction.PASS_VALUE,
         ),
         (
             "scalar_address_projection",
             _address_type(PYI_ADDRESS_ROLE_PROJECTION),
-            OwnershipContext.argument("in"),
+            _read_only_argument_context(),
             PythonBarrierAction.SCALAR_VALUE,
             NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
         ),
         (
             "scalar_storage",
             _scalar_storage_type(),
-            OwnershipContext.argument("inout"),
+            _writable_argument_context(),
             PythonBarrierAction.SCALAR_STORAGE,
             NativeBarrierAction.PASS_STORAGE_ADDRESS,
         ),
         (
             "pointer_scalar_address_projection",
             pointer_projection,
-            OwnershipContext.argument("in"),
+            _read_only_argument_context(),
             PythonBarrierAction.SCALAR_VALUE,
             NativeBarrierAction.PASS_STORAGE_ADDRESS,
         ),
         (
             "array_storage",
             _array_type(),
-            OwnershipContext.argument("in"),
+            _read_only_argument_context(),
             PythonBarrierAction.ARRAY_STORAGE,
             NativeBarrierAction.PASS_ARRAY_DESCRIPTOR,
         ),
         (
             "string_value",
             _string_type(),
-            OwnershipContext.argument("inout", projects_result=True),
+            _writable_argument_context(projects_result=True),
             PythonBarrierAction.STRING_VALUE,
             NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
         ),
         (
+            "string_storage",
+            _string_storage_type(),
+            _writable_argument_context(),
+            PythonBarrierAction.STRING_STORAGE,
+            NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        ),
+        (
             "raw_address",
             _address_type(PYI_ADDRESS_ROLE_RAW),
-            OwnershipContext.argument("in"),
+            _read_only_argument_context(),
             PythonBarrierAction.RAW_ADDRESS,
             NativeBarrierAction.PASS_RAW_ADDRESS,
         ),
         (
             "wrapper_instance",
             _derived_type(),
-            OwnershipContext.argument("in"),
+            _read_only_argument_context(),
             PythonBarrierAction.WRAPPER_INSTANCE,
             NativeBarrierAction.PASS_WRAPPER_ADDRESS,
         ),
@@ -435,6 +467,10 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         == "_convert_python_string_value_argument"
     )
     assert (
+        CPythonBindingGenerator._PYTHON_BARRIER_DISPATCHER.handlers[PythonBarrierAction.STRING_STORAGE]
+        == "_convert_python_string_storage_argument"
+    )
+    assert (
         FortranToCBridgeGenerator._NATIVE_BARRIER_DISPATCHER.handlers[NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS]
         == "_convert_native_call_local_address_argument"
     )
@@ -515,6 +551,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         PythonBarrierAction.SCALAR_STORAGE,
         PythonBarrierAction.ARRAY_STORAGE,
         PythonBarrierAction.STRING_VALUE,
+        PythonBarrierAction.STRING_STORAGE,
         PythonBarrierAction.RAW_ADDRESS,
         PythonBarrierAction.WRAPPER_INSTANCE,
     }
@@ -591,25 +628,25 @@ def normalize(
     assert decision.python_visible is True
 
 
-def test_immutable_derived_output_selects_wrapper_instance_and_inout_blocks():
+def test_immutable_derived_output_selects_wrapper_instance_and_replacement_blocks():
     semantic_type = _derived_type("point")
     semantic_type.metadata["python_value_mutability"] = "immutable"
 
     output = default_ownership_policy.decide_semantic_type(
         semantic_type,
-        OwnershipContext.argument("out", projects_result=True, python_visible=True),
+        _hidden_output_context(projects_result=True, python_visible=True),
     )
     assert output.owner is OwnershipOwner.WRAPPER
     assert output.transfer is TransferMode.WRAPPER_INSTANCE
     assert output.destruction is DestructionPolicy.WRAPPER_DEALLOC
     assert output.codegen_action is CodegenAction.HIDDEN_OUTPUT
 
-    inout = default_ownership_policy.decide_semantic_type(
+    replacement = default_ownership_policy.decide_semantic_type(
         semantic_type,
-        OwnershipContext.argument("inout", projects_result=True, python_visible=True),
+        _writable_argument_context(projects_result=True, python_visible=True),
     )
-    assert inout.is_blocked
-    assert inout.blocker == "immutable derived inout replacement is not implemented"
+    assert replacement.is_blocked
+    assert replacement.blocker == "immutable derived replacement is not implemented"
 
 
 @pytest.mark.parametrize(
@@ -617,11 +654,11 @@ def test_immutable_derived_output_selects_wrapper_instance_and_inout_blocks():
     [
         ("python", "copy_return", "python_refcount", OwnershipContext.result()),
         ("python", "snapshot_copy", "python_refcount", OwnershipContext.result()),
-        ("caller", "call_local", "none", OwnershipContext.argument("in")),
-        ("caller", "in_place", "caller", OwnershipContext.argument("inout")),
+        ("caller", "call_local", "none", _read_only_argument_context()),
+        ("caller", "in_place", "caller", _writable_argument_context()),
         ("native", "borrowed_view", "native_owner", OwnershipContext.module_variable()),
         ("wrapper", "borrowed_view", "wrapper_dealloc", OwnershipContext.field()),
-        ("temporary", "call_local", "call_local", OwnershipContext.argument("in")),
+        ("temporary", "call_local", "call_local", _read_only_argument_context()),
     ],
 )
 def test_explicit_supported_ownership_triples_remain_codegen_ready(
@@ -707,9 +744,9 @@ def test_explicit_blocked_policy_normalizes_all_lifetime_axes():
 def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
     cases = [
         ("by_value", _scalar_type(), OwnershipContext.result()),
-        ("call_local_none", _scalar_type(), OwnershipContext.argument("in")),
-        ("call_local_cleanup", _string_type(), OwnershipContext.argument("out")),
-        ("caller_in_place", _array_type(), OwnershipContext.argument("inout")),
+        ("call_local_none", _scalar_type(), _read_only_argument_context()),
+        ("call_local_cleanup", _string_type(), _hidden_output_context()),
+        ("caller_in_place", _array_type(), _writable_argument_context()),
         ("copy_return", _array_type(), OwnershipContext.result()),
         ("snapshot_copy", _array_type(pointer=True), OwnershipContext.result()),
         (
@@ -719,8 +756,8 @@ def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
         ),
         ("wrapper_borrowed_view", _array_type(allocatable=True), OwnershipContext.field()),
         ("wrapper_instance", _derived_type(), OwnershipContext.result()),
-        ("wrapper_in_place", _derived_type(), OwnershipContext.argument("inout")),
-        ("blocked", _array_type(pointer=True), OwnershipContext.argument("out")),
+        ("wrapper_in_place", _derived_type(), _writable_argument_context()),
+        ("blocked", _array_type(pointer=True), _hidden_output_context()),
     ]
 
     decisions = [
@@ -894,7 +931,7 @@ def test_recursive_module_policy_map_includes_nested_fields_and_functions():
         functions=[
             SemanticFunction(
                 "build",
-                arguments=[SemanticArgument("n", _scalar_type(), intent="in")],
+                arguments=[SemanticArgument("n", _scalar_type())],
                 return_type=_array_type(allocatable=True),
             )
         ],
@@ -927,7 +964,13 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
         functions=[
             SemanticFunction(
                 "replace",
-                arguments=[SemanticArgument("values", _array_type(allocatable=True), intent="inout")],
+                arguments=[
+                    SemanticArgument(
+                        "values",
+                        _array_type(allocatable=True),
+                        metadata={"pyi_projected_output": True},
+                    )
+                ],
                 return_type=None,
                 projection=[
                     ProjectionMapping(
@@ -936,7 +979,6 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
                         native_position=0,
                         python_position=0,
                         result_position=0,
-                        intent="inout",
                     )
                 ],
             )
@@ -990,13 +1032,13 @@ def test_policy_completion_converts_native_addr_projection_after_python_boundary
     module = parse_pyi_text(
         """
 @native_call([Addr(Arg(0))])
-def inspect(value: Const(Int32)) -> None: ...
+def inspect(value: Int32) -> None: ...
 """,
         module_name="native_projection_policy",
     )
     argument = module.functions[0].arguments[0]
 
-    assert argument.semantic_type.storage.kind == "value"
+    assert argument.semantic_type.storage is None
 
     complete_semantic_policies(module)
 

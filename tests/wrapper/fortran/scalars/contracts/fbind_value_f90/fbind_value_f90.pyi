@@ -8,7 +8,7 @@ def double_value(
 
 @native_call([Addr(Arg(0))])
 def plus_reference(
-    n: Const(Int32)
+    n: Int32
 ) -> Int32: ...
 
 def scale_real(

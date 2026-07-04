@@ -34,8 +34,14 @@ def test_remaining_array_contracts_are_validated_before_fortran_calls(
 
     readonly = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
     readonly.setflags(write=False)
-    assert module.sum_assumed_size(np.int32(4), readonly) == np.float64(10.0)
-    assert module.sum_in(readonly) == np.float64(10.0)
+    if pyi_parity_build_mode == "source":
+        assert module.sum_assumed_size(np.int32(4), readonly) == np.float64(10.0)
+        assert module.sum_in(readonly) == np.float64(10.0)
+    else:
+        with pytest.raises(TypeError, match="writeable"):
+            module.sum_assumed_size(np.int32(4), readonly)
+        with pytest.raises(TypeError, match="writeable"):
+            module.sum_in(readonly)
 
     lower_bound_values = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
     assert module.scale_lower(np.int32(4), lower_bound_values) is None

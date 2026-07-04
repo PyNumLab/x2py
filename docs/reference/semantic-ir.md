@@ -439,14 +439,16 @@ addresses, caller/Python-backed storage addresses, raw addresses, packed array
 descriptors, and wrapper-owned native addresses. These decisions are semantic
 policy. `ir2ast.py`, bindings, bridges, and printers may create backend-local
 temporaries, but they must not infer or override a barrier action from datatype,
-`intent`, array category, aliasing, or memory-storage checks.
+source-declaration direction, array category, aliasing, or memory-storage checks.
 
 Parser-model conversion and codegen model traversal use the shared
-`x2py.visitor.ClassVisitor` dispatcher and one `_visit_<ClassName>` protocol.
-Barrier/action dispatch tables are allowed only for completed policy actions;
-the primitive ABI map is the other deliberate table because it maps datatype
-classes to semantic dtypes rather than traversing model nodes. These tables
-are separate from model-node dispatch.
+`x2py.visitor.ClassVisitor` dispatcher and one configured
+`<prefix>_<ClassName>` protocol. The default prefix is `_visit`; specialized
+visitors may choose clearer names such as `_print` or `_parse` while still using
+the same MRO dispatcher. Barrier/action dispatch tables are allowed only for
+completed policy actions; the primitive ABI map is the other deliberate table
+because it maps datatype classes to semantic dtypes rather than traversing model
+nodes. These tables are separate from model-node dispatch.
 
 ### Round Trips And Provenance
 
@@ -502,8 +504,9 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 Future C conversion should use the same notation documented by the semantic
 `.pyi` format reference: by-value scalars as bare types, unrefined pointers as
-`Addr(T)` or `Addr(Const(T))`, and array notation only when a real array storage
-contract is known.
+`Addr(T)`, and array notation only when a real array storage contract is known.
+C `const` qualifiers remain source provenance and policy inputs; semantic
+`.pyi` still uses the same boundary spelling as generated Fortran contracts.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -573,9 +576,8 @@ X2PY_C_DOCS_END -->
    direct C return, or `None` for native `void`.
 5. A C pointer parameter is never silently represented by a plain immutable
    Python scalar. The caller supplies pointer-backed storage.
-6. A bare numeric pointer uses `Addr(T)` for a raw writable address and
-   `Addr(Const(T))` for a raw read-only address. For an API known to use that
-   pointer as scalar storage, use `T[()]` so callers pass rank-zero NumPy
+6. A bare numeric pointer uses `Addr(T)` for a raw address. For an API known
+   to use that pointer as scalar storage, use `T[()]` so callers pass rank-zero NumPy
    storage. Numeric pointer parameters with a recorded array shape contract use
    `T[dimension-specs]` or `T[...]`. All these one-level storage forms lower to
    one native pointer; C does not carry rank, shape or stride metadata in an
@@ -600,8 +602,9 @@ X2PY_C_DOCS_END -->
    `Float64[:, ::]` or `Float64[:, 0:n:]`. It is a direct
    interface when any native extent or stride values remain visible arguments;
    the exact interface must not generate them.
-9. `Const(...)` is the canonical spelling for a read-only C pointee/storage
-   contract.
+9. C `const` does not introduce a second semantic type spelling. A public
+   `.pyi` contract uses the same Python boundary shape, and source constness is
+   retained only as provenance or explicit policy metadata where needed.
 10. Pointer graphs such as `T **` and deeper are not inferred from NumPy
     arrays. They are represented directly as `Addr[n](T)` and require the
     caller to supply a compatible low-level native pointer object.
@@ -703,16 +706,11 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | Semantic annotation | Python caller supplies | Native parameter |
 | &#45;&#45;- | &#45;&#45;- | &#45;&#45;- |
-| `T[()]` | writable rank-zero NumPy scalar storage | `T *` |
-| `Const(T[()])` | read-only rank-zero NumPy scalar storage | `const T *` |
-| `Addr(T)` | raw address to compatible writable storage, for example `array.ctypes.data` | `T *` |
-| `Addr(Const(T))` | raw address to compatible read-only storage, for example `array.ctypes.data` | `const T *` |
-| `Int[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `int *` |
-| `Const(Int[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const int *` |
-| `Float64[:]` | writable contiguous rank-one NumPy array; C/F order is equivalent | `double *` |
-| `Const(Float64[:])` | read-only contiguous rank-one NumPy array; C/F order is equivalent | `const double *` |
-| `Float64[n]` | writable one-dimensional array whose size is validated against visible argument or semantic constant `n` | `double *` |
-| `Const(Float64[n])` | read-only one-dimensional array whose size is validated against visible argument or semantic constant `n` | `const double *` |
+| `T[()]` | rank-zero NumPy scalar storage | `T *` or `const T *` |
+| `Addr(T)` | raw address to compatible storage, for example `array.ctypes.data` | `T *` or `const T *` |
+| `Int[:]` | contiguous rank-one NumPy array; C/F order is equivalent | `int *` or `const int *` |
+| `Float64[:]` | contiguous rank-one NumPy array; C/F order is equivalent | `double *` or `const double *` |
+| `Float64[n]` | one-dimensional array whose size is validated against visible argument or semantic constant `n` | `double *` or `const double *` |
 | `Float64[0:n]` | writable one-dimensional array with explicit half-open range `0:n` | `double *` |
 | `Float64[:, :]` | writable rank-two C-contiguous NumPy array | `double *` |
 | `Float64[3, 4]` | writable C-contiguous NumPy array with exact shape `(3, 4)` | `double *` |
@@ -726,7 +724,7 @@ X2PY_C_DOCS_END -->
 selector restricts that set: `Float64[...][1:4]` accepts ranks 1 through 3
 because the stop value is exclusive, while `Float64[...][1, 2, 5]` accepts
 only ranks 1, 2, and 5. The same forms apply to other numeric element types
-and inside `Const(...)`.
+and inside shape expressions.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -739,8 +737,8 @@ forms with a lower bound or step.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-`Addr(T)` and `Addr(Const(T))` preserve an unrefined one-level C pointer as a
-raw address. For a known primitive scalar-storage API, use `T[()]` so the Python
+`Addr(T)` preserves an unrefined one-level C pointer as a raw address. For a
+known primitive scalar-storage API, use `T[()]` so the Python
 caller supplies a rank-zero NumPy array. `T[dimension-specs]` and `T[...]`
 with an optional rank selector are NumPy-backed array-pointer spellings once
 an array contract is known. A shape-bearing array annotation already
@@ -829,10 +827,8 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | Semantic annotation | Native parameter |
 | &#45;&#45;- | &#45;&#45;- |
-| `Addr(T)` | `T *`; writable unrefined one-level pointer storage |
-| `Addr(Const(T))` | `const T *`; read-only unrefined one-level pointer storage |
+| `Addr(T)` | `T *` or `const T *`; unrefined one-level pointer storage |
 | `Addr[2](T)` | `T **` direct low-level pointer object |
-| `Addr[2](Const(T))` | `const T **` direct low-level pointer object |
 | `Addr[n](T)` | `T` followed by exactly `n` native pointer layers, `n >= 2` |
 X2PY_C_DOCS_END -->
 
@@ -875,7 +871,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 ```python
 def increment(value: Int[()]) -> None: ...
-def read_count(value: Const(Int[()])) -> None: ...
+def read_count(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -915,7 +911,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 ```python
 def negate(n: Int, values: Float64[n]) -> None: ...
-def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
+def sum_values(n: SizeT, values: Float64[n]) -> Float64: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1055,7 +1051,7 @@ X2PY_C_DOCS_END -->
 ```python
 def process_bounded_step(n: Int, m: Int, values: Float64[:, 0:n:m]) -> None: ...
 def process_columns(
-    values: Const(Float64[:, ::]),
+    values: Float64[:, ::],
     columns: SizeT,
     stride_bytes: SizeT,
 ) -> None: ...
@@ -1387,9 +1383,9 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 1. Parse scalar annotations and direct `None`/scalar return annotations.
-2. Parse unrefined one-level pointer forms `Addr(T)` and `Addr(Const(T))`, and
-   accept raw address values; known scalar-storage uses should support `T[()]`.
-3. Parse numeric array storage forms: `T[:]`, `Const(T[:])`, `T[:, :]`,
+2. Parse unrefined one-level pointer forms `Addr(T)` and accept raw address
+   values; known scalar-storage uses should support `T[()]`.
+3. Parse numeric array storage forms: `T[:]`, `T[:, :]`,
    fixed or symbolic extents such as `T[3, 4]` and `T[n]`, explicit dependent
    ranges or steps such as `T[0:n]` and `T[:, 0:n:m]`, and rank-polymorphic
    forms such as `T[...]`, `T[...][1:4]`, and `T[...][1, 2, 5]`.
@@ -1475,7 +1471,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def read_count(value: Const(Int[()])) -> None: ...
+def read_count(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1496,7 +1492,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-def sum_values(n: SizeT, values: Const(Float64[n])) -> Float64: ...
+def sum_values(n: SizeT, values: Float64[n]) -> Float64: ...
 ```
 X2PY_C_DOCS_END -->
 
@@ -1676,11 +1672,11 @@ def get_count() -> Int: ...
 
 # C: double sum_values(size_t n, const double *values);
 @native_call([As[SizeT](Arg(0).shape[0]), Arg(0)])
-def sum_values(values: Const(Float64[:])) -> Float64: ...
+def sum_values(values: Float64[:]) -> Float64: ...
 
 # C: void process_columns(const double *values, size_t n, ptrdiff_t stride_bytes);
 @native_call([Arg(0), Arg(0).shape[1], Arg(0).strides[1]])
-def process_columns(values: Const(Float64[:, ::])) -> None: ...
+def process_columns(values: Float64[:, ::]) -> None: ...
 
 # C: void get_values(int n, double *out);
 @native_call([Arg(0), Return(0)])

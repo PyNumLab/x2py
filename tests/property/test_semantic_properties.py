@@ -113,7 +113,7 @@ def canonical_semantic_types(draw):
             constraints=constraints,
             ownership=OwnershipPolicy(),
             storage=storage,
-        ), "in"
+        )
 
     if storage_kind == "reference":
         storage = SemanticStorageContract(
@@ -128,7 +128,7 @@ def canonical_semantic_types(draw):
             constraints=constraints,
             ownership=ownership,
             storage=storage,
-        ), "in" if read_only else "inout"
+        )
 
     shape = [str(bound) for bound in draw(st.lists(st.integers(min_value=1, max_value=32), min_size=1, max_size=3))]
     order = draw(st.sampled_from(["default", "ORDER_F", "ORDER_ANY"]))
@@ -157,7 +157,7 @@ def canonical_semantic_types(draw):
         constraints=constraints,
         ownership=ownership,
         storage=storage,
-    ), "in" if read_only else "inout"
+    )
 
 
 @pytest.mark.property
@@ -330,8 +330,7 @@ def test_generated_pyi_synthetic_imports_are_stably_sorted(type_stems):
 @given(st.lists(canonical_semantic_types(), max_size=5))
 def test_generated_semantic_ir_round_trips_through_pyi(arguments):
     semantic_arguments = [
-        SemanticArgument(f"value_{index}", semantic_type, intent=intent)
-        for index, (semantic_type, intent) in enumerate(arguments)
+        SemanticArgument(f"value_{index}", semantic_type) for index, semantic_type in enumerate(arguments)
     ]
     module = SemanticModule(
         name="generated",
@@ -346,7 +345,6 @@ def test_generated_semantic_ir_round_trips_through_pyi(arguments):
                         native_name=argument.name,
                         native_position=index,
                         python_position=index,
-                        intent=argument.intent,
                     )
                     for index, argument in enumerate(semantic_arguments)
                 ],

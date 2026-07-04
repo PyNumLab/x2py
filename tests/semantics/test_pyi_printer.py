@@ -21,6 +21,7 @@ from x2py.codegen.printers.pyi_printer import (
     PyiPrinter,
 )
 from x2py.semantics.models import (
+    CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
@@ -98,9 +99,9 @@ end module
     assert "def add(" in code
 
     assert "@native_call([Addr(Arg(0)), Addr(Arg(1)), Return('c', 0)])" in code
-    assert "a: Const(Float64)" in code
-    assert "b: Const(Float64)" in code
-    assert "c: Annotated[Addr(Float64), Intent('out')]" not in code
+    assert "a: Float64" in code
+    assert "b: Float64" in code
+    assert "c: Addr(Float64)" not in code
     assert 'Returns["c"' not in code
     assert ") -> Float64: ..." in code
 
@@ -397,11 +398,11 @@ end module
 
     code = generate_pyi(source)
 
-    assert "A: Annotated[Const(Float64[::, ::]), ORDER_F" in code
+    assert "A: Annotated[Float64[::, ::], ORDER_F" in code
     assert "Shape" not in code
-    assert "x: Const(Float64[::])" in code
+    assert "x: Float64[::]" in code
     assert "y: Float64[::]" in code
-    assert "y: Annotated[Float64[::], Intent('out')]" not in code
+    assert "Annotated[Float64[::]" not in code
     assert 'Returns["y", Float64[::]]' in code
 
 
@@ -602,7 +603,7 @@ end module
 
     code = generate_pyi(source)
 
-    assert "A: Annotated[Const(Float64[10, 20]), ORDER_F]" in code
+    assert "A: Annotated[Float64[10, 20], ORDER_F]" in code
 
 
 # ============================================================
@@ -810,9 +811,9 @@ end module
     assert "K: Annotated[Float64[::, ::], ORDER_F" in code
     assert 'Returns["K", Annotated[Float64[::, ::], ORDER_F]]' in code
 
-    assert "coords: Annotated[Const(Float64[::, ::]), ORDER_F" in code
+    assert "coords: Annotated[Float64[::, ::], ORDER_F" in code
 
-    assert "connectivity: Annotated[Const(Int32[::, ::]), ORDER_F" in code
+    assert "connectivity: Annotated[Int32[::, ::], ORDER_F" in code
 
     # --------------------------------------------------------
     # Return type
@@ -877,7 +878,7 @@ end module
 
     code = PyiPrinter().emit(smod)
 
-    assert "c: Annotated[Addr(Float64), Intent('out')]" not in code
+    assert "c: Annotated[Addr(Float64)" not in code
     assert 'Returns["c"' not in code
     assert ") -> Float64: ..." in code
 
@@ -948,7 +949,7 @@ end module
 
     assert "def touch(" in code
     assert "@native_call([Addr(Arg(0))])" in code
-    assert "x: Annotated[Int32, Intent('inout')]" in code
+    assert "x: Int32" in code
 
 
 def test_printer_emit_visitor_dispatches_semantic_models():
@@ -1089,7 +1090,7 @@ end module vector_mod
     assert "class vector:" in code
     assert "values: Annotated[Float64[:], Allocatable]" in code
     assert "    @native_call([Pass(), Addr(Arg(0))])" in code
-    assert "    def scale(\n        self,\n        alpha: Const(Float64)\n    ) -> None: ..." in code
+    assert "    def scale(\n        self,\n        alpha: Float64\n    ) -> None: ..." in code
     assert "        self: vector" not in code
 
 
@@ -1146,11 +1147,11 @@ end module pass_mod
 
     code = generate_pyi(source)
 
-    assert "    def shift(\n        self,\n        dx: Const(Float64),\n        dy: Const(Float64)" in code
+    assert "    def shift(\n        self,\n        dx: Float64,\n        dy: Float64" in code
     assert "        owner: Addr(vector)" not in code
     assert "@native_call([Addr(Arg(0)), Pass(), Addr(Arg(1))])" in code
     assert '    @staticmethod\n    @bind("make_vector")' in code
-    assert "value: Const(Float64)" in code
+    assert "value: Float64" in code
     assert "-> vector: ..." in code
 
 
@@ -1270,10 +1271,10 @@ def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_
     assert "def __radd__(" in code
     assert '@overload("assign_vector_real")' in code
     assert "def assign(" in code
-    assert "left: Annotated[Addr(vector), Intent('out')]" not in code
+    assert "left: Annotated[Addr(vector)" not in code
     assert "left: vector" in code
     assert '-> Returns["left", vector]: ...' in code
-    assert "right: Const(Float64)\n    ) -> vector: ..." in code
+    assert "right: Float64\n    ) -> vector: ..." in code
     assert '@overload("dot_vectors")' in code
     assert "def operator_dot(" in code
     assert '@overload("equivalent_vector_offset", generic="operator(.eqv.)")' in code
@@ -1334,10 +1335,10 @@ def test_bound_constructor_pyi_generates_single_initializer_without_keyword_defa
         """
 class state:
     @private
-    def init_state(self, seed: Addr(Const(Int32))) -> None: ...
+    def init_state(self, seed: Addr(Int32)) -> None: ...
 
     @bind("init_state")
-    def __init__(self, seed: Addr(Const(Int32))) -> None: ...
+    def __init__(self, seed: Addr(Int32)) -> None: ...
 
     id: Int32
 """,
@@ -1452,7 +1453,11 @@ def test_emit_module_with_projection_helpers_and_private_function():
                 ],
                 projection=[
                     ProjectionMapping(native_position=0, python_position=0),
-                    ProjectionMapping(native_position=1, value_kind="const", value=1),
+                    ProjectionMapping(
+                        native_position=1,
+                        value_kind="literal",
+                        value={"type": "Int32", "value": 1},
+                    ),
                     ProjectionMapping(
                         native_position=2,
                         value_kind="len",
@@ -1476,7 +1481,7 @@ def test_emit_module_with_projection_helpers_and_private_function():
 
     code = emit_module(module)
 
-    assert "@native_call([Arg(0), Const(1), Len(Arg(0)), Arg(0).shape[0], IsPresent(Arg(1)), Work('tmp')])" in code
+    assert "@native_call([Arg(0), Int32(1), Len(Arg(0)), Arg(0).shape[0], IsPresent(Arg(1)), Work('tmp')])" in code
 
 
 def test_emit_native_call_supports_return_and_work_value_references():
@@ -1529,11 +1534,6 @@ def serialized(x: Float64) -> Float64: ...
         "message": "message",
         "success": 0,
     }
-    assert [(arg.name, arg.intent) for arg in func.arguments] == [
-        ("x", "in"),
-        ("status", "out"),
-        ("message", "out"),
-    ]
     assert loaded.functions[1].metadata[RUNTIME_HOLD_GIL_METADATA] is True
 
     code = emit_module(loaded)
@@ -1724,9 +1724,9 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit(canonical_constant) == "answer: Final[Int32]"
     with pytest.raises(ValueError, match=r"Final\[\.\.\.\]"):
         printer.emit(canonical_constant.semantic_type)
-    assert printer.emit(readonly_value) == "Const(Int32)"
+    assert printer.emit(readonly_value) == "Int32"
     assert printer.emit(mutable_value) == "Int32"
-    assert printer.emit(deep_pointer) == "Addr[3](Const(Float64))"
+    assert printer.emit(deep_pointer) == "Addr[3](Float64)"
     assert printer.emit(double_pointer) == "Addr[2](Float64)"
     assert printer.emit(unspecified_storage) == "Int32"
     assert printer.emit(inferred_array) == "Float64[:, :]"
@@ -1738,6 +1738,98 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit(full_callback) == "Callable[[Int32, Float64], Float64]"
     assert printer.emit(any_callback) == "Callable[..., Float64]"
     assert printer.emit(SemanticType("Callable")) == "Callable"
+
+
+def test_printer_emits_callback_argument_abi_wrappers():
+    printer = PyiPrinter()
+    missing_reference = SemanticType(
+        "Float64",
+        storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
+    )
+    missing_array = SemanticType(
+        "Float64",
+        rank=1,
+        shape=[":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            mutable=True,
+            array=SemanticArrayContract(rank=1, shape=[":"]),
+        ),
+    )
+    input_reference = SemanticType(
+        "Int32",
+        storage=SemanticStorageContract(kind="reference", read_only=True, pointer_depth=1),
+    )
+    output_array = SemanticType(
+        "Float64",
+        rank=1,
+        shape=[":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            mutable=True,
+            array=SemanticArrayContract(rank=1, shape=[":"]),
+        ),
+    )
+    inout_array = SemanticType(
+        "Float64",
+        rank=1,
+        shape=[":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            mutable=True,
+            array=SemanticArrayContract(rank=1, shape=[":"]),
+        ),
+    )
+    callback_arguments = [
+        SemanticArgument(
+            "value",
+            SemanticType("Int32"),
+            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "read"},
+            origin=SemanticOrigin(metadata={"value": True}),
+        ),
+        SemanticArgument(
+            "missing",
+            missing_reference,
+            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "unspecified"},
+            origin=SemanticOrigin(metadata={"value": False}),
+        ),
+        SemanticArgument(
+            "missing_array",
+            missing_array,
+            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "unspecified"},
+            origin=SemanticOrigin(metadata={"value": False}),
+        ),
+        SemanticArgument(
+            "read",
+            input_reference,
+            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "read"},
+            origin=SemanticOrigin(metadata={"value": False}),
+        ),
+        SemanticArgument(
+            "write",
+            output_array,
+            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "write"},
+            origin=SemanticOrigin(metadata={"value": False}),
+        ),
+        SemanticArgument(
+            "readwrite",
+            inout_array,
+            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "readwrite"},
+            origin=SemanticOrigin(metadata={"value": False}),
+        ),
+    ]
+    callback = SemanticType(
+        "Callable",
+        metadata={
+            "arguments": [argument.semantic_type for argument in callback_arguments],
+            "callback_arguments": callback_arguments,
+            "return": SemanticType("None"),
+        },
+    )
+
+    assert printer.emit(callback) == (
+        "Callable[[Int32, PassByRef(Float64), Float64[:], In(Int32), Out(Float64[:]), InOut(Float64[:])], None]"
+    )
 
 
 def test_character_array_pyi_spelling_round_trips_fixed_and_deferred_lengths():
@@ -1776,7 +1868,6 @@ def test_printer_projection_return_helpers_and_keyword_data_members():
             "Float64",
             storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
         ),
-        intent="inout",
         optional=True,
     )
     plain = SemanticArgument("value", SemanticType("Int32"))
@@ -1853,8 +1944,8 @@ def wrapper() -> None: ..."""
 
 def test_native_call_sorts_synthetic_entries_before_native_positions():
     projection = [
-        ProjectionMapping(native_position=0, value_kind="const", value=1),
+        ProjectionMapping(native_position=0, value_kind="literal", value={"type": "Int32", "value": 1}),
         ProjectionMapping(result_position=0),
     ]
 
-    assert PyiPrinter()._native_call(projection) == "@native_call([Return(0), Const(1)])"
+    assert PyiPrinter()._native_call(projection) == "@native_call([Return(0), Int32(1)])"

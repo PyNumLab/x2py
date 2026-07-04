@@ -84,7 +84,7 @@ class accumulator:
     @native_call([Pass(), Addr(Arg(0))])
     def add(
         self,
-        value: Const(Int32)
+        value: Int32
     ) -> None: ...
 ```
 

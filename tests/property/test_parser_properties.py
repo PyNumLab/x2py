@@ -116,7 +116,6 @@ def test_generated_fortran_subroutines_preserve_argument_order(case):
     procedure = parsed.procedures[0]
     assert procedure.name == proc_name
     assert [arg.name for arg in procedure.arguments] == arg_names
-    assert all(arg.intent == "in" for arg in procedure.arguments)
 
 
 @pytest.mark.property

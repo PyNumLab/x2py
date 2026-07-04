@@ -51,6 +51,10 @@ addressing. Arrays, strings, rank-zero storage, wrapped objects, and raw-address
 arguments use `Arg(i)` because their default native representation is already
 address- or handle-based.
 
+Public syntax uses the Python boundary shape directly, keeps `Final[T]` for
+module constants, and requires hidden native literals inside `@native_call` to
+be typed expressions such as `Int32(1)` or `String[1]("N")`.
+
 `readiness.py`, `ir2ast.py`, bridges, and bindings consume those decisions
 instead of making local policy guesses. Bridge and binding dispatch is strict:
 an unregistered barrier action or object-kind/action pair is an error rather

@@ -119,7 +119,6 @@ def test_converter_visitor_and_compatibility_methods_cover_public_paths():
         name="x",
         base_type="real",
         kind="8",
-        intent="unknown",
         allocatable=True,
         pointer=True,
     )
@@ -149,7 +148,6 @@ def test_converter_visitor_and_compatibility_methods_cover_public_paths():
     assert converter.visit(proc).visibility == "public"
 
     semantic_arg = converter.visit(arg)
-    assert semantic_arg.intent == "inout"
     assert semantic_arg.semantic_type.storage.kind == "reference"
     assert semantic_arg.semantic_type.storage.mutable is True
     assert semantic_arg.visibility == "public"
@@ -174,7 +172,7 @@ def test_converter_visitor_and_compatibility_methods_cover_public_paths():
 def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
     converter = FortranToIRConverter()
     imported_type = FortranVariable(name="state", base_type="derived", kind="local_state")
-    imported_argument = FortranArgument(name="arg", base_type="derived", kind="local_state", intent="inout")
+    imported_argument = FortranArgument(name="arg", base_type="derived", kind="local_state")
     local_field = FortranArgument(name="nested", base_type="derived", kind="container_t")
     dtype = FortranDerivedType(
         name="container_t",
@@ -230,7 +228,6 @@ def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
     assert "external_type_ref" not in semantic_module.classes[0].fields[1].semantic_type.metadata
     assert semantic_class.fields[0].semantic_type.metadata["external_type_ref"] == external_ref
     assert isinstance(semantic_class.fields[0], SemanticField)
-    assert [field.intent for field in semantic_class.fields] == ["in", "in"]
     assert semantic_class.visibility == "private"
     assert asdict(semantic_class.origin) == {
         "source_language": "fortran",
@@ -247,7 +244,6 @@ def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
     assert semantic_proc.arguments[0].semantic_type.metadata["external_type_ref"] == external_ref
     assert semantic_module.variables[0].semantic_type.metadata["external_type_ref"] == external_ref
     assert isinstance(semantic_module.variables[0], SemanticVariable)
-    assert semantic_module.variables[0].intent == "in"
     assert [method.name for method in semantic_module.classes[0].methods] == ["step"]
     assert semantic_module.classes[0].methods[0].projection == semantic_proc.projection
     assert asdict(semantic_module.classes[0].methods[0].origin) == asdict(semantic_proc.origin)
@@ -269,7 +265,6 @@ def test_converter_preserves_imported_derived_contexts_through_dispatch_paths():
             "result_position": None,
             "value_kind": "",
             "value": None,
-            "intent": "inout",
         }
     ]
     assert asdict(semantic_module.origin) == {
@@ -674,7 +669,7 @@ end module invalid_assignment
     )
 
     assert blocker["items"][0]["generic"] == "assignment(=)"
-    assert "intent(out) or intent(inout)" in blocker["items"][0]["detail"]
+    assert "left-hand side must be writable" in blocker["items"][0]["detail"]
 
 
 def test_converter_reports_missing_defined_operator_target_as_readiness_blocker():
@@ -1578,15 +1573,14 @@ def test_semantic_model_helpers_cover_projection_and_canonical_edge_cases():
     ) == ["$0", ("$1",), {"extent": "$0 + $1"}]
 
     projection = [
-        ProjectionMapping(native_position=0, python_position=1, intent="inout"),
-        ProjectionMapping(native_position=1, python_position=None, intent="out"),
-        ProjectionMapping(native_position=2, result_position=0, intent="in"),
-        ProjectionMapping(native_position=3, python_position=None, intent="in"),
+        ProjectionMapping(native_position=0, python_position=1),
+        ProjectionMapping(native_position=1, python_position=None),
+        ProjectionMapping(native_position=2, result_position=0),
+        ProjectionMapping(native_position=3, python_position=None),
         ProjectionMapping(
             native_position=4,
             value_kind="shape",
             value={"value": ["n", ("m",)], "dim": {"extent": "n + m"}},
-            intent="in",
         ),
     ]
 
@@ -1632,12 +1626,9 @@ end module
     c = func.arguments[2]
 
     assert a.name == "a"
-    assert a.intent == "in"
 
     assert a.semantic_type.name == "Float64"
     assert a.semantic_type.rank == 0
-
-    assert c.intent == "out"
 
     assert c.semantic_type.ownership.mutable is True
 
@@ -1782,7 +1773,6 @@ end module contract_mod
         "pointer": True,
         "target": False,
         "contiguous": False,
-        "intent": "in",
         "optional": False,
         "value": False,
         "association": "runtime",
@@ -1800,7 +1790,6 @@ def test_fortran_native_storage_contracts_preserve_exact_bounds_and_member_flags
         kind="8",
         rank=2,
         shape=["0:n - 1", "*"],
-        intent="inout",
     )
     matrix.contiguous = True
     member = FortranArgument(
@@ -1823,12 +1812,6 @@ def test_fortran_native_storage_contracts_preserve_exact_bounds_and_member_flags
         as_data_member=True,
     )
     mixed_bounds = converter.visit(FortranVariable(name="mixed", base_type="real", rank=3, shape=["3", "1:n", "0:n"]))
-    spaced_intent = converter.visit(FortranArgument(name="spaced", base_type="integer", intent="in out"))
-    out_member = converter.visit(
-        FortranVariable(name="out_value", base_type="integer"),
-        as_data_member=True,
-        intent="out",
-    )
 
     assert asdict(matrix_type.storage) == {
         "kind": "array",
@@ -1868,7 +1851,6 @@ def test_fortran_native_storage_contracts_preserve_exact_bounds_and_member_flags
         "metadata": {},
     }
     assert semantic_member.name == "items"
-    assert semantic_member.intent == "in"
     assert semantic_member.optional is True
     assert semantic_member.visibility == "private"
     assert semantic_member.semantic_type.storage.array.category == "deferred_shape"
@@ -1884,8 +1866,6 @@ def test_fortran_native_storage_contracts_preserve_exact_bounds_and_member_flags
     assert plain_member.origin.source_kind == "variable"
     assert mixed_bounds.storage.array.lower_bounds == [None, None, "0"]
     assert mixed_bounds.storage.array.upper_bounds == [None, "4", "4"]
-    assert spaced_intent.intent == "inout"
-    assert out_member.intent == "out"
 
 
 def test_explicit_bound_ranges_remain_shaped_storage_contracts():
@@ -1972,7 +1952,6 @@ end module
     x = func.arguments[0]
 
     assert array_contract(x.semantic_type).allocatable is True
-    assert x.intent == "out"
     assert func.projection == [
         ProjectionMapping(
             python_name="x",
@@ -1980,7 +1959,6 @@ end module
             native_position=0,
             python_position=None,
             result_position=0,
-            intent="out",
         )
     ]
 
@@ -2254,8 +2232,6 @@ end module
 
     K = next(arg for arg in assemble.arguments if arg.name == "K")
 
-    assert K.intent == "out"
-
     assert K.semantic_type.rank == 2
 
     assert array_contract(K.semantic_type).order == "ORDER_F"
@@ -2322,7 +2298,6 @@ end module m
     semantic_dtype = get_class(semantic_module, "thing")
 
     assert semantic_var.semantic_type.name == "Int32"
-    assert semantic_arg.intent == "inout"
     assert array_contract(semantic_arg.semantic_type).allocatable is True
     assert semantic_proc.projection[0].python_position == 0
     assert semantic_dtype.base_classes == ["base"]
@@ -2371,7 +2346,6 @@ end module chars
     assert mapping.python_position == 0
     assert mapping.native_position == 0
     assert mapping.result_position == 0
-    assert mapping.intent == "inout"
 
 
 def test_imported_derived_type_is_an_opaque_external_reference_by_default():
@@ -2474,18 +2448,18 @@ def test_semantic_function_projection_equality_and_placeholders():
         native_name="f",
         arguments=[
             SemanticArgument("x", SemanticType("Int32", dtype="Int32")),
-            SemanticArgument("y", SemanticType("Float64", dtype="Float64"), intent="out"),
+            SemanticArgument("y", SemanticType("Float64", dtype="Float64")),
         ],
-        projection=[ProjectionMapping(native_position=1, result_position=0, intent="out")],
+        projection=[ProjectionMapping(native_position=1, result_position=0)],
     )
     right = SemanticFunction(
         name="f",
         native_name="f",
         arguments=[
             SemanticArgument("a", SemanticType("Int32", dtype="Int32")),
-            SemanticArgument("b", SemanticType("Float64", dtype="Float64"), intent="out"),
+            SemanticArgument("b", SemanticType("Float64", dtype="Float64")),
         ],
-        projection=[ProjectionMapping(native_position=1, result_position=0, intent="out")],
+        projection=[ProjectionMapping(native_position=1, result_position=0)],
     )
 
     assert left == right
@@ -2497,17 +2471,30 @@ module callbacks
   type :: point_t
     real(8) :: x
   end type point_t
-  abstract interface
-    function transform_iface(count, values, point) result(output)
-      import :: point_t
-      integer, intent(in) :: count
-      real(8), intent(in) :: values(count)
-      type(point_t), intent(in) :: point
-      real(8) :: output(count)
-    end function transform_iface
-    subroutine notify_iface(value)
-      integer, intent(in) :: value
-    end subroutine notify_iface
+    abstract interface
+      function transform_iface(count, values, point) result(output)
+        import :: point_t
+        integer, intent(in) :: count
+        real(8), intent(in) :: values(count)
+        type(point_t), intent(in) :: point
+        real(8) :: output(count)
+      end function transform_iface
+      subroutine no_intent_iface(count, values)
+        integer :: count
+        real(8) :: values(count)
+      end subroutine no_intent_iface
+      subroutine value_iface(value, ref)
+        integer, value, intent(in) :: value
+        real(8) :: ref
+      end subroutine value_iface
+      subroutine notify_iface(value)
+        integer, intent(in) :: value
+      end subroutine notify_iface
+      subroutine string_iface(read_label, write_label, update_label)
+        character(len=8), intent(in) :: read_label
+        character(len=8), intent(out) :: write_label
+        character(len=8), intent(inout) :: update_label
+      end subroutine string_iface
   end interface
 contains
   subroutine abstract_case(callback)
@@ -2523,6 +2510,15 @@ contains
   subroutine notify_case(callback)
     procedure(notify_iface) :: callback
   end subroutine notify_case
+  subroutine no_intent_case(callback)
+    procedure(no_intent_iface) :: callback
+  end subroutine no_intent_case
+  subroutine value_case(callback)
+    procedure(value_iface) :: callback
+  end subroutine value_case
+  subroutine string_case(callback)
+    procedure(string_iface) :: callback
+  end subroutine string_case
 end module callbacks
 """
     module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
@@ -2545,6 +2541,10 @@ end module callbacks
     assert abstract_callback.metadata["callback_lifetime"] == "call"
     assert abstract_callback.metadata["callback_thread"] == "entering_thread"
     assert abstract_callback.metadata["callback_exception"] == "print_traceback_and_abort"
+    assert [
+        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
+        for argument in abstract_callback.metadata["callback_arguments"]
+    ] == ["read", "read", "read"]
 
     explicit_callback = get_function(module, "explicit_case").arguments[0].semantic_type
     assert explicit_callback.name == "Callable"
@@ -2554,9 +2554,36 @@ end module callbacks
     notify_callback = get_function(module, "notify_case").arguments[0].semantic_type
     assert notify_callback.metadata["return"].name == "None"
 
+    no_intent_callback = get_function(module, "no_intent_case").arguments[0].semantic_type
+    assert [
+        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
+        for argument in no_intent_callback.metadata["callback_arguments"]
+    ] == ["unspecified", "unspecified"]
+
+    value_callback = get_function(module, "value_case").arguments[0].semantic_type
+    assert [argument.name for argument in value_callback.metadata["callback_arguments"]] == ["value", "ref"]
+    assert [
+        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
+        for argument in value_callback.metadata["callback_arguments"]
+    ] == ["read", "unspecified"]
+    assert [argument.origin.metadata["value"] for argument in value_callback.metadata["callback_arguments"]] == [
+        True,
+        False,
+    ]
+
+    string_callback = get_function(module, "string_case").arguments[0].semantic_type
+    assert [
+        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
+        for argument in string_callback.metadata["callback_arguments"]
+    ] == ["read", "write", "readwrite"]
+
     emitted = emit_module(module)
     assert "FortranCallback" not in emitted
     assert "Callable[[" in emitted
+    assert "Callable[[In(Int32), In(Float64[count]), In(point_t)], Float64[count]]" in emitted
+    assert "Callable[[PassByRef(Int32), Float64[count]], None]" in emitted
+    assert "Callable[[Int32, PassByRef(Float64)], None]" in emitted
+    assert "Callable[[In(String[8]), Out(String[8][()]), InOut(String[8][()])], None]" in emitted
     assert native_contract_issues(parse_pyi_text(emitted, module_name=module.name)) == []
 
     project = parse_fortran_project(

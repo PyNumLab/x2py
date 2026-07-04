@@ -410,7 +410,12 @@ class BindCModule(Module):
     """
 
     __slots__ = ("_orig_mod", "_removed_functions", "_variable_wrappers")
-    _attribute_nodes = (*Module._attribute_nodes, "_orig_mod", "_variable_wrappers", "_removed_functions")
+    _attribute_nodes = (
+        *Module._attribute_nodes,
+        "_orig_mod",
+        "_variable_wrappers",
+        "_removed_functions",
+    )
 
     def __init__(
         self,

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
+    PYI_PROJECTED_OUTPUT_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     SemanticArgument,
@@ -388,14 +389,13 @@ class _SemanticReadinessChecker:
                     unit=unit,
                     unit_kind=unit_kind,
                 )
-            if self._is_unsupported_allocatable_output(arg.semantic_type, arg.intent):
+            if self._is_unsupported_allocatable_output(arg):
                 self._add_blocker(
                     "allocatable_scalar_replacement_unsupported",
                     "Allocatable scalar replacement needs explicit construction, ownership, and destruction policy before it can be wrapped safely.",
                     {
                         "owner": owner,
                         "item": arg.name,
-                        "intent": arg.intent,
                     },
                     unit=unit,
                     unit_kind=unit_kind,
@@ -407,7 +407,6 @@ class _SemanticReadinessChecker:
                     {
                         "owner": owner,
                         "item": arg.name,
-                        "intent": arg.intent,
                     },
                     unit=unit,
                     unit_kind=unit_kind,
@@ -732,12 +731,22 @@ class _SemanticReadinessChecker:
             )
 
     @classmethod
-    def _is_unsupported_allocatable_output(cls, semantic_type: SemanticType | None, intent: str) -> bool:
+    def _is_unsupported_allocatable_output(cls, argument: SemanticArgument) -> bool:
+        semantic_type = argument.semantic_type
         return bool(
             semantic_type is not None
             and semantic_type.rank == 0
             and semantic_type.metadata.get("fortran_allocatable")
-            and str(intent).lower() in {"out", "inout"}
+            and cls._argument_uses_writable_storage(argument)
+        )
+
+    @staticmethod
+    def _argument_uses_writable_storage(argument: SemanticArgument) -> bool:
+        storage = argument.semantic_type.storage
+        return bool(
+            argument.semantic_type.ownership.mutable
+            or (storage is not None and (storage.mutable or not storage.read_only))
+            or argument.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)
         )
 
     @classmethod
@@ -798,7 +807,7 @@ class _SemanticReadinessChecker:
         semantic_type = arg.semantic_type
         if semantic_type is None or semantic_type.rank != 0:
             return False
-        if str(arg.intent).lower() != "in":
+        if self._argument_uses_writable_storage(arg):
             return False
         if semantic_type.metadata.get("fortran_allocatable"):
             return False

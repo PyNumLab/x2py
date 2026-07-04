@@ -48,7 +48,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -73,12 +72,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             }
           ],
@@ -93,8 +90,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             }
           ],
           "metadata": {},
@@ -148,7 +144,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "unknown",
                     "optional": false,
                     "value": false
                   }
@@ -173,7 +168,6 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "unknown",
                   "optional": false,
                   "value": false
                 }
@@ -247,7 +241,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "unknown",
                     "optional": false,
                     "value": false
                   }
@@ -278,7 +271,6 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "unknown",
                   "optional": false,
                   "value": false
                 }

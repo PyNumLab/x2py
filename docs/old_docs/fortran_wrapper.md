@@ -1161,10 +1161,10 @@ end subroutine edit_name
 ```
 
 ```python
-original = "alpha"
+original = "alpha   "
 replacement = edit_name(original)
 
-assert original == "alpha"       # Python str is immutable
+assert original == "alpha   "    # Python str is immutable
 assert replacement.startswith("X")
 ```
 
@@ -1175,10 +1175,10 @@ other scalar output.
 ### Length, Encoding, And NUL Rules
 
 Python input uses CPython's UTF-8 bytes at the ABI boundary. For a fixed-length
-dummy, longer input is truncated to the declared byte length and shorter input
-is blank-padded. The returned Python value reflects the complete post-call
-Fortran buffer, including trailing blanks. An assumed-length `intent(inout)`
-dummy uses the encoded input byte length.
+dummy, the encoded input length must exactly match the declared byte length;
+x2py does not pad or truncate the public value. The returned Python value
+reflects the complete post-call Fortran buffer, including trailing blanks. An
+assumed-length `intent(inout)` dummy uses the encoded input byte length.
 
 ```fortran
 character(len=8) function label()

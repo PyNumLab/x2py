@@ -29,8 +29,8 @@ The generated contract for the scale function is:
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
-    value: Const(Float64),
-    factor: Const(Float64),
+    value: Float64,
+    factor: Float64,
 ) -> Float64: ...
 ```
 
@@ -76,7 +76,7 @@ Generated contract:
 ```python
 @native_call([Addr(Arg(0))])
 def squares(
-    size: Const(Int32)
+    size: Int32
 ) -> Float64[size]: ...
 ```
 
@@ -137,7 +137,7 @@ Inspecting `function_outputs.f90` prints this function contract:
 ```python
 @native_call([Arg(0), Return('count', 1)])
 def sum_with_count(
-    values: Const(Float64[::])
+    values: Float64[::]
 ) -> tuple[Float64, Int32]: ...
 ```
 

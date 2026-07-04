@@ -16,6 +16,7 @@ from tests.wrapper.fortran._generated_contracts import (
 CONTRACT_ROOT = Path(__file__).parent / "contracts"
 CASES = (
     source_contract_case(CONTRACT_ROOT, "fcallback_array_f90.f90"),
+    source_contract_case(CONTRACT_ROOT, "fcallback_all_f90.f90"),
     source_contract_case(CONTRACT_ROOT, "fcallback_derived_f90.f90"),
     source_contract_case(CONTRACT_ROOT, "fcallback_scalar_f90.f90"),
 )

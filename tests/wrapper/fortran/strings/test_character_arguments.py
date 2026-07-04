@@ -30,7 +30,7 @@ def test_legacy_fortran_character_arguments_and_results(pyi_parity_build_mode: s
 
     if pyi_parity_build_mode == "source":
         bind_c_source = _normalized_fortran_source(tmp_path / "source_build" / "bind_c_fstrings_wrapper.f90")
-        assert "C_fixed = transfer(C_0001, C_fixed)" in bind_c_source
+        assert "C = transfer(C_0001, C)" in bind_c_source
         assert "C = transfer(C_0001, C) C_fixed = C" not in bind_c_source
         assert (
             "CHAR_RESULT_DEFAULT_ptr = transfer("
