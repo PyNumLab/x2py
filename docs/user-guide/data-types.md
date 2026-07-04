@@ -140,6 +140,7 @@ as two different completed policies:
 | `T[()]` | validate rank-0 NumPy scalar storage | pass the caller-provided storage address |
 | `T[:]`, `T[n]`, `T[:, :]` | validate NumPy array storage | pass the packed array descriptor/data contract |
 | `String[n]` | read a Python `str` | pass x2py's call-local fixed-width character storage |
+| `String[n][:]`, `String[:][:]` | validate NumPy bytes array storage | pass the character array descriptor/data contract |
 | `Addr(T)` or `Addr(T[n])` | read a raw address value | pass that raw address unchanged |
 
 Those barrier actions are completed after semantic IR is loaded and before
@@ -177,7 +178,18 @@ silently cast, byte-swap, realign, or repair an incompatible array. See
 
 Scalar Fortran character values use Python `str`. `String[8]` records fixed
 native length eight; plain `String` records assumed, deferred, or otherwise
-non-fixed scalar length. The length is a character length, not an array shape.
+non-fixed scalar length. The first `String[...]` subscription is character
+length, not array shape. Bare `String[:]` is invalid; write `String` for a
+scalar non-fixed string or add a second shape axis for an array.
+
+| Contract | Meaning |
+| --- | --- |
+| `String` | scalar string with unknown, assumed, deferred, or otherwise non-fixed length |
+| `String[8]` | scalar fixed-length string with length 8 |
+| `String[:][:]` | rank-one array of strings whose element length is not fixed in the public contract |
+| `String[8][:]` | rank-one array of fixed-length strings |
+| `String[8][()]` | mutable scalar fixed-length string storage |
+
 For `String[8]`, the encoded Python string length must be exactly eight; pass
 `"aa      "` when the native argument is an eight-character value.
 
@@ -198,12 +210,14 @@ The matching `.pyi` annotation is `String[8][()]`. Native mutation writes back
 into the NumPy array, and Python reads the scalar storage as bytes, for example
 `label[()]`.
 
-Character arrays use fixed-width NumPy bytes dtypes. For
-`character(len=5) :: names(:)`, Python passes and receives arrays with
-`dtype="S5"`. For an allocatable deferred-length character array, the runtime
-allocation length becomes the returned dtype itemsize. x2py treats these arrays
-as raw fixed-width bytes storage; Python Unicode arrays, object arrays, and
-mutable scalar deferred-length character storage remain blocked.
+Character arrays use fixed-width NumPy bytes dtypes. `String[8][:]` is a rank-one
+array of eight-character elements. `String[:][:]` is a rank-one array whose
+element length is not fixed in the public contract. For `character(len=5) ::
+names(:)`, Python passes and receives arrays with `dtype="S5"`. For an
+allocatable deferred-length character array, the runtime allocation length
+becomes the returned dtype itemsize. x2py treats these arrays as raw fixed-width
+bytes storage; Python Unicode arrays, object arrays, and mutable scalar
+deferred-length character storage remain blocked.
 
 ## Derived Types
 

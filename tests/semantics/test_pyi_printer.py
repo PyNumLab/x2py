@@ -1848,7 +1848,7 @@ end module char_array_mod
     emitted = emit_module(semantic_module)
 
     assert "String[4][::]" in emitted
-    assert "Annotated[String[:], Allocatable]" in emitted
+    assert "Annotated[String[:][:], Allocatable]" in emitted
 
     parsed = parse_pyi_text(emitted, module_name="char_array_mod")
     use_labels = next(func for func in parsed.functions if func.name == "use_labels")

@@ -293,13 +293,15 @@ class PyiPrinter(ClassVisitor):
         return base_type
 
     @staticmethod
-    def _semantic_base_type(semantic_type: SemanticType) -> str:
+    def _semantic_base_type(semantic_type: SemanticType, *, include_deferred_length: bool = False) -> str:
         """Return the semantic dtype including fixed character length."""
         if semantic_type.name != "String":
             return semantic_type.name
         length = semantic_type.metadata.get("fortran_character_length")
-        if length is None or str(length) in {"", ":", "*"}:
+        if length is None or str(length) in {"", "*"}:
             return "String"
+        if str(length) == ":":
+            return "String[:]" if include_deferred_length else "String"
         return f"String[{length}]"
 
     def _is_normal_storage_address(self, semantic_type: SemanticType) -> bool:
@@ -320,7 +322,7 @@ class PyiPrinter(ClassVisitor):
 
     def _address_target_type(self, semantic_type: SemanticType) -> str:
         """Return the pointee type spelling for a raw address contract."""
-        base_type = self._semantic_base_type(semantic_type)
+        base_type = self._semantic_base_type(semantic_type, include_deferred_length=semantic_type.rank > 0)
         if semantic_type.rank <= 0:
             return base_type
         dimensions = semantic_type.shape
@@ -335,9 +337,9 @@ class PyiPrinter(ClassVisitor):
         storage = semantic_type.storage
         array = storage.array if storage is not None else None
         if array is not None and array.category == PYI_SCALAR_STORAGE_CATEGORY:
-            return f"{self._semantic_base_type(semantic_type)}[()]"
+            return f"{self._semantic_base_type(semantic_type, include_deferred_length=True)}[()]"
         dimensions = self._array_dimensions(semantic_type, array)
-        base = f"{self._semantic_base_type(semantic_type)}[{', '.join(dimensions)}]"
+        base = f"{self._semantic_base_type(semantic_type, include_deferred_length=True)}[{', '.join(dimensions)}]"
 
         metadata = self._array_annotation_metadata(array)
         if metadata:

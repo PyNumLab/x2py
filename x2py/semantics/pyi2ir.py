@@ -1095,7 +1095,10 @@ class _PyiAstParser:
 
         if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
             if self._string_subscript_is_array_dimensions(node):
-                return self.array_type(node)
+                raise ValueError(
+                    "String[:] is ambiguous; use String for scalar non-fixed length, "
+                    "String[:][:] for an array of non-fixed strings, or String[n] for fixed length"
+                )
             return self._character_type(node)
 
         name = self.type_name(node)
@@ -1141,7 +1144,7 @@ class _PyiAstParser:
     def array_type(self, node: ast.Subscript) -> SemanticType:
         if isinstance(node.value, ast.Subscript):
             if self.matches_name(node.value.value, "String"):
-                semantic_type = self._character_type(node.value)
+                semantic_type = self._character_type(node.value, allow_deferred_length=True)
                 return self._array_type_from_dimensions(
                     semantic_type.name,
                     self.array_dimension_texts(node),
@@ -1299,14 +1302,22 @@ class _PyiAstParser:
             return None
         return "ORDER_C" if source_shape.index("*") == 0 else "ORDER_F"
 
-    def _character_type(self, node: ast.Subscript) -> SemanticType:
+    def _character_type(self, node: ast.Subscript, *, allow_deferred_length: bool = False) -> SemanticType:
         items = self.subscript_items(node)
-        if (
-            len(items) != 1
-            or isinstance(items[0], ast.Slice)
-            or (isinstance(items[0], ast.Constant) and items[0].value is Ellipsis)
-        ):
+        if len(items) != 1 or (isinstance(items[0], ast.Constant) and items[0].value is Ellipsis):
             raise ValueError("Fixed character types use String[length]; use String for non-fixed length")
+        if isinstance(items[0], ast.Slice):
+            length = self.dimension_text(items[0])
+            if allow_deferred_length and length == ":":
+                return SemanticType(
+                    name="String",
+                    dtype="String",
+                    metadata={"fortran_character_length": ":"},
+                )
+            raise ValueError(
+                "String[:] is ambiguous; use String for scalar non-fixed length, "
+                "String[:][:] for an array of non-fixed strings, or String[n] for fixed length"
+            )
         length = self.dimension_text(items[0])
         return SemanticType(
             name="String",

@@ -713,11 +713,21 @@ metadata.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-Fixed-size character storage uses `String[length]`, for example `String[8]`.
-Assumed, deferred, or otherwise non-fixed character length uses plain `String`.
-The subscription on `String` is a character length, not an array rank. Source
-kind names are already resolved into semantic dtypes, so generated contracts do
-not import `iso_c_binding`, `iso_fortran_env`, or their kind constants.
+Character annotations have two axes. The first `String[...]` subscription is
+the character length, and any second subscription is scalar-storage or array
+shape:
+
+- `String`: scalar string with assumed, deferred, or otherwise non-fixed length.
+- `String[8]`: scalar fixed-length string with length 8.
+- `String[:][:]`: rank-one array of non-fixed-length strings.
+- `String[8][:]`: rank-one array of fixed-length strings.
+- `String[8][()]`: mutable scalar fixed-length string storage.
+
+Bare `String[:]` is invalid because it omits the shape axis and is ambiguous:
+use `String` for a scalar non-fixed string, `String[:][:]` for an array of
+non-fixed strings, or `String[n]` for a scalar fixed-length string. Source kind
+names are already resolved into semantic dtypes, so generated contracts do not
+import `iso_c_binding`, `iso_fortran_env`, or their kind constants.
 X2PY_C_DOCS_END -->
 
 ## Python And Native Boundaries
@@ -742,6 +752,7 @@ arguments, or scalar by-address projection differs from the default lowering.
 | `Float64[()]` | rank-zero NumPy array with dtype `np.float64` | storage address |
 | `Float64[n]`, `Float64[:]`, `Float64[:, :]` | NumPy array storage | data address |
 | `String[n]` | Python `str` whose encoded length is exactly `n` | address of x2py's call-local fixed-width character storage |
+| `String[n][:]`, `String[:][:]` | NumPy bytes array storage | character array descriptor/data contract |
 | `String[n][()]` | rank-zero NumPy bytes array with dtype `S<n>` | fixed-width character storage copied back into the NumPy array when native code mutates it |
 | `Addr(Float64)`, `Addr(Float64[n])`, `Addr(String[n])` | integer raw address such as `array.ctypes.data` or a `ctypes` buffer address | that raw address |
 | `WrappedType` | generated wrapper instance | wrapped object's native handle/address |
@@ -776,8 +787,11 @@ update_storage(value)
 ```
 
 Array annotations such as `T[n]`, `T[:]`, and `T[:, :]` represent
-caller-provided NumPy storage. The native boundary is always the array data
-address; `@native_call([Addr(Arg(i))])` is redundant for these arguments.
+caller-provided NumPy storage. Character arrays use the same second-axis shape
+rule: `String[8][:]` is an array of fixed-length strings, while `String[:][:]`
+is an array whose element length is not fixed in the public contract. The native
+boundary is always the array data address; `@native_call([Addr(Arg(i))])` is
+redundant for these arguments.
 
 `String[n]` represents a Python `str` at the Python boundary. Its encoded byte
 length must be exactly `n`; x2py does not pad or truncate the public value. x2py

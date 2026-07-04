@@ -234,15 +234,15 @@ end module character_names
 ```
 
 The generated `.pyi` represents a fixed-length rank-one character array as
-`String[4][::]`. A deferred-length allocatable rank-one array uses
-`Annotated[String[:], Allocatable]`, so the element width can come from the
-native allocation at runtime:
+`String[4][::]`. A deferred-length allocatable rank-one array uses the two-axis
+spelling `Annotated[String[:][:], Allocatable]`, so the element width can come
+from the native allocation at runtime:
 
 ```python
 def replace_names(
-    names: Annotated[String[:], Allocatable]
+    names: Annotated[String[:][:], Allocatable]
 ) -> Returns[
-    "names", Annotated[String[:], Allocatable], Optional
+    "names", Annotated[String[:][:], Allocatable], Optional
 ]: ...
 ```
 
