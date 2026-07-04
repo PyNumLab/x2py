@@ -8,7 +8,7 @@ status: maintained
 
 # Verification
 
-Verify the Python environment, inspection path, and native build path
+Verify the Python environment, contract-generation path, and native build path
 separately. This makes a failure easier to route.
 
 ## 1. Verify The Installed Package
@@ -24,33 +24,31 @@ python3 -m x2py --help
 The first two commands prove that x2py and NumPy import from the selected
 interpreter. The third proves that the module entrypoint is installed.
 
-## 2. Verify The Inspection Path
+## 2. Verify The Contract Path
 
 Use the `scale.f90` input created in the
 [README Quick Start](../../README.md#quick-start).
 
-From the directory containing `scale.f90`, inspect readiness without
-compiling a wrapper:
+From the directory containing `scale.f90`, print the semantic `.pyi` contract
+without compiling a wrapper:
 
 ```bash
-python3 -m x2py scale.f90 --wrap-readiness
+python3 -m x2py scale.f90 --pyi
 ```
 
-The readiness output should look like:
+The generated declaration should look like:
 
-```text
-File: scale.f90
-  Source: fortran
-  Semantic modules: scale
-  Wrappable: yes
-  Public functions: 1
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
+```python
+@external
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
+def scale(
+    value: Float64,
+    factor: Float64
+) -> Float64: ...
 ```
 
 This verifies preprocessing, parsing, semantic lowering, type probing, and
-readiness. It does not compile or import an extension.
+contract printing. It does not compile or import an extension.
 
 ## 3. Verify The Native Toolchain
 
@@ -138,7 +136,7 @@ timings.
 | Failure | Next action |
 | --- | --- |
 | `import x2py` or `import numpy` fails | Recheck the active interpreter and [Installation Issues](../troubleshooting/installation-issues.md). |
-| `--help` works but readiness fails | Read the diagnostic and the [diagnostic code reference](../reference/diagnostic-codes.md). |
+| `--help` works but `.pyi` generation fails | Read the diagnostic and the [diagnostic code reference](../reference/diagnostic-codes.md). |
 | Compiler executable is missing | Use [Compiler Issues](../troubleshooting/compiler-issues.md). |
 | Native compilation or linking fails | Rebuild with `--verbose` and use [Build Issues](../troubleshooting/build-issues.md). |
 | Build succeeds but import or call fails | Use [Runtime Issues](../troubleshooting/runtime-issues.md). |

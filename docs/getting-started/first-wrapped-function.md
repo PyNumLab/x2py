@@ -108,5 +108,5 @@ successful import followed by a call failure goes to
 
 The linked `scale.f90` input is checked against the repository fixture by
 [`test_documentation_examples.py`](../../tests/tools/test_documentation_examples.py).
-The renamed extension and `7.5` runtime result are checked by
+The default extension name and `7.5` runtime result are checked by
 [`test_build_modes.py`](../../tests/wrapper/fortran/build_from_source/test_build_modes.py).

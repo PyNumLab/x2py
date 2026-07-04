@@ -117,8 +117,8 @@ and the printed header directories exist.
 | macOS | Not in the current wrapper CI matrix. Compiler discovery, extension suffixes, linker flags, and runtime library paths need platform validation. |
 | Windows | Not in the current wrapper CI matrix. The direct GNU/POSIX build assumptions and generated Makefile workflow are not established as supported. |
 
-Do not interpret successful parser or readiness commands as proof that the
-native wrapper toolchain works on an unverified platform.
+Do not interpret successful contract-generation or diagnostic commands as proof
+that the native wrapper toolchain works on an unverified platform.
 
 ## Evidence And Troubleshooting
 

@@ -28,9 +28,10 @@ Follow these pages in order:
 4. [Work with a Fortran module and its saved state](first-wrapped-module.md).
 5. [Use the normal edit, inspect, build, test, and rebuild loop](beginner-workflow.md).
 
-The [basic wrapper tutorial](../tutorials/basic-wrapper.md) combines inspection,
-semantic `.pyi` generation, readiness, compilation, and import into one longer
-walkthrough. Use the pages here when you need one step at a time.
+The [basic wrapper tutorial](../tutorials/basic-wrapper.md) combines semantic
+`.pyi` generation, wrapper compilation, import, and a few diagnostic commands
+into one longer walkthrough. Use the pages here when you need one step at a
+time.
 
 ## What You Will Build
 

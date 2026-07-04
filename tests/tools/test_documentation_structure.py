@@ -761,13 +761,23 @@ def test_beginner_workflow_reuses_scale_example_without_renaming_it() -> None:
     page = (DOCS_ROOT / "getting-started/beginner-workflow.md").read_text(encoding="utf-8")
     source_reference_index = page.index("[README Quick Start](../../README.md#quick-start)")
     layout_index = page.index("src/\n    scale.f90")
-    inspect_index = page.index("python3 -m x2py src/scale.f90 --wrap-readiness")
+    contract_index = page.index("python3 -m x2py src/scale.f90 --pyi")
     build_index = page.index("python3 -m x2py src/scale.f90 \\\n  --wrap \\\n  --out-dir build/scale")
     smoke_index = page.index("result = scale.scale(np.float64(3.0), np.float64(2.5))")
     advanced_index = page.index("## Advanced Next Step: Edit The Semantic Contract")
 
-    assert source_reference_index < layout_index < inspect_index < build_index < smoke_index < advanced_index
+    assert source_reference_index < layout_index < contract_index < build_index < smoke_index < advanced_index
     assert "scale_api" not in page
+
+
+def test_getting_started_pages_keep_advanced_stage_flags_out_of_beginner_path() -> None:
+    content = "\n".join(
+        _visible_documentation_source(DOCS_ROOT / relative_path) for relative_path in REQUIRED_GETTING_STARTED_PAGES
+    )
+
+    assert "--parse" not in content
+    assert "--semantics" not in content
+    assert "--wrap-readiness" not in content
 
 
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)

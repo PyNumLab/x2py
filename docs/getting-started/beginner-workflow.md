@@ -42,25 +42,28 @@ generated bridge, C binding, object, module, runtime-support, or shared-library
 files under `build/`; the next build can replace them.
 X2PY_C_DOCS_END -->
 
-## 2. Inspect Before Compiling
+## 2. Review The Contract Before Compiling
 
-Before building, inspect the same source through the normal stages:
+Before building, print the semantic `.pyi` contract for the same source:
 
 ```bash
-python3 -m x2py src/scale.f90 --parse
-python3 -m x2py src/scale.f90 --semantics
 python3 -m x2py src/scale.f90 --pyi
-python3 -m x2py src/scale.f90 --wrap-readiness
 ```
 
-Read the outputs in this order:
+The output should match the wrapper contract from the
+[First Wrapped Function](first-wrapped-function.md) page:
 
-- `--parse` confirms what x2py read from the source.
-- `--semantics` confirms the resolved native facts.
-- `--pyi` shows the wrapper contract that code generation will follow.
-- `--wrap-readiness` reports blockers before generated wrapper code exists.
+```python
+@external
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
+def scale(
+    value: Float64,
+    factor: Float64
+) -> Float64: ...
+```
 
-`Wrappable: yes` means no semantic blocker is known. It does not prove that the
+This confirms the Python-facing dtype contract and the native scalar-address
+projection that code generation will follow. It does not prove that the
 compiler, linker, native dependency set, or runtime environment is valid; the
 build and smoke test still need to run.
 
@@ -144,7 +147,6 @@ separately:
 
 ```bash
 python3 -m x2py src/scale.f90 --pyi --out contracts
-python3 -m x2py contracts/__init__.pyi --wrap-readiness
 ```
 
 Do not treat this as the beginner default. A runtime build from an edited `.pyi`
@@ -155,14 +157,12 @@ before using that path.
 
 ## Failure Routing
 
-1. If inspection fails, fix preprocessing, parsing, or semantic diagnostics.
-2. If readiness reports a blocker, check the feature matrix and generated
-   contract before attempting code generation.
-3. If compilation or linking fails, rebuild with `--verbose` and inspect
+1. If `.pyi` generation fails, fix preprocessing, parsing, or semantic diagnostics.
+2. If compilation or linking fails, rebuild with `--verbose` and inspect
    [Build Issues](../troubleshooting/build-issues.md).
-4. If import or runtime behavior fails, use
+3. If import or runtime behavior fails, use
    [Runtime Issues](../troubleshooting/runtime-issues.md).
-5. If a documented supported behavior fails, reproduce it with the focused
+4. If a documented supported behavior fails, reproduce it with the focused
    wrapper test linked by the feature matrix before escalating to full CI.
 
 Support boundaries are maintained in the
