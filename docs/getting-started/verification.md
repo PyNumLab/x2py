@@ -69,41 +69,29 @@ From the same directory, build `scale.f90` into a dedicated directory:
 
 ```bash
 python3 -m x2py scale.f90 \
-  --wrap \
-  --out-dir build/verify \
-  --json
+  --out-dir build/verify
 ```
 
-The JSON result must report:
+The command must create:
 
-- `compiled` as `true`;
-- `module_name` as `scale`;
-- an existing `shared_library` under `build/verify`; and
-- generated native bridge, object, runtime-support, and extension paths.
+- an importable `scale` extension under `build/verify`; and
+- generated native bridge, object, runtime-support, and extension files.
 
 <!-- X2PY_C_DOCS_START
-- generated bridge, C binding, object, and runtime-support paths.
+- generated bridge, C binding, object, and runtime-support files.
 X2PY_C_DOCS_END -->
 
-Import the extension through the Python API result so the platform-specific
-shared-library suffix does not need to be guessed:
+Import the extension from that build directory:
 
 ```python
-from importlib.util import module_from_spec, spec_from_file_location
+import sys
 
 import numpy as np
 
-from x2py import build_fortran_extension
+sys.path.insert(0, "build/verify")
+import scale
 
-build = build_fortran_extension(
-    "scale.f90",
-    output_dir="build/verify",
-)
-spec = spec_from_file_location(build.module_name, build.shared_library)
-extension = module_from_spec(spec)
-spec.loader.exec_module(extension)
-
-assert extension.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
+assert scale.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
 ```
 
 ## 4. Inspect Generated Files
@@ -127,9 +115,8 @@ print(build.output_dir)
 print(build.shared_library)
 ```
 
-For CLI builds, `--json` exposes the same fields. Add `--verbose` when a
-compiler or linker command fails; it prints the exact native commands and stage
-timings.
+For CLI builds, add `--verbose` when a compiler or linker command fails; it
+prints the exact native commands and stage timings.
 
 ## Escalation Path
 

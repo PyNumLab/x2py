@@ -53,9 +53,7 @@ From the directory containing `module_state.f90`:
 
 ```bash
 python3 -m x2py module_state.f90 \
-  --wrap \
-  --out-dir build/first-module \
-  --json
+  --out-dir build/first-module
 ```
 
 The source stem creates extension `module_state`. Its contained module is

@@ -25,9 +25,7 @@ From the directory containing `scale.f90`:
 
 ```bash
 python3 -m x2py scale.f90 \
-  --wrap \
-  --out-dir build/first-function \
-  --json
+  --out-dir build/first-function
 ```
 
 The extension is named after the source stem: `scale`. The standalone native

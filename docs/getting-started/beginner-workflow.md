@@ -71,16 +71,11 @@ build and smoke test still need to run.
 
 ```bash
 python3 -m x2py src/scale.f90 \
-  --wrap \
-  --out-dir build/scale \
-  --json
+  --out-dir build/scale
 ```
 
-Build output goes under `build/scale`, leaving `src/scale.f90` untouched. Keep
-the JSON result in build logs when debugging. It records the module name, output
-directory, shared-library path, generated files, and native build plan. Use
-`--verbose` instead of `--json` when you need exact compiler and linker
-commands.
+Build output goes under `build/scale`, leaving `src/scale.f90` untouched. Use
+`--verbose` when you need exact compiler and linker commands in build logs.
 
 ## 4. Run A Python Smoke Test
 
@@ -132,12 +127,12 @@ selected output directory first:
 
 ```bash
 rm -rf build/scale
-python3 -m x2py src/scale.f90 --wrap --out-dir build/scale --json
+python3 -m x2py src/scale.f90 --out-dir build/scale
 ```
 
-Use `--wrap --makefile` when you intentionally want inspectable commands and
-manual rebuild control. `--makefile` and `--verbose` are separate modes and
-cannot be combined.
+The advanced Makefile workflow is available when you intentionally want
+inspectable commands and manual rebuild control. Makefile generation and
+`--verbose` are separate modes and cannot be combined.
 
 ## Advanced Next Step: Edit The Semantic Contract
 
