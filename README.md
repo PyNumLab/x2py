@@ -266,15 +266,15 @@ File: scale.f90
     - function scale(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
 ```
 
-Generate its editable `.pyi` contract:
+Generate its editable `.pyi` contract package:
 
 ```bash
-python3 -m x2py scale.f90 --pyi
+python3 -m x2py scale.f90 --pyi --out contracts
 ```
 
+Expected contract (`contracts/__init__.pyi`):
+
 ```python
-File: scale.f90
-Root contract: scale/scale.pyi
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
@@ -300,16 +300,15 @@ File: scale.f90
   No semantic readiness blockers detected.
 ```
 
-Write a draft interface, edit it when source facts are not enough, then check
-the edited contract:
+Edit the draft interface when source facts are not enough, then check the
+edited contract:
 
 ```bash
-python3 -m x2py scale.f90 --pyi --out contracts
 python3 -m x2py contracts/__init__.pyi --wrap-readiness
 ```
 
-Expected result: the first command writes `contracts/__init__.pyi`; the
-second command reports the same `Wrappable: yes` readiness result shown above.
+Expected result: the command reports `Wrappable: yes` for
+`contracts/__init__.pyi`.
 
 <!-- X2PY_C_DOCS_START
 ### C

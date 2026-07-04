@@ -555,13 +555,13 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         "python3 -m x2py scale.f90 --out SCALE",
         default_source_build_tree_index,
     )
-    named_source_build_tree_index = quick_start.index(
+    source_build_tree_index = quick_start.index(
         ".\n  scale.f90\n  SCALE.so\n  __x2py__/",
         named_source_build_command_index,
     )
     explicit_source_build_command_index = quick_start.index(
         "python3 -m x2py scale.f90 \\\n  --out SCALE \\\n  --out-dir build/SCALE",
-        named_source_build_tree_index,
+        source_build_tree_index,
     )
     explicit_source_build_tree_index = quick_start.index("build/SCALE/", explicit_source_build_command_index)
     pyi_generation_command_index = quick_start.index(
@@ -589,7 +589,7 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
 
     assert source_index < fortran_block_index < source_build_command_index
     assert source_build_command_index < default_source_build_tree_index < named_source_build_command_index
-    assert named_source_build_command_index < named_source_build_tree_index < explicit_source_build_command_index
+    assert named_source_build_command_index < source_build_tree_index < explicit_source_build_command_index
     assert explicit_source_build_command_index < explicit_source_build_tree_index < pyi_generation_command_index
     assert pyi_generation_command_index < pyi_contract_tree_index < pyi_contract_body_index
     assert pyi_contract_body_index < pyi_build_command_index < native_source_argument_index < output_name_index

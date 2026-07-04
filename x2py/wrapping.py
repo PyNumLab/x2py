@@ -1069,12 +1069,19 @@ def _merge_wrapper_modules(modules: list[SemanticModule], *, name: str | None = 
 
 
 def _wrapper_codegen_module_name(codegen_ast, requested_name: str, *, explicit_output_name: bool) -> str:
-    if not explicit_output_name:
-        return str(codegen_ast.scope.get_python_name(codegen_ast.name))
+    if explicit_output_name:
+        module_name = requested_name
+    else:
+        module_name = codegen_ast.scope.naming_policy.reserve_public_name(
+            (),
+            requested_name,
+            category="module",
+            owner=requested_name,
+        )
 
-    codegen_ast._name = requested_name
-    codegen_ast.scope._original_symbol[requested_name] = requested_name
-    return requested_name
+    codegen_ast._name = module_name
+    codegen_ast.scope._original_symbol[module_name] = module_name
+    return str(module_name)
 
 
 def _wrapper_module_metadata(modules: list[SemanticModule]) -> dict[str, object]:

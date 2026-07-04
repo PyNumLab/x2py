@@ -76,6 +76,33 @@ def test_fortran_wrapper_default_places_extension_beside_source(tmp_path: Path):
     assert not list(tmp_path.glob("*_wrapper.c"))
 
 
+def test_fortran_wrapper_default_module_name_does_not_collide_with_root_function(tmp_path: Path):
+    source = tmp_path / SCALE_SOURCE.name
+    shutil.copyfile(SCALE_SOURCE, source)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", str(source), "--json"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+
+    shared_library = Path(payload["shared_library"])
+    assert payload["module_name"] == "scale"
+    assert shared_library.parent == tmp_path
+    assert shared_library.name == "scale.so"
+    assert shared_library.exists()
+
+    sys.modules.pop("scale", None)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        module = importlib.import_module("scale")
+    finally:
+        sys.path.remove(str(tmp_path))
+    assert module.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
+
+
 def test_fortran_wrapper_out_names_importable_shared_library(tmp_path: Path):
     source = tmp_path / SCALE_SOURCE.name
     output_name = tmp_path / "SCALE"
