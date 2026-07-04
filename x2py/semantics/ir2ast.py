@@ -1261,7 +1261,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
                 )
             )
 
-    def _visit_SemanticModule(self, node):
+    def _prepare_semantic_module(self, node):
         if node.metadata.get(models.PYI_LOADED_METADATA) and not node.metadata.get(
             models.PYI_NATIVE_CONTRACT_PREPARED_METADATA
         ):
@@ -1280,10 +1280,45 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         for semantic_class in node.classes:
             custom_types.setdefault(semantic_class.name, _class_type(semantic_class))
             self.scope.insert_cls_construct(custom_types[semantic_class.name])
+        return custom_types, class_lookup, class_descendants, class_order
 
+    def _lower_module_child(self, item, *, custom_types, class_lookup, class_descendants, class_order):
+        return self._lower_child(
+            item,
+            custom_types=custom_types,
+            class_lookup=class_lookup,
+            class_descendants=class_descendants,
+            class_order=class_order,
+        )
+
+    def _record_module_conversion_metadata(
+        self,
+        item,
+        converted,
+        *,
+        python_exports,
+        native_imports,
+        overload_target_names=frozenset(),
+    ) -> None:
+        python_exports[id(converted)] = _semantic_python_exports(item, converted, self.scope)
+        native_import = _pyi_native_import(item, converted, overload_target_names=overload_target_names)
+        if native_import is not None:
+            native_imports.append(native_import)
+
+    def _lower_module_classes(
+        self,
+        node,
+        *,
+        custom_types,
+        class_lookup,
+        class_descendants,
+        class_order,
+        python_exports,
+        native_imports,
+    ):
         class_items = [item for item in node.classes if _is_public(item)]
         classes = [
-            self._lower_child(
+            self._lower_module_child(
                 item,
                 custom_types=custom_types,
                 class_lookup=class_lookup,
@@ -1292,18 +1327,32 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             )
             for item in class_items
         ]
+        for item, converted in zip(class_items, classes, strict=True):
+            self._record_module_conversion_metadata(
+                item,
+                converted,
+                python_exports=python_exports,
+                native_imports=native_imports,
+            )
+            native_imports.extend(_pyi_class_overload_native_imports(item, converted))
+        return classes
+
+    def _lower_module_functions(
+        self,
+        node,
+        *,
+        custom_types,
+        class_lookup,
+        class_descendants,
+        class_order,
+        python_exports,
+        native_imports,
+    ):
         funcs = []
         generated_overload_sets = []
-        python_exports = {}
-        native_imports = []
         overload_target_names = _pyi_overload_target_names(node)
-        for item, converted in zip(class_items, classes, strict=True):
-            python_exports[id(converted)] = _semantic_python_exports(item, converted, self.scope)
-            if native_import := _pyi_native_import(item, converted):
-                native_imports.append(native_import)
-            native_imports.extend(_pyi_class_overload_native_imports(item, converted))
         for item in node.functions:
-            converted = self._lower_child(
+            converted = self._lower_module_child(
                 item,
                 custom_types=custom_types,
                 class_lookup=class_lookup,
@@ -1314,11 +1363,28 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
                 generated_overload_sets.append(converted)
             else:
                 funcs.append(converted)
-            python_exports[id(converted)] = _semantic_python_exports(item, converted, self.scope)
-            if native_import := _pyi_native_import(item, converted, overload_target_names=overload_target_names):
-                native_imports.append(native_import)
+            self._record_module_conversion_metadata(
+                item,
+                converted,
+                python_exports=python_exports,
+                native_imports=native_imports,
+                overload_target_names=overload_target_names,
+            )
+        return funcs, generated_overload_sets
+
+    def _lower_module_overload_sets(
+        self,
+        node,
+        *,
+        custom_types,
+        class_lookup,
+        class_descendants,
+        class_order,
+        python_exports,
+        native_imports,
+    ):
         overload_sets = [
-            self._lower_child(
+            self._lower_module_child(
                 item,
                 custom_types=custom_types,
                 class_lookup=class_lookup,
@@ -1328,28 +1394,61 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             for item in node.overload_sets
         ]
         for item, converted in zip(node.overload_sets, overload_sets, strict=True):
-            python_exports[id(converted)] = _semantic_python_exports(item, converted, self.scope)
-            if native_import := _pyi_native_import(item, converted):
-                native_imports.append(native_import)
+            self._record_module_conversion_metadata(
+                item,
+                converted,
+                python_exports=python_exports,
+                native_imports=native_imports,
+            )
+        return overload_sets
+
+    def _lower_module_declarations(self, node, *, custom_types, python_exports, native_imports):
         declarations = [self._lower_child(item, custom_types=custom_types) for item in node.variables]
         for item, converted in zip(node.variables, declarations, strict=True):
-            python_exports[id(converted)] = _semantic_python_exports(item, converted, self.scope)
-            if native_import := _pyi_native_import(item, converted):
-                native_imports.append(native_import)
+            self._record_module_conversion_metadata(
+                item,
+                converted,
+                python_exports=python_exports,
+                native_imports=native_imports,
+            )
+        return declarations
+
+    @staticmethod
+    def _semantic_module_imports(node, native_imports):
+        if node.metadata.get(models.PYI_LOADED_METADATA):
+            return native_imports
+        return [Import(module_name, target=()) for module_name in node.metadata.get("wrapper_native_modules", ())]
+
+    def _visit_SemanticModule(self, node):
+        custom_types, class_lookup, class_descendants, class_order = self._prepare_semantic_module(node)
+        python_exports = {}
+        native_imports = []
+        lowering_context = {
+            "custom_types": custom_types,
+            "class_lookup": class_lookup,
+            "class_descendants": class_descendants,
+            "class_order": class_order,
+            "python_exports": python_exports,
+            "native_imports": native_imports,
+        }
+        classes = self._lower_module_classes(node, **lowering_context)
+        funcs, generated_overload_sets = self._lower_module_functions(node, **lowering_context)
+        overload_sets = self._lower_module_overload_sets(node, **lowering_context)
+        declarations = self._lower_module_declarations(
+            node,
+            custom_types=custom_types,
+            python_exports=python_exports,
+            native_imports=native_imports,
+        )
         name = self.scope.get_new_public_name(node.name, object_type="module", owner=node.name)
         explicit_exports = node.metadata.get(models.PYTHON_EXPORTS_PREPARED_METADATA)
-        imports = (
-            native_imports
-            if node.metadata.get(models.PYI_LOADED_METADATA)
-            else [Import(module_name, target=()) for module_name in node.metadata.get("wrapper_native_modules", ())]
-        )
         return Module(
             name,
             declarations,
             funcs,
             overload_sets=[*generated_overload_sets, *overload_sets],
             classes=classes,
-            imports=imports,
+            imports=self._semantic_module_imports(node, native_imports),
             scope=self.scope,
             python_exports=python_exports if explicit_exports else None,
         )
