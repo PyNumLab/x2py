@@ -354,6 +354,14 @@ def _assert_modern_string_examples(module):
     assert module.string_result_c_char() == "C-CHAR!!"
     assert module.string_result_deferred("dynamic") == "dynamic-deferred"
     assert module.string_result_deferred("café") == "café-deferred"
+    labels = np.array([b"first", b"second"], dtype="S8")
+    assert module.fixed_array_extent(labels) == 16
+    original_names = np.array([b"aa", b"bbb"], dtype="S3")
+    replacement_names = module.replace_names(original_names)
+    assert original_names.tolist() == [b"aa", b"bbb"]
+    assert replacement_names.dtype == np.dtype("S5")
+    assert replacement_names.tolist() == [b"red  ", b"blue "]
+    assert module.rewrite_storage("abcdefgh") == "Ybcdefg?"
 
 
 def _assert_modern_class_examples(module):
