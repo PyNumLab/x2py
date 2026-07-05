@@ -1138,7 +1138,7 @@ class OwnershipPolicyResolver:
             reason=(
                 "native module objects need object-level addressability before they can be borrowed"
                 if facts.is_custom
-                else "plain allocatable module arrays use snapshot_copy by default"
+                else "plain allocatable module arrays use read-only snapshot_copy by default"
             ),
         )
 
@@ -1154,11 +1154,11 @@ class OwnershipPolicyResolver:
         if context.is_argument and context.writes_argument:
             blocker = "pointer output and reassociation code generation is not implemented"
         elif facts.rank > 0 and (context.is_field or context.is_module_variable):
-            blocker = "pointer array field and module snapshot accessors are not implemented"
+            blocker = "pointer array field and module detached-copy accessors are not implemented"
         elif facts.rank == 0 and (context.is_field or context.is_module_variable):
             blocker = "scalar pointer field and module accessors are not implemented"
         elif context.is_result and decision.transfer is not TransferMode.SNAPSHOT_COPY:
-            blocker = "pointer results currently require snapshot_copy transfer"
+            blocker = "pointer results currently require Transfer('snapshot_copy') detached-copy policy"
         elif context.is_argument and not context.writes_argument and decision.transfer is not TransferMode.CALL_LOCAL:
             blocker = "pointer input arguments currently require call_local transfer"
         if blocker is None:

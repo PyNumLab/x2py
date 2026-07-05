@@ -494,13 +494,13 @@ be exposed as a borrowed view whose base keeps that object alive.
 
 | Term | Meaning | Typical example |
 | --- | --- | --- |
-| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, pointer snapshots. |
+| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, pointer detached copies. |
 | Caller-owned | The caller supplied the Python object and retains ownership. | A NumPy array passed as `intent(in)`, `intent(out)`, or `intent(inout)`. |
 | Wrapper-owned | A Python extension object owns one native Fortran instance. | A wrapped derived-type result. |
 | Native-owned | Fortran or an external library owns storage independently of Python. | A module allocatable array or external-library buffer. |
 | Borrowed view | Python references storage owned elsewhere and does not destroy it. | An allocatable component view or module-array attribute. |
 | Copy-return | Native output is copied into a new Python-owned value before return. | Allocatable output arrays and array function results. |
-| Snapshot copy | Python receives a copy of current native state, not a live view. | Supported pointer results and pointer-backed getters. |
+| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Supported pointer results and pointer-backed getters. |
 | Call-local association | Native code may use Python storage only during the wrapped call. | Pointer `intent(in)` array arguments. |
 | Blocked | Generation stops because a safe contract cannot be proven. | Pointer reassociation without owner and release policy. |
 
@@ -528,7 +528,7 @@ X2PY_C_DOCS_END -->
 | Value | Who destroys it | When |
 | --- | --- | --- |
 | Python scalar or string | Python | When Python references are gone. |
-| Copy-return or snapshot NumPy array | NumPy or its generated base capsule | When Python references are gone. |
+| Copy-return or detached-copy NumPy array | NumPy or its generated base capsule | When Python references are gone. |
 | Caller-supplied NumPy array | The Python caller | According to normal Python lifetime. |
 | Wrapper-owned derived instance | Generated wrapper deallocator | When the owning wrapper is collected. |
 | Borrowed nested component | The parent wrapper | When parent and all borrowed children are gone. |
@@ -955,9 +955,9 @@ callee allocation, or nothing. x2py therefore supports a conservative subset:
 
 - pointer `intent(in)` scalars and arrays are call-local associations;
 - associated pointer scalar results become copied Python scalars;
-- associated pointer array results become Python-owned snapshot copies;
+- associated pointer array results become detached Python-owned copies;
 - unassociated results become `None`;
-- pointer-backed fields and module variables are snapshot-or-block; and
+- pointer-backed fields and module variables are detached-copy-or-block; and
 - pointer `intent(out)` and `intent(inout)` are blocked by default.
 
 ### Call-Local Input
@@ -978,7 +978,7 @@ The native pointer may reference `values` only while `total` runs. Fortran must
 not save the association for later use. Scalar pointer inputs similarly use a
 temporary converted value and do not expose writes or reassociation to Python.
 
-### Snapshot Result
+### Detached Pointer Result
 
 ```fortran
 function selected_values(enabled) result(values)
@@ -991,17 +991,17 @@ end function selected_values
 ```
 
 ```python
-snapshot = selected_values(True)
+selected = selected_values(True)
 missing = selected_values(False)
 
 assert missing is None
-snapshot[0] = 9.0       # does not mutate module_values
+selected[0] = 9.0       # does not mutate module_values
 ```
 
-A snapshot is allowed only when association state, shape, dtype, contiguity,
-nullability, target owner, and deallocation obligations are known. Repeated
-access can return independent arrays. Two snapshots of the same target do not
-alias each other.
+The detached copy is allowed only when association state, shape, dtype,
+contiguity, nullability, target owner, and deallocation obligations are known.
+Repeated access can return independent arrays. Two detached copies of the same
+target do not alias each other.
 
 ### Pointer Policy Metadata
 
@@ -1220,7 +1220,7 @@ origin.x = 4.0          # valid: origin retains the parent owner
 ```
 
 Private components are omitted from Python descriptors. Allocatable fields use
-borrowed views. Pointer fields use snapshot-or-block policy; the containing
+borrowed views. Pointer fields use detached-copy-or-block policy; the containing
 object does not automatically own pointer targets. Arrays of derived types are
 blocked.
 
@@ -1388,7 +1388,7 @@ independent = view.copy()
 deallocate_values()      # invalidates the native storage behind view
 ```
 
-Pointer module variables use snapshot-or-block policy. Explicit `save` on a
+Pointer module variables use detached-copy-or-block policy. Explicit `save` on a
 public module variable does not change exposure because module storage already
 has module lifetime. Procedure-local `save` variables remain internal.
 
@@ -2026,7 +2026,7 @@ General borrowed pointer views are not supported. x2py cannot yet:
 - lower pointer `intent(out)` and `intent(inout)` reassociation with a complete
   copy, borrow, ownership-transfer, and release policy.
 
-Use supported snapshot copies when complete target facts are known. Otherwise
+Use supported detached copies when complete target facts are known. Otherwise
 readiness blocks the declaration.
 
 ### Advanced Multi-Source Integration

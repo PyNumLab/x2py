@@ -266,7 +266,7 @@ objects, archives, and libraries remain separate build-plan facts.
 - [x] Derived-type parity covers fields, methods, type-bound root target
   procedures, default/keyword constructors, finalizers, borrowed child
   lifetime, scalar object boundaries, inheritance, polymorphic dispatch, and
-  pointer snapshot results in both `source` and `generated-pyi` modes. `.pyi`
+  pointer detached-copy results in both `source` and `generated-pyi` modes. `.pyi`
   parser regressions restore type-bound target metadata from class method
   declarations.
 - [x] Callback parity covers scalar, array, and derived callback conversions,
@@ -521,7 +521,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 - [x] Bridge-side function-argument conversion now dispatches projected hidden
   outputs and copy-in/copy-out replacements through completed object-kind/action
-  policy. Numeric scalar, string replacement, scalar snapshot result, and
+  policy. Numeric scalar, string replacement, scalar detached-copy result, and
   custom-result paths use named handlers instead of selecting behavior from raw
   action checks inside the shared implementation block. Allocatable array
   result-helper eligibility also dispatches from completed result policy instead
@@ -534,7 +534,7 @@ X2PY_C_DOCS_END -->
   named handlers instead of local action/projection branches in the result
   packing loop. Array/scalar writable-access validation also dispatches from the
   selected policy action instead of checking the action inside the shared
-  validator, and scalar snapshot-copy results have a dedicated binding result
+  validator, and scalar detached-copy results have a dedicated binding result
   handler. Scalar argument conversion now dispatches direct, call-local, and
   identity-output cases into named methods before reaching shared casting code;
   string call-local, identity, and replacement arguments likewise select their
@@ -553,7 +553,7 @@ X2PY_C_DOCS_END -->
   for the current supported surface. Bridge field getters and setters dispatch
   from completed getter/setter policy, derived value-copy setters are selected
   by policy, explicit borrowed derived fields reject replacement setters, and
-  pointer module-variable or field snapshot accessors fail closed before
+  pointer module-variable or field detached-copy accessors fail closed before
   lowering. Remaining rank, datatype, `is_alias`, and storage checks in bridge
   and binding code are local emitted-code, ABI, documentation, or object-model
   mechanics rather than semantic policy selection. Evidence:

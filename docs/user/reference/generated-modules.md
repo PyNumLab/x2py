@@ -87,7 +87,7 @@ ownership rules in [Memory Management](../guide/memory-management.md) and
 the topic-specific user-guide pages. `Aliased` derived module variables return
 live borrowed wrappers. Plain derived module variables return generated
 `Snapshot[T]` objects when every field can be copied safely. Missing
-addressability, ownership, release, mutability, or snapshot-copy facts block
+addressability, ownership, release, mutability, or safe-copy facts block
 generation.
 
 ## Visibility, Binding Names, And Imports

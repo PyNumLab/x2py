@@ -23,7 +23,7 @@ guess from datatype or intent.
 | Wrapper-owned instance | A generated Python extension object owns one native derived instance. | [`points.f90` result](wrapping-derived-types.md#complete-derived-type-example) |
 | Native-owned storage | Native module state or another native owner controls allocation and release. | [`allocations.f90` module view](allocatable-arrays.md#complete-allocatable-example) |
 | Borrowed view or child | Python refers to storage owned by a module or containing wrapper. | [`points.f90` nested child](wrapping-derived-types.md#complete-derived-type-example) |
-| Snapshot copy | Python receives detached current native state. | [`pointers.f90` result](pointer-arguments.md#complete-pointer-example) |
+| Detached copy (`snapshot_copy` policy) | Python receives copied current native state, without a live view. | [`pointers.f90` result](pointer-arguments.md#complete-pointer-example) |
 | Call-local association | Native code may refer to Python storage only during one wrapped call. | [`pointers.f90` input](pointer-arguments.md#complete-pointer-example) |
 
 Those linked pages contain the full source, build commands, and asserted
@@ -33,7 +33,7 @@ attached to one canonical source listing.
 ## Core Invariants
 
 1. Exactly one owner destroys each owned native allocation.
-2. Python-owned copies, pointer snapshots, and module-object snapshots are independent of later native mutation.
+2. Python-owned copies, pointer detached copies, and module-object snapshots are independent of later native mutation.
 3. Caller-owned arrays are never freed by x2py.
 4. A borrowed child or component view retains its generated wrapper owner.
 5. Owner retention does not protect a view from explicit native reallocation or deallocation.
@@ -47,7 +47,7 @@ attached to one canonical source listing.
 
 | Value | Release responsibility |
 | --- | --- |
-| scalar, string, copy-return array, pointer snapshot, derived module snapshot | Python, NumPy, or its generated base capsule |
+| scalar, string, copy-return array, pointer detached copy, derived module snapshot | Python, NumPy, or its generated base capsule |
 | caller-supplied NumPy array | Python caller |
 | wrapper-owned derived instance | generated wrapper deallocator and native finalization |
 | borrowed nested component | containing wrapper owner |
@@ -82,12 +82,13 @@ it does not transfer native release responsibility.
 - Python strings use **replacement** because `str` is immutable;
 - Allocatable inout arrays use **replacement** because native allocation identity may change;
 - Array/function results use **copy-return**;
-- Supported pointer results and plain derived module variables use **snapshot-copy**; and
+- Supported pointer results use detached-copy `snapshot_copy` policy, and plain
+  derived module variables use **read-only `Snapshot[T]` objects**; and
 - Borrowed allocatable views **share native storage** until native invalidation.
 
-Generated snapshot objects are read-only detached data. Their scalar fields and
-arrays are copied at read time, nested derived fields become nested snapshots,
-and type-bound methods are not exposed on the snapshot classes.
+Generated `Snapshot[T]` objects are read-only detached data. Their scalar fields
+and arrays are copied at read time, nested derived fields become nested
+snapshots, and type-bound methods are not exposed on the snapshot classes.
 
 Return projection and ownership are one contract. An edited `.pyi` cannot ask
 for copy-return without a projected replacement, or combine immutable storage

@@ -621,7 +621,7 @@ Examples include:
 - pointer reassociation for projected or writable arguments without implemented
   owner, shape, lifetime, and release behavior;
 - pointer module variables or derived-type pointer fields without an
-  implemented snapshot or borrowed-accessor path;
+  implemented detached-copy or borrowed-accessor path;
 - borrowed pointer views without owner retention and stale-view invalidation;
 - `Ownership("native")` with `Destruction("python_refcount")` for the same
   authoritative allocation; and

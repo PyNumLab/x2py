@@ -241,11 +241,11 @@ current: box
     assert {
         "owner": "solver.current",
         "item": "current",
-        "policy": "snapshot field box.values is a pointer array without a completed pointer snapshot policy",
+        "policy": "snapshot field box.values is a pointer array without a completed pointer detached-copy policy",
     } in blocker["items"]
 
 
-def test_pointer_module_variable_uses_snapshot_or_block_ownership_policy():
+def test_pointer_module_variable_uses_detached_copy_or_block_ownership_policy():
     parsed = parse_fortran_file(
         """
 module pointer_module_mod

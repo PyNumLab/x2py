@@ -682,7 +682,7 @@ Test families should mirror the Fortran parser:
 - CLI tests
 - semantic conversion tests
 - `.pyi` generation/parser tests
-- legacy JSON schema snapshot tests
+- legacy JSON schema golden tests
 - error fixture/golden tests
 - corpus parse-only tests
 

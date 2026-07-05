@@ -1074,7 +1074,7 @@ Transfer modes:
 | `Transfer("call_local")` | The wrapper creates or associates storage only for one native call. Python does not receive persistent native storage. | `Destruction("call_local")` for bridge temporaries, or `Destruction("none")` when no generated storage is owned. | `def use_value(value: Annotated[Float64, Ownership("temporary"), Transfer("call_local"), Destruction("call_local")]) -> None: ...` |
 | `Transfer("in_place")` | Native code writes through caller-provided mutable Python storage. The same Python object observes the mutation. | `Destruction("caller")`; x2py must not free caller storage. | `def scale(values: Annotated[Float64[:], Ownership("caller"), Transfer("in_place"), Destruction("caller")]) -> None: ...` |
 | `Transfer("copy_return")` | Native output is copied or read back into a fresh Python-visible return value. The original Python object is not mutated unless separately declared. | `Destruction("python_refcount")` after Python owns the copy. | `def read_values() -> Annotated[Float64[:], Ownership("python"), Transfer("copy_return"), Destruction("python_refcount")]: ...` |
-| `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. | `Destruction("python_refcount")` for the snapshot. | `def current_pointer() -> Annotated[Float64[:], Pointer, Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")] | None: ...` |
+| `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. This transfer name does not by itself make a returned NumPy array read-only. | `Destruction("python_refcount")` for the detached copy. | `def current_pointer() -> Annotated[Float64[:], Pointer, Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")] | None: ...` |
 | `Transfer("borrowed_view")` | Python receives a no-copy view of storage owned somewhere else. Writes may mutate that storage when the value is mutable and the backend supports writable views. | Usually `Destruction("native_owner")` or `Destruction("wrapper_dealloc")`; Python does not free the borrowed target. | `module_values: Annotated[Float64[:], Allocatable, Aliased, Ownership("native"), Transfer("borrowed_view"), Destruction("native_owner")] | None` |
 | `Transfer("wrapper_instance")` | Python receives a wrapper object that owns or controls a native instance. | `Destruction("wrapper_dealloc")`. | `def make_state() -> Annotated[state, Ownership("wrapper"), Transfer("wrapper_instance"), Destruction("wrapper_dealloc")]: ...` |
 | `Transfer("blocked")` | The contract intentionally has no safe lowering with the current policy facts. Wrapper generation must stop. | `Destruction("blocked")`. | `def reassociate(values: Annotated[Float64[:], Pointer, Ownership("unknown"), Transfer("blocked"), Destruction("blocked")]) -> None: ...` |
@@ -1126,7 +1126,7 @@ value: Annotated[
 ]
 ```
 For example, a pointer array function result can be made a Python-owned
-snapshot only when the stub also supplies enough shape, nullability, lifetime,
+detached copy only when the stub also supplies enough shape, nullability, lifetime,
 and release facts for the backend path being enabled.
 
 `Snapshot[T]` wraps a derived type in the Python-visible contract when a native
@@ -1825,7 +1825,7 @@ X2PY_C_DOCS_END -->
 Allocatable writable arguments remain blocked. They need a replacement
 policy for the caller-visible object before x2py can safely expose them.
 
-## Pointer Procedure Snapshot Subset
+## Pointer Procedure Detached-Copy Subset
 
 Fortran pointer array facts are emitted and loaded with `Pointer` metadata:
 
@@ -1847,9 +1847,10 @@ The supported runtime subset is procedure-local and copy-based:
   blocked unless future policy metadata supplies ownership, lifetime, shape,
   contiguity, reassociation, and deallocation behavior.
 
-The returned NumPy array from a pointer function result is a snapshot. Mutating
-it does not mutate the original Fortran target. Borrowed views for module
-pointer variables and derived-type pointer fields are not part of this subset.
+The returned NumPy array from a pointer function result is a detached copy.
+Mutating it does not mutate the original Fortran target. Borrowed views for
+module pointer variables and derived-type pointer fields are not part of this
+subset.
 
 ## Visibility And Names
 
@@ -1949,7 +1950,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Writable scalar storage | `T[()]`, or visible `T` plus projected replacement `Returns["name", T]` |
 | Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
 | Module variables | direct module-level annotations; native accessors remain internal |
-| Allocatable borrowed views and snapshots | derived-type fields and aliased module arrays as borrowed views; plain module arrays as read-only snapshots; `None` for unallocated storage |
+| Allocatable borrowed views and read-only snapshots | derived-type fields and aliased module arrays as borrowed views; plain module arrays as read-only snapshots; `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
 | Fortran derived types | classes with fields and methods; `@native_type` only for irreducible attributes or finalizers |
 | Fortran defined operators | Python data-model methods plus explicit named-operator methods |

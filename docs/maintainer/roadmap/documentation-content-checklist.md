@@ -298,7 +298,7 @@ primary placeholder queue.
 - [x] `docs/user/guide/allocatable-arrays.md`: maintained copy, replacement,
   borrowed module/component view, unallocated, lifetime, and limitation guide.
 - [x] `docs/user/guide/pointer-arguments.md`: maintained call-local input,
-  snapshot result, nullability, target policy, and blocked-reassociation guide.
+  detached result, nullability, target policy, and blocked-reassociation guide.
 - [x] `docs/user/guide/wrapping-derived-types.md`: maintained class, field,
   method, constructor, finalizer, nested borrow, layout, and polymorphism guide.
 - [x] `docs/user/guide/memory-management.md`: maintained ownership, transfer,

@@ -146,7 +146,8 @@ movement do not by themselves make the layout invalid.
 - Ordinary output arrays remain visible; the caller allocates writable storage.
 - Inout arrays remain visible and mutate in place.
 - Array function results and allocatable outputs are Python-owned copies.
-- Supported pointer results are snapshot copies.
+- Supported pointer array results are detached Python-owned copies;
+  unassociated pointer results return `None`.
 - Borrowed allocatable module views are native-owned; borrowed component views
   are owned through the containing wrapper. Both require lifetime care.
 

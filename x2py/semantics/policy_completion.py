@@ -239,9 +239,9 @@ def _snapshot_field_storage_blocker(semantic_type: models.SemanticType, path: st
     if semantic_type.metadata.get("fortran_assumed_type") or semantic_type.metadata.get("fortran_polymorphic"):
         return f"snapshot field {path} uses unsupported polymorphic or assumed-type storage"
     if array is not None and array.pointer:
-        return f"snapshot field {path} is a pointer array without a completed pointer snapshot policy"
+        return f"snapshot field {path} is a pointer array without a completed pointer detached-copy policy"
     if semantic_type.metadata.get("fortran_pointer") or (storage is not None and storage.pointer_depth > 0):
-        return f"snapshot field {path} is pointer storage without a completed pointer snapshot policy"
+        return f"snapshot field {path} is pointer storage without a completed pointer detached-copy policy"
     return None
 
 

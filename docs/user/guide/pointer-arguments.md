@@ -9,7 +9,7 @@ status: maintained
 # Pointer Arguments
 
 A Fortran pointer does not identify the target owner. x2py therefore supports a
-conservative subset: call-local input association and detached snapshot results.
+conservative subset: call-local input association and detached copied results.
 General borrowed pointer views and pointer reassociation remain blocked.
 
 ## Complete Pointer Example
@@ -42,7 +42,7 @@ Build it:
 python3 -m x2py pointers.f90 --out-dir build/pointers
 ```
 
-Then verify call-local input and snapshot output:
+Then verify call-local input and detached output:
 
 ```python
 import sys
@@ -56,9 +56,9 @@ api = pointers.pointers_api
 values = np.array([1.0, 2.0, 3.0], dtype=np.float64)
 assert api.sum_pointer(values) == np.float64(6.0)
 
-snapshot = api.select_values(values, np.int32(1))
+selected = api.select_values(values, np.int32(1))
 assert api.select_values(values, np.int32(0)) is None
-snapshot[0] = np.float64(99.0)
+selected[0] = np.float64(99.0)
 np.testing.assert_array_equal(values, np.array([1.0, 2.0, 3.0], dtype=np.float64))
 ```
 
@@ -72,25 +72,25 @@ The wrapper still validates exact dtype, rank, shape, layout, alignment, and
 read-only requirements. Pointer syntax does not permit an implicit conversion
 or unsafe array view.
 
-## Snapshot Results
+## Detached Pointer Results
 
 An associated pointer scalar result becomes a copied Python value. An associated
-pointer array result becomes a Python-owned NumPy snapshot. An unassociated
+pointer array result becomes a detached Python-owned NumPy array. An unassociated
 result becomes `None`.
 
-Snapshots do not alias the native target or one another. Mutation of a snapshot
-does not reach the original input, and deleting the input does not invalidate
-the snapshot.
+Detached pointer results do not alias the native target or one another. Mutation
+of the returned array does not reach the original input, and deleting the input
+does not invalidate the returned array.
 
-Snapshot generation requires known association state, dtype, shape,
+This detached-copy path requires known association state, dtype, shape,
 contiguity, nullability, target owner, and deallocation obligations. Missing
 facts produce a readiness blocker.
 
 ## Pointer Fields And Module Variables
 
-Pointer-backed fields and module variables use snapshot-or-block policy. The
+Pointer-backed fields and module variables use detached-copy-or-block policy. The
 containing object or module does not automatically own the pointer target.
-Where a safe snapshot cannot be proved, the declaration is blocked instead of
+Where a safe detached copy cannot be proved, the declaration is blocked instead of
 exposing a borrowed view.
 
 ## Unsupported Forms
@@ -106,12 +106,12 @@ implement a missing runtime path.
 
 ## Evidence And Troubleshooting
 
-Scalar and array pointer inputs, nullable results, independent snapshots, and
+Scalar and array pointer inputs, nullable results, independent detached copies, and
 dtype rejection are exercised by
 [`test_pointers.py`](../../../tests/wrapper/fortran/derived_types/test_pointers.py).
 
 If readiness blocks a pointer, do not replace the diagnostic with guessed
-ownership metadata. Snapshot behavior is expressible only when shape,
+ownership metadata. Detached pointer result behavior is expressible only when shape,
 nullability, target owner, lifetime, and release facts are complete. Memory
 Management and the semantic `.pyi` ownership reference expand those decisions
 later.

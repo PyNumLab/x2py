@@ -71,7 +71,7 @@ writable field uses the completed setter policy. Private fields are omitted.
 
 Nested scalar derived components are borrowed child wrappers that retain their
 owning parent. Allocatable fields can expose borrowed NumPy views when
-ownership and lifetime are explicit. Pointer fields use snapshot-or-block
+ownership and lifetime are explicit. Pointer fields use detached-copy-or-block
 policy. Arrays of derived types are unsupported.
 
 Snapshot classes generated for plain derived module variables expose copied data
@@ -108,8 +108,8 @@ releases that native instance exactly once.
 Borrowed child wrappers, borrowed module objects, and borrowed component views
 do not destroy the storage they reference. They retain the owning wrapper or
 module reference needed for Python lifetime, but explicit native deallocation
-or reallocation can still invalidate borrowed storage. Snapshot objects are
-Python-owned copies and do not retain or mutate native storage.
+or reallocation can still invalidate borrowed storage. `Snapshot[T]` objects are
+Python-owned read-only copies and do not retain or mutate native storage.
 
 Native finalizers do not provide a recoverable Python status channel during
 object destruction. Use ordinary wrapped procedures for recoverable cleanup

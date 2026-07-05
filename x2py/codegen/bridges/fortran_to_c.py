@@ -3260,7 +3260,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
 
     def _get_pointer_snapshot_bind_c_array(self, name, orig_var, pointer_var):
-        """Return pointer snapshot bind c array."""
+        """Return pointer detached-copy bind c array."""
         dtype = orig_var.dtype
         rank = orig_var.rank
         order = orig_var.order

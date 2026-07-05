@@ -1477,7 +1477,7 @@ class CPythonBindingGenerator(BindingGenerator):
         create_array = AliasAssign(
             py_equiv, self._array_to_python_call(v, data_var, shape_var, itemsize_var, release_memory)
         )
-        readonly = self._clear_writeable_flag(py_equiv) if decision.transfer is TransferMode.SNAPSHOT_COPY else []
+        readonly = self._clear_writeable_flag(py_equiv) if self._returns_read_only_snapshot_array(decision) else []
         return [
             call,
             *unallocated_guard,
@@ -1486,8 +1486,13 @@ class CPythonBindingGenerator(BindingGenerator):
         ]
 
     @staticmethod
+    def _returns_read_only_snapshot_array(decision):
+        """Return whether this completed array policy is a read-only snapshot."""
+        return decision.transfer is TransferMode.SNAPSHOT_COPY and decision.storage_mode is StorageMode.HEAP
+
+    @staticmethod
     def _clear_writeable_flag(py_array):
-        """Clear NumPy writeability on a returned snapshot copy."""
+        """Clear NumPy writeability on a returned read-only snapshot."""
         return [
             PyArray_CLEARFLAGS(
                 ObjectAddress(PointerCast(py_array, PyArray_CLEARFLAGS.arguments[0].var)),
@@ -3811,7 +3816,7 @@ class CPythonBindingGenerator(BindingGenerator):
         if decision.storage_mode is StorageMode.HEAP:
             return [
                 "Plain allocatable module arrays without Aliased are copied into Python-owned NumPy arrays.",
-                "Returned snapshots are read-only and detached from later native changes.",
+                "Returned module snapshots are read-only and detached from later native changes.",
                 "Unallocated module arrays return None.",
             ]
         if not var.rank:

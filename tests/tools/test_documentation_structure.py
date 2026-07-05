@@ -326,7 +326,7 @@ FEATURE_MATRIX_REQUIRED_FEATURES = [
     "Output arguments and multiple results",
     "Optional arguments",
     "Allocatable outputs, results, replacements, and borrowed module/component views",
-    "Pointer call-local inputs and snapshot results",
+    "Pointer call-local inputs and detached-copy results",
     "Array-valued function results",
     "NumPy array argument contracts",
     "Derived-type scalar boundaries and methods",

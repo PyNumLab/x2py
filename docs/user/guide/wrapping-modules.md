@@ -87,7 +87,7 @@ view[0] = np.float64(5.0)
 For aliased arrays, mutation reaches native module storage. A later native
 deallocation or reallocation invalidates old views; use `view.copy()` first when
 Python needs an independent lifetime. Pointer module variables use
-snapshot-or-block policy.
+detached-copy-or-block policy.
 
 ## Derived Module Objects
 
@@ -154,7 +154,7 @@ code.
 
 - Private module declarations remain hidden.
 - Common-block variables have no generated attribute surface.
-- Pointer state is exposed only when snapshot policy is complete; general
+- Pointer state is exposed only when detached-copy policy is complete; general
   borrowed pointer variables are blocked.
 - Plain derived-type module variables are exposed only when the recursive
   snapshot policy covers every field; `Aliased` is required for live borrowing.

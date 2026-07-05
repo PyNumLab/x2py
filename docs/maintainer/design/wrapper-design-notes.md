@@ -53,7 +53,7 @@ X2PY_C_DOCS_END -->
 | Gap | Current risk | Proposed direction |
 | --- | --- | --- |
 | Procedure pointers and dummy procedures | A broad `Procedure` type loses enough signature and lifetime information that wrappers cannot safely call or receive callbacks. | Resolve abstract interface signatures into a first-class semantic callable form. Preserve procedure pointer, optional, pass-through, and callback lifetime facts; block wrapper generation until call direction and ownership policy are explicit. |
-| Pointer and allocatable ownership | Borrowed zero-copy views are supported for allocatable derived-type fields, aliased module arrays, and derived module objects whose own declaration is aliased. Plain allocatable module arrays and copyable non-aliased derived module objects use read-only snapshot copies. Allocatable array results, `intent(out)` dummies, and `intent(inout)` replacement dummies use copy-return NumPy-owned storage. Pointer arrays have no intrinsic owner, so results, module variables, and derived-type fields use snapshot-copy behavior only when association, shape, dtype, nullability, contiguity, target owner, and deallocation obligations are known; otherwise they remain blocked. | Keep pointer/allocatable, rank, bounds, `intent`, object-origin aliasability, contiguity, and recursive snapshot eligibility facts in semantic IR. Treat x2py-constructed pointer-backed instances separately from pre-existing native module objects. Expose allocatable fields, aliased module arrays, and aliased derived module objects as borrowed values with their native owner retained. Expose plain allocatable module arrays and eligible non-aliased derived module objects as read-only snapshots, but block snapshots when any nested field lacks a complete safe-copy policy. Copy allocatable array results and allocatable output/replacement dummies before returning to Python. Expose pointer arrays only as Python-owned snapshots or block them until explicit borrowed-view, replacement, deallocation, aliasing, and stale-view policy is defined. Block allocatable scalar derived-type replacement until ownership and destruction policy is defined. |
+| Pointer and allocatable ownership | Borrowed zero-copy views are supported for allocatable derived-type fields, aliased module arrays, and derived module objects whose own declaration is aliased. Plain allocatable module arrays and copyable non-aliased derived module objects use read-only snapshot copies. Allocatable array results, `intent(out)` dummies, and `intent(inout)` replacement dummies use copy-return NumPy-owned storage. Pointer arrays have no intrinsic owner, so results, module variables, and derived-type fields use detached-copy behavior only when association, shape, dtype, nullability, contiguity, target owner, and deallocation obligations are known; otherwise they remain blocked. | Keep pointer/allocatable, rank, bounds, `intent`, object-origin aliasability, contiguity, and recursive snapshot eligibility facts in semantic IR. Treat x2py-constructed pointer-backed instances separately from pre-existing native module objects. Expose allocatable fields, aliased module arrays, and aliased derived module objects as borrowed values with their native owner retained. Expose plain allocatable module arrays and eligible non-aliased derived module objects as read-only snapshots, but block snapshots when any nested field lacks a complete safe-copy policy. Copy allocatable array results and allocatable output/replacement dummies before returning to Python. Expose pointer arrays only as Python-owned detached copies or block them until explicit borrowed-view, replacement, deallocation, aliasing, and stale-view policy is defined. Block allocatable scalar derived-type replacement until ownership and destruction policy is defined. |
 | Assumed-rank, assumed-type, and optional descriptor-heavy arguments | Descriptors such as `dimension(..)` and `type(*)` can accept many native shapes that Python cannot infer safely. | Represent descriptor category, rank constraints, element type availability, optional presence, and contiguity. Generate wrappers only for explicit accepted rank/dtype policies or through backend shims that validate descriptors. |
 | Generic interfaces and operators | Named generics, defined operators, named operators, and defined assignment now preserve explicit concrete-target links. Python cannot intercept `=`, arbitrary named operators, or infer safe in-place mutation. Static extension-type inheritance is represented in Python, and scalar polymorphic input dispatch reuses the same generated overload selection path. | Use Python data-model slots for intrinsic operators, `operator_name`/`r_operator_name` methods for named operators, and mutating `assign` methods for defined assignment. Keep exact dtype/rank/extension-class dispatch and reject indistinguishable signatures during generation. |
 | Coarrays, teams, events, and directive-driven device/offload behavior | These introduce parallel runtime or device-memory semantics outside normal host wrappers. | Treat as out of the initial wrapper scope. Preserve diagnostics where detected and require a separate runtime design before claiming support. |
@@ -100,7 +100,7 @@ runtime-determined shape or scalar rank. Avoid long
 wrapper-internal explanations. Class docstrings should
 summarize fields and methods. Get/set descriptor docstrings should describe
 class attributes, including borrowed view lifetimes for allocatable arrays and
-snapshot-copy behavior for pointer-backed arrays. Module variables exposed
+detached-copy behavior for pointer-backed arrays. Module variables exposed
 through getter functions should document the getter, since CPython modules do
 not provide a portable per-variable descriptor docstring for plain module
 attributes.
@@ -275,15 +275,15 @@ field:
   callee allocation, a module variable, a derived-type field, a dummy argument,
   a section, or external state. Therefore pointer array results, module
   variables, and derived-type fields must not become borrowed views or
-  snapshot-copy values unless an explicit policy identifies the target owner,
+  detached-copy values unless an explicit policy identifies the target owner,
   lifetime, deallocation rules, association replacement behavior, aliasing,
   mutability, shape, and contiguity.
 
 The safe first behavior for exposed pointer arrays, when those policy facts are
-known, is a snapshot copy: associated pointer targets are copied into
+known, is a detached copy: associated pointer targets are copied into
 Python-owned NumPy arrays, and unassociated pointers become `None`. Mutating
 that returned array does not mutate the native pointer target, and repeated
-property access may produce a new snapshot. If the wrapper cannot prove
+property access may produce a new detached copy. If the wrapper cannot prove
 association state, shape, dtype, contiguity, nullability, and deallocation
 obligations, readiness must block the pointer array instead of returning a view,
 leaking a callee allocation, double-freeing a borrowed target, or inventing
@@ -293,7 +293,7 @@ This means a returned derived-type wrapper owns the native instance itself, but
 does not automatically own targets reachable through pointer components. Putting
 a pointer array inside an `intent(out)` derived type does not change the pointer
 array policy: the object may be returned, but the pointer component is either a
-documented snapshot-copy property with known owner/deallocation behavior or
+documented detached-copy property with known owner/deallocation behavior or
 remains unavailable until explicit pointer policy exists.
 
 <!-- X2PY_C_DOCS_START
@@ -353,7 +353,7 @@ The narrow first contract for procedure pointer arrays is implemented as:
   policy metadata before they can be projected to Python returns or mutable
   Python-visible arguments.
 - Module pointer variables and derived-type pointer fields use the same
-  pointer ownership rule. They may be exposed only as documented snapshot
+  pointer ownership rule. They may be exposed only as documented detached
   copies when the wrapper can prove the required array facts. Borrowed pointer
   views require owner tracking and stale-view rules, so they are not the
   default field or module-variable behavior.
@@ -361,8 +361,8 @@ The narrow first contract for procedure pointer arrays is implemented as:
 Scalar pointer `intent(in)` dummies use a call-local wrapper temporary. The
 generated bridge associates the native pointer with that temporary only for the
 call, so Python never receives a native address and does not observe writes or
-reassociation. Scalar pointer function results use the same detached snapshot
-rule as arrays: the bridge copies an associated value into wrapper-owned
+reassociation. Scalar pointer function results use the same detached-copy rule
+as arrays: the bridge copies an associated value into wrapper-owned
 temporary storage and returns an ordinary Python scalar, while an unassociated
 result returns `None`.
 
@@ -371,13 +371,13 @@ Future `.pyi` pointer policy should make each missing fact explicit:
 | Policy fact | Why the wrapper needs it |
 | --- | --- |
 | Nullability | Defines whether an unassociated pointer is valid and whether Python should receive `None` or raise an error. |
-| Transfer mode | Distinguishes snapshot copy, borrowed NumPy view, native-owned capsule, Python-owned input storage, and blocked exact-native pointer passing. |
+| Transfer mode | Distinguishes detached copy, borrowed NumPy view, native-owned capsule, Python-owned input storage, and blocked exact-native pointer passing. |
 | Target owner | Identifies who owns the storage: a Python argument, a containing wrapper instance, a module variable, a callee allocation, an external library, or unknown native state. |
 | Lifetime | States how long a borrowed target remains valid: call only, owner object lifetime, module lifetime, explicit release, or unknown. |
 | Deallocation policy | Says whether the wrapper must never deallocate, should deallocate after copying, should attach a destructor capsule, or must call a named native release routine. This is the main missing fact for pointer outputs. |
 | Shape source | Provides extents for array pointers, such as explicit `.pyi` dimensions, companion size arguments, descriptor bounds, or source pointer bounds. |
 | Contiguity and strides | Decides whether only contiguous targets are supported, whether strided sections may become NumPy views, or whether non-contiguous targets must be copied or rejected. |
-| Reassociation behavior | Defines what happens when Fortran points the dummy somewhere else: ignore the original Python input, return the final association as a snapshot, write back association state, invalidate old views, or block. |
+| Reassociation behavior | Defines what happens when Fortran points the dummy somewhere else: ignore the original Python input, return the final association as a detached copy, write back association state, invalidate old views, or block. |
 | Aliasing | States whether two returned pointers may share one target and whether Python must preserve that identity or may return independent copies. |
 | Mutability | Declares whether Python may write through a borrowed view and whether native code may write while Python holds it. |
 
@@ -452,7 +452,7 @@ policy.
 The settled numeric array subset uses validation and copy rules instead of
 implicit conversion:
 
-- Pointer array function results use the procedure snapshot policy: associated
+- Pointer array function results use the procedure detached-copy policy: associated
   results are copied into Python-owned NumPy arrays, and unassociated results
   return `None`.
 - Multidimensional Fortran results and arguments preserve Fortran order.

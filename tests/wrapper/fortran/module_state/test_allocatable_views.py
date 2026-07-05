@@ -200,7 +200,7 @@ def test_plain_allocatable_module_array_is_read_only_snapshot(
         "Plain allocatable module arrays without Aliased are copied into Python-owned NumPy arrays."
         in wrapper_source_text
     )
-    assert "Returned snapshots are read-only and detached from later native changes." in wrapper_source_text
+    assert "Returned module snapshots are read-only and detached from later native changes." in wrapper_source_text
 
     assert module.values is None
     module.allocate_values(np.int32(3))

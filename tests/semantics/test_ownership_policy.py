@@ -814,7 +814,7 @@ def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
             assert decision.codegen_action is not CodegenAction.BLOCKED, label
 
 
-def test_pyi_policy_metadata_round_trips_pointer_snapshot_and_blocks_getters():
+def test_pyi_policy_metadata_round_trips_pointer_detached_copy_and_blocks_getters():
     blocked_type = _array_type(pointer=True)
     blocked = default_ownership_policy.decide_semantic_type(blocked_type, OwnershipContext.field())
     assert blocked.is_blocked
@@ -831,13 +831,13 @@ def test_pyi_policy_metadata_round_trips_pointer_snapshot_and_blocks_getters():
         OwnershipContext.field(),
     )
     assert overridden.is_blocked
-    assert overridden.blocker == "pointer array field and module snapshot accessors are not implemented"
+    assert overridden.blocker == "pointer array field and module detached-copy accessors are not implemented"
     module_overridden = default_ownership_policy.decide_semantic_type(
         _array_type(pointer=True, metadata=metadata),
         OwnershipContext.module_variable(),
     )
     assert module_overridden.is_blocked
-    assert module_overridden.blocker == "pointer array field and module snapshot accessors are not implemented"
+    assert module_overridden.blocker == "pointer array field and module detached-copy accessors are not implemented"
 
     module = parse_pyi_text(
         """
@@ -1279,7 +1279,10 @@ def test_plain_derived_module_snapshot_blocks_unsupported_nested_pointer_field()
     storage = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
     getter = variable.metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA]
     assert storage.is_blocked
-    assert storage.blocker == "snapshot field box.values is a pointer array without a completed pointer snapshot policy"
+    assert (
+        storage.blocker
+        == "snapshot field box.values is a pointer array without a completed pointer detached-copy policy"
+    )
     assert getter.is_blocked
     assert SNAPSHOT_TYPE_METADATA not in variable.semantic_type.metadata
     assert all(RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA not in field.metadata for field in module.classes[0].fields)

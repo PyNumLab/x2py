@@ -1,4 +1,4 @@
-"""Pointer argument, result, association, and snapshot tests."""
+"""Pointer argument, result, association, and detached-copy tests."""
 
 import gc
 from pathlib import Path
@@ -15,7 +15,7 @@ POINTERS_F90_SOURCE = wrapper_source("fpointers_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 
 
-def test_pointer_arrays_use_call_local_inputs_and_snapshot_results(
+def test_pointer_arrays_use_call_local_inputs_and_detached_copy_results(
     pyi_parity_build_mode: str,
     tmp_path: Path,
 ):
@@ -44,13 +44,14 @@ def test_pointer_arrays_use_call_local_inputs_and_snapshot_results(
     selected = module.pointer_to_values(values, np.int32(1))
     np.testing.assert_allclose(selected, values)
     assert selected.base is not None
+    assert selected.flags.writeable is True
 
-    second_snapshot = module.pointer_to_values(values, np.int32(1))
-    assert not np.shares_memory(selected, second_snapshot)
+    second_copy = module.pointer_to_values(values, np.int32(1))
+    assert not np.shares_memory(selected, second_copy)
 
     selected[0] = np.float64(99.0)
     np.testing.assert_allclose(values, np.array([1.0, 2.0, 3.0], dtype=np.float64))
-    np.testing.assert_allclose(second_snapshot, values)
+    np.testing.assert_allclose(second_copy, values)
 
     assert module.pointer_to_values(values, np.int32(0)) is None
     assert "pointer_to_values(values, use_values) -> ndarray[float64] | None" in module.pointer_to_values.__doc__

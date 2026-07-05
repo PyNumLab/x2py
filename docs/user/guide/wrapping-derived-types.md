@@ -98,7 +98,7 @@ omitted. A nested scalar derived component is a borrowed child wrapper: it
 retains its parent owner and never destroys the component independently.
 
 Allocatable fields use borrowed NumPy views. Pointer fields use
-the snapshot-or-block policy. Arrays of derived types are blocked because element
+detached-copy-or-block policy. Arrays of derived types are blocked because element
 construction, destruction, layout, aliasing, and copy policy are incomplete.
 
 ## Constructors
