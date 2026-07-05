@@ -38,6 +38,7 @@ from x2py.semantics.fortran2ir import (
 from x2py.semantics import models as semantic_models
 from x2py.semantics.native_contract import native_contract_issues
 from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
+from x2py.semantic_metadata import SCALAR_STORAGE_CATEGORY
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.codegen.printers.pyi_printer import emit_module
 
@@ -1921,6 +1922,62 @@ end module
     tol = func.arguments[1]
 
     assert tol.optional is True
+
+
+def test_optional_scalar_output_remains_visible_scalar_storage():
+    source = """
+module opt_out_mod
+contains
+subroutine maybe_status(status)
+    integer(4), intent(out), optional :: status
+end subroutine maybe_status
+end module opt_out_mod
+"""
+
+    smod = fortran_module_to_semantic_module(parse_fortran_source(source))
+
+    func = get_function(smod, "maybe_status")
+    status = func.arguments[0]
+
+    assert status.optional is True
+    assert array_contract(status.semantic_type).category == SCALAR_STORAGE_CATEGORY
+    assert func.projection == [
+        ProjectionMapping(
+            python_name="status",
+            native_name="status",
+            native_position=0,
+            python_position=0,
+            result_position=0,
+        )
+    ]
+
+
+def test_optional_allocatable_output_remains_visible():
+    source = """
+module opt_alloc_out_mod
+contains
+subroutine maybe_values(values)
+    real(8), allocatable, intent(out), optional :: values(:)
+end subroutine maybe_values
+end module opt_alloc_out_mod
+"""
+
+    smod = fortran_module_to_semantic_module(parse_fortran_source(source))
+
+    func = get_function(smod, "maybe_values")
+    values = func.arguments[0]
+
+    assert values.optional is True
+    assert array_contract(values.semantic_type).allocatable is True
+    assert func.projection == [
+        ProjectionMapping(
+            python_name="values",
+            native_name="values",
+            native_position=0,
+            python_position=0,
+            result_position=0,
+        )
+    ]
 
 
 # ============================================================

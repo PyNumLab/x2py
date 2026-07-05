@@ -14,7 +14,7 @@ somewhere else.
 
 | Case | Python sees | Owner and lifetime |
 | --- | --- | --- |
-| Function result or hidden allocatable output | new NumPy array, or `None` when unallocated | Python owns the returned copy; the native temporary is released |
+| Function result or non-optional hidden allocatable output | new NumPy array, or `None` when unallocated | Python owns the returned copy; the native temporary is released |
 | Allocatable `intent(inout)` argument | replacement NumPy array or `None` | Python owns the returned replacement; the original argument is unchanged |
 | Aliased allocatable module variable | borrowed NumPy view or `None` | the Fortran module owns allocation and release |
 | Plain allocatable module variable | read-only NumPy snapshot or `None` | Python owns each returned copy |
@@ -182,10 +182,12 @@ the previous borrowed view stale.
 
 ## Output And Function Results
 
-Allocated top-level results and hidden allocatable outputs use copy-return:
-x2py copies the native allocation into a new Python-owned NumPy array and then
-releases the native temporary. Unallocated storage becomes `None`, while
-allocated zero-sized storage remains a zero-sized array.
+Allocated top-level results and non-optional hidden allocatable outputs use
+copy-return: x2py copies the native allocation into a new Python-owned NumPy
+array and then releases the native temporary. Unallocated storage becomes
+`None`, while allocated zero-sized storage remains a zero-sized array.
+Optional allocatable outputs remain visible so the caller can omit them and make
+native `present(...)` false.
 
 Changing the returned NumPy array does not mutate later native results or module
 state.

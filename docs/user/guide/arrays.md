@@ -145,7 +145,10 @@ movement do not by themselves make the layout invalid.
 - Input arrays remain caller-owned and may be read-only.
 - Ordinary output arrays remain visible; the caller allocates writable storage.
 - Inout arrays remain visible and mutate in place.
-- Array function results and allocatable outputs are Python-owned copies.
+- Array function results and non-optional hidden allocatable outputs are
+  Python-owned copies.
+- Optional allocatable outputs remain visible so the caller controls native
+  `present(...)`.
 - Supported pointer array results are detached Python-owned copies;
   unassociated pointer results return `None`.
 - Borrowed allocatable module views are native-owned; borrowed component views

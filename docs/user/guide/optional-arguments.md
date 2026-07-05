@@ -82,17 +82,19 @@ and writeability when supplied. `None` means no native argument; it does not
 mean a zero-sized array. An optional derived-type argument accepts `None` or an
 instance of the required generated class.
 
-## Optional Outputs
+## Optional Native Outputs
 
-Optional output behavior depends on who supplies storage:
+Optional `intent(out)` and `intent(inout)` dummies stay Python-visible so the
+caller controls native `present(...)`:
 
-- a supplied caller-provided output array is mutated and returned as documented;
-- an absent caller-provided output array contributes `None` to its result
-  position;
-- a hidden scalar or derived output is requested with generated temporary
-  storage and therefore remains present and returned; and
+- a supplied optional scalar output uses mutable rank-zero storage such as
+  `Int32[()]`, mutates that storage, and returns it when projected;
+- a supplied optional output array is mutated and returned as documented;
+- an absent optional output contributes `None` to its result position;
 - an optional inout argument mutates normally when supplied and does nothing
-  when absent.
+  when absent; and
+- a hidden `Return(...)` output is not caller-optional because the wrapper
+  requests it with generated temporary storage on every call.
 
 Always review the generated return annotation when optional outputs are mixed
 with required outputs.

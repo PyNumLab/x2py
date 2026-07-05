@@ -316,6 +316,8 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_policy_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_policy_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_policy_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_policy_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_policy_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_convert_snapshot_policy_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_convert_policy_scalar_result",
             (ObjectKind.STRING, CodegenAction.COPY_OUT): "_convert_policy_string_result",
@@ -342,6 +344,7 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_default_result_detail_lines",
             (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_default_result_detail_lines",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_default_result_detail_lines",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_default_result_detail_lines",
             (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_default_result_detail_lines",
             (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_snapshot_copy_result_detail_lines",
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_default_result_detail_lines",
@@ -368,6 +371,7 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_empty_result_notes",
             (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_empty_result_notes",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_empty_result_notes",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_empty_result_notes",
             (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_empty_result_notes",
             (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_snapshot_copy_result_notes",
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_empty_result_notes",
@@ -2101,6 +2105,9 @@ class CPythonBindingGenerator(BindingGenerator):
             body.extend(self._writable_array_access_validation(orig_var, decision, collect_arg))
         else:
             body.extend(self._readable_array_access_validation(orig_var, decision, collect_arg))
+        if orig_var.is_optional:
+            body.append(AliasAssign(arg_var, data_value))
+            return {"body": body, "args": [arg_var], "clean_up": []}
         if read_initial:
             body.append(Assign(arg_var, data_value))
         clean_up = [Assign(data_value, arg_var)] if decision.mutates_native else []
@@ -2124,6 +2131,11 @@ class CPythonBindingGenerator(BindingGenerator):
     def _uses_python_raw_address(var) -> bool:
         """Return whether completed policy extracts this argument as an address."""
         return ownership_decision_for_codegen_variable(var).python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+
+    @staticmethod
+    def _uses_python_scalar_storage(var) -> bool:
+        """Return whether completed policy expects rank-0 NumPy scalar storage."""
+        return ownership_decision_for_codegen_variable(var).python_barrier_action is PythonBarrierAction.SCALAR_STORAGE
 
     def _convert_python_wrapper_instance_argument(
         self,
@@ -4213,6 +4225,25 @@ class CPythonBindingGenerator(BindingGenerator):
         except RuntimeError:
             return str(source_var.name)
 
+    @staticmethod
+    def _scalar_storage_type_check_condition(py_obj, arg, raise_error):
+        """Build the rank-0 NumPy storage type check for a visible scalar output."""
+        try:
+            type_ref = numpy_dtype_registry[arg.dtype]
+        except KeyError:
+            raise TypeError(f"Can't check the type of scalar storage {arg.dtype}") from None
+        allow_empty = convert_to_literal(False)
+        if raise_error:
+            return pyarray_check(
+                CStrStr(convert_to_literal(arg.name)),
+                py_obj,
+                type_ref,
+                convert_to_literal(0),
+                no_order_check,
+                allow_empty,
+            )
+        return is_numpy_array(py_obj, type_ref, convert_to_literal(0), no_order_check, allow_empty)
+
     def _get_type_check_condition(
         self,
         py_obj,
@@ -4266,6 +4297,8 @@ class CPythonBindingGenerator(BindingGenerator):
         uses_raw_address = self._uses_python_raw_address(arg)
         if uses_raw_address:
             type_check_condition = Ne(PyLong_Check(py_obj), convert_to_literal(0))
+        elif self._uses_python_scalar_storage(arg):
+            type_check_condition = self._scalar_storage_type_check_condition(py_obj, arg, raise_error)
         elif isinstance(dtype, CustomDataType):
             python_cls_base = self.scope.find(dtype.name, "classes", raise_if_missing=True)
             type_check_condition = PyObject_TypeCheck(py_obj, python_cls_base.type_object)

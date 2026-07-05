@@ -26,6 +26,12 @@ from the storage that the Python caller must allocate.
 | allocatable `intent(inout)` | visible array or `None` | new replacement array or `None` |
 | supported derived `intent(out)` | hidden | new wrapper-owned instance |
 
+`optional, intent(out)` is the visibility exception for normally hidden
+outputs. The argument remains visible so the caller can omit it and make native
+`present(...)` false. Optional scalar outputs use mutable rank-zero storage such
+as `Int32[()]`; optional array and allocatable outputs use visible optional
+storage and return `None` when absent.
+
 The generated `.pyi` is authoritative when a procedure combines several of
 these forms.
 

@@ -139,6 +139,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_scalar_result",
+            (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_convert_snapshot_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_convert_scalar_result",
             (ObjectKind.STRING, CodegenAction.COPY_OUT): "_convert_string_result",

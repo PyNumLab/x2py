@@ -380,6 +380,8 @@ class FortranToIRConverter(ClassVisitor):
             pass
         elif semantic_type.rank > 0:
             self._apply_array_argument_contract(semantic_type, arg, writes_argument=access[1])
+        elif getattr(arg, "optional", False) and access[1] and not access[0]:
+            semantic_type.storage = self._scalar_storage_contract(writes_argument=access[1])
         elif not getattr(arg, "pass_by_value", False):
             semantic_type.storage = self._reference_storage_contract(writes_argument=access[1])
             if getattr(arg, "pointer", False):
@@ -1244,6 +1246,20 @@ class FortranToIRConverter(ClassVisitor):
         )
 
     @staticmethod
+    def _scalar_storage_contract(*, writes_argument: bool) -> SemanticStorageContract:
+        read_only = not writes_argument
+        return SemanticStorageContract(
+            kind="array",
+            read_only=read_only,
+            mutable=not read_only,
+            array=SemanticArrayContract(
+                rank=0,
+                shape=[],
+                category=SCALAR_STORAGE_CATEGORY,
+            ),
+        )
+
+    @staticmethod
     def _apply_array_argument_contract(
         semantic_type: SemanticType,
         arg: FortranArgument | FortranVariable,
@@ -1888,6 +1904,33 @@ class FortranToIRConverter(ClassVisitor):
         ]
 
     @staticmethod
+    def _is_returned_output_argument(
+        *,
+        is_output: bool,
+        semantic_type: SemanticType | None,
+        is_allocatable_replacement: bool,
+        is_character_replacement: bool,
+    ) -> bool:
+        if is_allocatable_replacement or is_character_replacement:
+            return True
+        if not is_output or semantic_type is None:
+            return False
+        return FortranToIRConverter._is_scalar_copy_return(semantic_type) or semantic_type.rank > 0
+
+    @staticmethod
+    def _is_hidden_output_argument(
+        native_arg: FortranArgument,
+        *,
+        is_output: bool,
+        semantic_type: SemanticType | None,
+    ) -> bool:
+        if not is_output or getattr(native_arg, "optional", False):
+            return False
+        return FortranToIRConverter._is_scalar_copy_return(semantic_type) or FortranToIRConverter._is_allocatable_array(
+            semantic_type
+        )
+
+    @staticmethod
     def _procedure_projection(
         proc: FortranProcedureSignature,
         arguments: list[SemanticArgument],
@@ -1904,17 +1947,19 @@ class FortranToIRConverter(ClassVisitor):
             is_allocatable_replacement = (
                 reads_argument and writes_argument and FortranToIRConverter._is_allocatable_array(arg.semantic_type)
             )
-            is_scalar_copy_return = FortranToIRConverter._is_scalar_copy_return(arg.semantic_type)
             is_character_replacement = (
                 reads_argument and writes_argument and FortranToIRConverter._is_scalar_character(arg.semantic_type)
             )
-            is_returned_output = (
-                (is_output and (is_scalar_copy_return or arg.semantic_type.rank > 0))
-                or is_allocatable_replacement
-                or is_character_replacement
+            is_returned_output = FortranToIRConverter._is_returned_output_argument(
+                is_output=is_output,
+                semantic_type=arg.semantic_type,
+                is_allocatable_replacement=is_allocatable_replacement,
+                is_character_replacement=is_character_replacement,
             )
-            is_hidden_output = is_output and (
-                is_scalar_copy_return or FortranToIRConverter._is_allocatable_array(arg.semantic_type)
+            is_hidden_output = FortranToIRConverter._is_hidden_output_argument(
+                native_arg,
+                is_output=is_output,
+                semantic_type=arg.semantic_type,
             )
             mapping_python_position = None if is_hidden_output else python_position
             mapping_result_position = result_position if is_returned_output else None

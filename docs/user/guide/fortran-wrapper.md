@@ -484,11 +484,11 @@ The central rule is:
 > transfer mode at the Python boundary. It is never inferred from Fortran syntax
 > alone.
 
-For example, both an allocatable output dummy and an allocatable component use
-the Fortran `allocatable` attribute, but they have different owners. An output
-dummy crosses the boundary as a replacement value and is copied into
-Python-owned memory. A component belongs to a containing native object and can
-be exposed as a borrowed view whose base keeps that object alive.
+For example, both a non-optional allocatable output dummy and an allocatable
+component use the Fortran `allocatable` attribute, but they have different
+owners. The output dummy crosses the boundary as a replacement value and is
+copied into Python-owned memory. A component belongs to a containing native
+object and can be exposed as a borrowed view whose base keeps that object alive.
 
 ### Ownership Vocabulary
 
@@ -795,7 +795,7 @@ value, status, message = analyze(2.0)
 Generated `.pyi` signatures and NumPy-style docstrings use the same projection.
 `Returns["name", T]` is reserved for a returned value that also remains a
 Python-visible argument, such as caller-provided output storage. Hidden outputs
-use ordinary return annotations; allocatable outputs include `None`.
+use ordinary return annotations; hidden allocatable outputs include `None`.
 
 Runtime tests: [`test_output_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_output_arguments.py),
 [`test_native_call_examples.py`](../../../tests/wrapper/fortran/function_calls/test_native_call_examples.py).
@@ -825,11 +825,13 @@ For Python-visible optional inputs, omission and explicit `None` both mean that
 no native actual argument is passed, so `present(dummy)` is false. Passing a
 concrete value makes it true.
 
-An optional `intent(inout)` value mutates normally when supplied and does
-nothing when absent. An optional caller-provided output array returns that same
-array when supplied and returns `None` for its output position when absent.
-Hidden scalar or derived-type outputs are different: the wrapper requests them
-with native temporary storage, so they are present and returned.
+Optional `intent(out)` and `intent(inout)` dummies remain visible so omission or
+`None` makes native `present(dummy)` false. Optional scalar outputs use mutable
+rank-zero storage such as `Int32[()]`. Optional output arrays, including
+allocatable outputs, use visible optional storage and return `None` for their
+result position when absent. Hidden scalar or derived-type `Return(...)`
+outputs are different: the wrapper requests them with native temporary storage,
+so they are present and returned on every call.
 
 Runtime tests: [`test_optional_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_optional_arguments.py).
 
@@ -883,10 +885,10 @@ Allocatable behavior depends on where the allocation lives.
 
 ### Allocatable Output And Function Results
 
-Top-level allocatable outputs and function results use copy-return ownership.
-Allocated storage becomes a Python-owned NumPy array; unallocated storage
-becomes `None`. The bridge releases the temporary Fortran allocation after the
-copy.
+Top-level function results and non-optional hidden allocatable outputs use
+copy-return ownership. Allocated storage becomes a Python-owned NumPy array;
+unallocated storage becomes `None`. The bridge releases the temporary Fortran
+allocation after the copy.
 
 ```fortran
 function make_vector(n) result(values)

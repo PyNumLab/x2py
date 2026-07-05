@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Arg, Float64, Int32, Optional, Return, Returns, String, native_call
+from x2py.contracts import Addr, Arg, Float64, Int32, Optional, Returns, String, native_call
 
 class sample:
     def __init__(
@@ -30,7 +30,8 @@ def fill_optional(
     values: Float64[::] = ...
 ) -> Returns["values", Float64[::], Optional]: ...
 
-@native_call([Addr(Arg(0)), Return('status', 1)])
+@native_call([Addr(Arg(0)), Arg(1)])
 def optional_status(
-    base: Int32
-) -> tuple[Int32, Int32 | None]: ...
+    base: Int32,
+    status: Int32[()] = ...
+) -> tuple[Int32, Returns["status", Int32[()], Optional]]: ...

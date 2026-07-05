@@ -818,7 +818,10 @@ that representation is already address/storage based. `Addr(Arg(i))` is reserved
 for bare numeric scalar values that would otherwise be passed by value.
 `Return(...)` entries always name hidden writable native output storage. The
 wrapper passes that storage by address because a native output argument cannot
-be written by value; `Addr(Return(...))` is redundant and invalid.
+be written by value; `Addr(Return(...))` is redundant and invalid. Do not use
+`Return(...)` for optional native outputs when the caller must control
+`present(...)`; keep the output visible instead, using `T[()]` for scalar
+storage and visible optional array storage for arrays.
 
 ## Storage Contracts
 
@@ -1815,11 +1818,12 @@ Python module namespaces, so assigning to `mod.nmax` can rebind that Python name
 without modifying native Fortran state.
 
 <!-- X2PY_C_DOCS_START
-Allocatable array function results and allocatable output array arguments
-use a copy-return policy. The generated bridge copies allocated Fortran storage
-into C memory that becomes owned by the returned NumPy array, then deallocates
-the Fortran allocatable. If the Fortran value remains unallocated, Python
-receives `None`.
+Allocatable array function results and non-optional allocatable output array
+arguments use a copy-return policy. The generated bridge copies allocated
+Fortran storage into C memory that becomes owned by the returned NumPy array,
+then deallocates the Fortran allocatable. If the Fortran value remains
+unallocated, Python receives `None`. Optional allocatable output dummies remain
+visible so the caller can omit them and make native `present(...)` false.
 X2PY_C_DOCS_END -->
 
 Allocatable writable arguments remain blocked. They need a replacement

@@ -483,6 +483,40 @@ end module
     assert "= ..." in code
 
 
+def test_emit_optional_scalar_output_as_visible_scalar_storage():
+    source = """
+module opt_out_mod
+contains
+subroutine maybe_status(status)
+    integer(4), intent(out), optional :: status
+end subroutine maybe_status
+end module opt_out_mod
+"""
+
+    code = generate_pyi(source)
+
+    assert "Return('status'" not in code
+    assert "status: Int32[()] = ..." in code
+    assert ') -> Returns["status", Int32[()], Optional]: ...' in code
+
+
+def test_emit_optional_allocatable_output_as_visible_argument():
+    source = """
+module opt_alloc_out_mod
+contains
+subroutine maybe_values(values)
+    real(8), allocatable, intent(out), optional :: values(:)
+end subroutine maybe_values
+end module opt_alloc_out_mod
+"""
+
+    code = generate_pyi(source)
+
+    assert "Return('values'" not in code
+    assert "values: Annotated[Float64[:], Allocatable] = ..." in code
+    assert ') -> Returns["values", Annotated[Float64[:], Allocatable], Optional]: ...' in code
+
+
 # ============================================================
 # Allocatable constraint
 # ============================================================

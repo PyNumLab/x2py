@@ -64,7 +64,13 @@ def test_optional_arguments_drive_fortran_present_behavior(
     np.testing.assert_allclose(output, np.array([11.0, 12.0, 13.0], dtype=np.float64))
     assert module.fill_optional(np.int32(3)) is None
     assert module.fill_optional(np.int32(3), None) is None
-    assert module.optional_status(np.int32(8)) == (np.int32(8), np.int32(58))
+    assert module.optional_status(np.int32(8)) == (np.int32(8), None)
+    assert module.optional_status(np.int32(8), None) == (np.int32(8), None)
+    status = np.empty((), dtype=np.int32)
+    returned_base, returned_status = module.optional_status(np.int32(8), status)
+    assert returned_base == np.int32(8)
+    assert returned_status is status
+    assert status[()] == np.int32(58)
 
     with pytest.raises(TypeError):
         module.summarize(np.int32(5), scale="bad")
