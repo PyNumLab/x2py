@@ -56,7 +56,7 @@
               "visibility": "public",
               "default_value": null,
               "metadata": {
-                "pyi_projected_output": true
+                "projected_output": true
               },
               "origin": {
                 "source_language": "fortran",
@@ -1467,7 +1467,7 @@
               "visibility": "public",
               "default_value": null,
               "metadata": {
-                "pyi_projected_output": true
+                "projected_output": true
               },
               "origin": {
                 "source_language": "fortran",

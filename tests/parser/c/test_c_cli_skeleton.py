@@ -15,6 +15,8 @@ from x2py.c_parser import cli as c_parser_cli
 from x2py import cli as x2py_cli
 from x2py.preprocessing import PreprocessingConfig
 
+CONTRACT_IMPORT = "from x2py.contracts import Int32\n\n"
+
 
 def test_cli_help_shows_explicit_c_language_mode():
     cmd = [sys.executable, "-m", "x2py", "--help"]
@@ -263,7 +265,7 @@ def test_cli_c_wrap_readiness_directory_includes_native_and_pyi_inputs(tmp_path:
     header = tmp_path / "api.h"
     pyi = tmp_path / "solver.pyi"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    pyi.write_text(f"{CONTRACT_IMPORT}def fill(n: Int32) -> None: ...\n", encoding="utf-8")
     cmd = [
         sys.executable,
         "-m",
@@ -284,7 +286,7 @@ def test_cli_c_wrap_readiness_directory_includes_native_and_pyi_inputs(tmp_path:
 
 def test_cli_c_wrap_readiness_accepts_language_neutral_pyi_input(tmp_path: Path):
     pyi = tmp_path / "solver.pyi"
-    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    pyi.write_text(f"{CONTRACT_IMPORT}def fill(n: Int32) -> None: ...\n", encoding="utf-8")
     cmd = [
         sys.executable,
         "-m",
