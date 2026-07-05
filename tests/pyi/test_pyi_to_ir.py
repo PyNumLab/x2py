@@ -114,7 +114,7 @@ def test_convert_pyi_to_ir_accepts_parsed_pyi_ast_only():
 
     assert module.name == "parsed"
     assert module.variables[0].name == "value"
-    with pytest.raises(TypeError, match="expects a Python ast.Module"):
+    with pytest.raises(TypeError, match=r"expects a Python ast\.Module"):
         convert_pyi_to_ir(source)
 
 
