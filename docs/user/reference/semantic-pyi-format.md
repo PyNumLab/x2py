@@ -1421,20 +1421,16 @@ def convert_integer(value: Int32) -> Int32: ...
 def convert_real(value: Float64) -> Float64: ...
 
 @overload("convert_integer")
-@native_call([Addr(Arg(0))])
 def convert(value: Int32) -> Int32: ...
 
 @overload("convert_real")
-@native_call([Addr(Arg(0))])
 def convert(value: Float64) -> Float64: ...
 
 class accumulator:
     @overload("accumulator_add_integer")
-    @native_call([Pass(), Addr(Arg(0))])
     def add(self, value: Int32) -> None: ...
 
     @overload("accumulator_add_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def add(self, value: Float64) -> None: ...
 ```
 
@@ -1446,6 +1442,9 @@ when it is needed to resolve a public overload declaration from the standalone
 that is otherwise part of the wrapper input.
 `@native_call` is not emitted merely to restate an unchanged native function
 name.
+An overload declaration is only a Python dispatch link. It must not also carry
+`@native_call`; the linked concrete procedure owns any native projection,
+including argument reordering, `Pass()`, hidden values, and projected returns.
 
 The loader resolves only the decorator string. It never guesses a target by
 signature. The target must exist exactly once, each target may occur only once
@@ -1457,10 +1456,9 @@ When a module-level Python overload group is renamed, `generic=` preserves the
 native Fortran generic name:
 
 ```python
-from x2py.contracts import Addr, Arg, Int32, native_call, overload
+from x2py.contracts import Int32, overload
 
 @overload("convert_integer", generic="convert")
-@native_call([Addr(Arg(0))])
 def convert_number(value: Int32) -> Int32: ...
 ```
 
@@ -1523,11 +1521,9 @@ def add_real_vector(left: Float64, right: vector) -> vector: ...
 
 class vector:
     @overload("add_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def __add__(self, right: Float64) -> vector: ...
 
     @overload("add_real_vector")
-    @native_call([Addr(Arg(0)), Pass()])
     def __radd__(self, left: Float64) -> vector: ...
 ```
 
@@ -1590,7 +1586,6 @@ def assign_vector_real(
 
 class vector:
     @overload("assign_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def assign(self, right: Float64) -> vector: ...
 ```
 
@@ -2013,6 +2008,8 @@ ambiguous, unsafe, or stale before wrapper lowering:
   `@hold_gil`, and `@staticmethod`.
 - bare `@overload` or `typing.overload`; overload links require one concrete
   procedure name.
+- `@overload(...)` combined with `@native_call(...)`; the linked concrete
+  procedure owns native projection metadata.
 
 ## Roadmap
 

@@ -56,13 +56,11 @@ def convert_real(
 ) -> Float64: ...
 
 @overload("convert_integer")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Int32
 ) -> Int32: ...
 
 @overload("convert_real")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Float64
 ) -> Float64: ...
@@ -95,7 +93,9 @@ generated-class overloads follow the same exact dtype/rank/class rule when
 their specifics are supported.
 
 The generated `.pyi` contains overload declarations associated with concrete
-native targets. The public generic name remains one callable.
+native targets. The public generic name remains one callable. `@native_call`
+belongs on the concrete specific procedure, not on the `@overload(...)`
+declaration that links the public Python signature to that target.
 
 ## Type-Bound Generics
 

@@ -79,17 +79,25 @@ fields only. They do not expose type-bound procedures or writable setters, and
 their `snapshot_type` attribute points at the live wrapper class they snapshot.
 
 Type-bound procedures become methods. The generated semantic contract uses
-`Pass()` when the native passed-object position is not the default and
-`@overload(...)` when a generic method has multiple specific procedures:
+`Pass()` on the concrete native-specific method when the native passed-object
+position is not the default, and `@overload(...)` when a generic method has
+multiple specific procedures:
 
 ```python
-from x2py.contracts import Addr, Arg, Float64, Int32, Pass, native_call, overload
+from x2py.contracts import Addr, Arg, Float64, Int32, Pass, bind, native_call, overload, private
 
 class accumulator:
     total: Float64 = 0.0
 
-    @overload("accumulator_add_integer")
+    @private
+    @bind("accumulator_add_integer")
     @native_call([Pass(), Addr(Arg(0))])
+    def add_integer(
+        self,
+        value: Int32
+    ) -> None: ...
+
+    @overload("accumulator_add_integer")
     def add(
         self,
         value: Int32
@@ -97,7 +105,8 @@ class accumulator:
 ```
 
 Method dispatch is exact. Indistinguishable overloads or unsupported generic
-constructors block generation.
+constructors block generation. The overload declaration is only a Python
+dispatch link; it cannot also carry `@native_call(...)`.
 
 ## Ownership And Finalization
 

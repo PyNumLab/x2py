@@ -1352,7 +1352,7 @@ class PyiPrinter(ClassVisitor):
             and not func.metadata.get(OVERLOAD_TARGET_METADATA)
         ):
             decorators.append(f"{indent}@{self._contract('external')}")
-        if self._requires_native_call(func):
+        if not func.metadata.get(OVERLOAD_TARGET_METADATA) and self._requires_native_call(func):
             decorators.append(f"{indent}{self._native_call(self._pyi_projection(func))}")
         if isinstance(policy := func.metadata.get(RUNTIME_STATUS_ERROR_METADATA), dict):
             decorators.append(f"{indent}{self._raises(policy)}")

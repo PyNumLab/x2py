@@ -26,14 +26,12 @@ class accumulator:
     ) -> None: ...
 
     @overload("accumulator_add_integer")
-    @native_call([Pass(), Addr(Arg(0))])
     def add(
         self,
         value: Int32
     ) -> None: ...
 
     @overload("accumulator_add_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def add(
         self,
         value: Float64
@@ -102,25 +100,21 @@ def accumulator_add_real(
 ) -> None: ...
 
 @overload("convert_integer")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Int32
 ) -> Int32: ...
 
 @overload("convert_real")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Float64
 ) -> Float64: ...
 
 @overload("convert_complex")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Complex128
 ) -> Complex128: ...
 
 @overload("summarize_scalar")
-@native_call([Addr(Arg(0))])
 def summarize(
     value: Float64
 ) -> Float64: ...

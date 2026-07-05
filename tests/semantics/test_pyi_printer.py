@@ -1291,10 +1291,12 @@ end module generic_mod
     code = generate_pyi(source)
 
     assert "from typing import overload" not in code
-    assert code.count('@overload("convert_integer")\n@native_call([Addr(Arg(0))])\ndef convert(') == 1
-    assert code.count('@overload("convert_real")\n@native_call([Addr(Arg(0))])\ndef convert(') == 1
-    assert code.count('    @overload("set_integer")\n    @native_call([Pass(), Addr(Arg(0))])\n    def set(') == 1
-    assert code.count('    @overload("set_real")\n    @native_call([Pass(), Addr(Arg(0))])\n    def set(') == 1
+    assert code.count('@overload("convert_integer")\ndef convert(') == 1
+    assert code.count('@overload("convert_real")\ndef convert(') == 1
+    assert code.count('    @overload("set_integer")\n    def set(') == 1
+    assert code.count('    @overload("set_real")\n    def set(') == 1
+    assert '@overload("convert_integer")\n@native_call' not in code
+    assert '    @overload("set_integer")\n    @native_call' not in code
 
     loaded = parse_pyi_text(code, module_name="generic_mod")
     assert [(item.name, len(item.procedures)) for item in loaded.overload_sets] == [("convert", 2)]

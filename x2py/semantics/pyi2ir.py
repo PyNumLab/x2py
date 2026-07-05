@@ -401,6 +401,8 @@ class _PyiAstParser:
             self._apply_decorator(parsed, node, context=context)
         if parsed.overload_target is not None and parsed.bind_target is not None:
             raise ValueError("bind cannot be combined with overload")
+        if parsed.overload_target is not None and parsed.has_native_call:
+            raise ValueError("overload cannot be combined with native_call; put native_call on the specific procedure")
         return parsed
 
     def _apply_decorator(self, parsed: _Decorators, node: ast.expr, *, context: str) -> None:

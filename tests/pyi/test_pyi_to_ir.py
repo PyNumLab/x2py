@@ -785,9 +785,8 @@ class state:
 
     emitted = emit_module(linked)
     assert "def __init__(\n        self,\n        *,\n        id: Int32 = 7," in emitted
-    assert (
-        '    @overload("init_state")\n    @native_call([Pass(), Addr(Arg(0)), Addr(Arg(1))])\n    def __init__('
-    ) in emitted
+    assert '    @overload("init_state")\n    def __init__(' in emitted
+    assert '    @overload("init_state")\n    @native_call' not in emitted
     assert parse_pyi_text(emitted, module_name="edited") == linked
 
     with pytest.raises(ValueError, match="Constructor overload dispatch is not mapped"):
@@ -1069,6 +1068,25 @@ def convert(value: Int32) -> Int32: ...
 def convert(value: Int32) -> Int32: ...
 """,
             "references specific procedure 'convert_integer' more than once",
+        ),
+        (
+            """
+def convert_integer(value: Int32) -> Int32: ...
+@overload("convert_integer")
+@native_call([Addr(Arg(0))])
+def convert(value: Int32) -> Int32: ...
+""",
+            "overload cannot be combined with native_call",
+        ),
+        (
+            """
+def set_integer(self: item, value: Int32) -> None: ...
+class item:
+    @overload("set_integer")
+    @native_call([Pass(), Addr(Arg(0))])
+    def set(self, value: Int32) -> None: ...
+""",
+            "overload cannot be combined with native_call",
         ),
     ],
 )

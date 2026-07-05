@@ -16,13 +16,11 @@ def convert_real_specific(
 ) -> Float64: ...
 
 @overload("convert_int", generic="convert")
-@native_call([Addr(Arg(0))])
 def convert_number(
     value: Int32
 ) -> Int32: ...
 
 @overload("convert_real_specific", generic="convert")
-@native_call([Addr(Arg(0))])
 def convert_number(
     value: Float64
 ) -> Float64: ...

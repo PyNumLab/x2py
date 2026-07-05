@@ -13,13 +13,11 @@ def convert_real(
 ) -> Float64: ...
 
 @overload("convert_integer")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Int32
 ) -> Int32: ...
 
 @overload("convert_real")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Float64
 ) -> Float64: ...

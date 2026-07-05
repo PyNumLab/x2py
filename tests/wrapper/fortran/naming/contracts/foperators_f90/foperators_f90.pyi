@@ -16,21 +16,18 @@ class vector:
     ) -> vector: ...
 
     @overload("add_vector_integer")
-    @native_call([Pass(), Addr(Arg(0))])
     def __add__(
         self,
         right: Int32
     ) -> vector: ...
 
     @overload("add_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def __add__(
         self,
         right: Float64
     ) -> vector: ...
 
     @overload("add_real_vector")
-    @native_call([Addr(Arg(0)), Pass()])
     def __radd__(
         self,
         left: Float64
@@ -52,14 +49,12 @@ class vector:
     def __pos__(self) -> vector: ...
 
     @overload("subtract_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def __sub__(
         self,
         right: Float64
     ) -> vector: ...
 
     @overload("subtract_real_vector")
-    @native_call([Addr(Arg(0)), Pass()])
     def __rsub__(
         self,
         left: Float64
@@ -69,21 +64,18 @@ class vector:
     def __neg__(self) -> vector: ...
 
     @overload("multiply_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def __mul__(
         self,
         right: Float64
     ) -> vector: ...
 
     @overload("divide_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def __truediv__(
         self,
         right: Float64
     ) -> vector: ...
 
     @overload("power_vector_integer")
-    @native_call([Pass(), Addr(Arg(0))])
     def __pow__(
         self,
         right: Int32
@@ -108,7 +100,6 @@ class vector:
     ) -> Bool: ...
 
     @overload("not_equivalent_vector_integer", generic="operator(.neqv.)")
-    @native_call([Pass(), Addr(Arg(0))])
     def __ne__(
         self,
         right: Int32
@@ -121,14 +112,12 @@ class vector:
     ) -> Bool: ...
 
     @overload("less_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def __lt__(
         self,
         right: Float64
     ) -> Bool: ...
 
     @overload("less_real_vector")
-    @native_call([Addr(Arg(0)), Pass()])
     def __gt__(
         self,
         left: Float64
@@ -174,21 +163,18 @@ class vector:
     ) -> Float64: ...
 
     @overload("shift_real_vector")
-    @native_call([Addr(Arg(0)), Pass()])
     def r_operator_shift(
         self,
         left: Float64
     ) -> vector: ...
 
     @overload("assign_vector_integer")
-    @native_call([Pass(), Addr(Arg(0))])
     def assign(
         self,
         right: Int32
     ) -> vector: ...
 
     @overload("assign_vector_real")
-    @native_call([Pass(), Addr(Arg(0))])
     def assign(
         self,
         right: Float64
@@ -204,14 +190,12 @@ class offset:
     value: Float64 = 0.0
 
     @overload("add_vector_offset")
-    @native_call([Arg(0), Pass()])
     def __radd__(
         self,
         left: vector
     ) -> vector: ...
 
     @overload("equivalent_vector_offset", generic="operator(.eqv.)")
-    @native_call([Arg(0), Pass()])
     def __eq__(
         self,
         left: vector
@@ -235,7 +219,6 @@ class counter:
     ) -> counter: ...
 
     @overload("counter_add_integer")
-    @native_call([Pass(), Addr(Arg(0))])
     def __add__(
         self,
         right: Int32
@@ -452,13 +435,11 @@ def counter_add_integer(
 ) -> counter: ...
 
 @overload("convert_integer")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Int32
 ) -> Int32: ...
 
 @overload("convert_real")
-@native_call([Addr(Arg(0))])
 def convert(
     value: Float64
 ) -> Float64: ...

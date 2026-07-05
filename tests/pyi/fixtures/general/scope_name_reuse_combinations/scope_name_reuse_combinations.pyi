@@ -59,19 +59,16 @@ def convert_to_logical(
 ) -> Bool: ...
 
 @overload("do_work_i")
-@native_call([Addr(Arg(0))])
 def do_work(
     same_name: Int32
 ) -> None: ...
 
 @overload("do_work_r")
-@native_call([Addr(Arg(0))])
 def do_work(
     same_name: Float32
 ) -> None: ...
 
 @overload("do_work_l")
-@native_call([Addr(Arg(0))])
 def do_work(
     same_name: Bool
 ) -> None: ...
