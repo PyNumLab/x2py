@@ -2,7 +2,7 @@
 title: Getting Started
 audience: users
 prerequisites: repository checkout
-related: installation.md, verification.md, ../tutorials/basic-wrapper.md
+related: installation.md, verification.md
 status: maintained
 ---
 
@@ -27,11 +27,6 @@ Follow these pages in order:
 3. [Build and call a scalar function](first-wrapped-function.md).
 4. [Work with a Fortran module and its saved state](first-wrapped-module.md).
 5. [Use the normal edit, inspect, build, test, and rebuild loop](beginner-workflow.md).
-
-The [basic wrapper tutorial](../tutorials/basic-wrapper.md) combines semantic
-`.pyi` generation, wrapper compilation, import, and a few diagnostic commands
-into one longer walkthrough. Use the pages here when you need one step at a
-time.
 
 ## What You Will Build
 
