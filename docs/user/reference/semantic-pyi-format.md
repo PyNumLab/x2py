@@ -816,6 +816,9 @@ arguments, or scalar by-address projection differs from the default lowering.
 representation." For arrays, scalar storage, strings, and raw-address arguments,
 that representation is already address/storage based. `Addr(Arg(i))` is reserved
 for bare numeric scalar values that would otherwise be passed by value.
+`Return(...)` entries always name hidden writable native output storage. The
+wrapper passes that storage by address because a native output argument cannot
+be written by value; `Addr(Return(...))` is redundant and invalid.
 
 ## Storage Contracts
 
@@ -1371,7 +1374,8 @@ def solve(
 `@native_call` preserves native argument order. The return annotation preserves
 Python result order and the hidden output's native name and type. A function
 result is Python result slot zero; projected output arguments follow it in
-native argument order.
+native argument order. Each `Return(...)` entry is hidden writable storage passed
+to the native procedure by address.
 
 The same native routine can be edited into an identity call without projection:
 
@@ -1912,8 +1916,8 @@ Loaded projection entries:
 | --- | --- |
 | `Arg(i)` | native argument is Python argument `i`'s default native representation |
 | `Addr(Arg(i))` | native argument is the address of Python argument `i`'s call-local native scalar representation |
-| `Return(i)` | native argument is supplied by projected return slot `i` |
-| `Return("name", i)` | named native argument is supplied by projected return slot `i` |
+| `Return(i)` | native argument is supplied by projected return slot `i` as hidden writable storage passed by address |
+| `Return("name", i)` | named native argument is supplied by projected return slot `i` as hidden writable storage passed by address |
 | `Pass()` | hidden type-bound passed-object argument |
 | `Int32(1)`, `Float64(0.5)`, `Bool(False)`, `String[1]("N")` | hidden native literal with an explicit ABI type |
 | `Len(Arg(i))`, `Len(Return(i))`, `Len(Work("name"))` | hidden native length metadata |

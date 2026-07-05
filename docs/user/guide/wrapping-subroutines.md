@@ -121,6 +121,11 @@ Hidden outputs are returned in native argument order. A hidden scalar character
 output becomes a new `str`, and a hidden scalar derived output becomes a new
 wrapper-owned object.
 
+In `@native_call`, `Return(...)` always names hidden writable native output
+storage. The wrapper passes that storage to the native procedure by address,
+because an output argument cannot be written by value. Do not write
+`Addr(Return(...))`; `Return(...)` already carries the output-storage contract.
+
 ## Caller-Provided Arrays
 
 Array output and inout storage remains visible. Allocate it with the exact
