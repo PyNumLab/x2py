@@ -23,10 +23,10 @@ from x2py.ownership_policy import (
     TransferMode,
     ownership_decision_for_codegen_variable,
 )
+from x2py.semantic_metadata import SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA
 from x2py.semantics.models import (
     INTERNAL_MODULE_VARIABLE_ACCESS_METADATA,
     INTERNAL_MODULE_VARIABLE_NAME_METADATA,
-    PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
 )
@@ -5063,7 +5063,7 @@ class CPythonBindingGenerator(BindingGenerator):
         current = cls
         while current is not None:
             decorators = getattr(current, "decorators", {})
-            if hasattr(decorators, "get") and decorators.get(PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
+            if hasattr(decorators, "get") and decorators.get(SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
                 return True
             next_class = getattr(current, "original_class", None)
             if next_class is current:

@@ -67,12 +67,12 @@ def test_c_semantic_readiness_reports_callback_policy_required():
 
 
 def test_completed_pyi_callback_policy_can_make_c_api_semantically_ready():
-    from x2py.semantics.pyi2ir import parse_pyi_text
+    from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
     module = parse_pyi_text(
         """
-from typing import Callable
+from x2py.contracts import Addr, Callable, Int8
 
 def each_item(
     items: Addr(Int8),

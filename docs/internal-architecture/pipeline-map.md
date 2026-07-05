@@ -68,7 +68,7 @@ not mean those classes should be merged.
 | Printers and compilation | `x2py/codegen/printers/`, `x2py/compiling/`, and wrapper orchestration | Text emission, generated artifact layout, compiler commands, native objects, libraries, include directories, and link inputs | Semantic support decisions and generated-AST rewriting policy |
 
 <!-- X2PY_C_DOCS_START
-| Semantic IR | `x2py/semantics/models.py` and source-to-IR converters | Language-neutral contract facts: public names, native identities, source origins, visibility, type/storage/access facts, module/class/function/variable structure, and metadata that must survive `.pyi` round trips | Generated bodies, temporaries, target-language scopes, include/import mechanics, CPython calls, and printer-only syntax |
+| Semantic IR | `x2py/semantics/models.py`, `x2py/semantic_metadata.py`, and source-to-IR converters | Language-neutral contract facts: public names, native identities, source origins, visibility, type/storage/access facts, module/class/function/variable structure, and metadata that must survive parser, policy, printer, and lowering boundaries | Generated bodies, temporaries, target-language scopes, include/import mechanics, CPython calls, and printer-only syntax |
 | Backend codegen AST | `x2py/codegen/bridges/`, `x2py/codegen/bindings/`, and backend API helpers | Fortran bridge nodes, C/CPython binding nodes, target ABI/API calls, and backend-specific adapter structure | Language-neutral semantic meaning |
 | Naming policy | `x2py/naming/` | Shared public-name and generated-symbol decisions for Python, C, and Fortran targets | Semantic IR ownership or codegen tree ownership |
 X2PY_C_DOCS_END -->
@@ -143,7 +143,7 @@ X2PY_C_DOCS_END -->
 | --- | --- | --- |
 | CLI and output routing | `x2py/cli.py`, parser CLI helpers | `docs/developer-guide/source-map.md`, `docs/developer-guide/feature-to-code-map.md` |
 | Source loading and preprocessing | `x2py/preprocessing.py` | `docs/developer-guide/source-map.md`, parser references |
-| Editable semantic contracts | `x2py/semantics/pyi_parser.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/reference/semantic-pyi-format.md` |
+| Editable semantic contracts | `x2py/pyi_parser/parser.py`, `x2py/pyi_pipeline.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/reference/semantic-pyi-format.md` |
 | Readiness | `x2py/semantics/readiness.py` | `docs/reference/diagnostic-codes.md` |
 | Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/ownership_policy.py`, `x2py/semantics/ir2ast.py` | `docs/user-guide/fortran-wrapper.md`, ownership docs |
 | Native build | `x2py/compiling/python_wrapper.py`, `x2py/compiling/runtime_support.py` | compiling package README and build-system docs |
@@ -162,7 +162,8 @@ the Python API.
 
 ```text
 .pyi contract
-  -> x2py/semantics/pyi_parser.py
+  -> x2py/pyi_parser/parser.py
+  -> x2py/pyi_pipeline.py
   -> x2py/semantics/pyi2ir.py
   -> x2py/semantics/native_contract.py
   -> x2py/semantics/policy_completion.py
@@ -194,7 +195,7 @@ X2PY_C_DOCS_END -->
 ```text
 C parser -> x2py/semantics/c2ir.py
 Fortran parser -> x2py/semantics/fortran2ir.py
-.pyi parser -> x2py/semantics/pyi_parser.py -> x2py/semantics/pyi2ir.py
+.pyi parser -> x2py/pyi_parser/parser.py -> x2py/pyi_pipeline.py -> x2py/semantics/pyi2ir.py
   -> SemanticModule objects
   -> x2py/semantics/policy_completion.py
   -> readiness and lowering

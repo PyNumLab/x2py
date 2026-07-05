@@ -62,7 +62,11 @@ def test_module_generation_writes_explicit_package_entry_and_native_leaf(tmp_pat
         "__init__.pyi",
         "contract_math_mod.pyi",
     }
-    assert entry.read_text(encoding="utf-8").startswith("from . import contract_math_mod\n\n@external\n")
+    assert entry.read_text(encoding="utf-8").startswith(
+        "from x2py.contracts import Addr, Arg, Int32, external, native_call\n"
+        "from . import contract_math_mod\n\n"
+        "@external\n"
+    )
 
 
 def test_same_named_module_uses_init_entry_and_keeps_externals_at_root(tmp_path: Path):
@@ -74,7 +78,10 @@ def test_same_named_module_uses_init_entry_and_keeps_externals_at_root(tmp_path:
     assert entry == tmp_path / "contracts" / "contract_same_name" / "__init__.pyi"
     assert {path.name for path in entry.parent.iterdir()} == {"__init__.pyi", "contract_same_name.pyi"}
     assert entry.read_text(encoding="utf-8") == (
-        "from . import contract_same_name\n\n@external\ndef external_ping() -> None: ...\n"
+        "from x2py.contracts import external\n"
+        "from . import contract_same_name\n\n"
+        "@external\n"
+        "def external_ping() -> None: ...\n"
     )
     assert "def module_ping() -> None: ..." in (entry.parent / "contract_same_name.pyi").read_text(encoding="utf-8")
 

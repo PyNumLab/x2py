@@ -28,7 +28,7 @@ The full parity plan is tracked in
 Status terms used below:
 
 - **Generated**: emitted today by `--pyi` or `codegen.printers.pyi_printer`.
-- **Loaded**: accepted today by `semantics.pyi_parser` and converted back to
+- **Loaded**: accepted today by `x2py.pyi_parser` and converted back to
   semantic IR.
 - **Readiness**: understood by the semantic readiness checker.
 - **Build input**: accepted by the `.pyi` wrapper build for the implemented
@@ -63,7 +63,7 @@ Function and method bodies must be `...`. Positional-only, keyword-only,
 part of the semantic format. The generated keyword-only derived-type
 constructor described below is the only keyword-only exception.
 
-`load_pyi_modules(...)` can load one file, several files, or a directory tree.
+`pyi_paths_to_semantic_modules(...)` can load one file, several files, or a directory tree.
 Directory loading derives dotted module names from relative `.pyi` paths and
 reconciles imported external type references across the loaded set.
 

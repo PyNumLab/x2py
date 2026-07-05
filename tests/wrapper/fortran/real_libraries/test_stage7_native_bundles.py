@@ -21,6 +21,10 @@ from tests.wrapper.fortran.multiple_files.test_multi_source_builds import (
 )
 
 
+CONTRACT_IMPORT = "from x2py.contracts import Addr, Arg, Int32, external, native_call\n\n"
+NATIVE_CALL_IMPORT = "from x2py.contracts import Addr, Arg, Int32, native_call\n\n"
+
+
 def _compiler() -> str:
     compiler = shutil.which("gfortran")
     if compiler is None:
@@ -105,6 +109,10 @@ def _import_from_build(result):
 
 
 def _simple_external_contract(name: str) -> str:
+    return f"{CONTRACT_IMPORT}{_simple_external_declaration(name)}"
+
+
+def _simple_external_declaration(name: str) -> str:
     return f"@external\n@native_call([Addr(Arg(0))])\ndef {name}(value: Int32) -> Int32: ...\n"
 
 
@@ -186,14 +194,17 @@ end module stage7_mod
     entry = _write_contract_package(
         tmp_path / "contracts" / "mixed_stage7",
         entry=(
+            "from x2py.contracts import Addr, Arg, Int32, external, native_call\n"
             "from . import stage7_mod\n\n"
-            f"{_simple_external_contract('ext_object')}\n"
-            f"{_simple_external_contract('ext_archive')}\n"
-            f"{_simple_external_contract('ext_shared')}\n"
-            f"{_simple_external_contract('ext_named')}"
+            f"{_simple_external_declaration('ext_object')}\n"
+            f"{_simple_external_declaration('ext_archive')}\n"
+            f"{_simple_external_declaration('ext_shared')}\n"
+            f"{_simple_external_declaration('ext_named')}"
         ),
         leaves={
-            "stage7_mod": ("@native_call([Addr(Arg(0))])\ndef mod_value(\n    value: Int32\n) -> Int32: ...\n"),
+            "stage7_mod": (
+                f"{NATIVE_CALL_IMPORT}@native_call([Addr(Arg(0))])\ndef mod_value(\n    value: Int32\n) -> Int32: ...\n"
+            ),
         },
     )
 
@@ -468,7 +479,10 @@ end module missing_mod
         tmp_path / "contracts" / "missing_mod",
         entry="from . import missing_mod\n",
         leaves={
-            "missing_mod": ("@native_call([Addr(Arg(0))])\ndef value_plus_one(\n    value: Int32\n) -> Int32: ...\n")
+            "missing_mod": (
+                f"{NATIVE_CALL_IMPORT}@native_call([Addr(Arg(0))])\n"
+                "def value_plus_one(\n    value: Int32\n) -> Int32: ...\n"
+            )
         },
     )
 

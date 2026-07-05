@@ -752,13 +752,17 @@ end module physics
 
     payload = x2py_cli._semantic_report([str(physics)])
 
-    assert payload[str(physics)]["pyi_dependencies"] == {"types_mod": "class particle(Opaque):\n    pass"}
+    assert payload[str(physics)]["pyi_dependencies"] == {
+        "types_mod": "from x2py.contracts import Opaque\n\nclass particle(Opaque):\n    pass"
+    }
     monkeypatch.setattr(sys, "argv", ["x2py", str(physics), "--pyi", "--out"])
     assert x2py_cli.main() == 0
 
     package = tmp_path / "physics"
     assert (package / "__init__.pyi").read_text(encoding="utf-8") == "from . import physics\n"
-    assert (package / "types_mod.pyi").read_text(encoding="utf-8") == "class particle(Opaque):\n    pass\n"
+    assert (package / "types_mod.pyi").read_text(
+        encoding="utf-8"
+    ) == "from x2py.contracts import Opaque\n\nclass particle(Opaque):\n    pass\n"
 
 
 def test_x2py_pyi_report_formats_and_rejects_conflicting_dependency_stubs():
@@ -3368,7 +3372,7 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
         return readiness
 
     monkeypatch.setattr(x2py_cli, "_expand_pyi_paths", expand)
-    monkeypatch.setattr(x2py_cli, "load_pyi_modules", load)
+    monkeypatch.setattr(x2py_cli, "pyi_paths_to_semantic_modules", load)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
     monkeypatch.setattr(x2py_cli, "assess_semantic_wrap_readiness", assess)
 

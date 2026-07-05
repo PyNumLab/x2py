@@ -722,9 +722,9 @@ True
 
 <!-- x2py-doc-test: exact -->
 ```python
-from x2py import assess_semantic_wrap_readiness, parse_pyi_text
+from x2py import assess_semantic_wrap_readiness, pyi_text_to_semantic_module
 
-module = parse_pyi_text(
+module = pyi_text_to_semantic_module(
     """
 from typing import Callable
 
@@ -750,9 +750,9 @@ True
 ### Check `.pyi` Files Or Directories
 
 ```python
-from x2py import assess_pyi_wrap_readiness, load_pyi_modules
+from x2py import assess_pyi_wrap_readiness, pyi_paths_to_semantic_modules
 
-modules = load_pyi_modules("path/to/interfaces")
+modules = pyi_paths_to_semantic_modules("path/to/interfaces")
 report = assess_pyi_wrap_readiness("path/to/interfaces")
 
 print([module.name for module in modules])

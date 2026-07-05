@@ -58,6 +58,8 @@ Representable native parameters become `Final[...]` constants in the generated
 contract:
 
 ```python
+from x2py.contracts import Final, Int32
+
 nmax: Final[Int32] = 12
 ```
 
@@ -96,6 +98,8 @@ has its own source attributes. `Aliased` on that declaration selects a live
 borrowed wrapper:
 
 ```python
+from x2py.contracts import Aliased, Allocatable, Annotated, Float64
+
 class box:
     values: Annotated[Float64[:], Allocatable]
 
@@ -112,6 +116,8 @@ Without `Aliased`, x2py exposes a detached recursive snapshot when every field
 has a safe copy policy:
 
 ```python
+from x2py.contracts import Snapshot
+
 current: Snapshot[box]
 ```
 

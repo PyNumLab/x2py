@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Aliased, Annotated, Arg, Destruction, Float64, Int32, Ownership, Pointer, PointerAssociation, Transfer, native_call
+
 @native_call([Addr(Arg(0))])
 def read_pointer(
     value: Annotated[Float64, PointerAssociation("runtime"), Ownership("caller"), Transfer("call_local"), Destruction("call_local")]

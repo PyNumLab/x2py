@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from x2py.contracts import CONTRACT_SYMBOLS
 from x2py import parse_fortran_file
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.models import (
@@ -24,9 +25,10 @@ from x2py.semantics.models import (
     SemanticStorageContract,
     SemanticType,
 )
-from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.semantics.readiness import (
     _SemanticTypeIndex,
+    _called_shape_intrinsics,
     _constant_names,
     _constant_values,
     _import_index,
@@ -42,10 +44,11 @@ from x2py import cli as x2py_cli
 
 
 TEST_FILE = Path(__file__).parent.parent / "data" / "fortran" / "general" / "basic_subroutine.f90"
+CONTRACT_IMPORT = f"from x2py.contracts import {', '.join(sorted(CONTRACT_SYMBOLS))}\n"
 
 
 def _readiness_from_pyi(source: str):
-    module = parse_pyi_text(source, module_name="solver")
+    module = parse_pyi_text(f"{CONTRACT_IMPORT}{source}", module_name="solver")
     return assess_semantic_wrap_readiness(module, source="solver.pyi")
 
 
@@ -108,7 +111,7 @@ end module m
 def test_completed_pyi_interface_is_semantically_ready():
     report = _readiness_from_pyi(
         """
-from typing import Callable, Final
+from x2py.contracts import Callable, Final, Float64, Int32, Returns
 
 rk: Final[Int32] = 8
 nmax: Final[Int32] = 32
@@ -264,6 +267,51 @@ end module pointer_module_mod
             "policy": "pointer array owner, lifetime, shape, and release policy are unknown",
         }
     ]
+
+
+def test_shape_readiness_ignores_layout_syntax_and_called_array_intrinsics():
+    parsed = parse_fortran_file(
+        """
+module color_mod
+  type :: rgb_color
+    integer :: r, g, b
+  end type rgb_color
+contains
+  function dot_colors(v, colors) result(color)
+    real(8), intent(in) :: v(:)
+    type(rgb_color), intent(in) :: colors(size(v))
+    type(rgb_color) :: color
+  end function dot_colors
+end module color_mod
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+
+    report = assess_semantic_wrap_readiness(module)
+    blockers = {blocker["code"]: blocker for blocker in report["wrappability_blockers"]}
+
+    assert "unresolved_shape_symbols" not in blockers
+    assert blockers["fortran_derived_type_array_policy_missing"]["items"] == [
+        {"owner": "color_mod.dot_colors.colors", "item": "colors", "type": "rgb_color"}
+    ]
+
+
+def test_shape_readiness_preserves_native_extent_names_matching_layout_tokens():
+    parsed = parse_fortran_file(
+        """
+module named_extents
+  integer, parameter :: Flat = 2
+  integer, parameter :: Strided = 3
+  real :: flat_values(Flat)
+  real :: strided_values(Strided)
+end module named_extents
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+
+    report = assess_semantic_wrap_readiness(module)
+
+    assert "unresolved_shape_symbols" not in _blocker_codes(report)
 
 
 def test_allocatable_scalar_derived_replacement_reports_precise_blocker():
@@ -550,7 +598,7 @@ def integrate(objective: Procedure, x0: Float64) -> Float64: ...
 def test_callable_with_signature_makes_callback_ready():
     report = _readiness_from_pyi(
         """
-from typing import Callable
+from x2py.contracts import Callable, Float64
 
 def integrate(objective: Callable[[Float64], Float64], x0: Float64) -> Float64: ...
 """
@@ -562,7 +610,7 @@ def integrate(objective: Callable[[Float64], Float64], x0: Float64) -> Float64: 
 def test_callable_without_argument_list_is_not_enough_for_readiness():
     report = _readiness_from_pyi(
         """
-from typing import Callable
+from x2py.contracts import Callable, Float64
 
 def integrate(objective: Callable[..., Float64], x0: Float64) -> Float64: ...
 """
@@ -578,8 +626,8 @@ def test_assess_pyi_wrap_readiness_expands_directory_and_uses_leaf_filenames(tmp
     first = tmp_path / "first.pyi"
     second = nested / "second.pyi"
     ignored = nested / "ignored.txt"
-    first.write_text("def first(x: Int32) -> None: ...\n", encoding="utf-8")
-    second.write_text("def second(x: Int32) -> None: ...\n", encoding="utf-8")
+    first.write_text(f"{CONTRACT_IMPORT}def first(x: Int32) -> None: ...\n", encoding="utf-8")
+    second.write_text(f"{CONTRACT_IMPORT}def second(x: Int32) -> None: ...\n", encoding="utf-8")
     ignored.write_text("not a stub", encoding="utf-8")
 
     report = assess_pyi_wrap_readiness([tmp_path, first])
@@ -592,7 +640,7 @@ def test_assess_pyi_wrap_readiness_expands_directory_and_uses_leaf_filenames(tmp
 
 def test_assess_pyi_wrap_readiness_honors_explicit_encoding(tmp_path: Path):
     pyi = tmp_path / "latin1.pyi"
-    pyi.write_bytes('label: Final[String] = "caf\xe9"\n'.encode("latin-1"))
+    pyi.write_bytes(f'{CONTRACT_IMPORT}label: Final[String] = "caf\xe9"\n'.encode("latin-1"))
 
     report = assess_pyi_wrap_readiness(pyi, encoding="latin-1")
 
@@ -603,7 +651,7 @@ def test_assess_pyi_wrap_readiness_honors_explicit_encoding(tmp_path: Path):
 
 def test_readiness_reports_unsupported_module_variable_initializer(tmp_path: Path):
     pyi = tmp_path / "labels.pyi"
-    pyi.write_text('label: String = "ready"\n', encoding="utf-8")
+    pyi.write_text(f'{CONTRACT_IMPORT}label: String = "ready"\n', encoding="utf-8")
 
     report = assess_pyi_wrap_readiness(pyi)
 
@@ -784,7 +832,35 @@ def test_readiness_helpers_cover_indexes_constants_shapes_and_visibility():
         storage=SemanticStorageContract(array=SemanticArrayContract(shape=["m", "k + 1"])),
     )
     assert _shape_expressions(semantic_type) == ["n", "m", "k + 1"]
+    semantic_type.storage.array.shape.insert(0, "n")
+    assert _shape_expressions(semantic_type) == ["n", "m", "k + 1"]
+    layout_type = SemanticType(
+        "Float64",
+        shape=["::Strided", "0:n:Strided"],
+        storage=SemanticStorageContract(
+            array=SemanticArrayContract(
+                shape=["::Strided", "0:n:Strided"],
+                axes=["strided", "strided"],
+            )
+        ),
+    )
+    assert _shape_expressions(layout_type) == ["0:n:"]
+    named_extents = SemanticType(
+        "Float64",
+        shape=["Flat", "Strided"],
+        storage=SemanticStorageContract(
+            array=SemanticArrayContract(shape=["Flat", "Strided"], axes=["dense", "dense"])
+        ),
+    )
+    assert _shape_expressions(named_extents) == ["Flat", "Strided"]
     assert _shape_symbols("2 * n + state.width + _hidden") == {"n", "state", "width", "_hidden"}
+    assert _shape_symbols("Flat + Strided") == {"Flat", "Strided"}
+    assert _shape_symbols("size(v)") == {"size", "v"}
+    assert _shape_symbols("SIZE(v)") == {"SIZE", "v"}
+    assert _shape_symbols("size + n") == {"size", "n"}
+    assert _shape_symbols("extent(v)") == {"extent", "v"}
+    assert _called_shape_intrinsics("size(v) + SHAPE(v)") == {"size", "SHAPE"}
+    assert _called_shape_intrinsics("size + extent(v)") == set()
     assert _is_public(SemanticFunction("visible")) is True
     assert _is_public(SemanticFunction("hidden", visibility="private")) is False
 
@@ -1257,7 +1333,8 @@ def test_readiness_report_preserves_blocker_payloads_and_unit_ownership():
 def test_cli_wrap_readiness_uses_pyi_filename_as_native_contract(tmp_path: Path):
     pyi = tmp_path / "solver.pyi"
     pyi.write_text(
-        """
+        f"""
+{CONTRACT_IMPORT}
 n: Final[Int32] = 8
 
 def fill(x: Float64[n]) -> None: ...
@@ -1275,7 +1352,7 @@ def fill(x: Float64[n]) -> None: ...
 
 def test_cli_wrap_readiness_json_uses_pyi_filename_as_native_contract(tmp_path: Path):
     pyi = tmp_path / "solver.pyi"
-    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    pyi.write_text(f"{CONTRACT_IMPORT}def fill(n: Int32) -> None: ...\n", encoding="utf-8")
 
     cmd = [sys.executable, "-m", "x2py", str(pyi), "--wrap-readiness", "--json"]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -1323,7 +1400,7 @@ def test_x2py_main_wrap_readiness_mode_from_inline_source(tmp_path: Path, monkey
 def test_x2py_main_wrap_readiness_json_directory_expands_fortran_and_pyi(tmp_path: Path, monkeypatch, capsys):
     f90 = _write_ready_fortran(tmp_path / "mini.f90")
     pyi = tmp_path / "solver.pyi"
-    pyi.write_text("def fill(n: Int32) -> None: ...\n", encoding="utf-8")
+    pyi.write_text(f"{CONTRACT_IMPORT}def fill(n: Int32) -> None: ...\n", encoding="utf-8")
 
     monkeypatch.setattr(sys, "argv", ["x2py", str(tmp_path), "--language", "fortran", "--wrap-readiness", "--json"])
     assert x2py_cli.main() == 0
@@ -1337,7 +1414,8 @@ def test_wrap_readiness_report_reconciles_edited_pyi_file_set(tmp_path: Path):
     physics = tmp_path / "physics.pyi"
     types_mod = tmp_path / "types_mod.pyi"
     physics.write_text(
-        """
+        f"""
+{CONTRACT_IMPORT}
 from types_mod import particle
 
 def create_particle() -> particle: ...
@@ -1345,7 +1423,8 @@ def create_particle() -> particle: ...
         encoding="utf-8",
     )
     types_mod.write_text(
-        """
+        f"""
+{CONTRACT_IMPORT}
 class particle:
     mass: Float64
 """,

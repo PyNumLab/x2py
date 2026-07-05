@@ -1,5 +1,7 @@
 # Intentional difference: add a renamed public binding and a new Python
 # overload group over two existing native specific procedures.
+from x2py.contracts import Addr, Arg, Float64, Int32, bind, native_call, overload, private
+
 @bind("convert")
 @native_call([Addr(Arg(0))])
 def convert_int(

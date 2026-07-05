@@ -3,7 +3,9 @@ from pathlib import Path
 import pytest
 
 import x2py
+from x2py.contracts import CONTRACT_SYMBOLS
 from x2py import parse_fortran_file as parse_fortran_source
+from x2py.semantic_metadata import SNAPSHOT_TYPE_METADATA
 from x2py.codegen.binding_pipeline import BindingPipeline
 from x2py.codegen.codegen import Codegen
 from x2py.codegen.scope import Scope
@@ -12,7 +14,7 @@ from x2py.semantics.fortran2ir import (
     fortran_module_to_semantic_module,
 )
 
-from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.codegen.printers.pyi_printer import (
     emit_module,
@@ -23,7 +25,6 @@ from x2py.codegen.printers.pyi_printer import (
 from x2py.semantics.models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
-    PYI_SNAPSHOT_TYPE_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
     SemanticArgument,
@@ -38,11 +39,19 @@ from x2py.semantics.models import (
     SemanticField,
     SemanticStorageContract,
     SemanticType,
+    SemanticVariable,
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
 
 WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"
 OPERATOR_F90_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
+CONTRACT_IMPORT = f"from x2py.contracts import {', '.join(sorted(CONTRACT_SYMBOLS))}\n"
+
+
+def parse_pyi_text(source: str, *args, **kwargs):
+    if "x2py.contracts" in source:
+        return _parse_pyi_text(source, *args, **kwargs)
+    return _parse_pyi_text(f"{CONTRACT_IMPORT}{source}", *args, **kwargs)
 
 
 # ============================================================
@@ -85,7 +94,7 @@ def test_emit_snapshot_type_wrapper_round_trips():
         variables=[
             SemanticArgument(
                 "current",
-                SemanticType("box", dtype="box", metadata={PYI_SNAPSHOT_TYPE_METADATA: True}),
+                SemanticType("box", dtype="box", metadata={SNAPSHOT_TYPE_METADATA: True}),
             )
         ],
     )
@@ -95,7 +104,7 @@ def test_emit_snapshot_type_wrapper_round_trips():
     assert "current: Snapshot[box]" in code
     parsed = parse_pyi_text(code, module_name="snapshot_mod")
     assert parsed.variables[0].semantic_type.name == "box"
-    assert parsed.variables[0].semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
+    assert parsed.variables[0].semantic_type.metadata[SNAPSHOT_TYPE_METADATA] is True
 
 
 def test_emit_basic_scalar_function():
@@ -688,7 +697,7 @@ end module physics
     assert "p: particle" in code
     assert "Addr(particle)" not in code
     assert "class particle" not in code
-    assert stubs["types_mod"] == "class particle(Opaque):\n    pass"
+    assert stubs["types_mod"].endswith("class particle(Opaque):\n    pass")
 
 
 def test_emit_bare_use_adds_import_for_opaque_dependency_type():
@@ -707,7 +716,7 @@ end module physics
 
     assert "import types_mod" in stubs["physics"]
     assert "from types_mod import particle" in stubs["physics"]
-    assert stubs["types_mod"] == "class particle(Opaque):\n    pass"
+    assert stubs["types_mod"].endswith("class particle(Opaque):\n    pass")
 
 
 def test_emit_omits_structured_source_kind_import_without_items():
@@ -1070,6 +1079,44 @@ def test_printer_emits_flat_dimension_for_assumed_size_arrays():
     assert PyiPrinter().emit(lower_bound_assumed_size) == 'Annotated[Float64[Flat], SourceDims("0:*")]'
 
 
+def test_emit_module_aliases_contract_import_when_user_name_collides():
+    array_type = SemanticType(
+        "Float64",
+        dtype="Float64",
+        rank=1,
+        shape=[":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(
+                rank=1,
+                shape=[":"],
+                category="assumed_size",
+                source_shape=["*"],
+                order="ORDER_F",
+                contiguous=True,
+            ),
+        ),
+    )
+    module = SemanticModule(
+        name="alias_mod",
+        variables=[
+            SemanticVariable(
+                "Flat",
+                SemanticType("Int32", constraints=[SemanticConstraint("Constant")]),
+                default_value="10",
+            )
+        ],
+        functions=[SemanticFunction("inspect", arguments=[SemanticArgument("values", array_type)])],
+    )
+
+    code = emit_module(module)
+
+    assert "Flat as " in code.splitlines()[0]
+    reparsed = _parse_pyi_text(code, module_name="alias_mod")
+    assert reparsed.variables[0].name == "Flat"
+    assert reparsed.functions[0].arguments[0].semantic_type.storage.array.category == "assumed_size"
+
+
 def test_emit_class_method_keeps_method_indentation():
     module = SemanticModule(
         name="method_mod",
@@ -1298,7 +1345,7 @@ end module derived_module_snapshot
 
     assert "current: Snapshot[box]" in code
     loaded = parse_pyi_text(code, module_name="derived_module_snapshot")
-    assert loaded.variables[0].semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
+    assert loaded.variables[0].semantic_type.metadata[SNAPSHOT_TYPE_METADATA] is True
 
 
 def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():

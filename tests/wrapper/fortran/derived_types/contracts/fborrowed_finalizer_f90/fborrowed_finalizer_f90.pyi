@@ -1,3 +1,5 @@
+from x2py.contracts import Int32, native_type
+
 @native_type(finalizers=('cleanup_child',))
 class child:
     pass

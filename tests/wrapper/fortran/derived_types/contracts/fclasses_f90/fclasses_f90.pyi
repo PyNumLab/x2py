@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int64, ORDER_F, Pass, Polymorphic, bind, native_call
+
 class vector:
     def __init__(
         self,

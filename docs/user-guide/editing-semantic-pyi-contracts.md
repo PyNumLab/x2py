@@ -122,6 +122,8 @@ generated Python API. For example, deleting `next_local` removes the function
 without affecting the remaining module variables and functions:
 
 ```python
+from x2py.contracts import Int32
+
 counter: Int32
 
 def summarize() -> Int32: ...
@@ -142,6 +144,8 @@ public constructor is not regenerated.
 Use `@private` for functions, methods, and classes:
 
 ```python
+from x2py.contracts import Float64, private
+
 @private
 def scaled_counter() -> Float64: ...
 ```
@@ -149,6 +153,8 @@ def scaled_counter() -> Float64: ...
 Use `private[...]` for data declarations or arguments:
 
 ```python
+from x2py.contracts import Float64, private
+
 scale: private[Float64]
 ```
 
@@ -164,6 +170,8 @@ Each candidate is an independent declaration. Removing one candidate narrows
 runtime dispatch without removing the generic name:
 
 ```python
+from x2py.contracts import Float64, Int32, overload
+
 @overload("convert_integer")
 def convert(value: Int32) -> Int32: ...
 
@@ -178,6 +186,8 @@ an empty overload declaration as an absence marker; remove it.
 A mutable scalar module variable may include a literal default:
 
 ```python
+from x2py.contracts import Int32
+
 counter: Int32 = 41
 ```
 
@@ -193,6 +203,8 @@ instead of being treated as copied Python values.
 Use `Final[...]` for true constants:
 
 ```python
+from x2py.contracts import Final, Int32
+
 nmax: Final[Int32] = 12
 ```
 
@@ -203,6 +215,8 @@ nmax: Final[Int32] = 12
 Add the complete callable declaration to the module leaf:
 
 ```python
+from x2py.contracts import Float64
+
 def norm2(values: Float64[:]) -> Float64: ...
 ```
 
@@ -215,6 +229,8 @@ Use `@bind(...)` when the declaration's Python name differs from the native
 specific procedure:
 
 ```python
+from x2py.contracts import Float64, Int32, bind
+
 @bind("solver_step")
 def step(values: Float64[:]) -> Int32: ...
 ```
@@ -222,6 +238,8 @@ def step(values: Float64[:]) -> Int32: ...
 For a standalone external symbol, also use `@external`:
 
 ```python
+from x2py.contracts import Float64, bind, external
+
 @external
 @bind("vendor_norm2")
 def norm2(values: Float64[:]) -> Float64: ...
@@ -234,6 +252,8 @@ def norm2(values: Float64[:]) -> Float64: ...
 Link every Python overload to one concrete native specific:
 
 ```python
+from x2py.contracts import Float64, Int32, overload
+
 @overload("scale_integer")
 def scale(value: Int32) -> Int32: ...
 
@@ -245,6 +265,8 @@ To rename the Python overload group while calling an existing native generic,
 preserve the native generic explicitly:
 
 ```python
+from x2py.contracts import Int32, overload
+
 @overload("convert_integer", generic="convert")
 def convert_number(value: Int32) -> Int32: ...
 ```
@@ -258,6 +280,8 @@ silently choose a native procedure.
 An edited class may bind `__init__` to one concrete native initializer:
 
 ```python
+from x2py.contracts import Addr, Arg, Int32, Pass, bind, native_call
+
 class state:
     @bind("init_state")
     @native_call([Pass(), Addr(Arg(0))])
@@ -275,6 +299,8 @@ When every native dummy remains visible in native order, the edited declaration
 does not need `@native_call`:
 
 ```python
+from x2py.contracts import Int32
+
 def scalar_status(
     base: Int32[()],
     status: Int32[()],
@@ -301,6 +327,8 @@ For a native-order scalar character dummy, keep the Python boundary as
 `String[n]`:
 
 ```python
+from x2py.contracts import String
+
 def fixed_inout(label: String[8]) -> None: ...
 ```
 
@@ -310,6 +338,8 @@ returns `None`. Add a replacement return when Python should receive the mutated
 value:
 
 ```python
+from x2py.contracts import Returns, String
+
 def fixed_inout(label: String[8]) -> Returns["label", String[8]]: ...
 ```
 
@@ -320,6 +350,8 @@ the native call needs hidden output storage, reordered arguments, constants,
 lengths, presence flags, shapes, or work buffers:
 
 ```python
+from x2py.contracts import Addr, Arg, Int32, Return, Returns, native_call
+
 @native_call([Addr(Arg(0)), Return("status", 0)])
 def scalar_status(
     base: Int32,
@@ -337,6 +369,8 @@ writable native argument therefore needs either an explicit replacement result
 or an explicit call-local discarded-mutation policy:
 
 ```python
+from x2py.contracts import Annotated, Float64, Immutable, Int32, Returns
+
 def scale_with_status(
     values: Annotated[Float64[:], Immutable],
     status: Int32[()],
@@ -358,6 +392,8 @@ The annotation is runtime policy, not merely an IDE hint. Supported edits can
 tighten or broaden validation without changing the native ABI:
 
 ```python
+from x2py.contracts import Annotated, Float64, ORDER_F
+
 def solve(
     matrix: Annotated[Float64[3, 3], ORDER_F],
     rhs: Float64[3],
@@ -391,6 +427,8 @@ the same way through `fortran_runtime_coercions_unsupported`.
 Use `@raises(...)` to turn a projected native status into a Python exception:
 
 ```python
+from x2py.contracts import Float64, Int32, Returns, String, raises
+
 @raises(status="status", message="message", success=0)
 def solve(values: Float64[:]) -> Returns[
     "result", Float64[:],
@@ -409,6 +447,8 @@ allows it. Add `@hold_gil` when native code must call Python synchronously or
 otherwise requires the current Python thread to retain the GIL:
 
 ```python
+from x2py.contracts import Callable, Float64, In, hold_gil
+
 @hold_gil
 def invoke_callback(callback: Callable[[In(Float64)], Float64]) -> Float64: ...
 ```
@@ -421,6 +461,8 @@ procedure ABI.
 Ownership edits use a complete policy triple:
 
 ```python
+from x2py.contracts import Annotated, Destruction, Float64, Ownership, Transfer
+
 Annotated[
     Float64[:],
     Ownership("native"),
@@ -451,6 +493,8 @@ but their native storage contexts make their lifetimes different.
 #### Fortran-owned module storage
 
 ```python
+from x2py.contracts import Aliased, Allocatable, Annotated, Destruction, Float64, Ownership, Transfer
+
 module_values: Annotated[
     Float64[:],
     Allocatable,
@@ -477,6 +521,8 @@ Fortran allocates -> Python borrows -> Python releases view (no native free)
 #### Wrapper-owned component storage
 
 ```python
+from x2py.contracts import Allocatable, Annotated, Destruction, Float64, Ownership, Transfer
+
 class buffer:
     values: Annotated[
         Float64[:],
@@ -505,6 +551,8 @@ wrapper allocates instance -> component allocates -> NumPy view retains wrapper
 #### NumPy-owned copy
 
 ```python
+from x2py.contracts import Addr, Allocatable, Annotated, Arg, Destruction, Float64, Int32, Ownership, Return, Transfer, native_call
+
 @native_call([Addr(Arg(0)), Return("values", 0)])
 def build_values(
     n: Int32,

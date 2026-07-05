@@ -34,6 +34,8 @@ end module adjustments
 Inspecting `optional.f90` prints this optional-input contract:
 
 ```python
+from x2py.contracts import Addr, Arg, Int32, native_call
+
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def adjust(
     value: Int32,

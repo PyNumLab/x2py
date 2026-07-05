@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Bool, Complex64, Float32, Int32, String, native_call, overload
+
 class same_name:
     def __init__(
         self,

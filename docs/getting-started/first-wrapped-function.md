@@ -60,6 +60,8 @@ python3 -m x2py scale.f90 --pyi
 The generated declaration is:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, external, native_call
+
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
@@ -81,6 +83,8 @@ Native scalar arguments use exact NumPy dtypes. A plain Python `float` is not a
 replacement for `numpy.float64` at this boundary:
 
 ```python
+from x2py.contracts import raises
+
 scale.scale(3.0, 2.5)  # raises TypeError
 ```
 

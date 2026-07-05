@@ -71,7 +71,7 @@ from x2py.semantics.models import (
     SemanticType,
     SemanticVariable,
 )
-from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.codegen.printers.pyi_printer import emit_module, emit_module_stubs
 
@@ -422,7 +422,10 @@ void use_context(struct private_context *ctx);
         "representation": "opaque",
     }
     assert "from private import private_context" in stubs["api"]
-    assert stubs["private"] == "class private_context(CStruct, Opaque):\n    pass"
+    assert (
+        stubs["private"]
+        == "from x2py.contracts import CStruct, Opaque\n\nclass private_context(CStruct, Opaque):\n    pass"
+    )
     assert assess_semantic_wrap_readiness(module, source="api.h")["wrappable"] is True
 
 
@@ -679,7 +682,7 @@ def test_c2ir_enum_values_emit_only_python_compatible_expressions():
     assert "FLAG_ONE: Final[Int] = 1" in code
     assert "FLAG_OCTAL: Final[Int] = 8" in code
     assert "FLAG_SHIFT: Final[Int] = FLAG_ONE << 1" in code
-    assert "FLAG_CHAR: Final[Int]\n" in code
+    assert "FLAG_CHAR: Final[Int]" in code
     assert {variable.name: variable.default_value for variable in module.variables} == {
         "FLAG_ONE": "1U",
         "FLAG_OCTAL": "010",

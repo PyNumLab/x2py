@@ -133,6 +133,8 @@ from . import module_state
 The generated module leaf remains the native contract:
 
 ```python
+from x2py.contracts import Final, Float64, Int32
+
 nmax: Final[Int32] = 12
 
 counter: Int32

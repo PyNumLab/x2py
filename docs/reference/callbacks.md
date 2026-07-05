@@ -55,6 +55,8 @@ signature rather than a Python raw-address calling convention.
 Read-only fixed-length character callback dummies use Python strings:
 
 ```python
+from x2py.contracts import Callable, In, String
+
 callback: Callable[[In(String[8])], None]
 ```
 
@@ -62,6 +64,8 @@ Writable fixed-length character callback dummies use mutable rank-zero bytes
 storage:
 
 ```python
+from x2py.contracts import Callable, InOut, Out, String
+
 callback: Callable[[Out(String[8][()])], None]
 callback: Callable[[InOut(String[8][()])], None]
 ```

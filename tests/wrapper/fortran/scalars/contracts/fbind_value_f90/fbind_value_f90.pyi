@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Bool, Complex128, Float64, Int32, String, native_call
+
 def plus_value(
     n: Int32
 ) -> Int32: ...

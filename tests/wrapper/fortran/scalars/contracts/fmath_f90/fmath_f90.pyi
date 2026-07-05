@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Bool, Complex128, Complex64, Float32, Float64, Int32, bind, native_call
+
 @bind("SQUARE_R4")
 @native_call([Addr(Arg(0))])
 def square_r4(

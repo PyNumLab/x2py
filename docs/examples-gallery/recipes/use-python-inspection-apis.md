@@ -104,11 +104,11 @@ X2PY_C_DOCS_END -->
 
 <!-- x2py-doc-test: exact -->
 ```python
-from x2py import assess_semantic_wrap_readiness, parse_pyi_text
+from x2py import assess_semantic_wrap_readiness, pyi_text_to_semantic_module
 
-module = parse_pyi_text(
+module = pyi_text_to_semantic_module(
     """
-from typing import Callable
+from x2py.contracts import Callable, Float64
 
 def integrate(
     objective: Callable[[Float64], Float64],

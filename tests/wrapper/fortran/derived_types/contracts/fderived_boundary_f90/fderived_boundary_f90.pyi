@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Float64, Return, native_call
+
 class point:
     def __init__(
         self,

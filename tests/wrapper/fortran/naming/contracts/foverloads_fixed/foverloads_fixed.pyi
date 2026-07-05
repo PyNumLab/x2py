@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Float64, Int32, native_call, overload, private
+
 @private
 @native_call([Addr(Arg(0))])
 def convert_integer(

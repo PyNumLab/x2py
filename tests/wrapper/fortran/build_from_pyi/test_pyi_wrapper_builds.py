@@ -370,15 +370,19 @@ def test_pyi_python_api_rejects_invalid_projection_before_codegen(tmp_path: Path
     ("contract_text", "message"),
     [
         (
-            "class particle:\n    value: Float64\n\ndef invalid(value: Addr(particle)) -> None: ...\n",
+            "from x2py.contracts import Addr, Float64\n\n"
+            "class particle:\n    value: Float64\n\n"
+            "def invalid(value: Addr(particle)) -> None: ...\n",
             r"Addr\(WrappedType\) is not allowed",
         ),
         (
-            "@native_call([Addr(Arg(0))])\ndef invalid(values: Float64[:]) -> None: ...\n",
+            "from x2py.contracts import Addr, Arg, Float64, native_call\n\n"
+            "@native_call([Addr(Arg(0))])\n"
+            "def invalid(values: Float64[:]) -> None: ...\n",
             "only valid for primitive scalar values",
         ),
         (
-            "def invalid(values: Addr(Float64[:])) -> None: ...\n",
+            "from x2py.contracts import Addr, Float64\n\ndef invalid(values: Addr(Float64[:])) -> None: ...\n",
             "raw arrays require a fully resolved rank and shape",
         ),
     ],
@@ -574,7 +578,7 @@ def test_entry_rejects_colliding_wildcard_exports(tmp_path: Path):
     first = tmp_path / "first.pyi"
     second = tmp_path / "second.pyi"
     entry.write_text("from .first import *\nfrom .second import *\n", encoding="utf-8")
-    declaration = "def update(value: Int32) -> Int32: ...\n"
+    declaration = "from x2py.contracts import Int32\n\ndef update(value: Int32) -> Int32: ...\n"
     first.write_text(declaration, encoding="utf-8")
     second.write_text(declaration, encoding="utf-8")
 

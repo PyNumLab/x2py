@@ -581,6 +581,8 @@ printers do not invent ownership behavior.
 An edited `.pyi` can provide ownership metadata:
 
 ```python
+from x2py.contracts import Annotated, Destruction, Float64, Ownership, Pointer, Transfer
+
 values: Annotated[
     Float64[:],
     Pointer,
@@ -1316,6 +1318,8 @@ public construction; x2py does not regenerate it. To use one concrete native
 initializer, bind `__init__` to another same-class method:
 
 ```python
+from x2py.contracts import Float64, Int32, bind, private
+
 class settings:
     @bind("initialize")
     def __init__(self, iterations: Int32, tolerance: Float64) -> None: ...
@@ -1437,6 +1441,8 @@ X2PY_C_DOCS_END -->
 The generated semantic stub preserves the values:
 
 ```python
+from x2py.contracts import Final, Int32
+
 red: Final[Int32] = 1
 blue: Final[Int32] = 2
 invalid: Final[Int32] = -1
@@ -1923,6 +1929,8 @@ outputs. Native `stop` or `error stop` can terminate the Python process.
 An edited semantic `.pyi` can opt into status projection:
 
 ```python
+from x2py.contracts import Float64, Int32, Returns, String, raises
+
 @raises(status="status", message="message", success=0)
 def solve(
     x: Float64[:],
@@ -1930,6 +1938,8 @@ def solve(
 ```
 
 ```python
+from x2py.contracts import raises
+
 solve(values)            # returns None when status == 0
 solve(bad_values)        # raises RuntimeError(message) otherwise
 ```
@@ -1952,6 +1962,8 @@ callback-taking calls keep the GIL automatically. An edited `.pyi` can keep it
 for another procedure:
 
 ```python
+from x2py.contracts import Int32, hold_gil
+
 @hold_gil
 def update_shared_state(value: Int32) -> None: ...
 ```

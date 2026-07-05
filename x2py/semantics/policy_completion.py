@@ -11,7 +11,6 @@ from x2py.ownership_policy import (
     DestructionPolicy,
     OWNERSHIP_POLICY_METADATA,
     ObjectKind,
-    PYI_SCALAR_STORAGE_CATEGORY,
     OwnershipDecision,
     OwnershipContext,
     OwnershipOwner,
@@ -20,6 +19,14 @@ from x2py.ownership_policy import (
     TransferMode,
     default_ownership_policy,
     ownership_context_for_argument,
+)
+from x2py.semantic_metadata import (
+    ADDRESS_ROLE_METADATA,
+    ADDRESS_ROLE_PROJECTION,
+    ADDRESS_ROLE_RAW,
+    PROJECTED_OUTPUT_METADATA,
+    SCALAR_STORAGE_CATEGORY,
+    SNAPSHOT_TYPE_METADATA,
 )
 from x2py.semantics import models
 
@@ -123,7 +130,7 @@ def _complete_module_snapshot_policy(
     """Complete recursive snapshot eligibility for a derived module variable."""
     decision = variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA]
     if not _is_module_derived_snapshot(decision, variable.semantic_type):
-        if variable.semantic_type.metadata.get(models.PYI_SNAPSHOT_TYPE_METADATA):
+        if variable.semantic_type.metadata.get(SNAPSHOT_TYPE_METADATA):
             blocker = _invalid_snapshot_annotation_blocker(variable, decision)
             blocked = _blocked_snapshot_decision(decision, blocker)
             variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = blocked
@@ -133,7 +140,7 @@ def _complete_module_snapshot_policy(
                 setter_action=SetterAction.OMIT,
             )
         else:
-            variable.semantic_type.metadata.pop(models.PYI_SNAPSHOT_TYPE_METADATA, None)
+            variable.semantic_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
         return
 
     blocker, actions = _snapshot_plan(variable.semantic_type, class_lookup, (variable.semantic_type.name,))
@@ -145,12 +152,12 @@ def _complete_module_snapshot_policy(
             blocked,
             setter_action=SetterAction.OMIT,
         )
-        variable.semantic_type.metadata.pop(models.PYI_SNAPSHOT_TYPE_METADATA, None)
+        variable.semantic_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
         return
 
     for field, action in actions:
         field.metadata[models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA] = action
-    variable.semantic_type.metadata[models.PYI_SNAPSHOT_TYPE_METADATA] = True
+    variable.semantic_type.metadata[SNAPSHOT_TYPE_METADATA] = True
 
 
 def _is_module_derived_snapshot(decision: OwnershipDecision, semantic_type: models.SemanticType) -> bool:
@@ -358,10 +365,10 @@ def _apply_scalar_address_projection(argument: models.SemanticArgument) -> None:
     semantic_type = argument.semantic_type
     storage = semantic_type.storage
     metadata = dict(storage.metadata) if storage is not None else {}
-    metadata[models.PYI_ADDRESS_ROLE_METADATA] = models.PYI_ADDRESS_ROLE_PROJECTION
+    metadata[ADDRESS_ROLE_METADATA] = ADDRESS_ROLE_PROJECTION
     explicit_policy = semantic_type.metadata.get(OWNERSHIP_POLICY_METADATA)
     transfer = explicit_policy.get("transfer") if isinstance(explicit_policy, dict) else None
-    projects_output = bool(argument.metadata.get(models.PYI_PROJECTED_OUTPUT_METADATA))
+    projects_output = bool(argument.metadata.get(PROJECTED_OUTPUT_METADATA))
     read_only = transfer == "call_local" and not projects_output
     mutable = not read_only
     semantic_type.storage = models.SemanticStorageContract(
@@ -392,7 +399,7 @@ def _is_primitive_scalar_value(
         allow_completed_projection
         and storage.kind == "address"
         and storage.pointer_depth == 1
-        and storage.metadata.get(models.PYI_ADDRESS_ROLE_METADATA) == models.PYI_ADDRESS_ROLE_PROJECTION
+        and storage.metadata.get(ADDRESS_ROLE_METADATA) == ADDRESS_ROLE_PROJECTION
     )
 
 
@@ -406,7 +413,7 @@ def _is_visible_extent_source(semantic_type: models.SemanticType) -> bool:
         and (semantic_type.dtype or semantic_type.name) in SEMANTIC_SCALAR_TYPE_NAMES
         and storage is not None
         and storage.array is not None
-        and storage.array.category == models.PYI_SCALAR_STORAGE_CATEGORY
+        and storage.array.category == SCALAR_STORAGE_CATEGORY
     )
 
 
@@ -418,7 +425,7 @@ def _validate_raw_address_type(
     visible_scalar_names: set[str],
 ) -> None:
     storage = semantic_type.storage
-    if storage is None or storage.metadata.get(models.PYI_ADDRESS_ROLE_METADATA) != models.PYI_ADDRESS_ROLE_RAW:
+    if storage is None or storage.metadata.get(ADDRESS_ROLE_METADATA) != ADDRESS_ROLE_RAW:
         return
     if storage.pointer_depth != 1:
         raise ValueError(
@@ -624,5 +631,5 @@ def _is_scalar_string_storage(semantic_type: models.SemanticType) -> bool:
         and storage.kind == "array"
         and array is not None
         and array.rank == 0
-        and array.category == PYI_SCALAR_STORAGE_CATEGORY
+        and array.category == SCALAR_STORAGE_CATEGORY
     )

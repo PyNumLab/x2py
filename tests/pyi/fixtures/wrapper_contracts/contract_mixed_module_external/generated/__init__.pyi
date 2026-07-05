@@ -1,3 +1,4 @@
+from x2py.contracts import Addr, Arg, Int32, external, native_call
 from . import contract_math_mod
 
 @external

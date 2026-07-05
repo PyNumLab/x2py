@@ -37,7 +37,7 @@ from x2py.semantics.fortran2ir import (
 )
 from x2py.semantics import models as semantic_models
 from x2py.semantics.native_contract import native_contract_issues
-from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.codegen.printers.pyi_printer import emit_module
 

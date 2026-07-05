@@ -226,6 +226,8 @@ end module
 The semantic interface may expose a Pythonic object model:
 
 ```python
+from x2py.contracts import bind
+
 @bind("sparse_matrix")
 class SparseMatrix:
 
@@ -346,6 +348,8 @@ is an allowed coercion for `alpha`.
 ## Matrix Example
 
 ```python
+from x2py.contracts import ORDER_F
+
 def solve(
     A: Float64Matrix[
         From(np.ndarray),
@@ -504,6 +508,8 @@ They are separate from constants. A `Final[...]` declaration records an immutabl
 The implemented minimal slice is literal defaults on mutable module variables:
 
 ```python
+from x2py.contracts import Int32
+
 counter: Int32 = 41
 ```
 
@@ -512,6 +518,8 @@ That form can be lowered to a typed value and assigned through the generated ext
 The longer-term contract is more general. An initializer expression may be executable Python:
 
 ```python
+from x2py.contracts import Float64, Int32
+
 from .init_hooks import initial_counter, runtime_scale
 
 counter: Int32 = initial_counter(seed=41)
@@ -871,6 +879,8 @@ X2PY_C_DOCS_END -->
 The semantic API may expose:
 
 ```python
+from x2py.contracts import ORDER_F
+
 class Solver:
     @contract(pre=square_linear_system)
     def solve(

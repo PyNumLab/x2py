@@ -1,4 +1,6 @@
 # Intentional difference: exercise runtime policy decorators from an edited contract.
+from x2py.contracts import Addr, Arg, Int32, Return, String, hold_gil, native_call, raises
+
 def pause_for_one_second() -> None: ...
 
 @hold_gil

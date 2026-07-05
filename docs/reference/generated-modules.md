@@ -64,6 +64,8 @@ Module procedures are attributes of the child module and follow
 variables are direct module attributes:
 
 ```python
+from x2py.contracts import Final, Int32
+
 nmax: Final[Int32] = 12
 
 counter: Int32

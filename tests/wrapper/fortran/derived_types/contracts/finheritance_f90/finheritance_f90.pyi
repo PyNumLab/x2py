@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Arg, Float64, Pass, Polymorphic, bind, native_call
+
 class base_shape:
     def __init__(
         self,

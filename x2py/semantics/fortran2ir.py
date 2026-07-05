@@ -22,7 +22,8 @@ from x2py.fortran_parser.models import (
     FortranUseMapping,
     FortranVariable,
 )
-from x2py.ownership_policy import PYI_SCALAR_STORAGE_CATEGORY, set_ownership_metadata
+from x2py.ownership_policy import set_ownership_metadata
+from x2py.semantic_metadata import PROJECTED_OUTPUT_METADATA, SCALAR_STORAGE_CATEGORY
 from x2py.visitor import ClassVisitor
 
 from .models import (
@@ -31,7 +32,6 @@ from .models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
-    PYI_PROJECTED_OUTPUT_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -547,7 +547,7 @@ class FortranToIRConverter(ClassVisitor):
             array=SemanticArrayContract(
                 rank=0,
                 shape=[],
-                category=PYI_SCALAR_STORAGE_CATEGORY,
+                category=SCALAR_STORAGE_CATEGORY,
             ),
         )
         semantic_type.ownership.mutable = True
@@ -1919,7 +1919,7 @@ class FortranToIRConverter(ClassVisitor):
             mapping_python_position = None if is_hidden_output else python_position
             mapping_result_position = result_position if is_returned_output else None
             if is_returned_output:
-                arg.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
+                arg.metadata[PROJECTED_OUTPUT_METADATA] = True
             projection.append(
                 ProjectionMapping(
                     python_name=arg.name,

@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Bool, Complex128, Complex64, Flat, Float32, Float64, Int32, String, bind, external, native_call
+
 @bind("CAXPY")
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Addr(Arg(3)), Arg(4), Addr(Arg(5))])

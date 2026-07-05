@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int32, ORDER_F, Return, Returns, String, native_call
+
 class output_point:
     def __init__(
         self,

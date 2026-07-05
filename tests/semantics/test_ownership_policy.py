@@ -1,5 +1,14 @@
 import pytest
 
+from x2py.contracts import CONTRACT_SYMBOLS
+from x2py.semantic_metadata import (
+    ADDRESS_ROLE_METADATA,
+    ADDRESS_ROLE_PROJECTION,
+    ADDRESS_ROLE_RAW,
+    PROJECTED_OUTPUT_METADATA,
+    SCALAR_STORAGE_CATEGORY,
+    SNAPSHOT_TYPE_METADATA,
+)
 from x2py.codegen.bindings.c_to_python import CPythonBindingGenerator
 from x2py.codegen.bridges.fortran_to_c import FortranToCBridgeGenerator
 from x2py.codegen.printers.pyi_printer import PyiPrinter
@@ -15,10 +24,6 @@ from x2py.ownership_policy import (
     OwnershipDecision,
     OwnershipOwner,
     OwnershipPolicyResolver,
-    PYI_ADDRESS_ROLE_METADATA,
-    PYI_ADDRESS_ROLE_PROJECTION,
-    PYI_ADDRESS_ROLE_RAW,
-    PYI_SCALAR_STORAGE_CATEGORY,
     PolicyActionDispatcher,
     PythonBarrierAction,
     PythonBarrierDispatcher,
@@ -36,7 +41,6 @@ from x2py.semantics.models import (
     MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
     PYTHON_EXPORTS_METADATA,
     PYTHON_EXPORTS_PREPARED_METADATA,
-    PYI_SNAPSHOT_TYPE_METADATA,
     RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA,
     RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
@@ -55,7 +59,16 @@ from x2py.semantics.models import (
     SemanticVariable,
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
+
+
+CONTRACT_IMPORT = f"from x2py.contracts import {', '.join(sorted(CONTRACT_SYMBOLS))}\n"
+
+
+def parse_pyi_text(source: str, *args, **kwargs):
+    if "x2py.contracts" in source:
+        return _parse_pyi_text(source, *args, **kwargs)
+    return _parse_pyi_text(f"{CONTRACT_IMPORT}{source}", *args, **kwargs)
 
 
 def _scalar_type(name: str = "Int32") -> SemanticType:
@@ -103,7 +116,7 @@ def _scalar_storage_type() -> SemanticType:
         rank=0,
         storage=SemanticStorageContract(
             kind="array",
-            array=SemanticArrayContract(rank=0, shape=[], category=PYI_SCALAR_STORAGE_CATEGORY),
+            array=SemanticArrayContract(rank=0, shape=[], category=SCALAR_STORAGE_CATEGORY),
         ),
     )
 
@@ -116,7 +129,7 @@ def _string_storage_type() -> SemanticType:
         metadata={"fortran_character_length": "8"},
         storage=SemanticStorageContract(
             kind="array",
-            array=SemanticArrayContract(rank=0, shape=[], category=PYI_SCALAR_STORAGE_CATEGORY),
+            array=SemanticArrayContract(rank=0, shape=[], category=SCALAR_STORAGE_CATEGORY),
         ),
     )
 
@@ -125,7 +138,7 @@ def _address_type(role: str) -> SemanticType:
     return SemanticType(
         name="Int32",
         dtype="Int32",
-        storage=SemanticStorageContract(kind="address", metadata={PYI_ADDRESS_ROLE_METADATA: role}),
+        storage=SemanticStorageContract(kind="address", metadata={ADDRESS_ROLE_METADATA: role}),
     )
 
 
@@ -248,7 +261,7 @@ def test_default_policy_decisions_cover_public_object_kinds():
 
 
 def test_default_policy_completes_python_and_native_barrier_actions():
-    pointer_projection = _address_type(PYI_ADDRESS_ROLE_PROJECTION)
+    pointer_projection = _address_type(ADDRESS_ROLE_PROJECTION)
     pointer_projection.metadata["fortran_pointer"] = True
     cases = [
         (
@@ -260,7 +273,7 @@ def test_default_policy_completes_python_and_native_barrier_actions():
         ),
         (
             "scalar_address_projection",
-            _address_type(PYI_ADDRESS_ROLE_PROJECTION),
+            _address_type(ADDRESS_ROLE_PROJECTION),
             _read_only_argument_context(),
             PythonBarrierAction.SCALAR_VALUE,
             NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
@@ -302,7 +315,7 @@ def test_default_policy_completes_python_and_native_barrier_actions():
         ),
         (
             "raw_address",
-            _address_type(PYI_ADDRESS_ROLE_RAW),
+            _address_type(ADDRESS_ROLE_RAW),
             _read_only_argument_context(),
             PythonBarrierAction.RAW_ADDRESS,
             NativeBarrierAction.PASS_RAW_ADDRESS,
@@ -989,7 +1002,7 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
                     SemanticArgument(
                         "values",
                         _array_type(allocatable=True),
-                        metadata={"pyi_projected_output": True},
+                        metadata={PROJECTED_OUTPUT_METADATA: True},
                     )
                 ],
                 return_type=None,
@@ -1064,7 +1077,7 @@ def inspect(value: Int32) -> None: ...
     complete_semantic_policies(module)
 
     assert argument.semantic_type.storage.kind == "address"
-    assert argument.semantic_type.storage.metadata[PYI_ADDRESS_ROLE_METADATA] == PYI_ADDRESS_ROLE_PROJECTION
+    assert argument.semantic_type.storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_PROJECTION
     decision = argument.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
     assert decision.python_barrier_action is PythonBarrierAction.SCALAR_VALUE
     assert decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
@@ -1234,7 +1247,7 @@ def test_plain_derived_module_object_is_completed_as_snapshot_contract():
     assert storage.owner is OwnershipOwner.PYTHON
     assert storage.transfer is TransferMode.SNAPSHOT_COPY
     assert storage.destruction is DestructionPolicy.PYTHON_REFCOUNT
-    assert variable.semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
+    assert variable.semantic_type.metadata[SNAPSHOT_TYPE_METADATA] is True
     assert getter.codegen_action is CodegenAction.SNAPSHOT_COPY
     assert setter.setter_action is SetterAction.REJECT_REPLACEMENT
     point, box = module.classes
@@ -1268,7 +1281,7 @@ def test_plain_derived_module_snapshot_blocks_unsupported_nested_pointer_field()
     assert storage.is_blocked
     assert storage.blocker == "snapshot field box.values is a pointer array without a completed pointer snapshot policy"
     assert getter.is_blocked
-    assert PYI_SNAPSHOT_TYPE_METADATA not in variable.semantic_type.metadata
+    assert SNAPSHOT_TYPE_METADATA not in variable.semantic_type.metadata
     assert all(RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA not in field.metadata for field in module.classes[0].fields)
 
 

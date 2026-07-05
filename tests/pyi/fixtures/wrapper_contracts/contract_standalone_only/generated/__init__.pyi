@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Int32, external, native_call
+
 @external
 def standalone_ping() -> None: ...
 

@@ -29,8 +29,6 @@ from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
 from x2py.semantics.models import (
     PYTHON_EXPORTS_METADATA,
     PYTHON_EXPORTS_PREPARED_METADATA,
-    PYI_LOADED_METADATA,
-    PYI_NATIVE_CONTRACT_PREPARED_METADATA,
     ProcedureOverloadSet,
     SemanticClass,
     SemanticFunction,
@@ -38,9 +36,10 @@ from x2py.semantics.models import (
     SemanticModule,
     SemanticVariable,
 )
-from x2py.semantics.native_contract import validate_pyi_native_contract
+from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA, validate_pyi_native_contract
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.semantics.pyi2ir import load_pyi_file, load_pyi_modules
+from x2py.pyi_pipeline import _PyiSemanticModuleCache
+from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
 
 
 _DEFAULT_BUILD_DIR_NAME = "__x2py__"
@@ -314,9 +313,10 @@ class _PyiNativeBuildInputs:
 def _pyi_contract_bundle(
     entry: Path,
 ) -> _PyiContractBundle:
-    discovered = {entry, *_discover_pyi_imports(entry)}
+    module_cache = _PyiSemanticModuleCache()
+    discovered = {entry, *_discover_pyi_imports(entry, module_cache)}
     sorted_paths = tuple(sorted(discovered))
-    loaded_modules = load_pyi_modules(sorted_paths)
+    loaded_modules = module_cache.paths_to_semantic_modules(sorted_paths)
     modules_by_path = dict(zip(sorted_paths, loaded_modules, strict=True))
     _validate_pyi_bundle_placement(entry, modules_by_path)
     _apply_pyi_python_exports(entry, modules_by_path)
@@ -395,12 +395,13 @@ def _namespace_imported_pyi_paths(entry: Path, modules_by_path: dict[Path, Seman
     return namespace_imports
 
 
-def _discover_pyi_imports(root: Path) -> tuple[Path, ...]:
+def _discover_pyi_imports(root: Path, module_cache: _PyiSemanticModuleCache | None = None) -> tuple[Path, ...]:
+    module_cache = module_cache or _PyiSemanticModuleCache()
     discovered: set[Path] = set()
     pending = [root]
     while pending:
         path = pending.pop()
-        module = load_pyi_file(path)
+        module = module_cache.file_to_semantic_module(path)
         for dependency in _relative_pyi_dependencies(path, module):
             if dependency in discovered or dependency == root:
                 continue
@@ -1090,7 +1091,7 @@ def _wrapper_module_metadata(modules: list[SemanticModule]) -> dict[str, object]
         metadata[PYTHON_EXPORTS_PREPARED_METADATA] = True
     if any(module.metadata.get(PYI_LOADED_METADATA) for module in modules):
         metadata[PYI_LOADED_METADATA] = True
-        metadata[PYI_NATIVE_CONTRACT_PREPARED_METADATA] = True
+        metadata[NATIVE_CONTRACT_PREPARED_METADATA] = True
     readiness_blockers = [blocker for module in modules for blocker in module.metadata.get("readiness_blockers", ())]
     if readiness_blockers:
         metadata["readiness_blockers"] = readiness_blockers

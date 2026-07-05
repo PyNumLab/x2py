@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Float64, Int32, Optional, Return, Returns, String, native_call
+
 class sample:
     def __init__(
         self,

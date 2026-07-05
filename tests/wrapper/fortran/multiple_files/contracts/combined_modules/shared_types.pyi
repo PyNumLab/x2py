@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Int32, native_call
+
 class box:
     def __init__(
         self,

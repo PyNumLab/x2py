@@ -1,3 +1,5 @@
+from x2py.contracts import Complex128, Float64, Int32, native_type
+
 @native_type(attributes=('bind(c)',))
 class point:
     def __init__(

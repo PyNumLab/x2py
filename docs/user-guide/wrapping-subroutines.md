@@ -62,6 +62,8 @@ end module outputs
 Inspecting `outputs.f90` prints these subroutine contracts:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Return, Returns, native_call
+
 @native_call([Arg(0), Return('smallest', 0), Return('largest', 1)])
 def bounds(
     values: Float64[::]

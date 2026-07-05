@@ -37,14 +37,23 @@ from x2py.codegen.models.datatypes import (
     convert_to_literal,
     original_type_to_x2py_type,
 )
+from x2py.semantic_metadata import (
+    ADDRESS_ROLE_METADATA,
+    ADDRESS_ROLE_PROJECTION,
+    ADDRESS_ROLE_RAW,
+    BIND_TARGET_METADATA,
+    NATIVE_PROJECTION_METADATA,
+    PROJECTED_OUTPUT_METADATA,
+    SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
+)
 from x2py.semantics import models
 from x2py.semantics.models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
-    PYI_NATIVE_PROJECTION_METADATA,
-    PYI_PROJECTED_OUTPUT_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
 )
+from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA
+from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
 from x2py.visitor import ClassVisitor
 
 
@@ -271,7 +280,7 @@ def _passes_by_value(node: models.SemanticVariable) -> bool:
 
 
 def _passed_object_position(node: models.SemanticFunction) -> int | None:
-    if node.name == "__init__" and node.metadata.get(models.PYI_BIND_TARGET_METADATA):
+    if node.name == "__init__" and node.metadata.get(BIND_TARGET_METADATA):
         return None
     overload_kind = node.metadata.get(OVERLOAD_KIND_METADATA)
     if overload_kind in {"generic", "assignment", "named_operator", "comparison"}:
@@ -306,7 +315,7 @@ def _pyi_bound_constructor_self(
     cls_base: ClassDef | None,
     func_scope,
 ) -> Variable | None:
-    if cls_base is None or node.name != "__init__" or not node.metadata.get(models.PYI_BIND_TARGET_METADATA):
+    if cls_base is None or node.name != "__init__" or not node.metadata.get(BIND_TARGET_METADATA):
         return None
     self_policy = cls_base.decorators[models.RESOLVED_CLASS_SELF_POLICY_METADATA]
     self_var = Variable(
@@ -393,7 +402,7 @@ def _argument_uses_writable_storage(argument: models.SemanticArgument) -> bool:
     return bool(
         argument.semantic_type.ownership.mutable
         or (storage is not None and (storage.mutable or not storage.read_only))
-        or argument.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)
+        or argument.metadata.get(PROJECTED_OUTPUT_METADATA)
     )
 
 
@@ -1027,7 +1036,7 @@ def _is_importable_class_generic(native_name: str) -> bool:
 def _semantic_function_decorators(node):
     decorators = {}
     if node.projection:
-        decorators[PYI_NATIVE_PROJECTION_METADATA] = True
+        decorators[NATIVE_PROJECTION_METADATA] = True
     if node.metadata.get(models.RUNTIME_HOLD_GIL_METADATA):
         decorators[models.RUNTIME_HOLD_GIL_METADATA] = True
     if isinstance(status_policy := node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA), dict):
@@ -1040,7 +1049,7 @@ def _semantic_type_bound_name(node: models.SemanticFunction, cls_base: ClassDef 
     if cls_base is None:
         return None
     name = str(node.name)
-    if isinstance(node, models.SemanticMethod) and node.metadata.get(models.PYI_BIND_TARGET_METADATA):
+    if isinstance(node, models.SemanticMethod) and node.metadata.get(BIND_TARGET_METADATA):
         candidate = name[:-1] if name.endswith("_") else name
         if keyword.iskeyword(candidate):
             return candidate
@@ -1070,10 +1079,10 @@ def _semantic_variable_type_and_shape(semantic_type, scope, custom_types):
 def _fortran_array_category_and_source_shape(semantic_type):
     storage = semantic_type.storage
     if storage is not None and storage.kind == "address":
-        role = storage.metadata.get(models.PYI_ADDRESS_ROLE_METADATA)
-        if role == models.PYI_ADDRESS_ROLE_PROJECTION:
+        role = storage.metadata.get(ADDRESS_ROLE_METADATA)
+        if role == ADDRESS_ROLE_PROJECTION:
             return "address_projection", ()
-        if role == models.PYI_ADDRESS_ROLE_RAW:
+        if role == ADDRESS_ROLE_RAW:
             return "raw_address", ()
     contract = _array_contract(semantic_type)
     if contract is None:
@@ -1262,9 +1271,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             )
 
     def _prepare_semantic_module(self, node):
-        if node.metadata.get(models.PYI_LOADED_METADATA) and not node.metadata.get(
-            models.PYI_NATIVE_CONTRACT_PREPARED_METADATA
-        ):
+        if node.metadata.get(PYI_LOADED_METADATA) and not node.metadata.get(NATIVE_CONTRACT_PREPARED_METADATA):
             from .native_contract import prepare_pyi_native_contract
 
             prepare_pyi_native_contract([node])
@@ -1415,7 +1422,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
 
     @staticmethod
     def _semantic_module_imports(node, native_imports):
-        if node.metadata.get(models.PYI_LOADED_METADATA):
+        if node.metadata.get(PYI_LOADED_METADATA):
             return native_imports
         return [Import(module_name, target=()) for module_name in node.metadata.get("wrapper_native_modules", ())]
 
@@ -1576,8 +1583,8 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             cls for base_name in node.base_classes if (cls := self.scope.find(base_name, "classes")) is not None
         )
         decorators = {}
-        if node.origin.metadata.get(models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
-            decorators[models.PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
+        if node.origin.metadata.get(SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA):
+            decorators[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
         decorators[models.RESOLVED_CLASS_INSTANCE_POLICY_METADATA] = node.metadata[
             models.RESOLVED_CLASS_INSTANCE_POLICY_METADATA
         ]
@@ -1679,7 +1686,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             ownership_decision=ownership_decision,
             setter_ownership_decision=node.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA),
             snapshot_field_action=node.metadata.get(models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA),
-            projected_output=bool(node.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)),
+            projected_output=bool(node.metadata.get(PROJECTED_OUTPUT_METADATA)),
             assumed_rank=_is_assumed_rank(semantic_type),
             cls_base=self.cls_base,
             default_value=default_value,

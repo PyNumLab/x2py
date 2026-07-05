@@ -45,6 +45,8 @@ contract uses `@native_call(...)` and `Returns[...]` to preserve the native call
 shape:
 
 ```python
+from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, Returns, native_call
+
 @native_call([Addr(Arg(0)), Arg(1)])
 def fill_vector(
     n: Int32,
@@ -96,6 +98,8 @@ contract keeps one public name and links each public implementation back to a
 specific native procedure:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Int32, native_call, overload
+
 @overload("convert_integer")
 @native_call([Addr(Arg(0))])
 def convert(

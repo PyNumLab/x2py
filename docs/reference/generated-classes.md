@@ -40,6 +40,8 @@ x2py generates a keyword-only Python initializer for public rank-zero numeric,
 logical, and complex fields that are safe constructor inputs:
 
 ```python
+from x2py.contracts import Float64, Int32, native_type
+
 @native_type(finalizers=('cleanup_initialized',))
 class initialized:
     def __init__(
@@ -81,6 +83,8 @@ Type-bound procedures become methods. The generated semantic contract uses
 `@overload(...)` when a generic method has multiple specific procedures:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Int32, Pass, native_call, overload
+
 class accumulator:
     total: Float64 = 0.0
 

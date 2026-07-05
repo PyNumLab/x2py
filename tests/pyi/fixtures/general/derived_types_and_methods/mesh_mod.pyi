@@ -1,3 +1,5 @@
+from x2py.contracts import Allocatable, Annotated, Float64, Int32
+
 class node:
     def __init__(
         self,

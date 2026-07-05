@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+import x2py.pyi_pipeline as pyi_pipeline
 from tests._shared.fixture_outputs import (
     C_PYI_FIXTURE_DIR,
     FORTRAN_DATA_DIR,
@@ -12,9 +13,9 @@ from tests._shared.fixture_outputs import (
     iter_general_fortran_fixtures,
     pyi_files_for_fixture,
 )
-from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.codegen.printers.pyi_printer import emit_module
-from x2py.wrapping import _discover_pyi_imports
+from x2py.wrapping import _discover_pyi_imports, _pyi_contract_bundle
 
 
 FORTRAN_FIXTURES = iter_general_fortran_fixtures()
@@ -132,7 +133,11 @@ def test_generated_mixed_contract_keeps_module_and_external_placement_separate()
     assert (
         (package / "contract_mixed_module_external.pyi")
         .read_text(encoding="utf-8")
-        .startswith("from . import contract_math_mod\n\n@external\n")
+        .startswith(
+            "from x2py.contracts import Addr, Arg, Int32, external, native_call\n"
+            "from . import contract_math_mod\n\n"
+            "@external\n"
+        )
     )
     assert "@external" not in (package / "contract_math_mod.pyi").read_text(encoding="utf-8")
 
@@ -141,7 +146,9 @@ def test_generated_same_name_contract_uses_init_entry():
     package = PYI_FIXTURE_DIR / "contract_same_name"
 
     assert (package / "__init__.pyi").read_text(encoding="utf-8") == (
-        "from . import contract_same_name\n\n@external\ndef external_ping() -> None: ...\n"
+        "from x2py.contracts import external\n"
+        "from . import contract_same_name\n\n"
+        "@external\ndef external_ping() -> None: ...\n"
     )
     assert "def module_ping() -> None: ..." in (package / "contract_same_name.pyi").read_text(encoding="utf-8")
 
@@ -169,6 +176,43 @@ def test_generated_entry_recursively_discovers_its_complete_contract_directory(f
     discovered = {entry, *_discover_pyi_imports(entry)}
 
     assert discovered == set(package.rglob("*.pyi"))
+
+
+def test_pyi_contract_bundle_reuses_import_discovery_conversion_cache(monkeypatch, tmp_path: Path):
+    entry = tmp_path / "api.pyi"
+    dependency = tmp_path / "types_mod.pyi"
+    entry.write_text(
+        """
+from x2py.contracts import Float64
+from .types_mod import particle
+
+def inspect(item: particle) -> Float64: ...
+""",
+        encoding="utf-8",
+    )
+    dependency.write_text(
+        """
+from x2py.contracts import Float64
+
+class particle:
+    mass: Float64
+""",
+        encoding="utf-8",
+    )
+
+    original_parse = pyi_pipeline.parse_pyi_text
+    parsed_filenames: list[Path] = []
+
+    def parse_once(source: str, *, filename: str = "<pyi>"):
+        parsed_filenames.append(Path(filename))
+        return original_parse(source, filename=filename)
+
+    monkeypatch.setattr(pyi_pipeline, "parse_pyi_text", parse_once)
+
+    bundle = _pyi_contract_bundle(entry)
+
+    assert bundle.paths == (entry, dependency)
+    assert parsed_filenames == [entry, dependency]
 
 
 @pytest.mark.parametrize(

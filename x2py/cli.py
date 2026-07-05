@@ -18,7 +18,7 @@ from x2py.fortran_parser.models import FortranParseError
 from x2py.fortran_parser.parser import FortranParser
 from x2py.semantics.c2ir import c_project_to_semantic_modules
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
-from x2py.semantics.pyi2ir import load_pyi_modules
+from x2py.pyi_pipeline import pyi_paths_to_semantic_modules
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.c_type_probe import (
     CStandardTypeProbeError,
@@ -640,9 +640,29 @@ def _fortran_contract_payload(path: Path, modules, available_modules) -> dict[st
 
 
 def _source_root_stub(module_names: list[str], external_text: list[str]) -> str:
+    contract_imports: set[str] = set()
+    external_sections = []
+    for text in external_text:
+        imports, body = _split_contract_imports(text)
+        contract_imports.update(imports)
+        if body:
+            external_sections.append(body)
+    contract_section = f"from x2py.contracts import {', '.join(sorted(contract_imports))}" if contract_imports else ""
     lines = [f"from . import {name}" for name in module_names]
-    sections = ["\n".join(lines), *external_text]
+    import_section = "\n".join(line for line in [contract_section, *lines] if line)
+    sections = [import_section, *external_sections]
     return "\n\n".join(section for section in sections if section).strip()
+
+
+def _split_contract_imports(text: str) -> tuple[set[str], str]:
+    imports: set[str] = set()
+    body_lines = []
+    for line in text.splitlines():
+        if line.startswith("from x2py.contracts import "):
+            imports.update(item.strip() for item in line.removeprefix("from x2py.contracts import ").split(","))
+            continue
+        body_lines.append(line)
+    return imports, "\n".join(body_lines).strip()
 
 
 def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
@@ -735,7 +755,9 @@ def _pyi_readiness_report(paths: list[str]) -> dict[str, dict]:
     pyi_paths = _expand_pyi_paths(paths)
     if not pyi_paths:
         return {}
-    modules = load_pyi_modules([raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"])
+    modules = pyi_paths_to_semantic_modules(
+        [raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"]
+    )
     return {
         str(path): {
             "source_kind": "pyi",

@@ -34,12 +34,46 @@ The full parity plan is tracked in
 Status terms used below:
 
 - **Generated**: emitted today by `--pyi` or `codegen.printers.pyi_printer`.
-- **Loaded**: accepted today by `semantics.pyi_parser` and converted back to
+- **Loaded**: accepted today by `x2py.pyi_parser` and converted back to
   semantic IR.
 - **Readiness**: understood by the semantic readiness checker.
 - **Build input**: accepted by the `.pyi` wrapper build for the implemented
   subset when the required native artifacts are supplied.
 - **Roadmap**: design direction, not implemented wrapper behavior.
+
+## Contract Imports
+
+Every semantic `.pyi` control name is imported from `x2py.contracts`. This
+single namespace also re-exports the typing forms used by the contract:
+
+```python
+from x2py.contracts import Addr, Arg, Final, Flat, Float64, Snapshot, native_call
+
+color: Final[Snapshot[rgb_color]]
+
+@native_call([Addr(Arg(0))])
+def inspect(values: Float64[Flat]) -> None: ...
+```
+
+The loader follows each import binding, including arbitrary `as` aliases,
+instead of matching the final spelling. For example, importing
+`Flat as LayoutFlat` makes `LayoutFlat` the contract marker. An unimported
+`Flat`, `Arg`, or `Float64` is therefore a user symbol. When a user declaration
+has the same name, generated contracts alias only the imported control name:
+
+```python
+from x2py.contracts import Final, Flat as LayoutFlat, Float64, Int32
+
+Flat: Final[Int32] = 10
+values: Float64[LayoutFlat]
+```
+
+The alias spelling in generated files is an implementation detail; edited
+contracts may use any non-conflicting local alias imported from
+`x2py.contracts`.
+
+Bare-name compatibility is not part of the format. Contract files must import
+every x2py or re-exported typing form they use.
 
 The user-facing Fortran, semantic `.pyi`, Python, and NumPy mapping is documented
 in [Data Types](../user-guide/data-types.md). The underlying semantic model is
@@ -79,10 +113,11 @@ declaration or import being processed, the invalid fact, and the expected
 documented form. When x2py can continue only by guessing, it should report an
 error or blocker instead of guessing.
 
-When a `.pyi` file is loaded from disk, syntax diagnostics use Python's filename
-field and semantic loader diagnostics prefix the message with the contract path.
-Inline helper calls such as `parse_pyi_text(...)` do not invent a path; pass a
-`filename=` when inline syntax diagnostics need source provenance.
+When a `.pyi` file is converted from disk, syntax diagnostics use Python's
+filename field and semantic pipeline diagnostics prefix the message with the
+contract path. Inline helper calls such as `pyi_text_to_semantic_module(...)`
+do not invent a path; pass a `filename=` when inline syntax diagnostics need
+source provenance.
 
 Some edited contracts intentionally request a lower-level native identity call.
 Those are not misuse if they are structurally complete, but the Python behavior
@@ -104,6 +139,8 @@ place. `Transfer("borrowed_view")` requests no-copy shared storage. Combining
 loading the `.pyi` contract:
 
 ```python
+from x2py.contracts import Annotated, Float64, Immutable, Transfer
+
 def normalize(
     values: Annotated[Float64[:], Immutable, Transfer("borrowed_view")]
 ) -> None: ...
@@ -136,6 +173,8 @@ fails closed for missing handlers.
 Loaded files support imports, classes, enums, variables and stub functions:
 
 ```python
+from x2py.contracts import Addr, Arg, Final, Float64, Int32, native_call
+
 from types_mod import particle
 
 answer: Final[Int32]
@@ -186,12 +225,16 @@ The ordinary module-procedure form is intentionally small when the Python
 signature already describes the native argument order:
 
 ```python
+from x2py.contracts import Float64
+
 def update(value: Float64[()]) -> None: ...
 ```
 
 Only standalone procedures carry `@external`:
 
 ```python
+from x2py.contracts import Float64, external
+
 @external
 def update(value: Float64[()]) -> None: ...
 ```
@@ -221,6 +264,8 @@ declared without `@external` in that module contract is contained in the native
 Fortran module:
 
 ```python
+from x2py.contracts import Float64
+
 # module1.pyi
 def update(value: Float64[()]) -> None: ...
 ```
@@ -242,6 +287,8 @@ A procedure outside every Fortran module is marked explicitly with
 `@external`:
 
 ```python
+from x2py.contracts import Float64, Int32, external
+
 # externals/dgesv.pyi
 @external
 def dgesv(a: Float64[:, :], b: Float64[:, :]) -> Int32: ...
@@ -257,6 +304,8 @@ Python-visible renaming is separate from placement. `@bind` retains the native
 Fortran procedure name while the declaration uses a wrapper name:
 
 ```python
+from x2py.contracts import Float64, Int32, bind, external
+
 @external
 @bind("dgesv")
 def solve(a: Float64[:, :], b: Float64[:, :]) -> Int32: ...
@@ -315,6 +364,8 @@ A mixed source keeps standalone procedures in the entry contract and marks each
 one with `@external`:
 
 ```python
+from x2py.contracts import Float64, external
+
 from . import m1
 
 @external
@@ -368,6 +419,8 @@ For legacy BLAS/LAPACK-style assumed-size arrays such as `DX(*)`, generated
 contracts use `Flat`:
 
 ```python
+from x2py.contracts import Addr, Flat, Float64, Int32, external
+
 @external
 def DAXPY(
     N: Addr(Int32),
@@ -392,7 +445,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
-from typing import Annotated
+
+from x2py.contracts import Addr, Annotated, Flat, Float64, Int32, ORDER_C, external
 
 @external
 def row_sums(
@@ -644,7 +698,7 @@ extension binding surface. Declarations in imported leaf files that are not
 reachable from that policy do not get standalone public wrapper bindings; they
 remain native contract facts only when an exported declaration depends on them.
 
-Absolute support imports such as `from typing import Callable` or
+Absolute support imports such as `from x2py.contracts import Callable` or
 `from types import SimpleNamespace` may support annotation parsing, but they are
 not contract graph edges and never create runtime exports. Generated references
 to declarations in another contract package file use relative imports.
@@ -687,6 +741,8 @@ because the generated Fortran adapter must match the callback procedure
 interface exactly:
 
 ```python
+from x2py.contracts import Callable, Float64, In, Int32, Out, PassByRef
+
 callback: Callable[[Int32, PassByRef(Float64), Float64[:], In(Float64[:]), Out(Float64[:])], None]
 ```
 
@@ -767,6 +823,8 @@ for bare numeric scalar values that would otherwise be passed by value.
 Bare scalar types are direct values:
 
 ```python
+from x2py.contracts import Float64
+
 def dot(a: Float64, b: Float64) -> Float64: ...
 ```
 
@@ -775,6 +833,8 @@ addressable rank-0 NumPy array with the declared dtype; x2py validates the
 object and uses its data storage for the native call:
 
 ```python
+from x2py.contracts import Float64, Int32
+
 def update_storage(value: Float64[()]) -> None: ...
 def inspect_storage(value: Int32[()]) -> None: ...
 ```
@@ -804,6 +864,8 @@ otherwise the mutation is discarded.
 caller passes a rank-zero NumPy fixed-width bytes array:
 
 ```python
+from x2py.contracts import String
+
 def rewrite_label(label: String[8][()]) -> None: ...
 
 label = np.array("abcdefgh", dtype="S8")
@@ -823,6 +885,8 @@ lifetime, true dtype, alignment, length, or ownership. The pointer value itself
 does not carry string length or array shape:
 
 ```python
+from x2py.contracts import Addr, Float64, Int32, String
+
 def update_raw(value: Addr(Float64)) -> None: ...
 def inspect_raw(value: Addr(Int32)) -> None: ...
 def raw_values(n: Int32, values: Addr(Float64[n])) -> None: ...
@@ -857,6 +921,8 @@ projected output policy is added.
 Pointer depth is explicit for low-level pointer graphs:
 
 ```python
+from x2py.contracts import Addr, Int8, OpaqueHandle
+
 handle: Addr[2](OpaqueHandle)
 argv: Addr[3](Int8)
 ```
@@ -867,6 +933,8 @@ Array storage uses NumPy-style subscriptions:
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Annotated, Flat, Float64, ORDER_C
+
 vector: Float64[:]
 fixed: Float64[3]
 matrix: Float64[n, m]
@@ -893,6 +961,11 @@ Dimension entries have the following meaning:
 Generated `.pyi` prints `::` and bounded forms such as `0:n:` for stride-aware
 axes. Edited contracts may still use the explicit `::Strided` and
 `0:n:Strided` spellings; they load to the same semantic array contract.
+Readiness uses the structured array contract to distinguish layout dimensions
+from extent expressions. Names such as `Strided` and `Flat` remain ordinary
+symbols when they occur in native extent expressions. Called Fortran shape
+intrinsics such as `size(v)` are recognized only after visible symbols are
+resolved; the referenced value `v` must still be visible in the interface.
 
 <!-- X2PY_C_DOCS_START
 `Flat` must appear exactly once at either edge of a concrete-rank array. Final
@@ -919,6 +992,8 @@ Use local constants or generated `Final[...]` names for shape symbols.
 source-language argument direction:
 
 ```python
+from x2py.contracts import Annotated, Float64, ORDER_F
+
 def fill(
     a: Annotated[Float64[:, :], ORDER_F],
     out: Float64[()],
@@ -962,6 +1037,8 @@ X2PY_C_DOCS_END -->
 Other positional `Annotated` helpers are preserved as semantic constraints:
 
 ```python
+from x2py.contracts import Annotated, Bounded, Finite, Int32
+
 value: Annotated[Int32, Bounded(1, 8), Finite]
 ```
 
@@ -1027,6 +1104,8 @@ the backend still validates whether the requested transfer and destruction path
 are implemented.
 
 ```python
+from x2py.contracts import Annotated, Float64, Pointer, PointerPolicy
+
 value: Annotated[
     Float64[:],
     Pointer,
@@ -1052,6 +1131,8 @@ and release facts for the backend path being enabled.
 module variable is copied into a detached read-only object graph:
 
 ```python
+from x2py.contracts import Allocatable, Annotated, Float64, Snapshot
+
 class box:
     values: Annotated[Float64[:], Allocatable]
 
@@ -1073,6 +1154,8 @@ Constants use `Final[T]`. Literal values are optional unless the value is needed
 as a compile-time expression or enumerator initializer:
 
 ```python
+from x2py.contracts import Final, Int32
+
 nmax: Final[Int32]
 answer: Final[Int32] = 42
 ```
@@ -1083,6 +1166,8 @@ Python `Enum`/`IntEnum` classes or semantic enum datatypes:
 X2PY_C_DOCS_END -->
 
 ```python
+from x2py.contracts import Final, Int
+
 STATUS_OK: Final[Int] = 0
 STATUS_RETRY: Final[Int] = STATUS_OK + 1
 ```
@@ -1096,6 +1181,8 @@ integer type.
 Fortran derived types and ordinary semantic classes use normal class syntax:
 
 ```python
+from x2py.contracts import Float64, Int32
+
 class particle:
     id: Int32
     position: Float64[3]
@@ -1106,6 +1193,8 @@ C aggregate identity is explicit through base markers:
 X2PY_C_DOCS_END -->
 
 ```python
+from x2py.contracts import CStruct, CUnion, Float64, Int32, Opaque, UInt32
+
 class packet(CStruct):
     tag: UInt32
 
@@ -1133,6 +1222,8 @@ field that marks the anonymous member:
 X2PY_C_DOCS_END -->
 
 ```python
+from x2py.contracts import Annotated, CAnonymous, CAnonymousMember, CStruct, CUnion, Float32, Int
+
 class flags(CStruct):
     class anonymous_union_0_type(CUnion, CAnonymous):
         integer: Int
@@ -1150,6 +1241,8 @@ X2PY_C_DOCS_END -->
 External opaque types can live in separate owner stubs:
 
 ```python
+from x2py.contracts import Opaque
+
 # types_mod.pyi
 class particle(Opaque):
     pass
@@ -1198,6 +1291,8 @@ discard-initial-value semantics.
 Loaded return forms:
 
 ```python
+from x2py.contracts import Float64, Int32, Returns
+
 def f() -> None: ...
 def g(x: Float64) -> Float64: ...
 def split(x: Float64) -> tuple[Float64, Int32]: ...
@@ -1216,6 +1311,8 @@ Python argument to its native scalar representation and then passes the address
 of that native slot. It does not mean the user passed a reference.
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Returns, native_call
+
 @native_call([Addr(Arg(0))])
 def read_ref(x: Float64) -> None: ...
 
@@ -1233,6 +1330,8 @@ projected replacement result, use scalar storage to expose an addressable Python
 object:
 
 ```python
+from x2py.contracts import Float64
+
 def legacy_update(x: Float64[()]) -> None: ...
 ```
 
@@ -1248,6 +1347,8 @@ address representation. Address projections of `Return(...)` and `Work(...)`
 are also rejected; native outputs and workspaces already name their storage.
 
 ```python
+from x2py.contracts import Returns, String
+
 def string_inout(label: String[8]) -> Returns["label", String[8]]: ...
 ```
 
@@ -1259,6 +1360,8 @@ For example, a native subroutine ordered as `(a, status, b)` with hidden scalar
 `status` output is represented as:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Int32, Return, native_call
+
 @native_call([Addr(Arg(0)), Return("status", 0), Addr(Arg(1))])
 def solve(
     a: Float64,
@@ -1274,6 +1377,8 @@ native argument order.
 The same native routine can be edited into an identity call without projection:
 
 ```python
+from x2py.contracts import Addr, Float64, Int32
+
 def solve(
     a: Addr(Float64),
     status: Int32[()],
@@ -1299,6 +1404,8 @@ decorator is x2py metadata; it is not `typing.overload` and must not be imported
 from `typing`.
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Int32, Pass, native_call, overload, private
+
 @private
 @native_call([Addr(Arg(0))])
 def convert_integer(value: Int32) -> Int32: ...
@@ -1344,6 +1451,8 @@ When a module-level Python overload group is renamed, `generic=` preserves the
 native Fortran generic name:
 
 ```python
+from x2py.contracts import Addr, Arg, Int32, native_call, overload
+
 @overload("convert_integer", generic="convert")
 @native_call([Addr(Arg(0))])
 def convert_number(value: Int32) -> Int32: ...
@@ -1354,6 +1463,8 @@ two distinct Fortran generics share one Python method, the decorator also
 carries the otherwise unrecoverable operator spelling:
 
 ```python
+from x2py.contracts import Bool, overload
+
 @overload("equivalent_values", generic="operator(.eqv.)")
 def __eq__(self, other: value) -> Bool: ...
 ```
@@ -1394,6 +1505,8 @@ full Fortran operand list, while the class declaration describes the Python
 method call:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Pass, native_call, overload, private
+
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def add_vector_real(left: vector, right: Float64) -> vector: ...
@@ -1460,6 +1573,8 @@ Python assignment cannot be intercepted. Fortran `assignment(=)` is exposed as
 explicit mutation:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Pass, Returns, native_call, overload, private
+
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def assign_vector_real(
@@ -1506,6 +1621,8 @@ obj.reset_values()    # may invalidate x; y remains valid
 Derived-type allocatable fields remain fields in `.pyi`:
 
 ```python
+from x2py.contracts import Allocatable, Annotated, Float64
+
 class buffer:
     values: Annotated[Float64[:], Allocatable]
 ```
@@ -1520,6 +1637,8 @@ keyword is optional: omitted components keep the native allocation state,
 including any Fortran default component initializer.
 
 ```python
+from x2py.contracts import Float64, Int32
+
 class state:
     def __init__(
         self,
@@ -1557,6 +1676,8 @@ declaration omits that argument because Python supplies the newly allocated
 instance.
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Int32, Pass, bind, native_call, private
+
 class state:
     @private
     @native_call([Pass(), Addr(Arg(0)), Addr(Arg(1))])
@@ -1589,6 +1710,8 @@ Module variables are declarations in the semantic contract. Allocatable arrays
 include `None` because native storage may be unallocated:
 
 ```python
+from x2py.contracts import Aliased, Allocatable, Annotated, Float64
+
 module_values: Annotated[Float64[:], Allocatable, Aliased] | None
 snapshot_values: Annotated[Float64[:], Allocatable] | None
 ```
@@ -1603,6 +1726,8 @@ aliased by the wrapper.
 object:
 
 ```python
+from x2py.contracts import Aliased, Allocatable, Annotated, Float64, Snapshot
+
 class box:
     values: Annotated[Float64[:], Allocatable]
 
@@ -1624,6 +1749,8 @@ Public scalar Fortran module variables are emitted directly with their resolved
 semantic type:
 
 ```python
+from x2py.contracts import Int32, String
+
 counter: Int32
 label: String[8]
 ```
@@ -1641,6 +1768,8 @@ A mutable scalar module variable may include a literal default in an edited
 `.pyi` contract:
 
 ```python
+from x2py.contracts import Int32
+
 counter: Int32 = 41
 ```
 
@@ -1656,6 +1785,8 @@ Fortran `parameter` declarations are emitted as `Final[...]` constants when
 their literal value can be represented in `.pyi`:
 
 ```python
+from x2py.contracts import Final, Int32
+
 nmax: Final[Int32] = 12
 ```
 
@@ -1668,6 +1799,8 @@ real, parameter :: c = cos(0.0)
 ```
 
 ```python
+from x2py.contracts import Final, Float32
+
 c: Final[Float32]
 ```
 
@@ -1694,6 +1827,8 @@ policy for the caller-visible object before x2py can safely expose them.
 Fortran pointer array facts are emitted and loaded with `Pointer` metadata:
 
 ```python
+from x2py.contracts import Annotated, Float64, Int32, Pointer
+
 def sum_values(values: Annotated[Float64[:], Pointer]) -> Float64: ...
 def choose_values(flag: Int32) -> Annotated[Float64[:], Pointer] | None: ...
 ```
@@ -1718,6 +1853,8 @@ pointer variables and derived-type pointer fields are not part of this subset.
 `@private` marks classes, functions and methods private:
 
 ```python
+from x2py.contracts import Int32, private
+
 @private
 def helper(x: Int32) -> None: ...
 ```
@@ -1725,6 +1862,8 @@ def helper(x: Int32) -> None: ...
 `private[T]` marks a variable or argument private:
 
 ```python
+from x2py.contracts import Float64, Int32, private
+
 hidden_value: private[Float64]
 def consume(value: private[Int32]) -> None: ...
 ```
@@ -1739,6 +1878,8 @@ data declarations, or with `Annotated[..., Name("native-name")]` for callable
 arguments:
 
 ```python
+from x2py.contracts import Annotated, Int32, Name
+
 var["class"]: Int32
 def f(class_: Annotated[Int32, Name("class")]) -> None: ...
 ```
@@ -1750,6 +1891,8 @@ differs from the exact native signature, whether the projection was generated
 from native projected-output behavior or written by the user:
 
 ```python
+from x2py.contracts import Arg, Float64, Return, native_call
+
 @native_call([Arg(0), Arg(0).shape[0], Return("result", 0)])
 def normalize(values: Float64[:]) -> Float64: ...
 ```
@@ -1758,6 +1901,8 @@ Scalar address inputs use a Python-visible value type and an explicit native
 address projection:
 
 ```python
+from x2py.contracts import Addr, Arg, Int32, native_call
+
 @native_call([Addr(Arg(0))])
 def add_one(value: Int32) -> Int32: ...
 ```

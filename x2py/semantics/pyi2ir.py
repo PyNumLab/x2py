@@ -2,13 +2,24 @@ from __future__ import annotations
 
 import ast
 import re
-from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass, field
-from pathlib import Path
 
+from x2py.contracts import CONTRACT_SYMBOLS, CONTRACT_TYPE_NAMES
 from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, set_ownership_metadata, set_pointer_policy_metadata
+from x2py.semantic_metadata import (
+    ADDRESS_ROLE_METADATA,
+    ADDRESS_ROLE_PROJECTION,
+    ADDRESS_ROLE_RAW,
+    BIND_TARGET_METADATA,
+    NATIVE_PROJECTION_METADATA,
+    PROJECTED_OUTPUT_METADATA,
+    SCALAR_STORAGE_CATEGORY,
+    SNAPSHOT_TYPE_METADATA,
+    SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
+    USER_PRIVATE_METADATA,
+)
 from x2py.visitor import ClassVisitor
 
 from .models import (
@@ -17,22 +28,11 @@ from .models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
-    PYI_BIND_TARGET_METADATA,
-    PYI_ADDRESS_ROLE_METADATA,
-    PYI_ADDRESS_ROLE_PROJECTION,
-    PYI_ADDRESS_ROLE_RAW,
-    PYI_LOADED_METADATA,
-    PYI_NATIVE_PROJECTION_METADATA,
-    PYI_PROJECTED_OUTPUT_METADATA,
-    PYI_SCALAR_STORAGE_CATEGORY,
-    PYI_SNAPSHOT_TYPE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
     PYTHON_VALUE_IMMUTABLE,
     PYTHON_VALUE_MUTABILITY_METADATA,
-    PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
-    PYI_USER_PRIVATE_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
     ProjectionMapping,
@@ -53,12 +53,14 @@ from .models import (
     SemanticVariable,
     _iter_module_semantic_types,
 )
-from .pyi_parser import parse_pyi_text as parse_pyi_ast_text
 
-__all__ = ("convert_pyi_to_ir", "load_pyi_file", "load_pyi_modules", "parse_pyi_text")
+__all__ = ("convert_pyi_to_ir", "reconcile_external_type_refs")
 
 
 _PYI_OPTIONAL_RETURN_METADATA = "_pyi_optional_return"
+_CONTRACT_MODULE = "x2py.contracts"
+_FLAT_DIMENSION_SENTINEL = "@x2py.Flat"
+_STRIDED_DIMENSION_SENTINEL = "@x2py.Strided"
 
 
 @dataclass(frozen=True)
@@ -68,52 +70,11 @@ class _CallbackArgumentSpec:
     passes_by_value: bool
 
 
-def load_pyi_file(path: str | Path, *, module_name: str | None = None, encoding: str = "utf-8") -> SemanticModule:
-    pyi_path = Path(path)
-    try:
-        return parse_pyi_text(
-            pyi_path.read_text(encoding=encoding),
-            module_name=module_name or pyi_path.stem,
-            filename=str(pyi_path),
-        )
-    except ValueError as exc:
-        raise ValueError(f"{pyi_path}: {exc}") from exc
+def convert_pyi_to_ir(tree: ast.Module, *, module_name: str = "<pyi>", source: str = "") -> SemanticModule:
+    """Convert a parsed semantic `.pyi` AST into semantic IR."""
 
-
-def load_pyi_modules(
-    paths: str | Path | Iterable[str | Path],
-    *,
-    encoding: str = "utf-8",
-) -> list[SemanticModule]:
-    raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
-    expanded: dict[Path, str | None] = {}
-    for raw_path in raw_paths:
-        path = Path(raw_path)
-        if path.is_dir():
-            for item in path.rglob("*.pyi"):
-                if not item.is_file():
-                    continue
-                module_name = ".".join(item.relative_to(path).with_suffix("").parts)
-                previous = expanded.get(item)
-                if previous is not None and previous != module_name:
-                    raise ValueError(f"Ambiguous module name for {item}: {previous!r} or {module_name!r}")
-                expanded[item] = module_name
-        else:
-            expanded.setdefault(path, None)
-    return _reconcile_external_type_refs(
-        [
-            load_pyi_file(path, module_name=module_name, encoding=encoding)
-            for path, module_name in sorted(expanded.items())
-        ]
-    )
-
-
-def convert_pyi_to_ir(source: str, *, module_name: str = "<pyi>") -> SemanticModule:
-    return parse_pyi_text(source, module_name=module_name)
-
-
-def parse_pyi_text(source: str, *, module_name: str = "<pyi>", filename: str = "<pyi>") -> SemanticModule:
-    tree = parse_pyi_ast_text(source, filename=filename)
+    if not isinstance(tree, ast.Module):
+        raise TypeError("convert_pyi_to_ir expects a Python ast.Module parsed by x2py.pyi_parser")
     module = _PyiAstParser(module_name=module_name, source=source).parse(tree)
     _annotate_imported_external_type_refs(module)
     return module
@@ -144,9 +105,11 @@ class _PendingOverload:
 
 class _PyiAstParser:
     def __init__(self, *, module_name: str, source: str = ""):
-        self.module = SemanticModule(name=module_name, metadata={PYI_LOADED_METADATA: True})
+        self.module = SemanticModule(name=module_name)
         self.source = source
         self._pending_overloads: list[_PendingOverload] = []
+        self._contract_bindings: dict[str, str] = {}
+        self._user_type_names: set[str] = set()
 
     def parse(self, tree: ast.Module) -> SemanticModule:
         _ModuleVisitor(self)._visit(tree)
@@ -161,8 +124,40 @@ class _PyiAstParser:
             items=[SemanticImportItem(source=alias.name, target=alias.asname) for alias in node.names],
         )
 
+    def register_contract_import(self, node: ast.ImportFrom) -> bool:
+        module_name = "." * node.level + (node.module or "")
+        if module_name != _CONTRACT_MODULE:
+            return False
+        for alias in node.names:
+            if alias.name == "*":
+                raise ValueError("x2py.contracts does not support wildcard imports")
+            if alias.name not in CONTRACT_SYMBOLS:
+                raise ValueError(f"Unknown x2py contract name {alias.name!r}")
+            local_name = alias.asname or alias.name
+            previous = self._contract_bindings.get(local_name)
+            if previous is not None and previous != alias.name:
+                raise ValueError(f"Contract import name {local_name!r} is bound more than once")
+            self._contract_bindings[local_name] = alias.name
+        return True
+
     def import_name(self, node: ast.Import) -> str:
         return ", ".join(f"{alias.name} as {alias.asname}" if alias.asname else alias.name for alias in node.names)
+
+    def register_user_type_names(self, node: ast.Module) -> None:
+        """Record names that can intentionally shadow contract type spellings."""
+        for item in ast.walk(node):
+            if isinstance(item, ast.ClassDef):
+                self._user_type_names.add(item.name)
+            elif isinstance(item, ast.ImportFrom):
+                module_name = "." * item.level + (item.module or "")
+                if module_name == _CONTRACT_MODULE:
+                    continue
+                for alias in item.names:
+                    if alias.name != "*":
+                        self._user_type_names.add(alias.asname or alias.name)
+            elif isinstance(item, ast.Import):
+                for alias in item.names:
+                    self._user_type_names.add(alias.asname or alias.name.split(".", 1)[0])
 
     def class_def(
         self,
@@ -175,13 +170,13 @@ class _PyiAstParser:
         body._walk_nodes(node.body)
         if body.constructor_from_fields and body.has_bound_constructor:
             raise ValueError("Direct constructor bindings replace the generated field constructor; remove one __init__")
-        base_classes = [ast.unparse(base) for base in node.bases]
+        base_classes = [self.base_class_name(base) for base in node.bases]
         origin = self._origin(
             source_language="fortran" if body.constructor_from_fields or native_type is not None else None,
             user_private=visibility == "private",
         )
         if not body.constructor_from_fields:
-            origin.metadata[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
+            origin.metadata[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] = True
 
         metadata = self._class_metadata(base_classes)
         if native_type is not None:
@@ -210,7 +205,7 @@ class _PyiAstParser:
     @staticmethod
     def _validate_bound_constructor_targets(semantic_class: SemanticClass) -> None:
         for constructor in semantic_class.methods:
-            target_name = constructor.metadata.get(PYI_BIND_TARGET_METADATA)
+            target_name = constructor.metadata.get(BIND_TARGET_METADATA)
             if constructor.name != "__init__" or not isinstance(target_name, str):
                 continue
             candidates = [
@@ -241,11 +236,18 @@ class _PyiAstParser:
             metadata["representation"] = "opaque"
         return metadata
 
+    def base_class_name(self, node: ast.expr) -> str:
+        """Return a class base name, resolving imported contract aliases."""
+        contract_name = self.contract_name(node)
+        if contract_name is not None:
+            return contract_name
+        return ast.unparse(node)
+
     @staticmethod
     def _origin(*, source_language: str | None = None, user_private: bool = False) -> SemanticOrigin:
         origin = SemanticOrigin(source_language=source_language)
         if user_private:
-            origin.metadata[PYI_USER_PRIVATE_METADATA] = True
+            origin.metadata[USER_PRIVATE_METADATA] = True
         return origin
 
     def function_def(
@@ -262,9 +264,9 @@ class _PyiAstParser:
     ) -> SemanticFunction:
         actual_projection = projection if projection is not None else []
         semantic_args, return_type = self._callable_parts(node, projection=actual_projection)
-        metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        metadata = {BIND_TARGET_METADATA: native_name} if native_name is not None else {}
         if has_native_call:
-            metadata[PYI_NATIVE_PROJECTION_METADATA] = True
+            metadata[NATIVE_PROJECTION_METADATA] = True
         if hold_gil:
             metadata[RUNTIME_HOLD_GIL_METADATA] = True
         if error_status_policy is not None:
@@ -307,9 +309,9 @@ class _PyiAstParser:
             projection=actual_projection,
             drop_untyped_self=True,
         )
-        metadata = {PYI_BIND_TARGET_METADATA: native_name} if native_name is not None else {}
+        metadata = {BIND_TARGET_METADATA: native_name} if native_name is not None else {}
         if has_native_call:
-            metadata[PYI_NATIVE_PROJECTION_METADATA] = True
+            metadata[NATIVE_PROJECTION_METADATA] = True
         passed_object_name = None
         passed_object_position = None
         if infer_passed_object and not is_static and node.name != "__init__":
@@ -389,7 +391,7 @@ class _PyiAstParser:
             default_value=self.assignment_default_value(node.value, semantic_type),
         )
         if visibility == "private":
-            binding.origin.metadata[PYI_USER_PRIVATE_METADATA] = True
+            binding.origin.metadata[USER_PRIVATE_METADATA] = True
         binding.optional = self.default_marks_optional(node.value)
         return binding
 
@@ -405,7 +407,7 @@ class _PyiAstParser:
         if self.matches_name(node, "private"):
             parsed.visibility = "private"
             return
-        if self.matches_name(node, "staticmethod"):
+        if self.matches_plain_name(node, "staticmethod"):
             parsed.is_static = True
             return
         target = node.func if isinstance(node, ast.Call) else node
@@ -428,8 +430,6 @@ class _PyiAstParser:
             raise ValueError("overload expects one specific procedure name")
         if parsed.overload_target is not None:
             raise ValueError(f"Duplicate {context} overload decorator")
-        if self.qualified_name(node.func) == ("typing", "overload"):
-            raise ValueError('typing.overload is not supported; use x2py @overload("specific")')
         if len(node.args) != 1:
             raise ValueError("overload expects one specific procedure name")
         target = ast.literal_eval(node.args[0])
@@ -708,7 +708,7 @@ class _PyiAstParser:
             semantic_type.rank == 0
             and storage is not None
             and storage.kind == "address"
-            and storage.metadata.get(PYI_ADDRESS_ROLE_METADATA) == PYI_ADDRESS_ROLE_PROJECTION
+            and storage.metadata.get(ADDRESS_ROLE_METADATA) == ADDRESS_ROLE_PROJECTION
         ):
             visible_type = deepcopy(semantic_type)
             visible_type.storage = SemanticStorageContract(
@@ -983,12 +983,13 @@ class _PyiAstParser:
         if isinstance(node, ast.Subscript) and self.matches_name(node.value, "String"):
             length = self._native_literal_string_length(node)
             return f"String[{length}]"
-        if not isinstance(node, ast.Name):
+        name = self.contract_name(node)
+        if name is None:
             return None
-        if node.id == "String":
+        if name == "String":
             raise ValueError('native_call string literals require String[length](value), for example String[1]("N")')
-        if node.id in SEMANTIC_SCALAR_TYPE_NAMES and node.id not in {"String", "Void"}:
-            return node.id
+        if name in SEMANTIC_SCALAR_TYPE_NAMES and name not in {"String", "Void"}:
+            return name
         return None
 
     def _native_literal_string_length(self, node: ast.Subscript) -> str:
@@ -1082,6 +1083,7 @@ class _PyiAstParser:
         return semantic_type, original_name
 
     def semantic_type(self, node: ast.expr) -> SemanticType:
+        self._reject_unimported_contract_type(node)
         if self.is_subscript_of(node, "Annotated"):
             semantic_type, _ = self.semantic_type_annotation(node)
             return semantic_type
@@ -1117,6 +1119,16 @@ class _PyiAstParser:
             )
         return self.array_type(node)
 
+    def _reject_unimported_contract_type(self, node: ast.expr) -> None:
+        name_node = node.value if isinstance(node, ast.Subscript) else node
+        if not isinstance(name_node, ast.Name):
+            return
+        if self.contract_name(name_node) is not None:
+            return
+        if name_node.id not in CONTRACT_TYPE_NAMES or name_node.id in self._user_type_names:
+            return
+        raise ValueError(f"Contract type {name_node.id!r} must be imported from x2py.contracts")
+
     def _final_type(self, node: ast.Subscript) -> SemanticType:
         items = self.subscript_items(node)
         if len(items) != 1:
@@ -1131,7 +1143,7 @@ class _PyiAstParser:
         if len(items) != 1:
             raise ValueError(f"Snapshot expects exactly one type: {ast.unparse(node)!r}")
         semantic_type = self.semantic_type(items[0])
-        semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] = True
+        semantic_type.metadata[SNAPSHOT_TYPE_METADATA] = True
         return semantic_type
 
     def _address_type(self, node: ast.Call) -> SemanticType:
@@ -1140,7 +1152,7 @@ class _PyiAstParser:
         pointee = self.semantic_type(node.args[0])
         read_only = pointee.storage.read_only if pointee.storage is not None else False
         metadata = dict(pointee.storage.metadata) if pointee.storage is not None else {}
-        metadata[PYI_ADDRESS_ROLE_METADATA] = PYI_ADDRESS_ROLE_RAW
+        metadata[ADDRESS_ROLE_METADATA] = ADDRESS_ROLE_RAW
         pointer_depth = self._addr_depth(node.func)
         pointee.storage = SemanticStorageContract(
             kind="address" if pointer_depth == 1 else "pointer",
@@ -1240,7 +1252,7 @@ class _PyiAstParser:
     @staticmethod
     def _strided_dimension_text(text: str) -> str:
         lower, upper, _step = text.split(":", 2)
-        return f"{lower.strip()}:{upper.strip()}:Strided"
+        return f"{lower.strip()}:{upper.strip()}:{_STRIDED_DIMENSION_SENTINEL}"
 
     @staticmethod
     def _array_type_from_dimensions(
@@ -1249,9 +1261,10 @@ class _PyiAstParser:
         *,
         metadata: dict[str, object] | None = None,
     ) -> SemanticType:
+        strided_axes = [_STRIDED_DIMENSION_SENTINEL in dim for dim in dims]
         dims, category, source_shape, lower_bounds, upper_bounds = _PyiAstParser._flat_array_dimensions(dims)
         if not dims:
-            category = PYI_SCALAR_STORAGE_CATEGORY
+            category = SCALAR_STORAGE_CATEGORY
         if dims == ["..."]:
             category = "assumed_rank"
             source_shape = [".."]
@@ -1261,8 +1274,8 @@ class _PyiAstParser:
             rank=rank,
             shape=list(dims),
             order=_PyiAstParser._array_order_for_dimensions(category, rank, source_shape),
-            axes=["strided" if "Strided" in dim else "dense" for dim in dims],
-            contiguous=not any("Strided" in dim for dim in dims),
+            axes=["strided" if strided else "dense" for strided in strided_axes],
+            contiguous=not any(strided_axes),
             category=category,
             source_shape=source_shape,
             lower_bounds=lower_bounds,
@@ -1284,16 +1297,34 @@ class _PyiAstParser:
         dims: list[str],
     ) -> tuple[list[str], str | None, list[str], list[str | None], list[str | None]]:
         if not dims:
-            return [], PYI_SCALAR_STORAGE_CATEGORY, [], [], []
-        if "Flat" not in dims:
-            source_shape = [] if any(dim in {":", "..."} or "Strided" in dim for dim in dims) else list(dims)
+            return [], SCALAR_STORAGE_CATEGORY, [], [], []
+        if _FLAT_DIMENSION_SENTINEL not in dims:
+            source_shape = (
+                [] if any(dim in {":", "..."} or _STRIDED_DIMENSION_SENTINEL in dim for dim in dims) else list(dims)
+            )
             lower_bounds, upper_bounds = _PyiAstParser._bounds_from_source_shape(source_shape)
-            return dims, None, source_shape, lower_bounds, upper_bounds
-        if dims.count("Flat") != 1 or "..." in dims or dims.index("Flat") not in {0, len(dims) - 1}:
+            return (
+                [dim.replace(_STRIDED_DIMENSION_SENTINEL, "Strided") for dim in dims],
+                None,
+                source_shape,
+                lower_bounds,
+                upper_bounds,
+            )
+        if (
+            dims.count(_FLAT_DIMENSION_SENTINEL) != 1
+            or "..." in dims
+            or dims.index(_FLAT_DIMENSION_SENTINEL) not in {0, len(dims) - 1}
+        ):
             raise ValueError("Flat must appear exactly once at the first or final concrete array dimension")
-        source_shape = ["*" if dim == "Flat" else dim for dim in dims]
+        source_shape = ["*" if dim == _FLAT_DIMENSION_SENTINEL else dim for dim in dims]
         lower_bounds, upper_bounds = _PyiAstParser._bounds_from_source_shape(source_shape)
-        return [":" if dim == "Flat" else dim for dim in dims], "assumed_size", source_shape, lower_bounds, upper_bounds
+        return (
+            [":" if dim == _FLAT_DIMENSION_SENTINEL else dim for dim in dims],
+            "assumed_size",
+            source_shape,
+            lower_bounds,
+            upper_bounds,
+        )
 
     @staticmethod
     def _array_order_for_dimensions(
@@ -1338,8 +1369,11 @@ class _PyiAstParser:
 
     def apply_annotation_metadata(self, semantic_type: SemanticType, node: ast.expr) -> None:
         if isinstance(node, ast.Name):
-            if not self._apply_metadata_name(semantic_type, node.id):
+            name = self.contract_name(node)
+            if name is None:
                 self._append_constraint_metadata(semantic_type, node.id, [])
+            elif not self._apply_metadata_name(semantic_type, name):
+                self._append_constraint_metadata(semantic_type, name, [])
             return
         if isinstance(node, ast.Call):
             self._apply_annotation_metadata_call(semantic_type, node)
@@ -1347,7 +1381,9 @@ class _PyiAstParser:
         raise ValueError(f"Unsupported Annotated metadata: {ast.unparse(node)!r}")
 
     def _apply_annotation_metadata_call(self, semantic_type: SemanticType, node: ast.Call) -> None:
-        helper = self.required_name(node.func)
+        helper = self._annotation_metadata_call_helper(semantic_type, node)
+        if helper is None:
+            return
         if helper in {"FortranType", "FortranCallback"}:
             raise ValueError(f"{helper} metadata is no longer part of the semantic .pyi contract")
         if helper == "PointerAssociation":
@@ -1386,6 +1422,28 @@ class _PyiAstParser:
         self._append_constraint_metadata(
             semantic_type,
             helper,
+            [ast.literal_eval(arg) for arg in node.args],
+        )
+
+    def _annotation_metadata_call_helper(self, semantic_type: SemanticType, node: ast.Call) -> str | None:
+        helper = self.contract_name(node.func)
+        if helper is not None:
+            return helper
+        if not isinstance(node.func, ast.Name):
+            return self.required_name(node.func)
+        if node.func.id in CONTRACT_SYMBOLS:
+            raise ValueError(f"Expected imported x2py contract helper: {ast.unparse(node.func)!r}")
+        self._apply_user_constraint_metadata_call(semantic_type, node)
+        return None
+
+    def _apply_user_constraint_metadata_call(self, semantic_type: SemanticType, node: ast.Call) -> None:
+        if not isinstance(node.func, ast.Name):
+            raise ValueError(f"Expected user constraint name: {ast.unparse(node)!r}")
+        if node.keywords:
+            raise ValueError(f"Constraint metadata expects positional arguments only: {ast.unparse(node)!r}")
+        self._append_constraint_metadata(
+            semantic_type,
+            node.func.id,
             [ast.literal_eval(arg) for arg in node.args],
         )
 
@@ -1525,10 +1583,9 @@ class _PyiAstParser:
             return False
         return storage.kind in {"reference", "array", "pointer", "callback", "address"} and not storage.read_only
 
-    @staticmethod
-    def _is_addr_call(node: ast.Call) -> bool:
-        return _PyiAstParser.matches_name(node.func, "Addr") or (
-            isinstance(node.func, ast.Subscript) and _PyiAstParser.matches_name(node.func.value, "Addr")
+    def _is_addr_call(self, node: ast.Call) -> bool:
+        return self.matches_name(node.func, "Addr") or (
+            isinstance(node.func, ast.Subscript) and self.matches_name(node.func.value, "Addr")
         )
 
     @staticmethod
@@ -1549,11 +1606,16 @@ class _PyiAstParser:
         if any(isinstance(item, ast.Slice | ast.Constant) for item in items):
             return True
         if any(
-            isinstance(item, ast.Name) and item.id not in self._non_dimension_subscription_names() for item in items
+            isinstance(item, ast.Name)
+            and (
+                self.contract_name(item) is None
+                or self.contract_name(item) not in self._non_dimension_subscription_names()
+            )
+            for item in items
         ):
             return True
         if any(
-            isinstance(item, ast.Call) and self.required_name(item.func) in self._non_dimension_subscription_names()
+            isinstance(item, ast.Call) and self.contract_name(item.func) in self._non_dimension_subscription_names()
             for item in items
         ):
             return False
@@ -1589,6 +1651,8 @@ class _PyiAstParser:
             return self.slice_text(node)
         if isinstance(node, ast.Constant):
             return str(node.value)
+        if self.matches_name(node, "Flat"):
+            return _FLAT_DIMENSION_SENTINEL
         if isinstance(node, ast.Attribute | ast.Subscript):
             raise ValueError(f"Unsupported array dimension expression: {ast.unparse(node)!r}")
         return ast.unparse(node)
@@ -1596,7 +1660,9 @@ class _PyiAstParser:
     def slice_text(self, node: ast.Slice) -> str:
         lower = "" if node.lower is None else ast.unparse(node.lower)
         upper = "" if node.upper is None else ast.unparse(node.upper)
-        step = "" if node.step is None else ast.unparse(node.step)
+        step = ""
+        if node.step is not None:
+            step = _STRIDED_DIMENSION_SENTINEL if self.matches_name(node.step, "Strided") else ast.unparse(node.step)
         if step:
             return f"{lower}:{upper}:{step}"
         return f"{lower}:{upper}"
@@ -1658,12 +1724,10 @@ class _PyiAstParser:
             self._mark_callback_reference_type(semantic_type, "unspecified")
         return _CallbackArgumentSpec(semantic_type, "unspecified", passes_by_value)
 
-    @staticmethod
-    def _callback_reference_wrapper_access(node: ast.Call) -> str | None:
-        qualified = _PyiAstParser.qualified_name(node.func)
-        if qualified is None:
+    def _callback_reference_wrapper_access(self, node: ast.Call) -> str | None:
+        wrapper = self.contract_name(node.func)
+        if wrapper is None:
             return None
-        wrapper = qualified[-1]
         return {
             "PassByRef": "unspecified",
             "In": "read",
@@ -1720,20 +1784,25 @@ class _PyiAstParser:
     def _callback_shape_names(cls, semantic_types: list[SemanticType]) -> list[str]:
         names = []
         for semantic_type in semantic_types:
-            for dimension in cls._semantic_shape_dimensions(semantic_type):
+            for dimension, strided in cls._semantic_shape_dimensions(semantic_type):
+                if strided:
+                    dimension = re.sub(r"(?i)(?<=:)Strided\s*$", "", str(dimension))
                 for name in re.findall(r"\b[A-Za-z_]\w*\b", str(dimension)):
-                    if name not in cls._non_dimension_subscription_names() and name not in names:
+                    if name not in names:
                         names.append(name)
         return names
 
     @staticmethod
-    def _semantic_shape_dimensions(semantic_type: SemanticType) -> list[str]:
-        if semantic_type.shape:
-            return list(semantic_type.shape)
+    def _semantic_shape_dimensions(semantic_type: SemanticType) -> list[tuple[str, bool]]:
         storage = semantic_type.storage
-        if storage is not None and storage.array is not None:
-            return list(storage.array.shape)
-        return []
+        array = storage.array if storage is not None else None
+        dimensions = list(semantic_type.shape)
+        if not dimensions and array is not None:
+            dimensions = list(array.shape)
+        axes = list(array.axes) if array is not None else []
+        if len(axes) != len(dimensions):
+            axes = ["dense"] * len(dimensions)
+        return [(str(dimension), axis == "strided") for dimension, axis in zip(dimensions, axes, strict=True)]
 
     @staticmethod
     def _is_dimension_scalar_callback_type(semantic_type: SemanticType) -> bool:
@@ -1830,12 +1899,11 @@ class _PyiAstParser:
         return SemanticArgument(
             name=str(ast.literal_eval(items[0])),
             semantic_type=semantic_type,
-            optional=len(items) == 3 and isinstance(items[2], ast.Name) and items[2].id == "Optional",
+            optional=len(items) == 3 and self.matches_name(items[2], "Optional"),
         )
 
-    @staticmethod
-    def name_metadata(node: ast.expr) -> str | None:
-        if isinstance(node, ast.Call) and _PyiAstParser.matches_name(node.func, "Name"):
+    def name_metadata(self, node: ast.expr) -> str | None:
+        if isinstance(node, ast.Call) and self.matches_name(node.func, "Name"):
             if len(node.args) != 1:
                 raise ValueError(f"Name metadata expects one argument: {ast.unparse(node)!r}")
             return str(ast.literal_eval(node.args[0]))
@@ -1882,21 +1950,26 @@ class _PyiAstParser:
             return (*parent, node.attr)
         return None
 
-    @staticmethod
-    def matches_name(node: ast.AST, name: str) -> bool:
-        qualified = _PyiAstParser.qualified_name(node)
-        return qualified is not None and qualified[-1] == name
+    def contract_name(self, node: ast.AST) -> str | None:
+        if not isinstance(node, ast.Name):
+            return None
+        return self._contract_bindings.get(node.id)
+
+    def matches_name(self, node: ast.AST, name: str) -> bool:
+        return self.contract_name(node) == name
 
     @staticmethod
-    def required_name(node: ast.AST) -> str:
-        qualified = _PyiAstParser.qualified_name(node)
-        if qualified is None:
-            raise ValueError(f"Expected named helper: {ast.unparse(node)!r}")
-        return qualified[-1]
+    def matches_plain_name(node: ast.AST, name: str) -> bool:
+        return isinstance(node, ast.Name) and node.id == name
 
-    @staticmethod
-    def is_subscript_of(node: ast.AST, name: str) -> bool:
-        return isinstance(node, ast.Subscript) and _PyiAstParser.matches_name(node.value, name)
+    def required_name(self, node: ast.AST) -> str:
+        name = self.contract_name(node)
+        if name is None:
+            raise ValueError(f"Expected imported x2py contract helper: {ast.unparse(node)!r}")
+        return name
+
+    def is_subscript_of(self, node: ast.AST, name: str) -> bool:
+        return isinstance(node, ast.Subscript) and self.matches_name(node.value, name)
 
     @staticmethod
     def subscript_slice(node: ast.AST) -> ast.expr:
@@ -1910,10 +1983,13 @@ class _PyiAstParser:
             return list(value.elts)
         return [value]
 
-    @staticmethod
-    def type_name(node: ast.AST) -> str:
+    def type_name(self, node: ast.AST) -> str:
         if isinstance(node, ast.Subscript):
-            return ast.unparse(node.value)
+            contract_name = self.contract_name(node.value)
+            return contract_name or ast.unparse(node.value)
+        contract_name = self.contract_name(node)
+        if contract_name is not None:
+            return contract_name
         return ast.unparse(node)
 
     def _callable_parts(
@@ -1992,7 +2068,7 @@ class _PyiAstParser:
             existing = by_name.get(returned.name)
             if existing is None:
                 _PyiAstParser._mark_projected_output(returned.semantic_type)
-                returned.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
+                returned.metadata[PROJECTED_OUTPUT_METADATA] = True
                 returned.metadata.pop("return_position", None)
                 native_position = returned.metadata.pop("native_position", None)
                 if isinstance(native_position, int) and 0 <= native_position <= len(semantic_args):
@@ -2000,7 +2076,7 @@ class _PyiAstParser:
                 else:
                     semantic_args.append(returned)
                 continue
-            existing.metadata[PYI_PROJECTED_OUTPUT_METADATA] = True
+            existing.metadata[PROJECTED_OUTPUT_METADATA] = True
             _PyiAstParser._mark_projected_output(existing.semantic_type)
 
     @staticmethod
@@ -2050,7 +2126,7 @@ class _PyiAstParser:
                     kind="address",
                     mutable=True,
                     pointer_depth=1,
-                    metadata={PYI_ADDRESS_ROLE_METADATA: PYI_ADDRESS_ROLE_PROJECTION},
+                    metadata={ADDRESS_ROLE_METADATA: ADDRESS_ROLE_PROJECTION},
                 )
             returned_args.insert(
                 0,
@@ -2094,7 +2170,7 @@ class _PyiAstParser:
             mapping.python_name = arg.name
             if not mapping.native_name:
                 mapping.native_name = arg.name
-            if arg.metadata.get(PYI_PROJECTED_OUTPUT_METADATA) and mapping.result_position is None:
+            if arg.metadata.get(PROJECTED_OUTPUT_METADATA) and mapping.result_position is None:
                 mapping.result_position = return_positions.get(arg.name)
 
     @staticmethod
@@ -2109,7 +2185,9 @@ class _PyiAstParser:
             mapping.value["position"] = new_position
 
     def return_items(self, node: ast.expr) -> list[ast.expr]:
-        if self.is_subscript_of(node, "tuple") or self.is_subscript_of(node, "Tuple"):
+        if isinstance(node, ast.Subscript) and (
+            self.matches_plain_name(node.value, "tuple") or self.matches_plain_name(node.value, "Tuple")
+        ):
             return self.subscript_items(node)
         return [node]
 
@@ -2216,7 +2294,11 @@ class _ClassBodyVisitor(ClassVisitor):
             or decorators.external
         ):
             raise ValueError(f"Unsupported class body decorator: {ast.unparse(node.decorator_list[-1])!r}")
-        if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
+        if (
+            len(node.bases) == 1
+            and isinstance(node.bases[0], ast.Subscript)
+            and self.parser.matches_plain_name(node.bases[0].value, "Enum")
+        ):
             raise ValueError(
                 f"Enum declarations are not supported; use Final[...] integer constants: {_node_text(node)!r}"
             )
@@ -2240,6 +2322,7 @@ class _ModuleVisitor(ClassVisitor):
 
     def _visit_Module(self, node: ast.Module) -> None:
         """Visit all top-level declarations in source order."""
+        self.parser.register_user_type_names(node)
         for item in node.body:
             self._visit(item)
 
@@ -2249,6 +2332,8 @@ class _ModuleVisitor(ClassVisitor):
 
     def _visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         """Convert a from-import declaration."""
+        if self.parser.register_contract_import(node):
+            return
         semantic_import = self.parser.import_from(node)
         if semantic_import.module == "typing" and any(item.source == "overload" for item in semantic_import.items):
             raise ValueError('typing.overload is not supported; use x2py @overload("specific")')
@@ -2269,7 +2354,11 @@ class _ModuleVisitor(ClassVisitor):
             or decorators.external
         ):
             raise ValueError(f"Unsupported class decorator: {ast.unparse(node.decorator_list[-1])!r}")
-        if len(node.bases) == 1 and self.parser.is_subscript_of(node.bases[0], "Enum"):
+        if (
+            len(node.bases) == 1
+            and isinstance(node.bases[0], ast.Subscript)
+            and self.parser.matches_plain_name(node.bases[0].value, "Enum")
+        ):
             raise ValueError(
                 f"Enum declarations are not supported; use Final[...] integer constants: {_node_text(node)!r}"
             )
@@ -2362,7 +2451,7 @@ def _imported_type_refs(module: SemanticModule) -> dict[str, tuple[str, str, str
     return imported
 
 
-def _reconcile_external_type_refs(modules: list[SemanticModule]) -> list[SemanticModule]:
+def reconcile_external_type_refs(modules: list[SemanticModule]) -> list[SemanticModule]:
     definitions = {(module.name, declaration.name): declaration for module in modules for declaration in module.classes}
     for module in modules:
         for semantic_type in _iter_module_semantic_types(module):

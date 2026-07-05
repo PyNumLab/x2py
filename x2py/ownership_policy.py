@@ -14,6 +14,14 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any
 
+from x2py.semantic_metadata import (
+    ADDRESS_ROLE_METADATA,
+    ADDRESS_ROLE_PROJECTION,
+    ADDRESS_ROLE_RAW,
+    PROJECTED_OUTPUT_METADATA,
+    SCALAR_STORAGE_CATEGORY,
+)
+
 
 OWNERSHIP_POLICY_METADATA = "ownership_policy"
 POINTER_POLICY_METADATA = "pointer_policy"
@@ -31,11 +39,6 @@ POINTER_POLICY_FIELDS = (
 )
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
 PYTHON_VALUE_IMMUTABLE = "immutable"
-PYI_PROJECTED_OUTPUT_METADATA = "pyi_projected_output"
-PYI_ADDRESS_ROLE_METADATA = "pyi_address_role"
-PYI_ADDRESS_ROLE_PROJECTION = "projection"
-PYI_ADDRESS_ROLE_RAW = "raw"
-PYI_SCALAR_STORAGE_CATEGORY = "scalar_storage"
 
 
 class ObjectKind(str, Enum):
@@ -371,7 +374,7 @@ def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipCon
         None,
     )
     metadata = getattr(argument, "metadata", {}) or {}
-    projects_result = bool(metadata.get(PYI_PROJECTED_OUTPUT_METADATA))
+    projects_result = bool(metadata.get(PROJECTED_OUTPUT_METADATA))
     projects_result |= mapping is not None and getattr(mapping, "result_position", None) is not None
     python_visible = mapping is None or getattr(mapping, "python_position", None) is not None
     storage = getattr(getattr(argument, "semantic_type", None), "storage", None)
@@ -612,7 +615,7 @@ class OwnershipPolicyResolver:
             return self._scalar_storage_decision(facts, context)
         if facts.pointer:
             return self._pointer_scalar_decision(facts, context)
-        if facts.address_role == PYI_ADDRESS_ROLE_PROJECTION:
+        if facts.address_role == ADDRESS_ROLE_PROJECTION:
             return self._address_projection_scalar_decision(facts, context)
         if context.is_result:
             return OwnershipDecision(
@@ -1333,7 +1336,7 @@ class OwnershipPolicyResolver:
             return PythonBarrierAction.BLOCKED
         if not context.is_argument or not context.python_visible:
             return PythonBarrierAction.NONE
-        if facts.address_role == PYI_ADDRESS_ROLE_RAW:
+        if facts.address_role == ADDRESS_ROLE_RAW:
             return PythonBarrierAction.RAW_ADDRESS
         if facts.scalar_storage or (
             decision.kind is ObjectKind.SCALAR and decision.codegen_action is CodegenAction.IDENTITY_OUTPUT
@@ -1361,7 +1364,7 @@ class OwnershipPolicyResolver:
             return NativeBarrierAction.BLOCKED
         if not context.is_argument:
             return NativeBarrierAction.NONE
-        if facts.address_role == PYI_ADDRESS_ROLE_RAW:
+        if facts.address_role == ADDRESS_ROLE_RAW:
             return NativeBarrierAction.PASS_RAW_ADDRESS
         if facts.scalar_storage or (
             decision.kind is ObjectKind.SCALAR
@@ -1371,7 +1374,7 @@ class OwnershipPolicyResolver:
         if (
             decision.kind is ObjectKind.SCALAR
             and decision.storage_mode is StorageMode.ALIAS
-            and (facts.address_role != PYI_ADDRESS_ROLE_PROJECTION or facts.pointer)
+            and (facts.address_role != ADDRESS_ROLE_PROJECTION or facts.pointer)
         ):
             return NativeBarrierAction.PASS_STORAGE_ADDRESS
         if decision.kind is ObjectKind.NUMPY_ARRAY:
@@ -1381,10 +1384,7 @@ class OwnershipPolicyResolver:
         if decision.kind is ObjectKind.DERIVED_TYPE:
             return NativeBarrierAction.PASS_WRAPPER_ADDRESS
         if decision.kind is ObjectKind.SCALAR:
-            if (
-                facts.address_role == PYI_ADDRESS_ROLE_PROJECTION
-                or decision.codegen_action is CodegenAction.COPY_IN_OUT
-            ):
+            if facts.address_role == ADDRESS_ROLE_PROJECTION or decision.codegen_action is CodegenAction.COPY_IN_OUT:
                 return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
             return NativeBarrierAction.PASS_VALUE
         return NativeBarrierAction.BLOCKED
@@ -1432,11 +1432,11 @@ class OwnershipPolicyResolver:
             is_custom=is_custom,
             storage_kind=str(getattr(storage, "kind", "value") if storage is not None else "value"),
             address_role=(
-                str(storage_metadata.get(PYI_ADDRESS_ROLE_METADATA))
-                if storage_metadata.get(PYI_ADDRESS_ROLE_METADATA) is not None
+                str(storage_metadata.get(ADDRESS_ROLE_METADATA))
+                if storage_metadata.get(ADDRESS_ROLE_METADATA) is not None
                 else None
             ),
-            scalar_storage=bool(getattr(array, "category", None) == PYI_SCALAR_STORAGE_CATEGORY),
+            scalar_storage=bool(getattr(array, "category", None) == SCALAR_STORAGE_CATEGORY),
             metadata=metadata,
         )
 
@@ -1451,7 +1451,7 @@ class OwnershipPolicyResolver:
                 writes_argument=bool(
                     variable.semantic_type.ownership.mutable
                     or (storage is not None and (storage.mutable or not storage.read_only))
-                    or variable.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)
+                    or variable.metadata.get(PROJECTED_OUTPUT_METADATA)
                 )
             )
         return OwnershipContext(location="value")

@@ -136,6 +136,8 @@ Root contract: basic_subroutine/basic_subroutine.pyi
 from . import m1
 
 Module contract: m1.pyi
+from x2py.contracts import Addr, Arg, Float64, Int32, native_call
+
 @native_call([Addr(Arg(0)), Arg(1)])
 def add1(
     n: Int32,

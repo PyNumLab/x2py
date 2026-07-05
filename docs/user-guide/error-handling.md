@@ -48,6 +48,8 @@ In `contracts/solver/solver_api.pyi`, keep the generated native types and add
 the explicit status policy:
 
 ```python
+from x2py.contracts import Addr, Arg, Int32, Return, String, native_call, raises
+
 @raises(status="status", message="message", success=0)
 @native_call([Addr(Arg(0)), Return("status", 0), Return("message", 1)])
 def solve(

@@ -54,6 +54,8 @@ The output should match the wrapper contract from the
 [First Wrapped Function](first-wrapped-function.md) page:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, external, native_call
+
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(

@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Final, Float64, Int, Int32, Int8, SizeT
+
 COORD_X: Final[Int] = 0
 
 COORD_Y: Final[Int] = 1

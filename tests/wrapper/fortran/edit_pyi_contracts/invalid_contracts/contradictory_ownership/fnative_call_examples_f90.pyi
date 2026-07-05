@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Destruction, Float64, Int32, Ownership, Returns, Transfer
+
 def scale_with_status(
     values: Annotated[
         Float64[:],

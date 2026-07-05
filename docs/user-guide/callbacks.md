@@ -77,6 +77,8 @@ is unsupported unless the value is explicitly copied.
 Callback argument wrappers are valid only inside `Callable[[...], T]`:
 
 ```python
+from x2py.contracts import Callable, Float64, In, InOut, Int32, Out, PassByRef
+
 callback: Callable[
     [
         Int32,
@@ -114,6 +116,8 @@ values are copied back before the callback adapter returns.
 Read-only fixed-length character callback arguments use Python `str`:
 
 ```python
+from x2py.contracts import Callable, In, String
+
 callback: Callable[[In(String[8])], None]
 ```
 
@@ -122,6 +126,8 @@ character callback arguments cannot use plain `String[8]`, because Python
 strings are immutable. Use mutable rank-zero fixed-width bytes storage instead:
 
 ```python
+from x2py.contracts import Callable, InOut, Out, String
+
 callback: Callable[[InOut(String[8][()])], None]
 callback: Callable[[Out(String[8][()])], None]
 ```
@@ -139,6 +145,8 @@ callback character dummies with `intent(out)` or `intent(inout)`. Manual
 contracts reject these writable immutable forms:
 
 ```python
+from x2py.contracts import Callable, InOut, Out, String
+
 Callable[[Out(String[8])], None]     # invalid
 Callable[[InOut(String[8])], None]   # invalid
 ```

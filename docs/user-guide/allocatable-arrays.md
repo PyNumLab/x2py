@@ -98,6 +98,8 @@ Inspecting `allocations.f90` prints the copy, replacement, and borrowed-view
 contracts:
 
 ```python
+from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, Int32, Optional, Returns, native_call
+
 shared_values: Annotated[Float64[:], Allocatable, Aliased] | None
 snapshot_values: Annotated[Float64[:], Allocatable] | None
 
@@ -239,6 +241,8 @@ spelling `Annotated[String[:][:], Allocatable]`, so the element width can come
 from the native allocation at runtime:
 
 ```python
+from x2py.contracts import Allocatable, Annotated, Optional, Returns, String
+
 def replace_names(
     names: Annotated[String[:][:], Allocatable]
 ) -> Returns[

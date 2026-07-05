@@ -91,10 +91,12 @@ contracts. Use readiness checks before assuming a semantic module can be wrapped
 
 | Symbol | Purpose |
 | --- | --- |
-| `parse_pyi_text` | Parses semantic `.pyi` source text. |
-| `load_pyi_file` | Loads and parses one semantic `.pyi` file. |
-| `load_pyi_modules` | Loads semantic `.pyi` modules from files or directories. |
-| `convert_pyi_to_ir` | Converts parsed semantic `.pyi` content to semantic IR. |
+| `parse_pyi_text` | Parses semantic `.pyi` source text into Python AST. |
+| `parse_pyi_file` | Loads and parses one semantic `.pyi` file into Python AST. |
+| `convert_pyi_to_ir` | Converts parsed semantic `.pyi` AST to semantic IR. |
+| `pyi_text_to_semantic_module` | Parses inline semantic `.pyi` text and converts it to semantic IR. |
+| `pyi_file_to_semantic_module` | Converts one semantic `.pyi` file to semantic IR. |
+| `pyi_paths_to_semantic_modules` | Converts semantic `.pyi` files or directories to semantic IR and reconciles imports. |
 
 Editable `.pyi` files are a contract surface. User-private declarations in a
 `.pyi` file are distinct from source-private Fortran declarations omitted from

@@ -39,6 +39,8 @@ python3 -m x2py scale.f90 --pyi
 The generated declaration should look like:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, external, native_call
+
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(

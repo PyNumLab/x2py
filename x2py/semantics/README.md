@@ -7,11 +7,13 @@ editable `.pyi` files, readiness diagnostics, and wrapper code generation.
 
 | File | Owns |
 | --- | --- |
-| `models.py` | Semantic IR dataclasses and metadata keys. |
+| `models.py` | Semantic IR dataclasses and core model metadata. |
+| `../semantic_metadata.py` | Cross-stage semantic metadata keys consumed after `.pyi`, C, or Fortran conversion. |
 | `fortran2ir.py` | Fortran parser facts to semantic modules. |
 | `c2ir.py` | C parser facts to semantic modules. |
-| `pyi_parser.py` | Minimal `.pyi` text/file parsing to Python AST. |
 | `pyi2ir.py` | User-editable semantic `.pyi` AST conversion and validation. |
+| `../pyi_pipeline.py` | Combined `.pyi` text/file/path-set conversion and external-type reconciliation. |
+| `pyi_metadata.py` | Semantic `.pyi` loader workflow metadata. |
 | `native_contract.py` | Source-free native ABI and placement validation. |
 | `policy_completion.py` | Complete ownership, transfer, destruction, mutability/writeback, projection, nullability, release, storage, Python-barrier, native-barrier, and accessor decisions after full signatures are known. |
 | `readiness.py` | Support blockers and readiness reports before wrapper codegen. |

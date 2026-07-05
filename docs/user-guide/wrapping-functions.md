@@ -25,6 +25,8 @@ python3 -m x2py scale.f90 --out-dir build/scale
 The generated contract for the scale function is:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, external, native_call
+
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
@@ -73,6 +75,8 @@ end module results
 Generated contract:
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, Int32, native_call
+
 @native_call([Addr(Arg(0))])
 def squares(
     size: Int32
@@ -134,6 +138,8 @@ end module outputs
 Inspecting `function_outputs.f90` prints this function contract:
 
 ```python
+from x2py.contracts import Arg, Float64, Int32, Return, native_call
+
 @native_call([Arg(0), Return('count', 1)])
 def sum_with_count(
     values: Float64[::]

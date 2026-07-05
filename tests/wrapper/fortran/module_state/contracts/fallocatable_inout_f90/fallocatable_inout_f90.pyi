@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int32, Optional, Returns, native_call
+
 @native_call([Arg(0), Addr(Arg(1))])
 def replace_values(
     values: Annotated[Float64[:], Allocatable],

@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Arg, Int32, Name, bind, native_call
+
 class visible_t:
     def __init__(
         self,

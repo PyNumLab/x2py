@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Arg, Flat, Float64, Int32, ORDER_F, Returns, native_call
+
 @native_call([Addr(Arg(0)), Arg(1)])
 def sum_assumed_size(
     n: Int32,

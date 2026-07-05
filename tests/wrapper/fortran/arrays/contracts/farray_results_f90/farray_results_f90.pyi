@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int32, ORDER_F, native_call
+
 def fixed_vector() -> Float64[3]: ...
 
 @native_call([Addr(Arg(0))])

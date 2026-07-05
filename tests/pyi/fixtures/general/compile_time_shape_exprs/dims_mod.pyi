@@ -1,3 +1,5 @@
+from x2py.contracts import Final, Float32, Int32
+
 n0: Final[Int32] = 4
 
 n1: Final[Int32] = 6

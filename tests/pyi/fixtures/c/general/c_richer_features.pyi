@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Any, CStruct, CUnion, Final, Float64, Int, Int8, Opaque, SizeT, UInt32, UInt64
+
 class x2py_flags(CStruct):
     ready: UInt32
     mode: UInt32

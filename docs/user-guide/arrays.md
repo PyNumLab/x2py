@@ -46,6 +46,8 @@ end module array_ops
 Inspecting `arrays.f90` prints these array contracts:
 
 ```python
+from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, native_call
+
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2)])
 def scale_matrix(
     rows: Int32,

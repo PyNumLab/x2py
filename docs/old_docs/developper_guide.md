@@ -205,7 +205,7 @@ implementation files.
 | Fortran to semantic IR | `x2py/semantics/fortran2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_fortran2ir.py` |
 | C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_c2ir.py`, `tests/semantics/test_c_semantic_readiness.py` |
 | `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
-| `.pyi` loading/editing | `x2py/semantics/pyi_parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
+| `.pyi` loading/editing | `x2py/pyi_parser/parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
 | Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/test_multi_source_builds.py` |
 | Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
@@ -257,7 +257,7 @@ module-level function only to preserve an old internal call path.
 
 ### `.pyi` Contract Internals
 
-User-visible `.pyi` syntax is parsed by `x2py/semantics/pyi_parser.py` and printed
+User-visible `.pyi` syntax is parsed by `x2py/pyi_parser/parser.py` and printed
 by `x2py/codegen/printers/pyi_printer.py`. Both operate on `x2py/semantics/models.py`.
 
 Important implementation rules:
@@ -567,9 +567,10 @@ Input shapes are part of the contract:
   files.
 - `preprocess_source(path, language=..., config=...)` is path-based because it
   shells out to a compiler. Feed `preprocessed.source` to the parser afterward.
-- `parse_pyi_text(...)` and `convert_pyi_to_ir(...)` accept inline `.pyi`
-  source text. `load_pyi_file(...)` reads one `.pyi` file, and
-  `load_pyi_modules(...)` reads a file set or directory.
+- `parse_pyi_text(...)` accepts inline `.pyi` source text and returns Python
+  AST. `convert_pyi_to_ir(...)` converts that parsed AST to semantic IR.
+  `pyi_text_to_semantic_module(...)`, `pyi_file_to_semantic_module(...)`, and `pyi_paths_to_semantic_modules(...)`
+  combine parsing and conversion for inline text, one file, or a file set.
 - The CLI accepts source, `.pyi`, and directory paths. It does not accept
   inline source text on the command line.
 
@@ -590,7 +591,7 @@ CLI `.pyi` readiness:
 
 ```text
 .pyi path(s) or directory
-  -> load_pyi_modules(...)
+  -> pyi_paths_to_semantic_modules(...)
   -> SemanticModule list
   -> assess_semantic_wrap_readiness(...)
 ```
@@ -614,19 +615,21 @@ then `c_file_to_semantic_modules(...)` or
 Loading or editing `.pyi` is the opposite direction:
 
 ```python
-from x2py import assess_semantic_wrap_readiness, load_pyi_modules
+from x2py import assess_semantic_wrap_readiness, pyi_paths_to_semantic_modules
 
-modules = load_pyi_modules("interfaces")
+modules = pyi_paths_to_semantic_modules("interfaces")
 report = assess_semantic_wrap_readiness(modules, source="interfaces")
 ```
 
 Use the `.pyi` helpers by input shape:
 
-- `parse_pyi_text(source, module_name=...)` for inline text.
-- `convert_pyi_to_ir(source, module_name=...)` as the compatibility alias for
-  inline text.
-- `load_pyi_file(path, module_name=...)` for one file.
-- `load_pyi_modules(paths_or_directory)` for a set of interfaces that may
+- `parse_pyi_text(source, filename=...)` from `x2py.pyi_parser` for parser-only
+  AST parsing.
+- `convert_pyi_to_ir(tree, module_name=..., source=...)` for AST-to-IR
+  conversion.
+- `pyi_text_to_semantic_module(source, module_name=..., filename=...)` for inline text.
+- `pyi_file_to_semantic_module(path, module_name=...)` for one file.
+- `pyi_paths_to_semantic_modules(paths_or_directory)` for a set of interfaces that may
   reference each other.
 
 Do not run compiler preprocessing, C ABI probes, or Fortran type probes for an
@@ -795,7 +798,7 @@ from `x2py/semantics/models.py`.
   promotes them into semantic IR; local bindings are not emitted into `.pyi` or
   treated as wrapper interface items by default.
 - `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
-- `x2py/semantics/pyi_parser.py` loads edited contracts back into semantic IR.
+- `x2py/pyi_parser/parser.py` loads edited contracts back into semantic IR.
 - `x2py/semantics/readiness.py` decides whether that IR is complete enough for
   wrapping.
 
@@ -1000,7 +1003,7 @@ PYTHONPATH=. pytest -q tests/semantics/test_pyi_printer.py tests/pyi/test_pyi_to
 Example target: add a new `Annotated[...]` metadata item or projection helper.
 
 1. Add loader tests in `tests/pyi/test_pyi_to_ir.py`.
-2. Update `x2py/semantics/pyi_parser.py`.
+2. Update `x2py/pyi_parser/parser.py`.
 3. Add printer tests in `tests/semantics/test_pyi_printer.py`.
 4. Update `x2py/codegen/printers/pyi_printer.py`.
 5. Update semantic models in `x2py/semantics/models.py` only if the IR needs a new

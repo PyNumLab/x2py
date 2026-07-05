@@ -1,3 +1,5 @@
+from x2py.contracts import Allocatable, Annotated, FortranAllocatable, Int32, Optional, Returns, String
+
 def char_code_default(
     c: String[1]
 ) -> Int32: ...

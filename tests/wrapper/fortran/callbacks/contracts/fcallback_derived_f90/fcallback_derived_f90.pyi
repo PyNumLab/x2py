@@ -1,3 +1,5 @@
+from x2py.contracts import Arg, Callable, Float64, In, Return, native_call
+
 class point_t:
     def __init__(
         self,

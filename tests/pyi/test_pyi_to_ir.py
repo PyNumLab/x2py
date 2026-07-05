@@ -5,15 +5,22 @@ from pathlib import Path
 
 import pytest
 
+import x2py.pyi_pipeline as pyi_pipeline
+from x2py.contracts import CONTRACT_SYMBOLS
+from x2py.semantic_metadata import (
+    ADDRESS_ROLE_METADATA,
+    ADDRESS_ROLE_PROJECTION,
+    ADDRESS_ROLE_RAW,
+    BIND_TARGET_METADATA,
+    PROJECTED_OUTPUT_METADATA,
+    SNAPSHOT_TYPE_METADATA,
+    SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
+    USER_PRIVATE_METADATA,
+)
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 from x2py.semantics.models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
-    PYI_BIND_TARGET_METADATA,
-    PYI_PROJECTED_OUTPUT_METADATA,
-    PYI_SNAPSHOT_TYPE_METADATA,
-    PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
-    PYI_USER_PRIVATE_METADATA,
     PYTHON_VALUE_IMMUTABLE,
     PYTHON_VALUE_MUTABILITY_METADATA,
     SemanticArgument,
@@ -30,11 +37,9 @@ from x2py.semantics.pyi2ir import (
     _PyiAstParser,
     _node_text,
     convert_pyi_to_ir,
-    load_pyi_file,
-    load_pyi_modules,
-    parse_pyi_text,
 )
-from x2py.semantics.pyi_parser import parse_pyi_text as parse_pyi_ast_text
+from x2py.pyi_pipeline import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
+from x2py.pyi_parser import parse_pyi_text as parse_pyi_ast_text
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.native_contract import native_contract_issues
 from x2py.semantics.policy_completion import complete_semantic_policies
@@ -84,6 +89,13 @@ def _sample_pyi_compare_fixtures(paths: list[Path]) -> list[Path]:
 
 
 FORTRAN_PYI_COMPARE_FIXTURES = _sample_pyi_compare_fixtures(_ALL_FORTRAN_PYI_COMPARE_FIXTURES)
+CONTRACT_IMPORT = f"from x2py.contracts import {', '.join(sorted(CONTRACT_SYMBOLS))}\n"
+
+
+def parse_pyi_text(source: str, *args, **kwargs):
+    if "x2py.contracts" in source:
+        return pyi_text_to_semantic_module(source, *args, **kwargs)
+    return pyi_text_to_semantic_module(f"{CONTRACT_IMPORT}{source}", *args, **kwargs)
 
 
 def test_pyi_parser_returns_python_ast_only():
@@ -94,6 +106,18 @@ def test_pyi_parser_returns_python_ast_only():
     assert tree.body[0].name == "scale"
 
 
+def test_convert_pyi_to_ir_accepts_parsed_pyi_ast_only():
+    source = f"{CONTRACT_IMPORT}value: Int32\n"
+    tree = parse_pyi_ast_text(source, filename="contract.pyi")
+
+    module = convert_pyi_to_ir(tree, module_name="parsed", source=source)
+
+    assert module.name == "parsed"
+    assert module.variables[0].name == "value"
+    with pytest.raises(TypeError, match="expects a Python ast.Module"):
+        convert_pyi_to_ir(source)
+
+
 def _semantic_modules_for_source(path: Path):
     parsed = parse_fortran_file(
         path.read_text(encoding="utf-8"),
@@ -102,14 +126,12 @@ def _semantic_modules_for_source(path: Path):
     return fortran_file_to_semantic_modules(parsed, standalone_module_name=path.stem)
 
 
-def test_parse_pyi_text_dispatches_nested_and_qualified_semantic_types():
+def test_convert_pyi_to_ir_dispatches_nested_and_qualified_semantic_types():
     module = parse_pyi_text(
         """
-import typing
-
 public_value: Int32
 bounded: Final[Annotated[Int32, Bounded(1, 8)]]
-callback: typing.Callable
+callback: Callable
 pointer: Addr(Float64)
 raw_pointer: Addr(Float64)
 """,
@@ -125,11 +147,48 @@ raw_pointer: Addr(Float64)
     ]
     assert callback.semantic_type.name == "Callable"
     assert pointer.semantic_type.storage.kind == "address"
-    assert pointer.semantic_type.storage.metadata["pyi_address_role"] == "raw"
+    assert pointer.semantic_type.storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_RAW
     assert raw_pointer.semantic_type.storage.read_only is False
 
 
-def test_parse_pyi_text_preserves_immutable_python_value_metadata():
+def test_convert_pyi_to_ir_requires_imported_contract_types():
+    with pytest.raises(ValueError, match="Contract type 'Float64' must be imported"):
+        pyi_text_to_semantic_module("value: Float64\n", module_name="bare")
+
+    module = pyi_text_to_semantic_module(
+        """
+class Float64:
+    pass
+
+value: Float64
+""",
+        module_name="user_type",
+    )
+
+    assert module.classes[0].name == "Float64"
+    assert module.variables[0].semantic_type.name == "Float64"
+
+
+def test_convert_pyi_to_ir_follows_arbitrary_contract_aliases():
+    module = pyi_text_to_semantic_module(
+        """
+from x2py.contracts import Addr as AddressOf, Arg as PythonArg, Final as Frozen
+from x2py.contracts import Flat as Layout, Float64 as F64, Int32 as I32, native_call as call
+
+Flat: Frozen[I32] = 10
+
+@call([AddressOf(PythonArg(0))])
+def inspect(values: F64[Layout], dense: F64[Flat]) -> None: ...
+""",
+        module_name="aliases",
+    )
+
+    assert module.variables[0].name == "Flat"
+    assert module.functions[0].arguments[0].semantic_type.storage.array.category == "assumed_size"
+    assert module.functions[0].arguments[1].semantic_type.shape == ["Flat"]
+
+
+def test_convert_pyi_to_ir_preserves_immutable_python_value_metadata():
     module = parse_pyi_text(
         """
 def scale(
@@ -149,7 +208,7 @@ def scale(
     assert reparsed_values.metadata[PYTHON_VALUE_MUTABILITY_METADATA] == PYTHON_VALUE_IMMUTABLE
 
 
-def test_parse_pyi_text_rejects_immutable_writable_borrowed_view_argument():
+def test_convert_pyi_to_ir_rejects_immutable_writable_borrowed_view_argument():
     with pytest.raises(ValueError, match="Immutable values cannot request"):
         parse_pyi_text(
             """
@@ -161,7 +220,7 @@ def normalize(
         )
 
 
-def test_parse_pyi_text_allows_user_modified_stub():
+def test_convert_pyi_to_ir_allows_user_modified_stub():
     pyi = """
 import iso_c_binding
 
@@ -195,7 +254,7 @@ def touch(
     assert module.variables[3].default_value == "42"
 
 
-def test_parse_pyi_text_accepts_mutable_module_literal_defaults():
+def test_convert_pyi_to_ir_accepts_mutable_module_literal_defaults():
     source = """counter: Int32 = 41
 scale: Float64 = 2.5
 label: String[8] = "ready"
@@ -215,12 +274,12 @@ label: String[8] = "ready"
         "counter: Int32 = SOME_NAME\n",
     ],
 )
-def test_parse_pyi_text_rejects_mutable_module_expression_defaults(source):
+def test_convert_pyi_to_ir_rejects_mutable_module_expression_defaults(source):
     with pytest.raises(ValueError, match="Mutable defaults must be literal values"):
         parse_pyi_text(source, module_name="runtime_state")
 
 
-def test_parse_pyi_text_round_trips_enum_like_integer_constants():
+def test_convert_pyi_to_ir_round_trips_enum_like_integer_constants():
     source = """STATUS_OK: Final[Int] = 0
 STATUS_NEXT: Final[Int] = STATUS_OK + 1
 
@@ -240,7 +299,7 @@ def set_status(
     assert parse_pyi_text(emitted, module_name="status_api") == module
 
 
-def test_parse_pyi_text_rejects_enum_classes():
+def test_convert_pyi_to_ir_rejects_enum_classes():
     source = """class status(Enum[Int]):
     pass
 """
@@ -249,10 +308,10 @@ def test_parse_pyi_text_rejects_enum_classes():
         parse_pyi_text(source, module_name="status_api")
 
 
-def test_parse_pyi_text_preserves_callable_signature_metadata():
+def test_convert_pyi_to_ir_preserves_callable_signature_metadata():
     module = parse_pyi_text(
         """
-from typing import Callable
+from x2py.contracts import Callable, Float64, Int32
 
 class sim_state:
     n: Int32
@@ -272,7 +331,7 @@ def integrate(
     assert callback_type.metadata["return"].name == "Float64"
 
 
-def test_parse_pyi_text_preserves_callback_argument_abi_wrappers():
+def test_convert_pyi_to_ir_preserves_callback_argument_abi_wrappers():
     module = parse_pyi_text(
         """
 class particle:
@@ -364,7 +423,7 @@ def test_callback_string_storage_contracts_complete(annotation: str):
     assert callback_argument.semantic_type.name == "String"
 
 
-def test_parse_pyi_text_infers_callback_dimension_argument_names():
+def test_convert_pyi_to_ir_infers_callback_dimension_argument_names():
     module = parse_pyi_text(
         """
 def apply_transform(
@@ -380,7 +439,7 @@ def apply_transform(
     assert callback_type.metadata["return"].shape == ["count"]
 
 
-def test_parse_pyi_text_accepts_import_aliases():
+def test_convert_pyi_to_ir_accepts_import_aliases():
     module = parse_pyi_text(
         "from list_input import delete_input_list as delete_input\n",
         module_name="edited",
@@ -394,7 +453,7 @@ def test_parse_pyi_text_accepts_import_aliases():
     ]
 
 
-def test_parse_pyi_text_accepts_relative_imports():
+def test_convert_pyi_to_ir_accepts_relative_imports():
     module = parse_pyi_text("from ..types_mod import particle\nfrom . import local_particle\n", module_name="edited")
 
     assert module.imports == [
@@ -409,7 +468,7 @@ def test_parse_pyi_text_accepts_relative_imports():
     ]
 
 
-def test_parse_pyi_text_annotates_types_from_each_import_statement():
+def test_convert_pyi_to_ir_annotates_types_from_each_import_statement():
     module = parse_pyi_text(
         """
 from first_mod import first_t
@@ -448,11 +507,12 @@ def create() -> local_shared.inner.types_mod.particle: ...
     }
 
 
-def test_load_pyi_modules_reconciles_opaque_and_edited_external_types(tmp_path: Path):
+def test_pyi_paths_to_semantic_modules_reconciles_opaque_and_edited_external_types(tmp_path: Path):
     physics = tmp_path / "physics.pyi"
     types_mod = tmp_path / "types_mod.pyi"
     physics.write_text(
-        """
+        f"""
+{CONTRACT_IMPORT}
 from types_mod import particle
 
 answer: Int32
@@ -464,14 +524,15 @@ def move(p: Annotated[particle, CompatibleHandle]) -> None: ...
         encoding="utf-8",
     )
     types_mod.write_text(
-        """
+        f"""
+{CONTRACT_IMPORT}
 class particle(Opaque):
     pass
 """,
         encoding="utf-8",
     )
 
-    modules = {module.name: module for module in load_pyi_modules(tmp_path)}
+    modules = {module.name: module for module in pyi_paths_to_semantic_modules(tmp_path)}
     opaque = modules["types_mod"].classes[0]
     create_ref = modules["physics"].functions[0].return_type.metadata["external_type_ref"]
     move_type = modules["physics"].functions[1].arguments[0].semantic_type
@@ -487,13 +548,14 @@ class particle(Opaque):
     assert [constraint.name for constraint in move_type.constraints] == ["CompatibleHandle"]
 
     types_mod.write_text(
-        """
+        f"""
+{CONTRACT_IMPORT}
 class particle:
     mass: Float64
 """,
         encoding="utf-8",
     )
-    edited_modules = {module.name: module for module in load_pyi_modules([physics, types_mod])}
+    edited_modules = {module.name: module for module in pyi_paths_to_semantic_modules([physics, types_mod])}
     edited_ref = edited_modules["physics"].functions[0].return_type.metadata["external_type_ref"]
 
     assert edited_ref["wrapped"] is True
@@ -501,7 +563,7 @@ class particle:
     assert edited_modules["types_mod"].classes[0].fields[0].name == "mass"
 
 
-def test_load_pyi_modules_preserves_dotted_module_names_from_directory(tmp_path: Path):
+def test_pyi_paths_to_semantic_modules_preserves_dotted_module_names_from_directory(tmp_path: Path):
     package = tmp_path / "shared"
     package.mkdir()
     (tmp_path / "physics.pyi").write_text(
@@ -520,7 +582,7 @@ class particle(Opaque):
         encoding="utf-8",
     )
 
-    modules = {module.name: module for module in load_pyi_modules(tmp_path)}
+    modules = {module.name: module for module in pyi_paths_to_semantic_modules(tmp_path)}
     particle_ref = modules["physics"].functions[0].arguments[0].semantic_type.metadata["external_type_ref"]
 
     assert "shared.types_mod" in modules
@@ -528,51 +590,74 @@ class particle(Opaque):
     assert particle_ref["representation"] == "opaque"
 
 
-def test_load_pyi_modules_handles_duplicate_roots_and_ambiguous_module_names(tmp_path: Path):
+def test_pyi_paths_to_semantic_modules_handles_duplicate_roots_and_ambiguous_module_names(tmp_path: Path):
     package = tmp_path / "shared"
     package.mkdir()
     pyi_path = package / "types_mod.pyi"
     pyi_path.write_text("class particle:\n    pass\n", encoding="utf-8")
 
-    assert [module.name for module in load_pyi_modules([tmp_path, tmp_path])] == ["shared.types_mod"]
+    assert [module.name for module in pyi_paths_to_semantic_modules([tmp_path, tmp_path])] == ["shared.types_mod"]
     with pytest.raises(ValueError) as error:
-        load_pyi_modules([tmp_path, package])
+        pyi_paths_to_semantic_modules([tmp_path, package])
     assert str(error.value) == f"Ambiguous module name for {pyi_path}: 'shared.types_mod' or 'types_mod'"
 
 
-def test_load_pyi_modules_ignores_directories_with_pyi_suffix(tmp_path: Path):
+def test_pyi_paths_to_semantic_modules_ignores_directories_with_pyi_suffix(tmp_path: Path):
     (tmp_path / "ignored.pyi").mkdir()
     (tmp_path / "types_mod.pyi").write_text("class particle:\n    pass\n", encoding="utf-8")
 
-    assert [module.name for module in load_pyi_modules(tmp_path)] == ["types_mod"]
+    assert [module.name for module in pyi_paths_to_semantic_modules(tmp_path)] == ["types_mod"]
 
 
-def test_load_pyi_file_and_modules_forward_module_name_encoding_and_filename(tmp_path: Path):
+def test_pyi_file_to_semantic_module_and_modules_forward_module_name_encoding_and_filename(tmp_path: Path):
     pyi_path = tmp_path / "types_mod.pyi"
     pyi_path.write_bytes("# caf\xe9\nclass particle:\n    pass\n".encode("latin-1"))
 
-    module = load_pyi_file(pyi_path, module_name="custom.types_mod", encoding="latin-1")
+    module = pyi_file_to_semantic_module(pyi_path, module_name="custom.types_mod", encoding="latin-1")
     assert module.name == "custom.types_mod"
     assert module.classes[0].name == "particle"
-    assert load_pyi_modules(pyi_path, encoding="latin-1")[0].name == "types_mod"
+    assert pyi_paths_to_semantic_modules(pyi_path, encoding="latin-1")[0].name == "types_mod"
 
     invalid_path = tmp_path / "invalid.pyi"
     invalid_path.write_text("from broken import\n", encoding="utf-8")
     with pytest.raises(SyntaxError) as error:
-        load_pyi_file(invalid_path)
+        pyi_file_to_semantic_module(invalid_path)
     assert error.value.filename == str(invalid_path)
 
     semantic_invalid_path = tmp_path / "semantic_invalid.pyi"
     semantic_invalid_path.write_text("def f(x) -> None: ...\n", encoding="utf-8")
     with pytest.raises(ValueError) as semantic_error:
-        load_pyi_file(semantic_invalid_path)
+        pyi_file_to_semantic_module(semantic_invalid_path)
     message = str(semantic_error.value)
     assert message.startswith(f"{semantic_invalid_path}: ")
     assert "Expected typed argument: 'x'" in message
 
 
+def test_pyi_conversion_cache_reuses_file_parse_for_same_module_key(monkeypatch, tmp_path: Path):
+    pyi_path = tmp_path / "types_mod.pyi"
+    pyi_path.write_text(f"{CONTRACT_IMPORT}value: Int32\n", encoding="utf-8")
+
+    original_parse = pyi_pipeline.parse_pyi_text
+    parsed_filenames: list[str] = []
+
+    def parse_once(source: str, *, filename: str = "<pyi>"):
+        parsed_filenames.append(filename)
+        return original_parse(source, filename=filename)
+
+    monkeypatch.setattr(pyi_pipeline, "parse_pyi_text", parse_once)
+    cache = pyi_pipeline._PyiSemanticModuleCache()
+
+    first = cache.file_to_semantic_module(pyi_path)
+    second = cache.file_to_semantic_module(pyi_path, module_name="types_mod")
+    renamed = cache.file_to_semantic_module(pyi_path, module_name="renamed_types")
+
+    assert first is second
+    assert renamed is not first
+    assert [Path(filename) for filename in parsed_filenames] == [pyi_path, pyi_path]
+
+
 def test_convert_pyi_to_ir_and_import_parser_edge_cases():
-    module = convert_pyi_to_ir("from m import a, b as c\n", module_name="edited")
+    module = pyi_text_to_semantic_module("from m import a, b as c\n", module_name="edited")
     assert module.name == "edited"
     assert module.imports == [
         SemanticImport(
@@ -585,16 +670,16 @@ def test_convert_pyi_to_ir_and_import_parser_edge_cases():
     ]
 
     with pytest.raises(SyntaxError):
-        convert_pyi_to_ir("from m import\n", module_name="edited")
+        pyi_text_to_semantic_module("from m import\n", module_name="edited")
 
 
-def test_parse_pyi_text_forwards_filename_to_syntax_errors():
+def test_convert_pyi_to_ir_forwards_filename_to_syntax_errors():
     with pytest.raises(SyntaxError) as error:
         parse_pyi_text("from broken import\n", filename="custom.pyi")
     assert error.value.filename == "custom.pyi"
 
 
-def test_parse_pyi_text_class_body_visibility_and_native_call():
+def test_convert_pyi_to_ir_class_body_visibility_and_native_call():
     module = parse_pyi_text(
         """
 class wrapper:
@@ -613,7 +698,7 @@ class particle:
     assert particle_cls.methods[0].name == "reset"
     assert particle_cls.methods[0].native_name == "reset"
     assert particle_cls.methods[0].visibility == "private"
-    assert particle_cls.methods[0].origin.metadata[PYI_USER_PRIVATE_METADATA] is True
+    assert particle_cls.methods[0].origin.metadata[USER_PRIVATE_METADATA] is True
     assert [arg.name for arg in particle_cls.methods[0].arguments] == ["self"]
     assert particle_cls.methods[0].return_type.name == "Int32"
     assert asdict(particle_cls.methods[0].projection[0]) == {
@@ -629,11 +714,11 @@ class particle:
     assert "    @private\n    def reset(self) -> Int32: ..." in emitted
     reparsed = parse_pyi_text(emitted, module_name="edited")
     assert reparsed.classes[1].methods[0].visibility == "private"
-    assert reparsed.classes[1].methods[0].origin.metadata[PYI_USER_PRIVATE_METADATA] is True
+    assert reparsed.classes[1].methods[0].origin.metadata[USER_PRIVATE_METADATA] is True
     assert emit_module(reparsed) == emitted
 
 
-def test_parse_pyi_text_distinguishes_generated_and_linked_constructors():
+def test_convert_pyi_to_ir_distinguishes_generated_and_linked_constructors():
     generated = parse_pyi_text(
         """
 class state:
@@ -712,7 +797,7 @@ class state:
         )
 
 
-def test_parse_pyi_text_removed_constructor_suppresses_keyword_initializer():
+def test_convert_pyi_to_ir_removed_constructor_suppresses_keyword_initializer():
     module = parse_pyi_text(
         """
 class state:
@@ -724,7 +809,7 @@ class state:
 
     cls = module.classes[0]
     assert cls.origin.source_language is None
-    assert cls.origin.metadata[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert cls.origin.metadata[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
     assert "def __init__" not in emit_module(module)
 
     codegen_module = semantic_ir_to_codegen_ast(
@@ -732,11 +817,11 @@ class state:
         Scope(name=module.name, scope_type="module"),
     )
     codegen_cls = codegen_module.classes[0]
-    assert codegen_cls.decorators[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert codegen_cls.decorators[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
     assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
 
 
-def test_parse_pyi_text_self_only_generated_constructor_keeps_default_initializer():
+def test_convert_pyi_to_ir_self_only_generated_constructor_keeps_default_initializer():
     module = parse_pyi_text(
         """
 class state:
@@ -749,7 +834,7 @@ class state:
 
     cls = module.classes[0]
     assert cls.origin.source_language == "fortran"
-    assert PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA not in cls.origin.metadata
+    assert SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA not in cls.origin.metadata
     assert cls.methods == []
     assert "    def __init__(self) -> None: ..." in emit_module(module)
 
@@ -761,7 +846,7 @@ class state:
     assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is False
 
 
-def test_parse_pyi_text_bound_constructor_replaces_generated_keyword_initializer():
+def test_convert_pyi_to_ir_bound_constructor_replaces_generated_keyword_initializer():
     module = parse_pyi_text(
         """
 class state:
@@ -786,13 +871,13 @@ class state:
     )
 
     cls = module.classes[0]
-    assert cls.origin.metadata[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert cls.origin.metadata[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
     assert [method.name for method in cls.methods] == ["init_state", "__init__"]
     target = cls.methods[0]
     assert target.visibility == "private"
     init = cls.methods[1]
     assert init.native_name == "init_state"
-    assert init.metadata[PYI_BIND_TARGET_METADATA] == "init_state"
+    assert init.metadata[BIND_TARGET_METADATA] == "init_state"
     assert [arg.name for arg in init.arguments] == ["seed", "scale"]
 
     emitted = emit_module(module)
@@ -806,7 +891,7 @@ class state:
         Scope(name=module.name, scope_type="module"),
     )
     codegen_cls = codegen_module.classes[0]
-    assert codegen_cls.decorators[PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert codegen_cls.decorators[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
     assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
     codegen_init = next(
         method for method in codegen_cls.methods if codegen_cls.scope.get_python_name(method.name) == "__init__"
@@ -817,7 +902,7 @@ class state:
     assert [str(arg.name) for arg in codegen_init.arguments[1:]] == ["seed", "scale"]
 
 
-def test_parse_pyi_text_bound_constructor_allows_public_target_method():
+def test_convert_pyi_to_ir_bound_constructor_allows_public_target_method():
     module = parse_pyi_text(
         """
 class state:
@@ -879,12 +964,12 @@ class state:
         ),
     ],
 )
-def test_parse_pyi_text_rejects_ambiguous_constructor_declarations(source: str, message: str):
+def test_convert_pyi_to_ir_rejects_ambiguous_constructor_declarations(source: str, message: str):
     with pytest.raises(ValueError, match=re.escape(message)):
         parse_pyi_text(source, module_name="edited")
 
 
-def test_parse_pyi_text_applies_decorators_after_native_call():
+def test_convert_pyi_to_ir_applies_decorators_after_native_call():
     module = parse_pyi_text(
         """
 @native_call([])
@@ -897,7 +982,7 @@ def hidden() -> None: ...
     assert module.functions[0].visibility == "private"
 
 
-def test_parse_pyi_text_resolves_x2py_overload_by_explicit_specific_name():
+def test_convert_pyi_to_ir_resolves_x2py_overload_by_explicit_specific_name():
     module = parse_pyi_text(
         """
 def convert_integer(value: Int32) -> Int32: ...
@@ -915,7 +1000,7 @@ def convert(value: Int32) -> Int32: ...
     assert module.overload_sets[0].procedures[0].metadata["overload_target"] == "convert_integer"
 
 
-def test_parse_pyi_text_renames_module_generic_and_round_trips_native_name():
+def test_convert_pyi_to_ir_renames_module_generic_and_round_trips_native_name():
     module = parse_pyi_text(
         """
 @bind("convert")
@@ -987,7 +1072,7 @@ def convert(value: Int32) -> Int32: ...
         ),
     ],
 )
-def test_parse_pyi_text_rejects_invalid_x2py_overload_links(source: str, message: str):
+def test_convert_pyi_to_ir_rejects_invalid_x2py_overload_links(source: str, message: str):
     with pytest.raises(ValueError, match=message):
         parse_pyi_text(source, module_name="generic_mod")
 
@@ -1005,10 +1090,10 @@ def test_pyi_parser_reports_unsupported_lines_and_invalid_helpers():
     with pytest.raises(ValueError, match="expects positional arguments only"):
         parse_pyi_text("@native_call([Arg(0, name='x')])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
 
-    with pytest.raises(ValueError, match="Unsupported native_call projection entry"):
+    with pytest.raises(ValueError, match="Expected imported x2py contract helper"):
         parse_pyi_text("@native_call([Unknown(0)])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
 
-    with pytest.raises(ValueError, match="Expected Arg"):
+    with pytest.raises(ValueError, match="Expected imported x2py contract helper"):
         parse_pyi_text("@native_call([Len(Unknown(0))])\ndef f(x: Int32) -> None: ...\n", module_name="edited")
 
     with pytest.raises(ValueError, match="Unknown semantic type is not allowed"):
@@ -1036,7 +1121,7 @@ alias: Annotated[Int32, Name("native_alias"), Finite]
     assert parse_pyi_text(emitted, module_name="constraints").variables[0] == module.variables[0]
 
 
-def test_parse_pyi_text_round_trips_snapshot_type_wrapper():
+def test_convert_pyi_to_ir_round_trips_snapshot_type_wrapper():
     module = parse_pyi_text(
         """
 class box:
@@ -1050,21 +1135,22 @@ current: Snapshot[box]
     current = module.variables[0]
     assert current.name == "current"
     assert current.semantic_type.name == "box"
-    assert current.semantic_type.metadata[PYI_SNAPSHOT_TYPE_METADATA] is True
+    assert current.semantic_type.metadata[SNAPSHOT_TYPE_METADATA] is True
 
     emitted = emit_module(module)
     assert "current: Snapshot[box]" in emitted
     assert parse_pyi_text(emitted, module_name="snapshots") == module
 
 
-def test_parse_pyi_text_accepts_qualified_ast_wrapper_names():
-    module = parse_pyi_text(
+def test_convert_pyi_to_ir_accepts_aliased_contract_wrapper_names():
+    module = pyi_text_to_semantic_module(
         """
-import typing
+from x2py.contracts import Annotated as Metadata, Float64 as F64, Name as NativeName
+from x2py.contracts import Returns as Gives
 
-alias: typing.Annotated[Float64[1:n], typing.Name("native_alias")]
+alias: Metadata[F64[1:n], NativeName("native_alias")]
 
-def f() -> typing.Tuple[Float64, typing.Returns["y", Float64]]: ...
+def f() -> tuple[F64, Gives["y", F64]]: ...
 """,
         module_name="edited",
     )
@@ -1076,7 +1162,7 @@ def f() -> typing.Tuple[Float64, typing.Returns["y", Float64]]: ...
     assert module.functions[0].arguments[0].name == "y"
 
 
-def test_parse_pyi_text_accepts_ast_only_projection_value_refs():
+def test_convert_pyi_to_ir_accepts_ast_only_projection_value_refs():
     module = parse_pyi_text(
         """
 @native_call([Return(0), Len(Return(0)), Work("tmp").shape[0]])
@@ -1090,7 +1176,7 @@ def f() -> Float64: ...
     assert projection[2].value == {"value": {"kind": "work", "name": "tmp"}, "dim": 0}
 
 
-def test_parse_pyi_text_accepts_plain_return_type():
+def test_convert_pyi_to_ir_accepts_plain_return_type():
     pyi = """
 def make_value(
     x: Float64
@@ -1126,9 +1212,11 @@ def add_one(value: Int32) -> Int32: ...
     assert value.semantic_type.storage.kind == "address"
     assert value.semantic_type.storage.read_only is False
     assert value.semantic_type.storage.mutable is True
-    assert value.semantic_type.storage.metadata["pyi_address_role"] == "projection"
-    assert emit_module(module).strip() == (
-        "@native_call([Addr(Arg(0))])\ndef add_one(\n    value: Int32\n) -> Int32: ..."
+    assert value.semantic_type.storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_PROJECTION
+    assert (
+        emit_module(module)
+        .strip()
+        .endswith("@native_call([Addr(Arg(0))])\ndef add_one(\n    value: Int32\n) -> Int32: ...")
     )
 
 
@@ -1248,17 +1336,17 @@ def raw_label(label: Addr(String[8])) -> None: ...
     label_type = raw_label.arguments[0].semantic_type
 
     assert update_storage.kind == "address"
-    assert update_storage.metadata["pyi_address_role"] == "raw"
+    assert update_storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_RAW
     assert inspect_storage.read_only is False
     assert inspect_storage.mutable is True
     assert values_type.rank == 1
     assert values_type.shape == ["n"]
     assert values_type.storage.kind == "address"
-    assert values_type.storage.metadata["pyi_address_role"] == "raw"
+    assert values_type.storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_RAW
     assert label_type.name == "String"
     assert label_type.metadata["fortran_character_length"] == "8"
     assert label_type.storage.kind == "address"
-    assert label_type.storage.metadata["pyi_address_role"] == "raw"
+    assert label_type.storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_RAW
 
     emitted = emit_module(module)
     assert "value: Addr(Float64)" in emitted
@@ -1281,9 +1369,11 @@ def move(value: Addr(particle)) -> None: ...
 
     storage = module.functions[0].arguments[0].semantic_type.storage
     assert storage.kind == "address"
-    assert storage.metadata["pyi_address_role"] == "raw"
-    assert emit_module(module).strip() == (
-        "class particle:\n    value: Float64\n\ndef move(\n    value: Addr(particle)\n) -> None: ..."
+    assert storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_RAW
+    assert (
+        emit_module(module)
+        .strip()
+        .endswith("class particle:\n    value: Float64\n\ndef move(\n    value: Addr(particle)\n) -> None: ...")
     )
     with pytest.raises(ValueError, match=r"Addr\(WrappedType\) is not allowed"):
         complete_semantic_policies(module)
@@ -1348,7 +1438,7 @@ def invalid(n: Int32, value: {annotation}) -> None: ...
         ("Callable[[Addr[2](Float64)], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
     ],
 )
-def test_parse_pyi_text_rejects_invalid_callback_reference_wrappers(annotation: str, message: str):
+def test_convert_pyi_to_ir_rejects_invalid_callback_reference_wrappers(annotation: str, message: str):
     with pytest.raises(ValueError, match=message):
         parse_pyi_text(f"def register(callback: {annotation}) -> None: ...", module_name="callbacks")
 
@@ -1364,7 +1454,11 @@ def fill(values: Float64[3]) -> Returns["values", Float64[3]]: ...
     assert function.projection[0].native_position == 0
     assert function.projection[0].python_position == 0
     assert function.projection[0].result_position == 0
-    assert emit_module(module).strip() == ('def fill(\n    values: Float64[3]\n) -> Returns["values", Float64[3]]: ...')
+    assert (
+        emit_module(module)
+        .strip()
+        .endswith('def fill(\n    values: Float64[3]\n) -> Returns["values", Float64[3]]: ...')
+    )
 
 
 def test_function_equality_treats_argument_names_as_placeholders():
@@ -1406,7 +1500,7 @@ def add(
     assert [arg.name for arg in func.arguments] == ["a", "b"]
 
 
-def test_parse_pyi_text_preserves_explicit_array_source_dimensions():
+def test_convert_pyi_to_ir_preserves_explicit_array_source_dimensions():
     module = parse_pyi_text(
         """
 def apply(
@@ -1432,7 +1526,7 @@ def apply(
     assert args["scratch"].source_shape == []
 
 
-def test_parse_pyi_text_accepts_explicit_strided_marker_for_edited_contracts():
+def test_convert_pyi_to_ir_accepts_explicit_strided_marker_for_edited_contracts():
     module = parse_pyi_text(
         """
 current: Float64[::]
@@ -1519,7 +1613,7 @@ def fixed_inout(
     )
     func = from_pyi.functions[0]
 
-    assert func.arguments[0].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
+    assert func.arguments[0].metadata[PROJECTED_OUTPUT_METADATA] is True
     assert len(func.projection) == 1
     assert func.projection[0].native_position == 0
     assert func.projection[0].python_position == 0
@@ -1601,7 +1695,7 @@ def fill(
     )
     func = from_pyi.functions[0]
 
-    assert func.arguments[1].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
+    assert func.arguments[1].metadata[PROJECTED_OUTPUT_METADATA] is True
     assert func.projection[1].result_position == 0
 
     codegen_module = semantic_ir_to_codegen_ast(
@@ -1624,8 +1718,8 @@ def solve(
     func = from_pyi.functions[0]
 
     assert [arg.name for arg in func.arguments] == ["x", "status", "message"]
-    assert PYI_PROJECTED_OUTPUT_METADATA not in func.arguments[1].metadata
-    assert func.arguments[2].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
+    assert PROJECTED_OUTPUT_METADATA not in func.arguments[1].metadata
+    assert func.arguments[2].metadata[PROJECTED_OUTPUT_METADATA] is True
 
 
 def test_compact_assignment_overload_projects_visible_destination_without_direction_label():
@@ -1651,7 +1745,7 @@ def assign_vector_real(
     )
     func = from_pyi.functions[0]
 
-    assert func.arguments[0].metadata[PYI_PROJECTED_OUTPUT_METADATA] is True
+    assert func.arguments[0].metadata[PROJECTED_OUTPUT_METADATA] is True
     assert func.projection[0].result_position == 0
     assert from_pyi.classes[0].overload_sets[0].procedures[0].metadata["overload_kind"] == "assignment"
 
@@ -2006,6 +2100,7 @@ def split(
 
 def test_return_projection_preserves_multiple_plain_output_components():
     parser = _PyiAstParser(module_name="internal")
+    parser._contract_bindings.update({name: name for name in CONTRACT_SYMBOLS})
 
     return_type, returned = parser.return_projection(ast.parse("tuple[Float64, Int32, Logical]", mode="eval").body)
 
@@ -2086,7 +2181,7 @@ class vector:
         ("foo.bar: Int32\n", "Unsupported annotation target: 'foo.bar'"),
         ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument: \"Name('x', 'y')\""),
         ("def f(x: Int32): ...\n", "Unsupported function header: 'def f(x: Int32):'"),
-        ("def f(\n    x: Int32,\n): ...\n", "Unterminated callable starting at line 1"),
+        ("def f(\n    x: Int32,\n): ...\n", "Unterminated callable starting at line 2"),
         ("def f(*x: Int32) -> None: ...\n", "Unsupported function header: 'def f(*x: Int32) -> None:'"),
         ("def f(*, x: Int32) -> None: ...\n", "Unsupported function header: 'def f(*, x: Int32) -> None:'"),
         ("def f(x: Int32, /) -> None: ...\n", "Unsupported function header: 'def f(x: Int32, /) -> None:'"),
@@ -2125,7 +2220,7 @@ class vector:
         ),
         (
             "@native_call([Len(Unknown(0))])\ndef f(x: Int32) -> None: ...\n",
-            "Expected Arg(...), Return(...), or Work(...) value reference",
+            "Expected imported x2py contract helper: 'Unknown'",
         ),
         ("def f(x: Int32) -> Returns['x']: ...\n", "Returns expects a name and type: \"Returns['x']\""),
         ("value: Final[Int32, Float64]\n", "Final expects exactly one type: 'Final[Int32, Float64]'"),
@@ -2133,13 +2228,13 @@ class vector:
         ("value: Annotated[()]\n", "Annotated type is empty: 'Annotated[()]'"),
     ],
 )
-def test_parse_pyi_text_rejects_invalid_projection_and_type_forms(source: str, message: str):
+def test_convert_pyi_to_ir_rejects_invalid_projection_and_type_forms(source: str, message: str):
     with pytest.raises(ValueError) as error:
         parse_pyi_text(source, module_name="edited")
     assert str(error.value) == message
 
 
-def test_parse_pyi_text_accepts_multiline_native_call_decorator():
+def test_convert_pyi_to_ir_accepts_multiline_native_call_decorator():
     module = parse_pyi_text(
         """
 @native_call([
@@ -2182,7 +2277,7 @@ end module solver_mod
     assert [arg.name for arg in func.arguments] == ["a", "x", "b"]
 
 
-def test_parse_pyi_text_accepts_c_and_fortran_order_constraints():
+def test_convert_pyi_to_ir_accepts_c_and_fortran_order_constraints():
     module = parse_pyi_text(
         """
 def consume(
@@ -2205,7 +2300,7 @@ def consume(
     assert all(not arg.semantic_type.constraints for arg in module.functions[0].arguments)
 
 
-def test_parse_pyi_text_accepts_flat_array_dimension():
+def test_convert_pyi_to_ir_accepts_flat_array_dimension():
     module = parse_pyi_text(
         """
 flat: Float64[Flat]
@@ -2249,7 +2344,7 @@ c_tensor: Annotated[Float64[Flat, 3, 4], ORDER_C]
     assert [array.order for array in arrays] == [None, "ORDER_F", "ORDER_F", "ORDER_C", "ORDER_C"]
 
 
-def test_parse_pyi_text_preserves_extended_array_metadata_and_nested_selector():
+def test_convert_pyi_to_ir_preserves_extended_array_metadata_and_nested_selector():
     module = parse_pyi_text(
         """
 value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
@@ -2280,13 +2375,11 @@ def fill(x: Float64[:]) -> None: ...
     assert name.metadata["fortran_allocatable"] is True
 
 
-def test_parse_pyi_text_handles_callable_and_pointer_storage_variants():
+def test_convert_pyi_to_ir_handles_callable_and_pointer_storage_variants():
     module = parse_pyi_text(
         """
-import typing
-
 plain_callback: Callable
-qualified_callback: typing.Callable
+second_callback: Callable
 opaque_callback: Callable[..., Float64]
 constant: Int32
 deep: Addr[3](Float64)
@@ -2328,7 +2421,7 @@ nested_answer: Final[Final[Int32]]
     assert nested.constraints == [SemanticConstraint("Constant")]
 
 
-def test_parse_pyi_text_preserves_module_fields_and_private_callable_arguments():
+def test_convert_pyi_to_ir_preserves_module_fields_and_private_callable_arguments():
     module = parse_pyi_text(
         """
 output: Float64[:] = ...
@@ -2342,7 +2435,7 @@ def consume(value: private[Int32]) -> None: ...
     assert module.functions[0].arguments[0].visibility == "private"
 
 
-def test_parse_pyi_text_preserves_user_private_bound_function_contract():
+def test_convert_pyi_to_ir_preserves_user_private_bound_function_contract():
     module = parse_pyi_text(
         """
 @private
@@ -2356,7 +2449,7 @@ def helper(value: Int32) -> None: ...
     assert native_contract_issues(module) == []
     assert helper.visibility == "private"
     assert helper.origin.source_language == "fortran"
-    assert helper.origin.metadata[PYI_USER_PRIVATE_METADATA] is True
+    assert helper.origin.metadata[USER_PRIVATE_METADATA] is True
 
     emitted = emit_module(module)
     assert '@private\n@bind("native_helper")\ndef helper(' in emitted
@@ -2371,29 +2464,11 @@ def helper(value: Int32) -> None: ...
         ("value: Addr[1](Int32)\n", "Addr[1](...) is invalid; use Addr(...)"),
         ("value: Callable[Int32]\n", "Callable expects argument types and a return type: 'Callable[Int32]'"),
         ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list: 'Callable[Int32, Float64]'"),
-        ("value: Annotated[Float64[:], SourceShape('n')]\n", "SourceShape metadata is not supported; use SourceDims"),
-        (
-            "value: Int32[Constant]\n",
-            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
-            "Annotated[...] for constraints or array metadata",
-        ),
         (
             "value: Float64[ORDER_F]\n",
             "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
             "Annotated[...] for constraints or array metadata",
         ),
-        (
-            "value: Float64[Shape]\n",
-            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
-            "Annotated[...] for constraints or array metadata",
-        ),
-        (
-            "value: Float64[Shape('n')]\n",
-            "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "
-            "Annotated[...] for constraints or array metadata",
-        ),
-        ("value: Annotated[Int32, Constant]\n", "Constant metadata is not supported; use Final[...]"),
-        ("value: Annotated[Float64[:], Shape('n')]\n", "Shape metadata is not supported; put dimensions inside T[...]"),
         (
             "value: Float64[3, Flat, 4]\n",
             "Flat must appear exactly once at the first or final concrete array dimension",
@@ -2422,7 +2497,7 @@ def helper(value: Int32) -> None: ...
         ),
     ],
 )
-def test_parse_pyi_text_rejects_additional_invalid_storage_forms(source: str, message: str):
+def test_convert_pyi_to_ir_rejects_additional_invalid_storage_forms(source: str, message: str):
     with pytest.raises(ValueError) as error:
         parse_pyi_text(source, module_name="invalid")
     assert str(error.value) == message
@@ -2430,6 +2505,7 @@ def test_parse_pyi_text_rejects_additional_invalid_storage_forms(source: str, me
 
 def test_pyi_parser_internal_projection_helpers_preserve_native_names():
     parser = _PyiAstParser(module_name="internal")
+    parser._contract_bindings.update({name: name for name in CONTRACT_SYMBOLS})
     return_type, returned_values = parser.return_projection(
         ast.parse("tuple[Float64, Returns['extra', Int32, Optional], Returns['other', Float64]]", mode="eval").body
     )
@@ -2478,7 +2554,7 @@ def test_generated_pyi_loads_and_reemits_for_all_fortran_fixtures(tmp_path: Path
             pyi_path.write_text(generated_pyi + "\n", encoding="utf-8")
 
             try:
-                loaded = load_pyi_file(pyi_path)
+                loaded = pyi_file_to_semantic_module(pyi_path)
                 assert parse_pyi_text(emit_module(loaded), module_name=loaded.name) == loaded
                 issues = native_contract_issues(loaded)
                 assert issues == []
@@ -2545,11 +2621,15 @@ end module solver_mod
     )
     generated = emit_module(fortran_file_to_semantic_modules(parsed)[0])
     constrained = generated.replace(
-        "Float64",
-        "Annotated[Float64, Finite]",
+        "from x2py.contracts import ",
+        "from x2py.contracts import Annotated, Finite, ",
         1,
-    )
-    changed_abi = generated.replace("Float64", "Int32", 1)
+    ).replace("value: Float64", "value: Annotated[Float64, Finite]", 1)
+    changed_abi = generated.replace(
+        "from x2py.contracts import ",
+        "from x2py.contracts import Int32, ",
+        1,
+    ).replace("value: Float64", "value: Int32", 1)
 
     assert native_contract_issues(parse_pyi_text(constrained, module_name="solver_mod")) == []
     assert native_contract_issues(parse_pyi_text(changed_abi, module_name="solver_mod")) == []

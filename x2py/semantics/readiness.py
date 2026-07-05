@@ -4,9 +4,10 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
+from x2py.semantic_metadata import PROJECTED_OUTPUT_METADATA
+
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
-    PYI_PROJECTED_OUTPUT_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     SemanticArgument,
@@ -20,7 +21,6 @@ from .models import (
 )
 from .native_contract import native_contract_issues
 from .policy_completion import complete_semantic_policies
-from .pyi2ir import load_pyi_modules
 
 
 __all__ = (
@@ -58,6 +58,8 @@ _BUILTIN_TYPES = frozenset(
 )
 _CALLBACK_PLACEHOLDERS = frozenset({"Procedure", "Callback", "FunctionPointer", "CFunctionPointer"})
 _IDENTIFIER_RE = re.compile(r"\b[A-Za-z_]\w*\b")
+_SHAPE_INTRINSIC_CALLS = frozenset({"lbound", "shape", "size", "ubound"})
+_NON_EXTENT_DIMENSIONS = frozenset({"", "*", ":", "::", "..."})
 _MAX_SUPPORTED_ARRAY_RANK = 15
 _ISO_C_KIND_TOKENS = frozenset(
     {
@@ -88,9 +90,11 @@ def assess_pyi_wrap_readiness(
     encoding: str = "utf-8",
 ) -> dict:
     """Load one or more edited .pyi files and assess semantic wrap-readiness."""
+    from x2py.pyi_pipeline import pyi_paths_to_semantic_modules
+
     raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
     expanded = _expand_pyi_paths(raw_paths)
-    modules = load_pyi_modules(raw_paths, encoding=encoding)
+    modules = pyi_paths_to_semantic_modules(raw_paths, encoding=encoding)
     return assess_semantic_wrap_readiness(
         modules,
         source=[str(path) for path in expanded],
@@ -746,7 +750,7 @@ class _SemanticReadinessChecker:
         return bool(
             argument.semantic_type.ownership.mutable
             or (storage is not None and (storage.mutable or not storage.read_only))
-            or argument.metadata.get(PYI_PROJECTED_OUTPUT_METADATA)
+            or argument.metadata.get(PROJECTED_OUTPUT_METADATA)
         )
 
     @classmethod
@@ -880,6 +884,7 @@ class _SemanticReadinessChecker:
         unit_kind: str,
     ) -> None:
         for expression in _shape_expressions(semantic_type):
+            intrinsic_calls = _called_shape_intrinsics(expression)
             for symbol in sorted(_shape_symbols(expression)):
                 if symbol in known_shape_symbols:
                     continue
@@ -891,6 +896,8 @@ class _SemanticReadinessChecker:
                         unit=unit,
                         unit_kind=unit_kind,
                     )
+                    continue
+                if symbol in intrinsic_calls:
                     continue
                 self._add_blocker(
                     "unresolved_shape_symbols",
@@ -1104,11 +1111,27 @@ def _is_external_type_ref(semantic_type: SemanticType) -> bool:
 
 
 def _shape_expressions(semantic_type: SemanticType) -> list[str]:
-    expressions = list(semantic_type.shape)
     storage = semantic_type.storage
-    if storage is not None and storage.array is not None:
-        expressions.extend(storage.array.shape)
+    array = storage.array if storage is not None else None
+    shape_sources = [semantic_type.shape]
+    if array is not None:
+        shape_sources.append(array.shape)
+    expressions = []
+    for dimensions in shape_sources:
+        axes = array.axes if array is not None and len(array.axes) == len(dimensions) else ()
+        for index, dimension in enumerate(dimensions):
+            axis = axes[index] if axes else None
+            expression = _extent_expression(str(dimension), axis=axis)
+            if expression is not None and expression not in expressions:
+                expressions.append(expression)
     return expressions
+
+
+def _extent_expression(dimension: str, *, axis: str | None) -> str | None:
+    expression = dimension.strip()
+    if axis == "strided" and expression.endswith(":Strided"):
+        expression = expression[: -len("Strided")]
+    return None if expression in _NON_EXTENT_DIMENSIONS else expression
 
 
 def _iter_expression_values(value) -> Iterable[str]:
@@ -1123,7 +1146,17 @@ def _iter_expression_values(value) -> Iterable[str]:
 
 
 def _shape_symbols(expression: str) -> set[str]:
-    return {match.group(0) for match in _IDENTIFIER_RE.finditer(expression) if not match.group(0).isdigit()}
+    return {match.group(0) for match in _IDENTIFIER_RE.finditer(expression)}
+
+
+def _called_shape_intrinsics(expression: str) -> set[str]:
+    intrinsics = set()
+    for match in _IDENTIFIER_RE.finditer(expression):
+        symbol = match.group(0)
+        suffix = expression[match.end() :].lstrip()
+        if symbol.casefold() in _SHAPE_INTRINSIC_CALLS and suffix.startswith("("):
+            intrinsics.add(symbol)
+    return intrinsics
 
 
 def _is_public(node) -> bool:

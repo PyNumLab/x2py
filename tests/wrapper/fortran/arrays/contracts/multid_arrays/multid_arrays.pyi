@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, Returns, native_call
+
 def scale2_contiguous(
     a: Annotated[Float64[:, :], ORDER_F],
     out: Annotated[Float64[:, :], ORDER_F]

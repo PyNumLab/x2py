@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int32, Snapshot, native_call
+
 class child:
     def __init__(
         self,

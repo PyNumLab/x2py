@@ -357,6 +357,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Final, Int
+
 STATUS_OK: Final[Int] = 0
 STATUS_ERROR: Final[Int] = 10
 
@@ -452,9 +454,10 @@ nodes. These tables are separate from model-node dispatch.
 
 ### Round Trips And Provenance
 
-`parse_pyi_text`, `load_pyi_file`, and `convert_pyi_to_ir` load the documented
-semantic `.pyi` subset into the same public storage contracts emitted by the
-source semantic pipelines. Focused round-trip tests cover:
+`x2py.pyi_parser` parses the documented semantic `.pyi` subset into Python AST.
+`convert_pyi_to_ir` converts that AST into the same public storage contracts
+emitted by the source semantic pipelines; `pyi_file_to_semantic_module` combines file parsing
+and conversion. Focused round-trip tests cover:
 
 ```text
 Fortran parser model -> semantic IR -> .pyi -> semantic IR
@@ -469,7 +472,7 @@ guessing.
 
 External source-language types are modeled in semantic IR by owner-module type
 identity. Stub printing may emit owner-module dependency stubs, and
-`load_pyi_modules` reconciles those imports back into semantic
+`pyi_paths_to_semantic_modules` reconciles those imports back into semantic
 `external_type_ref` metadata. The concrete file syntax for those owner stubs is
 documented in
 [Semantic `.pyi` format](semantic-pyi-format.md#classes-and-native-type-markers).
@@ -674,6 +677,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, Int
+
 def add(a: Int, b: Int) -> Int: ...
 def multiply(a: Float64, b: Float64) -> Float64: ...
 ```
@@ -870,6 +875,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int
+
 def increment(value: Int[()]) -> None: ...
 def read_count(value: Int[()]) -> None: ...
 ```
@@ -910,6 +917,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, Int, SizeT
+
 def negate(n: Int, values: Float64[n]) -> None: ...
 def sum_values(n: SizeT, values: Float64[n]) -> Float64: ...
 ```
@@ -937,6 +946,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, Int
+
 def get_count(out: Int[()]) -> None: ...
 def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
@@ -985,6 +996,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Addr, Float64
+
 def process_raw(values: Addr(Float64)) -> None: ...
 ```
 X2PY_C_DOCS_END -->
@@ -1005,6 +1018,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, Int
+
 def process_matrix(matrix: Float64[:, :]) -> None: ...
 def process_any(values: Float64[...]) -> None: ...
 def process_vector_or_matrix(values: Float64[...][1, 2]) -> None: ...
@@ -1049,6 +1064,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, Int, SizeT
+
 def process_bounded_step(n: Int, m: Int, values: Float64[:, 0:n:m]) -> None: ...
 def process_columns(
     values: Float64[:, ::],
@@ -1091,6 +1108,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Addr, Int
+
 def use_rows(rows: Addr[2](Int)) -> None: ...
 def update_value(value: Addr[5](Int)) -> None: ...
 ```
@@ -1144,6 +1163,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int
+
 def status() -> Int: ...
 def reset() -> None: ...
 ```
@@ -1172,6 +1193,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Addr, Float64, Opaque
+
 class context(Opaque):
     pass
 
@@ -1195,6 +1218,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Annotated, Float64, Int
+
 def create_values(n: Int) -> Annotated[
     Float64[n],
     Owned,
@@ -1229,6 +1254,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int, bind
+
 @bind("library_add")
 def add(a: Int, b: Int) -> Int: ...
 
@@ -1260,6 +1287,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64
+
 class point(Structure):
     x: Float64
     y: Float64
@@ -1284,6 +1313,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int, Opaque
+
 class context(Opaque):
     pass
 
@@ -1429,6 +1460,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int
+
 def add(a: Int, b: Int) -> Int: ...
 ```
 X2PY_C_DOCS_END -->
@@ -1449,6 +1482,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int
+
 def increment(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
@@ -1471,6 +1506,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int
+
 def read_count(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
@@ -1492,6 +1529,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, SizeT
+
 def sum_values(n: SizeT, values: Float64[n]) -> Float64: ...
 ```
 X2PY_C_DOCS_END -->
@@ -1514,6 +1553,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, Int
+
 def get_count(out: Int[()]) -> None: ...
 def get_values(n: Int, out: Float64[n]) -> None: ...
 ```
@@ -1537,6 +1578,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Float64, Int
+
 def matrix_data(matrix: Float64[:, :]) -> None: ...
 def array_data(values: Float64[...]) -> None: ...
 def vector_matrix_or_rank5(values: Float64[...][1, 2, 5]) -> None: ...
@@ -1563,6 +1606,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Addr, Int
+
 def use_rows(rows: Addr[2](Int)) -> None: ...
 def update_value(value: Addr[5](Int)) -> None: ...
 ```
@@ -1588,6 +1633,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Opaque
+
 class context(Opaque):
     pass
 
@@ -1614,6 +1661,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int, bind
+
 @bind("library_add")
 def add(a: Int, b: Int) -> Int: ...
 ```
@@ -1635,6 +1684,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Addr, Arg, Int, Returns, native_call
+
 @native_call([Addr(Arg(0))])
 def increment(value: Int) -> Returns["value", Int]: ...
 ```
@@ -1646,6 +1697,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Int
+
 def increment(value: Int[()]) -> None: ...
 ```
 X2PY_C_DOCS_END -->
@@ -1662,6 +1715,8 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ```python
+from x2py.contracts import Addr, Annotated, Arg, Float64, Int, Return, Returns, SizeT, native_call, raises
+
 # C: void increment(int *value);
 @native_call([Addr(Arg(0))])
 def increment_value(value: Int) -> Returns["value", Int]: ...

@@ -580,11 +580,12 @@ facts do not add visible array requirements.
 
 ### Loading And Round Trips
 
-`parse_pyi_text`, `load_pyi_file` and `convert_pyi_to_ir` load canonical
-array subscriptions and `Annotated[...]` metadata into the same public
-storage contracts emitted by the Fortran semantic pipeline. Native
-source-provenance details not emitted into the public type are intentionally
-excluded from public contract equality. Focused round-trip tests cover:
+`x2py.pyi_parser` parses canonical array subscriptions and `Annotated[...]`
+metadata into Python AST. `convert_pyi_to_ir` converts that AST into the same
+public storage contracts emitted by the Fortran semantic pipeline, while
+`pyi_file_to_semantic_module` combines file parsing and conversion. Native source-provenance
+details not emitted into the public type are intentionally excluded from public
+contract equality. Focused round-trip tests cover:
 
 ```text
 Fortran parser model -> semantic IR -> .pyi -> semantic IR
@@ -810,7 +811,7 @@ from types_mod import particle
 def move(p: Addr(particle)) -> None: ...
 ```
 
-`emit_module_stubs(...)` produces the complete stub mapping. `load_pyi_modules`
+`emit_module_stubs(...)` produces the complete stub mapping. `pyi_paths_to_semantic_modules`
 loads one or more files or directories and reconciles those imports back into
 semantic `external_type_ref` metadata. If the user replaces the opaque owner
 stub with a concrete class body, the imported semantic reference becomes

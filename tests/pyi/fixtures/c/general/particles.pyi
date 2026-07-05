@@ -1,3 +1,5 @@
+from x2py.contracts import CStruct, Float64, Int, private
+
 class particle(CStruct):
     id: Int
     x: Float64[3]

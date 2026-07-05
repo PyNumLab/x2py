@@ -1,3 +1,5 @@
+from x2py.contracts import Optional, Return, Returns, String, native_call
+
 def fixed_inout(
     name: String[8]
 ) -> Returns["name", String[8]]: ...

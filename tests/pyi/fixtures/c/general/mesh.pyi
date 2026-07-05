@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, CStruct, Float64, Int, SizeT
+
 class node(CStruct):
     id: Int
     xyz: Float64[3]

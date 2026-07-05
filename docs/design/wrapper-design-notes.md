@@ -390,6 +390,8 @@ Python behavior.
 Semantic `.pyi` expresses these facts in one keyword-only annotation:
 
 ```python
+from x2py.contracts import Annotated, Float64, Pointer, PointerPolicy
+
 value: Annotated[
     Float64[:],
     Pointer,

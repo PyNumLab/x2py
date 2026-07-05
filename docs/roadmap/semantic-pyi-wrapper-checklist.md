@@ -414,7 +414,7 @@ X2PY_C_DOCS_END -->
   `tests/semantics/test_semantic_wrap_readiness.py`,
   and `x2py/semantics/README.md`.
 - [x] `.pyi` parsing and `.pyi` semantic conversion are separate stages:
-  `x2py/semantics/pyi_parser.py` parses text/files to Python AST, and
+  `x2py/pyi_parser/parser.py` parses text/files to Python AST, and
   `x2py/semantics/pyi2ir.py` converts that AST into `SemanticModule` objects
   before semantic policy completion runs. Evidence:
   `tests/pyi/test_pyi_to_ir.py::test_pyi_parser_returns_python_ast_only`,
@@ -432,7 +432,7 @@ X2PY_C_DOCS_END -->
   `Transfer("borrowed_view")` means no-copy shared storage; combining them on a
   writable native argument reports a direct `.pyi` contract error. Evidence:
   `docs/reference/semantic-pyi-format.md` and
-  `tests/pyi/test_pyi_to_ir.py::test_parse_pyi_text_rejects_immutable_writable_borrowed_view_argument`.
+  `tests/pyi/test_pyi_to_ir.py::test_convert_pyi_to_ir_rejects_immutable_writable_borrowed_view_argument`.
 - [x] Edited-contract misuse has a documented diagnostic model: loader errors,
   structural contract errors, readiness blockers, and native artifact failures
   are separated, and diagnostics identify the contract path, declaration,
@@ -440,7 +440,7 @@ X2PY_C_DOCS_END -->
   loader semantic errors prefix messages with the `.pyi` contract path while
   syntax errors keep Python's filename field. Evidence:
   `docs/reference/semantic-pyi-format.md` and
-  `tests/pyi/test_pyi_to_ir.py::test_load_pyi_file_and_modules_forward_module_name_encoding_and_filename`.
+  `tests/pyi/test_pyi_to_ir.py::test_pyi_file_to_semantic_module_and_modules_forward_module_name_encoding_and_filename`.
 - [x] A modified module `.pyi` can remove a public function and hide public
   declarations with `@private` or `private[...]` while preserving unaffected
   runtime behavior. Evidence:
@@ -466,7 +466,7 @@ X2PY_C_DOCS_END -->
 - [x] Module overload groups can be renamed while preserving the native generic
   name with `@overload("specific", generic="native_generic")`, and the printer
   round-trips that metadata. Evidence:
-  `tests/pyi/test_pyi_to_ir.py::test_parse_pyi_text_renames_module_generic_and_round_trips_native_name`
+  `tests/pyi/test_pyi_to_ir.py::test_convert_pyi_to_ir_renames_module_generic_and_round_trips_native_name`
   and `docs/reference/semantic-pyi-format.md`.
 - [x] Explicit owner, transfer, and destruction triples are validated as a
   complete lifetime policy instead of independent switches. Supported triples

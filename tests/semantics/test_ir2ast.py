@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from x2py import parse_fortran_file
+from x2py.contracts import CONTRACT_SYMBOLS
 from x2py.codegen.models.core import ClassDef, FunctionOverloadSet
 from x2py.codegen.models.datatypes import (
     CharType,
@@ -18,12 +19,19 @@ from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import SemanticModule
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.semantics.pyi2ir import parse_pyi_text
+from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
 
 
 WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"
 FORTRAN_CLASS_SOURCE = WRAPPER_FORTRAN_DATA / "fclasses_f90.f90"
 FORTRAN_OPERATOR_SOURCE = WRAPPER_FORTRAN_DATA / "foperators_f90.f90"
+CONTRACT_IMPORT = f"from x2py.contracts import {', '.join(sorted(CONTRACT_SYMBOLS))}\n"
+
+
+def parse_pyi_text(source: str, *args, **kwargs):
+    if "x2py.contracts" in source:
+        return _parse_pyi_text(source, *args, **kwargs)
+    return _parse_pyi_text(f"{CONTRACT_IMPORT}{source}", *args, **kwargs)
 
 
 def semantic_ir_to_codegen_ast(node, *args, **kwargs):

@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, Int32, ORDER_F, Pass, Return, native_call
+
 class buffer:
     def __init__(self) -> None: ...
 

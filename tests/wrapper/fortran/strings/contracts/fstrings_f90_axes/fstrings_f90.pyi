@@ -1,3 +1,5 @@
+from x2py.contracts import Allocatable, Annotated, Int32, Optional, Returns, String
+
 def string_len_assumed(
     text: String
 ) -> Int32: ...

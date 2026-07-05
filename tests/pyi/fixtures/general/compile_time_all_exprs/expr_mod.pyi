@@ -1,3 +1,5 @@
+from x2py.contracts import Final, Int32
+
 a: Final[Int32] = 8
 
 b: Final[Int32] = 3
