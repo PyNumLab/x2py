@@ -264,7 +264,7 @@ def test_wrapper_language_suite_and_user_guide_link_current_subject_paths():
     assert (WRAPPER_SUITE_ROOT / "README.md").is_file()
     assert "fortran/README.md" in (WRAPPER_SUITE_ROOT / "README.md").read_text(encoding="utf-8")
 
-    guide = (DOCS_ROOT / "user-guide/fortran-wrapper.md").read_text(encoding="utf-8")
+    guide = (DOCS_ROOT / "user/guide/fortran-wrapper.md").read_text(encoding="utf-8")
     runtime_paths = [
         test_path
         for test_path in SUBJECT_TEST_PATHS
