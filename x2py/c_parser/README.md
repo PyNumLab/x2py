@@ -17,9 +17,9 @@ not own runtime wrapping of user-supplied C libraries.
 
 ## Tests And Docs
 
-- Public reference: `docs/developer-guide/c-parser-reference.md`
-- User recipe: `docs/examples-gallery/recipes/inspect-c-api.md`
-- Source navigation: `docs/developer-guide/source-map.md`, `docs/developer-guide/feature-to-code-map.md`
+- Public reference: `docs/developer/c-parser-reference.md`
+- User recipe: `docs/user/examples/recipes/inspect-c-api.md`
+- Source navigation: `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`
 - Parser tests: `tests/parser/c/`
 - Semantic handoff tests: `tests/semantics/test_c2ir.py`
 - Readiness tests: `tests/semantics/test_c_semantic_readiness.py`

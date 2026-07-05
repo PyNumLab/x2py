@@ -21,10 +21,10 @@ jumping directly into generated-code internals.
 
 ## Source Navigation Docs
 
-- `docs/developer-guide/source-map.md`
-- `docs/developer-guide/feature-to-code-map.md`
-- `docs/developer-guide/repository-structure.md`
-- `docs/internal-architecture/pipeline-map.md`
+- `docs/developer/source-map.md`
+- `docs/developer/feature-to-code-map.md`
+- `docs/developer/repository-structure.md`
+- `docs/maintainer/internal-architecture/pipeline-map.md`
 
 Keep user-facing support claims in the docs backed by focused tests and, for
 wrapper behavior, runtime tests that compile, import, call, mutate, and check

@@ -290,7 +290,7 @@ The custom wrapper flags appear in the relevant command lines:
 Standalone procedures are the smallest wrapper surface and therefore come
 first. Contained Fortran module procedures are preserved under Python child
 modules; continue with the
-[first wrapped module](docs/getting-started/first-wrapped-module.md) for that
+[first wrapped module](docs/user/getting-started/first-wrapped-module.md) for that
 layout and for public module state.
 
 The runtime wrapper mechanism is:
@@ -320,7 +320,7 @@ X2PY_C_DOCS_END -->
 
 For diagnostic and inspection commands beyond the main build path, start with
 `python3 -m x2py --help`, then continue to the
-[Fortran wrapper guide](docs/user-guide/fortran-wrapper.md).
+[Fortran wrapper guide](docs/user/guide/fortran-wrapper.md).
 
 <!-- X2PY_C_DOCS_START
 `Wrappable: yes` means the semantic contract has no known readiness blockers.
@@ -328,7 +328,7 @@ The runtime build path accepts one or more ordered Fortran sources. C parsing,
 semantic IR, `.pyi`, and readiness are implemented, but wrapping user-supplied
 C libraries is a later backend. The generated C code used internally by the
 Fortran wrapper is not that future C-input backend.
-The [generated target datatype mapping example](docs/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
+The [generated target datatype mapping example](docs/user/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
 shows how the GitHub Actions C and Fortran scalar types map to NumPy dtypes.
 X2PY_C_DOCS_END -->
 
@@ -517,7 +517,7 @@ Current support includes:
 - documented runtime wrapper behavior for scalar and array calls, strings,
   module state, derived types, generic interfaces, optional and output
   arguments, and immediate call-scoped Python callbacks. The
-  [language feature matrix](docs/language-support/feature-matrix.md) is the
+  [language feature matrix](docs/user/language-support/feature-matrix.md) is the
   authoritative support-status summary.
 
 <!-- X2PY_C_DOCS_START
@@ -541,23 +541,29 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 - [Documentation](docs/index.md): browse getting-started guides, tutorials,
   examples, reference material, language support, and troubleshooting.
-- [Getting started](docs/getting-started/index.md): installation, verification,
+- [Getting started](docs/user/getting-started/index.md): installation, verification,
   standalone procedures, modules, and the normal rebuild workflow.
-- [User guide](docs/user-guide/index.md): feature-focused wrapper guidance for
+- [User guide](docs/user/guide/index.md): feature-focused wrapper guidance for
   data types, functions, subroutines, modules, arrays, callbacks, ownership,
   runtime behavior, packaging, and distribution.
-- [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported Fortran
+- [Tutorial](docs/user/tutorials/basic-wrapper.md): the complete supported Fortran
   workflow from source inspection to an imported extension.
-- [Examples cookbook](docs/examples-gallery/verified-cookbook.md): checked Fortran wrapper builds and
+- [Examples cookbook](docs/user/examples/verified-cookbook.md): checked Fortran wrapper builds and
   calls, inspection commands, compiler recipes, and Python API examples.
-- [Fortran wrapper guide](docs/user-guide/fortran-wrapper.md): generated Python behavior,
-  ownership, lifetime, arrays, derived types, callbacks, build modes, and
-  limitations.
-- [Developer guide](docs/developer-guide/maintainer-guide.md): implementation ownership,
+- [Reference](docs/user/reference/index.md): CLI, Python API, semantic contracts,
+  diagnostics, and generated wrapper surfaces.
+- [Language support](docs/user/language-support/index.md): implemented, partial,
+  unsupported, and planned language features.
+- [FAQ](docs/user/faq/index.md): concise answers to common usage questions.
+- [Troubleshooting](docs/user/troubleshooting/index.md): installation, compiler,
+  build, runtime, and platform failures.
+- [Changelog](docs/user/changelog/index.md): user-visible changes by release.
+- [Developer documentation](docs/developer/index.md): implementation ownership,
   parser references, testing, fixtures, and change workflows.
+- [Contributing](docs/developer/contributing/index.md): repository contribution workflow.
 
 <!-- X2PY_C_DOCS_START
-- [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported user workflow,
+- [Tutorial](docs/user/tutorials/basic-wrapper.md): the complete supported user workflow,
   Fortran extension build, semantic interface editing, readiness, and current
   C boundary.
 X2PY_C_DOCS_END -->
@@ -571,4 +577,7 @@ PYTHONPATH=. python3 -m pytest -q
 ```
 
 Focused verification commands and fixture-maintenance workflows are in the
-[Developer guide](docs/developer-guide/maintainer-guide.md#testing-map).
+[Developer guide](docs/developer/development-workflow.md#testing-map).
+Repository governance, internal architecture, design records, release policy,
+and active completion ledgers remain in the GitHub-only
+[Maintainer documentation](docs/maintainer/README.md).

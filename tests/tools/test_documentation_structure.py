@@ -14,23 +14,28 @@ import x2py
 
 ROOT = Path(__file__).parents[2]
 DOCS_ROOT = ROOT / "docs"
-FEATURE_MATRIX_PATH = DOCS_ROOT / "language-support/feature-matrix.md"
-CLI_REFERENCE_PATH = DOCS_ROOT / "reference/cli-commands.md"
-PYTHON_API_REFERENCE_PATH = DOCS_ROOT / "reference/python-api.md"
-DOCUMENTATION_CHECKLIST_PATH = DOCS_ROOT / "roadmap/documentation-content-checklist.md"
+FEATURE_MATRIX_PATH = DOCS_ROOT / "user/language-support/feature-matrix.md"
+CLI_REFERENCE_PATH = DOCS_ROOT / "user/reference/cli-commands.md"
+PYTHON_API_REFERENCE_PATH = DOCS_ROOT / "user/reference/python-api.md"
+DOCUMENTATION_CHECKLIST_PATH = DOCS_ROOT / "maintainer/roadmap/documentation-content-checklist.md"
 DOC_PATHS = sorted(path for path in DOCS_ROOT.rglob("*.md") if "old_docs" not in path.parts)
-PUBLIC_DOCUMENTATION_PATHS = [ROOT / "README.md", *DOC_PATHS]
+WEBSITE_DOCUMENTATION_PATHS = [
+    DOCS_ROOT / "index.md",
+    *sorted((DOCS_ROOT / "user").rglob("*.md")),
+    *sorted((DOCS_ROOT / "developer").rglob("*.md")),
+]
+PUBLISHED_DOCUMENTATION_PATHS = [ROOT / "README.md", *WEBSITE_DOCUMENTATION_PATHS]
 DEFERRED_C_PAGE_PATHS = [
-    ROOT / "docs/design/cpython-integration.md",
-    ROOT / "docs/developer-guide/c-parser-reference.md",
-    ROOT / "docs/examples-gallery/recipes/inspect-c-api.md",
+    ROOT / "docs/maintainer/design/cpython-integration.md",
+    ROOT / "docs/developer/c-parser-reference.md",
+    ROOT / "docs/user/examples/recipes/inspect-c-api.md",
 ]
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
 C_DOCS_START = "<!-- X2PY_C_DOCS_START"
 C_DOCS_END = "X2PY_C_DOCS_END -->"
 C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
 VISIBLE_C_DOCUMENTATION_EXCEPTIONS = {
-    "docs/user-guide/enumerations.md": ("bind(C)",),
+    "docs/user/guide/enumerations.md": ("bind(C)",),
 }
 VISIBLE_C_DOCUMENTATION = re.compile(
     r"(?:"
@@ -71,62 +76,64 @@ ALLOWED_STATUSES = {
 }
 TODO_STATUSES = {"draft", "not-yet-implemented", "planned-documentation"}
 REQUIRED_AREA_INDEXES = [
-    "getting-started/index.md",
-    "user-guide/index.md",
-    "tutorials/index.md",
-    "examples-gallery/index.md",
-    "reference/index.md",
-    "language-support/index.md",
-    "design/index.md",
-    "developer-guide/index.md",
-    "internal-architecture/index.md",
-    "roadmap/index.md",
-    "faq/index.md",
-    "troubleshooting/index.md",
-    "changelog/index.md",
-    "contributing/index.md",
+    "user/index.md",
+    "user/getting-started/index.md",
+    "user/guide/index.md",
+    "user/tutorials/index.md",
+    "user/examples/index.md",
+    "user/reference/index.md",
+    "user/language-support/index.md",
+    "user/faq/index.md",
+    "user/troubleshooting/index.md",
+    "user/changelog/index.md",
+    "developer/index.md",
+    "developer/contributing/index.md",
+    "maintainer/README.md",
+    "maintainer/design/index.md",
+    "maintainer/internal-architecture/index.md",
+    "maintainer/roadmap/index.md",
 ]
 REQUIRED_REFERENCE_PAGES = [
-    "reference/index.md",
-    "reference/cli-commands.md",
-    "reference/python-api.md",
-    "reference/semantic-ir.md",
-    "reference/semantic-pyi-format.md",
-    "reference/diagnostic-codes.md",
+    "user/reference/index.md",
+    "user/reference/cli-commands.md",
+    "user/reference/python-api.md",
+    "user/reference/semantic-ir.md",
+    "user/reference/semantic-pyi-format.md",
+    "user/reference/diagnostic-codes.md",
 ]
 REQUIRED_ROADMAP_PAGES = [
-    "roadmap/index.md",
-    "roadmap/semantic-pyi-wrapper-checklist.md",
-    "roadmap/documentation-content-checklist.md",
+    "maintainer/roadmap/index.md",
+    "maintainer/roadmap/semantic-pyi-wrapper-checklist.md",
+    "maintainer/roadmap/documentation-content-checklist.md",
 ]
 REQUIRED_GETTING_STARTED_PAGES = [
-    "getting-started/index.md",
-    "getting-started/installation.md",
-    "getting-started/verification.md",
-    "getting-started/first-wrapped-function.md",
-    "getting-started/first-wrapped-module.md",
-    "getting-started/beginner-workflow.md",
+    "user/getting-started/index.md",
+    "user/getting-started/installation.md",
+    "user/getting-started/verification.md",
+    "user/getting-started/first-wrapped-function.md",
+    "user/getting-started/first-wrapped-module.md",
+    "user/getting-started/beginner-workflow.md",
 ]
 REQUIRED_USER_GUIDE_PAGES = [
-    "user-guide/index.md",
-    "user-guide/data-types.md",
-    "user-guide/wrapping-functions.md",
-    "user-guide/wrapping-subroutines.md",
-    "user-guide/wrapping-modules.md",
-    "user-guide/arrays.md",
-    "user-guide/optional-arguments.md",
-    "user-guide/generic-interfaces.md",
-    "user-guide/allocatable-arrays.md",
-    "user-guide/pointer-arguments.md",
-    "user-guide/wrapping-derived-types.md",
-    "user-guide/memory-management.md",
-    "user-guide/callbacks.md",
-    "user-guide/enumerations.md",
-    "user-guide/error-handling.md",
-    "user-guide/packaging.md",
-    "user-guide/distribution.md",
-    "user-guide/fortran-wrapper.md",
-    "user-guide/editing-semantic-pyi-contracts.md",
+    "user/guide/index.md",
+    "user/guide/data-types.md",
+    "user/guide/wrapping-functions.md",
+    "user/guide/wrapping-subroutines.md",
+    "user/guide/wrapping-modules.md",
+    "user/guide/arrays.md",
+    "user/guide/optional-arguments.md",
+    "user/guide/generic-interfaces.md",
+    "user/guide/allocatable-arrays.md",
+    "user/guide/pointer-arguments.md",
+    "user/guide/wrapping-derived-types.md",
+    "user/guide/memory-management.md",
+    "user/guide/callbacks.md",
+    "user/guide/enumerations.md",
+    "user/guide/error-handling.md",
+    "user/guide/packaging.md",
+    "user/guide/distribution.md",
+    "user/guide/fortran-wrapper.md",
+    "user/guide/editing-semantic-pyi-contracts.md",
 ]
 CLI_HELP_GROUP_HEADINGS = [
     "input selection:",
@@ -185,16 +192,15 @@ CLI_REFERENCE_OPTIONS = [
 ]
 CLI_VISIBLE_HELP_OPTIONS = [option for option in CLI_REFERENCE_OPTIONS if option != "--vars-limit"]
 REQUIRED_SOURCE_NAVIGATION_PAGES = [
-    "developer-guide/source-map.md",
-    "developer-guide/feature-to-code-map.md",
-    "developer-guide/repository-structure.md",
-    "internal-architecture/pipeline-map.md",
+    "developer/source-map.md",
+    "developer/feature-to-code-map.md",
+    "developer/repository-structure.md",
 ]
 SOURCE_NAVIGATION_CORPUS = [
-    "docs/developer-guide/source-map.md",
-    "docs/developer-guide/feature-to-code-map.md",
-    "docs/developer-guide/repository-structure.md",
-    "docs/internal-architecture/pipeline-map.md",
+    "docs/developer/source-map.md",
+    "docs/developer/feature-to-code-map.md",
+    "docs/developer/repository-structure.md",
+    "docs/maintainer/internal-architecture/pipeline-map.md",
     "x2py/README.md",
     "x2py/c_parser/README.md",
     "x2py/fortran_parser/README.md",
@@ -242,31 +248,27 @@ SOURCE_NAVIGATION_HOTSPOTS = [
 ]
 SOURCE_NAVIGATION_PUBLIC_DOCS = [
     "README.md",
-    "docs/documentation-architecture.md",
-    "docs/tutorials/basic-wrapper.md",
-    "docs/examples-gallery/verified-cookbook.md",
-    "docs/examples-gallery/recipes/build-and-import-cli.md",
-    "docs/examples-gallery/recipes/build-multiple-fortran-sources.md",
-    "docs/examples-gallery/recipes/compiler-preprocessing.md",
-    "docs/examples-gallery/recipes/generate-editable-makefile.md",
-    "docs/examples-gallery/recipes/inspect-c-api.md",
-    "docs/examples-gallery/recipes/inspect-fortran-api.md",
-    "docs/examples-gallery/recipes/semantic-pyi-contracts.md",
-    "docs/user-guide/fortran-wrapper.md",
-    "docs/user-guide/editing-semantic-pyi-contracts.md",
-    "docs/reference/cli-commands.md",
-    "docs/reference/diagnostic-codes.md",
-    "docs/reference/python-api.md",
-    "docs/reference/semantic-ir.md",
-    "docs/reference/semantic-pyi-format.md",
-    "docs/developer-guide/build-system.md",
-    "docs/developer-guide/c-parser-reference.md",
-    "docs/developer-guide/fortran-parser-reference.md",
-    "docs/developer-guide/quality-assurance.md",
-    "docs/design/memory-ownership-model.md",
-    "docs/internal-architecture/wrapper-generation-pipeline.md",
-    "docs/language-support/feature-matrix.md",
-    "docs/roadmap/semantic-pyi-wrapper-checklist.md",
+    "docs/user/tutorials/basic-wrapper.md",
+    "docs/user/examples/verified-cookbook.md",
+    "docs/user/examples/recipes/build-and-import-cli.md",
+    "docs/user/examples/recipes/build-multiple-fortran-sources.md",
+    "docs/user/examples/recipes/compiler-preprocessing.md",
+    "docs/user/examples/recipes/generate-editable-makefile.md",
+    "docs/user/examples/recipes/inspect-c-api.md",
+    "docs/user/examples/recipes/inspect-fortran-api.md",
+    "docs/user/examples/recipes/semantic-pyi-contracts.md",
+    "docs/user/guide/fortran-wrapper.md",
+    "docs/user/guide/editing-semantic-pyi-contracts.md",
+    "docs/user/reference/cli-commands.md",
+    "docs/user/reference/diagnostic-codes.md",
+    "docs/user/reference/python-api.md",
+    "docs/user/reference/semantic-ir.md",
+    "docs/user/reference/semantic-pyi-format.md",
+    "docs/developer/build-system.md",
+    "docs/developer/c-parser-reference.md",
+    "docs/developer/fortran-parser-reference.md",
+    "docs/developer/quality-assurance.md",
+    "docs/user/language-support/feature-matrix.md",
 ]
 SOURCE_NAVIGATION_TEST_TARGETS = [
     "tests/parser/",
@@ -297,8 +299,8 @@ SOURCE_NAVIGATION_TEST_TARGETS = [
     "tests/wrapper/fortran/build_from_source/test_runtime_abi.py",
 ]
 PACKAGE_README_NAVIGATION_REFERENCES = [
-    "docs/developer-guide/source-map.md",
-    "docs/developer-guide/feature-to-code-map.md",
+    "docs/developer/source-map.md",
+    "docs/developer/feature-to-code-map.md",
 ]
 LEGACY_ACTIVE_DOC_REFERENCES = [
     "docs/c_parser.md",
@@ -354,17 +356,17 @@ FEATURE_MATRIX_REQUIRED_FEATURES = [
     "Generated reference pages for modules, functions, and classes",
 ]
 REQUIRED_EXAMPLE_RECIPE_PAGES = [
-    "examples-gallery/verified-cookbook.md",
-    "examples-gallery/recipes/build-and-import-cli.md",
-    "examples-gallery/recipes/build-and-import-python-api.md",
-    "examples-gallery/recipes/generate-editable-makefile.md",
-    "examples-gallery/recipes/build-multiple-fortran-sources.md",
-    "examples-gallery/recipes/inspect-fortran-api.md",
-    "examples-gallery/recipes/inspect-c-api.md",
-    "examples-gallery/recipes/semantic-pyi-contracts.md",
-    "examples-gallery/recipes/control-cli-output.md",
-    "examples-gallery/recipes/use-python-inspection-apis.md",
-    "examples-gallery/recipes/compiler-preprocessing.md",
+    "user/examples/verified-cookbook.md",
+    "user/examples/recipes/build-and-import-cli.md",
+    "user/examples/recipes/build-and-import-python-api.md",
+    "user/examples/recipes/generate-editable-makefile.md",
+    "user/examples/recipes/build-multiple-fortran-sources.md",
+    "user/examples/recipes/inspect-fortran-api.md",
+    "user/examples/recipes/inspect-c-api.md",
+    "user/examples/recipes/semantic-pyi-contracts.md",
+    "user/examples/recipes/control-cli-output.md",
+    "user/examples/recipes/use-python-inspection-apis.md",
+    "user/examples/recipes/compiler-preprocessing.md",
 ]
 MAJOR_SOURCE_PACKAGES = [
     "x2py/c_parser/",
@@ -460,6 +462,19 @@ def _combined_text(relative_paths: list[str]) -> str:
 
 
 @cache
+def _site_navigation_positions() -> dict[str, int]:
+    navigation_entry = re.compile(r": ([^#\s]+\.md)\s*$")
+    paths: list[str] = []
+    for line in (ROOT / "mkdocs.yml").read_text(encoding="utf-8").splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        match = navigation_entry.search(line)
+        if match:
+            paths.append(match.group(1))
+    return {path: index for index, path in enumerate(paths)}
+
+
+@cache
 def _x2py_cli_help() -> str:
     result = subprocess.run(
         [sys.executable, "-m", "x2py", "--help"],
@@ -514,7 +529,7 @@ def test_documentation_page_metadata(path: Path) -> None:
         assert "TODO:" in body, f"{path.relative_to(ROOT)}: TODO section must contain explicit TODO markers"
 
 
-@pytest.mark.parametrize("path", PUBLIC_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize("path", PUBLISHED_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
 def test_deferred_c_documentation_is_not_visible(path: Path) -> None:
     visible = _visible_documentation_source(path)
     for allowed_text in VISIBLE_C_DOCUMENTATION_EXCEPTIONS.get(str(path.relative_to(ROOT)), ()):
@@ -657,6 +672,58 @@ def test_required_documentation_area_exists(relative_path: str) -> None:
     assert (DOCS_ROOT / relative_path).is_file()
 
 
+def test_documentation_root_uses_three_audience_lanes() -> None:
+    directories = {path.name for path in DOCS_ROOT.iterdir() if path.is_dir()}
+    root_pages = {path.name for path in DOCS_ROOT.glob("*.md")}
+    assert directories == {"user", "developer", "maintainer", "old_docs"}
+    assert root_pages == {"index.md"}
+
+
+@pytest.mark.parametrize(
+    ("lane", "audience_terms"),
+    [
+        ("user", ("users",)),
+        ("developer", ("developers", "contributors")),
+        ("maintainer", ("maintainers",)),
+    ],
+)
+def test_documentation_lane_has_consistent_audience(lane: str, audience_terms: tuple[str, ...]) -> None:
+    for path in (DOCS_ROOT / lane).rglob("*.md"):
+        metadata, _ = _front_matter(path)
+        assert any(term in metadata["audience"] for term in audience_terms)
+        if lane != "maintainer":
+            assert "maintainers" not in metadata["audience"]
+        else:
+            assert metadata["audience"] == "maintainers"
+
+
+@pytest.mark.parametrize("path", WEBSITE_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+def test_website_documentation_does_not_link_to_maintainer_lane(path: Path) -> None:
+    maintainer_root = (DOCS_ROOT / "maintainer").resolve()
+    for target in MARKDOWN_LINK.findall(_visible_documentation_source(path)):
+        if target.startswith(("http://", "https://", "mailto:")):
+            continue
+        resolved = (path.parent / target).resolve()
+        assert not resolved.is_relative_to(maintainer_root), (
+            f"{path.relative_to(ROOT)}: website link enters maintainer lane: {target}"
+        )
+
+
+def test_readme_documentation_links_follow_site_navigation_order() -> None:
+    readme = _visible_documentation_source(ROOT / "README.md")
+    documentation = readme.split("## Documentation", maxsplit=1)[1].split(
+        "## Development",
+        maxsplit=1,
+    )[0]
+    positions = _site_navigation_positions()
+    linked_positions = [
+        positions[target.removeprefix("docs/")]
+        for target in MARKDOWN_LINK.findall(documentation)
+        if target.startswith("docs/")
+    ]
+    assert linked_positions == sorted(linked_positions)
+
+
 @pytest.mark.parametrize("relative_path", REQUIRED_REFERENCE_PAGES)
 def test_required_reference_page_exists(relative_path: str) -> None:
     assert (DOCS_ROOT / relative_path).is_file()
@@ -673,10 +740,11 @@ def test_required_roadmap_page_exists(relative_path: str) -> None:
     assert (DOCS_ROOT / relative_path).is_file()
 
 
-@pytest.mark.parametrize("relative_path", REQUIRED_ROADMAP_PAGES)
-def test_roadmap_page_is_in_site_navigation(relative_path: str) -> None:
+def test_maintainer_documentation_is_excluded_from_site_build() -> None:
     site_configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
-    assert relative_path in site_configuration
+    assert "maintainer/**" in site_configuration
+    assert "old_docs/**" in site_configuration
+    assert not any(path.startswith("maintainer/") for path in _site_navigation_positions())
 
 
 @pytest.mark.parametrize("relative_path", REQUIRED_GETTING_STARTED_PAGES)
@@ -717,6 +785,25 @@ def test_user_guide_page_is_completed_in_documentation_checklist(relative_path: 
     assert f"- [x] `docs/{relative_path}`" in checklist
 
 
+@pytest.mark.parametrize(
+    "relative_path",
+    [*REQUIRED_GETTING_STARTED_PAGES[1:], *REQUIRED_USER_GUIDE_PAGES[1:]],
+)
+def test_sequential_user_page_does_not_link_forward(relative_path: str) -> None:
+    path = DOCS_ROOT / relative_path
+    _, body = _front_matter(path)
+    positions = _site_navigation_positions()
+    source_position = positions[relative_path]
+    for target in MARKDOWN_LINK.findall(body):
+        target_path = (path.parent / target).resolve()
+        if not target_path.is_relative_to(DOCS_ROOT):
+            continue
+        target_relative = target_path.relative_to(DOCS_ROOT).as_posix()
+        if target_relative not in positions:
+            continue
+        assert positions[target_relative] <= source_position, f"{relative_path}: forward link to {target_relative}"
+
+
 @pytest.mark.parametrize("relative_path", REQUIRED_USER_GUIDE_PAGES[:-2])
 def test_user_guide_commands_do_not_expose_fixture_paths(relative_path: str) -> None:
     page = (DOCS_ROOT / relative_path).read_text(encoding="utf-8")
@@ -724,15 +811,15 @@ def test_user_guide_commands_do_not_expose_fixture_paths(relative_path: str) -> 
 
 
 def test_getting_started_overview_uses_standalone_example_and_current_evidence() -> None:
-    overview = (DOCS_ROOT / "getting-started/index.md").read_text(encoding="utf-8")
+    overview = (DOCS_ROOT / "user/getting-started/index.md").read_text(encoding="utf-8")
 
     assert "scale.scale(np.float64(3.0), np.float64(2.5))" in overview
     assert "build_from_source/test_build_modes.py" in overview
 
 
-def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_centrally() -> None:
-    page = (DOCS_ROOT / "getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
-    source_index = page.index("[README Quick Start](../../README.md#quick-start)")
+def test_first_wrapped_function_shows_contract_and_mentions_later_support_boundaries() -> None:
+    page = (DOCS_ROOT / "user/getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
+    source_index = page.index("[README Quick Start](../../../README.md#quick-start)")
     build_index = page.index("python3 -m x2py scale.f90 \\")
     command_index = page.index("python3 -m x2py scale.f90 --pyi")
     contract_index = page.index(
@@ -743,11 +830,11 @@ def test_first_wrapped_function_shows_contract_and_routes_support_boundaries_cen
     assert source_index < build_index < command_index < contract_index
     assert "<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->" not in page
     assert "## Current Limitations" not in page
-    assert "[language feature matrix](../language-support/feature-matrix.md)" in page
+    assert "language feature matrix later" in page
 
 
 def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None:
-    page = (DOCS_ROOT / "getting-started/first-wrapped-module.md").read_text(encoding="utf-8")
+    page = (DOCS_ROOT / "user/getting-started/first-wrapped-module.md").read_text(encoding="utf-8")
     source_index = page.index("Create `module_state.f90` with this module:")
     build_index = page.index("python3 -m x2py module_state.f90 \\")
     inspect_index = page.index("python3 -m x2py module_state.f90 --pyi")
@@ -756,12 +843,12 @@ def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None
     assert source_index < build_index < inspect_index < contract_index
     assert "fmodule_vars_f90" not in page
     assert "## Current Limitations" not in page
-    assert "[language feature matrix](../language-support/feature-matrix.md)" in page
+    assert "language feature matrix later collects support boundaries" in page
 
 
 def test_beginner_workflow_reuses_scale_example_without_renaming_it() -> None:
-    page = (DOCS_ROOT / "getting-started/beginner-workflow.md").read_text(encoding="utf-8")
-    source_reference_index = page.index("[README Quick Start](../../README.md#quick-start)")
+    page = (DOCS_ROOT / "user/getting-started/beginner-workflow.md").read_text(encoding="utf-8")
+    source_reference_index = page.index("[README Quick Start](../../../README.md#quick-start)")
     layout_index = page.index("src/\n    scale.f90")
     contract_index = page.index("python3 -m x2py src/scale.f90 --pyi")
     build_index = page.index("python3 -m x2py src/scale.f90 \\\n  --out-dir build/scale")
@@ -908,7 +995,12 @@ def test_feature_matrix_row_is_complete(row: dict[str, str]) -> None:
     for column in ["User docs", "Source owner", "Evidence"]:
         assert MARKDOWN_LINK.search(row[column]), f"{row['Feature']}: {column} must contain a Markdown link"
     if row["Status"] in {"Supported", "Partially supported"}:
-        assert "](../../tests/" in row["Evidence"], f"{row['Feature']}: support claims need direct test evidence"
+        evidence_targets = [
+            (FEATURE_MATRIX_PATH.parent / target).resolve() for target in MARKDOWN_LINK.findall(row["Evidence"])
+        ]
+        assert any(target.is_relative_to(ROOT / "tests") for target in evidence_targets), (
+            f"{row['Feature']}: support claims need direct test evidence"
+        )
 
 
 @pytest.mark.parametrize("row", FEATURE_MATRIX_ROWS, ids=lambda row: row["Feature"])
@@ -923,7 +1015,7 @@ def test_feature_matrix_links_point_to_existing_files(row: dict[str, str]) -> No
 
 @pytest.mark.parametrize("package", MAJOR_SOURCE_PACKAGES)
 def test_source_map_covers_major_source_packages(package: str) -> None:
-    source_map = (DOCS_ROOT / "developer-guide/source-map.md").read_text(encoding="utf-8")
+    source_map = (DOCS_ROOT / "developer/source-map.md").read_text(encoding="utf-8")
     assert package in source_map
 
 

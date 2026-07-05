@@ -31,8 +31,8 @@ binding source for the implemented Fortran wrapper path.
 
 ## Tests And Docs
 
-- User wrapper contract: `docs/user-guide/fortran-wrapper.md`
-- Source navigation: `docs/developer-guide/source-map.md`, `docs/developer-guide/feature-to-code-map.md`
-- Pipeline map: `docs/internal-architecture/pipeline-map.md`
+- User wrapper contract: `docs/user/guide/fortran-wrapper.md`
+- Source navigation: `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`
+- Pipeline map: `docs/maintainer/internal-architecture/pipeline-map.md`
 - Runtime tests: `tests/wrapper/fortran/`
 - `.pyi` printer tests: `tests/semantics/test_pyi_printer.py`
