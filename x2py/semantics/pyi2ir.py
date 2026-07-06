@@ -84,6 +84,7 @@ def convert_pyi_to_ir(tree: ast.Module, *, module_name: str = "<pyi>", source: s
 class _Decorators:
     visibility: str = "public"
     projection: list[ProjectionMapping] = field(default_factory=list)
+    native_result: ProjectionMapping | None = None
     has_native_call: bool = False
     overload_target: str | None = None
     overload_generic: str | None = None
@@ -256,6 +257,7 @@ class _PyiAstParser:
         *,
         visibility: str,
         projection: list[ProjectionMapping] | None = None,
+        native_result: ProjectionMapping | None = None,
         native_name: str | None = None,
         external: bool = False,
         has_native_call: bool = False,
@@ -263,7 +265,11 @@ class _PyiAstParser:
         error_status_policy: dict[str, object] | None = None,
     ) -> SemanticFunction:
         actual_projection = projection if projection is not None else []
-        semantic_args, return_type = self._callable_parts(node, projection=actual_projection)
+        semantic_args, return_type = self._callable_parts(
+            node,
+            projection=actual_projection,
+            native_result=native_result,
+        )
         metadata = {BIND_TARGET_METADATA: native_name} if native_name is not None else {}
         if has_native_call:
             metadata[NATIVE_PROJECTION_METADATA] = True
@@ -295,6 +301,7 @@ class _PyiAstParser:
         *,
         visibility: str,
         projection: list[ProjectionMapping] | None = None,
+        native_result: ProjectionMapping | None = None,
         is_static: bool = False,
         native_name: str | None = None,
         class_name: str,
@@ -307,6 +314,7 @@ class _PyiAstParser:
         semantic_args, return_type = self._callable_parts(
             node,
             projection=actual_projection,
+            native_result=native_result,
             drop_untyped_self=True,
         )
         metadata = {BIND_TARGET_METADATA: native_name} if native_name is not None else {}
@@ -500,7 +508,7 @@ class _PyiAstParser:
         if not isinstance(node, ast.Call):
             raise ValueError("native_call expects a single list argument")
         parsed.has_native_call = True
-        parsed.projection = self.native_call(node)
+        parsed.projection, parsed.native_result = self.native_call(node)
 
     def _apply_raises_decorator(self, parsed: _Decorators, node: ast.expr, context: str) -> None:
         if not isinstance(node, ast.Call):
@@ -509,15 +517,31 @@ class _PyiAstParser:
             raise ValueError(f"Duplicate {context} raises decorator")
         parsed.error_status_policy = self.error_status_policy(node)
 
-    def native_call(self, node: ast.Call) -> list[ProjectionMapping]:
-        if len(node.args) != 1 or node.keywords:
-            raise ValueError("native_call expects a single list argument")
+    def native_call(self, node: ast.Call) -> tuple[list[ProjectionMapping], ProjectionMapping | None]:
+        if len(node.args) != 1:
+            raise ValueError("native_call expects one native-argument list")
+        if len(node.keywords) > 1 or any(keyword.arg != "result" for keyword in node.keywords):
+            raise ValueError("native_call accepts only the optional result keyword")
         entries = node.args[0]
         if not isinstance(entries, ast.List):
             raise ValueError("native_call expects a list of projection entries")
-        return [
+        projection = [
             self.native_projection_entry(entry, native_position) for native_position, entry in enumerate(entries.elts)
         ]
+        native_result = self.native_result_projection(node.keywords[0].value) if node.keywords else None
+        return projection, native_result
+
+    def native_result_projection(self, node: ast.AST) -> ProjectionMapping:
+        """Parse the nullable scalar descriptor returned by a native function."""
+        mapping = self.native_projection_entry(node, native_position=-1)
+        if mapping.value_kind in {"allocatable", "pointer"} and mapping.python_position is not None:
+            raise ValueError("native_call result must reference Return(i), not Arg(i)")
+        if mapping.value_kind not in {"allocatable", "pointer"} or mapping.result_position is None:
+            raise ValueError("native_call result expects Allocatable(Return(i)) or Pointer(Return(i))")
+        mapping.native_position = None
+        if mapping.result_position != 0:
+            raise ValueError("native scalar descriptor function result must map to Python result slot 0")
+        return mapping
 
     @staticmethod
     def error_status_policy(node: ast.Call) -> dict[str, object]:
@@ -874,12 +898,40 @@ class _PyiAstParser:
         if self._is_addr_call(node):
             return self.native_address_projection_entry(node, native_position)
 
+        descriptor = self.contract_name(node.func)
+        if descriptor in {"Allocatable", "Pointer"}:
+            return self.native_descriptor_projection_entry(node, native_position, descriptor)
+
         literal = self.native_literal_projection_entry(node, native_position)
         if literal is not None:
             return literal
 
         helper = self.required_name(node.func)
         return self._native_helper_projection_entry(helper, node, native_position)
+
+    def native_descriptor_projection_entry(
+        self,
+        node: ast.Call,
+        native_position: int,
+        descriptor: str,
+    ) -> ProjectionMapping:
+        """Parse a nullable scalar descriptor projection around Arg/Return."""
+        if len(node.args) != 1:
+            raise ValueError(f"{descriptor} projection expects one Arg(...) or Return(...) reference")
+        value = self.native_value_ref(node.args[0], allow_named_return=True)
+        mapping = ProjectionMapping(
+            native_position=native_position,
+            value_kind=descriptor.casefold(),
+            value=value,
+        )
+        if value["kind"] == "arg":
+            mapping.python_position = int(value["position"])
+        elif value["kind"] == "return":
+            mapping.result_position = int(value["position"])
+            mapping.native_name = str(value.get("name") or "")
+        else:
+            raise ValueError(f"{descriptor} projection expects Arg(...) or Return(...)")
+        return mapping
 
     def _native_helper_projection_entry(
         self,
@@ -1039,17 +1091,34 @@ class _PyiAstParser:
             },
         )
 
-    def native_value_ref(self, node: ast.AST) -> dict[str, int | str]:
+    def native_value_ref(
+        self,
+        node: ast.AST,
+        *,
+        allow_named_return: bool = False,
+    ) -> dict[str, int | str]:
         if not isinstance(node, ast.Call):
             raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
-        if node.keywords or len(node.args) != 1:
+        if node.keywords:
             raise ValueError(f"{self.required_name(node.func)} value reference expects one positional argument")
         helper = self.required_name(node.func)
         if helper == "Arg":
+            if len(node.args) != 1:
+                raise ValueError("Arg value reference expects one positional argument")
             return {"kind": "arg", "position": int(ast.literal_eval(node.args[0]))}
         if helper == "Return":
-            return {"kind": "return", "position": int(ast.literal_eval(node.args[0]))}
+            if len(node.args) == 1:
+                return {"kind": "return", "position": int(ast.literal_eval(node.args[0]))}
+            if allow_named_return and len(node.args) == 2:
+                return {
+                    "kind": "return",
+                    "name": str(ast.literal_eval(node.args[0])),
+                    "position": int(ast.literal_eval(node.args[1])),
+                }
+            raise ValueError("Return value reference expects one index or a name and index")
         if helper == "Work":
+            if len(node.args) != 1:
+                raise ValueError("Work value reference expects one positional argument")
             return {"kind": "work", "name": str(ast.literal_eval(node.args[0]))}
         raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
 
@@ -1107,6 +1176,10 @@ class _PyiAstParser:
                     "String[:][:] for an array of non-fixed strings, or String[n] for fixed length"
                 )
             return self._character_type(node)
+        if self.is_subscript_of(node, "Allocatable"):
+            return self._scalar_descriptor_type(node, "Allocatable")
+        if self.is_subscript_of(node, "Pointer"):
+            return self._scalar_descriptor_type(node, "Pointer")
 
         name = self.type_name(node)
         if name == "Unknown":
@@ -1130,6 +1203,31 @@ class _PyiAstParser:
         if name_node.id not in CONTRACT_TYPE_NAMES or name_node.id in self._user_type_names:
             return
         raise ValueError(f"Contract type {name_node.id!r} must be imported from x2py.contracts")
+
+    def _scalar_descriptor_type(self, node: ast.Subscript, descriptor: str) -> SemanticType:
+        items = self.subscript_items(node)
+        if len(items) != 1:
+            raise ValueError(f"{descriptor} expects exactly one scalar type: {ast.unparse(node)!r}")
+        semantic_type = self.semantic_type(items[0])
+        if semantic_type.rank > 0 or (semantic_type.storage is not None and semantic_type.storage.array is not None):
+            raise ValueError(
+                f"{descriptor}[...] supports scalar descriptors only; array descriptor handles are reserved"
+            )
+        self._apply_scalar_descriptor_kind(semantic_type, descriptor.casefold())
+        return semantic_type
+
+    @staticmethod
+    def _apply_scalar_descriptor_kind(semantic_type: SemanticType, descriptor: str) -> None:
+        if semantic_type.rank > 0 or (semantic_type.storage is not None and semantic_type.storage.array is not None):
+            raise ValueError(f"{descriptor.capitalize()} projection supports scalar values only")
+        if descriptor == "allocatable":
+            semantic_type.metadata["fortran_allocatable"] = True
+            return
+        if descriptor != "pointer":
+            raise ValueError(f"Unsupported scalar descriptor projection: {descriptor!r}")
+        semantic_type.metadata["fortran_pointer"] = True
+        semantic_type.metadata["fortran_pointer_association"] = "runtime"
+        semantic_type.storage = SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1)
 
     def _final_type(self, node: ast.Subscript) -> SemanticType:
         items = self.subscript_items(node)
@@ -2002,8 +2100,30 @@ class _PyiAstParser:
         node: ast.FunctionDef,
         *,
         projection: list[ProjectionMapping],
+        native_result: ProjectionMapping | None = None,
         drop_untyped_self: bool = False,
     ) -> tuple[list[SemanticArgument], SemanticType | None]:
+        self._validate_callable_header(node)
+        semantic_args = self._callable_semantic_arguments(node, projection, drop_untyped_self=drop_untyped_self)
+        visible_args = list(semantic_args)
+        self._apply_argument_descriptor_projections(visible_args, projection)
+        optional_return_positions = self._optional_native_return_positions(projection, native_result)
+        return_type, returned_args = self.return_projection(
+            node.returns,
+            optional_return_positions=optional_return_positions,
+        )
+        self._validate_callable_descriptor_return(return_type, native_result)
+        return_type, returned_args = self._apply_native_call_returns(return_type, returned_args, projection)
+        return_type = self._apply_native_result_projection(return_type, native_result)
+        return_positions = self._return_positions_by_name(returned_args)
+        self._apply_projected_returns(semantic_args, returned_args)
+        if returned_args and not projection:
+            projection.extend(self._identity_return_projection(semantic_args, visible_args, return_positions))
+        self._apply_native_call_argument_names(visible_args, return_positions, projection)
+        return semantic_args, return_type
+
+    def _validate_callable_header(self, node: ast.FunctionDef) -> None:
+        """Validate the supported semantic `.pyi` callable header shape."""
         self._validate_stub_callable(node)
         if node.returns is None:
             if getattr(node, "end_lineno", node.lineno) != node.lineno:
@@ -2012,33 +2132,98 @@ class _PyiAstParser:
         if node.args.vararg or node.args.kwarg or node.args.kwonlyargs or node.args.posonlyargs:
             raise ValueError(f"Unsupported function header: {_node_text(node)!r}")
 
+    def _callable_semantic_arguments(
+        self,
+        node: ast.FunctionDef,
+        projection: list[ProjectionMapping],
+        *,
+        drop_untyped_self: bool,
+    ) -> list[SemanticArgument]:
+        """Load callable arguments and enforce scalar descriptor projection syntax."""
         args = list(zip(node.args.args, self._argument_defaults(node), strict=False))
         if drop_untyped_self and args and args[0][0].arg == "self":
             args = args[1:]
+        descriptor_positions = self._descriptor_argument_positions(projection)
+        semantic_args = [
+            self._callable_argument(arg, default, nullable_descriptor=index in descriptor_positions)
+            for index, (arg, default) in enumerate(args)
+        ]
+        self._validate_callable_descriptor_arguments(semantic_args, descriptor_positions)
+        return semantic_args
 
-        semantic_args = [self._callable_argument(arg, default) for arg, default in args]
-        visible_args = list(semantic_args)
-        optional_return_positions = {
+    @staticmethod
+    def _descriptor_argument_positions(projection: list[ProjectionMapping]) -> set[int]:
+        """Return Python argument positions wrapped by descriptor projections."""
+        return {
+            mapping.python_position
+            for mapping in projection
+            if mapping.value_kind in {"allocatable", "pointer"} and mapping.python_position is not None
+        }
+
+    def _validate_callable_descriptor_arguments(
+        self,
+        arguments: list[SemanticArgument],
+        descriptor_positions: set[int],
+    ) -> None:
+        """Reject descriptor type wrappers on callable Python annotations."""
+        for index, argument in enumerate(arguments):
+            if index in descriptor_positions:
+                continue
+            if self._semantic_scalar_descriptor_kind(argument.semantic_type) is not None:
+                raise ValueError(
+                    "Callable scalar descriptors use nullable value annotations plus "
+                    "Allocatable(Arg(i)) or Pointer(Arg(i)) in native_call"
+                )
+
+    @staticmethod
+    def _optional_native_return_positions(
+        projection: list[ProjectionMapping],
+        native_result: ProjectionMapping | None,
+    ) -> set[int]:
+        """Return nullable result slots and reject duplicate native producers."""
+        positions = {
             mapping.result_position
             for mapping in projection
             if mapping.result_position is not None and mapping.python_position is None
         }
-        return_type, returned_args = self.return_projection(
-            node.returns,
-            optional_return_positions=optional_return_positions,
-        )
-        return_type, returned_args = self._apply_native_call_returns(return_type, returned_args, projection)
-        return_positions = self._return_positions_by_name(returned_args)
-        self._apply_projected_returns(semantic_args, returned_args)
-        if returned_args and not projection:
-            projection.extend(self._identity_return_projection(semantic_args, visible_args, return_positions))
-        self._apply_native_call_argument_names(visible_args, return_positions, projection)
-        return semantic_args, return_type
+        if native_result is None or native_result.result_position is None:
+            return positions
+        if native_result.result_position in positions:
+            raise ValueError(
+                f"native_call result slot {native_result.result_position} is also used by a native output argument"
+            )
+        positions.add(native_result.result_position)
+        return positions
 
-    def _callable_argument(self, arg: ast.arg, default: ast.expr | None) -> SemanticArgument:
+    def _validate_callable_descriptor_return(
+        self,
+        return_type: SemanticType | None,
+        native_result: ProjectionMapping | None,
+    ) -> None:
+        """Reject descriptor type wrappers on callable Python return annotations."""
+        if native_result is None and self._semantic_scalar_descriptor_kind(return_type) is not None:
+            raise ValueError(
+                "Callable scalar descriptor results use a nullable value annotation plus "
+                "native_call result=Allocatable(Return(0)) or result=Pointer(Return(0))"
+            )
+
+    def _callable_argument(
+        self,
+        arg: ast.arg,
+        default: ast.expr | None,
+        *,
+        nullable_descriptor: bool = False,
+    ) -> SemanticArgument:
         if arg.annotation is None:
             raise ValueError(f"Expected typed argument: {arg.arg!r}")
-        visibility, semantic_type, original_name = self.visible_type(arg.annotation)
+        annotation = arg.annotation
+        if nullable_descriptor:
+            annotation = self._optional_union_item(annotation)
+            if annotation is None:
+                raise ValueError(
+                    f"Scalar descriptor argument {arg.arg!r} must use a nullable annotation such as Float64 | None"
+                )
+        visibility, semantic_type, original_name = self.visible_type(annotation)
         writable = self._type_uses_writable_storage(semantic_type)
         semantic_type.ownership.mutable = writable
         if semantic_type.storage is not None:
@@ -2051,6 +2236,42 @@ class _PyiAstParser:
             visibility=visibility,
             origin=self._origin(user_private=visibility == "private"),
         )
+
+    def _apply_argument_descriptor_projections(
+        self,
+        arguments: list[SemanticArgument],
+        projection: list[ProjectionMapping],
+    ) -> None:
+        for mapping in projection:
+            if mapping.value_kind not in {"allocatable", "pointer"} or mapping.python_position is None:
+                continue
+            if not 0 <= mapping.python_position < len(arguments):
+                raise ValueError(f"native_call argument position is out of range: {mapping.python_position}")
+            self._apply_scalar_descriptor_kind(arguments[mapping.python_position].semantic_type, mapping.value_kind)
+
+    @staticmethod
+    def _semantic_scalar_descriptor_kind(semantic_type: SemanticType | None) -> str | None:
+        if semantic_type is None or semantic_type.rank != 0:
+            return None
+        if semantic_type.metadata.get("fortran_allocatable"):
+            return "allocatable"
+        if semantic_type.metadata.get("fortran_pointer"):
+            return "pointer"
+        return None
+
+    def _apply_native_result_projection(
+        self,
+        return_type: SemanticType | None,
+        native_result: ProjectionMapping | None,
+    ) -> SemanticType | None:
+        if native_result is None:
+            return return_type
+        if return_type is None:
+            raise ValueError("native_call result requires a native function result in Python result slot 0")
+        if not return_type.metadata.pop(_PYI_OPTIONAL_RETURN_METADATA, False):
+            raise ValueError("native scalar descriptor function result must use a nullable T | None annotation")
+        self._apply_scalar_descriptor_kind(return_type, native_result.value_kind)
+        return return_type
 
     @staticmethod
     def _argument_defaults(node: ast.FunctionDef) -> list[ast.expr | None]:
@@ -2110,8 +2331,9 @@ class _PyiAstParser:
             for native_position, argument in enumerate(semantic_args)
         ]
 
-    @staticmethod
+    @classmethod
     def _apply_native_call_returns(
+        cls,
         return_type: SemanticType | None,
         returned_args: list[SemanticArgument],
         projection: list[ProjectionMapping],
@@ -2121,40 +2343,88 @@ class _PyiAstParser:
             for mapping in projection
             if mapping.result_position is not None and mapping.python_position is None
         }
-        if return_type is not None and 0 in output_by_result:
-            mapping = output_by_result[0]
-            if mapping.native_name and not mapping.python_name:
-                mapping.python_name = mapping.native_name
-            return_type.ownership.mutable = True
-            if return_type.rank == 0 and return_type.storage is None:
-                return_type.storage = SemanticStorageContract(
-                    kind="address",
-                    mutable=True,
-                    pointer_depth=1,
-                    metadata={ADDRESS_ROLE_METADATA: ADDRESS_ROLE_PROJECTION},
-                )
-            returned_args.insert(
-                0,
-                SemanticArgument(
-                    name=mapping.native_name or f"__return_{mapping.result_position}",
-                    semantic_type=return_type,
-                    optional=bool(return_type.metadata.pop(_PYI_OPTIONAL_RETURN_METADATA, False)),
-                    metadata={"native_position": mapping.native_position},
-                ),
-            )
-            return_type = None
+        return_type = cls._apply_direct_native_call_return(return_type, returned_args, output_by_result.get(0))
+        cls._apply_named_native_call_returns(returned_args, output_by_result)
+        return return_type, returned_args
 
+    @classmethod
+    def _apply_direct_native_call_return(
+        cls,
+        return_type: SemanticType | None,
+        returned_args: list[SemanticArgument],
+        mapping: ProjectionMapping | None,
+    ) -> SemanticType | None:
+        """Move a direct Python return into a projected native output argument."""
+        if return_type is None or mapping is None:
+            return return_type
+        cls._complete_native_output_mapping_name(mapping)
+        return_type.ownership.mutable = True
+        nullable_output = bool(return_type.metadata.pop(_PYI_OPTIONAL_RETURN_METADATA, False))
+        descriptor_output = cls._apply_descriptor_output_kind(return_type, mapping, nullable=nullable_output)
+        if not descriptor_output and return_type.rank == 0 and return_type.storage is None:
+            return_type.storage = SemanticStorageContract(
+                kind="address",
+                mutable=True,
+                pointer_depth=1,
+                metadata={ADDRESS_ROLE_METADATA: ADDRESS_ROLE_PROJECTION},
+            )
+        returned_args.insert(
+            0,
+            SemanticArgument(
+                name=mapping.native_name or f"__return_{mapping.result_position}",
+                semantic_type=return_type,
+                optional=nullable_output and not descriptor_output,
+                metadata={"native_position": mapping.native_position},
+            ),
+        )
+        return None
+
+    @classmethod
+    def _apply_named_native_call_returns(
+        cls,
+        returned_args: list[SemanticArgument],
+        output_by_result: dict[int | None, ProjectionMapping],
+    ) -> None:
+        """Apply native output mappings to named Python result slots."""
         for returned in returned_args:
             position = returned.metadata.get("return_position")
             mapping = output_by_result.get(position)
-            if mapping is not None:
-                if mapping.native_name and not mapping.python_name:
-                    mapping.python_name = mapping.native_name
-                if mapping.native_name:
-                    returned.name = mapping.native_name
-                _PyiAstParser._mark_projected_output(returned.semantic_type)
-                returned.metadata["native_position"] = mapping.native_position
-        return return_type, returned_args
+            if mapping is None:
+                continue
+            cls._complete_native_output_mapping_name(mapping)
+            if mapping.native_name:
+                returned.name = mapping.native_name
+            cls._mark_projected_output(returned.semantic_type)
+            descriptor_output = cls._apply_descriptor_output_kind(
+                returned.semantic_type,
+                mapping,
+                nullable=returned.optional,
+            )
+            if descriptor_output:
+                returned.optional = False
+            returned.metadata["native_position"] = mapping.native_position
+
+    @staticmethod
+    def _complete_native_output_mapping_name(mapping: ProjectionMapping) -> None:
+        """Complete a projected output's Python name from its native name."""
+        if mapping.native_name and not mapping.python_name:
+            mapping.python_name = mapping.native_name
+
+    @classmethod
+    def _apply_descriptor_output_kind(
+        cls,
+        semantic_type: SemanticType,
+        mapping: ProjectionMapping,
+        *,
+        nullable: bool,
+    ) -> bool:
+        """Apply nullable descriptor facts to one projected output type."""
+        if mapping.value_kind not in {"allocatable", "pointer"}:
+            return False
+        if not nullable:
+            raise ValueError("native scalar descriptor output must use a nullable T | None annotation")
+        cls._apply_scalar_descriptor_kind(semantic_type, mapping.value_kind)
+        return True
 
     @staticmethod
     def _return_positions_by_name(returned_args: list[SemanticArgument]) -> dict[str, int | None]:
@@ -2184,7 +2454,7 @@ class _PyiAstParser:
         old_position: int,
         new_position: int,
     ) -> None:
-        if mapping.value_kind != "addr" or not isinstance(mapping.value, dict):
+        if mapping.value_kind not in {"addr", "allocatable", "pointer"} or not isinstance(mapping.value, dict):
             return
         if mapping.value.get("kind") == "arg" and mapping.value.get("position") == old_position:
             mapping.value["position"] = new_position
@@ -2245,6 +2515,7 @@ class _ClassBodyVisitor(ClassVisitor):
             node,
             visibility=decorators.visibility,
             projection=decorators.projection,
+            native_result=decorators.native_result,
             is_static=decorators.is_static,
             native_name=decorators.bind_target,
             class_name=self.class_name,
@@ -2384,6 +2655,7 @@ class _ModuleVisitor(ClassVisitor):
             node,
             visibility=decorators.visibility,
             projection=decorators.projection,
+            native_result=decorators.native_result,
             native_name=decorators.bind_target,
             external=decorators.external,
             has_native_call=decorators.has_native_call,

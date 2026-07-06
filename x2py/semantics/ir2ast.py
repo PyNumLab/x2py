@@ -713,15 +713,6 @@ def _raise_for_unsupported_polymorphic_contracts(
         )
 
 
-def _raise_for_unsupported_allocatable_scalar_outputs(node: models.SemanticFunction) -> None:
-    for argument in node.arguments:
-        if _is_allocatable_scalar(argument.semantic_type) and _argument_uses_writable_storage(argument):
-            raise ValueError(
-                f"Function {node.name!r} has writable allocatable scalar argument {argument.name!r}, "
-                "which needs explicit construction, ownership, and destruction policy"
-            )
-
-
 def _is_scalar_integer_runtime_status(semantic_type: models.SemanticType) -> bool:
     if semantic_type.rank != 0:
         return False
@@ -1480,7 +1471,6 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
     def _visit_SemanticFunction(self, node):
         _raise_for_invalid_runtime_policy(node)
         _raise_for_unsupported_bind_c_abi(node, self.class_lookup or {})
-        _raise_for_unsupported_allocatable_scalar_outputs(node)
         _raise_for_unsupported_pointer_outputs(node)
         _raise_for_blocked_ownership_contracts_in_function(node)
         _raise_for_unsupported_assumed_type_contracts(node)

@@ -1281,23 +1281,24 @@ class CPythonBindingGenerator(BindingGenerator):
         body = []
         cast = arg_extraction["body"]
         arg_vars = arg_extraction["args"]
+        nullable_scalar = bool(arg_extraction.get("nullable_scalar"))
 
         # Initialise to any default value
-        if expr.has_default:
+        if expr.has_default or nullable_scalar:
             if "default_init" in arg_extraction:
                 for i, line in enumerate(arg_extraction["default_init"]):
                     body.insert(i, line)
             else:
                 assert len(arg_vars) == 1
                 arg_var = arg_vars[0]
-                default_val = expr.value
+                default_val = NIL if nullable_scalar else expr.value
                 if default_val is NIL:
                     body.insert(0, AliasAssign(arg_var, default_val))
                 else:
                     body.insert(0, Assign(arg_var, default_val))
 
         # Create any necessary type checks and errors
-        if expr.has_default:
+        if expr.has_default or nullable_scalar:
             check_func, err = self._get_type_check_condition(
                 collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
             )
@@ -1891,6 +1892,15 @@ class CPythonBindingGenerator(BindingGenerator):
         arg_var=None,
     ):
         """Read a Python scalar value for the completed scalar barrier."""
+        if getattr(orig_var, "is_optional", False) or (decision.descriptor_boundary and decision.nullable):
+            return self._convert_nullable_scalar_argument(
+                orig_var,
+                decision,
+                collect_arg,
+                bound_argument,
+                is_bind_c_argument,
+                arg_var=arg_var,
+            )
         return self._convert_scalar_argument(
             orig_var,
             decision,
@@ -1900,6 +1910,49 @@ class CPythonBindingGenerator(BindingGenerator):
             arg_var=arg_var,
             bind_c_stack_alias=decision.storage_mode is StorageMode.ALIAS,
         )
+
+    def _convert_nullable_scalar_argument(
+        self,
+        orig_var,
+        decision,
+        collect_arg,
+        bound_argument,
+        is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
+        """Convert an optional or descriptor scalar through one nullable C pointer path."""
+        if bound_argument or arg_var is not None:
+            raise ValueError(f"Nullable scalar argument {orig_var.name!r} requires a standalone value slot")
+        value_var = orig_var.clone(
+            self.scope.get_new_name(f"{orig_var.name}_value"),
+            new_class=Variable,
+            is_argument=False,
+            is_optional=False,
+            memory_handling=StorageMode.STACK.value,
+        )
+        self.scope.insert_variable(value_var)
+        converted = self._convert_scalar_argument(
+            orig_var,
+            decision,
+            collect_arg,
+            False,
+            is_bind_c_argument,
+            arg_var=value_var,
+            bind_c_stack_alias=False,
+        )
+        pointer_var = Variable(
+            BindCPointer(),
+            self.scope.get_new_name(f"{orig_var.name}_nullable"),
+            memory_handling=StorageMode.ALIAS.value,
+        )
+        self.scope.insert_variable(pointer_var)
+        return {
+            "body": [*converted["body"], Assign(pointer_var, ObjectAddress(value_var))],
+            "args": [pointer_var],
+            "clean_up": [],
+            "nullable_scalar": True,
+        }
 
     def _convert_python_scalar_storage_argument(
         self,
@@ -2029,6 +2082,7 @@ class CPythonBindingGenerator(BindingGenerator):
             A dictionary describing the objects necessary to access the argument.
         """
         assert not bound_argument
+        supplied_arg_var = arg_var is not None
         arg_var = self._scalar_argument_target(
             orig_var,
             is_bind_c_argument,
@@ -2050,7 +2104,7 @@ class CPythonBindingGenerator(BindingGenerator):
 
         body = [Assign(arg_var, cast_func(collect_arg))]
 
-        if getattr(orig_var, "is_optional", False):
+        if getattr(orig_var, "is_optional", False) and not supplied_arg_var:
             memory_var = self.scope.get_temporary_variable(
                 arg_var,
                 name=arg_var.name + "_memory",
@@ -2634,6 +2688,8 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _convert_policy_scalar_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
         """Emit the completed scalar result behavior."""
+        if decision.descriptor_boundary and decision.nullable:
+            return self._build_snapshot_copy_scalar_result(wrapped_var)
         return self._convert_scalar_result(wrapped_var, is_bind_c, funcdef, decision)
 
     def _convert_snapshot_policy_scalar_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
@@ -3826,6 +3882,11 @@ class CPythonBindingGenerator(BindingGenerator):
     def _snapshot_copy_result_notes(self, var, decision):
         """Handle snapshot copy result notes for the current generation context."""
         if decision.storage_mode is StorageMode.HEAP:
+            if not var.rank:
+                return [
+                    "Allocatable scalar snapshots are copied into detached Python values.",
+                    "Unallocated allocatable scalar snapshots return None.",
+                ]
             return [
                 "Plain allocatable module arrays without Aliased are copied into Python-owned NumPy arrays.",
                 "Returned module snapshots are read-only and detached from later native changes.",
@@ -3833,8 +3894,8 @@ class CPythonBindingGenerator(BindingGenerator):
             ]
         if not var.rank:
             return [
-                "Pointer scalar results are copied into detached Python values.",
-                "Unassociated pointer results return None.",
+                "Pointer scalar snapshots are copied into detached Python values.",
+                "Unassociated pointer scalar snapshots return None.",
             ]
         return [
             "Pointer array results are copied into Python-owned NumPy arrays.",
@@ -5327,6 +5388,7 @@ class CPythonBindingGenerator(BindingGenerator):
             decision is not None
             and decision.kind is ObjectKind.SCALAR
             and decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+            and not decision.descriptor_boundary
         )
 
     @staticmethod

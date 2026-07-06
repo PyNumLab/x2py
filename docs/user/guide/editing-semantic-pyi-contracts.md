@@ -618,8 +618,8 @@ Examples include:
 
 - `Immutable` writable storage with `Transfer("borrowed_view")`;
 - `Transfer("copy_return")` on an argument with no projected replacement;
-- pointer reassociation for projected or writable arguments without implemented
-  owner, shape, lifetime, and release behavior;
+- pointer array or persistent pointer reassociation without implemented owner,
+  shape, lifetime, and release behavior;
 - pointer module variables or derived-type pointer fields without an
   implemented detached-copy or borrowed-accessor path;
 - borrowed pointer views without owner retention and stale-view invalidation;

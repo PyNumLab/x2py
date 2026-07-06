@@ -383,6 +383,8 @@ class FortranToIRConverter(ClassVisitor):
             )
         else:
             semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
+        if isinstance(arg, FortranArgument):
+            semantic_type.metadata["fortran_intent"] = getattr(arg, "intent", None)
         access = self._argument_access(arg, semantic_type)
         if semantic_type.name == "Callable":
             pass
@@ -1951,8 +1953,9 @@ class FortranToIRConverter(ClassVisitor):
         semantic_type: SemanticType | None,
         is_allocatable_replacement: bool,
         is_character_replacement: bool,
+        is_descriptor_replacement: bool,
     ) -> bool:
-        if is_allocatable_replacement or is_character_replacement:
+        if is_allocatable_replacement or is_character_replacement or is_descriptor_replacement:
             return True
         if not is_output or semantic_type is None:
             return False
@@ -1967,8 +1970,10 @@ class FortranToIRConverter(ClassVisitor):
     ) -> bool:
         if not is_output or getattr(native_arg, "optional", False):
             return False
-        return FortranToIRConverter._is_scalar_copy_return(semantic_type) or FortranToIRConverter._is_allocatable_array(
-            semantic_type
+        return (
+            FortranToIRConverter._is_scalar_copy_return(semantic_type)
+            or FortranToIRConverter._is_allocatable_array(semantic_type)
+            or FortranToIRConverter._is_scalar_descriptor(semantic_type)
         )
 
     @staticmethod
@@ -1991,11 +1996,15 @@ class FortranToIRConverter(ClassVisitor):
             is_character_replacement = (
                 reads_argument and writes_argument and FortranToIRConverter._is_scalar_character(arg.semantic_type)
             )
+            is_descriptor_replacement = (
+                reads_argument and writes_argument and FortranToIRConverter._is_scalar_descriptor(arg.semantic_type)
+            )
             is_returned_output = FortranToIRConverter._is_returned_output_argument(
                 is_output=is_output,
                 semantic_type=arg.semantic_type,
                 is_allocatable_replacement=is_allocatable_replacement,
                 is_character_replacement=is_character_replacement,
+                is_descriptor_replacement=is_descriptor_replacement,
             )
             is_hidden_output = FortranToIRConverter._is_hidden_output_argument(
                 native_arg,
@@ -2028,6 +2037,14 @@ class FortranToIRConverter(ClassVisitor):
             and semantic_type.storage is not None
             and semantic_type.storage.array is not None
             and semantic_type.storage.array.allocatable
+        )
+
+    @staticmethod
+    def _is_scalar_descriptor(semantic_type: SemanticType | None) -> bool:
+        return bool(
+            semantic_type is not None
+            and semantic_type.rank == 0
+            and (semantic_type.metadata.get("fortran_allocatable") or semantic_type.metadata.get("fortran_pointer"))
         )
 
     @staticmethod

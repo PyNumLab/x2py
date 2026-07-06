@@ -695,7 +695,7 @@ class FCodePrinter(CodePrinter):
             return ""
         if is_alias:
             attributes = ", pointer"
-        elif (on_heap and isinstance(expr_type, NumpyNDArrayType)) or deferred_string:
+        elif (on_heap and isinstance(expr_type, NumpyNDArrayType | FixedSizeNumericType)) or deferred_string:
             attributes = ", allocatable"
         else:
             attributes = ""

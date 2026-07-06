@@ -27,8 +27,8 @@ limitations, troubleshooting route, and runtime evidence.
 
 ## Storage And Objects
 
-- [Allocatable arrays](allocatable-arrays.md)
-- [Pointer arguments](pointer-arguments.md)
+- [Allocatables](allocatables.md)
+- [Pointers](pointers.md)
 - [Wrapping derived types](wrapping-derived-types.md)
 - [Memory management](memory-management.md)
 

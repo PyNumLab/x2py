@@ -1931,6 +1931,11 @@ def test_printer_emits_extended_storage_and_callable_forms():
         "String",
         metadata={"fortran_character_length": ":", "fortran_allocatable": True},
     )
+    pointer_scalar = SemanticType(
+        "Int32",
+        metadata={"fortran_pointer": True, "fortran_pointer_association": "runtime"},
+        storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
+    )
 
     canonical_constant = SemanticArgument(
         "answer",
@@ -1949,10 +1954,52 @@ def test_printer_emits_extended_storage_and_callable_forms():
         "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
     )
     assert printer.emit(character) == "String[16]"
-    assert printer.emit(allocatable_character) == "Annotated[String, FortranAllocatable]"
+    assert printer.emit(allocatable_character) == "Allocatable[String]"
+    assert printer.emit(pointer_scalar) == "Pointer[Int32]"
     assert printer.emit(full_callback) == "Callable[[Int32, Float64], Float64]"
     assert printer.emit(any_callback) == "Callable[..., Float64]"
     assert printer.emit(SemanticType("Callable")) == "Callable"
+
+
+@pytest.mark.parametrize(
+    ("argument_type", "projection"),
+    [
+        (
+            SemanticType(
+                "Float64",
+                metadata={"fortran_allocatable": True},
+            ),
+            "Allocatable",
+        ),
+        (
+            SemanticType(
+                "Float64",
+                metadata={"fortran_pointer": True, "fortran_pointer_association": "runtime"},
+                storage=SemanticStorageContract(kind="reference", mutable=True, pointer_depth=1),
+            ),
+            "Pointer",
+        ),
+    ],
+)
+def test_printer_emits_nullable_scalar_descriptor_boundary_projections(argument_type, projection):
+    module = SemanticModule(
+        name="pointer_descriptor_mod",
+        functions=[
+            SemanticFunction(
+                name="read_pointer",
+                native_name="read_pointer",
+                arguments=[SemanticArgument("value", argument_type)],
+                return_type=argument_type,
+                projection=[ProjectionMapping(native_position=0, python_position=0)],
+            )
+        ],
+    )
+
+    code = emit_module(module)
+
+    assert f"@native_call([{projection}(Arg(0))], result={projection}(Return(0)))" in code
+    assert "value: Float64 | None" in code
+    assert ") -> Float64 | None: ..." in code
 
 
 def test_printer_emits_callback_argument_abi_wrappers():

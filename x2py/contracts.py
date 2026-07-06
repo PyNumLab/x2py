@@ -24,6 +24,9 @@ class _ContractExpression:
     def __getitem__(self, item: object) -> _ContractExpression:
         return _ContractExpression(self, item)
 
+    def __call__(self, *args: object, **kwargs: object) -> _ContractExpression:
+        return _ContractExpression(self, *args, **kwargs)
+
 
 class _ContractType:
     """Subscriptable and callable placeholder for semantic contract types."""

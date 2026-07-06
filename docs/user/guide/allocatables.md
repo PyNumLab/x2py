@@ -1,12 +1,12 @@
 ---
-title: Allocatable Arrays
+title: Allocatables
 audience: users, advanced users
 prerequisites: arrays
-related: arrays.md, pointer-arguments.md, memory-management.md
+related: arrays.md, pointers.md, memory-management.md
 status: maintained
 ---
 
-# Allocatable Arrays
+# Allocatables
 
 Allocatable behavior depends on which side owns the allocation. The Python
 value may be a copy, a replacement, or a borrowed view into storage owned
@@ -28,6 +28,60 @@ A borrowed view is a NumPy array that points at storage Python does not own.
 Mutating the view mutates the owner. Deallocating or reallocating the owner can
 make existing views stale, so copy the view when Python needs an independent
 lifetime.
+
+## Scalar Allocatable Projections
+
+Scalar allocatables cross a procedure boundary as ordinary nullable Python
+values. The semantic `.pyi` keeps the Python annotation as `T | None` and uses
+`Allocatable(...)` inside `@native_call` to describe native descriptor
+construction and readback.
+
+For example:
+
+```fortran
+function maybe_scale(enabled) result(scale)
+  integer(4), intent(in) :: enabled
+  real(8), allocatable :: scale
+
+  if (enabled /= 0) then
+    allocate(scale)
+    scale = 2.5_8
+  end if
+end function maybe_scale
+
+subroutine update_scale(scale)
+  real(8), allocatable, intent(inout) :: scale
+
+  if (allocated(scale)) then
+    scale = scale + 1.0_8
+  else
+    allocate(scale)
+    scale = 1.0_8
+  end if
+end subroutine update_scale
+```
+
+The corresponding semantic contract is:
+
+```python
+from x2py.contracts import Addr, Allocatable, Arg, Float64, Int32, Return, Returns, native_call
+
+@native_call([Addr(Arg(0))], result=Allocatable(Return(0)))
+def maybe_scale(enabled: Int32) -> Float64 | None: ...
+
+@native_call([Allocatable(Arg(0))])
+def update_scale(
+    scale: Float64 | None,
+) -> Returns["scale", Float64] | None: ...
+```
+
+Passing `None` creates an unallocated call-local descriptor. An unallocated
+function result or projected output becomes `None`. Ordinary scalar projection
+rules still apply: `intent(out)` uses
+`Allocatable(Return("name", j))`, while `intent(inout)` uses
+`Allocatable(Arg(i))` plus a matching `Returns["name", T] | None` readback.
+The singular `result=Allocatable(Return(j))` mapping describes the native
+function result and places it among any other Python results.
 
 ## Complete Allocatable Example
 

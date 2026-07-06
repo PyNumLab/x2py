@@ -2,7 +2,7 @@
 title: Arrays
 audience: users
 prerequisites: data types, wrapping functions
-related: allocatable-arrays.md, pointer-arguments.md, wrapping-subroutines.md
+related: allocatables.md, pointers.md, wrapping-subroutines.md
 status: maintained
 ---
 

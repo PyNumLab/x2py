@@ -957,11 +957,13 @@ storage, a component, a dummy argument, an array section, external memory, a
 callee allocation, or nothing. x2py therefore supports a conservative subset:
 
 - pointer `intent(in)` scalars and arrays are call-local associations;
+- pointer scalar `intent(out)` and `intent(inout)` use nullable copied-value
+  projection;
 - associated pointer scalar results become copied Python scalars;
 - associated pointer array results become detached Python-owned copies;
 - unassociated results become `None`;
 - pointer-backed fields and module variables are detached-copy-or-block; and
-- pointer `intent(out)` and `intent(inout)` are blocked by default.
+- pointer array `intent(out)` and `intent(inout)` reassociation is blocked.
 
 ### Call-Local Input
 
@@ -2026,8 +2028,8 @@ General borrowed pointer views are not supported. x2py cannot yet:
 - guarantee that Python never frees a borrowed target under all owner kinds;
 - invalidate a view after native reassociation, owner destruction, or target
   reallocation; or
-- lower pointer `intent(out)` and `intent(inout)` reassociation with a complete
-  copy, borrow, ownership-transfer, and release policy.
+- lower pointer array or persistent pointer reassociation with a complete copy,
+  borrow, ownership-transfer, and release policy.
 
 Use supported detached copies when complete target facts are known. Otherwise
 readiness blocks the declaration.

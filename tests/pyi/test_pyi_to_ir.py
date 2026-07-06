@@ -2272,7 +2272,10 @@ class vector:
         ("class C:\n    @bad\n    def f(self) -> None: ...\n", "Unsupported class body decorator: 'bad'"),
         ("@native_call([])\nclass C:\n    pass\n", "Unsupported class decorator: 'native_call([])'"),
         ("@native_call(Arg(0))\ndef f(x: Int32) -> None: ...\n", "native_call expects a list of projection entries"),
-        ("@native_call([Arg(0)], foo=1)\ndef f(x: Int32) -> None: ...\n", "native_call expects a single list argument"),
+        (
+            "@native_call([Arg(0)], foo=1)\ndef f(x: Int32) -> None: ...\n",
+            "native_call accepts only the optional result keyword",
+        ),
         (
             "@native_call([1])\ndef f(x: Int32) -> None: ...\n",
             'native_call hidden literals require typed calls such as Int32(1) or String[1]("N")',
@@ -2460,6 +2463,131 @@ def fill(x: Float64[:]) -> None: ...
     assert nested.storage.array.metadata["rank_selector"] == "rank, kind"
     assert name.metadata["fortran_character_length"] == "16"
     assert name.metadata["fortran_allocatable"] is True
+
+
+def test_convert_pyi_to_ir_accepts_scalar_descriptor_state_and_callable_projections():
+    module = parse_pyi_text(
+        """
+scratch: Allocatable[Float64]
+current: Pointer[Int32]
+maybe_value: Float64 | None
+
+@native_call(
+    [Allocatable(Arg(0)), Pointer(Arg(1))],
+    result=Pointer(Return(0)),
+)
+def combine(scale: Float64 | None, value: Int32 | None) -> Float64 | None: ...
+""",
+        module_name="scalar_descriptors",
+    )
+
+    scratch, current, maybe_value = [variable.semantic_type for variable in module.variables]
+    assert scratch.name == "Float64"
+    assert scratch.rank == 0
+    assert scratch.storage is None
+    assert scratch.metadata["fortran_allocatable"] is True
+
+    assert current.name == "Int32"
+    assert current.rank == 0
+    assert current.metadata["fortran_pointer"] is True
+    assert current.metadata["fortran_pointer_association"] == "runtime"
+    assert current.storage.kind == "reference"
+    assert current.storage.pointer_depth == 1
+
+    assert maybe_value.name == "Float64 | None"
+    assert maybe_value.metadata.get("fortran_allocatable") is None
+    assert maybe_value.metadata.get("fortran_pointer") is None
+
+    scale, value = [argument.semantic_type for argument in module.functions[0].arguments]
+    result = module.functions[0].return_type
+    assert scale.metadata["fortran_allocatable"] is True
+    assert value.metadata["fortran_pointer"] is True
+    assert result.metadata["fortran_pointer"] is True
+    assert [mapping.value_kind for mapping in module.functions[0].projection] == ["allocatable", "pointer"]
+
+
+def test_convert_pyi_to_ir_accepts_nullable_descriptor_output_and_inout_projections():
+    module = parse_pyi_text(
+        """
+@native_call([
+    Allocatable(Arg(0)),
+    Pointer(Return("selected", 1)),
+])
+def update(
+    value: Float64 | None,
+) -> tuple[
+    Returns["value", Float64] | None,
+    Returns["selected", Float64] | None,
+]: ...
+""",
+        module_name="descriptor_outputs",
+    )
+
+    value, selected = module.functions[0].arguments
+    assert value.semantic_type.metadata["fortran_allocatable"] is True
+    assert value.metadata[PROJECTED_OUTPUT_METADATA] is True
+    assert selected.semantic_type.metadata["fortran_pointer"] is True
+    assert selected.metadata[PROJECTED_OUTPUT_METADATA] is True
+    assert value.optional is False
+    assert selected.optional is False
+
+
+def test_convert_pyi_to_ir_resolves_aliased_scalar_descriptor_projection_helpers():
+    module = parse_pyi_text(
+        """
+from x2py.contracts import Allocatable as A, Arg as Input, Float64 as F64, Pointer as P, Return as Output, native_call as call
+
+@call([A(Input(0))], result=P(Output(0)))
+def convert(value: F64 | None) -> F64 | None: ...
+""",
+        module_name="aliased_descriptor_projection",
+    )
+
+    function = module.functions[0]
+    assert function.projection[0].value_kind == "allocatable"
+    assert function.arguments[0].semantic_type.metadata["fortran_allocatable"] is True
+    assert function.return_type.metadata["fortran_pointer"] is True
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        (
+            "def consume(value: Allocatable[Float64]) -> None: ...\n",
+            "Callable scalar descriptors use nullable value annotations",
+        ),
+        (
+            "def produce() -> Pointer[Float64]: ...\n",
+            "Callable scalar descriptor results use a nullable value annotation",
+        ),
+        (
+            "@native_call([Allocatable(Arg(0))])\ndef consume(value: Float64) -> None: ...\n",
+            "must use a nullable annotation",
+        ),
+        (
+            "@native_call([], result=Pointer(Return(0)))\ndef produce() -> Float64: ...\n",
+            "must use a nullable T | None annotation",
+        ),
+        (
+            "@native_call([], result=Allocatable(Arg(0)))\ndef produce() -> Float64 | None: ...\n",
+            "must reference Return(i), not Arg(i)",
+        ),
+    ],
+)
+def test_convert_pyi_to_ir_rejects_legacy_or_incomplete_scalar_descriptor_callable_forms(source, message):
+    with pytest.raises(ValueError, match=re.escape(message)):
+        parse_pyi_text(source, module_name="invalid_descriptor_projection")
+
+
+@pytest.mark.parametrize("annotation", ["Allocatable[Float64[:]]", "Pointer[Float64[:]]"])
+def test_convert_pyi_to_ir_rejects_reserved_array_descriptor_wrappers(annotation):
+    with pytest.raises(ValueError, match="array descriptor handles are reserved"):
+        parse_pyi_text(
+            f"""
+values: {annotation}
+""",
+            module_name="reserved_array_descriptors",
+        )
 
 
 def test_convert_pyi_to_ir_handles_callable_and_pointer_storage_variants():

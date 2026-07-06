@@ -168,7 +168,8 @@ contract, not the normal source-generated subroutine API. Editing Semantic
 
 ## Limitations
 
-- Pointer output and inout reassociation are blocked.
+- Pointer scalar output and inout use nullable copied-value projection; pointer
+  array and persistent reassociation remain blocked.
 - Character arrays require fixed-width NumPy bytes dtype storage. Arrays of
   derived types are blocked.
 - Allocatable scalar derived-type replacement is blocked.

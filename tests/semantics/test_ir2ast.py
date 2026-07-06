@@ -14,7 +14,7 @@ from x2py.codegen.models.datatypes import (
     NumpyNDArrayType,
 )
 from x2py.codegen.scope import Scope
-from x2py.ownership_policy import CodegenAction, SnapshotFieldAction
+from x2py.ownership_policy import CodegenAction, NativeBarrierAction, SnapshotFieldAction
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import SemanticModule
@@ -396,11 +396,41 @@ end module alloc_scalar_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match="writable allocatable scalar argument 'value'"):
+    with pytest.raises(ValueError, match=r"writable scalar descriptors require explicit intent\(out\)"):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),
         )
+
+
+def test_scalar_descriptor_function_signature_lowers_as_scalar_boundary():
+    module = parse_pyi_text(
+        """
+@native_call(
+    [Allocatable(Arg(0)), Pointer(Arg(1))],
+    result=Pointer(Return(0)),
+)
+def combine(
+    scale: Float64 | None,
+    current: Float64 | None,
+) -> Float64 | None: ...
+""",
+        module_name="descriptor_function",
+    )
+
+    lowered = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+
+    combine = lowered.funcs[0]
+    scale, current = [argument.var for argument in combine.arguments]
+    assert scale.ownership_decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert scale.ownership_decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    assert current.ownership_decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert current.ownership_decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    assert combine.results.var.ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert combine.results.var.ownership_decision.nullable is True
 
 
 def test_bind_c_scalar_without_iso_c_kind_raises_before_codegen():
@@ -456,7 +486,7 @@ end module pointer_module_mod
         )
 
 
-def test_pointer_scalar_module_variable_raises_before_codegen_without_policy():
+def test_pointer_scalar_module_variable_lowers_as_nullable_snapshot_getter():
     source = """
 module pointer_scalar_module_mod
   real(8), pointer :: value
@@ -464,11 +494,34 @@ end module pointer_scalar_module_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match="pointer scalar module_variable owner, lifetime, and reassociation policy"):
-        semantic_ir_to_codegen_ast(
-            semantic_module,
-            Scope(name=semantic_module.name, scope_type="module"),
-        )
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    value = codegen_module.variables[0]
+    assert value.ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert value.getter_ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert value.setter_ownership_decision.setter_action.name == "REJECT_REPLACEMENT"
+
+
+def test_allocatable_scalar_module_variable_lowers_as_nullable_snapshot_getter():
+    source = """
+module allocatable_scalar_module_mod
+  real(8), allocatable :: value
+end module allocatable_scalar_module_mod
+"""
+    semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    value = codegen_module.variables[0]
+    assert value.ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert value.getter_ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert value.setter_ownership_decision.setter_action.name == "REJECT_REPLACEMENT"
 
 
 @pytest.mark.parametrize(

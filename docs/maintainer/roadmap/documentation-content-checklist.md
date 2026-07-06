@@ -295,10 +295,10 @@ primary placeholder queue.
   keyword, input/output, default, limitation, and diagnostic guide.
 - [x] `docs/user/guide/generic-interfaces.md`: maintained named, type-bound,
   operator, assignment, exact-dispatch, ambiguity, and overload guide.
-- [x] `docs/user/guide/allocatable-arrays.md`: maintained copy, replacement,
+- [x] `docs/user/guide/allocatables.md`: maintained scalar projection, copy, replacement,
   borrowed module/component view, unallocated, lifetime, and limitation guide.
-- [x] `docs/user/guide/pointer-arguments.md`: maintained call-local input,
-  detached result, nullability, target policy, and blocked-reassociation guide.
+- [x] `docs/user/guide/pointers.md`: maintained scalar projection, call-local
+  input, detached result, nullability, target policy, and blocked-reassociation guide.
 - [x] `docs/user/guide/wrapping-derived-types.md`: maintained class, field,
   method, constructor, finalizer, nested borrow, layout, and polymorphism guide.
 - [x] `docs/user/guide/memory-management.md`: maintained ownership, transfer,

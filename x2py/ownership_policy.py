@@ -386,16 +386,8 @@ def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipCon
         projects_result
         or (
             not explicit_call_local_input
-            and (
-                (
-                    getattr(getattr(argument, "semantic_type", None), "ownership", None)
-                    and getattr(argument.semantic_type.ownership, "mutable", False)
-                )
-                or (
-                    storage is not None
-                    and (getattr(storage, "mutable", False) or not getattr(storage, "read_only", False))
-                )
-            )
+            and not _is_source_free_scalar_descriptor_input(argument, type_metadata, projects_result)
+            and _argument_has_mutable_storage(argument, storage)
         )
     )
     return OwnershipContext.argument(
@@ -403,6 +395,36 @@ def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipCon
         writes_argument=writes_argument,
         projects_result=projects_result,
         python_visible=python_visible,
+    )
+
+
+def _is_source_free_scalar_descriptor_input(
+    argument: Any,
+    type_metadata: Mapping[str, Any],
+    projects_result: bool,
+) -> bool:
+    """Return whether a `.pyi` scalar descriptor argument is a normal scalar input."""
+    semantic_type = getattr(argument, "semantic_type", None)
+    source_language = getattr(getattr(argument, "origin", None), "source_language", None) or getattr(
+        getattr(semantic_type, "origin", None),
+        "source_language",
+        None,
+    )
+    return bool(
+        not projects_result
+        and source_language is None
+        and getattr(semantic_type, "rank", None) == 0
+        and (type_metadata.get("fortran_allocatable") or type_metadata.get("fortran_pointer"))
+    )
+
+
+def _argument_has_mutable_storage(argument: Any, storage: Any) -> bool:
+    """Return whether an argument's semantic storage implies native writes."""
+    ownership = getattr(getattr(argument, "semantic_type", None), "ownership", None)
+    if ownership is not None and getattr(ownership, "mutable", False):
+        return True
+    return bool(
+        storage is not None and (getattr(storage, "mutable", False) or not getattr(storage, "read_only", False))
     )
 
 
@@ -422,6 +444,7 @@ class OwnershipDecision:
     mutates_native: bool = False
     projects_result: bool = False
     python_visible: bool = True
+    descriptor_boundary: bool = False
     assignment_mode: AssignmentMode = AssignmentMode.NONE
     setter_action: SetterAction = SetterAction.OMIT
     blocker: str | None = None
@@ -475,6 +498,7 @@ class OwnershipPolicyResolver:
         facts = self._semantic_facts(semantic_type)
         decision = self._apply_overrides(self._decide(facts, context), facts)
         decision = self._validate_aliased_decision(decision, facts, context)
+        decision = self._validate_scalar_descriptor_decision(decision, facts, context)
         decision = self._validate_pointer_decision(decision, facts, context)
         decision = self._complete_immutable_policy(decision, facts, context)
         decision = self._validate_result_projection(decision, context)
@@ -509,6 +533,8 @@ class OwnershipPolicyResolver:
         storage = self.decide_semantic_variable(variable, context)
         if storage.is_blocked or storage.kind in {ObjectKind.NUMPY_ARRAY, ObjectKind.DERIVED_TYPE}:
             return storage
+        if storage.kind is ObjectKind.SCALAR and storage.transfer is TransferMode.SNAPSHOT_COPY:
+            return storage
         return self.decide_semantic_type(variable.semantic_type, OwnershipContext.result())
 
     def decide_semantic_setter(
@@ -541,6 +567,8 @@ class OwnershipPolicyResolver:
     ) -> SetterAction:
         """Select Python property setter exposure from completed storage and input policy."""
         if storage.kind is ObjectKind.SCALAR:
+            if storage.transfer is TransferMode.SNAPSHOT_COPY and storage.nullable:
+                return SetterAction.REJECT_REPLACEMENT
             return SetterAction.WRITE_THROUGH
         if storage.kind is ObjectKind.DERIVED_TYPE and context.is_module_variable:
             return SetterAction.REJECT_REPLACEMENT
@@ -613,10 +641,12 @@ class OwnershipPolicyResolver:
     def _scalar_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if facts.scalar_storage:
             return self._scalar_storage_decision(facts, context)
-        if facts.pointer:
-            return self._pointer_scalar_decision(facts, context)
         if facts.address_role == ADDRESS_ROLE_PROJECTION:
             return self._address_projection_scalar_decision(facts, context)
+        if facts.allocatable:
+            return self._allocatable_scalar_decision(facts, context)
+        if facts.pointer:
+            return self._pointer_scalar_decision(facts, context)
         if context.is_result:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
@@ -716,9 +746,26 @@ class OwnershipPolicyResolver:
             reason="address-projected scalar value passes the address of call-local native storage",
         )
 
-    @staticmethod
-    def _pointer_scalar_decision(facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
-        if context.is_result:
+    def _allocatable_scalar_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_field or context.is_module_variable:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.SNAPSHOT_COPY,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                storage_mode=StorageMode.HEAP,
+                nullable=True,
+                reason="allocatable scalar storage is copied into a detached Python value",
+            )
+        return self._function_scalar_descriptor_decision(
+            facts,
+            context,
+            StorageMode.HEAP,
+            reason="allocatable scalar function boundary uses a normal Python scalar and a call-local native descriptor",
+        )
+
+    def _pointer_scalar_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_field or context.is_module_variable:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
                 OwnershipOwner.PYTHON,
@@ -728,24 +775,79 @@ class OwnershipPolicyResolver:
                 nullable=True,
                 reason="pointer scalar result is copied into a detached Python value",
             )
-        if context.is_field or context.is_module_variable or context.writes_argument:
+        return self._function_scalar_descriptor_decision(
+            facts,
+            context,
+            StorageMode.ALIAS,
+            reason="pointer scalar function boundary uses a normal Python scalar and a call-local native descriptor",
+        )
+
+    def _function_scalar_descriptor_decision(
+        self,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+        boundary_storage_mode: StorageMode,
+        *,
+        reason: str,
+    ) -> OwnershipDecision:
+        if context.is_result:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.SNAPSHOT_COPY,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                storage_mode=boundary_storage_mode,
+                nullable=True,
+                reason=reason,
+            )
+        if context.writes_argument and not context.projects_result:
             return OwnershipDecision(
                 ObjectKind.SCALAR,
                 OwnershipOwner.UNKNOWN,
                 TransferMode.BLOCKED,
                 DestructionPolicy.BLOCKED,
-                storage_mode=StorageMode.ALIAS,
+                boundary_storage_mode=boundary_storage_mode,
                 nullable=True,
-                blocker=f"pointer scalar {context.location} owner, lifetime, and reassociation policy are unknown",
-                reason="pointer scalar output needs explicit policy metadata",
+                descriptor_boundary=True,
+                blocker="scalar descriptor writes must be projected into the Python return annotation",
+                reason=reason,
+            )
+        if context.writes_argument and context.reads_argument:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                boundary_storage_mode=boundary_storage_mode,
+                nullable=True,
+                mutates_native=True,
+                projects_result=True,
+                descriptor_boundary=True,
+                reason=reason,
+            )
+        if context.writes_argument:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.BY_VALUE,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                boundary_storage_mode=boundary_storage_mode,
+                nullable=True,
+                mutates_native=True,
+                projects_result=True,
+                python_visible=False,
+                descriptor_boundary=True,
+                reason=reason,
             )
         return OwnershipDecision(
             ObjectKind.SCALAR,
             OwnershipOwner.CALLER,
             TransferMode.CALL_LOCAL,
-            DestructionPolicy.CALL_LOCAL,
-            storage_mode=StorageMode.ALIAS,
-            reason="pointer scalar input is associated with a wrapper temporary only for the call",
+            DestructionPolicy.NONE,
+            boundary_storage_mode=boundary_storage_mode,
+            nullable=True,
+            descriptor_boundary=True,
+            reason=reason,
         )
 
     def _string_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
@@ -1001,6 +1103,8 @@ class OwnershipPolicyResolver:
         )
 
     def _module_variable_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.allocatable and facts.rank == 0:
+            return self._allocatable_scalar_decision(facts, context)
         if facts.pointer and facts.rank == 0:
             return self._pointer_scalar_decision(facts, context)
         if facts.is_custom:
@@ -1039,6 +1143,8 @@ class OwnershipPolicyResolver:
         )
 
     def _derived_field_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.allocatable and facts.rank == 0:
+            return self._allocatable_scalar_decision(facts, context)
         if facts.pointer and facts.rank == 0:
             return self._pointer_scalar_decision(facts, context)
         if facts.rank > 0 or facts.is_ndarray:
@@ -1143,6 +1249,37 @@ class OwnershipPolicyResolver:
         )
 
     @staticmethod
+    def _validate_scalar_descriptor_decision(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
+        if decision.is_blocked or facts.rank != 0 or not (facts.allocatable or facts.pointer):
+            return decision
+        metadata = facts.metadata or {}
+        blocker = None
+        if (
+            context.is_argument
+            and context.writes_argument
+            and "fortran_intent" in metadata
+            and not metadata.get("fortran_intent")
+        ):
+            blocker = "writable scalar descriptors require explicit intent(out) or intent(inout)"
+        elif context.is_argument and context.writes_argument and (facts.is_custom or facts.is_string):
+            blocker = "scalar descriptor output projection currently supports primitive numeric values only"
+        if blocker is None:
+            return decision
+        return replace(
+            decision,
+            owner=OwnershipOwner.UNKNOWN,
+            transfer=TransferMode.BLOCKED,
+            destruction=DestructionPolicy.BLOCKED,
+            borrowed=False,
+            blocker=blocker,
+            reason="scalar descriptor construction and readback must have a complete supported policy",
+        )
+
+    @staticmethod
     def _validate_pointer_decision(
         decision: OwnershipDecision,
         facts: _StorageFacts,
@@ -1150,17 +1287,11 @@ class OwnershipPolicyResolver:
     ) -> OwnershipDecision:
         if not facts.pointer or decision.is_blocked:
             return decision
-        blocker = None
-        if context.is_argument and context.writes_argument:
-            blocker = "pointer output and reassociation code generation is not implemented"
-        elif facts.rank > 0 and (context.is_field or context.is_module_variable):
-            blocker = "pointer array field and module detached-copy accessors are not implemented"
-        elif facts.rank == 0 and (context.is_field or context.is_module_variable):
-            blocker = "scalar pointer field and module accessors are not implemented"
-        elif context.is_result and decision.transfer is not TransferMode.SNAPSHOT_COPY:
-            blocker = "pointer results currently require Transfer('snapshot_copy') detached-copy policy"
-        elif context.is_argument and not context.writes_argument and decision.transfer is not TransferMode.CALL_LOCAL:
-            blocker = "pointer input arguments currently require call_local transfer"
+        blocker = (
+            OwnershipPolicyResolver._pointer_argument_blocker(decision, facts, context)
+            or OwnershipPolicyResolver._pointer_container_blocker(decision, facts, context)
+            or OwnershipPolicyResolver._pointer_result_blocker(decision, facts, context)
+        )
         if blocker is None:
             return decision
         return replace(
@@ -1172,6 +1303,48 @@ class OwnershipPolicyResolver:
             blocker=blocker,
             reason="requested pointer policy is not implemented by code generation",
         )
+
+    @staticmethod
+    def _pointer_argument_blocker(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> str | None:
+        """Return a blocker for an unsupported pointer argument policy."""
+        if not context.is_argument:
+            return None
+        supported_scalar_write = facts.rank == 0 and decision.descriptor_boundary and context.projects_result
+        if context.writes_argument and not supported_scalar_write:
+            return "pointer output and reassociation code generation is not implemented"
+        if not context.writes_argument and decision.transfer is not TransferMode.CALL_LOCAL:
+            return "pointer input arguments currently require call_local transfer"
+        return None
+
+    @staticmethod
+    def _pointer_container_blocker(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> str | None:
+        """Return a blocker for an unsupported pointer field or module policy."""
+        if not (context.is_field or context.is_module_variable):
+            return None
+        if facts.rank > 0:
+            return "pointer array field and module detached-copy accessors are not implemented"
+        if decision.transfer is not TransferMode.SNAPSHOT_COPY:
+            return "scalar pointer field and module accessors require snapshot_copy detached values"
+        return None
+
+    @staticmethod
+    def _pointer_result_blocker(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> str | None:
+        """Return a blocker for an unsupported pointer function result policy."""
+        if facts.rank > 0 and context.is_result and decision.transfer is not TransferMode.SNAPSHOT_COPY:
+            return "pointer results currently require Transfer('snapshot_copy') detached-copy policy"
+        return None
 
     @staticmethod
     def _complete_immutable_policy(
@@ -1366,16 +1539,11 @@ class OwnershipPolicyResolver:
             return NativeBarrierAction.NONE
         if facts.address_role == ADDRESS_ROLE_RAW:
             return NativeBarrierAction.PASS_RAW_ADDRESS
-        if facts.scalar_storage or (
-            decision.kind is ObjectKind.SCALAR
-            and decision.codegen_action in {CodegenAction.IN_PLACE_ARGUMENT, CodegenAction.IDENTITY_OUTPUT}
-        ):
+        if OwnershipPolicyResolver._uses_descriptor_call_local_boundary(decision, facts, context):
+            return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+        if OwnershipPolicyResolver._passes_scalar_storage_address(decision, facts):
             return NativeBarrierAction.PASS_STORAGE_ADDRESS
-        if (
-            decision.kind is ObjectKind.SCALAR
-            and decision.storage_mode is StorageMode.ALIAS
-            and (facts.address_role != ADDRESS_ROLE_PROJECTION or facts.pointer)
-        ):
+        if OwnershipPolicyResolver._passes_scalar_alias_address(decision, facts):
             return NativeBarrierAction.PASS_STORAGE_ADDRESS
         if decision.kind is ObjectKind.NUMPY_ARRAY:
             return NativeBarrierAction.PASS_ARRAY_DESCRIPTOR
@@ -1388,6 +1556,38 @@ class OwnershipPolicyResolver:
                 return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
             return NativeBarrierAction.PASS_VALUE
         return NativeBarrierAction.BLOCKED
+
+    @staticmethod
+    def _uses_descriptor_call_local_boundary(
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> bool:
+        return bool(
+            context.is_argument
+            and decision.kind is ObjectKind.SCALAR
+            and decision.codegen_action in {CodegenAction.CALL_LOCAL_INPUT, CodegenAction.COPY_IN_OUT}
+            and decision.descriptor_boundary
+            and facts.address_role != ADDRESS_ROLE_PROJECTION
+        )
+
+    @staticmethod
+    def _passes_scalar_storage_address(decision: OwnershipDecision, facts: _StorageFacts) -> bool:
+        return bool(
+            facts.scalar_storage
+            or (
+                decision.kind is ObjectKind.SCALAR
+                and decision.codegen_action in {CodegenAction.IN_PLACE_ARGUMENT, CodegenAction.IDENTITY_OUTPUT}
+            )
+        )
+
+    @staticmethod
+    def _passes_scalar_alias_address(decision: OwnershipDecision, facts: _StorageFacts) -> bool:
+        return bool(
+            decision.kind is ObjectKind.SCALAR
+            and decision.storage_mode is StorageMode.ALIAS
+            and (facts.address_role != ADDRESS_ROLE_PROJECTION or facts.pointer)
+        )
 
     @staticmethod
     def _enum_value(enum_type: type[Enum], value: object, default: Any) -> Any:
@@ -1426,7 +1626,7 @@ class OwnershipPolicyResolver:
         return _StorageFacts(
             rank=rank,
             name=name,
-            allocatable=bool(getattr(array, "allocatable", False)),
+            allocatable=bool(getattr(array, "allocatable", False) or metadata.get("fortran_allocatable")),
             pointer=bool(getattr(array, "pointer", False) or metadata.get("fortran_pointer")),
             is_string=is_string,
             is_custom=is_custom,

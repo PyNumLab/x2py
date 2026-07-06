@@ -365,6 +365,23 @@ end module alloc_character_mod
     ]
 
 
+def test_scalar_descriptor_function_signature_is_wrappable():
+    report = _readiness_from_pyi(
+        """
+@native_call(
+    [Allocatable(Arg(0)), Pointer(Arg(1))],
+    result=Allocatable(Return(0)),
+)
+def combine(
+    scale: Float64 | None,
+    current: Float64 | None,
+) -> Float64 | None: ...
+"""
+    )
+
+    assert report["wrappable"] is True
+
+
 def test_pointer_write_policy_blockers_are_reported_for_writable_dummies():
     report = _readiness_from_pyi(
         """

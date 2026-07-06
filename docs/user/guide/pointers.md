@@ -1,16 +1,67 @@
 ---
-title: Pointer Arguments
+title: Pointers
 audience: advanced users
 prerequisites: arrays, memory management
-related: allocatable-arrays.md, memory-management.md, ../reference/semantic-pyi-format.md
+related: allocatables.md, memory-management.md, ../reference/semantic-pyi-format.md
 status: maintained
 ---
 
-# Pointer Arguments
+# Pointers
 
 A Fortran pointer does not identify the target owner. x2py therefore supports a
 conservative subset: call-local input association and detached copied results.
 General borrowed pointer views and pointer reassociation remain blocked.
+
+## Scalar Pointer Projections
+
+Supported scalar pointer dummies use ordinary nullable Python values. The
+semantic `.pyi` uses `Pointer(...)` inside `@native_call` to construct or read
+the native pointer descriptor without exposing a Python pointer handle.
+
+For example:
+
+```fortran
+real(8), target :: target_scale
+
+subroutine update_pointer(scale)
+  real(8), pointer, intent(inout) :: scale
+
+  if (associated(scale)) then
+    scale = scale + 1.0_8
+  else
+    scale => target_scale
+  end if
+end subroutine update_pointer
+
+function maybe_pointer(enabled) result(scale)
+  integer(4), intent(in) :: enabled
+  real(8), pointer :: scale
+
+  nullify(scale)
+  if (enabled /= 0) scale => target_scale
+end function maybe_pointer
+```
+
+The corresponding semantic contract is:
+
+```python
+from x2py.contracts import Addr, Arg, Float64, Int32, Pointer, Return, Returns, native_call
+
+@native_call([Pointer(Arg(0))])
+def update_pointer(
+    scale: Float64 | None,
+) -> Returns["scale", Float64] | None: ...
+
+@native_call([Addr(Arg(0))], result=Pointer(Return(0)))
+def maybe_pointer(enabled: Int32) -> Float64 | None: ...
+```
+
+Passing `None` creates an unassociated call-local descriptor. An unassociated
+function result or projected output becomes `None`. Ordinary scalar projection
+rules remain unchanged: `intent(out)` uses `Pointer(Return("name", j))`, and
+`intent(inout)` uses `Pointer(Arg(i))` plus a matching
+`Returns["name", T] | None` readback. Pointer arrays and persistent borrowed
+targets still require separate ownership and lifetime policy.
 
 ## Complete Pointer Example
 
@@ -95,7 +146,7 @@ exposing a borrowed view.
 
 ## Unsupported Forms
 
-- pointer `intent(out)` and `intent(inout)` reassociation;
+- pointer array `intent(out)` and `intent(inout)` reassociation;
 - general zero-copy borrowed pointer views;
 - unknown target owners or release responsibility;
 - persistent associations to Python storage after return; and
@@ -106,9 +157,11 @@ implement a missing runtime path.
 
 ## Evidence And Troubleshooting
 
-Scalar and array pointer inputs, nullable results, independent detached copies, and
-dtype rejection are exercised by
+Scalar pointer inputs, outputs, inout readback, nullable results, array pointer
+inputs, independent detached copies, and dtype rejection are exercised by
 [`test_pointers.py`](../../../tests/wrapper/fortran/derived_types/test_pointers.py).
+The scalar `out` and `inout` parity cases are exercised by
+[`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
 
 If readiness blocks a pointer, do not replace the diagnostic with guessed
 ownership metadata. Detached pointer result behavior is expressible only when shape,

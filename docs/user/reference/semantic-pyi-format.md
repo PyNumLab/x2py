@@ -1058,11 +1058,10 @@ Generated canonical metadata:
 | Metadata | Meaning |
 | --- | --- |
 | `ORDER_F` | multidimensional Fortran-oriented storage |
-| `Allocatable` | Fortran allocatable array storage |
-| `Pointer` | Fortran pointer array storage |
+| `Allocatable` | Fortran allocatable array storage when used as `Annotated[...]` metadata |
+| `Pointer` | Fortran pointer array storage when used as `Annotated[...]` metadata |
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
-| `FortranAllocatable` | Fortran scalar character storage is allocatable |
 | `Aliased` | native storage may be exposed across the Python boundary as an alias |
 | `Immutable` | Python-visible value must not be mutated in place; writable native calls require a completed copy-in/copy-out replacement policy or an explicit call-local discarded-mutation policy |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
@@ -1082,10 +1081,86 @@ Loaded compatibility metadata:
 | `ArrayCategory("...")` | source array category provenance |
 | `SourceDims(...)` | source declaration dimensions |
 | `LowerBounds(...)`, `UpperBounds(...)` | source bound provenance |
+| `FortranAllocatable` | older scalar character allocatable metadata; generated contracts use `Allocatable[String]` |
 
 <!-- X2PY_C_DOCS_START
 | `ORDER_C` | explicit C-oriented storage; this is also the default for plain multidimensional arrays |
 X2PY_C_DOCS_END -->
+
+Persistent scalar native descriptors use wrapper type syntax instead of
+`Annotated[...]` metadata:
+
+```python
+from x2py.contracts import Allocatable, Float64, Int32, Pointer
+
+scratch: Allocatable[Float64]
+current: Pointer[Int32]
+```
+
+`Allocatable[T]` means a persistent native allocatable scalar descriptor and
+`Pointer[T]` means a persistent native pointer scalar descriptor. Use those
+type wrappers for module variables and derived-type fields.
+
+Procedure boundaries keep the Python value type in the annotation and put the
+native descriptor conversion in `@native_call`. Both scalar descriptor kinds
+are nullable: Python passes `T | None`, where `None` creates an unallocated
+allocatable or an unassociated pointer for the call. An unallocated or
+unassociated projected result returns `None`.
+
+```python
+from x2py.contracts import Allocatable, Arg, Float64, Pointer, Return, Returns, native_call
+
+@native_call(
+    [
+        Allocatable(Arg(0)),
+        Pointer(Return("selected", 2)),
+    ],
+    result=Allocatable(Return(0)),
+)
+def normalize(
+    value: Float64 | None,
+) -> tuple[
+    Float64 | None,
+    Returns["value", Float64] | None,
+    Returns["selected", Float64] | None,
+]: ...
+```
+
+`Allocatable(Arg(i))` and `Pointer(Arg(i))` initialize an `intent(in)` or
+`intent(inout)` descriptor from Python argument `i`. For `intent(inout)`, a
+matching `Returns["name", T] | None` item requests readback from the same native
+dummy. `Allocatable(Return("name", j))` and `Pointer(Return("name", j))`
+create hidden `intent(out)` descriptor dummies projected into Python result slot
+`j`. The `result=...` keyword describes the single native Fortran function
+result; its nested `Return(j)` selects that result's position among all Python
+results. Other Python results come from projected `intent(out)` and
+`intent(inout)` dummies.
+
+Descriptor projection uses calls, not type subscriptions. Write
+`Allocatable(Arg(0))`, not `Allocatable[Arg(0)]`. This is distinct from
+`Addr(Arg(0))`: a scalar allocatable or pointer is a native descriptor, not just
+the address of a scalar slot.
+
+Reads of scalar descriptor variables or derived-type components are different
+because they expose persistent native state. Attribute reads copy the current
+scalar value into Python and return `None` when the allocatable is unallocated
+or the pointer is unassociated. No scalar handle object is exposed, so these
+values do not provide `.to_numpy()`, `.view()`, `.get()`, `.value`,
+allocation, deallocation, nullification, or resize APIs.
+
+Plain nullable Python projections are separate from native descriptors:
+
+```python
+from x2py.contracts import Float64
+
+maybe_value: Float64 | None
+```
+
+`Float64 | None` does not imply a native allocatable or pointer descriptor.
+Array descriptor handle spellings such as `Allocatable[Float64[:]]` and
+`Pointer[Float64[:]]` are reserved for a later handle phase. Existing
+allocatable and pointer array contracts continue to use
+`Annotated[Float64[:], Allocatable]` or `Annotated[Float64[:], Pointer]`.
 
 Other positional `Annotated` helpers are preserved as semantic constraints:
 
@@ -1427,7 +1502,9 @@ def solve(
 Python result order and the hidden output's native name and type. A function
 result is Python result slot zero; projected output arguments follow it in
 native argument order. Each `Return(...)` entry is hidden writable storage passed
-to the native procedure by address.
+to the native procedure by address. The optional `result=` keyword records a
+native scalar descriptor function result, for example
+`result=Allocatable(Return(0))` or `result=Pointer(Return(0))`.
 
 The same native routine can be edited into an identity call without projection:
 
@@ -1805,6 +1882,16 @@ counter: Int32
 label: String[8]
 ```
 
+Scalar allocatable and pointer module variables keep their descriptor spelling
+in the contract while reads expose copied Python values or `None`:
+
+```python
+from x2py.contracts import Allocatable, Float64, Pointer
+
+optional_scale: Allocatable[Float64]
+selected_scale: Pointer[Float64]
+```
+
 Wrapper generation may synthesize native getter and setter bridge functions to
 implement Python attribute reads and writes. Those functions are internal: they
 are absent from the `.pyi` and are not exported as Python-callable procedures.
@@ -1971,8 +2058,10 @@ Loaded projection entries:
 | --- | --- |
 | `Arg(i)` | native argument is Python argument `i`'s default native representation |
 | `Addr(Arg(i))` | native argument is the address of Python argument `i`'s call-local native scalar representation |
+| `Allocatable(Arg(i))`, `Pointer(Arg(i))` | native argument is a nullable call-local scalar descriptor initialized from Python argument `i` |
 | `Return(i)` | native argument is supplied by projected return slot `i` as hidden writable storage passed by address |
 | `Return("name", i)` | named native argument is supplied by projected return slot `i` as hidden writable storage passed by address |
+| `Allocatable(Return(...))`, `Pointer(Return(...))` | native output dummy is a nullable scalar descriptor copied to the selected Python result slot |
 | `Pass()` | hidden type-bound passed-object argument |
 | `Int32(1)`, `Float64(0.5)`, `Bool(False)`, `String[1]("N")` | hidden native literal with an explicit ABI type |
 | `Len(Arg(i))`, `Len(Return(i))`, `Len(Work("name"))` | hidden native length metadata |
@@ -1981,6 +2070,10 @@ Loaded projection entries:
 | `Work("name")` | hidden workspace value |
 
 Hidden native literals must be typed call expressions inside `@native_call`.
+`native_call` accepts one native-argument list and, when required, one
+`result=Allocatable(Return(i))` or `result=Pointer(Return(i))` keyword. The
+`result=` mapping describes the native function result and is not another native
+dummy argument.
 Bare literals such as `1` or `"N"` are rejected because they do not declare the
 native ABI type. Fixed-length string literals must include their length, for
 example `String[1]("N")`; plain `String("N")` is not enough.

@@ -1,4 +1,4 @@
-from x2py.contracts import Allocatable, Annotated, FortranAllocatable, Int32, Returns, String
+from x2py.contracts import Allocatable, Annotated, Arg, Int32, Return, Returns, String, native_call
 
 def char_code_default(
     c: String[1]
@@ -38,9 +38,10 @@ def string_result_padded() -> String[8]: ...
 
 def string_result_c_char() -> String[8]: ...
 
+@native_call([Arg(0)], result=Allocatable(Return(0)))
 def string_result_deferred(
     text: String
-) -> Annotated[String, FortranAllocatable]: ...
+) -> String | None: ...
 
 def fixed_array_extent(
     labels: String[8][::]

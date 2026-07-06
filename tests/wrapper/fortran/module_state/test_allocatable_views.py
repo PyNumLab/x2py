@@ -45,6 +45,131 @@ contains
   end subroutine deallocate_values
 end module fallocatable_snapshot_f90
 """
+SCALAR_DESCRIPTOR_MODULE_SOURCE = """\
+module fscalar_descriptors_f90
+  implicit none
+  real(8), allocatable :: optional_scale
+  real(8), target :: target_scale
+  real(8), pointer :: selected_scale => null()
+contains
+  subroutine clear_all()
+    if (allocated(optional_scale)) deallocate(optional_scale)
+    nullify(selected_scale)
+  end subroutine clear_all
+
+  subroutine set_allocatable(value)
+    real(8), intent(in) :: value
+
+    if (allocated(optional_scale)) deallocate(optional_scale)
+    allocate(optional_scale)
+    optional_scale = value
+  end subroutine set_allocatable
+
+  subroutine point_to_target(value)
+    real(8), intent(in) :: value
+
+    target_scale = value
+    selected_scale => target_scale
+  end subroutine point_to_target
+
+  subroutine bump_native()
+    if (allocated(optional_scale)) optional_scale = optional_scale + 10.0_8
+    if (associated(selected_scale)) selected_scale = selected_scale + 20.0_8
+  end subroutine bump_native
+
+  function echo_allocatable(value) result(out)
+    real(8), allocatable, intent(in) :: value
+    real(8) :: out
+
+    if (allocated(value)) then
+      out = value + 1.0_8
+    else
+      out = -1.0_8
+    end if
+  end function echo_allocatable
+
+  function echo_pointer(value) result(out)
+    real(8), pointer, intent(in) :: value
+    real(8) :: out
+
+    if (associated(value)) then
+      out = value + 2.0_8
+    else
+      out = -2.0_8
+    end if
+  end function echo_pointer
+
+  subroutine update_allocatable(value)
+    real(8), allocatable, intent(inout) :: value
+
+    if (allocated(value)) then
+      value = value + 10.0_8
+    else
+      allocate(value)
+      value = 10.0_8
+    end if
+  end subroutine update_allocatable
+
+  subroutine update_pointer(value)
+    real(8), pointer, intent(inout) :: value
+
+    if (associated(value)) then
+      value = value + 20.0_8
+    else
+      target_scale = 20.0_8
+      value => target_scale
+    end if
+  end subroutine update_pointer
+
+  subroutine clear_allocatable_value(value)
+    real(8), allocatable, intent(inout) :: value
+
+    if (allocated(value)) deallocate(value)
+  end subroutine clear_allocatable_value
+
+  subroutine clear_pointer_value(value)
+    real(8), pointer, intent(inout) :: value
+
+    nullify(value)
+  end subroutine clear_pointer_value
+
+  subroutine create_allocatable(value)
+    real(8), allocatable, intent(out) :: value
+
+    allocate(value)
+    value = 30.0_8
+  end subroutine create_allocatable
+
+  subroutine create_pointer(value)
+    real(8), pointer, intent(out) :: value
+
+    target_scale = 40.0_8
+    value => target_scale
+  end subroutine create_pointer
+
+  function maybe_allocatable(flag) result(value)
+    integer(4), intent(in) :: flag
+    real(8), allocatable :: value
+
+    if (flag /= 0) then
+      allocate(value)
+      value = 3.5_8
+    end if
+  end function maybe_allocatable
+
+  function maybe_pointer(flag) result(value)
+    integer(4), intent(in) :: flag
+    real(8), pointer :: value
+
+    if (flag /= 0) then
+      target_scale = 4.5_8
+      value => target_scale
+    else
+      nullify(value)
+    end if
+  end function maybe_pointer
+end module fscalar_descriptors_f90
+"""
 
 
 def _plain_allocatable_snapshot_module(build_mode: str, tmp_path: Path):
@@ -92,6 +217,52 @@ def _plain_allocatable_snapshot_module(build_mode: str, tmp_path: Path):
     )
     module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
     return module, (result.output_dir / "fallocatable_snapshot_f90_wrapper.c").read_text(encoding="utf-8")
+
+
+def _scalar_descriptor_module(build_mode: str, tmp_path: Path):
+    filename = "fscalar_descriptors_f90.f90"
+    expected_sources = {
+        "bind_c_fscalar_descriptors_f90_wrapper.f90",
+        "fscalar_descriptors_f90_wrapper.c",
+        "fscalar_descriptors_f90_wrapper.h",
+    }
+    if build_mode == "source":
+        source_build_dir = tmp_path / "source_build"
+        source_build_dir.mkdir(parents=True)
+        return _build_text_and_import(
+            SCALAR_DESCRIPTOR_MODULE_SOURCE,
+            filename,
+            source_build_dir,
+            expected_sources,
+        )
+
+    source_dir = tmp_path / "source"
+    source_dir.mkdir(parents=True)
+    source = source_dir / filename
+    source.write_text(SCALAR_DESCRIPTOR_MODULE_SOURCE, encoding="utf-8")
+    contract_dir = tmp_path / "contracts" / source.stem
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--pyi",
+            "--out",
+            str(contract_dir),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    native_object = _compile_native_object(source, tmp_path / "native")
+    result = build_pyi_extension(
+        contract_dir / "__init__.pyi",
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "pyi_build",
+    )
+    return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
 
 def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(
@@ -188,6 +359,58 @@ def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(
     owner = retained_view.base
     owner.deallocate_values()
     assert owner.values is None
+
+
+def test_scalar_descriptor_module_variables_return_copied_optional_values(
+    pyi_parity_build_mode: str,
+    tmp_path: Path,
+):
+    module = _scalar_descriptor_module(pyi_parity_build_mode, tmp_path)
+
+    module.clear_all()
+    assert module.optional_scale is None
+    assert module.selected_scale is None
+    assert not hasattr(module, "get_optional_scale")
+    assert not hasattr(module, "set_optional_scale")
+    assert not hasattr(module, "get_selected_scale")
+    assert not hasattr(module, "set_selected_scale")
+    with pytest.raises(AttributeError):
+        module.optional_scale = np.float64(9.0)
+    with pytest.raises(AttributeError):
+        module.selected_scale = np.float64(9.0)
+
+    module.set_allocatable(np.float64(1.5))
+    alloc_snapshot = module.optional_scale
+    assert alloc_snapshot == np.float64(1.5)
+
+    module.point_to_target(np.float64(2.5))
+    pointer_snapshot = module.selected_scale
+    assert pointer_snapshot == np.float64(2.5)
+
+    module.bump_native()
+    assert alloc_snapshot == np.float64(1.5)
+    assert pointer_snapshot == np.float64(2.5)
+    assert module.optional_scale == np.float64(11.5)
+    assert module.selected_scale == np.float64(22.5)
+    assert module.echo_allocatable(np.float64(3.0)) == np.float64(4.0)
+    assert module.echo_allocatable(None) == np.float64(-1.0)
+    assert module.echo_pointer(np.float64(3.0)) == np.float64(5.0)
+    assert module.echo_pointer(None) == np.float64(-2.0)
+    assert module.update_allocatable(np.float64(3.0)) == np.float64(13.0)
+    assert module.update_allocatable(None) == np.float64(10.0)
+    assert module.update_pointer(np.float64(3.0)) == np.float64(23.0)
+    assert module.update_pointer(None) == np.float64(20.0)
+    assert module.clear_allocatable_value(np.float64(3.0)) is None
+    assert module.clear_pointer_value(np.float64(3.0)) is None
+    assert module.create_allocatable() == np.float64(30.0)
+    assert module.create_pointer() == np.float64(40.0)
+    assert module.maybe_allocatable(np.int32(1)) == np.float64(3.5)
+    assert module.maybe_pointer(np.int32(1)) == np.float64(4.5)
+    assert module.maybe_pointer(np.int32(0)) is None
+
+    module.clear_all()
+    assert module.optional_scale is None
+    assert module.selected_scale is None
 
 
 def test_plain_allocatable_module_array_is_read_only_snapshot(

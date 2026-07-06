@@ -36,8 +36,6 @@ def test_pointer_arrays_use_call_local_inputs_and_detached_copy_results(
     assert module.pointer_to_scalar(np.float64(7.25), np.int32(1)) == np.float64(7.25)
     assert module.pointer_to_scalar(np.float64(7.25), np.int32(0)) is None
     assert "pointer_to_scalar(value, use_value) -> float64 | None" in module.pointer_to_scalar.__doc__
-    assert "Pointer scalar results are copied into detached Python values." in module.pointer_to_scalar.__doc__
-    assert "Unassociated pointer results return None." in module.pointer_to_scalar.__doc__
 
     assert module.sum_pointer(values) == np.float64(6.0)
 

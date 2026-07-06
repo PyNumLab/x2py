@@ -220,6 +220,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     _FIELD_GETTER_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_append_value_field_getter",
+            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_append_nullable_scalar_field_getter",
             (ObjectKind.STRING, CodegenAction.COPY_OUT): "_append_value_field_getter",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_append_borrowed_array_field_getter",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_append_alias_field_getter",
@@ -228,6 +229,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     _MODULE_VARIABLE_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_scalar_module_variable",
+            (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_scalar_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_array_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_array_module_variable",
             (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_snapshot_derived_module_variable",
@@ -849,6 +851,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                     [AliasAssign(obj, attrib), *getter_result_info["body"]],
                 ),
                 IfSection(convert_to_literal(True), unallocated_body),
+            )
+        )
+
+    def _append_nullable_scalar_field_getter(self, _expr, getter_policy, attrib, _obj, getter_result_info, getter_body):
+        """Copy a nullable scalar descriptor field through a C data pointer."""
+        getter_body.append(
+            self._nullable_scalar_snapshot_if(
+                attrib,
+                self._nullable_scalar_status_func(getter_policy),
+                getter_result_info["bind_var"],
+                getter_result_info["copy_var"],
+                getter_result_info["size_var"],
             )
         )
 
@@ -1693,12 +1707,58 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             raise ValueError(
                 f"Native call-local address barrier only supports scalar or string arguments, got {decision.kind.value}"
             )
+        if (
+            decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+            and decision.descriptor_boundary
+            and decision.boundary_storage_mode in {StorageMode.HEAP, StorageMode.ALIAS}
+        ):
+            return self._convert_native_scalar_descriptor_input_argument(var, decision)
         return self._build_numeric_argument(
             var,
             decision,
             needs_pointer_bridge=var.is_optional,
             direct_memory_handling=StorageMode.STACK.value,
         )
+
+    def _convert_native_scalar_descriptor_input_argument(self, var, decision):
+        """Build a nullable call-local descriptor from a scalar C pointer."""
+        name = var.name
+        scope = self.scope
+        scope.insert_symbol(name)
+        bind_var = Variable(
+            BindCPointer(),
+            scope.get_new_name(f"bound_{name}"),
+            is_argument=True,
+            is_optional=False,
+            memory_handling=StorageMode.ALIAS.value,
+        )
+        input_var = var.clone(
+            scope.get_new_name(f"{name}_input"),
+            new_class=Variable,
+            is_argument=False,
+            is_optional=False,
+            memory_handling=StorageMode.ALIAS.value,
+        )
+        descriptor_var = var.clone(
+            scope.get_new_name(f"{name}_descriptor"),
+            new_class=Variable,
+            is_argument=False,
+            is_optional=False,
+            memory_handling=decision.boundary_storage_mode.value,
+        )
+        scope.insert_variable(bind_var)
+        scope.insert_variable(input_var)
+        scope.insert_variable(descriptor_var)
+        body = [C_F_Pointer(bind_var, input_var)]
+        if decision.boundary_storage_mode is StorageMode.HEAP:
+            body.append(If(IfSection(ArrayAssociated(input_var), [Assign(descriptor_var, input_var)])))
+        else:
+            body.append(AliasAssign(descriptor_var, input_var))
+        return {
+            "c_arg": BindCVariable(bind_var, var),
+            "f_arg": descriptor_var,
+            "body": body,
+        }
 
     def _convert_native_storage_address_argument(self, var, decision, func):
         """Pass caller/Python-backed storage through the native call boundary."""
@@ -1765,6 +1825,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _convert_native_scalar_replacement_argument(self, var, decision, func):
         """Copy an immutable Python scalar into mutable native call storage."""
+        if decision.descriptor_boundary:
+            return self._convert_native_scalar_descriptor_input_argument(var, decision)
         name = var.name
         scope = self.scope
         scope.insert_symbol(name)
@@ -2337,6 +2399,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _convert_scalar_result(self, orig_var, decision, orig_func_scope):
         """Convert scalar result for the current wrapper."""
+        if decision.descriptor_boundary and decision.nullable:
+            return self._build_snapshot_copy_scalar_result(
+                orig_var,
+                self._nullable_scalar_status_func_for_storage(decision.boundary_storage_mode),
+                source_storage_mode=decision.boundary_storage_mode,
+            )
         name = orig_var.name
         self.scope.insert_symbol(name)
         local_var = orig_var.clone(
@@ -2358,7 +2426,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
     def _convert_snapshot_scalar_result(self, orig_var, decision, orig_func_scope):
         """Copy a pointer scalar result into detached Python-visible storage."""
-        return self._build_snapshot_copy_scalar_result(orig_var)
+        return self._build_snapshot_copy_scalar_result(
+            orig_var,
+            self._nullable_scalar_status_func(decision),
+            source_storage_mode=decision.storage_mode,
+        )
 
     def _convert_owned_custom_type_result(self, orig_var, decision, orig_func_scope):
         """Convert an owned custom result through native value storage."""
@@ -2520,18 +2592,27 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     # Node builders
     # ------------------------------------------------------------------
 
-    def _build_snapshot_copy_scalar_result(self, orig_var):
+    def _build_snapshot_copy_scalar_result(
+        self,
+        orig_var,
+        status_func=None,
+        source_expr=None,
+        source_storage_mode=None,
+    ):
         """Build snapshot copy scalar result nodes."""
         name = orig_var.name
         scope = self.scope
-        scope.insert_symbol(name)
-        pointer_var = orig_var.clone(
-            scope.get_expected_name(name),
-            new_class=Variable,
-            is_argument=False,
-            memory_handling="alias",
-            is_optional=False,
-        )
+        local_storage = source_storage_mode or StorageMode.ALIAS
+        if source_expr is None:
+            scope.insert_symbol(name)
+            source_expr = orig_var.clone(
+                scope.get_expected_name(name),
+                new_class=Variable,
+                is_argument=False,
+                memory_handling=local_storage.value,
+                is_optional=False,
+            )
+            scope.insert_variable(source_expr)
         bind_var = Variable(BindCPointer(), scope.get_new_name(f"bound_{name}"), memory_handling="alias")
         copy_var = orig_var.clone(
             scope.get_new_name(f"{name}_copy"),
@@ -2547,28 +2628,50 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             memory_handling="stack",
             is_optional=False,
         )
-        for variable in (pointer_var, copy_var, size_var):
+        for variable in (copy_var, size_var):
             scope.insert_variable(variable)
+        status = status_func or ArrayAssociated
+        body = [self._nullable_scalar_snapshot_if(source_expr, status, bind_var, copy_var, size_var)]
+        return {
+            "body": body,
+            "c_result": BindCVariable(bind_var, orig_var),
+            "f_result": source_expr,
+            "bind_var": bind_var,
+            "copy_var": copy_var,
+            "size_var": size_var,
+        }
+
+    @staticmethod
+    def _nullable_scalar_snapshot_if(source_expr, status_func, bind_var, copy_var, size_var):
+        """Build a nullable scalar snapshot branch from a completed descriptor policy."""
         copy_body = [
             Assign(bind_var, c_malloc(BindCSizeOf(size_var))),
             If(
                 IfSection(
                     IsNot(bind_var, NIL),
-                    [C_F_Pointer(bind_var, copy_var), Assign(copy_var, pointer_var)],
+                    [C_F_Pointer(bind_var, copy_var), Assign(copy_var, source_expr)],
                 )
             ),
         ]
-        body = [
-            If(
-                IfSection(ArrayAssociated(pointer_var), copy_body),
-                IfSection(convert_to_literal(True), [Assign(bind_var, NIL)]),
-            )
-        ]
-        return {
-            "body": body,
-            "c_result": BindCVariable(bind_var, orig_var),
-            "f_result": pointer_var,
-        }
+        return If(
+            IfSection(status_func(source_expr), copy_body),
+            IfSection(convert_to_literal(True), [Assign(bind_var, NIL)]),
+        )
+
+    @staticmethod
+    def _nullable_scalar_status_func(decision):
+        """Return the native descriptor presence check selected by completed policy."""
+        return FortranToCBridgeGenerator._nullable_scalar_status_func_for_storage(decision.storage_mode)
+
+    @staticmethod
+    def _nullable_scalar_status_func_for_storage(storage_mode):
+        """Return the presence check for one completed descriptor storage mode."""
+        if storage_mode is StorageMode.HEAP:
+            return ArrayAllocated
+        if storage_mode is StorageMode.ALIAS:
+            return ArrayAssociated
+        value = getattr(storage_mode, "value", storage_mode)
+        raise ValueError(f"Nullable scalar snapshot requires heap or alias storage, got {value}")
 
     def _build_snapshot_copy_array_result(self, orig_var, _decision, name, local_var):
         """Build snapshot copy array result nodes."""
@@ -2612,10 +2715,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         ]
         return result
 
-    @staticmethod
-    def _build_scalar_replacement_result(orig_var, decision, generated_arg):
+    def _build_scalar_replacement_result(self, orig_var, decision, generated_arg):
         """Return the mutable native scalar temporary as a replacement value."""
         local_var = generated_arg["f_arg"].value
+        if decision.descriptor_boundary and decision.nullable:
+            return self._build_snapshot_copy_scalar_result(
+                orig_var,
+                self._nullable_scalar_status_func_for_storage(decision.boundary_storage_mode),
+                source_expr=local_var,
+                source_storage_mode=decision.boundary_storage_mode,
+            )
         return {
             "c_result": BindCVariable(local_var, orig_var),
             "body": [],
@@ -2856,6 +2965,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     def _uses_allocatable_function_result_helper(cls, func, result):
         """Return whether uses allocatable function result helper."""
         func_result = getattr(getattr(func, "results", None), "var", NIL)
+        result_decision = ownership_decision_for_codegen_variable(result)
+        func_result_decision = ownership_decision_for_codegen_variable(func_result) if func_result is not NIL else None
+        if (
+            result_decision.kind is ObjectKind.SCALAR
+            and result_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+            and result_decision.storage_mode is StorageMode.HEAP
+            and func_result_decision is not None
+        ):
+            return (
+                func_result_decision.kind is ObjectKind.SCALAR
+                and func_result_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+                and func_result_decision.storage_mode is StorageMode.HEAP
+            )
         return (
             result.is_ndarray
             and cls._is_allocatable_copy_return_result(result)
@@ -2995,7 +3117,11 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     def _scalar_module_variable(self, expr, _decision):
         """Handle scalar module variable for the current generation context."""
         getter = self._scalar_module_getter(expr)
-        setter = self._scalar_module_setter(expr)
+        setter = (
+            self._scalar_module_setter(expr)
+            if expr.setter_ownership_decision.setter_action is SetterAction.WRITE_THROUGH
+            else None
+        )
         return expr.clone(
             expr.name,
             new_class=BindCScalarModuleVariable,
@@ -3166,17 +3292,34 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         func_name = scope.get_new_name("bind_c_" + public_name.lower())
         func_scope = scope.new_child_scope(func_name, "function")
         self.scope = func_scope
-        result = expr.clone(
-            func_scope.get_new_name(f"{expr.name}_value"),
-            is_argument=False,
-            is_optional=False,
-            memory_handling=getter_policy.storage_mode.value,
-            ownership_decision=getter_policy,
-            new_class=Variable,
-        )
-        func_scope.insert_variable(result)
         func_scope.imports["variables"][expr.name] = expr
-        body = [Assign(result, expr)]
+        if getter_policy.codegen_action is CodegenAction.SNAPSHOT_COPY:
+            source_value = expr.clone(
+                expr.name,
+                is_argument=False,
+                is_optional=False,
+                memory_handling=getter_policy.storage_mode.value,
+                ownership_decision=getter_policy,
+                new_class=Variable,
+            )
+            result_info = self._build_snapshot_copy_scalar_result(
+                expr,
+                self._nullable_scalar_status_func(getter_policy),
+                source_expr=source_value,
+            )
+            body = result_info["body"]
+            result = result_info["c_result"]
+        else:
+            result = expr.clone(
+                func_scope.get_new_name(f"{expr.name}_value"),
+                is_argument=False,
+                is_optional=False,
+                memory_handling=getter_policy.storage_mode.value,
+                ownership_decision=getter_policy,
+                new_class=Variable,
+            )
+            func_scope.insert_variable(result)
+            body = [Assign(result, expr)]
         self.exit_scope()
         original_result = expr.clone(
             f"{expr.name}_value",

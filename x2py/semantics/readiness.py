@@ -737,12 +737,18 @@ class _SemanticReadinessChecker:
     @classmethod
     def _is_unsupported_allocatable_output(cls, argument: SemanticArgument) -> bool:
         semantic_type = argument.semantic_type
-        return bool(
+        if not (
             semantic_type is not None
             and semantic_type.rank == 0
             and semantic_type.metadata.get("fortran_allocatable")
             and cls._argument_uses_writable_storage(argument)
-        )
+        ):
+            return False
+        scalar_name = semantic_type.dtype or semantic_type.name
+        if scalar_name not in _BUILTIN_TYPES or scalar_name in {"String", "Void"}:
+            return True
+        decision = argument.metadata.get(RESOLVED_OWNERSHIP_POLICY_METADATA)
+        return bool(decision is not None and decision.is_blocked)
 
     @staticmethod
     def _argument_uses_writable_storage(argument: SemanticArgument) -> bool:

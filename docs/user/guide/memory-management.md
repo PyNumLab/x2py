@@ -2,7 +2,7 @@
 title: Memory Management
 audience: users, advanced users
 prerequisites: arrays, wrapping derived types
-related: allocatable-arrays.md, pointer-arguments.md, editing-semantic-pyi-contracts.md
+related: allocatables.md, pointers.md, editing-semantic-pyi-contracts.md
 status: maintained
 ---
 
@@ -18,13 +18,13 @@ guess from datatype or intent.
 
 | Owner or transfer | Meaning | First complete example |
 | --- | --- | --- |
-| Python-owned value or copy | Python or NumPy releases detached storage after references are gone. | [`allocations.f90` copy result](allocatable-arrays.md#complete-allocatable-example) |
+| Python-owned value or copy | Python or NumPy releases detached storage after references are gone. | [`allocations.f90` copy result](allocatables.md#complete-allocatable-example) |
 | Caller-owned storage | The Python caller retains the exact object supplied to the call. | [`outputs.f90` output array](wrapping-subroutines.md#complete-output-example) |
 | Wrapper-owned instance | A generated Python extension object owns one native derived instance. | [`points.f90` result](wrapping-derived-types.md#complete-derived-type-example) |
-| Native-owned storage | Native module state or another native owner controls allocation and release. | [`allocations.f90` module view](allocatable-arrays.md#complete-allocatable-example) |
+| Native-owned storage | Native module state or another native owner controls allocation and release. | [`allocations.f90` module view](allocatables.md#complete-allocatable-example) |
 | Borrowed view or child | Python refers to storage owned by a module or containing wrapper. | [`points.f90` nested child](wrapping-derived-types.md#complete-derived-type-example) |
-| Detached copy (`snapshot_copy` policy) | Python receives copied current native state, without a live view. | [`pointers.f90` result](pointer-arguments.md#complete-pointer-example) |
-| Call-local association | Native code may refer to Python storage only during one wrapped call. | [`pointers.f90` input](pointer-arguments.md#complete-pointer-example) |
+| Detached copy (`snapshot_copy` policy) | Python receives copied current native state, without a live view. | [`pointers.f90` result](pointers.md#complete-pointer-example) |
+| Call-local association | Native code may refer to Python storage only during one wrapped call. | [`pointers.f90` input](pointers.md#complete-pointer-example) |
 
 Those linked pages contain the full source, build commands, and asserted
 results. The examples are not repeated here so ownership differences remain
