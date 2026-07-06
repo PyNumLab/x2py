@@ -131,7 +131,15 @@ _FORTRAN_STORAGE_TYPE_MAP = {
 class _DerivedTypeContext:
     module: str | None = None
     uses: dict[str, list[FortranUseMapping]] | None = None
+    procedure_uses: dict[str, list[FortranUseMapping]] | None = None
     local_types: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
+class _ResolvedDerivedTypeOrigin:
+    module: str | None
+    name: str
+    import_scope: str | None = None
 
 
 def _normalize_compile_time_values(
@@ -845,8 +853,21 @@ class FortranToIRConverter(ClassVisitor):
         return _DerivedTypeContext(
             module=proc.module or (parent.module if parent is not None else None),
             uses=uses,
+            procedure_uses=FortranToIRConverter._procedure_local_uses(proc, parent),
             local_types=parent.local_types if parent is not None else frozenset(),
         )
+
+    @staticmethod
+    def _procedure_local_uses(
+        proc: FortranProcedureSignature,
+        parent: _DerivedTypeContext | None,
+    ) -> dict[str, list[FortranUseMapping]]:
+        local_uses = getattr(proc, "_local_uses", None)
+        if isinstance(local_uses, dict):
+            return dict(local_uses)
+        if parent is None or parent.uses is None:
+            return dict(proc.uses)
+        return {module: mappings for module, mappings in proc.uses.items() if parent.uses.get(module) != mappings}
 
     def _derived_type_ref(
         self,
@@ -859,33 +880,53 @@ class FortranToIRConverter(ClassVisitor):
         if not local_name:
             return None
 
-        origin_module, source_name = self._resolve_derived_type_origin(local_name, context)
+        origin = self._resolve_derived_type_origin(local_name, context)
         local_type = bool(context is not None and context.module and local_name.lower() in context.local_types)
-        if local_type or origin_module is None:
+        if local_type or origin.module is None:
             return None
-        wrapped = bool(origin_module and (origin_module.lower(), source_name.lower()) in self.wrapped_derived_types)
-        return local_name, {
-            "name": source_name,
-            "local_name": local_name,
-            "origin_module": origin_module,
+        wrapped = bool((origin.module.lower(), origin.name.lower()) in self.wrapped_derived_types)
+        public_name = local_name
+        if origin.import_scope == "procedure":
+            public_name = f"{origin.module}.{origin.name}"
+        metadata: dict[str, object] = {
+            "name": origin.name,
+            "local_name": public_name,
+            "origin_module": origin.module,
             "wrapped": wrapped,
             "representation": "wrapped" if wrapped else "opaque",
         }
+        if origin.import_scope is not None:
+            metadata["import_scope"] = origin.import_scope
+        return public_name, metadata
 
     def _resolve_derived_type_origin(
         self,
         local_name: str,
         context: _DerivedTypeContext | None,
-    ) -> tuple[str | None, str]:
+    ) -> _ResolvedDerivedTypeOrigin:
         lname = local_name.lower()
         if context is None:
-            return None, local_name
+            return _ResolvedDerivedTypeOrigin(None, local_name)
         if lname in context.local_types:
-            return context.module, local_name
+            return _ResolvedDerivedTypeOrigin(context.module, local_name)
 
+        resolved = self._resolve_derived_type_origin_from_uses(local_name, context.uses)
+        if resolved.module is None:
+            return resolved
+        procedure_resolved = self._resolve_derived_type_origin_from_uses(local_name, context.procedure_uses)
+        if (procedure_resolved.module, procedure_resolved.name) == (resolved.module, resolved.name):
+            return _ResolvedDerivedTypeOrigin(resolved.module, resolved.name, import_scope="procedure")
+        return resolved
+
+    def _resolve_derived_type_origin_from_uses(
+        self,
+        local_name: str,
+        uses: dict[str, list[FortranUseMapping]] | None,
+    ) -> _ResolvedDerivedTypeOrigin:
+        lname = local_name.lower()
         explicit: list[tuple[str, str]] = []
         wildcard_modules: list[str] = []
-        for module_name, mappings in (context.uses or {}).items():
+        for module_name, mappings in (uses or {}).items():
             if not mappings:
                 wildcard_modules.append(module_name)
                 continue
@@ -894,9 +935,9 @@ class FortranToIRConverter(ClassVisitor):
                     explicit.append((module_name, mapping.source))
 
         if len(explicit) == 1:
-            return explicit[0]
+            return _ResolvedDerivedTypeOrigin(explicit[0][0], explicit[0][1])
         if len(explicit) > 1:
-            return None, local_name
+            return _ResolvedDerivedTypeOrigin(None, local_name)
 
         wrapped_wildcards = [
             module_name
@@ -904,10 +945,10 @@ class FortranToIRConverter(ClassVisitor):
             if (module_name.lower(), lname) in self.wrapped_derived_types
         ]
         if len(wrapped_wildcards) == 1:
-            return wrapped_wildcards[0], local_name
+            return _ResolvedDerivedTypeOrigin(wrapped_wildcards[0], local_name)
         if len(wildcard_modules) == 1:
-            return wildcard_modules[0], local_name
-        return None, local_name
+            return _ResolvedDerivedTypeOrigin(wildcard_modules[0], local_name)
+        return _ResolvedDerivedTypeOrigin(None, local_name)
 
     def _semantic_type_name(self, var: FortranVariable) -> str:
         base_type = var.base_type.lower()

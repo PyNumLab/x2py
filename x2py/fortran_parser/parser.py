@@ -2598,6 +2598,7 @@ class FortranParser(ClassVisitor):
             "symbols": symbols,
             "typed_symbols": typed_symbols or set(),
             "uses": {},
+            "local_uses": {},
             "in_contains": False,
             "local_params": {},
             "legacy_local_params": set(),
@@ -2973,6 +2974,7 @@ class FortranParser(ClassVisitor):
         if parsed_use:
             module_name, mappings = parsed_use
             proc_state["uses"][module_name] = mappings
+            proc_state["local_uses"][module_name] = mappings
             return
         # This parser is a subset parser focused on wrapper-relevant metadata.
         # These statements do not affect extracted signature typing/shapes.
@@ -3936,7 +3938,9 @@ class FortranParser(ClassVisitor):
                 sig.attributes.append(attr)
         sig.uses = dict(state["uses"])
         sig.common_variables = list(state.get("common_variables", ()))
-        return replace(sig)
+        finalized = replace(sig)
+        finalized._local_uses = dict(state.get("local_uses", {}))
+        return finalized
 
     @staticmethod
     def _record_common_variables(output: list[str], statement: str) -> None:

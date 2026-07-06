@@ -2434,26 +2434,37 @@ def _annotate_imported_external_type_refs(module: SemanticModule) -> None:
 
 def _imported_type_refs(module: SemanticModule) -> dict[str, tuple[str, str, str]]:
     imported: dict[str, tuple[str, str, str]] = {}
+    imported_namespaces: dict[str, str] = {}
     for imp in module.imports:
         if isinstance(imp, SemanticImport):
             for item in imp.items:
                 local_name = item.target or item.source
                 imported[local_name] = (imp.module, item.source, local_name)
+                if imp.module.startswith("."):
+                    imported_namespaces[local_name] = _relative_imported_namespace(imp.module, item.source)
             continue
         for item in imp.split(","):
             module_name, _, alias = item.strip().partition(" as ")
             visible_name = alias or module_name
             imported[visible_name] = (module_name, visible_name, visible_name)
+            imported_namespaces[visible_name] = module_name
 
     for semantic_type in _iter_module_semantic_types(module):
         if "." not in semantic_type.name:
             continue
         module_name, type_name = semantic_type.name.rsplit(".", 1)
         visible_module = module_name.split(".", 1)[0]
-        imported_module = imported.get(visible_module)
+        imported_module = imported_namespaces.get(visible_module)
         if imported_module is not None:
-            imported[semantic_type.name] = (imported_module[0], type_name, semantic_type.name)
+            imported[semantic_type.name] = (imported_module, type_name, semantic_type.name)
     return imported
+
+
+def _relative_imported_namespace(module_name: str, source_name: str) -> str:
+    module_path = module_name.lstrip(".")
+    if not module_path:
+        return source_name
+    return f"{module_path}.{source_name}"
 
 
 def reconcile_external_type_refs(modules: list[SemanticModule]) -> list[SemanticModule]:

@@ -945,6 +945,7 @@ class PyiPrinter(ClassVisitor):
     def _module_reserved_names(cls, module: SemanticModule) -> set[str]:
         """Return user/import names that cannot be reused by contract imports."""
         names: set[str] = set()
+        names.update(cls._required_procedure_namespace_import_names(module))
         for imp in module.imports:
             names.update(cls._import_local_names(imp))
         for item in [*module.classes, *module.variables, *module.functions, *module.overload_sets]:
@@ -984,6 +985,8 @@ class PyiPrinter(ClassVisitor):
     def _import_local_names(imp: str | SemanticImport) -> set[str]:
         """Return local names introduced by an import."""
         if isinstance(imp, SemanticImport):
+            if not imp.items:
+                return {imp.module.split(".", 1)[0]}
             return {item.target or item.source for item in imp.items}
         names = set()
         for item in str(imp).split(","):
@@ -1012,14 +1015,29 @@ class PyiPrinter(ClassVisitor):
             items.append(f"{name} as {alias}" if alias else name)
         return f"from {_CONTRACT_MODULE} import {', '.join(items)}"
 
-    @staticmethod
-    def _effective_imports(module: SemanticModule) -> list[str | SemanticImport]:
+    @classmethod
+    def _effective_imports(cls, module: SemanticModule) -> list[str | SemanticImport]:
         """Handle effective imports for the current generation context."""
         imports = [
             imp
             for imp in module.imports
             if not PyiPrinter._is_source_kind_import(imp) and not PyiPrinter._is_contract_import(imp)
         ]
+        procedure_namespaces = cls._required_procedure_namespace_import_names(module)
+        cls._validate_procedure_namespace_imports(module, procedure_namespaces, imports)
+        satisfied_namespaces = cls._satisfied_procedure_namespace_import_names(imports, procedure_namespaces)
+        imports.extend(cls._synthetic_flat_external_type_imports(module, imports, procedure_namespaces))
+        imports.extend(cls._missing_procedure_namespace_imports(procedure_namespaces, satisfied_namespaces))
+        return imports
+
+    @classmethod
+    def _synthetic_flat_external_type_imports(
+        cls,
+        module: SemanticModule,
+        imports: list[str | SemanticImport],
+        procedure_namespaces: set[str],
+    ) -> list[SemanticImport]:
+        """Return synthetic flattened imports needed by external type refs."""
         imported_items = {
             (imp.module, item.source, item.target or item.source)
             for imp in imports
@@ -1028,17 +1046,17 @@ class PyiPrinter(ClassVisitor):
         }
         synthetic: dict[str, list[SemanticImportItem]] = {}
         for semantic_type in _iter_module_semantic_types(module):
-            ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
-            if not isinstance(ref, dict):
+            ref = cls._flat_external_type_import_ref(semantic_type)
+            if ref is None:
                 continue
-            origin_module = ref.get("origin_module")
-            source_name = ref.get("name")
-            local_name = ref.get("local_name") or source_name
-            if not all(isinstance(value, str) and value for value in (origin_module, source_name, local_name)):
-                continue
+            origin_module, source_name, local_name = ref
             key = (origin_module, source_name, local_name)
             if key in imported_items:
                 continue
+            if local_name in procedure_namespaces:
+                raise ValueError(
+                    f"Procedure-local Fortran import namespace collides with generated .pyi name: {local_name!r}"
+                )
             synthetic.setdefault(origin_module, []).append(
                 SemanticImportItem(
                     source=source_name,
@@ -1046,14 +1064,124 @@ class PyiPrinter(ClassVisitor):
                 )
             )
             imported_items.add(key)
-        imports.extend(
+        return [
             SemanticImport(
                 module=module_name,
                 items=sorted(items, key=lambda item: (item.source, item.target or "")),
             )
             for module_name, items in sorted(synthetic.items())
-        )
-        return imports
+        ]
+
+    @classmethod
+    def _flat_external_type_import_ref(cls, semantic_type: SemanticType) -> tuple[str, str, str] | None:
+        """Return flattened external type import fields, or None for qualified refs."""
+        ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
+        if not isinstance(ref, dict) or cls._is_procedure_local_external_ref(ref):
+            return None
+        origin_module = ref.get("origin_module")
+        source_name = ref.get("name")
+        local_name = ref.get("local_name") or source_name
+        if not all(isinstance(value, str) and value for value in (origin_module, source_name, local_name)):
+            return None
+        if "." in local_name:
+            return None
+        return origin_module, source_name, local_name
+
+    @staticmethod
+    def _missing_procedure_namespace_imports(
+        procedure_namespaces: set[str],
+        satisfied_namespaces: set[str],
+    ) -> list[SemanticImport]:
+        """Return missing namespace imports for procedure-local external refs."""
+        missing_namespaces = sorted(procedure_namespaces - satisfied_namespaces)
+        if not missing_namespaces:
+            return []
+        return [
+            SemanticImport(
+                module=".",
+                items=[SemanticImportItem(source=name) for name in missing_namespaces],
+            )
+        ]
+
+    @staticmethod
+    def _is_procedure_local_external_ref(ref: dict[object, object]) -> bool:
+        """Return whether an external ref came from a procedure-local Fortran use."""
+        return ref.get("import_scope") == "procedure"
+
+    @classmethod
+    def _required_procedure_namespace_import_names(cls, module: SemanticModule) -> set[str]:
+        """Return module namespaces required by procedure-local imported types."""
+        names: set[str] = set()
+        for semantic_type in _iter_module_semantic_types(module):
+            ref = semantic_type.metadata.get(EXTERNAL_TYPE_REF_METADATA)
+            if not isinstance(ref, dict) or not cls._is_procedure_local_external_ref(ref):
+                continue
+            origin_module = ref.get("origin_module")
+            source_name = ref.get("name")
+            local_name = ref.get("local_name")
+            if not all(isinstance(value, str) and value for value in (origin_module, source_name, local_name)):
+                continue
+            names.add(origin_module)
+        return names
+
+    @classmethod
+    def _validate_procedure_namespace_imports(
+        cls,
+        module: SemanticModule,
+        procedure_namespaces: set[str],
+        imports: list[str | SemanticImport],
+    ) -> None:
+        """Reject namespace imports that would collide with emitted public names."""
+        if not procedure_namespaces:
+            return
+        declaration_collisions = procedure_namespaces & cls._top_level_declaration_names(module)
+        import_collisions = {
+            name
+            for imp in imports
+            for name in cls._import_local_names(imp) & procedure_namespaces
+            if not cls._import_satisfies_procedure_namespace(imp, name)
+        }
+        collisions = sorted(declaration_collisions | import_collisions)
+        if collisions:
+            joined = ", ".join(repr(name) for name in collisions)
+            raise ValueError(f"Procedure-local Fortran import namespace collides with generated .pyi name: {joined}")
+
+    @staticmethod
+    def _top_level_declaration_names(module: SemanticModule) -> set[str]:
+        """Return names emitted in a module-level stub namespace."""
+        return {
+            str(item.name)
+            for item in [*module.classes, *module.variables, *module.functions, *module.overload_sets]
+            if getattr(item, "name", None)
+        }
+
+    @classmethod
+    def _satisfied_procedure_namespace_import_names(
+        cls,
+        imports: list[str | SemanticImport],
+        procedure_namespaces: set[str],
+    ) -> set[str]:
+        """Return procedure namespace imports already provided by module imports."""
+        return {
+            name
+            for name in procedure_namespaces
+            if any(cls._import_satisfies_procedure_namespace(imp, name) for imp in imports)
+        }
+
+    @staticmethod
+    def _import_satisfies_procedure_namespace(imp: str | SemanticImport, name: str) -> bool:
+        """Return whether an import binds exactly the required module namespace."""
+        if isinstance(imp, SemanticImport):
+            if not imp.items:
+                return imp.module == name
+            return imp.module == "." and any(item.source == name and item.target is None for item in imp.items)
+        for item in str(imp).split(","):
+            module_name, _, alias = item.strip().partition(" as ")
+            if alias:
+                continue
+            if module_name == name:
+                return True
+        return False
 
     @staticmethod
     def _is_source_kind_import(imp: str | SemanticImport) -> bool:

@@ -200,6 +200,54 @@ type references across the discovered project. Low-level semantic loading may
 still operate on the resulting file set internally; users do not pass that set
 as separate wrapper inputs.
 
+## Imported Derived-Type Identity
+
+Fortran `use` statements at module scope may still generate flattened `.pyi`
+imports when that is unambiguous:
+
+```fortran
+module physics
+  use types_mod, only: particle
+contains
+  subroutine move(p)
+    type(particle), intent(inout) :: p
+  end subroutine move
+end module physics
+```
+
+```python
+from types_mod import particle
+
+def move(p: particle) -> None: ...
+```
+
+A procedure-local `use` that appears in the public API is represented by the
+imported module namespace instead. The public datatype spelling is the origin
+module plus the original exported type name:
+
+```fortran
+module physics
+contains
+  subroutine move(p)
+    use types_mod, only: local_particle => particle
+    type(local_particle), intent(inout) :: p
+  end subroutine move
+end module physics
+```
+
+```python
+from . import types_mod
+
+def move(p: types_mod.particle) -> None: ...
+```
+
+The Fortran rename `local_particle` is a procedure-local convenience and is not
+preserved as the public datatype spelling. Two modules that both export
+`state` therefore remain distinct as `a_types.state` and `b_types.state`.
+Generated procedure-local namespace imports are not aliased; if the generated
+module already has a public declaration or another import named `a_types`,
+contract generation fails instead of inventing a replacement alias.
+
 ## Contract Files And Native Procedure Placement
 
 Wrapper generation must distinguish immutable native structure from editable

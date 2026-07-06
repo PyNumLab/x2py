@@ -728,10 +728,102 @@ end module physics
     code = stubs["physics"]
 
     assert "from types_mod import particle" in code
+    assert "from . import types_mod" not in code
     assert "p: particle" in code
     assert "Addr(particle)" not in code
     assert "class particle" not in code
     assert stubs["types_mod"].endswith("class particle(Opaque):\n    pass")
+
+
+def test_emit_procedure_local_imported_derived_types_as_qualified_module_refs():
+    parsed = parse_fortran_source(
+        """
+module physics
+contains
+  subroutine use_a(p)
+    use a_types, only: state
+    type(state), intent(inout) :: p
+  end subroutine use_a
+
+  subroutine use_b(p)
+    use b_types, only: state
+    type(state), intent(inout) :: p
+  end subroutine use_b
+end module physics
+"""
+    )
+
+    module = fortran_module_to_semantic_module(parsed)
+    code = emit_module(module)
+
+    assert "from . import a_types, b_types" in code
+    assert "p: a_types.state" in code
+    assert "p: b_types.state" in code
+    assert "from a_types import state" not in code
+    assert "from b_types import state" not in code
+    assert "from .a_types import state" not in code
+    assert "from .b_types import state" not in code
+    assert " as imported_a_types" not in code
+
+
+def test_emit_procedure_local_import_namespace_collision_fails_without_alias():
+    parsed = parse_fortran_source(
+        """
+module physics
+contains
+  subroutine a_types()
+  end subroutine a_types
+
+  subroutine use_state(p)
+    use a_types, only: state
+    type(state), intent(inout) :: p
+  end subroutine use_state
+end module physics
+"""
+    )
+
+    module = fortran_module_to_semantic_module(parsed)
+
+    with pytest.raises(ValueError, match="Procedure-local Fortran import namespace collides"):
+        emit_module(module)
+
+
+def test_emit_procedure_local_import_namespace_collision_with_synthetic_import_fails():
+    procedure_ref = {
+        "name": "state",
+        "local_name": "a_types.state",
+        "origin_module": "a_types",
+        "wrapped": False,
+        "representation": "opaque",
+        "import_scope": "procedure",
+    }
+    flattened_ref = {
+        "name": "a_types",
+        "local_name": "a_types",
+        "origin_module": "other_types",
+        "wrapped": False,
+        "representation": "opaque",
+    }
+    module = SemanticModule(
+        name="api",
+        functions=[
+            SemanticFunction(
+                "use_state",
+                arguments=[
+                    SemanticArgument("p", SemanticType("a_types.state", metadata={"external_type_ref": procedure_ref}))
+                ],
+            ),
+            SemanticFunction(
+                "use_flat",
+                arguments=[
+                    SemanticArgument("p", SemanticType("a_types", metadata={"external_type_ref": flattened_ref}))
+                ],
+            ),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="Procedure-local Fortran import namespace collides"):
+        emit_module(module)
 
 
 def test_emit_bare_use_adds_import_for_opaque_dependency_type():

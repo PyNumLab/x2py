@@ -563,6 +563,68 @@ class particle:
     assert edited_modules["types_mod"].classes[0].fields[0].name == "mass"
 
 
+def test_pyi_paths_to_semantic_modules_reconciles_relative_namespace_type_refs(tmp_path: Path):
+    physics = tmp_path / "physics.pyi"
+    a_types = tmp_path / "a_types.pyi"
+    physics.write_text(
+        """
+from . import a_types
+
+def move(p: a_types.state) -> None: ...
+""",
+        encoding="utf-8",
+    )
+    a_types.write_text(
+        """
+class state:
+    pass
+""",
+        encoding="utf-8",
+    )
+
+    modules = {module.name: module for module in pyi_paths_to_semantic_modules(tmp_path)}
+    state_ref = modules["physics"].functions[0].arguments[0].semantic_type.metadata["external_type_ref"]
+
+    assert state_ref == {
+        "name": "state",
+        "local_name": "a_types.state",
+        "origin_module": "a_types",
+        "wrapped": True,
+        "representation": "wrapped",
+    }
+
+
+def test_convert_pyi_to_ir_accepts_relative_namespace_alias_type_refs(tmp_path: Path):
+    physics = tmp_path / "physics.pyi"
+    a_types = tmp_path / "a_types.pyi"
+    physics.write_text(
+        """
+from . import a_types as at
+
+def move(p: at.state) -> None: ...
+""",
+        encoding="utf-8",
+    )
+    a_types.write_text(
+        """
+class state:
+    pass
+""",
+        encoding="utf-8",
+    )
+
+    modules = {module.name: module for module in pyi_paths_to_semantic_modules(tmp_path)}
+    state_ref = modules["physics"].functions[0].arguments[0].semantic_type.metadata["external_type_ref"]
+
+    assert state_ref == {
+        "name": "state",
+        "local_name": "at.state",
+        "origin_module": "a_types",
+        "wrapped": True,
+        "representation": "wrapped",
+    }
+
+
 def test_pyi_paths_to_semantic_modules_preserves_dotted_module_names_from_directory(tmp_path: Path):
     package = tmp_path / "shared"
     package.mkdir()
