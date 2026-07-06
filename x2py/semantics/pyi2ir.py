@@ -1634,7 +1634,6 @@ class _PyiAstParser:
             "Aliased",
             "Immutable",
             "Ownership",
-            "Optional",
             "ORDER_ANY",
             "ORDER_C",
             "ORDER_F",
@@ -1844,8 +1843,11 @@ class _PyiAstParser:
         optional_positions = optional_return_positions or set()
 
         for item_index, item in enumerate(self.return_items(node)):
-            returned = self.returned_argument(item)
+            returned_optional = self._optional_union_item(item)
+            returned_item = returned_optional or item
+            returned = self.returned_argument(returned_item)
             if returned is not None:
+                returned.optional = returned.optional or returned_optional is not None
                 returned.metadata["return_position"] = item_index
                 returned_args.append(returned)
                 continue
@@ -1893,15 +1895,16 @@ class _PyiAstParser:
         if not self.is_subscript_of(node, "Returns"):
             return None
         items = self.subscript_items(node)
-        if len(items) not in {2, 3}:
-            raise ValueError(f"Returns expects a name and type: {ast.unparse(node)!r}")
+        if len(items) != 2:
+            raise ValueError(
+                f"Returns expects a name and type; use '| None' for nullable returns: {ast.unparse(node)!r}"
+            )
 
         semantic_type = self.semantic_type(items[1])
         semantic_type.ownership.mutable = True
         return SemanticArgument(
             name=str(ast.literal_eval(items[0])),
             semantic_type=semantic_type,
-            optional=len(items) == 3 and self.matches_name(items[2], "Optional"),
         )
 
     def name_metadata(self, node: ast.expr) -> str | None:

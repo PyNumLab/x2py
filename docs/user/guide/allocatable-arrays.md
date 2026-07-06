@@ -94,11 +94,11 @@ contains
 end module storage
 ```
 
-Inspecting `allocations.f90` prints the copy, replacement, and borrowed-view
-contracts:
+Inspecting `allocations.f90` prints the copy, replacement, read-only snapshot,
+and borrowed-view contracts:
 
 ```python
-from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, Int32, Optional, Returns, native_call
+from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, Int32, Returns, native_call
 
 shared_values: Annotated[Float64[:], Allocatable, Aliased] | None
 snapshot_values: Annotated[Float64[:], Allocatable] | None
@@ -109,8 +109,8 @@ def make_values(
 ) -> Annotated[Float64[:], Allocatable]: ...
 
 def replace_values(
-    values: Annotated[Float64[:], Allocatable]
-) -> Returns["values", Annotated[Float64[:], Allocatable], Optional]: ...
+    values: Annotated[Float64[:], Allocatable] | None
+) -> Returns["values", Annotated[Float64[:], Allocatable]] | None: ...
 
 @native_call([Addr(Arg(0))])
 def allocate_shared(
@@ -132,6 +132,11 @@ def release_snapshot() -> None: ...
 
 def shared_sum() -> Float64: ...
 ```
+
+`snapshot_values` is not written as `Snapshot[...]`. For arrays, the
+Python-owned read-only snapshot behavior is selected by the plain module array
+contract without `Aliased`. `Snapshot[T]` is reserved for detached recursive
+snapshots of derived-type module variables.
 
 Build it:
 
@@ -194,9 +199,12 @@ state.
 
 ## Inout Replacement
 
-An allocatable `intent(inout)` argument accepts `None` or an exact matching
-NumPy array. x2py copies the supplied value into temporary native allocatable
-storage. The Python argument remains Python-owned and is not mutated.
+An allocatable `intent(inout)` argument is annotated with `| None` because
+`None` means initially unallocated native storage. When the value is an exact
+matching NumPy array, x2py copies that value into temporary native allocatable
+storage. The Python argument remains Python-owned and is not mutated. The NumPy
+array is only an initializer for a bridge-owned native allocatable temporary;
+Python is not passing that NumPy buffer as native allocatable storage.
 
 After the call, x2py copies the final native allocation into a new Python-owned
 return value, or returns `None` if native storage is unallocated. This is
@@ -243,13 +251,13 @@ spelling `Annotated[String[:][:], Allocatable]`, so the element width can come
 from the native allocation at runtime:
 
 ```python
-from x2py.contracts import Allocatable, Annotated, Optional, Returns, String
+from x2py.contracts import Allocatable, Annotated, Returns, String
 
 def replace_names(
-    names: Annotated[String[:][:], Allocatable]
+    names: Annotated[String[:][:], Allocatable] | None
 ) -> Returns[
-    "names", Annotated[String[:][:], Allocatable], Optional
-]: ...
+    "names", Annotated[String[:][:], Allocatable]
+] | None: ...
 ```
 
 Build the example:

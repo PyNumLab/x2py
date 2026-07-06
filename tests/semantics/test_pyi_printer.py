@@ -497,7 +497,7 @@ end module opt_out_mod
 
     assert "Return('status'" not in code
     assert "status: Int32[()] = ..." in code
-    assert ') -> Returns["status", Int32[()], Optional]: ...' in code
+    assert ') -> Returns["status", Int32[()]] | None: ...' in code
 
 
 def test_emit_optional_allocatable_output_as_visible_argument():
@@ -513,8 +513,8 @@ end module opt_alloc_out_mod
     code = generate_pyi(source)
 
     assert "Return('values'" not in code
-    assert "values: Annotated[Float64[:], Allocatable] = ..." in code
-    assert ') -> Returns["values", Annotated[Float64[:], Allocatable], Optional]: ...' in code
+    assert "values: Annotated[Float64[:], Allocatable] | None = ..." in code
+    assert ') -> Returns["values", Annotated[Float64[:], Allocatable]] | None: ...' in code
 
 
 # ============================================================
@@ -1190,7 +1190,7 @@ end module vector_mod
     code = generate_pyi(source)
 
     assert "class vector:" in code
-    assert "values: Annotated[Float64[:], Allocatable]" in code
+    assert "values: Annotated[Float64[:], Allocatable] | None" in code
     assert "    @native_call([Pass(), Addr(Arg(0))])" in code
     assert "    def scale(\n        self,\n        alpha: Float64\n    ) -> None: ..." in code
     assert "        self: vector" not in code
@@ -1324,7 +1324,7 @@ end module alloc_view_mod
     code = generate_pyi(source)
 
     assert "values: Annotated[Float64[:], Allocatable, Aliased] | None" in code
-    assert "field: Annotated[Float64[:], Allocatable]" in code
+    assert "field: Annotated[Float64[:], Allocatable] | None" in code
 
     loaded = parse_pyi_text(code, module_name="alloc_view_mod")
     assert [variable.name for variable in loaded.variables] == ["values"]
@@ -2005,7 +2005,7 @@ def test_printer_projection_return_helpers_and_keyword_data_members():
         ],
     )
 
-    assert printer._projected_argument_return(argument, visible=True) == 'Returns["x", Addr(Float64), Optional]'
+    assert printer._projected_argument_return(argument, visible=True) == 'Returns["x", Addr(Float64)] | None'
     assert printer._named_return(plain) == 'Returns["value", Int32]'
     assert printer._projected_argument_return(argument, visible=False) == "Float64 | None"
     assert printer._projected_argument_return(plain, visible=False) == "Int32"

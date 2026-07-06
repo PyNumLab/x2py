@@ -1139,7 +1139,7 @@ module variable is copied into a detached read-only object graph:
 from x2py.contracts import Allocatable, Annotated, Float64, Snapshot
 
 class box:
-    values: Annotated[Float64[:], Allocatable]
+    values: Annotated[Float64[:], Allocatable] | None
 
 current: Snapshot[box]
 ```
@@ -1302,11 +1302,12 @@ def f() -> None: ...
 def g(x: Float64) -> Float64: ...
 def split(x: Float64) -> tuple[Float64, Int32]: ...
 def projected(x: Float64) -> Returns["x", Float64]: ...
+def maybe_projected(x: Float64) -> Returns["x", Float64] | None: ...
 ```
 
 `Returns["name", T]` records an output value associated with an argument name.
-`Returns["name", T, Optional]` marks the returned output optional. Plain tuple
-return components after the first are converted to generated output arguments.
+Use `Returns["name", T] | None` when that named output can be absent. Plain
+tuple return components after the first are converted to generated output arguments.
 When the name matches an existing Python-visible argument, the argument remains
 an input and the return item represents replacement-style writable-reference
 behavior for immutable public values such as Python `str`.
@@ -1625,7 +1626,7 @@ Derived-type allocatable fields remain fields in `.pyi`:
 from x2py.contracts import Allocatable, Annotated, Float64
 
 class buffer:
-    values: Annotated[Float64[:], Allocatable]
+    values: Annotated[Float64[:], Allocatable] | None
 ```
 
 Python cannot directly replace or reallocate such fields. Assigning a new array
@@ -1730,7 +1731,7 @@ object:
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64, Snapshot
 
 class box:
-    values: Annotated[Float64[:], Allocatable]
+    values: Annotated[Float64[:], Allocatable] | None
 
 live_current: Annotated[box, Aliased]
 current: Snapshot[box]
@@ -1821,8 +1822,14 @@ unallocated, Python receives `None`. Optional allocatable output dummies remain
 visible so the caller can omit them and make native `present(...)` false.
 X2PY_C_DOCS_END -->
 
-Allocatable writable arguments remain blocked. They need a replacement
-policy for the caller-visible object before x2py can safely expose them.
+Supported top-level allocatable writable arguments use replacement policy.
+Their Python-visible argument type includes `| None`: `None` means the native
+temporary starts unallocated. When Python passes a matching NumPy array, x2py
+copies it into bridge-owned native
+allocatable storage for the call; the NumPy array is not borrowed as native
+storage and is not mutated. After the call, x2py copies the final native
+allocation into a Python-owned replacement array, or returns `None` if the
+native allocation is absent.
 
 ## Pointer Procedure Detached-Copy Subset
 

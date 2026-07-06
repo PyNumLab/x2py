@@ -101,7 +101,7 @@ borrowed wrapper:
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64
 
 class box:
-    values: Annotated[Float64[:], Allocatable]
+    values: Annotated[Float64[:], Allocatable] | None
 
 current: Annotated[box, Aliased]
 ```

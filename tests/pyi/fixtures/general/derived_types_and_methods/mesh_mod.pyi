@@ -18,4 +18,4 @@ class mesh:
     ) -> None: ...
 
     nnodes: Int32
-    nodes: Annotated[node[:], Allocatable]
+    nodes: Annotated[node[:], Allocatable] | None

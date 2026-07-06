@@ -23,7 +23,7 @@ from the storage that the Python caller must allocate.
 | array `intent(out)` | visible writable NumPy array | same array when projected |
 | array `intent(inout)` | visible writable NumPy array | mutated in place; not duplicated unless explicitly projected |
 | allocatable `intent(out)` | hidden | Python-owned array or `None` |
-| allocatable `intent(inout)` | visible array or `None` | new replacement array or `None` |
+| allocatable `intent(inout)` | visible `source | None` argument | bridge-owned native temporary during the call; new replacement array or `None` after |
 | supported derived `intent(out)` | hidden | new wrapper-owned instance |
 
 `optional, intent(out)` is the visibility exception for normally hidden

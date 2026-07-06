@@ -30,8 +30,8 @@ class vector:
 class vector_store:
     def __init__(self) -> None: ...
 
-    values: Annotated[Float64[:], Allocatable]
-    matrix: Annotated[Float64[:, :], ORDER_F, Allocatable]
+    values: Annotated[Float64[:], Allocatable] | None
+    matrix: Annotated[Float64[:, :], ORDER_F, Allocatable] | None
 
     @native_call([Pass(), Addr(Arg(0))])
     def allocate_values(

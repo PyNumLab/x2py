@@ -909,11 +909,12 @@ values[0] = 9.0          # modifies only the Python-owned copy
 
 ### Allocatable `intent(inout)` Replacement
 
-An allocatable `intent(inout)` array is replacement-oriented. Python passes
-`None` for initially unallocated storage or a matching NumPy array. A supplied
-array is copied into a temporary native allocatable and is not mutated. After
-the call, Python receives `None` or a new Python-owned array reflecting the final
-native allocation.
+An allocatable `intent(inout)` array is replacement-oriented. Its Python-visible
+argument type includes `| None`: `None` means initially unallocated storage. A
+supplied matching NumPy array is copied into a bridge-owned native allocatable
+temporary and is not mutated. The NumPy buffer itself is not passed as native
+allocatable storage. After the call, Python receives `None` or a new
+Python-owned array reflecting the final native allocation.
 
 ```fortran
 subroutine replace_values(values)

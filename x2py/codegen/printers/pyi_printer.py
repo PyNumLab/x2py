@@ -600,6 +600,8 @@ class PyiPrinter(ClassVisitor):
             type_text = f"{self._contract('Final')}[{type_text}]"
         if getattr(arg, "visibility", "public") == "private":
             type_text = f"{self._contract('private')}[{type_text}]"
+        if self._is_allocatable_array(arg.semantic_type):
+            type_text = f"{type_text} | None"
 
         text = f"{name}: {type_text}"
         if arg.optional:
@@ -1223,11 +1225,11 @@ class PyiPrinter(ClassVisitor):
 
     def _named_return(self, arg: SemanticArgument) -> str:
         """Handle named return for the current generation context."""
-        optional = (
-            f", {self._contract('Optional')}" if arg.optional or self._is_allocatable_array(arg.semantic_type) else ""
-        )
         semantic_type = self._visible_projected_type(arg.semantic_type)
-        return f'{self._contract("Returns")}["{arg.name}", {self._visit(semantic_type)}{optional}]'
+        return_text = f'{self._contract("Returns")}["{arg.name}", {self._visit(semantic_type)}]'
+        if arg.optional or self._is_allocatable_array(arg.semantic_type):
+            return f"{return_text} | None"
+        return return_text
 
     @staticmethod
     def _visible_projected_type(semantic_type: SemanticType) -> SemanticType:

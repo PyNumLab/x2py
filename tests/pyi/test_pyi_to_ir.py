@@ -2240,7 +2240,14 @@ class vector:
             "@native_call([Len(Unknown(0))])\ndef f(x: Int32) -> None: ...\n",
             "Expected imported x2py contract helper: 'Unknown'",
         ),
-        ("def f(x: Int32) -> Returns['x']: ...\n", "Returns expects a name and type: \"Returns['x']\""),
+        (
+            "def f(x: Int32) -> Returns['x']: ...\n",
+            "Returns expects a name and type; use '| None' for nullable returns: \"Returns['x']\"",
+        ),
+        (
+            "def f(x: Int32) -> Returns['x', Int32, Optional]: ...\n",
+            "Returns expects a name and type; use '| None' for nullable returns: \"Returns['x', Int32, Optional]\"",
+        ),
         ("value: Final[Int32, Float64]\n", "Final expects exactly one type: 'Final[Int32, Float64]'"),
         ("value: Unknown\n", "Unknown semantic type is not allowed in .pyi annotations"),
         ("value: Annotated[()]\n", "Annotated type is empty: 'Annotated[()]'"),
@@ -2525,7 +2532,7 @@ def test_pyi_parser_internal_projection_helpers_preserve_native_names():
     parser = _PyiAstParser(module_name="internal")
     parser._contract_bindings.update({name: name for name in CONTRACT_SYMBOLS})
     return_type, returned_values = parser.return_projection(
-        ast.parse("tuple[Float64, Returns['extra', Int32, Optional], Returns['other', Float64]]", mode="eval").body
+        ast.parse("tuple[Float64, Returns['extra', Int32] | None, Returns['other', Float64]]", mode="eval").body
     )
     pointer = parser.semantic_type(ast.parse("Addr(Float64)", mode="eval").body)
     returned = SemanticArgument("result", SemanticType("Float64"), metadata={"return_position": 1})

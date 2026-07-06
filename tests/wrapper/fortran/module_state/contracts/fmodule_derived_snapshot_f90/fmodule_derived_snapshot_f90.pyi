@@ -18,7 +18,7 @@ class box:
 
     scalar: Int32 = 0
     fixed: Float64[2] = [0.0, 0.0]
-    values: Annotated[Float64[:], Allocatable]
+    values: Annotated[Float64[:], Allocatable] | None
     nested: child
 
     def scalar_plus_nested(self) -> Int32: ...

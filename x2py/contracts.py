@@ -91,7 +91,6 @@ Immutable = _ContractExpression()
 ORDER_ANY = _ContractExpression()
 ORDER_C = _ContractExpression()
 ORDER_F = _ContractExpression()
-Optional = _ContractExpression()
 Pointer = _ContractExpression()
 Polymorphic = _ContractExpression()
 Strided = _ContractExpression()
@@ -185,7 +184,6 @@ CONTRACT_SYMBOLS = frozenset(
         "Name",
         "Opaque",
         "OpaqueHandle",
-        "Optional",
         "ORDER_ANY",
         "ORDER_C",
         "ORDER_F",
