@@ -22745,22 +22745,14 @@
       ]
     },
     "scifortran/LIST_INPUT.f90": {
-      "wrappable": false,
+      "wrappable": true,
       "status": "ok",
       "n_modules": 1,
       "n_functions": 5,
       "n_classes": 1,
       "n_variables": 0,
-      "messages": [
-        "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely."
-      ],
-      "blockers": [
-        {
-          "code": "fortran_ownership_policy_blocked",
-          "message": "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
-          "n_items": 1
-        }
-      ]
+      "messages": [],
+      "blockers": []
     },
     "scifortran/MOD_QUADPACK.f90": {
       "wrappable": false,
@@ -25044,15 +25036,9 @@
       "n_classes": 0,
       "n_variables": 3,
       "messages": [
-        "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
         "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
       ],
       "blockers": [
-        {
-          "code": "fortran_ownership_policy_blocked",
-          "message": "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
-          "n_items": 1
-        },
         {
           "code": "callback_signature_incomplete",
           "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
@@ -25075,7 +25061,7 @@
         {
           "code": "fortran_ownership_policy_blocked",
           "message": "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
-          "n_items": 4
+          "n_items": 2
         },
         {
           "code": "callback_signature_incomplete",

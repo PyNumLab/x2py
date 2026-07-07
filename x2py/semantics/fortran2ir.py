@@ -383,7 +383,7 @@ class FortranToIRConverter(ClassVisitor):
             )
         else:
             semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
-        if isinstance(arg, FortranArgument):
+        if isinstance(arg, FortranArgument) and self._is_scalar_descriptor(semantic_type):
             semantic_type.metadata["fortran_intent"] = getattr(arg, "intent", None)
         access = self._argument_access(arg, semantic_type)
         if semantic_type.name == "Callable":
