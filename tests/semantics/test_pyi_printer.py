@@ -87,7 +87,7 @@ def normalize(text: str) -> str:
 # ============================================================
 
 
-def test_emit_snapshot_type_wrapper_round_trips():
+def test_emit_snapshot_type_wrapper_is_not_active_contract():
     module = SemanticModule(
         name="snapshot_mod",
         classes=[SemanticClass(name="box", fields=[SemanticField("value", SemanticType("Float64"))])],
@@ -99,12 +99,8 @@ def test_emit_snapshot_type_wrapper_round_trips():
         ],
     )
 
-    code = emit_module(module)
-
-    assert "current: Snapshot[box]" in code
-    parsed = parse_pyi_text(code, module_name="snapshot_mod")
-    assert parsed.variables[0].semantic_type.name == "box"
-    assert parsed.variables[0].semantic_type.metadata[SNAPSHOT_TYPE_METADATA] is True
+    with pytest.raises(ValueError, match=r"Snapshot\[T\] is not an active semantic \.pyi contract"):
+        emit_module(module)
 
 
 def test_emit_basic_scalar_function():
@@ -1457,7 +1453,7 @@ end module derived_module_state
     assert codegen_module.variables[0].is_target is True
 
 
-def test_emit_module_stubs_prints_plain_derived_module_variable_as_snapshot():
+def test_emit_module_stubs_do_not_print_plain_derived_module_variable_as_snapshot():
     source = """
 module derived_module_snapshot
   type :: box
@@ -1471,9 +1467,10 @@ end module derived_module_snapshot
 
     code = emit_module_stubs(semantic_module)["derived_module_snapshot"]
 
-    assert "current: Snapshot[box]" in code
+    assert "Snapshot[" not in code
+    assert "current: box" in code
     loaded = parse_pyi_text(code, module_name="derived_module_snapshot")
-    assert loaded.variables[0].semantic_type.metadata[SNAPSHOT_TYPE_METADATA] is True
+    assert loaded.variables[0].semantic_type.name == "box"
 
 
 def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_source():

@@ -130,9 +130,9 @@ class PyiPrinter(ClassVisitor):
         if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
             raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
         if semantic_type.metadata.get(SNAPSHOT_TYPE_METADATA):
-            inner_type = deepcopy(semantic_type)
-            inner_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
-            return f"{self._contract('Snapshot')}[{self._visit(inner_type)}]"
+            raise ValueError(
+                "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only"
+            )
         array_descriptor = native_array_descriptor_kind(semantic_type)
         if array_descriptor is not None:
             wrapper = "Allocatable" if array_descriptor == "allocatable" else "Pointer"

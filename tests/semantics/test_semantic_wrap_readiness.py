@@ -11,6 +11,7 @@ from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.models import (
     EXTERNAL_TYPE_REF_METADATA,
     POLICY_COMPLETION_PREPARED_METADATA,
+    RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     SemanticArrayContract,
     SemanticArgument,
@@ -38,8 +39,10 @@ from x2py.semantics.readiness import (
     _shape_expressions,
     _shape_symbols,
     assess_pyi_wrap_readiness,
+    assess_prepared_semantic_wrap_readiness,
     assess_semantic_wrap_readiness,
 )
+from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py import cli as x2py_cli
 
 
@@ -73,6 +76,29 @@ def test_readiness_completes_policy_before_blocker_checks():
     assert module.metadata[POLICY_COMPLETION_PREPARED_METADATA] is True
     decision = module.functions[0].arguments[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
     assert decision.transfer.value == "call_local"
+
+
+def test_prepared_readiness_blocks_missing_native_array_handle_policy():
+    module = parse_pyi_text(
+        f"""{CONTRACT_IMPORT}
+values: Allocatable[Float64[:]]
+""",
+        module_name="native_policy_missing",
+    )
+    complete_semantic_policies(module)
+    module.variables[0].metadata.pop(RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA)
+
+    report = assess_prepared_semantic_wrap_readiness(module, source="native_policy_missing.pyi")
+
+    blocker = next(
+        item for item in report["wrappability_blockers"] if item["code"] == "native_array_handle_policy_missing"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "native_policy_missing.values",
+            "item": "values",
+        }
+    ]
 
 
 def test_readiness_blocks_generic_constraints_that_have_no_runtime_validator():
@@ -179,7 +205,7 @@ values: Annotated[
     ]
 
 
-def test_plain_derived_module_object_uses_snapshot_and_borrowing_requires_aliased_storage():
+def test_plain_derived_module_object_blocks_and_borrowing_requires_aliased_storage():
     plain = _readiness_from_pyi(
         """
 class box:
@@ -189,8 +215,13 @@ current: box
 """
     )
 
-    assert plain["wrappable"] is True
-    assert plain["wrappability_blockers"] == []
+    assert plain["wrappable"] is False
+    plain_blocker = next(
+        item for item in plain["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
+    )
+    assert plain_blocker["items"][0]["policy"] == (
+        "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only"
+    )
 
     explicit_borrow = _readiness_from_pyi(
         """
@@ -223,7 +254,7 @@ current: Annotated[box, Aliased]
     assert aliased["wrappability_blockers"] == []
 
 
-def test_derived_module_snapshot_blocks_unsupported_nested_pointer_fields():
+def test_plain_derived_module_object_with_pointer_field_blocks_until_aliased_policy_is_explicit():
     report = _readiness_from_pyi(
         """
 class box:
@@ -240,7 +271,12 @@ current: box
     assert {
         "owner": "solver.current",
         "item": "current",
-        "policy": "snapshot field box.values is a pointer array without a completed pointer detached-copy policy",
+        "policy": "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only",
+    } in blocker["items"]
+    assert {
+        "owner": "solver.box.values",
+        "item": "values",
+        "policy": "pointer array owner, lifetime, shape, and release policy are unknown",
     } in blocker["items"]
 
 

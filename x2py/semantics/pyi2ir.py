@@ -17,7 +17,6 @@ from x2py.semantic_metadata import (
     OPTIONAL_ABSENT_HANDLE_METADATA,
     PROJECTED_OUTPUT_METADATA,
     SCALAR_STORAGE_CATEGORY,
-    SNAPSHOT_TYPE_METADATA,
     SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     USER_PRIVATE_METADATA,
 )
@@ -63,6 +62,9 @@ _PYI_OPTIONAL_RETURN_METADATA = "_pyi_optional_return"
 _CONTRACT_MODULE = "x2py.contracts"
 _FLAT_DIMENSION_SENTINEL = "@x2py.Flat"
 _STRIDED_DIMENSION_SENTINEL = "@x2py.Strided"
+_REMOVED_CONTRACT_DIAGNOSTICS = {
+    "Snapshot": "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only",
+}
 
 
 @dataclass(frozen=True)
@@ -134,6 +136,8 @@ class _PyiAstParser:
         for alias in node.names:
             if alias.name == "*":
                 raise ValueError("x2py.contracts does not support wildcard imports")
+            if alias.name in _REMOVED_CONTRACT_DIAGNOSTICS:
+                raise ValueError(_REMOVED_CONTRACT_DIAGNOSTICS[alias.name])
             if alias.name not in CONTRACT_SYMBOLS:
                 raise ValueError(f"Unknown x2py contract name {alias.name!r}")
             local_name = alias.asname or alias.name
@@ -1177,6 +1181,9 @@ class _PyiAstParser:
         return semantic_type, original_name
 
     def semantic_type(self, node: ast.expr) -> SemanticType:
+        removed_name = self._removed_contract_type_name(node)
+        if removed_name is not None:
+            raise ValueError(_REMOVED_CONTRACT_DIAGNOSTICS[removed_name])
         self._reject_unimported_contract_type(node)
         optional_item = self._optional_union_item(node)
         if optional_item is not None:
@@ -1189,8 +1196,6 @@ class _PyiAstParser:
         if self.is_subscript_of(node, "Annotated"):
             semantic_type, _ = self.semantic_type_annotation(node)
             return semantic_type
-        if self.is_subscript_of(node, "Snapshot"):
-            return self._snapshot_type(node)
         if self.is_subscript_of(node, "Final"):
             return self._final_type(node)
         if self.matches_name(node, "Callable") or self.is_subscript_of(node, "Callable"):
@@ -1235,6 +1240,14 @@ class _PyiAstParser:
             return
         raise ValueError(f"Contract type {name_node.id!r} must be imported from x2py.contracts")
 
+    def _removed_contract_type_name(self, node: ast.expr) -> str | None:
+        name_node = node.value if isinstance(node, ast.Subscript) else node
+        if not isinstance(name_node, ast.Name):
+            return None
+        if name_node.id in self._user_type_names:
+            return None
+        return name_node.id if name_node.id in _REMOVED_CONTRACT_DIAGNOSTICS else None
+
     def _descriptor_type(self, node: ast.Subscript, descriptor: str) -> SemanticType:
         items = self.subscript_items(node)
         if len(items) != 1:
@@ -1275,14 +1288,6 @@ class _PyiAstParser:
         semantic_type = self.semantic_type(items[0])
         if not any(constraint.name == "Constant" for constraint in semantic_type.constraints):
             semantic_type.constraints.append(SemanticConstraint("Constant"))
-        return semantic_type
-
-    def _snapshot_type(self, node: ast.Subscript) -> SemanticType:
-        items = self.subscript_items(node)
-        if len(items) != 1:
-            raise ValueError(f"Snapshot expects exactly one type: {ast.unparse(node)!r}")
-        semantic_type = self.semantic_type(items[0])
-        semantic_type.metadata[SNAPSHOT_TYPE_METADATA] = True
         return semantic_type
 
     def _address_type(self, node: ast.Call) -> SemanticType:

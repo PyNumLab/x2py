@@ -381,6 +381,9 @@ class Variable:
     snapshot_field_action : object, default: None
         Completed copy action used when this field appears in a derived snapshot.
 
+    native_array_handle_policy : object, default: None
+        Completed policy for native allocatable or pointer array handle lowering.
+
     shape : tuple, default: None
         The shape of the array. A tuple whose elements indicate the number of elements along
         each of the dimensions of an array. The elements of the tuple should be None or model objects.
@@ -426,6 +429,7 @@ class Variable:
         "_is_temp",
         "_memory_handling",
         "_name",
+        "_native_array_handle_policy",
         "_ownership_decision",
         "_passes_by_value",
         "_projected_output",
@@ -453,6 +457,7 @@ class Variable:
         ownership_decision=None,
         setter_ownership_decision=None,
         snapshot_field_action=None,
+        native_array_handle_policy=None,
         projected_output=False,
         assumed_rank=False,
         shape=None,
@@ -506,6 +511,7 @@ class Variable:
         self._ownership_decision = ownership_decision
         self._setter_ownership_decision = setter_ownership_decision
         self._snapshot_field_action = snapshot_field_action
+        self._native_array_handle_policy = native_array_handle_policy
         if not isinstance(projected_output, bool):
             raise TypeError("projected_output must be a boolean.")
         self._projected_output = projected_output
@@ -708,6 +714,11 @@ class Variable:
     def snapshot_field_action(self):
         """Completed copy action used when this field appears in a snapshot."""
         return self._snapshot_field_action
+
+    @property
+    def native_array_handle_policy(self):
+        """Completed policy for native allocatable or pointer array handles."""
+        return self._native_array_handle_policy
 
     @property
     def assumed_rank(self):

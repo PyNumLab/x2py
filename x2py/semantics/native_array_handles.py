@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import dataclass
 
 from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_METADATA
 from x2py.semantic_metadata import (
     NATIVE_ARRAY_DESCRIPTOR_METADATA,
+    NATIVE_ARRAY_HANDLE_POLICY_METADATA,
     OPTIONAL_ABSENT_HANDLE_METADATA,
 )
 from x2py.semantics.models import PYTHON_VALUE_MUTABILITY_METADATA, SemanticType
@@ -12,6 +14,7 @@ from x2py.semantics.models import PYTHON_VALUE_MUTABILITY_METADATA, SemanticType
 
 _HANDLE_ONLY_METADATA = (
     NATIVE_ARRAY_DESCRIPTOR_METADATA,
+    NATIVE_ARRAY_HANDLE_POLICY_METADATA,
     OPTIONAL_ABSENT_HANDLE_METADATA,
     OWNERSHIP_POLICY_METADATA,
     POINTER_POLICY_METADATA,
@@ -21,6 +24,38 @@ _HANDLE_ONLY_METADATA = (
     "fortran_pointer",
     "fortran_pointer_association",
 )
+
+
+@dataclass(frozen=True)
+class NativeArrayHandlePolicy:
+    """Completed post-IR policy for a native allocatable or pointer array handle."""
+
+    descriptor_kind: str
+    handle_kind: str
+    origin: str
+    owner: str
+    descriptor_ownership: str
+    borrowed: bool
+    getter_behavior: str
+    python_setter: str
+    native_setter: str
+    output_projection: str
+    release: str
+    to_numpy: str
+    nullable: bool
+    optional_absent: bool
+    storage_mode: str
+    operations: tuple[str, ...] = ()
+    blocker: str | None = None
+
+    @property
+    def is_blocked(self) -> bool:
+        """Return whether this completed policy blocks wrapper generation."""
+        return self.handle_kind == "unsupported" or self.blocker is not None
+
+    def allows(self, operation: str) -> bool:
+        """Return whether a descriptor operation is explicitly permitted."""
+        return operation in self.operations
 
 
 def native_array_descriptor_kind(semantic_type: SemanticType | None) -> str | None:
@@ -79,6 +114,7 @@ def native_array_data_type(semantic_type: SemanticType) -> SemanticType:
 
 
 __all__ = (
+    "NativeArrayHandlePolicy",
     "is_native_array_handle",
     "mark_native_array_handle",
     "native_array_data_type",

@@ -14,10 +14,10 @@ from x2py.codegen.models.datatypes import (
     NumpyNDArrayType,
 )
 from x2py.codegen.scope import Scope
-from x2py.ownership_policy import CodegenAction, NativeBarrierAction, SnapshotFieldAction
+from x2py.ownership_policy import CodegenAction, NativeBarrierAction
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
-from x2py.semantics.models import SemanticModule
+from x2py.semantics.models import RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, SemanticModule
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
 
@@ -50,6 +50,40 @@ def scale(values: Float64[:]) -> None: ...
 
     with pytest.raises(ValueError, match="missing completed ownership policy"):
         _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+
+
+def test_ir_lowering_requires_completed_native_array_handle_policy():
+    module = parse_pyi_text(
+        """
+values: Allocatable[Float64[:]]
+""",
+        module_name="raw_native_handle_policy",
+    )
+    complete_semantic_policies(module)
+    module.variables[0].metadata.pop(RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA)
+
+    with pytest.raises(ValueError, match="missing completed native-array-handle policy"):
+        _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+
+
+def test_native_array_handle_policy_lowers_to_codegen_variables():
+    module = parse_pyi_text(
+        """
+values: Allocatable[Float64[:]]
+
+def make_values() -> Allocatable[Float64[:]]: ...
+""",
+        module_name="native_handle_lowering",
+    )
+
+    lowered = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    values = lowered.variables[0]
+    make_values = lowered.funcs[0]
+
+    assert values.native_array_handle_policy.handle_kind == "borrowed_module_descriptor"
+    assert values.native_array_handle_policy.to_numpy == "read_only_detached_copy"
+    assert make_values.results.var.native_array_handle_policy.handle_kind == "owned_result_descriptor"
+    assert make_values.results.var.native_array_handle_policy.output_projection == "handle_result"
 
 
 def test_immutable_writable_arguments_lower_with_completed_copy_in_out_policy():
@@ -301,7 +335,7 @@ end module alloc_mod
     assert values.getter_ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
 
 
-def test_derived_snapshot_field_actions_are_completed_before_lowering():
+def test_plain_derived_module_variable_without_live_borrow_policy_blocks_before_lowering():
     module = parse_pyi_text(
         """
 class child:
@@ -317,15 +351,8 @@ current: box
         module_name="snapshot_mod",
     )
 
-    lowered = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
-    box = next(cls for cls in lowered.classes if str(cls.name) == "box")
-    actions = {str(field.name): field.snapshot_field_action for field in box.attributes}
-
-    assert actions == {
-        "scalar": SnapshotFieldAction.SCALAR_COPY,
-        "values": SnapshotFieldAction.ARRAY_COPY,
-        "nested": SnapshotFieldAction.NESTED_SNAPSHOT,
-    }
+    with pytest.raises(ValueError, match="plain derived module variables require Aliased storage"):
+        semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
 
 
 def test_allocatable_result_and_output_lower_for_copy_return_codegen():

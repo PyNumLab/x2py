@@ -47,9 +47,9 @@ Every semantic `.pyi` control name is imported from `x2py.contracts`. This
 single namespace also re-exports the typing forms used by the contract:
 
 ```python
-from x2py.contracts import Addr, Arg, Final, Flat, Float64, Snapshot, native_call
+from x2py.contracts import Addr, Arg, Final, Flat, Float64, Int32, native_call
 
-color: Final[Snapshot[rgb_color]]
+max_colors: Final[Int32] = 256
 
 @native_call([Addr(Arg(0))])
 def inspect(values: Float64[Flat]) -> None: ...
@@ -1187,7 +1187,7 @@ maybe_value: Float64 | None
 `Float64 | None` does not imply a native allocatable or pointer descriptor.
 For array descriptors, use `Allocatable[T[...]]` and `Pointer[T[...]]`.
 `Annotated[T[...], Allocatable]`, `Annotated[T[...], Pointer]`, and
-`Snapshot[T]` are not active public array descriptor spellings.
+`Snapshot[T]` are not active public descriptor spellings.
 
 Other positional `Annotated` helpers are preserved as semantic constraints:
 
@@ -1258,6 +1258,16 @@ preserved verbatim so project-specific owner and release names can be expressed;
 the backend still validates whether the requested transfer and destruction path
 are implemented.
 
+For native pointer-array handles, descriptor operations are opt-in. `nullify()`
+is always available on a present pointer handle. `allocate(shape)` is permitted
+only when `reassociation` is `allocate`, `allocate_resize`, `reallocate`, or
+`reassociate_allocate`. `deallocate()` is permitted only when `deallocation` is
+`deallocate`, `deallocate_resize`, `owner_deallocate`, or `wrapper_dealloc`.
+`resize(shape)` is permitted only when the policy opts into resize through both
+reassociation and deallocation, using `resize`, `allocate_resize`, or
+`deallocate_resize` as appropriate. Other values keep those operations absent
+from the completed handle policy.
+
 ```python
 from x2py.contracts import Annotated, Float64, Pointer, PointerPolicy
 
@@ -1281,23 +1291,23 @@ For example, a pointer array function result can be made a Python-owned
 detached copy only when the stub also supplies enough shape, nullability, lifetime,
 and release facts for the backend path being enabled.
 
-`Snapshot[T]` wraps a derived type in the Python-visible contract when a native
-module variable is copied into a detached read-only object graph:
+Whole-object `Snapshot[T]` contracts are future-only. They are not accepted in
+active semantic `.pyi` files and are not generated for derived module objects.
+Use an explicit live-borrow policy such as `Annotated[T, Aliased]` when the
+native object is addressable:
 
 ```python
-from x2py.contracts import Allocatable, Float64, Snapshot
+from x2py.contracts import Aliased, Allocatable, Annotated, Float64
 
 class box:
     values: Allocatable[Float64[:]]
 
-current: Snapshot[box]
+current: Annotated[box, Aliased]
 ```
 
-`Snapshot[T]` is not an aliasing marker. It selects a recursive snapshot of the
-current native value. Snapshot classes expose copied data fields only, do not
-expose type-bound methods, and reject mutation through a clear read-only
-snapshot error. If any nested field lacks a complete copy policy, wrapper
-generation fails before lowering.
+Without a completed live-borrow policy, a plain derived module variable is a
+readiness blocker. The backend must not silently fall back to a detached object
+copy.
 
 `Final[T]` is the only public constant spelling. Do not use
 `Annotated[T, Constant]` or `T[Constant]`.
@@ -1885,24 +1895,21 @@ may be aliased by the wrapper.
 object:
 
 ```python
-from x2py.contracts import Aliased, Allocatable, Annotated, Float64, Snapshot
+from x2py.contracts import Aliased, Allocatable, Annotated, Float64
 
 class box:
     values: Allocatable[Float64[:]]
 
 live_current: Annotated[box, Aliased]
-current: Snapshot[box]
 ```
 
 The annotation belongs to the module variable, not to `box`. An x2py-created
 `box()` is addressable because its generated constructor allocates
 pointer-backed native storage. A native module declaration is a different object
 origin. `Annotated[box, Aliased]` lets the wrapper retain that object's native
-address and return a live borrowed `box` wrapper. `Snapshot[box]` returns a
-fresh Python-owned snapshot object instead. Snapshot fields are copied
-recursively, arrays are read-only NumPy arrays or `None` when unallocated, and
-type-bound methods are not part of the snapshot surface. Unsupported nested
-fields block the whole snapshot.
+address and return a live borrowed `box` wrapper. Without `Aliased` or another
+completed policy, the derived module object blocks readiness because
+whole-object snapshots are not part of the active contract.
 
 Public scalar Fortran module variables are emitted directly with their resolved
 semantic type:

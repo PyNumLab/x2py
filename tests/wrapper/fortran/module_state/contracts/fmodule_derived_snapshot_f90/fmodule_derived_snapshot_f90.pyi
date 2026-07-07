@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Allocatable, Arg, Float64, Int32, Snapshot, native_call
+from x2py.contracts import Addr, Allocatable, Arg, Float64, Int32, native_call
 
 class child:
     def __init__(
@@ -23,7 +23,7 @@ class box:
 
     def scalar_plus_nested(self) -> Int32: ...
 
-current: Snapshot[box]
+current: box
 
 @native_call([Addr(Arg(0))])
 def initialise_current(

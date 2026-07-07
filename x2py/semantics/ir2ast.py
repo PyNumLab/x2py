@@ -52,6 +52,7 @@ from x2py.semantics.models import (
     OVERLOAD_KIND_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
 )
+from x2py.semantics.native_array_handles import native_array_descriptor_kind
 from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
 from x2py.visitor import ClassVisitor
@@ -269,6 +270,44 @@ def _type_ownership_decision(owner: str, semantic_type: models.SemanticType):
     if decision is None:
         raise _missing_completed_policy(owner)
     return decision
+
+
+def _missing_completed_native_array_handle_policy(owner: str) -> ValueError:
+    return ValueError(
+        f"{owner} is missing completed native-array-handle policy; "
+        "run complete_semantic_policies before ir2ast lowering"
+    )
+
+
+def _native_array_handle_policy(
+    owner: str,
+    semantic_type: models.SemanticType | None,
+    metadata: dict,
+):
+    if native_array_descriptor_kind(semantic_type) is None:
+        return None
+    policy = metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA)
+    if policy is None:
+        raise _missing_completed_native_array_handle_policy(owner)
+    if policy.is_blocked:
+        raise ValueError(f"{owner} cannot be wrapped safely: {policy.blocker or policy.handle_kind}")
+    return policy
+
+
+def _native_array_variable_policy(variable: models.SemanticVariable):
+    return _native_array_handle_policy(
+        f"Variable {variable.name!r}",
+        variable.semantic_type,
+        variable.metadata,
+    )
+
+
+def _native_array_function_result_policy(function: models.SemanticFunction):
+    return _native_array_handle_policy(
+        f"Function {function.name!r} result",
+        function.return_type,
+        function.metadata,
+    )
 
 
 def _passes_by_value(node: models.SemanticVariable) -> bool:
@@ -820,12 +859,26 @@ def _raise_for_blocked_ownership_contracts_in_function(node: models.SemanticFunc
         )
 
 
+def _raise_for_native_array_handle_policies_in_function(node: models.SemanticFunction) -> None:
+    for argument in node.arguments:
+        _native_array_variable_policy(argument)
+    if node.return_type is not None:
+        _native_array_function_result_policy(node)
+
+
 def _raise_for_blocked_ownership_contracts_in_class(node: models.SemanticClass) -> None:
     for field in node.fields:
         _raise_for_blocked_ownership_policy(
             f"Class {node.name!r} field {field.name!r}",
             _variable_ownership_decision(field),
         )
+
+
+def _raise_for_native_array_handle_policies_in_class(node: models.SemanticClass) -> None:
+    for field in node.fields:
+        _native_array_variable_policy(field)
+    for nested in node.classes:
+        _raise_for_native_array_handle_policies_in_class(nested)
 
 
 def _raise_for_blocked_ownership_contracts(node: models.SemanticModule) -> None:
@@ -836,6 +889,13 @@ def _raise_for_blocked_ownership_contracts(node: models.SemanticModule) -> None:
         )
     for semantic_class in node.classes:
         _raise_for_blocked_ownership_contracts_in_class(semantic_class)
+
+
+def _raise_for_native_array_handle_policies(node: models.SemanticModule) -> None:
+    for variable in node.variables:
+        _native_array_variable_policy(variable)
+    for semantic_class in node.classes:
+        _raise_for_native_array_handle_policies_in_class(semantic_class)
 
 
 def _is_public(node) -> bool:
@@ -1220,6 +1280,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         else:
             result_shape = None
         result_ownership = _function_return_ownership_decision(node)
+        native_array_handle_policy = _native_array_function_result_policy(node)
         result_var = Variable(
             return_dtype,
             node.name,
@@ -1227,6 +1288,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             memory_handling=result_ownership.storage_mode.value,
             fortran_character_length=_fortran_character_length(node.return_type),
             ownership_decision=result_ownership,
+            native_array_handle_policy=native_array_handle_policy,
         )
         func_scope.insert_variable(result_var, name=node.name)
         return FunctionDefResult(result_var)
@@ -1270,6 +1332,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         _raise_for_unsupported_fortran_module_features(node)
         _raise_for_unsupported_array_contracts(node)
         _raise_for_blocked_ownership_contracts(node)
+        _raise_for_native_array_handle_policies(node)
         _raise_for_private_type_exposure(node)
         custom_types = dict(self.custom_types or {})
         class_lookup = _semantic_class_lookup(node.classes)
@@ -1473,6 +1536,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         _raise_for_unsupported_bind_c_abi(node, self.class_lookup or {})
         _raise_for_unsupported_pointer_outputs(node)
         _raise_for_blocked_ownership_contracts_in_function(node)
+        _raise_for_native_array_handle_policies_in_function(node)
         _raise_for_unsupported_assumed_type_contracts(node)
         _raise_for_unsupported_array_contracts_in_function(node)
         passed_object_position = _passed_object_position(node)
@@ -1541,6 +1605,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         _raise_for_unresolved_generic_targets(node)
         _raise_for_unsupported_constructor_overloads(node)
         _raise_for_blocked_ownership_contracts_in_class(node)
+        _raise_for_native_array_handle_policies_in_class(node)
         class_type = (self.custom_types or {}).get(node.name)
         if class_type is None:
             class_type = _class_type(node)
@@ -1659,6 +1724,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             else node.metadata.get(models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA)
         )
         fortran_array_category, fortran_source_shape = _fortran_array_category_and_source_shape(semantic_type)
+        native_array_handle_policy = _native_array_variable_policy(node)
         var = Variable(
             dtype,
             name,
@@ -1676,6 +1742,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             ownership_decision=ownership_decision,
             setter_ownership_decision=node.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA),
             snapshot_field_action=node.metadata.get(models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA),
+            native_array_handle_policy=native_array_handle_policy,
             projected_output=bool(node.metadata.get(PROJECTED_OUTPUT_METADATA)),
             assumed_rank=_is_assumed_rank(semantic_type),
             cls_base=self.cls_base,

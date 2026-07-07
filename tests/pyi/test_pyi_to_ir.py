@@ -15,7 +15,6 @@ from x2py.semantic_metadata import (
     NATIVE_ARRAY_DESCRIPTOR_METADATA,
     OPTIONAL_ABSENT_HANDLE_METADATA,
     PROJECTED_OUTPUT_METADATA,
-    SNAPSHOT_TYPE_METADATA,
     SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     USER_PRIVATE_METADATA,
 )
@@ -1208,25 +1207,30 @@ alias: Annotated[Int32, Name("native_alias"), Finite]
     assert parse_pyi_text(emitted, module_name="constraints").variables[0] == module.variables[0]
 
 
-def test_convert_pyi_to_ir_round_trips_snapshot_type_wrapper():
-    module = parse_pyi_text(
-        """
+def test_convert_pyi_to_ir_rejects_snapshot_type_wrapper():
+    with pytest.raises(ValueError, match=r"Snapshot\[T\] is not an active semantic \.pyi contract"):
+        parse_pyi_text(
+            """
 class box:
     value: Float64
 
 current: Snapshot[box]
 """,
-        module_name="snapshots",
-    )
+            module_name="snapshots",
+        )
 
-    current = module.variables[0]
-    assert current.name == "current"
-    assert current.semantic_type.name == "box"
-    assert current.semantic_type.metadata[SNAPSHOT_TYPE_METADATA] is True
+    with pytest.raises(ValueError, match=r"Snapshot\[T\] is not an active semantic \.pyi contract"):
+        pyi_text_to_semantic_module(
+            """
+from x2py.contracts import Snapshot
 
-    emitted = emit_module(module)
-    assert "current: Snapshot[box]" in emitted
-    assert parse_pyi_text(emitted, module_name="snapshots") == module
+class box:
+    value: Float64
+
+current: Snapshot[box]
+""",
+            module_name="snapshots",
+        )
 
 
 def test_convert_pyi_to_ir_accepts_aliased_contract_wrapper_names():

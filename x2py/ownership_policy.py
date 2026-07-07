@@ -1111,11 +1111,15 @@ class OwnershipPolicyResolver:
             if not (facts.metadata or {}).get("aliased"):
                 return OwnershipDecision(
                     ObjectKind.DERIVED_TYPE,
-                    OwnershipOwner.PYTHON,
-                    TransferMode.SNAPSHOT_COPY,
-                    DestructionPolicy.PYTHON_REFCOUNT,
+                    OwnershipOwner.UNKNOWN,
+                    TransferMode.BLOCKED,
+                    DestructionPolicy.BLOCKED,
                     storage_mode=StorageMode.STACK,
-                    reason="plain derived module storage is copied into a read-only Python snapshot",
+                    blocker=(
+                        "plain derived module variables require Aliased storage; "
+                        "whole-object Snapshot[T] is future-only"
+                    ),
+                    reason="pre-existing derived module objects need explicit addressability before exposure",
                 )
             return OwnershipDecision(
                 ObjectKind.DERIVED_TYPE,

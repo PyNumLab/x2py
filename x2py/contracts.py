@@ -81,7 +81,6 @@ Void = _ContractType
 
 Addr = _ContractType
 Returns = _ContractType
-Snapshot = _ContractType
 private = _ContractType
 
 Aliased = _ContractExpression()
@@ -202,7 +201,6 @@ CONTRACT_SYMBOLS = frozenset(
         "Return",
         "Returns",
         "SizeT",
-        "Snapshot",
         "SourceDims",
         "Strided",
         "String",
@@ -262,7 +260,6 @@ CONTRACT_TYPE_NAMES = frozenset(
         "Pointer",
         "Returns",
         "SizeT",
-        "Snapshot",
         "String",
         "UInt",
         "UInt8",

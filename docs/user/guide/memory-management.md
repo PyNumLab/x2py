@@ -33,16 +33,16 @@ attached to one canonical source listing.
 ## Core Invariants
 
 1. Exactly one owner destroys each owned native allocation.
-2. Python-owned copies, pointer detached copies, and module-object snapshots are independent of later native mutation.
+2. Python-owned copies and pointer detached copies are independent of later native mutation.
 3. Caller-owned arrays are never freed by x2py.
 4. A borrowed child or component view retains its generated wrapper owner.
 5. Owner retention does not protect a view from explicit native reallocation or deallocation.
 6. A pointer declaration never proves ownership of its target.
 7. Missing owner, lifetime, release, shape, dtype, mutability, nullability, or aliasing facts block generation.
 8. Addressability is an object-origin fact: generated constructors allocate
-   pointer-backed instances, while pre-existing derived module objects use
-   `Aliased` for live borrowing or `Snapshot[T]` for detached read-only object
-   copies.
+   pointer-backed instances, while pre-existing derived module objects need
+   `Aliased` or another completed live-borrow policy before they can be
+   exposed.
 9. Native array descriptor state lives in `Allocatable[T[...]]` and
    `Pointer[T[...]]` handles; borrowed NumPy views and detached NumPy copies are
    explicit extraction results from `to_numpy()`.
@@ -51,7 +51,7 @@ attached to one canonical source listing.
 
 | Value | Release responsibility |
 | --- | --- |
-| scalar, string, copy-return array, pointer detached copy, derived module snapshot | Python, NumPy, or its generated base capsule |
+| scalar, string, copy-return array, pointer detached copy | Python, NumPy, or its generated base capsule |
 | caller-supplied NumPy array | Python caller |
 | wrapper-owned derived instance | generated wrapper deallocator and native finalization |
 | borrowed nested component | containing wrapper owner |
@@ -86,14 +86,14 @@ it does not transfer native release responsibility.
 - Python strings use **replacement** because `str` is immutable;
 - Allocatable array descriptors use **handles** because native allocation identity may change;
 - Array/function results use **copy-return**;
-- Supported pointer results use detached-copy `snapshot_copy` policy, and plain
-  derived module variables use **read-only `Snapshot[T]` objects**; and
+- Supported pointer results use detached-copy `snapshot_copy` policy, while
+  plain derived module variables without `Aliased` or another completed policy
+  block readiness; and
 - Borrowed views extracted from handles **share native storage** until native
   invalidation.
 
-Generated `Snapshot[T]` objects are read-only detached data. Their scalar fields
-and arrays are copied at read time, nested derived fields become nested
-snapshots, and type-bound methods are not exposed on the snapshot classes.
+Whole-object `Snapshot[T]` contracts are future-only and are not emitted or
+accepted by the active semantic `.pyi` format.
 
 Return projection and ownership are one contract. An edited `.pyi` cannot ask
 for copy-return without a projected replacement, or combine immutable storage

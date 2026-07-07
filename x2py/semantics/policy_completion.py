@@ -10,12 +10,11 @@ from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.ownership_policy import (
     DestructionPolicy,
     OWNERSHIP_POLICY_METADATA,
-    ObjectKind,
+    POINTER_POLICY_METADATA,
     OwnershipDecision,
     OwnershipContext,
     OwnershipOwner,
     SetterAction,
-    SnapshotFieldAction,
     TransferMode,
     default_ownership_policy,
     ownership_context_for_argument,
@@ -24,13 +23,44 @@ from x2py.semantic_metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
+    OPTIONAL_ABSENT_HANDLE_METADATA,
     PROJECTED_OUTPUT_METADATA,
     SCALAR_STORAGE_CATEGORY,
     SNAPSHOT_TYPE_METADATA,
 )
 from x2py.semantics import models
+from x2py.semantics.native_array_handles import NativeArrayHandlePolicy, native_array_descriptor_kind
 
 __all__ = ("complete_semantic_policies",)
+
+
+_UNSUPPORTED_SNAPSHOT_CONTRACT = (
+    "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only"
+)
+_POINTER_ALLOCATE_PERMISSION_VALUES = frozenset(
+    {
+        "allocate",
+        "allocate_resize",
+        "reallocate",
+        "reassociate_allocate",
+    }
+)
+_POINTER_DEALLOCATE_PERMISSION_VALUES = frozenset(
+    {
+        "deallocate",
+        "deallocate_resize",
+        "owner_deallocate",
+        "wrapper_dealloc",
+    }
+)
+_POINTER_RESIZE_PERMISSION_VALUES = frozenset(
+    {
+        "resize",
+        "allocate_resize",
+        "deallocate_resize",
+        "reallocate",
+    }
+)
 
 
 def complete_semantic_policies(
@@ -88,16 +118,13 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
     signatures are known and before ``ir2ast`` lowering.
     """
 
-    class_lookup = _semantic_class_lookup(module)
     for variable in module.variables:
         _complete_variable(variable, OwnershipContext.module_variable())
         _complete_accessor_policies(variable, OwnershipContext.module_variable())
         _complete_module_variable_initializer(variable)
+        _block_unsupported_snapshot_contract(variable)
     for semantic_class in module.classes:
         _complete_class(semantic_class)
-    _clear_snapshot_field_actions(module.classes)
-    for variable in module.variables:
-        _complete_module_snapshot_policy(variable, class_lookup)
     for function in module.functions:
         _complete_function(function)
     for overload_set in module.overload_sets:
@@ -107,178 +134,31 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
     return module
 
 
-def _semantic_class_lookup(module: models.SemanticModule) -> dict[str, models.SemanticClass]:
-    """Return all classes addressable by semantic type name in this module."""
-    lookup: dict[str, models.SemanticClass] = {}
-
-    def visit(semantic_class: models.SemanticClass) -> None:
-        lookup.setdefault(semantic_class.name, semantic_class)
-        if semantic_class.native_name:
-            lookup.setdefault(semantic_class.native_name, semantic_class)
-        for nested in semantic_class.classes:
-            visit(nested)
-
-    for semantic_class in module.classes:
-        visit(semantic_class)
-    return lookup
-
-
-def _complete_module_snapshot_policy(
-    variable: models.SemanticVariable,
-    class_lookup: dict[str, models.SemanticClass],
-) -> None:
-    """Complete recursive snapshot eligibility for a derived module variable."""
+def _block_unsupported_snapshot_contract(variable: models.SemanticVariable) -> None:
+    """Turn stale Snapshot IR metadata into an explicit post-IR blocker."""
+    if not variable.semantic_type.metadata.get(SNAPSHOT_TYPE_METADATA):
+        return
     decision = variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA]
-    if not _is_module_derived_snapshot(decision, variable.semantic_type):
-        if variable.semantic_type.metadata.get(SNAPSHOT_TYPE_METADATA):
-            blocker = _invalid_snapshot_annotation_blocker(variable, decision)
-            blocked = _blocked_snapshot_decision(decision, blocker)
-            variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = blocked
-            variable.metadata[models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA] = blocked
-            variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = replace(
-                blocked,
-                setter_action=SetterAction.OMIT,
-            )
-        else:
-            variable.semantic_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
-        return
-
-    blocker, actions = _snapshot_plan(variable.semantic_type, class_lookup, (variable.semantic_type.name,))
-    if blocker is not None:
-        blocked = _blocked_snapshot_decision(decision, blocker)
-        variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = blocked
-        variable.metadata[models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA] = blocked
-        variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = replace(
-            blocked,
-            setter_action=SetterAction.OMIT,
-        )
-        variable.semantic_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
-        return
-
-    for field, action in actions:
-        field.metadata[models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA] = action
-    variable.semantic_type.metadata[SNAPSHOT_TYPE_METADATA] = True
-
-
-def _is_module_derived_snapshot(decision: OwnershipDecision, semantic_type: models.SemanticType) -> bool:
-    return bool(
-        decision.kind is ObjectKind.DERIVED_TYPE
-        and decision.transfer is TransferMode.SNAPSHOT_COPY
-        and semantic_type.rank == 0
+    blocked = _blocked_snapshot_decision(decision)
+    variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = blocked
+    variable.metadata[models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA] = blocked
+    variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = replace(
+        blocked,
+        setter_action=SetterAction.OMIT,
     )
+    variable.semantic_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
 
 
-def _invalid_snapshot_annotation_blocker(
-    variable: models.SemanticVariable,
-    decision: OwnershipDecision,
-) -> str:
-    if decision.kind is not ObjectKind.DERIVED_TYPE or variable.semantic_type.rank != 0:
-        return "Snapshot[T] is supported only for scalar derived module variables"
-    return (
-        f"Snapshot[{variable.semantic_type.name}] conflicts with the completed "
-        f"{decision.transfer.value} transfer policy"
-    )
-
-
-def _blocked_snapshot_decision(decision: OwnershipDecision, blocker: str) -> OwnershipDecision:
+def _blocked_snapshot_decision(decision: OwnershipDecision) -> OwnershipDecision:
     return replace(
         decision,
         owner=OwnershipOwner.UNKNOWN,
         transfer=TransferMode.BLOCKED,
         destruction=DestructionPolicy.BLOCKED,
         borrowed=False,
-        blocker=blocker,
-        reason="recursive derived module snapshot policy is incomplete",
+        blocker=_UNSUPPORTED_SNAPSHOT_CONTRACT,
+        reason="whole-object snapshots are not part of the active contract",
     )
-
-
-def _clear_snapshot_field_actions(classes: Iterable[models.SemanticClass]) -> None:
-    for semantic_class in classes:
-        for field in semantic_class.fields:
-            field.metadata.pop(models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA, None)
-        _clear_snapshot_field_actions(semantic_class.classes)
-
-
-def _snapshot_plan(
-    semantic_type: models.SemanticType,
-    class_lookup: dict[str, models.SemanticClass],
-    stack: tuple[str, ...],
-) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
-    semantic_class = class_lookup.get(semantic_type.name)
-    if semantic_class is None:
-        return f"snapshot type {semantic_type.name!r} is not declared in this module", []
-    actions: list[tuple[models.SemanticField, SnapshotFieldAction]] = []
-    for field in semantic_class.fields:
-        blocker, field_actions = _snapshot_field_plan(field, class_lookup, stack)
-        if blocker is not None:
-            return blocker, []
-        actions.extend(field_actions)
-    return None, actions
-
-
-def _snapshot_field_plan(
-    field: models.SemanticField,
-    class_lookup: dict[str, models.SemanticClass],
-    stack: tuple[str, ...],
-) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
-    path = ".".join((*stack, field.name))
-    semantic_type = field.semantic_type
-    blocker = _snapshot_field_storage_blocker(semantic_type, path)
-    if blocker is not None:
-        return blocker, []
-    if semantic_type.name in class_lookup:
-        return _snapshot_derived_field_plan(field, class_lookup, stack, path)
-    return _snapshot_value_field_plan(field, path)
-
-
-def _snapshot_field_storage_blocker(semantic_type: models.SemanticType, path: str) -> str | None:
-    storage = semantic_type.storage
-    array = storage.array if storage is not None else None
-    if semantic_type.name in {"Callable", "Procedure", "Callback", "FunctionPointer", "CFunctionPointer"}:
-        return f"snapshot field {path} is a procedure or callback"
-    if semantic_type.metadata.get("fortran_assumed_type") or semantic_type.metadata.get("fortran_polymorphic"):
-        return f"snapshot field {path} uses unsupported polymorphic or assumed-type storage"
-    if array is not None and array.pointer:
-        return f"snapshot field {path} is a pointer array without a completed pointer detached-copy policy"
-    if semantic_type.metadata.get("fortran_pointer") or (storage is not None and storage.pointer_depth > 0):
-        return f"snapshot field {path} is pointer storage without a completed pointer detached-copy policy"
-    return None
-
-
-def _snapshot_derived_field_plan(
-    field: models.SemanticField,
-    class_lookup: dict[str, models.SemanticClass],
-    stack: tuple[str, ...],
-    path: str,
-) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
-    semantic_type = field.semantic_type
-    if semantic_type.rank > 0 and semantic_type.name in class_lookup:
-        return f"snapshot field {path} is an array of derived values", []
-    if semantic_type.metadata.get("fortran_allocatable"):
-        return f"snapshot field {path} is an allocatable derived scalar without a nullable copy policy", []
-    if semantic_type.name in stack:
-        return f"snapshot field {path} creates a recursive derived snapshot cycle", []
-    blocker, nested_actions = _snapshot_plan(semantic_type, class_lookup, (*stack, semantic_type.name))
-    if blocker is not None:
-        return blocker, []
-    return None, [(field, SnapshotFieldAction.NESTED_SNAPSHOT), *nested_actions]
-
-
-def _snapshot_value_field_plan(
-    field: models.SemanticField,
-    path: str,
-) -> tuple[str | None, list[tuple[models.SemanticField, SnapshotFieldAction]]]:
-    semantic_type = field.semantic_type
-    scalar_name = semantic_type.dtype or semantic_type.name
-    if semantic_type.rank > 0:
-        if scalar_name not in SEMANTIC_SCALAR_TYPE_NAMES or scalar_name == "Void":
-            return f"snapshot field {path} has unsupported array element type {scalar_name!r}", []
-        return None, [(field, SnapshotFieldAction.ARRAY_COPY)]
-    if semantic_type.metadata.get("fortran_allocatable"):
-        return f"snapshot field {path} is an allocatable scalar without a nullable copy policy", []
-    if scalar_name not in SEMANTIC_SCALAR_TYPE_NAMES or scalar_name == "Void":
-        return f"snapshot field {path} has no safe scalar copy policy for type {scalar_name!r}", []
-    return None, [(field, SnapshotFieldAction.SCALAR_COPY)]
 
 
 def _complete_class(semantic_class: models.SemanticClass) -> None:
@@ -309,8 +189,257 @@ def _complete_function(function: models.SemanticFunction) -> None:
     if function.return_type is not None:
         decision = default_ownership_policy.decide_semantic_type(function.return_type, OwnershipContext.result())
         function.metadata[models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA] = decision
+        _complete_native_array_handle_result_policy(function, decision)
     else:
         function.metadata.pop(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA, None)
+        function.metadata.pop(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, None)
+
+
+def _complete_native_array_handle_result_policy(
+    function: models.SemanticFunction,
+    decision: OwnershipDecision,
+) -> None:
+    return_type = function.return_type
+    descriptor_kind = native_array_descriptor_kind(return_type)
+    if descriptor_kind is None or return_type is None:
+        function.metadata.pop(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, None)
+        return
+    policy = _native_array_handle_policy(
+        descriptor_kind,
+        return_type,
+        decision,
+        OwnershipContext.result(),
+    )
+    function.metadata[models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA] = policy
+
+
+def _complete_native_array_handle_variable_policy(
+    variable: models.SemanticVariable,
+    context: OwnershipContext,
+) -> None:
+    descriptor_kind = native_array_descriptor_kind(variable.semantic_type)
+    if descriptor_kind is None:
+        variable.metadata.pop(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, None)
+        return
+    decision = variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA]
+    policy = _native_array_handle_policy(
+        descriptor_kind,
+        variable.semantic_type,
+        decision,
+        context,
+        variable=variable,
+    )
+    variable.metadata[models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA] = policy
+
+
+def _native_array_handle_policy(
+    descriptor_kind: str,
+    semantic_type: models.SemanticType,
+    decision: OwnershipDecision,
+    context: OwnershipContext,
+    *,
+    variable: models.SemanticVariable | None = None,
+) -> NativeArrayHandlePolicy:
+    optional_absent = bool(
+        variable is not None and variable.optional and semantic_type.metadata.get(OPTIONAL_ABSENT_HANDLE_METADATA)
+    )
+    handle_kind = _native_array_handle_kind(descriptor_kind, context, optional_absent=optional_absent)
+    blocker = _native_array_handle_blocker(descriptor_kind, handle_kind, decision)
+    return NativeArrayHandlePolicy(
+        descriptor_kind=descriptor_kind,
+        handle_kind=handle_kind,
+        origin=_native_array_handle_origin(context),
+        owner=_native_array_handle_owner(handle_kind),
+        descriptor_ownership=_native_array_descriptor_ownership(handle_kind),
+        borrowed=_native_array_descriptor_ownership(handle_kind) == "borrowed",
+        getter_behavior=_native_array_getter_behavior(handle_kind, context, blocker),
+        python_setter=_native_array_python_setter(variable),
+        native_setter=_native_array_native_setter(variable),
+        output_projection=_native_array_output_projection(descriptor_kind, handle_kind, context),
+        release=_native_array_release_responsibility(handle_kind),
+        to_numpy=_native_array_to_numpy_policy(descriptor_kind, handle_kind, decision),
+        nullable=bool(decision.nullable or optional_absent),
+        optional_absent=optional_absent,
+        storage_mode=decision.storage_mode.value,
+        operations=_native_array_handle_operations(descriptor_kind, handle_kind, context, semantic_type),
+        blocker=blocker,
+    )
+
+
+def _native_array_handle_kind(
+    descriptor_kind: str,
+    context: OwnershipContext,
+    *,
+    optional_absent: bool,
+) -> str:
+    if optional_absent:
+        return "optional_absent_handle"
+    if context.is_module_variable:
+        return "borrowed_module_descriptor"
+    if context.is_field:
+        return "borrowed_field_descriptor"
+    if context.is_argument:
+        return "argument_descriptor"
+    if context.is_result and descriptor_kind == "allocatable":
+        return "owned_result_descriptor"
+    return "unsupported"
+
+
+def _native_array_handle_origin(context: OwnershipContext) -> str:
+    if context.is_module_variable:
+        return "module_variable"
+    if context.is_field:
+        return "derived_field"
+    if context.is_argument:
+        return "argument"
+    if context.is_result:
+        return "result"
+    return "unknown"
+
+
+def _native_array_handle_owner(handle_kind: str) -> str:
+    return {
+        "argument_descriptor": "caller",
+        "borrowed_field_descriptor": "wrapper",
+        "borrowed_module_descriptor": "native",
+        "optional_absent_handle": "caller",
+        "owned_result_descriptor": "wrapper",
+    }.get(handle_kind, "unknown")
+
+
+def _native_array_descriptor_ownership(handle_kind: str) -> str:
+    if handle_kind == "owned_result_descriptor":
+        return "owned"
+    if handle_kind == "unsupported":
+        return "unknown"
+    return "borrowed"
+
+
+def _native_array_getter_behavior(handle_kind: str, context: OwnershipContext, blocker: str | None) -> str:
+    if blocker is not None:
+        return "blocked"
+    if context.is_module_variable or context.is_field:
+        return "handle"
+    if handle_kind == "owned_result_descriptor":
+        return "return_handle"
+    return "none"
+
+
+def _native_array_python_setter(variable: models.SemanticVariable | None) -> str:
+    setter = None if variable is None else variable.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA)
+    if setter is None:
+        return "none"
+    return setter.setter_action.value
+
+
+def _native_array_native_setter(variable: models.SemanticVariable | None) -> str:
+    setter = None if variable is None else variable.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA)
+    if setter is None:
+        return "none"
+    return setter.assignment_mode.value
+
+
+def _native_array_output_projection(
+    descriptor_kind: str,
+    handle_kind: str,
+    context: OwnershipContext,
+) -> str:
+    if handle_kind == "unsupported":
+        return "unsupported"
+    if context.is_result:
+        return "handle_result" if descriptor_kind == "allocatable" else "unsupported"
+    if context.is_argument and context.projects_result:
+        return "projected_handle"
+    return "none"
+
+
+def _native_array_release_responsibility(handle_kind: str) -> str:
+    return {
+        "argument_descriptor": "none",
+        "borrowed_field_descriptor": "wrapper_dealloc",
+        "borrowed_module_descriptor": "native_owner",
+        "optional_absent_handle": "none",
+        "owned_result_descriptor": "wrapper_dealloc",
+        "unsupported": "blocked",
+    }[handle_kind]
+
+
+def _native_array_to_numpy_policy(
+    descriptor_kind: str,
+    handle_kind: str,
+    decision: OwnershipDecision,
+) -> str:
+    if handle_kind == "unsupported" or decision.is_blocked:
+        return "unsupported"
+    if descriptor_kind == "pointer":
+        return "descriptor_view"
+    if handle_kind == "borrowed_module_descriptor" and not decision.borrowed:
+        return "read_only_detached_copy"
+    return "borrowed_view"
+
+
+def _native_array_handle_operations(
+    descriptor_kind: str,
+    handle_kind: str,
+    context: OwnershipContext,
+    semantic_type: models.SemanticType,
+) -> tuple[str, ...]:
+    if handle_kind == "unsupported":
+        return ()
+    if descriptor_kind == "allocatable":
+        operations = {"allocated", "to_numpy"}
+        if handle_kind in {"borrowed_module_descriptor", "borrowed_field_descriptor", "owned_result_descriptor"} or (
+            context.is_argument and context.writes_argument
+        ):
+            operations.update({"deallocate", "resize"})
+        return tuple(sorted(operations))
+    operations = {"associated", "nullify", "to_numpy"}
+    pointer_policy = _pointer_policy_metadata(semantic_type)
+    if _pointer_policy_allows_allocate(pointer_policy):
+        operations.add("allocate")
+    if _pointer_policy_allows_deallocate(pointer_policy):
+        operations.add("deallocate")
+    if _pointer_policy_allows_resize(pointer_policy):
+        operations.add("resize")
+    return tuple(sorted(operations))
+
+
+def _pointer_policy_metadata(semantic_type: models.SemanticType) -> dict[str, object]:
+    policy = semantic_type.metadata.get(POINTER_POLICY_METADATA)
+    return dict(policy) if isinstance(policy, dict) else {}
+
+
+def _pointer_policy_value(policy: dict[str, object], key: str) -> str:
+    value = policy.get(key)
+    return str(value).strip().casefold() if isinstance(value, str) else ""
+
+
+def _pointer_policy_allows_allocate(policy: dict[str, object]) -> bool:
+    return _pointer_policy_value(policy, "reassociation") in _POINTER_ALLOCATE_PERMISSION_VALUES
+
+
+def _pointer_policy_allows_deallocate(policy: dict[str, object]) -> bool:
+    return _pointer_policy_value(policy, "deallocation") in _POINTER_DEALLOCATE_PERMISSION_VALUES
+
+
+def _pointer_policy_allows_resize(policy: dict[str, object]) -> bool:
+    reassociation = _pointer_policy_value(policy, "reassociation")
+    deallocation = _pointer_policy_value(policy, "deallocation")
+    return reassociation in _POINTER_RESIZE_PERMISSION_VALUES and deallocation in _POINTER_RESIZE_PERMISSION_VALUES
+
+
+def _native_array_handle_blocker(
+    descriptor_kind: str,
+    handle_kind: str,
+    decision: OwnershipDecision,
+) -> str | None:
+    if decision.is_blocked:
+        return decision.blocker or decision.reason
+    if handle_kind == "unsupported" and descriptor_kind == "pointer":
+        return "pointer handle results need stable owner storage and target lifetime policy before wrapping"
+    if handle_kind == "unsupported":
+        return "native array handle origin is unsupported before wrapper lowering"
+    return None
 
 
 def _complete_callable_address_policy(function: models.SemanticFunction) -> None:
@@ -481,6 +610,7 @@ def _complete_variable(variable: models.SemanticVariable, context: OwnershipCont
     decision = default_ownership_policy.decide_semantic_variable(variable, context)
     variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = decision
     _complete_callable_policy(variable.semantic_type)
+    _complete_native_array_handle_variable_policy(variable, context)
 
 
 def _complete_accessor_policies(variable: models.SemanticVariable, context: OwnershipContext) -> None:
@@ -490,6 +620,7 @@ def _complete_accessor_policies(variable: models.SemanticVariable, context: Owne
     variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = (
         default_ownership_policy.decide_semantic_setter(variable, context)
     )
+    _complete_native_array_handle_variable_policy(variable, context)
 
 
 def _complete_module_variable_initializer(variable: models.SemanticVariable) -> None:

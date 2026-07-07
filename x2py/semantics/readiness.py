@@ -8,6 +8,7 @@ from x2py.semantic_metadata import PROJECTED_OUTPUT_METADATA
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
+    RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     SemanticArgument,
@@ -20,6 +21,7 @@ from .models import (
     SemanticVariable,
 )
 from .native_contract import native_contract_issues
+from .native_array_handles import native_array_descriptor_kind
 from .policy_completion import complete_semantic_policies
 
 
@@ -447,6 +449,14 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+        self._check_native_array_handle_policy(
+            func.return_type,
+            func.metadata.get(RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+            owner=f"{owner}.return",
+            item="return",
+            unit=unit,
+            unit_kind=unit_kind,
+        )
         self._check_type(
             func.return_type,
             owner=f"{owner}.return",
@@ -533,6 +543,14 @@ class _SemanticReadinessChecker:
     ) -> None:
         self._check_metadata_blockers(
             getattr(arg, "metadata", {}),
+            owner=owner,
+            item=arg.name,
+            unit=unit,
+            unit_kind=unit_kind,
+        )
+        self._check_native_array_handle_policy(
+            arg.semantic_type,
+            arg.metadata.get(RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
             owner=owner,
             item=arg.name,
             unit=unit,
@@ -688,6 +706,46 @@ class _SemanticReadinessChecker:
                 "owner": owner,
                 "item": item,
                 "policy": decision.blocker or decision.reason,
+            },
+            unit=unit,
+            unit_kind=unit_kind,
+        )
+
+    def _check_native_array_handle_policy(
+        self,
+        semantic_type: SemanticType | None,
+        policy,
+        *,
+        owner: str,
+        item: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        if native_array_descriptor_kind(semantic_type) is None:
+            return
+        if policy is None:
+            self._add_blocker(
+                "native_array_handle_policy_missing",
+                "Native array handles need completed descriptor ownership, lifetime, extraction, and operation policy before wrapper lowering.",
+                {
+                    "owner": owner,
+                    "item": item,
+                },
+                unit=unit,
+                unit_kind=unit_kind,
+            )
+            return
+        if not getattr(policy, "is_blocked", False):
+            return
+        self._add_blocker(
+            "native_array_handle_policy_blocked",
+            "Native array handle policy is incomplete or unsupported for wrapper lowering.",
+            {
+                "owner": owner,
+                "item": item,
+                "policy": getattr(policy, "blocker", None) or getattr(policy, "handle_kind", "unsupported"),
+                "descriptor_kind": getattr(policy, "descriptor_kind", None),
+                "handle_kind": getattr(policy, "handle_kind", None),
             },
             unit=unit,
             unit_kind=unit_kind,

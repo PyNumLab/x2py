@@ -112,24 +112,10 @@ allows supported component access such as `module.current.values`.
 An allocatable component view is writable and reaches native module state until
 native code reallocates or deallocates that component.
 
-Without `Aliased`, x2py exposes a detached recursive snapshot when every field
-has a safe copy policy:
-
-```python
-from x2py.contracts import Snapshot
-
-current: Snapshot[box]
-```
-
-Reading `module.current` returns a generated snapshot object such as
-`module.box_snapshot`. It is an instance of `module.Snapshot`, not `module.box`,
-and `module.current.snapshot_type is module.box`. Scalar fields are copied,
-fixed-shape and allocated allocatable arrays become Python-owned read-only
-NumPy arrays, unallocated allocatable arrays become `None`, and nested derived
-fields become nested snapshots. Type-bound methods and write setters are not
-available on snapshots because snapshots are detached read-only data. If any
-field has no safe copy rule, x2py blocks the whole module variable instead of
-returning a partial snapshot.
+Without `Aliased` or another completed live-borrow policy, x2py blocks the
+plain derived module variable before wrapper lowering. Whole-object
+`Snapshot[T]` contracts are future-only; the active contract does not generate
+or accept them as a detached fallback.
 
 Whole object replacement through `module.current = other` is not exposed.
 Mutate native module state through an `Aliased` borrowed object or a wrapped
