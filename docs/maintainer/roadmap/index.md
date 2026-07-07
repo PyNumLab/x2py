@@ -2,7 +2,7 @@
 title: Roadmap
 audience: maintainers
 prerequisites: user language support, developer documentation
-related: ../../user/language-support/planned-features.md, semantic-pyi-wrapper-checklist.md, documentation-content-checklist.md
+related: ../../user/language-support/planned-features.md, semantic-pyi-wrapper-checklist.md, native-array-handle-checklist.md, documentation-content-checklist.md
 status: active-roadmap
 ---
 
@@ -14,6 +14,7 @@ maintainers. Public support status remains in User documentation.
 ## Planned Features
 
 - [Semantic `.pyi` wrapper checklist](semantic-pyi-wrapper-checklist.md)
+- [Native array handle checklist](native-array-handle-checklist.md)
 - [Documentation content checklist](documentation-content-checklist.md)
 - TODO: Populate from accepted roadmap issues and maintained checklists.
 
