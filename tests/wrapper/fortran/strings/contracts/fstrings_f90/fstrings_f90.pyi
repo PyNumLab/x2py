@@ -1,4 +1,4 @@
-from x2py.contracts import Allocatable, Annotated, Arg, Int32, Return, Returns, String, native_call
+from x2py.contracts import Allocatable, Arg, Int32, Return, Returns, String, native_call
 
 def char_code_default(
     c: String[1]
@@ -48,8 +48,8 @@ def fixed_array_extent(
 ) -> Int32: ...
 
 def replace_names(
-    names: Annotated[String[:][:], Allocatable] | None
-) -> Returns["names", Annotated[String[:][:], Allocatable]] | None: ...
+    names: Allocatable[String[:][:]]
+) -> Returns["names", Allocatable[String[:][:]]]: ...
 
 def rewrite_storage(
     label: String[8]

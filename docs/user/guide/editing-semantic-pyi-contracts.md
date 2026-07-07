@@ -495,13 +495,12 @@ but their native storage contexts make their lifetimes different.
 from x2py.contracts import Aliased, Allocatable, Annotated, Destruction, Float64, Ownership, Transfer
 
 module_values: Annotated[
-    Float64[:],
-    Allocatable,
+    Allocatable[Float64[:]],
     Aliased,
     Ownership("native"),
     Transfer("borrowed_view"),
     Destruction("native_owner"),
-] | None
+]
 ```
 
 Python receives a zero-copy NumPy view. Mutation reaches the Fortran module
@@ -524,12 +523,11 @@ from x2py.contracts import Allocatable, Annotated, Destruction, Float64, Ownersh
 
 class buffer:
     values: Annotated[
-        Float64[:],
-        Allocatable,
+        Allocatable[Float64[:]],
         Ownership("wrapper"),
         Transfer("borrowed_view"),
         Destruction("wrapper_dealloc"),
-    ] | None
+    ]
 ```
 
 The containing Python extension object owns the native derived-type instance;
@@ -556,12 +554,11 @@ from x2py.contracts import Addr, Allocatable, Annotated, Arg, Destruction, Float
 def build_values(
     n: Int32,
 ) -> Annotated[
-    Float64[:],
-    Allocatable,
+    Allocatable[Float64[:]],
     Ownership("python"),
     Transfer("copy_return"),
     Destruction("python_refcount"),
-] | None: ...
+]: ...
 ```
 
 Native code produces allocatable output storage. Before that storage is

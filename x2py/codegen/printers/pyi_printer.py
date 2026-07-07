@@ -17,6 +17,7 @@ from x2py.semantic_metadata import (
     ADDRESS_ROLE_RAW,
     BIND_TARGET_METADATA,
     NATIVE_PROJECTION_METADATA,
+    OPTIONAL_ABSENT_HANDLE_METADATA,
     SCALAR_STORAGE_CATEGORY,
     SNAPSHOT_TYPE_METADATA,
     USER_PRIVATE_METADATA,
@@ -50,6 +51,7 @@ from x2py.semantics.models import (
     SemanticVariable,
     _iter_module_semantic_types,
 )
+from x2py.semantics.native_array_handles import native_array_data_type, native_array_descriptor_kind
 from x2py.visitor import ClassVisitor
 
 _WRAPPED_CALLABLE_TYPE_METADATA = "pyi_wrapped_callable_type"
@@ -131,7 +133,11 @@ class PyiPrinter(ClassVisitor):
             inner_type = deepcopy(semantic_type)
             inner_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
             return f"{self._contract('Snapshot')}[{self._visit(inner_type)}]"
-        if self._is_scalar_allocatable_descriptor(semantic_type):
+        array_descriptor = native_array_descriptor_kind(semantic_type)
+        if array_descriptor is not None:
+            wrapper = "Allocatable" if array_descriptor == "allocatable" else "Pointer"
+            text = f"{self._contract(wrapper)}[{self._visit(native_array_data_type(semantic_type))}]"
+        elif self._is_scalar_allocatable_descriptor(semantic_type):
             text = f"{self._contract('Allocatable')}[{self._scalar_descriptor_inner_text(semantic_type)}]"
         elif self._is_scalar_pointer_descriptor(semantic_type):
             text = f"{self._contract('Pointer')}[{self._scalar_descriptor_inner_text(semantic_type)}]"
@@ -473,8 +479,10 @@ class PyiPrinter(ClassVisitor):
             metadata.append(self._contract("AssumedType"))
         if semantic_type.metadata.get("fortran_polymorphic"):
             metadata.append(self._contract("Polymorphic"))
-        if semantic_type.metadata.get("fortran_allocatable") and not self._is_scalar_allocatable_descriptor(
-            semantic_type
+        if (
+            semantic_type.metadata.get("fortran_allocatable")
+            and not self._is_scalar_allocatable_descriptor(semantic_type)
+            and native_array_descriptor_kind(semantic_type) is None
         ):
             metadata.append(self._contract("FortranAllocatable"))
         if semantic_type.metadata.get("aliased"):
@@ -607,24 +615,12 @@ class PyiPrinter(ClassVisitor):
 
     def _emit_module_variable(self, arg: SemanticVariable) -> str:
         """Emit module variable syntax."""
-        if self._is_allocatable_module_array(arg):
-            name = self._module_variable_name(arg)
-            type_text = f"{self._visit(arg.semantic_type)} | None"
-            if name != arg.name:
-                type_text = self._annotated_type_text(type_text, [f"{self._contract('Name')}({json.dumps(arg.name)})"])
-            return f"{self._annotation_target(name)}: {type_text}"
         name = self._module_variable_name(arg)
         return self._emit_typed_name(
             self._annotation_target(name),
             arg,
             original_name=arg.name if name != arg.name else None,
         )
-
-    @staticmethod
-    def _is_allocatable_module_array(arg: SemanticVariable) -> bool:
-        """Return whether is allocatable module array."""
-        storage = arg.semantic_type.storage
-        return bool(storage is not None and storage.array is not None and storage.array.allocatable)
 
     @staticmethod
     def _is_allocatable_array(semantic_type: SemanticType) -> bool:
@@ -639,6 +635,7 @@ class PyiPrinter(ClassVisitor):
         *,
         original_name: str | None = None,
         nullable: bool = False,
+        allow_optional_absent_handle: bool = False,
     ) -> str:
         """Emit typed name syntax."""
         semantic_type = self._without_constant_constraint(arg.semantic_type)
@@ -652,7 +649,12 @@ class PyiPrinter(ClassVisitor):
             type_text = f"{self._contract('Final')}[{type_text}]"
         if getattr(arg, "visibility", "public") == "private":
             type_text = f"{self._contract('private')}[{type_text}]"
-        if nullable or self._is_allocatable_array(arg.semantic_type):
+        optional_absent_handle = arg.semantic_type.metadata.get(OPTIONAL_ABSENT_HANDLE_METADATA) or (
+            arg.optional and native_array_descriptor_kind(arg.semantic_type) is not None
+        )
+        if optional_absent_handle and not allow_optional_absent_handle:
+            raise ValueError("Optional absent native array handles can only be emitted for callable arguments")
+        if nullable or (allow_optional_absent_handle and optional_absent_handle):
             type_text = f"{type_text} | None"
 
         text = f"{name}: {type_text}"
@@ -681,6 +683,7 @@ class PyiPrinter(ClassVisitor):
             emitted_arg,
             original_name=arg.name if name != arg.name else None,
             nullable=descriptor_kind is not None,
+            allow_optional_absent_handle=True,
         )
 
     @classmethod
@@ -1421,7 +1424,7 @@ class PyiPrinter(ClassVisitor):
         if descriptor_kind is not None:
             semantic_type = self._visible_scalar_descriptor_type(semantic_type)
         return_text = f'{self._contract("Returns")}["{arg.name}", {self._visit(semantic_type)}]'
-        if descriptor_kind is not None or arg.optional or self._is_allocatable_array(arg.semantic_type):
+        if descriptor_kind is not None or arg.optional:
             return f"{return_text} | None"
         return return_text
 
@@ -1479,7 +1482,7 @@ class PyiPrinter(ClassVisitor):
         ):
             semantic_type.storage = None
         type_text = self._visit(semantic_type)
-        if descriptor_kind is not None or arg.optional or self._is_allocatable_array(arg.semantic_type):
+        if descriptor_kind is not None or arg.optional:
             return f"{type_text} | None"
         return type_text
 

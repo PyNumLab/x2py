@@ -136,14 +136,14 @@ def step(
 def test_allocatable_policy_blockers_are_reported_for_only_unsupported_cases():
     report = _readiness_from_pyi(
         """
-values: Annotated[Float64[:], Allocatable]
-target_values: Annotated[Float64[:], Allocatable, Aliased]
+values: Allocatable[Float64[:]]
+target_values: Annotated[Allocatable[Float64[:]], Aliased]
 
-def fill() -> Returns["values", Annotated[Float64[:], Allocatable]]: ...
+def fill() -> Returns["values", Allocatable[Float64[:]]]: ...
 
-def make_values() -> Annotated[Float64[:], Allocatable]: ...
+def make_values() -> Allocatable[Float64[:]]: ...
 
-def make_pair() -> tuple[Returns["left", Annotated[Float64[:], Allocatable]], Returns["right", Annotated[Float64[:], Allocatable]]]: ...
+def make_pair() -> tuple[Returns["left", Allocatable[Float64[:]]], Returns["right", Allocatable[Float64[:]]]]: ...
 """
     )
 
@@ -158,8 +158,7 @@ def test_explicit_borrowed_module_allocatable_requires_aliased_storage():
     report = _readiness_from_pyi(
         """
 values: Annotated[
-    Float64[:],
-    Allocatable,
+    Allocatable[Float64[:]],
     Ownership("native"),
     Transfer("borrowed_view"),
     Destruction("native_owner"),
@@ -228,7 +227,7 @@ def test_derived_module_snapshot_blocks_unsupported_nested_pointer_fields():
     report = _readiness_from_pyi(
         """
 class box:
-    values: Annotated[Float64[:], Pointer]
+    values: Pointer[Float64[:]]
 
 current: box
 """
@@ -385,13 +384,13 @@ def combine(
 def test_pointer_write_policy_blockers_are_reported_for_writable_dummies():
     report = _readiness_from_pyi(
         """
-def inspect(values: Annotated[Float64[:], Pointer]) -> None: ...
+def inspect(values: Pointer[Float64[:]]) -> None: ...
 
-def attach() -> Returns["values", Annotated[Float64[:], Pointer]]: ...
+def attach() -> Returns["values", Pointer[Float64[:]]]: ...
 
-def replace(values: Annotated[Float64[:], Pointer]) -> Returns["values", Annotated[Float64[:], Pointer]]: ...
+def replace(values: Pointer[Float64[:]]) -> Returns["values", Pointer[Float64[:]]]: ...
 
-def choose() -> Annotated[Float64[:], Pointer]: ...
+def choose() -> Pointer[Float64[:]]: ...
 """
     )
 

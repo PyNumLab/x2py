@@ -39,6 +39,7 @@ from ..bind_c import (
     BindCModuleVariable,
     BindCPointer,
     BindCResultTupleType,
+    BindCScalarDescriptorType,
     BindCVariable,
 )
 from ..models.core import PythonTuple
@@ -1282,6 +1283,7 @@ class CPythonBindingGenerator(BindingGenerator):
         cast = arg_extraction["body"]
         arg_vars = arg_extraction["args"]
         nullable_scalar = bool(arg_extraction.get("nullable_scalar"))
+        optional_scalar_descriptor = bool(arg_extraction.get("optional_scalar_descriptor"))
 
         # Initialise to any default value
         if expr.has_default or nullable_scalar:
@@ -1297,15 +1299,20 @@ class CPythonBindingGenerator(BindingGenerator):
                 else:
                     body.insert(0, Assign(arg_var, default_val))
 
+        body.extend(arg_extraction.get("pre_check_body", ()))
+
         # Create any necessary type checks and errors
         if expr.has_default or nullable_scalar:
             check_func, err = self._get_type_check_condition(
                 collect_arg, orig_var, True, body, allow_empty_arrays=is_bind_c_argument
             )
+            cast_condition = IsNot(collect_arg, Py_None)
+            if optional_scalar_descriptor:
+                cast_condition = And(IsNot(collect_arg, NIL), cast_condition)
             body.append(
                 If(
                     IfSection(
-                        IsNot(collect_arg, Py_None),
+                        cast_condition,
                         [
                             If(
                                 IfSection(check_func, cast),
@@ -1947,12 +1954,55 @@ class CPythonBindingGenerator(BindingGenerator):
             memory_handling=StorageMode.ALIAS.value,
         )
         self.scope.insert_variable(pointer_var)
+        if self._uses_optional_scalar_descriptor_presence(orig_var, decision):
+            presence_var = Variable(
+                BindCPointer(),
+                self.scope.get_new_name(f"{orig_var.name}_present"),
+                memory_handling=StorageMode.ALIAS.value,
+            )
+            self.scope.insert_variable(presence_var)
+            descriptor_var = Variable(
+                BindCScalarDescriptorType(),
+                self.scope.get_new_name(f"{orig_var.name}_descriptor"),
+                shape=(convert_to_literal(2),),
+            )
+            self.scope.insert_symbolic_alias(IndexedElement(descriptor_var, convert_to_literal(0)), pointer_var)
+            self.scope.insert_symbolic_alias(IndexedElement(descriptor_var, convert_to_literal(1)), presence_var)
+            return {
+                "body": [*converted["body"], Assign(pointer_var, ObjectAddress(value_var))],
+                "args": [descriptor_var],
+                "clean_up": [],
+                "default_init": [AliasAssign(pointer_var, NIL), AliasAssign(presence_var, NIL)],
+                "nullable_scalar": True,
+                "optional_scalar_descriptor": True,
+                "pre_check_body": [
+                    If(IfSection(IsNot(collect_arg, NIL), [Assign(presence_var, ObjectAddress(value_var))]))
+                ],
+            }
         return {
             "body": [*converted["body"], Assign(pointer_var, ObjectAddress(value_var))],
             "args": [pointer_var],
             "clean_up": [],
             "nullable_scalar": True,
         }
+
+    @staticmethod
+    def _uses_optional_scalar_descriptor_presence(orig_var, decision):
+        """Return whether this scalar descriptor must preserve omitted vs None."""
+        return CPythonBindingGenerator._is_optional_scalar_descriptor_var(orig_var, decision)
+
+    @staticmethod
+    def _is_optional_scalar_descriptor_var(orig_var, decision=None):
+        """Return whether ``orig_var`` is an optional nullable scalar descriptor."""
+        if decision is None:
+            decision = getattr(orig_var, "ownership_decision", None)
+        return bool(
+            getattr(orig_var, "is_optional", False)
+            and decision is not None
+            and decision.kind is ObjectKind.SCALAR
+            and decision.descriptor_boundary
+            and decision.nullable
+        )
 
     def _convert_python_scalar_storage_argument(
         self,
@@ -3764,11 +3814,14 @@ class CPythonBindingGenerator(BindingGenerator):
         header = f"{self._doc_argument_name(arg)} : {self._type_doc(var, include_none=can_be_none)}"
         details = self._argument_detail_lines(var)
         if can_be_none:
-            if self._is_nullable_replacement_argument(var):
+            if self._is_optional_scalar_descriptor_var(var):
+                details.append("    Omit to make the native optional dummy absent.")
+                details.append("    Pass None for a present unallocated or unassociated descriptor.")
+            elif self._is_nullable_replacement_argument(var):
                 details.append("    May be passed as None for initially unallocated storage.")
             else:
                 details.append("    May be omitted or passed as None.")
-        if arg.has_default:
+        if arg.has_default and not self._is_optional_scalar_descriptor_var(var):
             details.append(f"    Default is {arg.value}.")
         return [header, *details]
 
@@ -4267,7 +4320,7 @@ class CPythonBindingGenerator(BindingGenerator):
 
         # Initialise optionals
         body = [
-            AliasAssign(py_arg, Py_None)
+            AliasAssign(py_arg, self._python_optional_argument_default(func_def_arg))
             for func_def_arg, py_arg in zip(args, arg_vars, strict=False)
             if func_def_arg.has_default
         ]
@@ -4276,6 +4329,22 @@ class CPythonBindingGenerator(BindingGenerator):
         body.append(If(IfSection(Not(parse_node), [Return(self._error_exit_code)])))
 
         return func_args, body
+
+    def _python_optional_argument_default(self, function_arg):
+        """Return the Python-object sentinel used before argument parsing."""
+        if self._uses_optional_scalar_descriptor_python_presence(function_arg):
+            return NIL
+        return Py_None
+
+    @staticmethod
+    def _uses_optional_scalar_descriptor_python_presence(function_arg):
+        """Return whether a parsed Python argument must preserve omitted vs None."""
+        source_var = getattr(function_arg.var, "original_var", function_arg.var)
+        decision = getattr(source_var, "ownership_decision", None)
+        return bool(
+            function_arg.has_default
+            and CPythonBindingGenerator._is_optional_scalar_descriptor_var(source_var, decision)
+        )
 
     @staticmethod
     def _function_argument_python_name(original_func, function_arg):

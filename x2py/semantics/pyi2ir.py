@@ -14,12 +14,14 @@ from x2py.semantic_metadata import (
     ADDRESS_ROLE_RAW,
     BIND_TARGET_METADATA,
     NATIVE_PROJECTION_METADATA,
+    OPTIONAL_ABSENT_HANDLE_METADATA,
     PROJECTED_OUTPUT_METADATA,
     SCALAR_STORAGE_CATEGORY,
     SNAPSHOT_TYPE_METADATA,
     SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     USER_PRIVATE_METADATA,
 )
+from x2py.semantics.native_array_handles import mark_native_array_handle, native_array_descriptor_kind
 from x2py.visitor import ClassVisitor
 
 from .models import (
@@ -1122,19 +1124,40 @@ class _PyiAstParser:
             return {"kind": "work", "name": str(ast.literal_eval(node.args[0]))}
         raise ValueError("Expected Arg(...), Return(...), or Work(...) value reference")
 
-    def visible_type(self, node: ast.expr) -> tuple[str, SemanticType, str | None]:
+    def visible_type(
+        self,
+        node: ast.expr,
+        *,
+        allow_optional_absent_handle: bool = False,
+    ) -> tuple[str, SemanticType, str | None]:
         if self.is_subscript_of(node, "private"):
-            semantic_type, original_name = self.semantic_type_annotation(self.subscript_slice(node))
+            semantic_type, original_name = self.semantic_type_annotation(
+                self.subscript_slice(node),
+                allow_optional_absent_handle=allow_optional_absent_handle,
+            )
             return "private", semantic_type, original_name
-        semantic_type, original_name = self.semantic_type_annotation(node)
+        semantic_type, original_name = self.semantic_type_annotation(
+            node,
+            allow_optional_absent_handle=allow_optional_absent_handle,
+        )
         return "public", semantic_type, original_name
 
-    def semantic_type_annotation(self, node: ast.expr) -> tuple[SemanticType, str | None]:
+    def semantic_type_annotation(
+        self,
+        node: ast.expr,
+        *,
+        allow_optional_absent_handle: bool = False,
+    ) -> tuple[SemanticType, str | None]:
         optional_item = self._optional_union_item(node)
         if optional_item is not None:
             semantic_type = self.semantic_type(optional_item)
-            storage = semantic_type.storage
-            if storage is not None and storage.array is not None and storage.array.allocatable:
+            if native_array_descriptor_kind(semantic_type) is not None:
+                if not allow_optional_absent_handle:
+                    raise ValueError(
+                        "Native array handle '| None' is only valid for optional callable arguments; "
+                        "unallocated allocatables and unassociated pointers are states inside a present handle"
+                    )
+                semantic_type.metadata[OPTIONAL_ABSENT_HANDLE_METADATA] = True
                 return semantic_type, None
         if not self.is_subscript_of(node, "Annotated"):
             return self.semantic_type(node), None
@@ -1155,6 +1178,14 @@ class _PyiAstParser:
 
     def semantic_type(self, node: ast.expr) -> SemanticType:
         self._reject_unimported_contract_type(node)
+        optional_item = self._optional_union_item(node)
+        if optional_item is not None:
+            semantic_type = self.semantic_type(optional_item)
+            if native_array_descriptor_kind(semantic_type) is not None:
+                raise ValueError(
+                    "Native array handle '| None' is only valid for optional callable arguments; "
+                    "unallocated allocatables and unassociated pointers are states inside a present handle"
+                )
         if self.is_subscript_of(node, "Annotated"):
             semantic_type, _ = self.semantic_type_annotation(node)
             return semantic_type
@@ -1177,9 +1208,9 @@ class _PyiAstParser:
                 )
             return self._character_type(node)
         if self.is_subscript_of(node, "Allocatable"):
-            return self._scalar_descriptor_type(node, "Allocatable")
+            return self._descriptor_type(node, "Allocatable")
         if self.is_subscript_of(node, "Pointer"):
-            return self._scalar_descriptor_type(node, "Pointer")
+            return self._descriptor_type(node, "Pointer")
 
         name = self.type_name(node)
         if name == "Unknown":
@@ -1204,16 +1235,24 @@ class _PyiAstParser:
             return
         raise ValueError(f"Contract type {name_node.id!r} must be imported from x2py.contracts")
 
-    def _scalar_descriptor_type(self, node: ast.Subscript, descriptor: str) -> SemanticType:
+    def _descriptor_type(self, node: ast.Subscript, descriptor: str) -> SemanticType:
         items = self.subscript_items(node)
         if len(items) != 1:
-            raise ValueError(f"{descriptor} expects exactly one scalar type: {ast.unparse(node)!r}")
+            raise ValueError(f"{descriptor} expects exactly one type: {ast.unparse(node)!r}")
         semantic_type = self.semantic_type(items[0])
-        if semantic_type.rank > 0 or (semantic_type.storage is not None and semantic_type.storage.array is not None):
-            raise ValueError(
-                f"{descriptor}[...] supports scalar descriptors only; array descriptor handles are reserved"
-            )
+        storage = semantic_type.storage
+        if semantic_type.rank > 0 or (storage is not None and storage.array is not None):
+            return self._array_descriptor_handle_type(semantic_type, descriptor)
         self._apply_scalar_descriptor_kind(semantic_type, descriptor.casefold())
+        return semantic_type
+
+    @classmethod
+    def _array_descriptor_handle_type(cls, semantic_type: SemanticType, descriptor: str) -> SemanticType:
+        storage = semantic_type.storage
+        if storage is None or storage.array is None or semantic_type.rank <= 0:
+            raise ValueError(f"{descriptor}[...] array handles require an array type such as {descriptor}[Float64[:]]")
+        descriptor_kind = descriptor.casefold()
+        mark_native_array_handle(semantic_type, descriptor_kind)
         return semantic_type
 
     @staticmethod
@@ -1589,15 +1628,11 @@ class _PyiAstParser:
             array.order = name
             return True
         if name == "Allocatable":
-            array = self._require_array_storage(semantic_type)
-            array.allocatable = True
-            if semantic_type.name == "String" and "fortran_character_length" not in semantic_type.metadata:
-                semantic_type.metadata["fortran_character_length"] = ":"
-            return True
+            raise ValueError(
+                "Annotated[..., Allocatable] is not an active array descriptor spelling; use Allocatable[T[...]]"
+            )
         if name == "Pointer":
-            array = self._require_array_storage(semantic_type)
-            array.pointer = True
-            return True
+            raise ValueError("Annotated[..., Pointer] is not an active array descriptor spelling; use Pointer[T[...]]")
         if name == "Contiguous":
             self._require_array_storage(semantic_type).contiguous = True
             return True
@@ -2223,7 +2258,11 @@ class _PyiAstParser:
                 raise ValueError(
                     f"Scalar descriptor argument {arg.arg!r} must use a nullable annotation such as Float64 | None"
                 )
-        visibility, semantic_type, original_name = self.visible_type(annotation)
+        visibility, semantic_type, original_name = self.visible_type(
+            annotation,
+            allow_optional_absent_handle=True,
+        )
+        self._validate_optional_native_array_handle_argument(arg, default, semantic_type)
         writable = self._type_uses_writable_storage(semantic_type)
         semantic_type.ownership.mutable = writable
         if semantic_type.storage is not None:
@@ -2236,6 +2275,28 @@ class _PyiAstParser:
             visibility=visibility,
             origin=self._origin(user_private=visibility == "private"),
         )
+
+    def _validate_optional_native_array_handle_argument(
+        self,
+        arg: ast.arg,
+        default: ast.expr | None,
+        semantic_type: SemanticType,
+    ) -> None:
+        descriptor_kind = native_array_descriptor_kind(semantic_type)
+        if descriptor_kind is None:
+            return
+        has_optional_absence = bool(semantic_type.metadata.get(OPTIONAL_ABSENT_HANDLE_METADATA))
+        has_optional_default = self.default_marks_optional(default)
+        if has_optional_absence and not has_optional_default:
+            raise ValueError(
+                f"Native array handle argument {arg.arg!r} uses '| None' for an absent optional dummy, "
+                "so it must use '= ...' or '= None'"
+            )
+        if has_optional_default and not has_optional_absence:
+            wrapper = "Allocatable" if descriptor_kind == "allocatable" else "Pointer"
+            raise ValueError(
+                f"Optional native array handle argument {arg.arg!r} must use {wrapper}[T[...]] | None = ..."
+            )
 
     def _apply_argument_descriptor_projections(
         self,

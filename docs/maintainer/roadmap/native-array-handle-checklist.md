@@ -27,6 +27,13 @@ Scalar allocatable and pointer procedure projections are not part of this array
 handle work. Scalars continue to use ordinary nullable Python values plus
 `@native_call` descriptor projections such as `Allocatable(Arg(i))`,
 `Pointer(Arg(i))`, `Allocatable(Return(...))`, and `Pointer(Return(...))`.
+For scalar descriptor inputs, explicit `None` means a present but unallocated
+allocatable descriptor or a present but unassociated pointer descriptor. Native
+optional scalar descriptor dummies use the three-state scalar bridge path:
+omission means `present(...)` false, explicit `None` means a present descriptor
+with absent value state, and a value means a present descriptor with scalar
+storage. Array handles keep a different rule: `Allocatable[T[...]] | None` and
+`Pointer[T[...]] | None` mean optional absent handle only.
 
 ## Core Contract Decisions
 
@@ -50,8 +57,9 @@ handle work. Scalars continue to use ordinary nullable Python values plus
   and `Pointer[T[...]]`, where that state belongs inside the handle.
 - [ ] Plain NumPy arrays are rejected for `Allocatable[T[...]]` and
   `Pointer[T[...]]` descriptor parameters.
-- [ ] `| None` on a handle means the handle object itself may be absent, such
-  as for a native optional dummy.
+- [ ] `| None` on a handle means the handle object itself may be absent for a
+  native optional dummy, not that a present handle is unallocated or
+  unassociated.
 - [ ] Unallocated allocatable state lives inside the allocatable handle:
   `h.allocated is False` and `h.to_numpy() is None`.
 - [ ] Unassociated pointer state lives inside the pointer handle:
@@ -202,79 +210,83 @@ accepted as an array-like runtime value.
 Update the public docs first so the intended behavior is explicit before code
 changes.
 
-- [ ] Update `docs/user/guide/allocatables.md`.
-- [ ] Update `docs/user/guide/pointers.md`.
-- [ ] Update `docs/user/reference/semantic-pyi-format.md`.
-- [ ] Update memory-management or language-support pages if they describe
+- [x] Update `docs/user/guide/allocatables.md`.
+- [x] Update `docs/user/guide/pointers.md`.
+- [x] Update `docs/user/reference/semantic-pyi-format.md`.
+- [x] Update memory-management or language-support pages if they describe
   allocatable or pointer arrays as NumPy arrays, `ndarray | None`, metadata
   annotations, or `Snapshot[T]`.
-- [ ] Document that `Allocatable[T[...]]` is a handle, not an ndarray.
-- [ ] Document that `Pointer[T[...]]` is a handle to pointer association state,
+- [x] Document that `Allocatable[T[...]]` is a handle, not an ndarray.
+- [x] Document that `Pointer[T[...]]` is a handle to pointer association state,
   not an ndarray.
-- [ ] Document that `h.to_numpy()` returns a borrowed view, read-only detached
+- [x] Document that `h.to_numpy()` returns a borrowed view, read-only detached
   copy, or `None` depending on completed policy and current allocation state.
-- [ ] Document that `p.to_numpy()` returns the current target view or `None`,
+- [x] Document that `p.to_numpy()` returns the current target view or `None`,
   and can expose strided pointer targets when descriptor support is available.
-- [ ] Document that passing a handle to a handle parameter is descriptor
+- [x] Document that passing a handle to a handle parameter is descriptor
   passing, while passing a handle to `T[...]` uses normal array-actual
   semantics through the handle's native array-data facet.
-- [ ] Document call compatibility for `def f(x: T[...])`: ordinary arrays,
+- [x] Document call compatibility for `def f(x: T[...])`: ordinary arrays,
   allocated allocatable handles, and associated pointer handles are accepted
   as array actuals without implicit `.to_numpy()` conversion.
-- [ ] Document that normal `T[...]` parameters reject unallocated allocatable
+- [x] Document that normal `T[...]` parameters reject unallocated allocatable
   handles and unassociated pointer handles because there is no valid array
   actual to pass. Allocated or associated zero-length arrays are still valid.
-- [ ] Document that explicit `f(h.to_numpy())` is a separate user-requested
+- [x] Document that explicit `f(h.to_numpy())` is a separate user-requested
   ndarray path and follows ordinary ndarray validation.
-- [ ] Document that parameters annotated as `Allocatable[T[...]]` or
+- [x] Document that parameters annotated as `Allocatable[T[...]]` or
   `Pointer[T[...]]` pass native descriptors, so they require the corresponding
   handle object. Ordinary arrays are accepted only by normal `T[...]`
   parameters.
-- [ ] Document that plain ndarray inputs are rejected for descriptor-handle
+- [x] Document that plain ndarray inputs are rejected for descriptor-handle
   parameters.
-- [ ] Document that module allocatables and pointer arrays expose handles, not
+- [x] Document that module allocatables and pointer arrays expose handles, not
   `ndarray | None` module attributes.
-- [ ] Document that derived allocatable and pointer fields expose handles.
-- [ ] Document that allocatable function results can return owned handles only
+- [x] Document that derived allocatable and pointer fields expose handles.
+- [x] Document that allocatable function results can return owned handles only
   when x2py creates stable owner storage.
-- [ ] Document that pointer handles do not imply target ownership.
-- [ ] Document that pointer `nullify()` is default, while pointer
+- [x] Document that pointer handles do not imply target ownership.
+- [x] Document that pointer `nullify()` is default, while pointer
   `allocate()`, `deallocate()`, and `resize()` require explicit policy.
-- [ ] Document stale-view hazards after descriptor-changing operations,
+- [x] Document stale-view hazards after descriptor-changing operations,
   reassociation, nullification, deallocation, or reallocation.
-- [ ] Remove active public examples of `Annotated[T[...], Allocatable]`,
+- [x] Remove active public examples of `Annotated[T[...], Allocatable]`,
   `Annotated[T[...], Pointer]`, and `Snapshot[T]` for this feature.
 
 ### 2. Public Contract Symbols, Parser, And Printer
 
 Implement the public contract wrappers once and parameterize by descriptor kind.
 
-- [ ] Add `Allocatable[...]` as a real array-handle contract wrapper.
-- [ ] Add `Pointer[...]` as a real array-handle contract wrapper.
-- [ ] Parse `Allocatable[T[...]]` into a semantic representation for a native
+- [x] Add `Allocatable[...]` as a real array-handle contract wrapper.
+- [x] Add `Pointer[...]` as a real array-handle contract wrapper.
+- [x] Parse `Allocatable[T[...]]` into a semantic representation for a native
   allocatable array handle.
-- [ ] Parse `Pointer[T[...]]` into a semantic representation for a native
+- [x] Parse `Pointer[T[...]]` into a semantic representation for a native
   pointer array handle.
-- [ ] Parse optional absent handles as `Allocatable[T[...]] | None = ...` and
-  `Pointer[T[...]] | None = ...`.
-- [ ] Preserve normal `T[...]` type identity as array data semantics, not
+- [x] Parse optional absent callable-argument handles as
+  `Allocatable[T[...]] | None = ...` and `Pointer[T[...]] | None = ...`.
+- [x] Reject `Allocatable[T[...]] | None` and `Pointer[T[...]] | None` outside
+  optional callable arguments.
+- [x] Reject optional/defaulted callable-argument handles that omit the
+  explicit `| None` spelling.
+- [x] Preserve normal `T[...]` type identity as array data semantics, not
   descriptor semantics.
 - [ ] Reject `Snapshot[T]` in active `.pyi` contracts with a clear diagnostic.
 - [ ] Remove `Snapshot` from `x2py.contracts` and `CONTRACT_SYMBOLS` once
   active tests and docs are migrated.
-- [ ] Reject or fully migrate `Annotated[T[...], Allocatable]` from active
+- [x] Reject or fully migrate `Annotated[T[...], Allocatable]` from active
   public contracts.
-- [ ] Reject or fully migrate `Annotated[T[...], Pointer]` from active public
+- [x] Reject or fully migrate `Annotated[T[...], Pointer]` from active public
   contracts.
-- [ ] Keep metadata-only allocatable or pointer facts only as temporary internal
+- [x] Keep metadata-only allocatable or pointer facts only as temporary internal
   migration facts, not as accepted public syntax.
-- [ ] Print generated module allocatables as `Allocatable[T[...]]`.
-- [ ] Print generated derived allocatable fields as `Allocatable[T[...]]`.
-- [ ] Print allocatable descriptor arguments and supported handle results as
+- [x] Print generated module allocatables as `Allocatable[T[...]]`.
+- [x] Print generated derived allocatable fields as `Allocatable[T[...]]`.
+- [x] Print allocatable descriptor arguments and supported handle results as
   `Allocatable[T[...]]`.
-- [ ] Print generated module pointer arrays as `Pointer[T[...]]`.
-- [ ] Print generated derived pointer fields as `Pointer[T[...]]`.
-- [ ] Print pointer descriptor arguments and supported handle results as
+- [x] Print generated module pointer arrays as `Pointer[T[...]]`.
+- [x] Print generated derived pointer fields as `Pointer[T[...]]`.
+- [x] Print pointer descriptor arguments and supported handle results as
   `Pointer[T[...]]`.
 
 ### 3. Semantic IR Representation
@@ -294,16 +306,16 @@ descriptor-kind field rather than separate unrelated models.
   - optional-absent handle state;
   - source origin: module variable, derived field, argument, or result;
   - native access path.
-- [ ] Keep handle semantic types distinct from normal array semantic types.
-- [ ] Store allocatable/pointer descriptor facts on the handle semantic type,
+- [x] Keep handle semantic types distinct from normal array semantic types.
+- [x] Store allocatable/pointer descriptor facts on the handle semantic type,
   not as a global mutation of the plain array type.
-- [ ] Permit shared predicates or metadata equivalent to `is_allocatable` and
+- [x] Permit shared predicates or metadata equivalent to `is_allocatable` and
   `is_pointer` on handle semantic types when that helps policy dispatch.
-- [ ] Keep each handle's base array data type available for ordinary `T[...]`
+- [x] Keep each handle's base array data type available for ordinary `T[...]`
   call compatibility.
-- [ ] Keep scalar descriptor projection metadata on the existing scalar
+- [x] Keep scalar descriptor projection metadata on the existing scalar
   nullable-value path, not on array handle types.
-- [ ] Preserve `T[...]` arguments/results as normal array data in semantic IR
+- [x] Preserve `T[...]` arguments/results as normal array data in semantic IR
   even when runtime may later accept a handle through data coercion.
 - [ ] Model `Snapshot[T]` as unsupported or future-only rather than active
   semantic IR.
@@ -555,34 +567,36 @@ handoff when the wrapped call is native.
 
 ### Parser And Printer Tests
 
-- [ ] Parse and print `Allocatable[Float64[:]]`.
-- [ ] Parse and print `Allocatable[String[:][:]]`.
-- [ ] Parse and print `Allocatable[Float64[:, :]]`.
-- [ ] Parse and print `Allocatable[Float64[:]] | None = ...`.
-- [ ] Parse and print `Pointer[Float64[:]]`.
-- [ ] Parse and print `Pointer[Float64[:, :]]`.
+- [x] Parse and print `Allocatable[Float64[:]]`.
+- [x] Parse and print `Allocatable[String[:][:]]`.
+- [x] Parse and print `Allocatable[Float64[:, :]]`.
+- [x] Parse and print `Allocatable[Float64[:]] | None = ...`.
+- [x] Reject `Allocatable[Float64[:]] | None` on non-argument declarations.
+- [x] Parse and print `Pointer[Float64[:]]`.
+- [x] Parse and print `Pointer[Float64[:, :]]`.
 - [ ] Parse and print `Pointer[String[8][:]]` if string arrays are supported.
-- [ ] Parse and print `Pointer[Float64[:]] | None = ...`.
-- [ ] Verify normal `T[...]` type identity remains array data semantics even
+- [x] Parse and print `Pointer[Float64[:]] | None = ...`.
+- [x] Reject `Pointer[Float64[:]] | None` on non-argument declarations.
+- [x] Verify normal `T[...]` type identity remains array data semantics even
   when runtime can accept handles by data coercion.
-- [ ] Verify `Allocatable[T[...]]` and `Pointer[T[...]]` retain a base array
+- [x] Verify `Allocatable[T[...]]` and `Pointer[T[...]]` retain a base array
   data type that matches the wrapped `T[...]` annotation.
 - [ ] Reject `Snapshot[T]` in active contracts.
-- [ ] Reject or migrate `Annotated[T[...], Allocatable]`.
-- [ ] Reject or migrate `Annotated[T[...], Pointer]`.
+- [x] Reject or migrate `Annotated[T[...], Allocatable]`.
+- [x] Reject or migrate `Annotated[T[...], Pointer]`.
 - [ ] Verify no generated `.pyi` uses `Snapshot[T]`.
-- [ ] Verify no generated active `.pyi` uses public
+- [x] Verify no generated active `.pyi` uses public
   `Annotated[T[...], Allocatable]` or `Annotated[T[...], Pointer]` for array
   descriptor handles.
 
 ### Semantic IR And Policy Tests
 
-- [ ] Verify Allocatable and Pointer handles use the same semantic handle
+- [x] Verify Allocatable and Pointer handles use the same semantic handle
   representation family with distinct descriptor kinds.
-- [ ] Verify handle types are distinct from normal array data types.
-- [ ] Verify handle semantic types carry descriptor facts without mutating the
+- [x] Verify handle types are distinct from normal array data types.
+- [x] Verify handle semantic types carry descriptor facts without mutating the
   plain array semantic type.
-- [ ] Verify handle semantic types expose the base array data type used for
+- [x] Verify handle semantic types expose the base array data type used for
   `T[...]` call compatibility.
 - [ ] Verify module-variable, derived-field, argument, result, and optional
   absent handle origins complete policy before lowering.
@@ -673,15 +687,15 @@ handoff when the wrapped call is native.
 
 ### Documentation Regression Tests
 
-- [ ] Public docs show `Allocatable[T[...]]` for allocatable array handles.
-- [ ] Public docs show `Pointer[T[...]]` for pointer array handles.
-- [ ] Public docs do not show `Annotated[T[...], Allocatable]` as the active
+- [x] Public docs show `Allocatable[T[...]]` for allocatable array handles.
+- [x] Public docs show `Pointer[T[...]]` for pointer array handles.
+- [x] Public docs do not show `Annotated[T[...], Allocatable]` as the active
   public spelling.
-- [ ] Public docs do not show `Annotated[T[...], Pointer]` as the active public
+- [x] Public docs do not show `Annotated[T[...], Pointer]` as the active public
   spelling.
-- [ ] Public docs do not show `Snapshot[T]` as an active array descriptor
+- [x] Public docs do not show `Snapshot[T]` as an active array descriptor
   contract.
-- [ ] Public docs explain `to_numpy()` as the explicit user-facing extraction
+- [x] Public docs explain `to_numpy()` as the explicit user-facing extraction
   operation for both handle types, not the required internal implementation of
   handle-to-native calls.
 

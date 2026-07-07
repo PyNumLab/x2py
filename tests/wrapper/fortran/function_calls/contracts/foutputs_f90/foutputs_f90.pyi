@@ -32,7 +32,7 @@ def fill_matrix(
 @native_call([Addr(Arg(0)), Return('values', 0)])
 def build_alloc(
     n: Int32
-) -> Annotated[Float64[:], Allocatable] | None: ...
+) -> Allocatable[Float64[:]]: ...
 
 @native_call([Addr(Arg(0)), Return('status', 1)])
 def with_scalar(
@@ -43,7 +43,7 @@ def with_scalar(
 def mixed_outputs(
     n: Int32,
     values: Float64[n]
-) -> tuple[Float64, Returns["values", Float64[n]], Int32, Annotated[Float64[:], Allocatable] | None]: ...
+) -> tuple[Float64, Returns["values", Float64[n]], Int32, Allocatable[Float64[:]]]: ...
 
 def increment(
     values: Float64[::]

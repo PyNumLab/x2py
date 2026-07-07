@@ -40,6 +40,7 @@ from ..bind_c import (
     BindCModuleConstant,
     BindCPointer,
     BindCResultTupleType,
+    BindCScalarDescriptorType,
     BindCScalarModuleVariable,
     BindCSizeOf,
     BindCVariable,
@@ -1732,6 +1733,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             is_optional=False,
             memory_handling=StorageMode.ALIAS.value,
         )
+        presence_var = None
+        if self._uses_optional_scalar_descriptor_presence(var, decision):
+            presence_var = Variable(
+                BindCPointer(),
+                scope.get_new_name(f"bound_{name}_present"),
+                is_argument=True,
+                is_optional=False,
+                memory_handling=StorageMode.ALIAS.value,
+            )
         input_var = var.clone(
             scope.get_new_name(f"{name}_input"),
             new_class=Variable,
@@ -1747,6 +1757,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             memory_handling=decision.boundary_storage_mode.value,
         )
         scope.insert_variable(bind_var)
+        if presence_var is not None:
+            scope.insert_variable(presence_var)
         scope.insert_variable(input_var)
         scope.insert_variable(descriptor_var)
         body = [C_F_Pointer(bind_var, input_var)]
@@ -1754,11 +1766,36 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             body.append(If(IfSection(ArrayAssociated(input_var), [Assign(descriptor_var, input_var)])))
         else:
             body.append(AliasAssign(descriptor_var, input_var))
+        if presence_var is not None:
+            c_arg_var = Variable(
+                BindCScalarDescriptorType(),
+                scope.get_new_name(f"{name}_descriptor_input"),
+                is_argument=True,
+                shape=(convert_to_literal(2),),
+            )
+            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(0)), bind_var)
+            scope.insert_symbolic_alias(IndexedElement(c_arg_var, convert_to_literal(1)), presence_var)
+            return {
+                "c_arg": BindCVariable(c_arg_var, var),
+                "f_arg": descriptor_var,
+                "body": body,
+                "optional_presence_var": presence_var,
+            }
         return {
             "c_arg": BindCVariable(bind_var, var),
             "f_arg": descriptor_var,
             "body": body,
         }
+
+    @staticmethod
+    def _uses_optional_scalar_descriptor_presence(var, decision):
+        """Return whether a scalar descriptor needs supplied-vs-None tracking."""
+        return bool(
+            var.is_optional
+            and decision.kind is ObjectKind.SCALAR
+            and decision.descriptor_boundary
+            and decision.nullable
+        )
 
     def _convert_native_storage_address_argument(self, var, decision, func):
         """Pass caller/Python-backed storage through the native call boundary."""
@@ -2836,7 +2873,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
         if next_optional_arg:
             args = generated_args.copy()
-            optional_var = next_optional_arg["c_arg"].var
+            optional_var = next_optional_arg.get("optional_presence_var") or next_optional_arg["c_arg"].var
             optional_var = getattr(optional_var, "new_var", optional_var)
             class_type = optional_var.class_type
             if isinstance(class_type, BindCArrayType):

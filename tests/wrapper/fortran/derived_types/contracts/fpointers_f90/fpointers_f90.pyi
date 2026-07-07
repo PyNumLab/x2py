@@ -12,11 +12,11 @@ def pointer_to_scalar(
 ) -> Annotated[Float64, Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")] | None: ...
 
 def sum_pointer(
-    values: Annotated[Float64[:], Pointer, PointerAssociation("runtime"), Ownership("caller"), Transfer("call_local"), Destruction("none")]
+    values: Annotated[Pointer[Float64[:]], PointerAssociation("runtime"), Ownership("caller"), Transfer("call_local"), Destruction("none")]
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def pointer_to_values(
     values: Annotated[Float64[::], Aliased],
     use_values: Int32
-) -> Annotated[Float64[:], Pointer, PointerAssociation("runtime"), Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")]: ...
+) -> Annotated[Pointer[Float64[:]], PointerAssociation("runtime"), Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")]: ...

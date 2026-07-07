@@ -288,8 +288,9 @@ Important implementation rules:
 
 - `Addr(T)` and `Addr(T)` are storage contracts, not just pretty syntax.
 - Array subscriptions such as `Float64[n]` are semantic array contracts.
-- `Annotated[..., ORDER_F]`, `ORDER_ANY`, `Allocatable`, and `Pointer` are
-  metadata on the semantic storage contract. Output and writeback behavior is
+- `Annotated[..., ORDER_F]` and `ORDER_ANY` are array storage metadata.
+  `Allocatable[T[...]]` and `Pointer[T[...]]` are descriptor-handle wrappers
+  around the array storage contract. Output and writeback behavior is
   represented by writable storage plus `Returns["name", T]` when a Python
   result is projected.
 - `Final[T]` is the public constant spelling. Do not reintroduce

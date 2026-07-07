@@ -513,8 +513,8 @@ end module opt_alloc_out_mod
     code = generate_pyi(source)
 
     assert "Return('values'" not in code
-    assert "values: Annotated[Float64[:], Allocatable] | None = ..." in code
-    assert ') -> Returns["values", Annotated[Float64[:], Allocatable]] | None: ...' in code
+    assert "values: Allocatable[Float64[:]] | None = ..." in code
+    assert ') -> Returns["values", Allocatable[Float64[:]]] | None: ...' in code
 
 
 # ============================================================
@@ -547,8 +547,8 @@ end module
 
     assert "Allocatable" in code
     assert "@native_call([Return('x', 0)])" in code
-    assert "def build() -> Annotated[Float64[:], Allocatable] | None: ..." in code
-    assert "def make_values() -> Annotated[Float64[:], Allocatable]: ..." in code
+    assert "def build() -> Allocatable[Float64[:]]: ..." in code
+    assert "def make_values() -> Allocatable[Float64[:]]: ..." in code
 
 
 def test_emit_scalar_character_inout_as_replacement_return():
@@ -1282,7 +1282,7 @@ end module vector_mod
     code = generate_pyi(source)
 
     assert "class vector:" in code
-    assert "values: Annotated[Float64[:], Allocatable] | None" in code
+    assert "values: Allocatable[Float64[:]]" in code
     assert "    @native_call([Pass(), Addr(Arg(0))])" in code
     assert "    def scale(\n        self,\n        alpha: Float64\n    ) -> None: ..." in code
     assert "        self: vector" not in code
@@ -1415,8 +1415,8 @@ end module alloc_view_mod
 """
     code = generate_pyi(source)
 
-    assert "values: Annotated[Float64[:], Allocatable, Aliased] | None" in code
-    assert "field: Annotated[Float64[:], Allocatable] | None" in code
+    assert "values: Annotated[Allocatable[Float64[:]], Aliased]" in code
+    assert "field: Allocatable[Float64[:]]" in code
 
     loaded = parse_pyi_text(code, module_name="alloc_view_mod")
     assert [variable.name for variable in loaded.variables] == ["values"]
@@ -1879,6 +1879,28 @@ def test_emit_native_call_rejects_unrepresentable_projection_entries(projection,
         emit_module(module)
 
 
+def test_printer_rejects_optional_absent_array_handles_outside_callable_arguments():
+    variable = SemanticVariable(
+        "values",
+        SemanticType(
+            "Float64",
+            rank=1,
+            storage=SemanticStorageContract(
+                kind="array",
+                array=SemanticArrayContract(rank=1, shape=[":"], allocatable=True),
+            ),
+        ),
+    )
+    variable.optional = True
+    module = SemanticModule(
+        name="bad_optional_handle_mod",
+        variables=[variable],
+    )
+
+    with pytest.raises(ValueError, match="only be emitted for callable arguments"):
+        emit_module(module)
+
+
 def test_printer_emits_extended_storage_and_callable_forms():
     printer = PyiPrinter()
     readonly_value = SemanticType(
@@ -1900,6 +1922,28 @@ def test_printer_emits_extended_storage_and_callable_forms():
         rank=2,
         storage=SemanticStorageContract(kind="array"),
     )
+    allocatable_handle = SemanticType(
+        "Float64",
+        rank=2,
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(
+                rank=2,
+                shape=[":", ":"],
+                order="ORDER_F",
+                allocatable=True,
+            ),
+        ),
+    )
+    pointer_handle = SemanticType(
+        "Float64",
+        rank=1,
+        metadata={"fortran_pointer_association": "runtime"},
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(rank=1, shape=[":"], pointer=True),
+        ),
+    )
     annotated_array = SemanticType(
         "Float64",
         constraints=[SemanticConstraint("Finite"), SemanticConstraint("Range", [1, 3])],
@@ -1909,8 +1953,6 @@ def test_printer_emits_extended_storage_and_callable_forms():
                 rank=2,
                 shape=[":", ":"],
                 order="ORDER_ANY",
-                allocatable=True,
-                pointer=True,
             ),
         ),
     )
@@ -1950,9 +1992,9 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit(double_pointer) == "Addr[2](Float64)"
     assert printer.emit(unspecified_storage) == "Int32"
     assert printer.emit(inferred_array) == "Float64[:, :]"
-    assert printer.emit(annotated_array) == (
-        "Annotated[Float64[:, :], ORDER_ANY, Allocatable, Pointer, Finite, Range(1, 3)]"
-    )
+    assert printer.emit(allocatable_handle) == "Allocatable[Annotated[Float64[:, :], ORDER_F]]"
+    assert printer.emit(pointer_handle) == 'Annotated[Pointer[Float64[:]], PointerAssociation("runtime")]'
+    assert printer.emit(annotated_array) == "Annotated[Float64[:, :], ORDER_ANY, Finite, Range(1, 3)]"
     assert printer.emit(character) == "String[16]"
     assert printer.emit(allocatable_character) == "Allocatable[String]"
     assert printer.emit(pointer_scalar) == "Pointer[Int32]"
@@ -2000,6 +2042,49 @@ def test_printer_emits_nullable_scalar_descriptor_boundary_projections(argument_
     assert f"@native_call([{projection}(Arg(0))], result={projection}(Return(0)))" in code
     assert "value: Float64 | None" in code
     assert ") -> Float64 | None: ..." in code
+
+
+def test_defaulted_scalar_descriptors_preserve_omitted_vs_none_in_generated_wrappers(tmp_path):
+    loaded = parse_pyi_text(
+        """
+@native_call([Allocatable(Arg(0)), Pointer(Arg(1))])
+def update(scale: Float64 | None = ..., target: Float64 | None = ...) -> None: ...
+""",
+        module_name="optional_scalar_descriptors",
+    )
+    scope = Scope(name=loaded.name, scope_type="module")
+    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
+    pipeline = BindingPipeline(
+        Codegen(loaded.name, codegen_module, codegen_module.scope),
+        loaded.name,
+        "fortran",
+        verbose=0,
+    )
+
+    pipeline.generate(str(tmp_path))
+    bridge_path, c_wrapper_path, *_ = pipeline.write(tmp_path)
+    bridge_source = bridge_path.read_text()
+    c_wrapper = c_wrapper_path.read_text()
+
+    assert "bound_scale_present" in bridge_source
+    assert "bound_target_present" in bridge_source
+    assert "if (c_associated(bound_scale_present)) then" in bridge_source
+    assert "if (c_associated(bound_target_present)) then" in bridge_source
+    assert "call update()" in bridge_source
+    assert "call update(scale = scale_descriptor)" in bridge_source
+    assert "call update(target = target_descriptor)" in bridge_source
+    assert "call update(scale = scale_descriptor, target = target_descriptor" in bridge_source
+
+    assert "scale_obj = NULL;" in c_wrapper
+    assert "target_obj = NULL;" in c_wrapper
+    assert "if (scale_obj != NULL)" in c_wrapper
+    assert "scale_present = &scale_value;" in c_wrapper
+    assert "if ((scale_obj != NULL) && (scale_obj != Py_None))" in c_wrapper
+    assert "scale_nullable = &scale_value;" in c_wrapper
+    assert "bind_c_update(scale_nullable, scale_present, target_nullable, target_present);" in c_wrapper
+    assert "Omit to make the native optional dummy absent." in c_wrapper
+    assert "Pass None for a present unallocated or unassociated descriptor." in c_wrapper
+    assert "Default is None." not in c_wrapper
 
 
 def test_printer_emits_callback_argument_abi_wrappers():
@@ -2110,7 +2195,7 @@ end module char_array_mod
     emitted = emit_module(semantic_module)
 
     assert "String[4][::]" in emitted
-    assert "Annotated[String[:][:], Allocatable]" in emitted
+    assert "Allocatable[String[:][:]]" in emitted
 
     parsed = parse_pyi_text(emitted, module_name="char_array_mod")
     use_labels = next(func for func in parsed.functions if func.name == "use_labels")

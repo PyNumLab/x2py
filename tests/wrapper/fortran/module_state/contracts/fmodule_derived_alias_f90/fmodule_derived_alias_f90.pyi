@@ -3,7 +3,7 @@ from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, 
 class box:
     def __init__(self) -> None: ...
 
-    values: Annotated[Float64[:], Allocatable] | None
+    values: Allocatable[Float64[:]]
 
     @native_call([Pass(), Addr(Arg(0))])
     def allocate_values(

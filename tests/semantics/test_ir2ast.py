@@ -309,7 +309,7 @@ class child:
 
 class box:
     scalar: Int32
-    values: Annotated[Float64[:], Allocatable, Aliased]
+    values: Annotated[Allocatable[Float64[:]], Aliased]
     nested: child
 
 current: box

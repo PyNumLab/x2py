@@ -38,6 +38,7 @@ __all__ = (
     "BindCModuleVariable",
     "BindCPointer",
     "BindCResultTupleType",
+    "BindCScalarDescriptorType",
     "BindCScalarModuleVariable",
     "BindCSizeOf",
     "BindCVariable",
@@ -157,6 +158,52 @@ class BindCArrayType(Type, TupleType):
     @property
     def element_types(self):
         """Types of the pointer, shape, upper-bound, and stride fields."""
+        return self._element_types
+
+    @property
+    def container_rank(self):
+        """Rank of the packed descriptor itself."""
+        return 1
+
+    @property
+    def rank(self):
+        """Rank of the packed descriptor itself."""
+        return 1
+
+    @property
+    def order(self):
+        """Memory order is not applicable to the packed descriptor."""
+        return None
+
+    @property
+    def datatype(self):
+        """The descriptor is heterogeneous, so its datatype is the descriptor itself."""
+        return self
+
+    def shape_is_compatible(self, shape):
+        """Return whether ``shape`` has one entry with the descriptor field count."""
+        return isinstance(shape, tuple) and len(shape) == 1 and shape[0] == len(self)
+
+    def __getitem__(self, index):
+        return self._element_types[index]
+
+    def __len__(self):
+        return len(self._element_types)
+
+    def __iter__(self):
+        return iter(self._element_types)
+
+
+class BindCScalarDescriptorType(Type, TupleType):
+    """Two-pointer C descriptor for nullable optional scalar dummies."""
+
+    __slots__ = ()
+    _name = "BindCScalarDescriptorType"
+    _element_types = (BindCPointer(), BindCPointer())
+
+    @property
+    def element_types(self):
+        """Types of the value pointer and supplied/present token fields."""
         return self._element_types
 
     @property

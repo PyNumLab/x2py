@@ -8,21 +8,69 @@ status: maintained
 
 # Allocatables
 
-Allocatable behavior depends on which side owns the allocation. The Python
-value may be a copy, a replacement, or a borrowed view into storage owned
-somewhere else.
+Allocatable behavior depends on whether the contract describes a scalar
+descriptor projection or an array descriptor handle. Scalar allocatables cross
+procedure boundaries as ordinary nullable Python values. Array allocatables use
+`Allocatable[T[...]]`, which is a Python handle to a native allocatable
+descriptor, not a NumPy array.
 
 | Case | Python sees | Owner and lifetime |
 | --- | --- | --- |
-| Function result or non-optional hidden allocatable output | new NumPy array, or `None` when unallocated | Python owns the returned copy; the native temporary is released |
-| Allocatable `intent(inout)` argument | replacement NumPy array or `None` | Python owns the returned replacement; the original argument is unchanged |
-| Aliased allocatable module variable | borrowed NumPy view or `None` | the Fortran module owns allocation and release |
-| Plain allocatable module variable | read-only NumPy snapshot or `None` | Python owns each returned copy |
-| Allocatable derived-type field | borrowed NumPy view or `None` | the containing generated wrapper owns the native instance |
+| Scalar allocatable projection | `T | None` | a call-local native descriptor is created or read back by the bridge |
+| Allocatable descriptor argument | `Allocatable[T[...]]` handle | the handle passes the native allocatable descriptor |
+| Module allocatable array | `Allocatable[T[...]]` handle | the Fortran module owns allocation and release |
+| Derived allocatable field | `Allocatable[T[...]]` handle | the containing generated wrapper owns the native instance |
+| Owned allocatable result | `Allocatable[T[...]]` handle when stable owner storage is available | x2py-owned storage releases the native allocation with the handle |
 
 `Allocatable` is the dynamic-storage fact shared by all rows. It does not by
-itself choose copy, replacement, or borrowed-view behavior. The declaration
-context and completed ownership policy choose that behavior.
+itself choose copy, replacement, borrowed-view, or owned-handle behavior. The
+declaration context and completed ownership policy choose that behavior before
+wrapper lowering.
+
+## Array Handles
+
+`Allocatable[T[...]]` is the active allocatable-array spelling in semantic
+`.pyi` contracts:
+
+```python
+from x2py.contracts import Allocatable, Float64, Int32
+
+values: Allocatable[Float64[:]]
+
+def resize(values: Allocatable[Float64[:]], n: Int32) -> None: ...
+def scale(values: Float64[:]) -> None: ...
+```
+
+The handle owns the allocation state, so an unallocated descriptor is still a
+present handle: `h.allocated is False`, `h.shape is None`, and
+`h.to_numpy() is None`. `| None` means the handle object itself may be absent
+for an optional native dummy, making native `present(values)` false:
+
+```python
+def maybe_resize(values: Allocatable[Float64[:]] | None = ...) -> None: ...
+```
+
+That spelling is valid only for optional callable arguments. Do not use
+`Allocatable[T[...]] | None` for module variables, derived-type fields, or
+function results; those surfaces return a present handle, and unallocated state
+is represented inside that handle.
+
+Passing a handle to `Allocatable[T[...]]` passes the native descriptor. Passing
+the same allocated handle to a normal `T[...]` argument uses ordinary Fortran
+array-actual semantics by handing off the handle's native array data facet. It
+is not an implicit call to `.to_numpy()`. A normal `T[...]` argument rejects an
+unallocated handle because there is no valid array actual to pass; an allocated
+zero-length array remains valid.
+
+Plain NumPy arrays are accepted by normal `T[...]` array parameters. They are
+rejected for `Allocatable[T[...]]` descriptor parameters because a NumPy array
+does not carry a native allocatable descriptor.
+
+`h.to_numpy()` is the explicit extraction operation. It returns `None` when the
+handle is unallocated. When policy proves live aliasing is safe, it returns a
+borrowed NumPy view; when live aliasing is unsafe but copying is supported, it
+returns a read-only detached copy. Users can call `.copy()` on any returned
+NumPy array when they need independent lifetime.
 
 A borrowed view is a NumPy array that points at storage Python does not own.
 Mutating the view mutates the owner. Deallocating or reallocating the owner can
@@ -75,13 +123,26 @@ def update_scale(
 ) -> Returns["scale", Float64] | None: ...
 ```
 
-Passing `None` creates an unallocated call-local descriptor. An unallocated
-function result or projected output becomes `None`. Ordinary scalar projection
-rules still apply: `intent(out)` uses
+Passing `None` creates a present but unallocated call-local descriptor. Omitting
+a defaulted scalar descriptor argument creates native optional absence, so
+`present(scale)` is false. Passing a value creates a present allocated
+call-local descriptor. An unallocated function result or projected output
+becomes `None`. Ordinary scalar projection rules still apply: `intent(out)` uses
 `Allocatable(Return("name", j))`, while `intent(inout)` uses
-`Allocatable(Arg(i))` plus a matching `Returns["name", T] | None` readback.
-The singular `result=Allocatable(Return(j))` mapping describes the native
-function result and places it among any other Python results.
+`Allocatable(Arg(i))` plus a matching `Returns["name", T] | None` readback. The
+singular `result=Allocatable(Return(j))` mapping describes the native function
+result and places it among any other Python results.
+
+Use a default only when the native scalar dummy is optional:
+
+```python
+@native_call([Allocatable(Arg(0))])
+def update_scale(scale: Float64 | None = ...) -> None: ...
+```
+
+This scalar rule is separate from array allocatable handles. Array arguments use
+`Allocatable[T[...]] | None` only for an optional absent handle; unallocated array
+state stays inside a present handle.
 
 ## Complete Allocatable Example
 
@@ -148,23 +209,24 @@ contains
 end module storage
 ```
 
-Inspecting `allocations.f90` prints the copy, replacement, read-only snapshot,
-and borrowed-view contracts:
+Inspecting `allocations.f90` prints allocatable array handles for module
+storage, descriptor results, and descriptor arguments. Metadata such as
+`Aliased` can still wrap the handle to describe owner or transfer policy:
 
 ```python
 from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, Int32, Returns, native_call
 
-shared_values: Annotated[Float64[:], Allocatable, Aliased] | None
-snapshot_values: Annotated[Float64[:], Allocatable] | None
+shared_values: Annotated[Allocatable[Float64[:]], Aliased]
+snapshot_values: Allocatable[Float64[:]]
 
 @native_call([Addr(Arg(0))])
 def make_values(
     count: Int32
-) -> Annotated[Float64[:], Allocatable]: ...
+) -> Allocatable[Float64[:]]: ...
 
 def replace_values(
-    values: Annotated[Float64[:], Allocatable] | None
-) -> Returns["values", Annotated[Float64[:], Allocatable]] | None: ...
+    values: Allocatable[Float64[:]]
+) -> Returns["values", Allocatable[Float64[:]]]: ...
 
 @native_call([Addr(Arg(0))])
 def allocate_shared(
@@ -187,10 +249,9 @@ def release_snapshot() -> None: ...
 def shared_sum() -> Float64: ...
 ```
 
-`snapshot_values` is not written as `Snapshot[...]`. For arrays, the
-Python-owned read-only snapshot behavior is selected by the plain module array
-contract without `Aliased`. `Snapshot[T]` is reserved for detached recursive
-snapshots of derived-type module variables.
+`snapshot_values` is not written as `Snapshot[...]`. For arrays, detached
+copies are an extraction policy of the allocatable handle, not a separate
+public array type. Whole-object snapshots are a separate derived-object feature.
 
 Build it:
 
@@ -301,17 +362,17 @@ end module character_names
 
 The generated `.pyi` represents a fixed-length rank-one character array as
 `String[4][::]`. A deferred-length allocatable rank-one array uses the two-axis
-spelling `Annotated[String[:][:], Allocatable]`, so the element width can come
-from the native allocation at runtime:
+handle spelling `Allocatable[String[:][:]]`, so the element width can come from
+the native allocation at runtime:
 
 ```python
-from x2py.contracts import Allocatable, Annotated, Returns, String
+from x2py.contracts import Allocatable, Returns, String
 
 def replace_names(
-    names: Annotated[String[:][:], Allocatable] | None
+    names: Allocatable[String[:][:]]
 ) -> Returns[
-    "names", Annotated[String[:][:], Allocatable]
-] | None: ...
+    "names", Allocatable[String[:][:]]
+]: ...
 ```
 
 Build the example:
@@ -346,27 +407,27 @@ and releases the native temporary. Python inputs must use NumPy bytes dtype
 `S`; Unicode (`U`) and object (`O`) arrays are rejected. When the Fortran
 element length is fixed, the input dtype itemsize must match that length.
 
-## Module Snapshots And Views
+## Module Handles And Views
 
-An `Aliased` allocatable module array is native-owned. The module's allocation
-routines create and release the storage. Reading the Python attribute returns a
-borrowed NumPy view or `None`. Mutating the view reaches native module storage;
-deleting the view does not deallocate that storage. When the Fortran declaration
-has `target`, the generated `.pyi` marks the module variable with `Aliased`.
-`Aliased` is not an ownership mode; it says x2py may expose the native storage
-through an alias.
+An allocatable module array is native-owned. Reading the Python attribute
+returns an `Allocatable[T[...]]` handle, not `ndarray | None`. The module's
+allocation routines create and release the storage. `h.to_numpy()` returns the
+current view, detached copy, or `None` according to completed policy and current
+allocation state. When the Fortran declaration has `target`, the generated
+`.pyi` marks the handle with `Aliased`. `Aliased` is not an ownership mode; it
+says x2py may expose the native storage through an alias.
 
-A plain allocatable module array remains wrappable. Reading the Python attribute
-returns `None` when unallocated, or a fresh read-only NumPy snapshot when
-allocated. A snapshot is Python-owned and detached: mutating native storage later
-does not update an older snapshot, and Python writes to the snapshot are
-rejected.
+A plain allocatable module array remains wrappable. Its handle can still report
+unallocated state. If policy cannot expose a live view safely, `to_numpy()`
+returns a read-only detached copy when that path is implemented, or wrapper
+readiness blocks with a clear diagnostic.
 
 A supported allocatable component belongs to its containing native derived-type
-instance. The generated wrapper owns that native instance. Its NumPy view uses
-the wrapper object as `view.base`, which keeps the owner alive. Assigning a
-replacement array directly to such a field is rejected when native reallocation
-must go through an explicit method.
+instance. The generated wrapper owns that native instance. The field exposes an
+`Allocatable[T[...]]` handle that retains the parent wrapper. Any borrowed NumPy
+view produced by `to_numpy()` uses the wrapper object as `view.base`, which
+keeps the owner alive. Assigning a replacement array directly to such a field is
+rejected when native reallocation must go through an explicit method.
 
 Neither owner model can invalidate an already-created NumPy object safely after
 native reallocation. Copy before any operation that may reallocate or
@@ -383,7 +444,9 @@ independent = view.copy()
 - Borrowed views require a proved native or wrapper owner and `Aliased`
   storage when the owner is a module variable.
 - An edited `.pyi` cannot relabel a native-owned allocation as Python-owned
-  without choosing an implemented copy-return path.
+  without choosing an implemented owner-storage or copy-return path.
+- `Annotated[T[...], Allocatable]` is no longer the active public spelling for
+  allocatable array descriptors; use `Allocatable[T[...]]`.
 
 ## Evidence And Troubleshooting
 

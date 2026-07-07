@@ -110,9 +110,7 @@ def test_allocatable_character_array_generated_pyi_build_returns_fixed_width_byt
         capture_output=True,
         text=True,
     )
-    assert "Annotated[String[:][:], Allocatable]" in (pyi_dir / "fcharacter_array_bytes_f90.pyi").read_text(
-        encoding="utf-8"
-    )
+    assert "Allocatable[String[:][:]]" in (pyi_dir / "fcharacter_array_bytes_f90.pyi").read_text(encoding="utf-8")
     native_object = _compile_native_object(source, tmp_path / "native")
     result = build_pyi_extension(
         pyi_dir / "__init__.pyi",

@@ -7,8 +7,7 @@ class buffer:
         self,
         *,
         values: Annotated[
-            Float64[:],
-            Allocatable,
+            Allocatable[Float64[:]],
             Ownership("wrapper"),
             Transfer("borrowed_view"),
             Destruction("wrapper_dealloc"),
@@ -16,8 +15,7 @@ class buffer:
     ) -> None: ...
 
     values: Annotated[
-        Float64[:],
-        Allocatable,
+        Allocatable[Float64[:]],
         Ownership("wrapper"),
         Transfer("borrowed_view"),
         Destruction("wrapper_dealloc"),
@@ -40,13 +38,12 @@ class buffer:
     def values_sum(self) -> Float64: ...
 
 module_values: Annotated[
-    Float64[:],
-    Allocatable,
+    Allocatable[Float64[:]],
     Aliased,
     Ownership("native"),
     Transfer("borrowed_view"),
     Destruction("native_owner"),
-] | None
+]
 
 @native_call([Addr(Arg(0))])
 def allocate_module_values(
@@ -61,9 +58,8 @@ def module_values_sum() -> Float64: ...
 def build_values(
     n: Int32
 ) -> Annotated[
-    Float64[:],
-    Allocatable,
+    Allocatable[Float64[:]],
     Ownership("python"),
     Transfer("copy_return"),
     Destruction("python_refcount"),
-] | None: ...
+]: ...

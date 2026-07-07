@@ -12,12 +12,19 @@ from x2py.semantic_metadata import (
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
     BIND_TARGET_METADATA,
+    NATIVE_ARRAY_DESCRIPTOR_METADATA,
+    OPTIONAL_ABSENT_HANDLE_METADATA,
     PROJECTED_OUTPUT_METADATA,
     SNAPSHOT_TYPE_METADATA,
     SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
     USER_PRIVATE_METADATA,
 )
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
+from x2py.semantics.native_array_handles import (
+    is_native_array_handle,
+    native_array_data_type,
+    native_array_descriptor_kind,
+)
 from x2py.semantics.models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
@@ -888,7 +895,7 @@ def test_convert_pyi_to_ir_self_only_generated_constructor_keeps_default_initial
 class state:
     def __init__(self) -> None: ...
 
-    values: Annotated[Float64[:], Allocatable]
+    values: Allocatable[Float64[:]]
 """,
         module_name="edited",
     )
@@ -2437,7 +2444,7 @@ c_tensor: Annotated[Float64[Flat, 3, 4], ORDER_C]
 def test_convert_pyi_to_ir_preserves_extended_array_metadata_and_nested_selector():
     module = parse_pyi_text(
         """
-value: Annotated[Float64, ORDER_F, Allocatable, Pointer, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
+value: Annotated[Float64, ORDER_F, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
 nested: Float64[:, :][rank, kind]
 name: Annotated[String[16], FortranAllocatable]
 
@@ -2451,8 +2458,8 @@ def fill(x: Float64[:]) -> None: ...
     nested = module.variables[1].semantic_type
     name = module.variables[2].semantic_type
     assert value.order == "ORDER_F"
-    assert value.allocatable is True
-    assert value.pointer is True
+    assert value.allocatable is False
+    assert value.pointer is False
     assert value.contiguous is True
     assert value.category == "deferred_shape"
     assert value.source_shape == ["1:n", "*", "extent"]
@@ -2463,6 +2470,57 @@ def fill(x: Float64[:]) -> None: ...
     assert nested.storage.array.metadata["rank_selector"] == "rank, kind"
     assert name.metadata["fortran_character_length"] == "16"
     assert name.metadata["fortran_allocatable"] is True
+
+
+def test_convert_pyi_to_ir_accepts_array_descriptor_handle_wrappers():
+    module = pyi_text_to_semantic_module(
+        """
+from x2py.contracts import Allocatable as A, Annotated, Float64 as F64, Name, Pointer as P
+
+values: A[F64[:]]
+target: Annotated[P[F64[:, :]], Name("target_values")]
+plain_values: F64[:]
+
+def consume(values: A[F64[:]], target: P[F64[:]]) -> None: ...
+def maybe_consume(values: A[F64[:]] | None = ..., target: P[F64[:]] | None = ...) -> None: ...
+""",
+        module_name="array_descriptors",
+    )
+
+    values, target, plain_values = [variable.semantic_type for variable in module.variables]
+    assert is_native_array_handle(values) is True
+    assert native_array_descriptor_kind(values) == "allocatable"
+    assert values.storage.array.allocatable is True
+    assert values.storage.array.pointer is False
+    assert values.metadata[NATIVE_ARRAY_DESCRIPTOR_METADATA] == "allocatable"
+    assert values.rank == 1
+    assert values.shape == [":"]
+    values_data = native_array_data_type(values)
+    assert values_data.storage.array.allocatable is False
+    assert values_data.storage.array.pointer is False
+    assert values_data.metadata.get(NATIVE_ARRAY_DESCRIPTOR_METADATA) is None
+    assert values_data == plain_values
+    assert is_native_array_handle(plain_values) is False
+
+    assert target.storage.array.pointer is True
+    assert native_array_descriptor_kind(target) == "pointer"
+    assert target.metadata[NATIVE_ARRAY_DESCRIPTOR_METADATA] == "pointer"
+    assert target.rank == 2
+    target_data = native_array_data_type(target)
+    assert target_data.storage.array.pointer is False
+    assert target_data.rank == target.rank
+
+    consume_values, consume_target = [arg.semantic_type for arg in module.functions[0].arguments]
+    assert consume_values.storage.array.allocatable is True
+    assert consume_target.storage.array.pointer is True
+
+    maybe_values, maybe_target = module.functions[1].arguments
+    assert maybe_values.semantic_type.metadata[NATIVE_ARRAY_DESCRIPTOR_METADATA] == "allocatable"
+    assert maybe_values.semantic_type.metadata[OPTIONAL_ABSENT_HANDLE_METADATA] is True
+    assert maybe_values.optional is True
+    assert maybe_target.semantic_type.metadata[NATIVE_ARRAY_DESCRIPTOR_METADATA] == "pointer"
+    assert maybe_target.semantic_type.metadata[OPTIONAL_ABSENT_HANDLE_METADATA] is True
+    assert maybe_target.optional is True
 
 
 def test_convert_pyi_to_ir_accepts_scalar_descriptor_state_and_callable_projections():
@@ -2504,6 +2562,24 @@ def combine(scale: Float64 | None, value: Int32 | None) -> Float64 | None: ...
     assert value.metadata["fortran_pointer"] is True
     assert result.metadata["fortran_pointer"] is True
     assert [mapping.value_kind for mapping in module.functions[0].projection] == ["allocatable", "pointer"]
+
+
+def test_convert_pyi_to_ir_accepts_defaulted_scalar_descriptor_optional_dummies():
+    module = parse_pyi_text(
+        """
+@native_call([Allocatable(Arg(0)), Pointer(Arg(1))])
+def update(scale: Float64 | None = ..., current: Float64 | None = ...) -> None: ...
+""",
+        module_name="optional_scalar_descriptors",
+    )
+
+    scale, current = module.functions[0].arguments
+    assert scale.optional is True
+    assert scale.semantic_type.metadata["fortran_allocatable"] is True
+    assert current.optional is True
+    assert current.semantic_type.metadata["fortran_pointer"] is True
+    assert native_array_descriptor_kind(scale.semantic_type) is None
+    assert native_array_descriptor_kind(current.semantic_type) is None
 
 
 def test_convert_pyi_to_ir_accepts_nullable_descriptor_output_and_inout_projections():
@@ -2579,15 +2655,47 @@ def test_convert_pyi_to_ir_rejects_legacy_or_incomplete_scalar_descriptor_callab
         parse_pyi_text(source, module_name="invalid_descriptor_projection")
 
 
-@pytest.mark.parametrize("annotation", ["Allocatable[Float64[:]]", "Pointer[Float64[:]]"])
-def test_convert_pyi_to_ir_rejects_reserved_array_descriptor_wrappers(annotation):
-    with pytest.raises(ValueError, match="array descriptor handles are reserved"):
+@pytest.mark.parametrize(
+    ("annotation", "message"),
+    [
+        ("Annotated[Float64[:], Allocatable]", "use Allocatable"),
+        ("Annotated[Float64[:], Pointer]", "use Pointer"),
+    ],
+)
+def test_convert_pyi_to_ir_rejects_legacy_array_descriptor_metadata(annotation, message):
+    with pytest.raises(ValueError, match=message):
         parse_pyi_text(
             f"""
 values: {annotation}
 """,
-            module_name="reserved_array_descriptors",
+            module_name="legacy_array_descriptors",
         )
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        (
+            "values: Allocatable[Float64[:]] | None = ...\n",
+            "only valid for optional callable arguments",
+        ),
+        (
+            "def make_values() -> Allocatable[Float64[:]] | None: ...\n",
+            "only valid for optional callable arguments",
+        ),
+        (
+            "def consume(values: Allocatable[Float64[:]] | None) -> None: ...\n",
+            "must use '= ...' or '= None'",
+        ),
+        (
+            "def consume(values: Pointer[Float64[:]] = ...) -> None: ...\n",
+            "must use Pointer[T[...]] | None = ...",
+        ),
+    ],
+)
+def test_convert_pyi_to_ir_rejects_misplaced_optional_array_handle_none(source, message):
+    with pytest.raises(ValueError, match=re.escape(message)):
+        parse_pyi_text(source, module_name="invalid_optional_array_handle")
 
 
 def test_convert_pyi_to_ir_handles_callable_and_pointer_storage_variants():

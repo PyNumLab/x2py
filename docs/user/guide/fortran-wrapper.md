@@ -580,8 +580,7 @@ An edited `.pyi` can provide ownership metadata:
 from x2py.contracts import Annotated, Destruction, Float64, Ownership, Pointer, Transfer
 
 values: Annotated[
-    Float64[:],
-    Pointer,
+    Pointer[Float64[:]],
     Ownership("python"),
     Transfer("snapshot_copy"),
     Destruction("python_refcount"),

@@ -1,4 +1,4 @@
-from x2py.contracts import Allocatable, Annotated, Float64, Int32
+from x2py.contracts import Allocatable, Float64, Int32
 
 class node:
     def __init__(
@@ -18,4 +18,4 @@ class mesh:
     ) -> None: ...
 
     nnodes: Int32
-    nodes: Annotated[node[:], Allocatable] | None
+    nodes: Allocatable[node[:]]

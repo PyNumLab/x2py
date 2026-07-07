@@ -3,7 +3,7 @@ from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, 
 class buffer:
     def __init__(self) -> None: ...
 
-    values: Annotated[Float64[:], Allocatable] | None
+    values: Allocatable[Float64[:]]
 
     @native_call([Pass(), Addr(Arg(0))])
     def allocate_values(
@@ -21,7 +21,7 @@ class buffer:
 
     def values_sum(self) -> Float64: ...
 
-module_values: Annotated[Float64[:], Allocatable, Aliased] | None
+module_values: Annotated[Allocatable[Float64[:]], Aliased]
 
 @native_call([Addr(Arg(0))])
 def allocate_module_values(
@@ -40,21 +40,21 @@ def module_values_sum() -> Float64: ...
 @native_call([Addr(Arg(0)), Return('values', 0)])
 def build_values(
     n: Int32
-) -> Annotated[Float64[:], Allocatable] | None: ...
+) -> Allocatable[Float64[:]]: ...
 
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Return('values', 0)])
 def build_matrix(
     n: Int32,
     m: Int32
-) -> Annotated[Float64[:, :], ORDER_F, Allocatable] | None: ...
+) -> Allocatable[Annotated[Float64[:, :], ORDER_F]]: ...
 
 @native_call([Addr(Arg(0))])
 def make_values(
     n: Int32
-) -> Annotated[Float64[:], Allocatable]: ...
+) -> Allocatable[Float64[:]]: ...
 
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def make_matrix(
     n: Int32,
     m: Int32
-) -> Annotated[Float64[:, :], ORDER_F, Allocatable]: ...
+) -> Allocatable[Annotated[Float64[:, :], ORDER_F]]: ...

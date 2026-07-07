@@ -393,8 +393,7 @@ Semantic `.pyi` expresses these facts in one keyword-only annotation:
 from x2py.contracts import Annotated, Float64, Pointer, PointerPolicy
 
 value: Annotated[
-    Float64[:],
-    Pointer,
+    Pointer[Float64[:]],
     PointerPolicy(
         nullable=True,
         transfer="snapshot_copy",

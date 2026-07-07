@@ -231,6 +231,7 @@ CONTRACT_SYMBOLS = frozenset(
 CONTRACT_TYPE_NAMES = frozenset(
     {
         "Addr",
+        "Allocatable",
         "Annotated",
         "Any",
         "Bool",
@@ -258,6 +259,7 @@ CONTRACT_TYPE_NAMES = frozenset(
         "Matrix",
         "Opaque",
         "OpaqueHandle",
+        "Pointer",
         "Returns",
         "SizeT",
         "Snapshot",

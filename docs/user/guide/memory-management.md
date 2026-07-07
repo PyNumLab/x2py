@@ -41,7 +41,11 @@ attached to one canonical source listing.
 7. Missing owner, lifetime, release, shape, dtype, mutability, nullability, or aliasing facts block generation.
 8. Addressability is an object-origin fact: generated constructors allocate
    pointer-backed instances, while pre-existing derived module objects use
-   `Aliased` for live borrowing or `Snapshot[T]` for detached read-only copies.
+   `Aliased` for live borrowing or `Snapshot[T]` for detached read-only object
+   copies.
+9. Native array descriptor state lives in `Allocatable[T[...]]` and
+   `Pointer[T[...]]` handles; borrowed NumPy views and detached NumPy copies are
+   explicit extraction results from `to_numpy()`.
 
 ## Destruction Responsibilities
 
@@ -51,8 +55,8 @@ attached to one canonical source listing.
 | caller-supplied NumPy array | Python caller |
 | wrapper-owned derived instance | generated wrapper deallocator and native finalization |
 | borrowed nested component | containing wrapper owner |
-| borrowed allocatable component view | containing native instance |
-| borrowed allocatable module view | native module allocation routines |
+| allocatable or pointer array handle | containing wrapper, native module, or explicit x2py owner storage |
+| borrowed view extracted from a handle | the handle's completed owner policy |
 | call-local temporary | generated bridge before return |
 | pointer target | explicit proved owner, never the pointer declaration alone |
 
@@ -80,11 +84,12 @@ it does not transfer native release responsibility.
 
 - Ordinary caller-owned arrays **mutate in place**;
 - Python strings use **replacement** because `str` is immutable;
-- Allocatable inout arrays use **replacement** because native allocation identity may change;
+- Allocatable array descriptors use **handles** because native allocation identity may change;
 - Array/function results use **copy-return**;
 - Supported pointer results use detached-copy `snapshot_copy` policy, and plain
   derived module variables use **read-only `Snapshot[T]` objects**; and
-- Borrowed allocatable views **share native storage** until native invalidation.
+- Borrowed views extracted from handles **share native storage** until native
+  invalidation.
 
 Generated `Snapshot[T]` objects are read-only detached data. Their scalar fields
 and arrays are copied at read time, nested derived fields become nested

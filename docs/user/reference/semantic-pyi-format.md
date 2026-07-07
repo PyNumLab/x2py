@@ -1058,8 +1058,6 @@ Generated canonical metadata:
 | Metadata | Meaning |
 | --- | --- |
 | `ORDER_F` | multidimensional Fortran-oriented storage |
-| `Allocatable` | Fortran allocatable array storage when used as `Annotated[...]` metadata |
-| `Pointer` | Fortran pointer array storage when used as `Annotated[...]` metadata |
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `Aliased` | native storage may be exposed across the Python boundary as an alias |
@@ -1087,25 +1085,40 @@ Loaded compatibility metadata:
 | `ORDER_C` | explicit C-oriented storage; this is also the default for plain multidimensional arrays |
 X2PY_C_DOCS_END -->
 
-Persistent scalar native descriptors use wrapper type syntax instead of
-`Annotated[...]` metadata:
+Persistent native descriptors use wrapper type syntax instead of descriptor
+metadata inside `Annotated[...]`:
 
 ```python
 from x2py.contracts import Allocatable, Float64, Int32, Pointer
 
 scratch: Allocatable[Float64]
 current: Pointer[Int32]
+values: Allocatable[Float64[:]]
+target: Pointer[Float64[:]]
 ```
 
 `Allocatable[T]` means a persistent native allocatable scalar descriptor and
 `Pointer[T]` means a persistent native pointer scalar descriptor. Use those
 type wrappers for module variables and derived-type fields.
 
+`Allocatable[T[...]]` means a Python handle to a native allocatable array
+descriptor. `Pointer[T[...]]` means a Python handle to native pointer
+association state. Both are handles, not NumPy arrays. Extra metadata wraps the
+handle, for example `Annotated[Allocatable[Float64[:]], Aliased]` or
+`Annotated[Pointer[Float64[:]], PointerAssociation("runtime")]`.
+
+`Allocatable[T[...]] | None` and `Pointer[T[...]] | None` are valid only on
+optional callable arguments, where `None` or omission maps to native
+`present(...)` false. Module variables, derived-type fields, and function results
+use the handle type without `| None`; unallocated or unassociated state lives
+inside the present handle.
+
 Procedure boundaries keep the Python value type in the annotation and put the
 native descriptor conversion in `@native_call`. Both scalar descriptor kinds
-are nullable: Python passes `T | None`, where `None` creates an unallocated
-allocatable or an unassociated pointer for the call. An unallocated or
-unassociated projected result returns `None`.
+are nullable: Python passes `T | None`, where `None` creates a present but
+unallocated allocatable descriptor or a present but unassociated pointer
+descriptor for the call. An unallocated or unassociated projected result returns
+`None`.
 
 ```python
 from x2py.contracts import Allocatable, Arg, Float64, Pointer, Return, Returns, native_call
@@ -1141,6 +1154,21 @@ Descriptor projection uses calls, not type subscriptions. Write
 `Addr(Arg(0))`: a scalar allocatable or pointer is a native descriptor, not just
 the address of a scalar slot.
 
+Defaulted scalar descriptor arguments carry native optional-dummy absence:
+
+```python
+@native_call([Allocatable(Arg(0))])
+def update(value: Float64 | None = ...) -> None: ...
+```
+
+The native optional-dummy behavior has three states: `update()` means native
+`present(value)` is false, `update(None)` means the dummy is present with an
+unallocated or unassociated descriptor, and `update(1.0)` means the dummy is
+present with a value. This scalar rule is separate from array handles:
+`Allocatable[T[...]] | None` and `Pointer[T[...]] | None` are only the optional
+absent-handle form, while unallocated or unassociated array state remains inside
+a present handle.
+
 Reads of scalar descriptor variables or derived-type components are different
 because they expose persistent native state. Attribute reads copy the current
 scalar value into Python and return `None` when the allocatable is unallocated
@@ -1157,10 +1185,9 @@ maybe_value: Float64 | None
 ```
 
 `Float64 | None` does not imply a native allocatable or pointer descriptor.
-Array descriptor handle spellings such as `Allocatable[Float64[:]]` and
-`Pointer[Float64[:]]` are reserved for a later handle phase. Existing
-allocatable and pointer array contracts continue to use
-`Annotated[Float64[:], Allocatable]` or `Annotated[Float64[:], Pointer]`.
+For array descriptors, use `Allocatable[T[...]]` and `Pointer[T[...]]`.
+`Annotated[T[...], Allocatable]`, `Annotated[T[...], Pointer]`, and
+`Snapshot[T]` are not active public array descriptor spellings.
 
 Other positional `Annotated` helpers are preserved as semantic constraints:
 
@@ -1200,10 +1227,10 @@ Transfer modes:
 | `Transfer("call_local")` | The wrapper creates or associates storage only for one native call. Python does not receive persistent native storage. | `Destruction("call_local")` for bridge temporaries, or `Destruction("none")` when no generated storage is owned. | `def use_value(value: Annotated[Float64, Ownership("temporary"), Transfer("call_local"), Destruction("call_local")]) -> None: ...` |
 | `Transfer("in_place")` | Native code writes through caller-provided mutable Python storage. The same Python object observes the mutation. | `Destruction("caller")`; x2py must not free caller storage. | `def scale(values: Annotated[Float64[:], Ownership("caller"), Transfer("in_place"), Destruction("caller")]) -> None: ...` |
 | `Transfer("copy_return")` | Native output is copied or read back into a fresh Python-visible return value. The original Python object is not mutated unless separately declared. | `Destruction("python_refcount")` after Python owns the copy. | `def read_values() -> Annotated[Float64[:], Ownership("python"), Transfer("copy_return"), Destruction("python_refcount")]: ...` |
-| `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. This transfer name does not by itself make a returned NumPy array read-only. | `Destruction("python_refcount")` for the detached copy. | `def current_pointer() -> Annotated[Float64[:], Pointer, Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")] | None: ...` |
-| `Transfer("borrowed_view")` | Python receives a no-copy view of storage owned somewhere else. Writes may mutate that storage when the value is mutable and the backend supports writable views. | Usually `Destruction("native_owner")` or `Destruction("wrapper_dealloc")`; Python does not free the borrowed target. | `module_values: Annotated[Float64[:], Allocatable, Aliased, Ownership("native"), Transfer("borrowed_view"), Destruction("native_owner")] | None` |
+| `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. This transfer name does not by itself make a returned NumPy array read-only. | `Destruction("python_refcount")` for the detached copy. | `def current_pointer() -> Annotated[Pointer[Float64[:]], Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")]: ...` |
+| `Transfer("borrowed_view")` | Python receives a no-copy view of storage owned somewhere else. Writes may mutate that storage when the value is mutable and the backend supports writable views. | Usually `Destruction("native_owner")` or `Destruction("wrapper_dealloc")`; Python does not free the borrowed target. | `module_values: Annotated[Allocatable[Float64[:]], Aliased, Ownership("native"), Transfer("borrowed_view"), Destruction("native_owner")]` |
 | `Transfer("wrapper_instance")` | Python receives a wrapper object that owns or controls a native instance. | `Destruction("wrapper_dealloc")`. | `def make_state() -> Annotated[state, Ownership("wrapper"), Transfer("wrapper_instance"), Destruction("wrapper_dealloc")]: ...` |
-| `Transfer("blocked")` | The contract intentionally has no safe lowering with the current policy facts. Wrapper generation must stop. | `Destruction("blocked")`. | `def reassociate(values: Annotated[Float64[:], Pointer, Ownership("unknown"), Transfer("blocked"), Destruction("blocked")]) -> None: ...` |
+| `Transfer("blocked")` | The contract intentionally has no safe lowering with the current policy facts. Wrapper generation must stop. | `Destruction("blocked")`. | `def reassociate(values: Annotated[Pointer[Float64[:]], Ownership("unknown"), Transfer("blocked"), Destruction("blocked")]) -> None: ...` |
 
 Destruction policies:
 
@@ -1235,8 +1262,7 @@ are implemented.
 from x2py.contracts import Annotated, Float64, Pointer, PointerPolicy
 
 value: Annotated[
-    Float64[:],
-    Pointer,
+    Pointer[Float64[:]],
     PointerPolicy(
         nullable=True,
         transfer="snapshot_copy",
@@ -1259,10 +1285,10 @@ and release facts for the backend path being enabled.
 module variable is copied into a detached read-only object graph:
 
 ```python
-from x2py.contracts import Allocatable, Annotated, Float64, Snapshot
+from x2py.contracts import Allocatable, Float64, Snapshot
 
 class box:
-    values: Annotated[Float64[:], Allocatable] | None
+    values: Allocatable[Float64[:]]
 
 current: Snapshot[box]
 ```
@@ -1723,35 +1749,39 @@ specific must be a two-argument subroutine whose wrapped derived-type LHS is
 writable and whose RHS is read-only. Unsafe or unsupported forms are readiness
 blockers.
 
-## Allocatable Borrowed Views
+## Allocatable Array Handles
 
 Supported Fortran allocatable module arrays and derived-type array fields are
-exposed as zero-copy NumPy views over native storage. The NumPy array does not
-own the memory. For derived-type fields, NumPy's `base` object is the containing
-Python wrapper, so the wrapper cannot be destroyed while the view exists.
-For module variables, the Fortran module owns the storage for the process
-lifetime.
+exposed as `Allocatable[T[...]]` handles. The handle carries allocation state
+and descriptor operations. It is not a NumPy array, and unallocated state lives
+inside the handle.
 
-Unallocated allocatable arrays return `None`. A fresh attribute read after native
-deallocation also returns `None`. Existing views are not invalidated, detached,
-or tracked. If a wrapped Fortran procedure reallocates or deallocates the native
-storage while Python still holds an old view, that old view is stale; reading or
-writing it is unsupported and may crash the process. Users who need independent
-lifetime must copy explicitly:
+`h.to_numpy()` returns `None` when the descriptor is unallocated. When completed
+policy proves live aliasing is safe, it returns a borrowed NumPy view over
+native storage. For derived-type fields, NumPy's `base` object is the containing
+Python wrapper, so the wrapper cannot be destroyed while the view exists. For
+module variables, the Fortran module owns the storage for the process lifetime.
+When live aliasing is unsafe but copying is implemented, `to_numpy()` returns a
+read-only detached copy instead.
+
+Existing views are not invalidated, detached, or tracked. If a wrapped Fortran
+procedure reallocates or deallocates native storage while Python still holds an
+old view, that old view is stale; reading or writing it is unsupported and may
+crash the process. Users who need independent lifetime must copy explicitly:
 
 ```python
-x = obj.values        # borrowed zero-copy NumPy view, or None
-y = obj.values.copy() # independent NumPy-owned storage
-obj.reset_values()    # may invalidate x; y remains valid
+x = obj.values.to_numpy()        # borrowed view, detached copy, or None
+y = None if x is None else x.copy()
+obj.reset_values()               # may invalidate x; y remains valid
 ```
 
 Derived-type allocatable fields remain fields in `.pyi`:
 
 ```python
-from x2py.contracts import Allocatable, Annotated, Float64
+from x2py.contracts import Allocatable, Float64
 
 class buffer:
-    values: Annotated[Float64[:], Allocatable] | None
+    values: Allocatable[Float64[:]]
 ```
 
 Python cannot directly replace or reallocate such fields. Assigning a new array
@@ -1833,21 +1863,23 @@ declarations may still be used only when the generated field constructor is
 present; overloaded `tp_init` runtime lowering is not implemented yet and code
 generation reports an explicit blocker for that form.
 
-Module variables are declarations in the semantic contract. Allocatable arrays
-include `None` because native storage may be unallocated:
+Module variables are declarations in the semantic contract. Allocatable array
+module variables expose handles; unallocated state is represented by the handle,
+not by making the module attribute `None`:
 
 ```python
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64
 
-module_values: Annotated[Float64[:], Allocatable, Aliased] | None
-snapshot_values: Annotated[Float64[:], Allocatable] | None
+module_values: Annotated[Allocatable[Float64[:]], Aliased]
+snapshot_values: Allocatable[Float64[:]]
 ```
 
-`Aliased` selects a native-owned borrowed view. A plain allocatable module
-array remains wrappable as `None` when unallocated or as a fresh read-only
-snapshot copy when allocated. Fortran source declarations with `target` are
-printed as `Aliased` because they prove that the current allocation may be
-aliased by the wrapper.
+`Aliased` says a native-owned borrowed view may be exposed through
+`to_numpy()`. A plain allocatable module array remains wrappable as a handle;
+if live aliasing is unsafe, `to_numpy()` uses a read-only detached copy when
+that extraction policy is implemented. Fortran source declarations with
+`target` are printed as `Aliased` because they prove that the current allocation
+may be aliased by the wrapper.
 
 `Aliased` also controls borrowed access to an existing derived-type module
 object:
@@ -1856,7 +1888,7 @@ object:
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64, Snapshot
 
 class box:
-    values: Annotated[Float64[:], Allocatable] | None
+    values: Allocatable[Float64[:]]
 
 live_current: Annotated[box, Aliased]
 current: Snapshot[box]
@@ -1950,48 +1982,45 @@ without modifying native Fortran state.
 
 <!-- X2PY_C_DOCS_START
 Allocatable array function results and non-optional allocatable output array
-arguments use a copy-return policy. The generated bridge copies allocated
-Fortran storage into C memory that becomes owned by the returned NumPy array,
-then deallocates the Fortran allocatable. If the Fortran value remains
-unallocated, Python receives `None`. Optional allocatable output dummies remain
-visible so the caller can omit them and make native `present(...)` false.
+arguments use handle policy when stable owner storage is available. The handle
+owns the descriptor storage x2py creates for the result. If stable owner storage
+is not available, readiness must block instead of falling back to an implicit
+NumPy copy contract. Optional allocatable output dummies remain visible so the
+caller can omit them and make native `present(...)` false.
 X2PY_C_DOCS_END -->
 
-Supported top-level allocatable writable arguments use replacement policy.
-Their Python-visible argument type includes `| None`: `None` means the native
-temporary starts unallocated. When Python passes a matching NumPy array, x2py
-copies it into bridge-owned native
-allocatable storage for the call; the NumPy array is not borrowed as native
-storage and is not mutated. After the call, x2py copies the final native
-allocation into a Python-owned replacement array, or returns `None` if the
-native allocation is absent.
+Supported top-level allocatable writable descriptor arguments use
+`Allocatable[T[...]]` handle policy. `| None` on the annotation means the handle
+object itself may be absent for an optional native dummy. That spelling is only
+valid on optional callable arguments. Passing a handle to a normal `T[...]`
+argument is separate: the wrapper validates that the handle is allocated and
+hands off the native array actual, without implicitly calling `h.to_numpy()`.
 
-## Pointer Procedure Detached-Copy Subset
+## Pointer Array Handles
 
-Fortran pointer array facts are emitted and loaded with `Pointer` metadata:
+Fortran pointer array facts are emitted and loaded with `Pointer[T[...]]`
+handles:
 
 ```python
-from x2py.contracts import Annotated, Float64, Int32, Pointer
+from x2py.contracts import Float64, Int32, Pointer
 
-def sum_values(values: Annotated[Float64[:], Pointer]) -> Float64: ...
-def choose_values(flag: Int32) -> Annotated[Float64[:], Pointer] | None: ...
+def sum_values(values: Pointer[Float64[:]]) -> Float64: ...
+def choose_values(flag: Int32) -> Pointer[Float64[:]]: ...
 ```
 
-The supported runtime subset is procedure-local and copy-based:
+The handle carries association state and descriptor operations:
 
-- A read-only pointer array dummy is associated with the Python-owned NumPy
-  buffer only for the duration of the native call. The wrapper does not expose
-  or preserve pointer association identity after the call.
-- A pointer array function result is copied into a new Python-owned NumPy
-  array. If the Fortran result is unassociated, Python receives `None`.
-- Pointer array output and writable dummy arguments remain
-  blocked unless future policy metadata supplies ownership, lifetime, shape,
-  contiguity, reassociation, and deallocation behavior.
+- `p.associated` reports whether the pointer currently has a target.
+- `p.to_numpy()` returns the current target view or `None`.
+- `p.nullify()` is the default descriptor operation.
+- `allocate(shape)`, `deallocate()`, and `resize(shape)` are exposed only when
+  completed pointer policy allows them.
 
-The returned NumPy array from a pointer function result is a detached copy.
-Mutating it does not mutate the original Fortran target. Borrowed views for
-module pointer variables and derived-type pointer fields are not part of this
-subset.
+When descriptor-backed extraction is enabled, `to_numpy()` builds NumPy shape and
+strides from descriptor metadata and can expose strided pointer targets. If that
+path is unavailable, the completed policy must choose contiguous-only views,
+an explicit copy fallback, or a readiness diagnostic. Pointer handle ownership
+is descriptor or association access by default, not target ownership.
 
 ## Visibility And Names
 
@@ -2058,7 +2087,7 @@ Loaded projection entries:
 | --- | --- |
 | `Arg(i)` | native argument is Python argument `i`'s default native representation |
 | `Addr(Arg(i))` | native argument is the address of Python argument `i`'s call-local native scalar representation |
-| `Allocatable(Arg(i))`, `Pointer(Arg(i))` | native argument is a nullable call-local scalar descriptor initialized from Python argument `i` |
+| `Allocatable(Arg(i))`, `Pointer(Arg(i))` | native argument is a nullable call-local scalar descriptor initialized from Python argument `i`; `None` means present but unallocated or unassociated |
 | `Return(i)` | native argument is supplied by projected return slot `i` as hidden writable storage passed by address |
 | `Return("name", i)` | named native argument is supplied by projected return slot `i` as hidden writable storage passed by address |
 | `Allocatable(Return(...))`, `Pointer(Return(...))` | native output dummy is a nullable scalar descriptor copied to the selected Python result slot |

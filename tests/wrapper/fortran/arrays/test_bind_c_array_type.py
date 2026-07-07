@@ -1,6 +1,6 @@
 import pytest
 
-from x2py.codegen.bind_c import BindCArrayType, BindCPointer
+from x2py.codegen.bind_c import BindCArrayType, BindCPointer, BindCScalarDescriptorType
 from x2py.codegen.models.core import Add, Declare, IndexedElement, Slice, Variable
 from x2py.codegen.models.datatypes import (
     Literal,
@@ -157,6 +157,22 @@ def test_scope_expands_bind_c_array_to_registered_fields():
         scope.insert_symbolic_alias(IndexedElement(packed, i), field)
 
     assert scope.collect_all_tuple_elements(packed) == fields
+
+
+def test_bind_c_scalar_descriptor_type_expands_to_value_and_presence_pointers():
+    scope = Scope(name="f", scope_type="function")
+    descriptor_type = BindCScalarDescriptorType()
+    packed = Variable(descriptor_type, "descriptor", shape=(convert_to_literal(2),))
+    value = Variable(BindCPointer(), "value")
+    present = Variable(BindCPointer(), "present")
+
+    scope.insert_symbolic_alias(IndexedElement(packed, 0), value)
+    scope.insert_symbolic_alias(IndexedElement(packed, 1), present)
+
+    assert len(descriptor_type) == 2
+    assert all(isinstance(field, BindCPointer) for field in descriptor_type)
+    assert descriptor_type.shape_is_compatible((convert_to_literal(2),))
+    assert scope.collect_all_tuple_elements(packed) == [value, present]
 
 
 def test_fortran_visiter_visits_array_slice_with_inclusive_stop():

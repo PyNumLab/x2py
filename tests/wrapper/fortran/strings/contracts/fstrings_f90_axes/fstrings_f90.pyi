@@ -1,4 +1,4 @@
-from x2py.contracts import Allocatable, Annotated, Int32, Returns, String
+from x2py.contracts import Allocatable, Int32, Returns, String
 
 def string_len_assumed(
     text: String
@@ -13,10 +13,10 @@ def fixed_array_extent(
 ) -> Int32: ...
 
 def replace_names(
-    names: Annotated[String[:][:], Allocatable] | None
+    names: Allocatable[String[:][:]]
 ) -> Returns[
-    "names", Annotated[String[:][:], Allocatable]
-] | None: ...
+    "names", Allocatable[String[:][:]]
+]: ...
 
 def rewrite_storage(
     label: String[8][()]

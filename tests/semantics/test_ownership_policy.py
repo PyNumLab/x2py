@@ -855,8 +855,7 @@ def test_pyi_policy_metadata_round_trips_pointer_detached_copy_and_blocks_getter
         """
 class box:
     values: Annotated[
-        Float64[:],
-        Pointer,
+        Pointer[Float64[:]],
         Ownership("python"),
         Transfer("snapshot_copy"),
         Destruction("python_refcount"),
@@ -884,8 +883,7 @@ def test_complete_pointer_policy_metadata_round_trips_and_blocks_borrowed_views(
     module = parse_pyi_text(
         """
 value: Annotated[
-    Float64[:],
-    Pointer,
+    Pointer[Float64[:]],
     PointerAssociation("runtime"),
     PointerPolicy(
         nullable=True,
@@ -934,8 +932,7 @@ def test_pointer_policy_metadata_requires_every_fact():
         parse_pyi_text(
             """
 value: Annotated[
-    Float64[:],
-    Pointer,
+    Pointer[Float64[:]],
     PointerPolicy(
         nullable=True,
         transfer="snapshot_copy",

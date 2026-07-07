@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int32, Snapshot, native_call
+from x2py.contracts import Addr, Allocatable, Arg, Float64, Int32, Snapshot, native_call
 
 class child:
     def __init__(
@@ -18,7 +18,7 @@ class box:
 
     scalar: Int32 = 0
     fixed: Float64[2] = [0.0, 0.0]
-    values: Annotated[Float64[:], Allocatable] | None
+    values: Allocatable[Float64[:]]
     nested: child
 
     def scalar_plus_nested(self) -> Int32: ...
