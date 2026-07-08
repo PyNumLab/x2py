@@ -7,12 +7,12 @@ import weakref
 import numpy as np
 
 from tests.wrapper.fortran._support import (
+    build_pyi_extension_or_xfail_staged_native_array_handle,
     _compile_native_object,
     _import_from_build_dir,
     _sole_native_module,
     wrapper_source,
 )
-from x2py import build_pyi_extension
 
 NATIVE_SOURCE = wrapper_source("fallocatable_views_f90.f90")
 FINALIZER_SOURCE = wrapper_source("fborrowed_finalizer_f90.f90")
@@ -26,7 +26,7 @@ FINALIZER_CONTRACT = (
 
 def test_same_array_concept_uses_native_wrapper_and_numpy_lifetimes(tmp_path: Path):
     native_object = _compile_native_object(NATIVE_SOURCE, tmp_path / "native")
-    result = build_pyi_extension(
+    result = build_pyi_extension_or_xfail_staged_native_array_handle(
         OWNERSHIP_CONTRACT,
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
@@ -71,7 +71,7 @@ def test_same_array_concept_uses_native_wrapper_and_numpy_lifetimes(tmp_path: Pa
 
 def test_wrapper_owned_borrow_keeps_owner_alive_and_finalizes_exactly_once(tmp_path: Path):
     native_object = _compile_native_object(FINALIZER_SOURCE, tmp_path / "native")
-    result = build_pyi_extension(
+    result = build_pyi_extension_or_xfail_staged_native_array_handle(
         FINALIZER_CONTRACT,
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],

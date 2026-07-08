@@ -266,8 +266,8 @@ objects, archives, and libraries remain separate build-plan facts.
 - [x] Derived-type parity covers fields, methods, type-bound root target
   procedures, default/keyword constructors, finalizers, borrowed child
   lifetime, scalar object boundaries, inheritance, polymorphic dispatch, and
-  pointer detached-copy results in both `source` and `generated-pyi` modes. `.pyi`
-  parser regressions restore type-bound target metadata from class method
+  pointer handle readiness blockers in both `source` and `generated-pyi` modes.
+  `.pyi` parser regressions restore type-bound target metadata from class method
   declarations.
 - [x] Callback parity covers scalar, array, and derived callback conversions,
   call-scoped callback lifetime, GIL entry handling, reference cleanup, and
@@ -553,10 +553,11 @@ X2PY_C_DOCS_END -->
   for the current supported surface. Bridge field getters and setters dispatch
   from completed getter/setter policy, derived value-copy setters are selected
   by policy, explicit borrowed derived fields reject replacement setters, and
-  pointer module-variable or field detached-copy accessors fail closed before
-  lowering. Remaining rank, datatype, `is_alias`, and storage checks in bridge
-  and binding code are local emitted-code, ABI, documentation, or object-model
-  mechanics rather than semantic policy selection. Evidence:
+  pointer-array module-variable or field handle accessors fail closed before
+  lowering until descriptor extraction, target lifetime, and release policy are
+  implemented. Remaining rank, datatype, `is_alias`, and storage checks in
+  bridge and binding code are local emitted-code, ABI, documentation, or
+  object-model mechanics rather than semantic policy selection. Evidence:
   `x2py/ownership_policy.py`,
   `x2py/codegen/bridges/fortran_to_c.py`,
   `x2py/codegen/bindings/c_to_python.py`,

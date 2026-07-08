@@ -111,6 +111,18 @@ generated stubs.
 | `emit_module_stubs` | Emits semantic Python `.pyi` text from semantic module models. |
 | `opaque_dependency_modules` | Computes opaque dependency modules needed for emitted stubs. |
 
+## Native array handle API
+
+| Symbol | Purpose |
+| --- | --- |
+| `NativeArrayHandleBase` | Common runtime base for generated native array descriptor handles. |
+| `AllocatableHandle` | Runtime handle for a native allocatable array descriptor. |
+| `PointerHandle` | Runtime handle for a native pointer array descriptor. |
+
+Generated wrappers use these handle classes when an allocatable or pointer array
+descriptor is exposed as a Python object. Users can test for these classes when
+they need to distinguish descriptor handles from ordinary NumPy arrays.
+
 ## Wrapper build API
 
 | Symbol | Purpose |

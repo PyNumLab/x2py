@@ -1932,10 +1932,28 @@ def test_printer_emits_extended_storage_and_callable_forms():
             ),
         ),
     )
+    constrained_allocatable_handle = SemanticType(
+        "Bool",
+        rank=1,
+        constraints=[SemanticConstraint("Finite")],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(rank=1, shape=["1"], allocatable=True),
+        ),
+    )
     pointer_handle = SemanticType(
         "Float64",
         rank=1,
         metadata={"fortran_pointer_association": "runtime"},
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(rank=1, shape=[":"], pointer=True),
+        ),
+    )
+    string_pointer_handle = SemanticType(
+        "String",
+        rank=1,
+        metadata={"fortran_character_length": "8"},
         storage=SemanticStorageContract(
             kind="array",
             array=SemanticArrayContract(rank=1, shape=[":"], pointer=True),
@@ -1990,7 +2008,9 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit(unspecified_storage) == "Int32"
     assert printer.emit(inferred_array) == "Float64[:, :]"
     assert printer.emit(allocatable_handle) == "Allocatable[Annotated[Float64[:, :], ORDER_F]]"
+    assert printer.emit(constrained_allocatable_handle) == "Allocatable[Annotated[Bool[1], Finite]]"
     assert printer.emit(pointer_handle) == 'Annotated[Pointer[Float64[:]], PointerAssociation("runtime")]'
+    assert printer.emit(string_pointer_handle) == "Pointer[String[8][:]]"
     assert printer.emit(annotated_array) == "Annotated[Float64[:, :], ORDER_ANY, Finite, Range(1, 3)]"
     assert printer.emit(character) == "String[16]"
     assert printer.emit(allocatable_character) == "Allocatable[String]"

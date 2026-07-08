@@ -37,6 +37,10 @@ from x2py.semantics.models import (
     SemanticVariable,
 )
 from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA, validate_pyi_native_contract
+from x2py.semantics.native_array_handles import (
+    NativeArrayBuildRequirements,
+    native_array_handle_build_requirements,
+)
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.pyi_pipeline import _PyiSemanticModuleCache
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
@@ -910,6 +914,24 @@ def _manifest_native_plan(plan: NativeBuildPlan, *, base: Path) -> dict[str, obj
     }
 
 
+def _manifest_native_array_requirements(requirements: NativeArrayBuildRequirements) -> dict[str, object]:
+    return {
+        "pointer_c_descriptor_interop": requirements.pointer_c_descriptor_interop,
+        "headers": list(requirements.headers),
+        "items": [
+            {
+                "owner": item.owner,
+                "item": item.item,
+                "descriptor_kind": item.descriptor_kind,
+                "handle_kind": item.handle_kind,
+                "descriptor_interop": item.descriptor_interop,
+                "headers": list(item.headers),
+            }
+            for item in requirements.items
+        ],
+    }
+
+
 def _pyi_build_manifest(
     *,
     bundle: _PyiContractBundle,
@@ -923,6 +945,7 @@ def _pyi_build_manifest(
     wrapper_fortran_flags: tuple[str, ...],
     wrapper_c_flags: tuple[str, ...],
     native_build_plan: NativeBuildPlan,
+    native_array_build_requirements: NativeArrayBuildRequirements,
     manifest_dir: Path,
 ) -> dict[str, object]:
     return {
@@ -947,6 +970,7 @@ def _pyi_build_manifest(
             "wrapper_c_flags": list(wrapper_c_flags),
             "position_independent_code": True,
         },
+        "native_array_build_requirements": _manifest_native_array_requirements(native_array_build_requirements),
         "native_build_plan": _manifest_native_plan(native_build_plan, base=manifest_dir),
     }
 
@@ -1509,6 +1533,7 @@ def build_pyi_extension(
         raise ValueError(f"Output name must be a valid Python identifier: {requested_name!r}")
     module = _merge_wrapper_modules(modules, name=requested_name)
     complete_semantic_policies(module)
+    native_array_build_requirements = native_array_handle_build_requirements(module)
     scope = Scope(
         name=module.name,
         scope_type="module",
@@ -1586,6 +1611,7 @@ def build_pyi_extension(
         wrapper_fortran_flags=wrapper_fortran_flags,
         wrapper_c_flags=wrapper_c_flags,
         native_build_plan=native_build_plan,
+        native_array_build_requirements=native_array_build_requirements,
         manifest_dir=output_path,
     )
     build_manifest = _write_build_manifest(output_path / _BUILD_MANIFEST_NAME, manifest) if makefile else None

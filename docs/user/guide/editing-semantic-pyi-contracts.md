@@ -588,7 +588,7 @@ or keep the native-owned borrowed view.
 | `call_local` | Converted scalar/string/array inputs, pointer inputs associated only for one call, and explicitly discarded immutable mutation. | `none` or `call_local` |
 | `in_place` | Caller-supplied writable scalar storage, NumPy arrays, and existing wrapper instances. | `caller` or the existing wrapper's `wrapper_dealloc` |
 | `copy_return` | Strings, array results, non-optional hidden allocatable outputs, and immutable replacement results copied to Python. | `python_refcount` |
-| `snapshot_copy` | Supported pointer function results with complete shape and lifetime facts; Python receives a detached copy. | `python_refcount` |
+| `snapshot_copy` | Detached copies for explicitly supported projections. Pointer-array handle results remain blocked until owner storage, target lifetime, descriptor extraction, and destroy behavior are implemented. | `python_refcount` |
 | `borrowed_view` | Target-backed module allocatables and supported fields/components whose owner remains identifiable. | `native_owner` or `wrapper_dealloc` |
 | `wrapper_instance` | Derived-type output represented by a Python extension object owning a native instance. | `wrapper_dealloc` |
 | `blocked` | Intentional declaration that no safe implemented transfer exists. | `blocked` |
@@ -615,8 +615,8 @@ Examples include:
 
 - `Immutable` writable storage with `Transfer("borrowed_view")`;
 - `Transfer("copy_return")` on an argument with no projected replacement;
-- pointer array or persistent pointer reassociation without implemented owner,
-  shape, lifetime, and release behavior;
+- pointer array handles or persistent pointer reassociation without implemented
+  owner, shape, lifetime, descriptor handoff, and release behavior;
 - pointer module variables or derived-type pointer fields without an
   implemented detached-copy or borrowed-accessor path;
 - borrowed pointer views without owner retention and stale-view invalidation;

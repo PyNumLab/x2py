@@ -1227,7 +1227,7 @@ Transfer modes:
 | `Transfer("call_local")` | The wrapper creates or associates storage only for one native call. Python does not receive persistent native storage. | `Destruction("call_local")` for bridge temporaries, or `Destruction("none")` when no generated storage is owned. | `def use_value(value: Annotated[Float64, Ownership("temporary"), Transfer("call_local"), Destruction("call_local")]) -> None: ...` |
 | `Transfer("in_place")` | Native code writes through caller-provided mutable Python storage. The same Python object observes the mutation. | `Destruction("caller")`; x2py must not free caller storage. | `def scale(values: Annotated[Float64[:], Ownership("caller"), Transfer("in_place"), Destruction("caller")]) -> None: ...` |
 | `Transfer("copy_return")` | Native output is copied or read back into a fresh Python-visible return value. The original Python object is not mutated unless separately declared. | `Destruction("python_refcount")` after Python owns the copy. | `def read_values() -> Annotated[Float64[:], Ownership("python"), Transfer("copy_return"), Destruction("python_refcount")]: ...` |
-| `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. This transfer name does not by itself make a returned NumPy array read-only. | `Destruction("python_refcount")` for the detached copy. | `def current_pointer() -> Annotated[Pointer[Float64[:]], Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")]: ...` |
+| `Transfer("snapshot_copy")` | Python receives a detached copy of current native state. Later native changes do not update it, and Python writes do not mutate native storage. This transfer name does not by itself make a returned NumPy array read-only. | `Destruction("python_refcount")` for the detached copy. | `snapshot_values: Annotated[Allocatable[Float64[:]], Ownership("python"), Transfer("snapshot_copy"), Destruction("python_refcount")]` |
 | `Transfer("borrowed_view")` | Python receives a no-copy view of storage owned somewhere else. Writes may mutate that storage when the value is mutable and the backend supports writable views. | Usually `Destruction("native_owner")` or `Destruction("wrapper_dealloc")`; Python does not free the borrowed target. | `module_values: Annotated[Allocatable[Float64[:]], Aliased, Ownership("native"), Transfer("borrowed_view"), Destruction("native_owner")]` |
 | `Transfer("wrapper_instance")` | Python receives a wrapper object that owns or controls a native instance. | `Destruction("wrapper_dealloc")`. | `def make_state() -> Annotated[state, Ownership("wrapper"), Transfer("wrapper_instance"), Destruction("wrapper_dealloc")]: ...` |
 | `Transfer("blocked")` | The contract intentionally has no safe lowering with the current policy facts. Wrapper generation must stop. | `Destruction("blocked")`. | `def reassociate(values: Annotated[Pointer[Float64[:]], Ownership("unknown"), Transfer("blocked"), Destruction("blocked")]) -> None: ...` |
@@ -1262,7 +1262,10 @@ For native pointer-array handles, descriptor operations are opt-in. `nullify()`
 is always available on a present pointer handle. `allocate(shape)` is permitted
 only when `reassociation` is `allocate`, `allocate_resize`, `reallocate`, or
 `reassociate_allocate`. `deallocate()` is permitted only when `deallocation` is
-`deallocate`, `deallocate_resize`, `owner_deallocate`, or `wrapper_dealloc`.
+`deallocate`, `deallocate_resize`, `owner_deallocate`,
+`unsafe_deallocate`, or `wrapper_dealloc`.
+Use `unsafe_deallocate` only when the contract intentionally makes the caller
+responsible for requesting deallocation without x2py-proven target ownership.
 `resize(shape)` is permitted only when the policy opts into resize through both
 reassociation and deallocation, using `resize`, `allocate_resize`, or
 `deallocate_resize` as appropriate. Other values keep those operations absent
@@ -1287,9 +1290,10 @@ value: Annotated[
     ),
 ]
 ```
-For example, a pointer array function result can be made a Python-owned
-detached copy only when the stub also supplies enough shape, nullability, lifetime,
-and release facts for the backend path being enabled.
+For pointer-array handles, that metadata records the requested policy but does
+not enable a detached NumPy result by itself. Pointer-array results remain
+blocked until returned-handle owner storage, target lifetime, descriptor
+extraction, and destroy behavior are implemented.
 
 Whole-object `Snapshot[T]` contracts are future-only. They are not accepted in
 active semantic `.pyi` files and are not generated for derived module objects.

@@ -37,13 +37,13 @@ storage. Array handles keep a different rule: `Allocatable[T[...]] | None` and
 
 ## Core Contract Decisions
 
-- [ ] `Allocatable[T[...]]` means a Python handle to a native allocatable array
+- [x] `Allocatable[T[...]]` means a Python handle to a native allocatable array
   descriptor.
-- [ ] `Pointer[T[...]]` means a Python handle to a native pointer array
+- [x] `Pointer[T[...]]` means a Python handle to a native pointer array
   descriptor.
-- [ ] `Allocatable[T[...]]` and `Pointer[T[...]]` are handles, not NumPy arrays.
-- [ ] `T[...]` remains the ordinary array data-buffer contract.
-- [ ] Passing a handle to an `Allocatable[T[...]]` or `Pointer[T[...]]`
+- [x] `Allocatable[T[...]]` and `Pointer[T[...]]` are handles, not NumPy arrays.
+- [x] `T[...]` remains the ordinary array data-buffer contract.
+- [x] Passing a handle to an `Allocatable[T[...]]` or `Pointer[T[...]]`
   parameter uses descriptor semantics.
 - [ ] Passing a handle to a `T[...]` parameter uses normal array-actual
   semantics. For native wrapper calls, prefer passing the handle's native array
@@ -57,22 +57,22 @@ storage. Array handles keep a different rule: `Allocatable[T[...]] | None` and
   and `Pointer[T[...]]`, where that state belongs inside the handle.
 - [ ] Plain NumPy arrays are rejected for `Allocatable[T[...]]` and
   `Pointer[T[...]]` descriptor parameters.
-- [ ] `| None` on a handle means the handle object itself may be absent for a
+- [x] `| None` on a handle means the handle object itself may be absent for a
   native optional dummy, not that a present handle is unallocated or
   unassociated.
-- [ ] Unallocated allocatable state lives inside the allocatable handle:
+- [x] Unallocated allocatable state lives inside the allocatable handle:
   `h.allocated is False` and `h.to_numpy() is None`.
-- [ ] Unassociated pointer state lives inside the pointer handle:
+- [x] Unassociated pointer state lives inside the pointer handle:
   `p.associated is False` and `p.to_numpy() is None`.
-- [ ] `Annotated[T[...], Allocatable]` is not an active public allocatable-array
+- [x] `Annotated[T[...], Allocatable]` is not an active public allocatable-array
   spelling after migration.
-- [ ] `Annotated[T[...], Pointer]` is not an active public pointer-array
+- [x] `Annotated[T[...], Pointer]` is not an active public pointer-array
   spelling after migration.
 - [x] `Snapshot[T]` is removed from generated and accepted active semantic
   `.pyi` contracts for this feature.
 - [x] Whole-object snapshots are treated as a future feature, not part of this
   contract.
-- [ ] Borrowed views, detached snapshots, and descriptor handles remain distinct
+- [x] Borrowed views, detached snapshots, and descriptor handles remain distinct
   concepts in docs, diagnostics, runtime names, and tests.
 
 ## Public `.pyi` Examples
@@ -196,6 +196,13 @@ A `Pointer[Float64[:]]` value should expose or carry:
 - descriptor kind: `pointer`;
 - descriptor operations: association state, descriptor passing, nullify, and
   any policy-gated allocation/deallocation operations.
+- default handle mode: `Pointer[T[...]]` must be usable without
+  `PointerPolicy(...)` for conservative handle creation, association
+  inspection, descriptor handoff, `nullify()` where legal, and supported
+  extraction operations.
+- explicit policy mode: `PointerPolicy(...)` enables or requests behavior that
+  needs otherwise unprovable facts, such as allocation, deallocation,
+  reassociation, target lifetime, or unsafe ownership transfer.
 
 The implementation may use predicates or metadata equivalent to
 `is_allocatable` and `is_pointer` on the specific handle semantic type, but
@@ -294,7 +301,7 @@ Implement the public contract wrappers once and parameterize by descriptor kind.
 Create one semantic representation family for native array handles with a
 descriptor-kind field rather than separate unrelated models.
 
-- [ ] Represent common native-array handle facts:
+- [x] Represent common native-array handle facts:
   - descriptor kind: allocatable or pointer;
   - element semantic type;
   - dtype;
@@ -331,15 +338,22 @@ The completed decision is recorded as `NativeArrayHandlePolicy` metadata on
 each handle declaration or result type. That policy records the descriptor kind,
 handle origin/kind, owner retention, borrowed-vs-owned descriptor status,
 getter/setter behavior, native assignment behavior, release responsibility,
-storage mode, optional absent-handle state, `.to_numpy()` extraction policy, and
-descriptor operation permissions. `ir2ast.py` must fail before lowering a native
-array handle that is missing this completed policy.
+target lifetime, generated destroy behavior, storage mode, optional
+absent-handle state, `.to_numpy()` extraction policy, and descriptor operation
+permissions. It also records whether the selected path requires pointer C
+descriptor interop, so build integration can gate `ISO_Fortran_binding.h` from
+completed policy instead of raw datatype checks. `ir2ast.py` must fail before
+lowering a native array handle that is missing this completed policy.
 
-For pointer handles, the operation table is derived from completed
-`PointerPolicy(...)` facts. `nullify()` is the default descriptor operation.
-`allocate(shape)` requires an explicit reassociation value that allows
-allocation, `deallocate()` requires an explicit deallocation value, and
-`resize(shape)` requires both sides to opt into resize.
+For pointer handles, plain `Pointer[T[...]]` gets a default conservative
+operation table for descriptor association, `nullify()`, and unavailable
+extraction reporting. `PointerPolicy(...)` adds facts for behavior that needs
+an explicit contract. `allocate(shape)` requires an explicit reassociation
+value that allows allocation, `deallocate()` requires an explicit deallocation
+value, and `resize(shape)` requires both sides to opt into resize. When an
+explicit pointer policy selects descriptor-view extraction, the completed policy
+records the `pointer_c_descriptor` interop requirement even if another readiness
+blocker still prevents wrapper lowering.
 
 - [x] Add one completed native-array-handle policy decision shared by
   Allocatable and Pointer.
@@ -351,13 +365,13 @@ allocation, `deallocate()` requires an explicit deallocation value, and
   - `owned_result_descriptor`;
   - `optional_absent_handle`;
   - `unsupported`.
-- [ ] Complete ownership and lifetime retention before lowering.
+- [x] Complete ownership and lifetime retention before lowering.
 - [x] Complete whether the Python handle is borrowed or owned before lowering.
 - [x] Complete getter behavior before lowering.
 - [x] Complete Python setter exposure, if any, before lowering.
 - [x] Complete native setter assignment behavior, if any, before lowering.
 - [x] Complete output projection/readback behavior before lowering.
-- [ ] Complete release responsibility and generated destroy behavior before
+- [x] Complete release responsibility and generated destroy behavior before
   lowering.
 - [x] Complete `.to_numpy()` policy before lowering:
   - `borrowed_view`;
@@ -366,6 +380,8 @@ allocation, `deallocate()` requires an explicit deallocation value, and
   - `copy_only`;
   - `read_only_detached_copy`;
   - `unsupported`.
+- [x] Complete pointer C-descriptor interop requirement before lowering:
+  `none` or `pointer_c_descriptor`.
 - [x] Complete nullability and optional-absent-handle behavior before lowering.
 - [x] Complete contract-value storage mode before lowering: `stack`, `heap`, or
   `alias`.
@@ -379,20 +395,20 @@ allocation, `deallocate()` requires an explicit deallocation value, and
 - [x] Complete addressability/aliasability policy for `h.to_numpy()`.
 - [x] Use `borrowed_view` only when safe and legal addressability is proven.
 - [x] Use read-only detached copy when live aliasing is not safe.
-- [ ] Do not expose live NumPy views for non-addressable Fortran allocatables.
-- [ ] Do not call a read-only borrowed view a snapshot; snapshots are detached
+- [x] Do not expose live NumPy views for non-addressable Fortran allocatables.
+- [x] Do not call a read-only borrowed view a snapshot; snapshots are detached
   copies.
 - [x] Complete `deallocate()` permission.
 - [x] Complete `resize(shape)` permission.
 - [ ] Complete function-result ownership as wrapper-owned stable descriptor
   storage.
-- [ ] Mark unsupported allocatable array forms as readiness blockers rather than
+- [x] Mark unsupported allocatable array forms as readiness blockers rather than
   silently falling back to NumPy-array copy behavior.
 
 #### Pointer Policy Items
 
 - [x] Complete association-state support.
-- [ ] Complete target lifetime policy.
+- [x] Complete target lifetime policy.
 - [x] Complete `to_numpy()` extraction policy:
   - descriptor view;
   - contiguous view;
@@ -400,10 +416,15 @@ allocation, `deallocate()` requires an explicit deallocation value, and
   - unsupported.
 - [x] Complete `nullify()` permission as the default pointer descriptor
   operation.
+- [x] Complete a default conservative handle profile for plain
+  `Pointer[T[...]]` without requiring `PointerPolicy(...)`.
 - [x] Complete `allocate(shape)` permission only when explicit pointer policy
   allows allocation through this pointer.
 - [x] Complete `deallocate()` permission only when explicit pointer policy
   allows deallocation through this pointer.
+- [x] Add an explicit unsafe/user-responsibility deallocation policy value,
+  `unsafe_deallocate`, for callers who knowingly request deallocation without
+  x2py-proven target ownership.
 - [x] Complete `resize(shape)` permission only when explicit pointer policy
   allows resize through this pointer.
 - [x] Do not expose pointer `allocate()`, `deallocate()`, or `resize()` when
@@ -426,8 +447,32 @@ Add or reuse one internal runtime base for both public handle classes.
 - [x] Put shared generated ops table/accessor storage on the base.
 - [x] Put shared borrowed-vs-owned descriptor kind on the base.
 - [x] Leave room for optional generation or stale-view tracking later.
+- [x] Add an internal runtime array-actual validation and handoff hook for
+  future normal `T[...]` handle inputs, without calling `to_numpy()`.
+- [x] Add an internal runtime normal-array argument dispatcher that keeps
+  ordinary ndarray validation and native-handle array-actual handoff as
+  separate paths while sharing dtype, rank, shape, layout, and writeability
+  checks.
+- [x] Normalize runtime handle shapes as non-negative extents, rejecting
+  negative dimensions while preserving zero-length arrays as valid array
+  actuals.
+- [x] Let the internal runtime normal-array argument dispatcher enforce native
+  byte order and alignment when generated binding policy requests those checks.
+- [x] Add an internal runtime descriptor-parameter validation and handoff hook
+  for future `Allocatable[T[...]]` and `Pointer[T[...]]` binding inputs,
+  including optional absent-handle `None` mapping.
+- [x] Carry the completed `.to_numpy()` extraction policy on the runtime
+  handle.
+- [x] Apply read-only detached-copy policy in the runtime handle, after the
+  generated operation supplies current storage.
 - [x] Implement `AllocatableHandle` as a descriptor-specific subclass.
 - [x] Implement `PointerHandle` as a descriptor-specific subclass.
+
+Runtime handle support means the shared Python class enforces the completed
+policy once generated operations provide access to current native storage.
+Bridge generation for module variables, fields, arguments, results, and C
+descriptor extraction remains tracked in the codegen and integration sections
+below.
 
 #### Allocatable Runtime API
 
@@ -437,11 +482,11 @@ Add or reuse one internal runtime base for both public handle classes.
 - [x] `h.deallocate()`
 - [x] `h.resize(shape)`
 - [x] `h.to_numpy()` returns `None` when unallocated.
-- [ ] `h.to_numpy()` returns a live mutable borrowed view when
+- [x] `h.to_numpy()` returns a live mutable borrowed view when
   addressability/aliasability policy proves it safe.
-- [ ] `h.to_numpy()` returns a read-only detached NumPy snapshot when live
+- [x] `h.to_numpy()` returns a read-only detached NumPy snapshot when live
   aliasing is not safe.
-- [ ] Users can call `.copy()` on the returned NumPy array when they need
+- [x] Users can call `.copy()` on the returned NumPy array when they need
   independent lifetime.
 
 #### Pointer Runtime API
@@ -454,13 +499,13 @@ Add or reuse one internal runtime base for both public handle classes.
 - [x] Optional, policy-gated `p.deallocate()`
 - [x] Optional, policy-gated `p.resize(shape)`
 - [x] `p.to_numpy()` returns `None` when unassociated.
-- [ ] `p.to_numpy()` returns a live borrowed NumPy view when associated and
+- [x] `p.to_numpy()` returns a live borrowed NumPy view when associated and
   descriptor extraction is supported.
-- [ ] `p.to_numpy()` supports strided views when descriptor support is
+- [x] `p.to_numpy()` supports strided views when descriptor support is
   available.
-- [ ] `p.to_numpy()` raises a clear error when descriptor extraction is
+- [x] `p.to_numpy()` raises a clear error when descriptor extraction is
   unavailable and no fallback is supported.
-- [ ] Old borrowed views are documented as stale after native code nullifies,
+- [x] Old borrowed views are documented as stale after native code nullifies,
   reassociates, deallocates, or otherwise changes the pointer target.
 
 ### 6. IR-to-AST And Codegen Model
@@ -471,8 +516,16 @@ Lower only completed policy decisions into named implementation methods.
 - [x] Add codegen model nodes or metadata for generated native-array handle ops.
 - [x] Route Allocatable and Pointer handles through the same lowering path with
   descriptor-kind-specific operations.
-- [ ] Keep `@native_call Addr(Arg(i))` as data-address projection only.
-- [ ] Select descriptor passing from `Allocatable[T[...]]` or
+- [x] Keep `@native_call Addr(Arg(i))` as data-address projection only.
+- [x] Add native-array-handle bridge/binding dispatchers keyed by completed
+  descriptor kind and handle kind.
+- [x] Route native-array module-variable bridge generation through completed
+  handle policy before ordinary module-variable array dispatch.
+- [x] Route native-array derived-field bridge and binding generation through
+  completed handle policy before ordinary field array dispatch.
+- [x] Route native-array function-result bridge and binding generation through
+  completed handle policy before ordinary array result dispatch.
+- [x] Select descriptor passing from `Allocatable[T[...]]` or
   `Pointer[T[...]]` plus completed policy, not from `Addr`.
 - [x] Lower unsupported policy decisions to readiness/codegen blockers, not
   fallback behavior.
@@ -482,6 +535,8 @@ Lower only completed policy decisions into named implementation methods.
 Generate descriptor-access routines through the shared handle-ops shape, then
 specialize operation bodies by descriptor kind.
 
+- [x] Block generated descriptor-handle accessors with explicit native-array
+  codegen blockers until the descriptor-access routines below exist.
 - [ ] Generate module allocatable handles as borrowed descriptor handles.
 - [ ] Create module allocatable handle objects at module initialization.
 - [ ] Store generated operation pointers/accessors for module allocatable
@@ -508,28 +563,35 @@ specialize operation bodies by descriptor kind.
 - [ ] Generate derived-field pointer handles as borrowed descriptor handles.
 - [ ] Keep the parent wrapper object alive for derived-field pointer handles.
 - [ ] Generate field operations that access `parent%field`.
+- [x] Route pointer descriptor-argument bridge and binding generation through
+  completed handle policy before ordinary array argument dispatch.
 - [ ] Generate pointer descriptor-argument handoff for `Pointer[T[...]]`
   parameters.
+- [x] Route allocatable descriptor-argument bridge and binding generation
+  through completed handle policy before ordinary array argument dispatch.
 - [ ] Generate allocatable descriptor-argument handoff for
   `Allocatable[T[...]]` parameters.
-- [ ] Do not guess compiler-specific descriptor layouts.
+- [x] Do not guess compiler-specific descriptor layouts. Descriptor-based
+  interop must use the TS 29113 / Fortran 2018 C descriptor path or fail
+  readiness with an explicit diagnostic.
 
 #### Pointer Descriptor Extraction
 
 - [ ] Use TS 29113 / Fortran 2018 C descriptors for general pointer-array
   `to_numpy()` when this path is enabled.
-- [ ] Use `ISO_Fortran_binding.h` only for descriptor-based pointer interop
+- [x] Use `ISO_Fortran_binding.h` only for descriptor-based pointer interop
   paths.
-- [ ] Do not require `ISO_Fortran_binding.h` globally.
+- [x] Do not require `ISO_Fortran_binding.h` globally.
 - [ ] Build NumPy shape from descriptor `dim[i].extent`.
 - [ ] Build NumPy strides from descriptor `dim[i].sm`.
 - [ ] Read descriptor `base_addr`, `elem_len`, `rank`, `dim[i].lower_bound`,
   `dim[i].extent`, and `dim[i].sm` for pointer views.
 - [ ] Support strided pointer targets when descriptor support is available.
-- [ ] If descriptor support is unavailable, choose one explicit policy:
+- [x] If descriptor support is unavailable, choose one explicit policy:
   contiguous-only pointer views when shape/address are safely available,
   explicitly implemented copy fallback, or readiness failure with a clear
-  diagnostic.
+  diagnostic. The current selected fallback is `readiness_failure` in the
+  readiness blocker payload.
 
 ### 8. Python Binding Generation
 
@@ -547,7 +609,7 @@ handoff when the wrapped call is native.
   annotation includes `| None`.
 - [ ] Convert `None` optional handles into native absent optional dummies, not
   into unallocated or unassociated handle objects.
-- [ ] For normal `T[...]` parameters, accept ndarray inputs through the existing
+- [x] For normal `T[...]` parameters, accept ndarray inputs through the existing
   array data path.
 - [ ] For normal `T[...]` parameters, accept allocated allocatable handles only
   by validating the handle state and passing the wrapped native allocatable
@@ -559,9 +621,14 @@ handoff when the wrapped call is native.
   ndarray inputs and handle inputs for `T[...]`, while keeping the ndarray
   pointer/shape handoff and native-handle array-actual handoff as separate
   implementation methods.
-- [ ] Treat explicit `h.to_numpy()` or `p.to_numpy()` in user code as ordinary
-  ndarray input, including rejection of `None` or read-only arrays when the
-  native dummy requires writable storage.
+- [x] Treat explicit `h.to_numpy()` or `p.to_numpy()` results that are NumPy
+  arrays as ordinary ndarray input through the existing array-storage path.
+- [x] Reject read-only arrays returned by explicit `h.to_numpy()` or
+  `p.to_numpy()` when the native dummy requires writable storage, reusing the
+  existing writable ndarray validation.
+- [x] Add direct wrapper coverage showing explicit `h.to_numpy()` or
+  `p.to_numpy()` returning `None` is rejected as an ordinary ndarray argument
+  for non-nullable `T[...]` dummies.
 - [ ] Reject unallocated allocatable handles for `T[...]` unless nullable
   data-buffer behavior is explicitly implemented.
 - [ ] Reject unassociated pointer handles for `T[...]` unless nullable
@@ -569,12 +636,16 @@ handoff when the wrapped call is native.
 
 ### 9. Compilation And Build Gating
 
-- [ ] Require descriptor interop support only when a generated wrapper uses the
+- [x] Require descriptor interop support only when a generated wrapper uses the
   pointer C-descriptor path.
-- [ ] Do not require `ISO_Fortran_binding.h` for allocatable-only builds.
-- [ ] Do not require `ISO_Fortran_binding.h` for pointer builds that do not use
+- [x] Do not require `ISO_Fortran_binding.h` for allocatable-only builds.
+- [x] Do not require `ISO_Fortran_binding.h` for pointer builds that do not use
   descriptor-based pointer interop.
-- [ ] Emit a clear readiness or build diagnostic when pointer descriptor interop
+- [x] Collect native-array build requirements from completed handle policy
+  metadata, not from raw `Allocatable[...]` or `Pointer[...]` syntax.
+- [x] Record native-array build requirements in replayable `.pyi` wrapper build
+  manifests.
+- [x] Emit a clear readiness or build diagnostic when pointer descriptor interop
   is required but unavailable.
 
 ## Test Checklist
@@ -588,7 +659,7 @@ handoff when the wrapped call is native.
 - [x] Reject `Allocatable[Float64[:]] | None` on non-argument declarations.
 - [x] Parse and print `Pointer[Float64[:]]`.
 - [x] Parse and print `Pointer[Float64[:, :]]`.
-- [ ] Parse and print `Pointer[String[8][:]]` if string arrays are supported.
+- [x] Parse and print `Pointer[String[8][:]]` if string arrays are supported.
 - [x] Parse and print `Pointer[Float64[:]] | None = ...`.
 - [x] Reject `Pointer[Float64[:]] | None` on non-argument declarations.
 - [x] Verify normal `T[...]` type identity remains array data semantics even
@@ -614,11 +685,26 @@ handoff when the wrapped call is native.
   `T[...]` call compatibility.
 - [x] Verify module-variable, derived-field, argument, result, and optional
   absent handle origins complete policy before lowering.
-- [ ] Verify bridge/binding layers dispatch from completed policy decisions.
+- [x] Verify native array handle policy carries owner retention, target
+  lifetime, and generated destroy behavior before lowering.
+- [x] Verify bridge/binding layers dispatch from completed policy decisions.
 - [x] Verify incomplete ownership, lifetime, release, addressability, or
   descriptor-extraction facts produce readiness blockers.
+- [x] Verify descriptor-handle arguments block readiness until generated handle
+  handoff exists instead of falling back to NumPy-array conversion.
+- [x] Verify plain `Pointer[T[...]]` generates the default conservative handle
+  profile without requiring `PointerPolicy(...)`.
+- [x] Verify missing owner/release facts block only ownership-changing pointer
+  operations, not association inspection, handle passing, or other safe default
+  handle operations.
+- [x] Verify `Addr(Arg(i))` rejects `Allocatable[T[...]]` and
+  `Pointer[T[...]]` descriptor handles instead of acting as descriptor passing.
 - [x] Verify pointer allocation/deallocation/resize permissions are absent or
   blocked unless explicit pointer policy allows them.
+- [x] Verify unsafe/user-responsibility deallocation is available only through
+  the explicit policy value and never by default.
+- [x] Verify pointer C-descriptor interop requirements produce an explicit
+  readiness blocker while that interop path is unavailable.
 
 ### Shared Runtime Handle Tests
 
@@ -627,18 +713,34 @@ handoff when the wrapped call is native.
 - [x] Verify common shape metadata is reported consistently.
 - [x] Verify common dtype metadata is reported consistently.
 - [x] Verify handles keep required module, parent object, or owner storage alive.
+- [x] Verify the internal runtime array-actual hook rejects absent descriptor
+  state and uses generated handoff ops instead of `to_numpy()`.
+- [x] Verify the internal runtime array-actual hook validates expected dtype,
+  rank, shape, layout, and writeability before generated handoff.
+- [x] Verify the internal runtime normal-array argument dispatcher accepts
+  ordinary ndarrays through an ndarray path, accepts allocated/associated
+  handles through native array-actual handoff, and rejects unallocated or
+  unassociated handles without calling `to_numpy()`.
+- [x] Verify the internal runtime normal-array argument dispatcher preserves
+  zero-length array actuals and rejects handle shapes with negative extents.
+- [x] Verify the internal runtime normal-array argument dispatcher rejects
+  byte-swapped or unaligned ndarray inputs when generated binding policy
+  requests native byte order or alignment.
+- [x] Verify the internal runtime descriptor-parameter hook accepts only the
+  matching handle class/kind, rejects ordinary arrays, validates expected dtype,
+  rank, and shape, and maps optional `None` to an absent native handle.
 
 ### Allocatable Runtime Tests
 
 - [ ] Module allocatable attribute is a handle object.
-- [ ] `h.allocated` updates after allocate, deallocate, and resize.
-- [ ] `h.shape` updates after allocate, deallocate, and resize.
-- [ ] `h.to_numpy()` returns `None` when unallocated.
-- [ ] `h.to_numpy()` returns a mutable borrowed view when
+- [x] `h.allocated` updates after allocate, deallocate, and resize.
+- [x] `h.shape` updates after allocate, deallocate, and resize.
+- [x] `h.to_numpy()` returns `None` when unallocated.
+- [x] `h.to_numpy()` returns a mutable borrowed view when
   aliasable/addressable.
-- [ ] Mutating a borrowed view mutates native storage when policy allows a live
+- [x] Mutating a borrowed view mutates native storage when policy allows a live
   view.
-- [ ] `h.to_numpy()` returns a read-only detached snapshot when not
+- [x] `h.to_numpy()` returns a read-only detached snapshot when not
   aliasable/addressable.
 - [ ] Derived allocatable field is a handle object.
 - [ ] Derived-field handle keeps the parent wrapper alive.
@@ -655,7 +757,7 @@ handoff when the wrapped call is native.
 - [ ] `T[...]` parameter applies the same dtype, rank, shape, layout, and
   mutability validation policy to ndarray inputs and allocated allocatable
   handles.
-- [ ] Explicit `T[...]` calls with `h.to_numpy()` follow the ordinary ndarray
+- [x] Explicit `T[...]` calls with `h.to_numpy()` follow the ordinary ndarray
   path and reject `None` or read-only arrays when writable storage is required.
 - [ ] `T[...]` parameter rejects unallocated allocatable handle unless nullable
   data-buffer behavior is explicitly supported.
@@ -663,21 +765,23 @@ handoff when the wrapped call is native.
 ### Pointer Runtime Tests
 
 - [ ] Module pointer attribute is a handle object.
-- [ ] `p.associated` reflects association state.
-- [ ] `p.shape` reflects association state and target shape.
-- [ ] `p.to_numpy()` returns `None` when unassociated.
-- [ ] `p.to_numpy()` returns a borrowed view when associated and supported.
-- [ ] `p.nullify()` disassociates the native pointer descriptor.
+- [x] `p.associated` reflects association state.
+- [x] `p.shape` reflects association state and target shape.
+- [x] `p.to_numpy()` returns `None` when unassociated.
+- [x] `p.to_numpy()` returns a borrowed view when associated and supported.
+- [x] `p.nullify()` disassociates the native pointer descriptor.
 - [ ] Derived pointer field is a handle object.
 - [ ] Derived-field pointer handle keeps the parent wrapper alive.
 - [ ] Derived-field pointer operations access `parent%field`.
 - [ ] Pointer associated with a slice returns a NumPy view with expected shape
   and strides when C descriptors are available.
-- [ ] If C descriptors are unavailable, test the selected explicit fallback:
+- [x] Runtime pointer handles raise a clear unavailable-operation error when
+  no descriptor-extraction `to_numpy()` operation is generated.
+- [x] If C descriptors are unavailable, test the selected explicit fallback:
   contiguous-only view, copy fallback, or clear readiness diagnostic.
-- [ ] Pointer `deallocate()` and `resize()` are absent or raise when policy
+- [x] Pointer `deallocate()` and `resize()` are absent or raise when policy
   disallows them.
-- [ ] Pointer `allocate()`, `deallocate()`, and `resize()` work only when
+- [x] Pointer `allocate()`, `deallocate()`, and `resize()` work only when
   explicit pointer policy allows them.
 - [ ] `Pointer[T[...]]` parameter accepts pointer handles.
 - [ ] `Pointer[T[...]]` parameter rejects plain ndarray.
@@ -686,17 +790,17 @@ handoff when the wrapped call is native.
 - [ ] `T[...]` parameter applies the same dtype, rank, shape, layout, and
   mutability validation policy to ndarray inputs and associated pointer
   handles.
-- [ ] Explicit `T[...]` calls with `p.to_numpy()` follow the ordinary ndarray
+- [x] Explicit `T[...]` calls with `p.to_numpy()` follow the ordinary ndarray
   path and reject `None` or read-only arrays when writable storage is required.
 - [ ] `T[...]` parameter rejects unassociated pointer handle unless nullable
   data-buffer behavior is explicitly supported.
 
 ### Build Gating Tests
 
-- [ ] Pointer descriptor interop includes or requires `ISO_Fortran_binding.h`
+- [x] Pointer descriptor interop includes or requires `ISO_Fortran_binding.h`
   only when descriptor-based pointer interop is used.
-- [ ] Allocatable-only builds do not require `ISO_Fortran_binding.h`.
-- [ ] Builds that need unavailable pointer descriptor interop fail with a clear
+- [x] Allocatable-only builds do not require `ISO_Fortran_binding.h`.
+- [x] Builds that need unavailable pointer descriptor interop fail with a clear
   diagnostic rather than guessing descriptor layout.
 
 ### Documentation Regression Tests
@@ -717,20 +821,20 @@ handoff when the wrapped call is native.
 
 The feature is complete only when all of these are true:
 
-- [ ] Allocatable and Pointer array handles share one internal handle
+- [x] Allocatable and Pointer array handles share one internal handle
   foundation.
-- [ ] Public contract syntax is `Allocatable[T[...]]` and `Pointer[T[...]]`.
-- [ ] Active parser/printer paths reject or remove the old annotation and
+- [x] Public contract syntax is `Allocatable[T[...]]` and `Pointer[T[...]]`.
+- [x] Active parser/printer paths reject or remove the old annotation and
   snapshot forms.
-- [ ] Post-IR policy completes every handle decision before `ir2ast.py`.
-- [ ] Bridge and binding generation dispatch from completed policy only.
-- [ ] Runtime handles expose the documented APIs and state transitions.
-- [ ] Pointer descriptor extraction never guesses compiler-specific descriptor
+- [x] Post-IR policy completes every handle decision before `ir2ast.py`.
+- [x] Bridge and binding generation dispatch from completed policy only.
+- [x] Runtime handles expose the documented APIs and state transitions.
+- [x] Pointer descriptor extraction never guesses compiler-specific descriptor
   layout.
-- [ ] Build gating keeps descriptor interop requirements local to the paths that
+- [x] Build gating keeps descriptor interop requirements local to the paths that
   need them.
 - [ ] Runtime tests cover module variables, derived fields, arguments, data
   coercion, owned allocatable results, pointer association, pointer nullify, and
   pointer policy gating.
-- [ ] Documentation and generated `.pyi` fixtures no longer present old public
+- [x] Documentation and generated `.pyi` fixtures no longer present old public
   forms as active contracts.

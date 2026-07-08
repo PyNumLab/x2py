@@ -57,7 +57,13 @@ handle is unassociated. When descriptor extraction is supported, it returns the
 current target view and may expose strided targets. If descriptor extraction is
 unavailable, policy must choose a contiguous-only path, an explicit copy
 fallback, or a readiness diagnostic; x2py must not guess compiler-specific
-descriptor layout.
+descriptor layout. A generated handle without an extraction path raises a clear
+unavailable-operation error instead of fabricating a view.
+
+Any NumPy view returned by `p.to_numpy()` is tied to the pointer target at the
+time of extraction. After native code nullifies, reassociates, deallocates, or
+otherwise changes that target, discard older views and call `p.to_numpy()` again
+or copy the data before the target-changing operation.
 
 `p.nullify()` is the default pointer descriptor operation. `allocate(shape)`,
 `deallocate()`, and `resize(shape)` are exposed only when completed pointer
@@ -193,28 +199,26 @@ The returned value from `to_numpy()` follows ordinary ndarray validation,
 including rejection of `None` and read-only arrays when writable native storage
 is required.
 
-## Detached Pointer Results
+## Pointer Results
 
-An associated pointer scalar result becomes a copied Python value. An associated
-pointer array result becomes a detached Python-owned NumPy array. An unassociated
-result becomes `None`.
+An associated pointer scalar result becomes a copied Python value. An
+unassociated scalar result becomes `None`.
 
-Detached pointer results do not alias the native target or one another. Mutation
-of the returned array does not reach the original input, and deleting the input
-does not invalidate the returned array.
-
-This detached-copy path requires known association state, dtype, shape,
-contiguity, nullability, target owner, and deallocation obligations. Missing
-facts produce a readiness blocker.
+Pointer-array handle results remain blocked until x2py has stable owner storage,
+target lifetime, descriptor extraction, and generated destroy behavior for the
+returned handle. The wrapper does not silently fall back to a detached NumPy
+copy for `Pointer[T[...]]` results.
 
 ## Pointer Fields And Module Variables
 
 Pointer-backed fields and module variables expose `Pointer[T[...]]` handles.
 The containing object or module does not automatically own the pointer target.
 Derived-field handles keep the parent wrapper alive for descriptor access, but
-that retention is not target ownership. Where target lifetime, descriptor
-extraction, or release policy is incomplete, wrapper readiness blocks instead
-of exposing a guessed borrowed view.
+that retention is not target ownership. Plain `Pointer[T[...]]` has a default
+conservative handle policy for association inspection and legal descriptor
+operations. Generated field and module handle accessors remain a wrapper
+readiness blocker until descriptor-handle code generation is implemented; x2py
+does not expose a guessed borrowed view or ownership-changing operation.
 
 ## Unsupported Forms
 

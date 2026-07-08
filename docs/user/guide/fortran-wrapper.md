@@ -500,7 +500,7 @@ object and can be exposed as a borrowed view whose base keeps that object alive.
 | Native-owned | Fortran or an external library owns storage independently of Python. | A module allocatable array or external-library buffer. |
 | Borrowed view | Python references storage owned elsewhere and does not destroy it. | An allocatable component view or module-array attribute. |
 | Copy-return | Native output is copied into a new Python-owned value before return. | Allocatable output arrays and array function results. |
-| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Supported pointer results and pointer-backed getters. |
+| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Scalar pointer copied values and allocatable snapshots. |
 | Call-local association | Native code may use Python storage only during the wrapped call. | Pointer `intent(in)` array arguments. |
 | Blocked | Generation stops because a safe contract cannot be proven. | Pointer reassociation without owner and release policy. |
 
@@ -959,9 +959,9 @@ callee allocation, or nothing. x2py therefore supports a conservative subset:
 - pointer scalar `intent(out)` and `intent(inout)` use nullable copied-value
   projection;
 - associated pointer scalar results become copied Python scalars;
-- associated pointer array results become detached Python-owned copies;
-- unassociated results become `None`;
-- pointer-backed fields and module variables are detached-copy-or-block; and
+- pointer-array handles, results, fields, and module variables block wrapper
+  lowering until descriptor handoff, extraction, target lifetime, and release
+  policy are implemented; and
 - pointer array `intent(out)` and `intent(inout)` reassociation is blocked.
 
 ### Call-Local Input
@@ -982,7 +982,7 @@ The native pointer may reference `values` only while `total` runs. Fortran must
 not save the association for later use. Scalar pointer inputs similarly use a
 temporary converted value and do not expose writes or reassociation to Python.
 
-### Detached Pointer Result
+### Pointer Result Boundary
 
 ```fortran
 function selected_values(enabled) result(values)
@@ -995,17 +995,14 @@ end function selected_values
 ```
 
 ```python
-selected = selected_values(True)
+selected = selected_values(True)    # blocked until handle result policy is complete
 missing = selected_values(False)
-
-assert missing is None
-selected[0] = 9.0       # does not mutate module_values
 ```
 
-The detached copy is allowed only when association state, shape, dtype,
-contiguity, nullability, target owner, and deallocation obligations are known.
-Repeated access can return independent arrays. Two detached copies of the same
-target do not alias each other.
+Pointer-array results are not silently converted to detached NumPy copies.
+They remain blocked until owner storage, target lifetime, descriptor extraction,
+and generated destroy behavior are implemented for returned handles. Scalar
+pointer results still use copied Python values or `None`.
 
 ### Pointer Policy Metadata
 
@@ -1224,9 +1221,10 @@ origin.x = 4.0          # valid: origin retains the parent owner
 ```
 
 Private components are omitted from Python descriptors. Allocatable fields use
-borrowed views. Pointer fields use detached-copy-or-block policy; the containing
-object does not automatically own pointer targets. Arrays of derived types are
-blocked.
+borrowed views. Pointer-array fields have a default conservative handle policy,
+but generated descriptor-handle accessors are still a readiness blocker; the
+containing object does not automatically own pointer targets. Arrays of derived
+types are blocked.
 
 Runtime tests: [`test_derived_type_boundaries.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py)
 and [`test_derived_type_methods.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_methods.py).
@@ -1392,9 +1390,11 @@ independent = view.copy()
 deallocate_values()      # invalidates the native storage behind view
 ```
 
-Pointer module variables use detached-copy-or-block policy. Explicit `save` on a
-public module variable does not change exposure because module storage already
-has module lifetime. Procedure-local `save` variables remain internal.
+Pointer-array module variables have a default conservative handle policy, but
+generated descriptor-handle accessors are still a readiness blocker. Explicit
+`save` on a public module variable does not change exposure because module
+storage already has module lifetime. Procedure-local `save` variables remain
+internal.
 
 Common-block storage is never exported as Python variables or modeled by x2py.
 Wrapped native procedures may read and write it normally:

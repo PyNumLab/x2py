@@ -149,8 +149,8 @@ movement do not by themselves make the layout invalid.
   Python-owned copies.
 - Optional allocatable outputs remain visible so the caller controls native
   `present(...)`.
-- Supported pointer array results are detached Python-owned copies;
-  unassociated pointer results return `None`.
+- Pointer-array handle results remain blocked until owner storage, target
+  lifetime, descriptor extraction, and destroy behavior are implemented.
 - Borrowed allocatable module views are native-owned; borrowed component views
   are owned through the containing wrapper. Both require lifetime care.
 

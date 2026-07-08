@@ -86,8 +86,9 @@ view[0] = np.float64(5.0)
 
 For aliased arrays, mutation reaches native module storage. A later native
 deallocation or reallocation invalidates old views; use `view.copy()` first when
-Python needs an independent lifetime. Pointer module variables use
-detached-copy-or-block policy.
+Python needs an independent lifetime. Pointer-array module variables have a
+default conservative handle policy, but generated descriptor-handle accessors
+are still a readiness blocker.
 
 ## Derived Module Objects
 

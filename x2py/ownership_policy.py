@@ -18,6 +18,7 @@ from x2py.semantic_metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
+    NATIVE_ARRAY_DESCRIPTOR_METADATA,
     PROJECTED_OUTPUT_METADATA,
     SCALAR_STORAGE_CATEGORY,
 )
@@ -39,6 +40,10 @@ POINTER_POLICY_FIELDS = (
 )
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
 PYTHON_VALUE_IMMUTABLE = "immutable"
+POINTER_ARRAY_CONTAINER_HANDLE_BLOCKER = (
+    "pointer array field and module handles remain blocked until descriptor extraction, "
+    "target lifetime, and release policy are implemented"
+)
 
 
 class ObjectKind(str, Enum):
@@ -396,6 +401,11 @@ def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipCon
         projects_result=projects_result,
         python_visible=python_visible,
     )
+
+
+def _is_native_array_handle_type(type_metadata: Mapping[str, Any]) -> bool:
+    """Return whether metadata identifies an allocatable/pointer array handle."""
+    return type_metadata.get(NATIVE_ARRAY_DESCRIPTOR_METADATA) in {"allocatable", "pointer"}
 
 
 def _is_source_free_scalar_descriptor_input(
@@ -931,6 +941,8 @@ class OwnershipPolicyResolver:
         )
 
     def _array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_argument and _is_native_array_handle_type(facts.metadata or {}):
+            return self._native_array_handle_argument_decision(facts)
         if facts.pointer:
             return self._pointer_array_decision(facts, context)
         if facts.allocatable:
@@ -958,6 +970,22 @@ class OwnershipPolicyResolver:
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
             reason="array input is borrowed for the duration of the call",
+        )
+
+    @staticmethod
+    def _native_array_handle_argument_decision(facts: _StorageFacts) -> OwnershipDecision:
+        """Pass a native descriptor handle as a caller-owned descriptor argument."""
+        return OwnershipDecision(
+            ObjectKind.NUMPY_ARRAY,
+            OwnershipOwner.CALLER,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.NONE,
+            storage_mode=StorageMode.ALIAS if facts.pointer else StorageMode.HEAP,
+            boundary_storage_mode=StorageMode.ALIAS,
+            nullable=True,
+            borrowed=True,
+            descriptor_boundary=True,
+            reason="native array handle argument passes the caller descriptor for the call",
         )
 
     def _allocatable_array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
@@ -1017,15 +1045,23 @@ class OwnershipPolicyResolver:
 
     def _pointer_array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if context.is_field or context.is_module_variable:
+            owner = OwnershipOwner.WRAPPER if context.is_field else OwnershipOwner.NATIVE
+            destruction = DestructionPolicy.WRAPPER_DEALLOC if context.is_field else DestructionPolicy.NATIVE_OWNER
+            reason = (
+                "pointer array field exposes descriptor association without target ownership"
+                if context.is_field
+                else "pointer array module variable exposes descriptor association without target ownership"
+            )
             return OwnershipDecision(
                 ObjectKind.NUMPY_ARRAY,
-                OwnershipOwner.UNKNOWN,
-                TransferMode.BLOCKED,
-                DestructionPolicy.BLOCKED,
+                owner,
+                TransferMode.BORROWED_VIEW,
+                destruction,
                 storage_mode=StorageMode.ALIAS,
+                boundary_storage_mode=StorageMode.ALIAS,
                 nullable=True,
-                blocker="pointer array owner, lifetime, shape, and release policy are unknown",
-                reason="persistent pointer arrays need explicit policy metadata",
+                borrowed=True,
+                reason=reason,
             )
         if context.is_result:
             return OwnershipDecision(
@@ -1291,6 +1327,8 @@ class OwnershipPolicyResolver:
     ) -> OwnershipDecision:
         if not facts.pointer or decision.is_blocked:
             return decision
+        if context.is_argument and _is_native_array_handle_type(facts.metadata or {}):
+            return decision
         blocker = (
             OwnershipPolicyResolver._pointer_argument_blocker(decision, facts, context)
             or OwnershipPolicyResolver._pointer_container_blocker(decision, facts, context)
@@ -1334,7 +1372,13 @@ class OwnershipPolicyResolver:
         if not (context.is_field or context.is_module_variable):
             return None
         if facts.rank > 0:
-            return "pointer array field and module detached-copy accessors are not implemented"
+            metadata = facts.metadata or {}
+            if isinstance(metadata.get(POINTER_POLICY_METADATA), Mapping) or isinstance(
+                metadata.get(OWNERSHIP_POLICY_METADATA),
+                Mapping,
+            ):
+                return POINTER_ARRAY_CONTAINER_HANDLE_BLOCKER
+            return None
         if decision.transfer is not TransferMode.SNAPSHOT_COPY:
             return "scalar pointer field and module accessors require snapshot_copy detached values"
         return None
@@ -1347,7 +1391,10 @@ class OwnershipPolicyResolver:
     ) -> str | None:
         """Return a blocker for an unsupported pointer function result policy."""
         if facts.rank > 0 and context.is_result and decision.transfer is not TransferMode.SNAPSHOT_COPY:
-            return "pointer results currently require Transfer('snapshot_copy') detached-copy policy"
+            return (
+                "pointer array results remain blocked until returned-handle owner storage, "
+                "target lifetime, descriptor extraction, and destroy behavior are implemented"
+            )
         return None
 
     @staticmethod

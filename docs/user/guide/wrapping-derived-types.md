@@ -97,9 +97,11 @@ Public supported scalar fields become Python descriptors. Private fields are
 omitted. A nested scalar derived component is a borrowed child wrapper: it
 retains its parent owner and never destroys the component independently.
 
-Allocatable fields use borrowed NumPy views. Pointer fields use
-detached-copy-or-block policy. Arrays of derived types are blocked because element
-construction, destruction, layout, aliasing, and copy policy are incomplete.
+Allocatable fields use borrowed NumPy views. Pointer-array fields have a
+default conservative handle policy, but generated descriptor-handle accessors
+are still a readiness blocker. Arrays of derived types are blocked because
+element construction, destruction, layout, aliasing, and copy policy are
+incomplete.
 
 ## Constructors
 

@@ -159,7 +159,7 @@ def step(
     assert report["wrappability_blockers"] == []
 
 
-def test_allocatable_policy_blockers_are_reported_for_only_unsupported_cases():
+def test_allocatable_handle_codegen_blocks_until_generated_accessors_exist():
     report = _readiness_from_pyi(
         """
 values: Allocatable[Float64[:]]
@@ -173,11 +173,57 @@ def make_pair() -> tuple[Returns["left", Allocatable[Float64[:]]], Returns["righ
 """
     )
 
-    assert report["wrappable"] is True
+    assert report["wrappable"] is False
     assert "allocatable_replacement_policy_missing" not in _blocker_codes(report)
     assert "allocatable_owner_policy_missing" not in _blocker_codes(report)
     assert "allocatable_multiple_copy_returns_unsupported" not in _blocker_codes(report)
-    assert report["wrappability_blockers"] == []
+    blocker = next(
+        item for item in report["wrappability_blockers"] if item["code"] == "native_array_handle_codegen_unsupported"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "solver.values",
+            "item": "values",
+            "policy": "allocatable array handle accessors need generated descriptor-handle support before wrapper lowering",
+            "descriptor_kind": "allocatable",
+            "handle_kind": "borrowed_module_descriptor",
+        },
+        {
+            "owner": "solver.target_values",
+            "item": "target_values",
+            "policy": "allocatable array handle accessors need generated descriptor-handle support before wrapper lowering",
+            "descriptor_kind": "allocatable",
+            "handle_kind": "borrowed_module_descriptor",
+        },
+        {
+            "owner": "solver.fill.values",
+            "item": "values",
+            "policy": "allocatable descriptor-argument handoff needs generated handle support before wrapper lowering",
+            "descriptor_kind": "allocatable",
+            "handle_kind": "argument_descriptor",
+        },
+        {
+            "owner": "solver.make_values.return",
+            "item": "return",
+            "policy": "allocatable result handles need generated wrapper-owned descriptor storage before wrapper lowering",
+            "descriptor_kind": "allocatable",
+            "handle_kind": "owned_result_descriptor",
+        },
+        {
+            "owner": "solver.make_pair.left",
+            "item": "left",
+            "policy": "allocatable descriptor-argument handoff needs generated handle support before wrapper lowering",
+            "descriptor_kind": "allocatable",
+            "handle_kind": "argument_descriptor",
+        },
+        {
+            "owner": "solver.make_pair.right",
+            "item": "right",
+            "policy": "allocatable descriptor-argument handoff needs generated handle support before wrapper lowering",
+            "descriptor_kind": "allocatable",
+            "handle_kind": "argument_descriptor",
+        },
+    ]
 
 
 def test_explicit_borrowed_module_allocatable_requires_aliased_storage():
@@ -273,14 +319,19 @@ current: box
         "item": "current",
         "policy": "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only",
     } in blocker["items"]
+    codegen_blocker = next(
+        item for item in report["wrappability_blockers"] if item["code"] == "native_array_handle_codegen_unsupported"
+    )
     assert {
         "owner": "solver.box.values",
         "item": "values",
-        "policy": "pointer array owner, lifetime, shape, and release policy are unknown",
-    } in blocker["items"]
+        "policy": "pointer array handle accessors need generated descriptor-handle support before wrapper lowering",
+        "descriptor_kind": "pointer",
+        "handle_kind": "borrowed_field_descriptor",
+    } in codegen_blocker["items"]
 
 
-def test_pointer_module_variable_uses_detached_copy_or_block_ownership_policy():
+def test_pointer_module_variable_uses_default_handle_policy_until_codegen_support_exists():
     parsed = parse_fortran_file(
         """
 module pointer_module_mod
@@ -292,14 +343,60 @@ end module pointer_module_mod
 
     report = assess_semantic_wrap_readiness(module)
 
+    assert "pointer_c_descriptor_interop_unavailable" not in _blocker_codes(report)
     blocker = next(
-        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_ownership_policy_blocked"
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "native_array_handle_codegen_unsupported"
     )
     assert blocker["items"] == [
         {
             "owner": "pointer_module_mod.values",
             "item": "values",
-            "policy": "pointer array owner, lifetime, shape, and release policy are unknown",
+            "policy": "pointer array handle accessors need generated descriptor-handle support before wrapper lowering",
+            "descriptor_kind": "pointer",
+            "handle_kind": "borrowed_module_descriptor",
+        }
+    ]
+
+
+def test_pointer_descriptor_view_reports_unavailable_c_descriptor_interop():
+    report = _readiness_from_pyi(
+        """
+def inspect(
+    values: Annotated[
+        Pointer[Float64[:]],
+        PointerPolicy(
+            nullable=True,
+            transfer="call_local",
+            target_owner="caller",
+            lifetime="call",
+            deallocation="never",
+            shape_source="pointer_bounds",
+            contiguity="strided",
+            reassociation="never",
+            aliasing="borrowed",
+            mutability="view",
+        ),
+    ],
+) -> None: ...
+"""
+    )
+
+    blocker = next(
+        item for item in report["wrappability_blockers"] if item["code"] == "pointer_c_descriptor_interop_unavailable"
+    )
+    assert blocker["items"] == [
+        {
+            "owner": "solver.inspect.values",
+            "item": "values",
+            "descriptor_kind": "pointer",
+            "handle_kind": "argument_descriptor",
+            "descriptor_interop": "pointer_c_descriptor",
+            "to_numpy": "descriptor_view",
+            "descriptor_layout": "ts29113_required",
+            "compiler_specific_layout": "rejected",
+            "fallback": "readiness_failure",
         }
     ]
 
@@ -417,7 +514,7 @@ def combine(
     assert report["wrappable"] is True
 
 
-def test_pointer_write_policy_blockers_are_reported_for_writable_dummies():
+def test_pointer_descriptor_argument_blockers_are_reported_as_native_handle_policy():
     report = _readiness_from_pyi(
         """
 def inspect(values: Pointer[Float64[:]]) -> None: ...
@@ -430,15 +527,48 @@ def choose() -> Pointer[Float64[:]]: ...
 """
     )
 
-    pointer_blocker = next(
+    policy_blocker = next(
         blocker
         for blocker in report["wrappability_blockers"]
-        if blocker["code"] == "fortran_pointer_output_policy_missing"
+        if blocker["code"] == "native_array_handle_policy_blocked"
     )
-    assert pointer_blocker["items"] == [
-        {"owner": "solver.inspect", "item": "values"},
-        {"owner": "solver.attach", "item": "values"},
-        {"owner": "solver.replace", "item": "values"},
+    assert policy_blocker["items"] == [
+        {
+            "owner": "solver.inspect.values",
+            "item": "values",
+            "policy": "pointer descriptor-argument handoff needs generated handle support before wrapper lowering",
+            "descriptor_kind": "pointer",
+            "handle_kind": "argument_descriptor",
+        },
+        {
+            "owner": "solver.choose.return",
+            "item": "return",
+            "policy": "pointer handle results need stable owner storage and target lifetime policy before wrapping",
+            "descriptor_kind": "pointer",
+            "handle_kind": "unsupported",
+        },
+    ]
+
+    codegen_blocker = next(
+        blocker
+        for blocker in report["wrappability_blockers"]
+        if blocker["code"] == "native_array_handle_codegen_unsupported"
+    )
+    assert codegen_blocker["items"] == [
+        {
+            "owner": "solver.attach.values",
+            "item": "values",
+            "policy": "pointer descriptor-argument handoff needs generated handle support before wrapper lowering",
+            "descriptor_kind": "pointer",
+            "handle_kind": "argument_descriptor",
+        },
+        {
+            "owner": "solver.replace.values",
+            "item": "values",
+            "policy": "pointer descriptor-argument handoff needs generated handle support before wrapper lowering",
+            "descriptor_kind": "pointer",
+            "handle_kind": "argument_descriptor",
+        },
     ]
 
 

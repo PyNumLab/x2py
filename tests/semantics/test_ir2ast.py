@@ -86,6 +86,18 @@ def make_values() -> Allocatable[Float64[:]]: ...
     assert make_values.results.var.native_array_handle_policy.output_projection == "handle_result"
 
 
+def test_pointer_array_result_lowering_blocks_until_returned_handle_policy_is_complete():
+    module = parse_pyi_text(
+        """
+def make_values() -> Pointer[Float64[:]]: ...
+""",
+        module_name="pointer_handle_result_lowering",
+    )
+
+    with pytest.raises(ValueError, match="stable owner storage and target lifetime"):
+        semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+
+
 def test_immutable_writable_arguments_lower_with_completed_copy_in_out_policy():
     module = parse_pyi_text(
         """
@@ -498,7 +510,7 @@ end module pointer_mod
         )
 
 
-def test_pointer_module_variables_raise_before_codegen_without_policy():
+def test_pointer_module_variable_lowers_with_default_conservative_handle_policy():
     source = """
 module pointer_module_mod
   real(8), pointer :: values(:)
@@ -506,11 +518,18 @@ end module pointer_module_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match="pointer array owner, lifetime, shape, and release policy are unknown"):
-        semantic_ir_to_codegen_ast(
-            semantic_module,
-            Scope(name=semantic_module.name, scope_type="module"),
-        )
+    lowered = semantic_ir_to_codegen_ast(
+        semantic_module,
+        Scope(name=semantic_module.name, scope_type="module"),
+    )
+
+    values = lowered.variables[0]
+    policy = values.native_array_handle_policy
+    assert policy.descriptor_kind == "pointer"
+    assert policy.handle_kind == "borrowed_module_descriptor"
+    assert policy.getter_behavior == "handle"
+    assert policy.to_numpy == "unsupported"
+    assert policy.operations == ("associated", "nullify", "to_numpy")
 
 
 def test_pointer_scalar_module_variable_lowers_as_nullable_snapshot_getter():

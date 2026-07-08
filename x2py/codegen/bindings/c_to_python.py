@@ -30,6 +30,7 @@ from x2py.semantics.models import (
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
 )
+from x2py.semantics.native_array_handles import NativeArrayHandlePolicyDispatcher
 
 from ..bind_c import (
     BindCArrayVariable,
@@ -404,6 +405,19 @@ class CPythonBindingGenerator(BindingGenerator):
         {
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_incref_borrowed_array_getter",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_incref_borrowed_custom_getter",
+        }
+    )
+    _NATIVE_ARRAY_HANDLE_DISPATCHER = NativeArrayHandlePolicyDispatcher(
+        {
+            ("allocatable", "argument_descriptor"): "_bind_allocatable_descriptor_argument",
+            ("allocatable", "borrowed_field_descriptor"): "_bind_borrowed_allocatable_handle",
+            ("allocatable", "borrowed_module_descriptor"): "_bind_borrowed_allocatable_handle",
+            ("allocatable", "optional_absent_handle"): "_bind_optional_native_array_handle",
+            ("allocatable", "owned_result_descriptor"): "_bind_owned_allocatable_result_handle",
+            ("pointer", "argument_descriptor"): "_bind_pointer_descriptor_argument",
+            ("pointer", "borrowed_field_descriptor"): "_bind_borrowed_pointer_handle",
+            ("pointer", "borrowed_module_descriptor"): "_bind_borrowed_pointer_handle",
+            ("pointer", "optional_absent_handle"): "_bind_optional_native_array_handle",
         }
     )
     _ARGUMENT_RETURN_PROJECTION_DISPATCHER = PolicyProjectionDispatcher(
@@ -1626,6 +1640,38 @@ class CPythonBindingGenerator(BindingGenerator):
         )
         return PyGetSetDefElement(expr.python_name, getter, setter, CStrStr(docstring))
 
+    def _bind_borrowed_allocatable_handle(self, subject, policy, *args, **kwargs):
+        """Reject borrowed allocatable handles until binding handle objects exist."""
+        return self._unsupported_native_array_handle_binding(subject, policy, *args, **kwargs)
+
+    def _bind_allocatable_descriptor_argument(self, subject, policy, *args, **kwargs):
+        """Reject allocatable descriptor arguments until binding handoff exists."""
+        return self._unsupported_native_array_handle_binding(subject, policy, *args, **kwargs)
+
+    def _bind_owned_allocatable_result_handle(self, subject, policy, *args, **kwargs):
+        """Reject owned allocatable result handles until binding owner storage exists."""
+        return self._unsupported_native_array_handle_binding(subject, policy, *args, **kwargs)
+
+    def _bind_borrowed_pointer_handle(self, subject, policy, *args, **kwargs):
+        """Reject borrowed pointer handles until binding descriptor accessors exist."""
+        return self._unsupported_native_array_handle_binding(subject, policy, *args, **kwargs)
+
+    def _bind_pointer_descriptor_argument(self, subject, policy, *args, **kwargs):
+        """Reject pointer descriptor arguments until binding handoff exists."""
+        return self._unsupported_native_array_handle_binding(subject, policy, *args, **kwargs)
+
+    def _bind_optional_native_array_handle(self, subject, policy, *args, **kwargs):
+        """Reject optional descriptor handles until absent-handle binding exists."""
+        return self._unsupported_native_array_handle_binding(subject, policy, *args, **kwargs)
+
+    def _unsupported_native_array_handle_binding(self, subject, policy, *args, **kwargs):
+        """Raise a clear binding error for staged native-array-handle paths."""
+        name = str(getattr(subject, "name", getattr(subject, "python_name", type(subject).__name__)))
+        raise NotImplementedError(
+            f"Native array handle Python binding generation is not implemented for "
+            f"{name!r}: {policy.descriptor_kind}/{policy.handle_kind}"
+        )
+
     def _build_policy_property_setter(self, expr, class_type, name):
         """Build a writable or rejecting setter from completed accessor policy."""
         self._error_exit_code = convert_to_literal(-1, dtype=CNativeInt())
@@ -1879,6 +1925,16 @@ class CPythonBindingGenerator(BindingGenerator):
         dict
             A dictionary describing the objects necessary to access the argument.
         """
+        if orig_var.native_array_handle_policy is not None:
+            return self._NATIVE_ARRAY_HANDLE_DISPATCHER.dispatch(
+                self,
+                orig_var,
+                orig_var.native_array_handle_policy,
+                collect_arg,
+                bound_argument,
+                is_bind_c_argument,
+                arg_var=arg_var,
+            )
         return self._PYTHON_BARRIER_DISPATCHER.dispatch(
             self,
             orig_var,
@@ -2684,6 +2740,15 @@ class CPythonBindingGenerator(BindingGenerator):
         if isinstance(class_type, BindCResultTupleType):
             return self._convert_result_tuple(orig_var, is_bind_c, funcdef)
         original = getattr(orig_var, "original_var", orig_var)
+        if original.native_array_handle_policy is not None:
+            return self._NATIVE_ARRAY_HANDLE_DISPATCHER.dispatch(
+                self,
+                original,
+                original.native_array_handle_policy,
+                orig_var,
+                is_bind_c,
+                funcdef,
+            )
         previous_owner = getattr(self, "_result_owner_object", None)
         self._result_owner_object = owner_object
         try:

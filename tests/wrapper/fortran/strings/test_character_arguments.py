@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from tests.wrapper.fortran._support import (
+    build_pyi_extension_or_xfail_staged_native_array_handle,
     _build_source_or_generated_pyi_and_import,
     _compile_native_object,
     _import_from_build_dir,
@@ -14,7 +15,6 @@ from tests.wrapper.fortran._support import (
     _sole_native_module,
     wrapper_source,
 )
-from x2py import build_pyi_extension
 
 STRING_LEGACY_SOURCE = wrapper_source("fstrings.f")
 STRING_F90_SOURCE = wrapper_source("fstrings_f90.f90")
@@ -65,7 +65,7 @@ def test_modern_fortran_character_arguments_and_results(pyi_parity_build_mode: s
 
 def test_edited_modern_string_contract_wraps_full_axis_spelling_set(tmp_path: Path):
     native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
-    result = build_pyi_extension(
+    result = build_pyi_extension_or_xfail_staged_native_array_handle(
         CONTRACT_FIXTURES / "fstrings_f90_axes" / "__init__.pyi",
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],

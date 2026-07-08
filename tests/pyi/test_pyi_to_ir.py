@@ -23,6 +23,7 @@ from x2py.semantics.native_array_handles import (
     is_native_array_handle,
     native_array_data_type,
     native_array_descriptor_kind,
+    native_array_handle_facts,
 )
 from x2py.semantics.models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,
@@ -2479,10 +2480,11 @@ def fill(x: Float64[:]) -> None: ...
 def test_convert_pyi_to_ir_accepts_array_descriptor_handle_wrappers():
     module = pyi_text_to_semantic_module(
         """
-from x2py.contracts import Allocatable as A, Annotated, Float64 as F64, Name, Pointer as P
+from x2py.contracts import Allocatable as A, Annotated, Float64 as F64, Name, Pointer as P, String as Str
 
 values: A[F64[:]]
 target: Annotated[P[F64[:, :]], Name("target_values")]
+labels: P[Str[8][:]]
 plain_values: F64[:]
 
 def consume(values: A[F64[:]], target: P[F64[:]]) -> None: ...
@@ -2491,7 +2493,7 @@ def maybe_consume(values: A[F64[:]] | None = ..., target: P[F64[:]] | None = ...
         module_name="array_descriptors",
     )
 
-    values, target, plain_values = [variable.semantic_type for variable in module.variables]
+    values, target, labels, plain_values = [variable.semantic_type for variable in module.variables]
     assert is_native_array_handle(values) is True
     assert native_array_descriptor_kind(values) == "allocatable"
     assert values.storage.array.allocatable is True
@@ -2513,6 +2515,47 @@ def maybe_consume(values: A[F64[:]] | None = ..., target: P[F64[:]] | None = ...
     target_data = native_array_data_type(target)
     assert target_data.storage.array.pointer is False
     assert target_data.rank == target.rank
+
+    assert native_array_descriptor_kind(labels) == "pointer"
+    assert labels.name == "String"
+    assert labels.rank == 1
+    assert labels.shape == [":"]
+    assert labels.metadata["fortran_character_length"] == "8"
+    assert labels.storage.array.pointer is True
+    labels_data = native_array_data_type(labels)
+    assert labels_data.metadata["fortran_character_length"] == "8"
+
+    values_facts = native_array_handle_facts(values)
+    assert values_facts.descriptor_kind == "allocatable"
+    assert values_facts.data_type == plain_values
+    assert values_facts.element_type.name == "Float64"
+    assert values_facts.element_type.rank == 0
+    assert values_facts.element_type.shape == []
+    assert values_facts.dtype == "Float64"
+    assert values_facts.rank == 1
+    assert values_facts.shape == (":",)
+    assert values_facts.fortran_character_length is None
+
+    target_facts = native_array_handle_facts(target)
+    assert target_facts.descriptor_kind == "pointer"
+    assert target_facts.data_type.storage.array.pointer is False
+    assert target_facts.rank == 2
+    assert target_facts.shape == (":", ":")
+
+    labels_facts = native_array_handle_facts(labels)
+    assert labels_facts.descriptor_kind == "pointer"
+    assert labels_facts.element_type.name == "String"
+    assert labels_facts.element_type.rank == 0
+    assert labels_facts.element_type.metadata["fortran_character_length"] == "8"
+    assert labels_facts.data_type.storage.array.pointer is False
+    assert labels_facts.dtype == "String"
+    assert labels_facts.rank == 1
+    assert labels_facts.shape == (":",)
+    assert labels_facts.fortran_character_length == "8"
+
+    with pytest.raises(ValueError, match="is not a native array handle"):
+        native_array_handle_facts(plain_values)
+    assert labels_data.storage.array.pointer is False
 
     consume_values, consume_target = [arg.semantic_type for arg in module.functions[0].arguments]
     assert consume_values.storage.array.allocatable is True

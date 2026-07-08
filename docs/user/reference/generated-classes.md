@@ -71,8 +71,9 @@ writable field uses the completed setter policy. Private fields are omitted.
 
 Nested scalar derived components are borrowed child wrappers that retain their
 owning parent. Allocatable fields can expose borrowed NumPy views when
-ownership and lifetime are explicit. Pointer fields use detached-copy-or-block
-policy. Arrays of derived types are unsupported.
+ownership and lifetime are explicit. Pointer-array fields have a default
+conservative handle policy, but generated descriptor-handle accessors are still
+a readiness blocker. Arrays of derived types are unsupported.
 
 Whole-object snapshot classes are not part of the active generated contract.
 Plain derived module variables need a completed live-borrow policy, such as

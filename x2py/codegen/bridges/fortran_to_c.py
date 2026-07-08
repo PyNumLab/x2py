@@ -28,6 +28,7 @@ from x2py.semantics.models import (
     RESOLVED_CLASS_SELF_POLICY_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
 )
+from x2py.semantics.native_array_handles import NativeArrayHandlePolicyDispatcher
 
 from ..bind_c import (
     C_NULL_CHAR,
@@ -241,6 +242,19 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         {
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_borrowed_module_array_getter_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_snapshot_module_array_getter_result",
+        }
+    )
+    _NATIVE_ARRAY_HANDLE_DISPATCHER = NativeArrayHandlePolicyDispatcher(
+        {
+            ("allocatable", "argument_descriptor"): "_bridge_allocatable_descriptor_argument",
+            ("allocatable", "borrowed_field_descriptor"): "_bridge_borrowed_allocatable_handle",
+            ("allocatable", "borrowed_module_descriptor"): "_bridge_borrowed_allocatable_handle",
+            ("allocatable", "optional_absent_handle"): "_bridge_optional_native_array_handle",
+            ("allocatable", "owned_result_descriptor"): "_bridge_owned_allocatable_result_handle",
+            ("pointer", "argument_descriptor"): "_bridge_pointer_descriptor_argument",
+            ("pointer", "borrowed_field_descriptor"): "_bridge_borrowed_pointer_handle",
+            ("pointer", "borrowed_module_descriptor"): "_bridge_borrowed_pointer_handle",
+            ("pointer", "optional_absent_handle"): "_bridge_optional_native_array_handle",
         }
     )
     _COPY_RETURN_ARRAY_BY_STORAGE: ClassVar[dict[StorageMode, str]] = {
@@ -674,6 +688,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """
         if isinstance(expr.class_type, FinalType):
             return expr.clone(expr.name, new_class=BindCModuleConstant)
+        if expr.native_array_handle_policy is not None:
+            return self._NATIVE_ARRAY_HANDLE_DISPATCHER.dispatch(
+                self,
+                expr,
+                expr.native_array_handle_policy,
+            )
         return self._MODULE_VARIABLE_POLICY_DISPATCHER.dispatch(self, expr)
 
     def _array_module_variable(self, expr, decision):
@@ -728,6 +748,38 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=BindCArrayVariable,
             wrapper_function=func,
             original_variable=expr,
+        )
+
+    def _bridge_borrowed_allocatable_handle(self, subject, policy, *args):
+        """Reject borrowed allocatable handles until bridge handle accessors exist."""
+        return self._unsupported_native_array_handle_bridge(subject, policy, *args)
+
+    def _bridge_allocatable_descriptor_argument(self, subject, policy, *args):
+        """Reject allocatable descriptor arguments until handle handoff exists."""
+        return self._unsupported_native_array_handle_bridge(subject, policy, *args)
+
+    def _bridge_owned_allocatable_result_handle(self, subject, policy, *args):
+        """Reject owned allocatable result handles until owner storage exists."""
+        return self._unsupported_native_array_handle_bridge(subject, policy, *args)
+
+    def _bridge_borrowed_pointer_handle(self, subject, policy, *args):
+        """Reject borrowed pointer handles until descriptor accessors exist."""
+        return self._unsupported_native_array_handle_bridge(subject, policy, *args)
+
+    def _bridge_pointer_descriptor_argument(self, subject, policy, *args):
+        """Reject pointer descriptor arguments until handle handoff exists."""
+        return self._unsupported_native_array_handle_bridge(subject, policy, *args)
+
+    def _bridge_optional_native_array_handle(self, subject, policy, *args):
+        """Reject optional descriptor handles until absent-handle handoff exists."""
+        return self._unsupported_native_array_handle_bridge(subject, policy, *args)
+
+    def _unsupported_native_array_handle_bridge(self, subject, policy, *args):
+        """Raise a clear bridge error for staged native-array-handle paths."""
+        name = str(getattr(subject, "name", type(subject).__name__))
+        raise NotImplementedError(
+            f"Native array handle bridge generation is not implemented for "
+            f"{name!r}: {policy.descriptor_kind}/{policy.handle_kind}"
         )
 
     def _borrowed_module_array_getter_result(self, getter_value, _decision, expr):
@@ -1065,6 +1117,14 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         var = expr.var
         if isinstance(var, FunctionAddress):
             return self._convert_callback_argument(expr, func)
+        if var.native_array_handle_policy is not None:
+            return self._NATIVE_ARRAY_HANDLE_DISPATCHER.dispatch(
+                self,
+                var,
+                var.native_array_handle_policy,
+                expr,
+                func,
+            )
         func_def_argument_dict = self._NATIVE_BARRIER_DISPATCHER.dispatch(self, var, func)
         new_var = func_def_argument_dict["c_arg"]
         func_def_argument_dict["c_arg"] = FunctionDefArgument(
@@ -2432,6 +2492,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             - f_result: The Variable which should be used in a FunctionCall to collect the results
                     from the Fortran function.
         """
+        if orig_var.native_array_handle_policy is not None:
+            return self._NATIVE_ARRAY_HANDLE_DISPATCHER.dispatch(
+                self,
+                orig_var,
+                orig_var.native_array_handle_policy,
+                orig_func_scope,
+            )
         return self._RESULT_POLICY_DISPATCHER.dispatch(self, orig_var, orig_func_scope)
 
     def _convert_scalar_result(self, orig_var, decision, orig_func_scope):
@@ -2861,49 +2928,60 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         list
             A list of codegen nodes describing the body of the function.
         """
-        next_optional_arg = next(
-            (
-                a
-                for a in generated_args
-                if a["c_arg"] is not None
-                and getattr(getattr(a["c_arg"].var, "original_var", a["c_arg"].var), "is_optional", False)
-                and a not in handled
-            ),
-            None,
-        )
-        if next_optional_arg:
-            args = generated_args.copy()
-            optional_var = next_optional_arg.get("optional_presence_var") or next_optional_arg["c_arg"].var
-            optional_var = getattr(optional_var, "new_var", optional_var)
-            class_type = optional_var.class_type
-            if isinstance(class_type, BindCArrayType):
-                optional_var = self.scope.collect_tuple_element(IndexedElement(optional_var, convert_to_literal(0)))
+        optional_block = self._optional_argument_presence_block(func, generated_args, results, handled)
+        if optional_block is not None:
+            return optional_block
+        return self._get_required_function_def_body(func, generated_args, results)
 
-            handled += (next_optional_arg,)
-            true_section = IfSection(
-                IsNot(optional_var, NIL),
-                self._get_function_def_body(func, args, results, handled),
-            )
-            args.remove(next_optional_arg)
-            false_section = IfSection(
-                convert_to_literal(True),
-                [
-                    *next_optional_arg.get("absent_body", ()),
-                    *self._get_function_def_body(func, args, results, handled),
-                ],
-            )
-            return [If(true_section, false_section)]
+    def _optional_argument_presence_block(self, func, generated_args, results, handled):
+        """Build the next optional-argument presence branch, if any remains."""
+        next_optional_arg = self._next_optional_generated_arg(generated_args, handled)
+        if next_optional_arg is None:
+            return None
+
+        args = generated_args.copy()
+        optional_var = self._optional_presence_var(next_optional_arg)
+        handled += (next_optional_arg,)
+        true_section = IfSection(
+            IsNot(optional_var, NIL),
+            self._get_function_def_body(func, args, results, handled),
+        )
+        args.remove(next_optional_arg)
+        false_section = IfSection(
+            convert_to_literal(True),
+            [
+                *next_optional_arg.get("absent_body", ()),
+                *self._get_function_def_body(func, args, results, handled),
+            ],
+        )
+        return [If(true_section, false_section)]
+
+    @staticmethod
+    def _next_optional_generated_arg(generated_args, handled):
+        """Return the next generated optional argument that has not been branched."""
+        for generated_arg in generated_args:
+            if generated_arg["c_arg"] is None or generated_arg in handled:
+                continue
+            original_var = getattr(generated_arg["c_arg"].var, "original_var", generated_arg["c_arg"].var)
+            if getattr(original_var, "is_optional", False):
+                return generated_arg
+        return None
+
+    def _optional_presence_var(self, generated_arg):
+        """Return the C-side value used to test optional argument presence."""
+        optional_var = generated_arg.get("optional_presence_var") or generated_arg["c_arg"].var
+        optional_var = getattr(optional_var, "new_var", optional_var)
+        if isinstance(optional_var.class_type, BindCArrayType):
+            return self.scope.collect_tuple_element(IndexedElement(optional_var, convert_to_literal(0)))
+        return optional_var
+
+    def _get_required_function_def_body(self, func, generated_args, results):
+        """Build the body once all optional arguments have been resolved."""
         args = [a["f_arg"] for a in generated_args]
         body = [line for a in generated_args for line in a["body"]]
         post_body = [line for a in generated_args for line in a.get("post_body", ())]
 
-        if isinstance(func, FunctionOverloadSet):
-            selected = func.point(args)
-            native_name = func.native_name_for(selected)
-            args = self._positional_native_arguments(args)
-        else:
-            selected = None
-            native_name = ""
+        selected, native_name, args = self._selected_native_call_args(func, args)
         if re.sub(r"\s+", "", native_name).casefold() == "assignment(=)":
             lhs, rhs = func.native_arguments(selected, args)
             return [*body, Assign(lhs.value, rhs.value), *post_body]
@@ -2921,6 +2999,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             return [*body, *self._assumed_rank_dispatch(func, generated_args, results), *post_body]
 
         return [*body, *self._native_call_body(func, args, results), *post_body]
+
+    @staticmethod
+    def _selected_native_call_args(func, args):
+        """Resolve overload calls and normalize their native argument order."""
+        if not isinstance(func, FunctionOverloadSet):
+            return None, "", args
+        selected = func.point(args)
+        native_name = func.native_name_for(selected)
+        return selected, native_name, FortranToCBridgeGenerator._positional_native_arguments(args)
 
     @staticmethod
     def _positional_native_arguments(args):
@@ -3442,7 +3529,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
 
     def _get_pointer_snapshot_bind_c_array(self, name, orig_var, pointer_var):
-        """Return pointer detached-copy bind c array."""
+        """Return a snapshot-copy bind C array for descriptor-backed storage."""
         dtype = orig_var.dtype
         rank = orig_var.rank
         order = orig_var.order

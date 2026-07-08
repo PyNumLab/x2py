@@ -10,10 +10,65 @@ from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
 )
+from x2py.runtime_handles import AllocatableHandle, PointerHandle
 
 ARRAY_CONTRACTS_F90_SOURCE = wrapper_source("farray_contracts_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 _MAX_WRAPPER_TEST_RANK = 15
+
+
+def _absent_allocatable_handle():
+    return AllocatableHandle(
+        dtype=np.dtype(np.float64),
+        rank=1,
+        ops={
+            "shape": lambda _handle: None,
+            "to_numpy": lambda _handle: None,
+            "allocated": lambda _handle: False,
+            "deallocate": lambda _handle: None,
+            "resize": lambda _handle, _shape: None,
+        },
+    )
+
+
+def _array_allocatable_handle(value):
+    return AllocatableHandle(
+        dtype=value.dtype,
+        rank=value.ndim,
+        ops={
+            "shape": lambda _handle: value.shape,
+            "to_numpy": lambda _handle: value,
+            "allocated": lambda _handle: True,
+            "deallocate": lambda _handle: None,
+            "resize": lambda _handle, _shape: None,
+        },
+    )
+
+
+def _absent_pointer_handle():
+    return PointerHandle(
+        dtype=np.dtype(np.float64),
+        rank=1,
+        ops={
+            "shape": lambda _handle: None,
+            "to_numpy": lambda _handle: None,
+            "associated": lambda _handle: False,
+            "nullify": lambda _handle: None,
+        },
+    )
+
+
+def _array_pointer_handle(value):
+    return PointerHandle(
+        dtype=value.dtype,
+        rank=value.ndim,
+        ops={
+            "shape": lambda _handle: value.shape,
+            "to_numpy": lambda _handle: value,
+            "associated": lambda _handle: True,
+            "nullify": lambda _handle: None,
+        },
+    )
 
 
 def test_remaining_array_contracts_are_validated_before_fortran_calls(
@@ -31,6 +86,29 @@ def test_remaining_array_contracts_are_validated_before_fortran_calls(
         CONTRACT_FIXTURES / "farray_contracts_f90",
         pyi_parity_build_mode,
     )
+
+    absent_allocatable = _absent_allocatable_handle()
+    absent_pointer = _absent_pointer_handle()
+    assert absent_allocatable.to_numpy() is None
+    assert absent_pointer.to_numpy() is None
+    with pytest.raises(TypeError):
+        module.sum_in(absent_allocatable.to_numpy())
+    with pytest.raises(TypeError):
+        module.sum_in(absent_pointer.to_numpy())
+
+    readonly_allocatable_array = np.array([1.0, 2.0], dtype=np.float64)
+    readonly_allocatable_array.setflags(write=False)
+    readonly_allocatable = _array_allocatable_handle(readonly_allocatable_array)
+    assert readonly_allocatable.to_numpy() is readonly_allocatable_array
+    with pytest.raises(TypeError, match="writeable"):
+        module.bump_inout(readonly_allocatable.to_numpy())
+
+    readonly_pointer_array = np.array([1.0, 2.0], dtype=np.float64)
+    readonly_pointer_array.setflags(write=False)
+    readonly_pointer = _array_pointer_handle(readonly_pointer_array)
+    assert readonly_pointer.to_numpy() is readonly_pointer_array
+    with pytest.raises(TypeError, match="writeable"):
+        module.bump_inout(readonly_pointer.to_numpy())
 
     readonly = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
     readonly.setflags(write=False)

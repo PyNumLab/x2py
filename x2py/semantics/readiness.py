@@ -63,6 +63,7 @@ _IDENTIFIER_RE = re.compile(r"\b[A-Za-z_]\w*\b")
 _SHAPE_INTRINSIC_CALLS = frozenset({"lbound", "shape", "size", "ubound"})
 _NON_EXTENT_DIMENSIONS = frozenset({"", "*", ":", "::", "..."})
 _MAX_SUPPORTED_ARRAY_RANK = 15
+_POINTER_C_DESCRIPTOR_INTEROP_AVAILABLE = False
 _ISO_C_KIND_TOKENS = frozenset(
     {
         "c_bool",
@@ -735,7 +736,24 @@ class _SemanticReadinessChecker:
                 unit_kind=unit_kind,
             )
             return
+        self._check_pointer_c_descriptor_interop(policy, owner=owner, item=item, unit=unit, unit_kind=unit_kind)
         if not getattr(policy, "is_blocked", False):
+            codegen_blocker = self._native_array_handle_codegen_blocker(policy)
+            if codegen_blocker is None:
+                return
+            self._add_blocker(
+                "native_array_handle_codegen_unsupported",
+                "Native array handle policy is complete, but wrapper generation for this handle path is not implemented.",
+                {
+                    "owner": owner,
+                    "item": item,
+                    "policy": codegen_blocker,
+                    "descriptor_kind": getattr(policy, "descriptor_kind", None),
+                    "handle_kind": getattr(policy, "handle_kind", None),
+                },
+                unit=unit,
+                unit_kind=unit_kind,
+            )
             return
         self._add_blocker(
             "native_array_handle_policy_blocked",
@@ -750,6 +768,57 @@ class _SemanticReadinessChecker:
             unit=unit,
             unit_kind=unit_kind,
         )
+
+    def _check_pointer_c_descriptor_interop(
+        self,
+        policy,
+        *,
+        owner: str,
+        item: str,
+        unit: str,
+        unit_kind: str,
+    ) -> None:
+        if (
+            not getattr(policy, "requires_pointer_c_descriptor_interop", False)
+            or _POINTER_C_DESCRIPTOR_INTEROP_AVAILABLE
+        ):
+            return
+        self._add_blocker(
+            "pointer_c_descriptor_interop_unavailable",
+            "Pointer array descriptor-view extraction requires TS 29113 C descriptor interop, "
+            "which is not implemented by the current wrapper generator.",
+            {
+                "owner": owner,
+                "item": item,
+                "descriptor_kind": getattr(policy, "descriptor_kind", None),
+                "handle_kind": getattr(policy, "handle_kind", None),
+                "descriptor_interop": getattr(policy, "descriptor_interop", None),
+                "to_numpy": getattr(policy, "to_numpy", None),
+                "descriptor_layout": "ts29113_required",
+                "compiler_specific_layout": "rejected",
+                "fallback": "readiness_failure",
+            },
+            unit=unit,
+            unit_kind=unit_kind,
+        )
+
+    @staticmethod
+    def _native_array_handle_codegen_blocker(policy) -> str | None:
+        descriptor_kind = getattr(policy, "descriptor_kind", None)
+        handle_kind = getattr(policy, "handle_kind", None)
+        if handle_kind == "unsupported":
+            return None
+        if descriptor_kind == "allocatable" and handle_kind == "owned_result_descriptor":
+            return "allocatable result handles need generated wrapper-owned descriptor storage before wrapper lowering"
+        if handle_kind == "argument_descriptor":
+            return (
+                f"{descriptor_kind} descriptor-argument handoff needs generated handle support before wrapper lowering"
+            )
+        if handle_kind == "optional_absent_handle":
+            return f"{descriptor_kind} optional descriptor-handle arguments need generated absent-handle support before wrapper lowering"
+        if getattr(policy, "handle_kind", None) in {"borrowed_field_descriptor", "borrowed_module_descriptor"}:
+            return f"{descriptor_kind} array handle accessors need generated descriptor-handle support before wrapper lowering"
+        return None
 
     def _check_array_contract(
         self,

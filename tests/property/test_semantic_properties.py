@@ -134,14 +134,15 @@ def canonical_semantic_types(draw):
     order = draw(st.sampled_from(["default", "ORDER_F", "ORDER_ANY"]))
     if order == "default":
         order = "ORDER_C" if len(shape) > 1 else None
+    descriptor = draw(st.sampled_from(("none", "allocatable", "pointer")))
     array = SemanticArrayContract(
         rank=len(shape),
         shape=list(shape),
         order=order,
         axes=["dense" for _dimension in shape],
         contiguous=True,
-        allocatable=draw(st.booleans()),
-        pointer=draw(st.booleans()),
+        allocatable=descriptor == "allocatable",
+        pointer=descriptor == "pointer",
     )
     storage = SemanticStorageContract(
         kind="array",

@@ -149,8 +149,9 @@ class PyiPrinter(ClassVisitor):
             text = self._semantic_base_type(semantic_type)
         annotations = [
             *self._semantic_annotation_metadata(semantic_type),
-            *[self._visit(constraint) for constraint in semantic_type.constraints],
         ]
+        if array_descriptor is None:
+            annotations.extend(self._visit(constraint) for constraint in semantic_type.constraints)
         if annotations:
             return self._annotated_type_text(text, annotations)
         return text

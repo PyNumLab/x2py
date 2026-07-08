@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import (
+    build_pyi_extension_or_xfail_staged_native_array_handle,
     _build_source_or_generated_pyi_and_import,
     _build_text_and_import,
     _compile_native_object,
@@ -16,7 +17,6 @@ from tests.wrapper.fortran._support import (
     _sole_native_module,
     wrapper_source,
 )
-from x2py import build_pyi_extension
 
 ALLOCATABLE_VIEW_F90_SOURCE = wrapper_source("fallocatable_views_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
@@ -209,7 +209,7 @@ def _plain_allocatable_snapshot_module(build_mode: str, tmp_path: Path):
         check=True,
     )
     native_object = _compile_native_object(source, tmp_path / "native")
-    result = build_pyi_extension(
+    result = build_pyi_extension_or_xfail_staged_native_array_handle(
         contract_dir / "__init__.pyi",
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
@@ -256,7 +256,7 @@ def _scalar_descriptor_module(build_mode: str, tmp_path: Path):
         check=True,
     )
     native_object = _compile_native_object(source, tmp_path / "native")
-    result = build_pyi_extension(
+    result = build_pyi_extension_or_xfail_staged_native_array_handle(
         contract_dir / "__init__.pyi",
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],

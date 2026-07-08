@@ -326,7 +326,7 @@ FEATURE_MATRIX_REQUIRED_FEATURES = [
     "Output arguments and multiple results",
     "Optional arguments",
     "Allocatable outputs, results, replacements, and borrowed module/component views",
-    "Pointer call-local inputs and detached-copy results",
+    "Pointer scalar projections and array-handle readiness",
     "Array-valued function results",
     "NumPy array argument contracts",
     "Derived-type scalar boundaries and methods",
@@ -884,6 +884,20 @@ def test_user_guide_keeps_default_source_builds_free_of_redundant_stage_flags() 
     assert "solver.f90 \\\n  diagnostics.f90 \\\n  --wrap" not in content
     assert "python3 -m x2py contracts/solver/__init__.pyi \\\n  --wrap" in content
     assert "Makefile mode is an explicit wrapper submode" in content
+
+
+def test_array_handle_docs_keep_views_copies_and_handles_distinct() -> None:
+    allocatables = _visible_documentation_source(DOCS_ROOT / "user/guide/allocatables.md")
+    pointers = _visible_documentation_source(DOCS_ROOT / "user/guide/pointers.md")
+    memory = _visible_documentation_source(DOCS_ROOT / "user/guide/memory-management.md")
+
+    assert "Reading the Python attribute" in allocatables
+    assert "returns an `Allocatable[T[...]]` handle, not `ndarray | None`." in allocatables
+    assert "returns a read-only detached copy" in allocatables
+    assert "A borrowed view is a NumPy array that points at storage Python does not own." in allocatables
+    assert "Pointer-array handle results remain blocked" in pointers
+    assert "Any NumPy view returned by `p.to_numpy()` is tied to the pointer target" in pointers
+    assert "Whole-object `Snapshot[T]` contracts are future-only" in memory
 
 
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)

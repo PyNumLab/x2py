@@ -9,7 +9,9 @@ from x2py.semantic_metadata import (
     SCALAR_STORAGE_CATEGORY,
 )
 from x2py.codegen.bindings.c_to_python import CPythonBindingGenerator
+from x2py.codegen.bindings.cpython_api import PythonObjectType
 from x2py.codegen.bridges.fortran_to_c import FortranToCBridgeGenerator
+from x2py.codegen.models.core import Variable
 from x2py.codegen.printers.pyi_printer import PyiPrinter
 from x2py.codegen.scope import Scope
 from x2py.ownership_policy import (
@@ -56,6 +58,13 @@ from x2py.semantics.models import (
     SemanticStorageContract,
     SemanticType,
     SemanticVariable,
+)
+from x2py.semantics.native_array_handles import (
+    NativeArrayBuildRequirement,
+    NativeArrayHandlePolicy,
+    NativeArrayHandlePolicyDispatcher,
+    native_array_descriptor_kind,
+    native_array_handle_build_requirements,
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
@@ -466,6 +475,65 @@ def test_barrier_dispatchers_reject_missing_completed_actions():
         NativeBarrierDispatcher({}).handler_name_for_decision(decision, "x")
 
 
+def _native_array_policy(
+    *,
+    descriptor_kind: str = "allocatable",
+    handle_kind: str = "borrowed_module_descriptor",
+) -> NativeArrayHandlePolicy:
+    return NativeArrayHandlePolicy(
+        descriptor_kind=descriptor_kind,
+        handle_kind=handle_kind,
+        origin="module_variable",
+        owner="native",
+        owner_retention="native_module",
+        descriptor_ownership="borrowed",
+        borrowed=True,
+        getter_behavior="handle",
+        python_setter="none",
+        native_setter="none",
+        output_projection="none",
+        release="native_owner",
+        target_lifetime="module",
+        destroy_behavior="none",
+        to_numpy="borrowed_view",
+        descriptor_interop="none",
+        nullable=False,
+        optional_absent=False,
+        storage_mode="alias",
+        operations=("allocated", "to_numpy"),
+    )
+
+
+def test_native_array_handle_dispatcher_routes_completed_policy_to_named_method():
+    class Subject:
+        name = "values"
+
+    class Target:
+        def handle(self, subject, policy, marker):
+            return marker, subject.name, policy.descriptor_kind, policy.handle_kind
+
+    dispatcher = NativeArrayHandlePolicyDispatcher(
+        {("allocatable", "borrowed_module_descriptor"): "handle"},
+    )
+
+    assert dispatcher.dispatch(Target(), Subject(), _native_array_policy(), "seen") == (
+        "seen",
+        "values",
+        "allocatable",
+        "borrowed_module_descriptor",
+    )
+
+
+def test_native_array_handle_dispatcher_rejects_missing_completed_policy_pair():
+    dispatcher = NativeArrayHandlePolicyDispatcher({})
+
+    with pytest.raises(ValueError, match="pointer/borrowed_module_descriptor"):
+        dispatcher.handler_name_for_policy(
+            _native_array_policy(descriptor_kind="pointer"),
+            "target",
+        )
+
+
 def test_bridge_and_binding_generators_expose_ownership_action_maps():
     assert (
         CPythonBindingGenerator._RESULT_DETAIL_DISPATCHER.handlers[
@@ -526,6 +594,29 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         ]
         == "_uses_heap_allocatable_result_helper"
     )
+    native_array_handle_keys = {
+        ("allocatable", "argument_descriptor"),
+        ("allocatable", "borrowed_field_descriptor"),
+        ("allocatable", "borrowed_module_descriptor"),
+        ("allocatable", "optional_absent_handle"),
+        ("allocatable", "owned_result_descriptor"),
+        ("pointer", "argument_descriptor"),
+        ("pointer", "borrowed_field_descriptor"),
+        ("pointer", "borrowed_module_descriptor"),
+        ("pointer", "optional_absent_handle"),
+    }
+    assert set(FortranToCBridgeGenerator._NATIVE_ARRAY_HANDLE_DISPATCHER.handlers) == native_array_handle_keys
+    assert set(CPythonBindingGenerator._NATIVE_ARRAY_HANDLE_DISPATCHER.handlers) == native_array_handle_keys
+    assert (
+        FortranToCBridgeGenerator._NATIVE_ARRAY_HANDLE_DISPATCHER.handlers[
+            ("allocatable", "borrowed_module_descriptor")
+        ]
+        == "_bridge_borrowed_allocatable_handle"
+    )
+    assert (
+        CPythonBindingGenerator._NATIVE_ARRAY_HANDLE_DISPATCHER.handlers[("pointer", "borrowed_module_descriptor")]
+        == "_bind_borrowed_pointer_handle"
+    )
     dispatchers = (
         (FortranToCBridgeGenerator, "_NATIVE_BARRIER_DISPATCHER"),
         (FortranToCBridgeGenerator, "_FUNCTION_ARGUMENT_POLICY_DISPATCHER"),
@@ -537,6 +628,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         (FortranToCBridgeGenerator, "_FIELD_GETTER_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_MODULE_VARIABLE_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_MODULE_ARRAY_GETTER_POLICY_DISPATCHER"),
+        (FortranToCBridgeGenerator, "_NATIVE_ARRAY_HANDLE_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_ARGUMENT_POLICY_DISPATCHER"),
         (FortranToCBridgeGenerator, "_CALLBACK_RESULT_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_PYTHON_BARRIER_DISPATCHER"),
@@ -547,6 +639,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         (CPythonBindingGenerator, "_RESULT_NOTE_DISPATCHER"),
         (CPythonBindingGenerator, "_PROPERTY_SETTER_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_BORROWED_GETTER_POLICY_DISPATCHER"),
+        (CPythonBindingGenerator, "_NATIVE_ARRAY_HANDLE_DISPATCHER"),
         (CPythonBindingGenerator, "_ARGUMENT_RETURN_PROJECTION_DISPATCHER"),
         (CPythonBindingGenerator, "_PROJECTED_ARGUMENT_OBJECT_DISPATCHER"),
         (CPythonBindingGenerator, "_ARRAY_ACCESS_VALIDATION_DISPATCHER"),
@@ -642,6 +735,143 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         CPythonBindingGenerator._ARRAY_RELEASE_POLICY_DISPATCHER.handlers[DestructionPolicy.BLOCKED]
         == "_blocked_array_release_policy"
     )
+
+
+def test_native_array_handle_module_variable_bridge_uses_completed_handle_policy_dispatch():
+    module = parse_pyi_text(
+        """
+values: Allocatable[Float64[:]]
+""",
+        module_name="native_handle_bridge_dispatch",
+    )
+    complete_semantic_policies(module)
+    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    generator = FortranToCBridgeGenerator("", 0)
+
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Native array handle bridge generation is not implemented.*allocatable/borrowed_module_descriptor",
+    ):
+        generator._visit_Variable(lowered.variables[0])
+
+
+@pytest.mark.parametrize(
+    ("descriptor_kind", "annotation"),
+    [
+        ("allocatable", "Allocatable[Float64[:]]"),
+        ("pointer", "Pointer[Float64[:]]"),
+    ],
+)
+def test_native_array_handle_field_generation_uses_completed_handle_policy_dispatch(
+    descriptor_kind,
+    annotation,
+):
+    module = parse_pyi_text(
+        f"""
+class box:
+    values: {annotation}
+""",
+        module_name=f"{descriptor_kind}_handle_field_dispatch",
+    )
+    complete_semantic_policies(module)
+    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    field = lowered.classes[0].attributes[0]
+    policy = field.native_array_handle_policy
+
+    assert policy.descriptor_kind == descriptor_kind
+    assert policy.handle_kind == "borrowed_field_descriptor"
+    assert policy.origin == "derived_field"
+    assert policy.owner_retention == "parent_wrapper"
+    assert policy.blocker is None
+
+    bridge = FortranToCBridgeGenerator("", 0)
+    with pytest.raises(
+        NotImplementedError,
+        match=rf"Native array handle bridge generation is not implemented.*{descriptor_kind}/borrowed_field_descriptor",
+    ):
+        bridge._convert_result(field, lowered.classes[0].scope)
+
+    binding = CPythonBindingGenerator("", 0)
+    with pytest.raises(
+        NotImplementedError,
+        match=rf"Native array handle Python binding generation is not implemented.*"
+        rf"{descriptor_kind}/borrowed_field_descriptor",
+    ):
+        binding._convert_result(field, is_bind_c=True, funcdef=None)
+
+
+def test_native_array_handle_result_generation_uses_completed_handle_policy_dispatch():
+    module = parse_pyi_text(
+        """
+def make_values() -> Allocatable[Float64[:]]: ...
+""",
+        module_name="native_handle_result_dispatch",
+    )
+    complete_semantic_policies(module)
+    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    result = lowered.funcs[0].results.var
+
+    bridge = FortranToCBridgeGenerator("", 0)
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Native array handle bridge generation is not implemented.*allocatable/owned_result_descriptor",
+    ):
+        bridge._convert_result(result, lowered.funcs[0].scope)
+
+    binding = CPythonBindingGenerator("", 0)
+    with pytest.raises(
+        NotImplementedError,
+        match=r"Native array handle Python binding generation is not implemented.*allocatable/owned_result_descriptor",
+    ):
+        binding._convert_result(result, is_bind_c=True, funcdef=lowered.funcs[0])
+
+
+@pytest.mark.parametrize(
+    ("descriptor_kind", "annotation"),
+    [
+        ("allocatable", "Allocatable[Float64[:]]"),
+        ("pointer", "Pointer[Float64[:]]"),
+    ],
+)
+def test_native_array_handle_argument_generation_uses_completed_handle_policy_dispatch(
+    descriptor_kind,
+    annotation,
+):
+    module = parse_pyi_text(
+        f"""
+def fill(values: {annotation}) -> Returns["values", {annotation}]: ...
+""",
+        module_name=f"{descriptor_kind}_handle_argument_dispatch",
+    )
+    complete_semantic_policies(module)
+    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    argument = lowered.funcs[0].arguments[0]
+    policy = argument.var.native_array_handle_policy
+
+    assert policy.descriptor_kind == descriptor_kind
+    assert policy.handle_kind == "argument_descriptor"
+    assert policy.output_projection == "projected_handle"
+    assert policy.blocker is None
+
+    bridge = FortranToCBridgeGenerator("", 0)
+    with pytest.raises(
+        NotImplementedError,
+        match=rf"Native array handle bridge generation is not implemented.*{descriptor_kind}/argument_descriptor",
+    ):
+        bridge._convert_argument(argument, lowered.funcs[0])
+
+    binding = CPythonBindingGenerator("", 0)
+    collect_arg = Variable(PythonObjectType(), "py_values", memory_handling="alias")
+    with pytest.raises(
+        NotImplementedError,
+        match=rf"Native array handle Python binding generation is not implemented.*{descriptor_kind}/argument_descriptor",
+    ):
+        binding._convert_argument(
+            argument.var,
+            collect_arg,
+            bound_argument=False,
+            is_bind_c_argument=False,
+        )
 
 
 def test_immutable_replacement_policy_is_complete_before_ir_lowering():
@@ -817,10 +1047,20 @@ def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
             assert decision.codegen_action is not CodegenAction.BLOCKED, label
 
 
-def test_pyi_policy_metadata_round_trips_pointer_detached_copy_and_blocks_getters():
-    blocked_type = _array_type(pointer=True)
-    blocked = default_ownership_policy.decide_semantic_type(blocked_type, OwnershipContext.field())
-    assert blocked.is_blocked
+def test_pyi_policy_metadata_round_trips_pointer_array_handle_readiness_blocker():
+    default_type = _array_type(pointer=True)
+    default_field = default_ownership_policy.decide_semantic_type(default_type, OwnershipContext.field())
+    assert not default_field.is_blocked
+    assert default_field.owner is OwnershipOwner.WRAPPER
+    assert default_field.transfer is TransferMode.BORROWED_VIEW
+    assert default_field.destruction is DestructionPolicy.WRAPPER_DEALLOC
+    assert default_field.borrowed is True
+
+    default_module = default_ownership_policy.decide_semantic_type(default_type, OwnershipContext.module_variable())
+    assert not default_module.is_blocked
+    assert default_module.owner is OwnershipOwner.NATIVE
+    assert default_module.transfer is TransferMode.BORROWED_VIEW
+    assert default_module.destruction is DestructionPolicy.NATIVE_OWNER
 
     metadata: dict[str, object] = {}
     set_ownership_metadata(
@@ -834,13 +1074,19 @@ def test_pyi_policy_metadata_round_trips_pointer_detached_copy_and_blocks_getter
         OwnershipContext.field(),
     )
     assert overridden.is_blocked
-    assert overridden.blocker == "pointer array field and module detached-copy accessors are not implemented"
+    assert overridden.blocker == (
+        "pointer array field and module handles remain blocked until descriptor extraction, "
+        "target lifetime, and release policy are implemented"
+    )
     module_overridden = default_ownership_policy.decide_semantic_type(
         _array_type(pointer=True, metadata=metadata),
         OwnershipContext.module_variable(),
     )
     assert module_overridden.is_blocked
-    assert module_overridden.blocker == "pointer array field and module detached-copy accessors are not implemented"
+    assert module_overridden.blocker == (
+        "pointer array field and module handles remain blocked until descriptor extraction, "
+        "target lifetime, and release policy are implemented"
+    )
 
     module = parse_pyi_text(
         """
@@ -857,6 +1103,8 @@ class box:
     field_type = module.classes[0].fields[0].semantic_type
     parsed = default_ownership_policy.decide_semantic_type(field_type, OwnershipContext.field())
     assert parsed.is_blocked
+    assert "detached-copy accessors" not in parsed.blocker
+    assert "descriptor extraction" in parsed.blocker
 
     result = default_ownership_policy.decide_semantic_type(field_type, OwnershipContext.result())
     assert result.owner is OwnershipOwner.PYTHON
@@ -868,6 +1116,46 @@ class box:
     assert 'Ownership("python")' in emitted
     assert 'Transfer("snapshot_copy")' in emitted
     assert 'Destruction("python_refcount")' in emitted
+
+
+def test_plain_pointer_array_container_policy_completes_default_handle_profile():
+    module = parse_pyi_text(
+        """
+value: Pointer[Float64[:]]
+
+class box:
+    target: Pointer[Float64[:]]
+""",
+        module_name="pointer_default_profile",
+    )
+
+    complete_semantic_policies(module)
+
+    module_policy = module.variables[0].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
+    field_policy = module.classes[0].fields[0].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
+
+    assert not module_policy.is_blocked
+    assert module_policy.handle_kind == "borrowed_module_descriptor"
+    assert module_policy.getter_behavior == "handle"
+    assert module_policy.to_numpy == "unsupported"
+    assert module_policy.descriptor_interop == "none"
+    assert module_policy.requires_pointer_c_descriptor_interop is False
+    assert module_policy.target_lifetime == "module"
+    assert module_policy.destroy_behavior == "none"
+    assert set(module_policy.operations) == {"associated", "nullify", "to_numpy"}
+    assert "allocate" not in module_policy.operations
+    assert "deallocate" not in module_policy.operations
+    assert "resize" not in module_policy.operations
+
+    assert not field_policy.is_blocked
+    assert field_policy.handle_kind == "borrowed_field_descriptor"
+    assert field_policy.getter_behavior == "handle"
+    assert field_policy.to_numpy == "unsupported"
+    assert field_policy.descriptor_interop == "none"
+    assert field_policy.requires_pointer_c_descriptor_interop is False
+    assert field_policy.target_lifetime == "parent_wrapper"
+    assert field_policy.destroy_behavior == "parent_wrapper_finalizer"
+    assert set(field_policy.operations) == {"associated", "nullify", "to_numpy"}
 
 
 def test_complete_pointer_policy_metadata_round_trips_and_blocks_borrowed_views():
@@ -918,6 +1206,42 @@ value: Annotated[
     assert "owner retention" in decision.blocker
 
 
+def test_complete_pointer_policy_blocks_array_containers_until_handle_readiness():
+    module = parse_pyi_text(
+        """
+value: Annotated[
+    Pointer[Float64[:]],
+    PointerPolicy(
+        nullable=True,
+        transfer="snapshot_copy",
+        target_owner="module",
+        lifetime="module",
+        deallocation="never",
+        shape_source="pointer_bounds",
+        contiguity="contiguous",
+        reassociation="snapshot_final",
+        aliasing="independent_copy",
+        mutability="copy",
+    ),
+]
+""",
+        module_name="pointer_policy",
+    )
+
+    complete_semantic_policies(module)
+
+    handle_policy = module.variables[0].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
+    assert handle_policy.is_blocked
+    assert handle_policy.getter_behavior == "blocked"
+    assert handle_policy.to_numpy == "descriptor_view"
+    assert handle_policy.descriptor_interop == "pointer_c_descriptor"
+    assert handle_policy.requires_pointer_c_descriptor_interop is True
+    assert handle_policy.blocker == (
+        "pointer array field and module handles remain blocked until descriptor extraction, "
+        "target lifetime, and release policy are implemented"
+    )
+
+
 def test_pointer_policy_metadata_requires_every_fact():
     with pytest.raises(ValueError, match="missing: lifetime"):
         parse_pyi_text(
@@ -939,6 +1263,45 @@ value: Annotated[
 """,
             module_name="incomplete_pointer_policy",
         )
+
+
+def test_pointer_policy_unsafe_deallocate_is_explicit_operation_opt_in():
+    module = parse_pyi_text(
+        """
+def consume(
+    default_target: Pointer[Float64[:]],
+    unsafe_target: Annotated[
+        Pointer[Float64[:]],
+        PointerPolicy(
+            nullable=True,
+            transfer="call_local",
+            target_owner="external",
+            lifetime="call",
+            deallocation="unsafe_deallocate",
+            shape_source="pointer_bounds",
+            contiguity="contiguous",
+            reassociation="snapshot_final",
+            aliasing="descriptor",
+            mutability="mutable",
+        ),
+    ],
+) -> None: ...
+""",
+        module_name="unsafe_deallocate_policy",
+    )
+
+    complete_semantic_policies(module)
+
+    default_target = module.functions[0].arguments[0].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
+    unsafe_target = module.functions[0].arguments[1].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
+
+    assert set(default_target.operations) == {"associated", "nullify", "to_numpy"}
+    assert set(unsafe_target.operations) == {"associated", "deallocate", "nullify", "to_numpy"}
+    assert "allocate" not in unsafe_target.operations
+    assert "resize" not in unsafe_target.operations
+
+    emitted = PyiPrinter().emit(module.functions[0].arguments[1].semantic_type)
+    assert 'deallocation="unsafe_deallocate"' in emitted
 
 
 def test_recursive_module_policy_map_includes_nested_fields_and_functions():
@@ -1114,29 +1477,62 @@ def make_target() -> Pointer[Float64[:]]: ...
     assert values.handle_kind == "borrowed_module_descriptor"
     assert values.origin == "module_variable"
     assert values.owner == "native"
+    assert values.owner_retention == "native_module"
     assert values.descriptor_ownership == "borrowed"
+    assert values.target_lifetime == "module"
+    assert values.destroy_behavior == "none"
     assert values.to_numpy == "read_only_detached_copy"
+    assert values.descriptor_interop == "none"
+    assert values.requires_pointer_c_descriptor_interop is False
     assert values.storage_mode == "heap"
     assert set(values.operations) == {"allocated", "deallocate", "resize", "to_numpy"}
 
     assert target_values.handle_kind == "borrowed_module_descriptor"
+    assert target_values.owner_retention == "native_module"
+    assert target_values.target_lifetime == "module"
     assert target_values.to_numpy == "borrowed_view"
+    assert target_values.descriptor_interop == "none"
+    assert target_values.requires_pointer_c_descriptor_interop is False
 
     assert field_values.handle_kind == "borrowed_field_descriptor"
     assert field_values.owner == "wrapper"
+    assert field_values.owner_retention == "parent_wrapper"
     assert field_values.release == "wrapper_dealloc"
+    assert field_values.target_lifetime == "parent_wrapper"
+    assert field_values.destroy_behavior == "parent_wrapper_finalizer"
 
     assert field_target.descriptor_kind == "pointer"
     assert field_target.handle_kind == "borrowed_field_descriptor"
-    assert field_target.is_blocked is True
+    assert field_target.target_lifetime == "parent_wrapper"
+    assert field_target.destroy_behavior == "parent_wrapper_finalizer"
+    assert field_target.getter_behavior == "handle"
+    assert field_target.to_numpy == "unsupported"
+    assert field_target.descriptor_interop == "none"
+    assert field_target.requires_pointer_c_descriptor_interop is False
+    assert field_target.is_blocked is False
+    assert set(field_target.operations) == {"associated", "nullify", "to_numpy"}
 
     assert argument_values.handle_kind == "argument_descriptor"
     assert argument_values.origin == "argument"
+    assert argument_values.owner_retention == "caller_handle"
+    assert argument_values.target_lifetime == "call"
+    assert argument_values.destroy_behavior == "none"
+    assert argument_values.is_blocked is True
+    assert "descriptor-argument handoff needs generated handle support" in argument_values.blocker
+    assert argument_values.descriptor_interop == "none"
+    assert argument_values.requires_pointer_c_descriptor_interop is False
     assert set(argument_values.operations) == {"allocated", "deallocate", "resize", "to_numpy"}
 
     assert optional_target.handle_kind == "optional_absent_handle"
     assert optional_target.optional_absent is True
     assert optional_target.nullable is True
+    assert optional_target.owner_retention == "optional_argument"
+    assert optional_target.target_lifetime == "absent_or_call"
+    assert optional_target.destroy_behavior == "none"
+    assert optional_target.is_blocked is True
+    assert "descriptor-argument handoff needs generated handle support" in optional_target.blocker
+    assert optional_target.descriptor_interop == "none"
+    assert optional_target.requires_pointer_c_descriptor_interop is False
     assert set(optional_target.operations) == {"associated", "nullify", "to_numpy"}
     assert "allocate" not in optional_target.operations
     assert "deallocate" not in optional_target.operations
@@ -1144,6 +1540,13 @@ def make_target() -> Pointer[Float64[:]]: ...
 
     assert managed_target.handle_kind == "argument_descriptor"
     assert managed_target.descriptor_kind == "pointer"
+    assert managed_target.target_lifetime == "call"
+    assert managed_target.destroy_behavior == "none"
+    assert managed_target.is_blocked is True
+    assert "descriptor-argument handoff needs generated handle support" in managed_target.blocker
+    assert managed_target.to_numpy == "descriptor_view"
+    assert managed_target.descriptor_interop == "pointer_c_descriptor"
+    assert managed_target.requires_pointer_c_descriptor_interop is True
     assert set(managed_target.operations) == {
         "allocate",
         "associated",
@@ -1156,13 +1559,122 @@ def make_target() -> Pointer[Float64[:]]: ...
     assert allocatable_result.handle_kind == "owned_result_descriptor"
     assert allocatable_result.origin == "result"
     assert allocatable_result.owner == "wrapper"
+    assert allocatable_result.owner_retention == "wrapper_owner_storage"
     assert allocatable_result.descriptor_ownership == "owned"
     assert allocatable_result.output_projection == "handle_result"
     assert allocatable_result.release == "wrapper_dealloc"
+    assert allocatable_result.target_lifetime == "wrapper_owner_storage"
+    assert allocatable_result.destroy_behavior == "handle_finalizer"
+    assert allocatable_result.descriptor_interop == "none"
+    assert allocatable_result.requires_pointer_c_descriptor_interop is False
 
     assert pointer_result.handle_kind == "unsupported"
+    assert pointer_result.owner_retention == "unknown"
+    assert pointer_result.target_lifetime == "unknown"
+    assert pointer_result.destroy_behavior == "blocked"
     assert pointer_result.is_blocked is True
+    assert pointer_result.descriptor_interop == "none"
+    assert pointer_result.requires_pointer_c_descriptor_interop is False
     assert "stable owner storage and target lifetime" in pointer_result.blocker
+
+
+def test_allocatable_handle_numpy_policy_requires_proven_live_aliasing():
+    module = parse_pyi_text(
+        """
+values: Allocatable[Float64[:]]
+shared_values: Annotated[Allocatable[Float64[:]], Aliased]
+""",
+        module_name="allocatable_numpy_policy",
+    )
+
+    complete_semantic_policies(module)
+
+    values = module.variables[0].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
+    shared_values = module.variables[1].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
+
+    assert values.to_numpy == "read_only_detached_copy"
+    assert shared_values.to_numpy == "borrowed_view"
+
+
+def test_native_array_handle_build_requirements_are_selected_from_completed_policy():
+    module = parse_pyi_text(
+        """
+values: Allocatable[Float64[:]]
+default_target: Pointer[Float64[:]]
+
+def inspect(
+    target: Annotated[
+        Pointer[Float64[:]],
+        PointerPolicy(
+            nullable=True,
+            transfer="call_local",
+            target_owner="caller",
+            lifetime="call",
+            deallocation="never",
+            shape_source="pointer_bounds",
+            contiguity="strided",
+            reassociation="never",
+            aliasing="borrowed",
+            mutability="view",
+        ),
+    ],
+) -> None: ...
+""",
+        module_name="native_handle_build",
+    )
+
+    complete_semantic_policies(module)
+
+    requirements = native_array_handle_build_requirements(module)
+
+    assert requirements.pointer_c_descriptor_interop is True
+    assert requirements.requires_iso_fortran_binding is True
+    assert requirements.headers == ("ISO_Fortran_binding.h",)
+    assert requirements.items == (
+        NativeArrayBuildRequirement(
+            owner="native_handle_build.inspect.target",
+            item="target",
+            descriptor_kind="pointer",
+            handle_kind="argument_descriptor",
+            descriptor_interop="pointer_c_descriptor",
+            headers=("ISO_Fortran_binding.h",),
+        ),
+    )
+
+
+def test_native_array_handle_build_requirements_ignore_raw_default_handle_syntax():
+    module = parse_pyi_text(
+        """
+values: Allocatable[Float64[:]]
+target: Pointer[Float64[:]]
+
+class box:
+    values: Allocatable[Float64[:]]
+    target: Pointer[Float64[:]]
+""",
+        module_name="native_handle_no_interop",
+    )
+
+    complete_semantic_policies(module)
+
+    requirements = native_array_handle_build_requirements(module)
+
+    assert requirements.pointer_c_descriptor_interop is False
+    assert requirements.requires_iso_fortran_binding is False
+    assert requirements.headers == ()
+    assert requirements.items == ()
+
+
+def test_native_array_handle_build_requirements_require_completed_policy():
+    module = parse_pyi_text(
+        """
+target: Pointer[Float64[:]]
+""",
+        module_name="native_handle_missing_policy",
+    )
+
+    with pytest.raises(ValueError, match="run complete_semantic_policies"):
+        native_array_handle_build_requirements(module)
 
 
 def test_policy_completion_converts_native_addr_projection_after_python_boundary_parsing():
@@ -1184,6 +1696,32 @@ def inspect(value: Int32) -> None: ...
     decision = argument.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
     assert decision.python_barrier_action is PythonBarrierAction.SCALAR_VALUE
     assert decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+
+
+@pytest.mark.parametrize(
+    ("descriptor_kind", "annotation"),
+    [
+        ("allocatable", "Allocatable[Float64[:]]"),
+        ("pointer", "Pointer[Float64[:]]"),
+    ],
+)
+def test_policy_completion_rejects_addr_projection_for_array_descriptor_handles(
+    descriptor_kind,
+    annotation,
+):
+    module = parse_pyi_text(
+        f"""
+@native_call([Addr(Arg(0))])
+def consume(values: {annotation}) -> None: ...
+""",
+        module_name=f"{descriptor_kind}_addr_projection",
+    )
+    argument = module.functions[0].arguments[0]
+
+    assert native_array_descriptor_kind(argument.semantic_type) == descriptor_kind
+
+    with pytest.raises(ValueError, match=r"Addr\(Arg\(i\)\) is only valid for primitive scalar values"):
+        complete_semantic_policies(module)
 
 
 def test_policy_completion_prunes_unexported_entry_declarations_before_lowering():
