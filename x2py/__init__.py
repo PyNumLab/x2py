@@ -41,7 +41,7 @@ from x2py.semantics.pyi2ir import convert_pyi_to_ir
 from x2py.pyi_pipeline import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
 from x2py.codegen.printers.pyi_printer import emit_module_stubs, opaque_dependency_modules
 from x2py.semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
-from x2py.runtime_handles import AllocatableHandle, NativeArrayHandleBase, PointerHandle
+from x2py.runtime_handles import AllocatableArray, NativeArrayHandleBase, PointerArray
 
 from .cli import main
 
@@ -87,7 +87,7 @@ def __getattr__(name: str):
 
 __all__ = (
     "SEMANTIC_DTYPE_TO_NUMPY_DTYPE",
-    "AllocatableHandle",
+    "AllocatableArray",
     "CFile",
     "CParseError",
     "CProject",
@@ -110,7 +110,7 @@ __all__ = (
     "NativeCompilationUnit",
     "NativeLinkItem",
     "NativePrebuiltArtifact",
-    "PointerHandle",
+    "PointerArray",
     "WrapperBuildResult",
     "assess_pyi_wrap_readiness",
     "assess_semantic_wrap_readiness",

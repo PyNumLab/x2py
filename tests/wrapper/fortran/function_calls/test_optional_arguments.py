@@ -13,7 +13,7 @@ from tests.wrapper.fortran._support import (
     _sole_native_module,
     wrapper_source,
 )
-from x2py.runtime_handles import _NativeArrayHandoff, AllocatableHandle, PointerHandle
+from x2py.runtime_handles import _NativeArrayHandoff, AllocatableArray, PointerArray
 
 OPTIONAL_F90_SOURCE = wrapper_source("foptional_f90.f90")
 OPTIONAL_FIXED_SOURCE = wrapper_source("foptional_fixed.f")
@@ -21,7 +21,7 @@ CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 
 
 def _unallocated_handle_for_rejected_optional_array():
-    return AllocatableHandle(
+    return AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -37,7 +37,7 @@ def _unallocated_handle_for_rejected_optional_array():
 
 
 def _unassociated_handle_for_rejected_optional_array():
-    return PointerHandle(
+    return PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={

@@ -503,7 +503,7 @@ module_values: Annotated[
 ]
 ```
 
-Python receives a persistent `AllocatableHandle` for the module descriptor.
+Python receives a persistent `AllocatableArray` for the module descriptor.
 `handle.to_numpy()` may expose a zero-copy view because `Aliased` proves the
 required addressability. NumPy must not free the data. A native
 allocate/deallocate routine controls the allocation, and a later native
@@ -534,7 +534,7 @@ class buffer:
 
 The containing Python extension object owns the native derived-type instance;
 the allocatable component belongs to that instance. Access returns an
-`AllocatableHandle` that retains the wrapper. A NumPy view returned by
+`AllocatableArray` that retains the wrapper. A NumPy view returned by
 `handle.to_numpy()` retains the handle, so the owner chain remains live. The
 generated wrapper deallocator finalizes/releases the native instance after the
 last owning reference is gone. An explicit native component-deallocation method
@@ -566,7 +566,7 @@ def build_values(
 
 Native code produces allocatable output storage. The generated binding
 transfers its values into persistent descriptor storage and returns an owned
-`AllocatableHandle`. The handle remains valid after the native call;
+`AllocatableArray`. The handle remains valid after the native call;
 `handle.close()` or finalization releases its allocation. A NumPy view extracted
 with `to_numpy()` retains the handle and is not a detached copy.
 

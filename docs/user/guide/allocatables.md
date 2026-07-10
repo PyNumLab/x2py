@@ -27,6 +27,10 @@ itself choose copy, replacement, borrowed-view, or owned-handle behavior. The
 declaration context and completed ownership policy choose that behavior before
 wrapper lowering.
 
+At runtime, every allocatable array handle described below is an
+`AllocatableArray`. Scalar allocatables never produce an `AllocatableArray`;
+they remain ordinary `T | None` values at the Python boundary.
+
 ## Array Handles
 
 `Allocatable[T[...]]` is the active allocatable-array spelling in semantic
@@ -313,7 +317,7 @@ the previous borrowed view stale.
 ## Output And Function Results
 
 Allocated top-level results and non-optional hidden allocatable outputs return
-wrapper-owned `AllocatableHandle` objects. The generated binding transfers the
+wrapper-owned `AllocatableArray` objects. The generated binding transfers the
 result into persistent descriptor storage; the handle releases that storage on
 `close()` or finalization. Unallocated storage is represented by a present
 handle whose `allocated` property is false and whose `to_numpy()` result is
@@ -327,7 +331,7 @@ independent result handles.
 ## Inout Replacement
 
 An allocatable `intent(inout)` descriptor argument accepts an
-`AllocatableHandle`, not a plain NumPy array. A matching `Returns[...]`
+`AllocatableArray`, not a plain NumPy array. A matching `Returns[...]`
 projection records that the same caller handle is the Python result. Policy
 completion marks that descriptor boundary read-write before lowering; generated
 binding code does not manufacture a replacement ndarray or a second handle.

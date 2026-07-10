@@ -14,7 +14,7 @@ import pytest
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran.fmath_cases import fmath_cases
 from x2py import build_pyi_extension
-from x2py.runtime_handles import AllocatableHandle
+from x2py.runtime_handles import AllocatableArray
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WRAPPER_TEST_ROOT = Path(__file__).resolve().parent
@@ -380,8 +380,8 @@ def _assert_modern_class_examples(module):
     store = module.vector_store()
     values = store.values
     matrix_values = store.matrix
-    assert isinstance(values, AllocatableHandle)
-    assert isinstance(matrix_values, AllocatableHandle)
+    assert isinstance(values, AllocatableArray)
+    assert isinstance(matrix_values, AllocatableArray)
     assert values.owner is store
     assert matrix_values.owner is store
     assert values.allocated is False
@@ -435,7 +435,7 @@ def _assert_modern_class_examples(module):
 
     made = module.vector_store.make(np.int64(4), np.float64(1.5))
     made_values = made.values
-    assert isinstance(made_values, AllocatableHandle)
+    assert isinstance(made_values, AllocatableArray)
     assert made_values.owner is made
     np.testing.assert_allclose(made_values.to_numpy(), np.full(4, 1.5, dtype=np.float64))
     made_owner_id = id(made)

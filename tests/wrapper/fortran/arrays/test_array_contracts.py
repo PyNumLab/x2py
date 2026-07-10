@@ -10,7 +10,7 @@ from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
 )
-from x2py.runtime_handles import _NativeArrayHandoff, AllocatableHandle, PointerHandle
+from x2py.runtime_handles import _NativeArrayHandoff, AllocatableArray, PointerArray
 
 ARRAY_CONTRACTS_F90_SOURCE = wrapper_source("farray_contracts_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
@@ -22,7 +22,7 @@ def _handoff(address):
 
 
 def _absent_allocatable_handle():
-    return AllocatableHandle(
+    return AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -38,7 +38,7 @@ def _absent_allocatable_handle():
 
 
 def _array_allocatable_handle(value):
-    return AllocatableHandle(
+    return AllocatableArray(
         dtype=value.dtype,
         rank=value.ndim,
         ops={
@@ -58,7 +58,7 @@ def _array_allocatable_handle(value):
 
 
 def _absent_pointer_handle():
-    return PointerHandle(
+    return PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -73,7 +73,7 @@ def _absent_pointer_handle():
 
 
 def _array_pointer_handle(value):
-    return PointerHandle(
+    return PointerArray(
         dtype=value.dtype,
         rank=value.ndim,
         ops={

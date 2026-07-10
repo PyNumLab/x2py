@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from x2py.runtime_handles import AllocatableHandle
+from x2py.runtime_handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
@@ -74,16 +74,16 @@ def test_array_results_follow_data_buffer_and_descriptor_handle_contracts(
     assert zero.base is not None
 
     zero_alloc = module.zero_alloc_vector()
-    assert isinstance(zero_alloc, AllocatableHandle)
+    assert isinstance(zero_alloc, AllocatableArray)
     assert zero_alloc.allocated is True
     assert zero_alloc.shape == (0,)
     assert zero_alloc.to_numpy().shape == (0,)
 
     allocated = module.maybe_alloc_vector(np.int32(3))
-    assert isinstance(allocated, AllocatableHandle)
+    assert isinstance(allocated, AllocatableArray)
     np.testing.assert_allclose(allocated.to_numpy(), np.array([5.0, 10.0, 15.0], dtype=np.float64))
     unallocated = module.maybe_alloc_vector(np.int32(0))
-    assert isinstance(unallocated, AllocatableHandle)
+    assert isinstance(unallocated, AllocatableArray)
     assert unallocated.allocated is False
     assert unallocated.to_numpy() is None
 

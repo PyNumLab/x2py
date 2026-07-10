@@ -252,6 +252,8 @@ copy for `Pointer[T[...]]` results.
 ## Pointer Fields And Module Variables
 
 Pointer-backed fields and module variables expose `Pointer[T[...]]` handles.
+Their runtime Python class is `PointerArray`. Scalar pointers never produce a
+`PointerArray`; they remain ordinary `T | None` values at the Python boundary.
 The containing object or module does not automatically own the pointer target.
 Derived-field handles keep the parent wrapper alive for descriptor access, but
 that retention is not target ownership. Plain `Pointer[T[...]]` has a default

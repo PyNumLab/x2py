@@ -22,8 +22,8 @@ from the storage that the Python caller must allocate.
 | array `intent(in)` | visible NumPy array | no result |
 | array `intent(out)` | visible writable NumPy array | same array when projected |
 | array `intent(inout)` | visible writable NumPy array | mutated in place; not duplicated unless explicitly projected |
-| allocatable array `intent(out)` | hidden unless optional | wrapper-owned `AllocatableHandle` |
-| allocatable array `intent(inout)` | visible `AllocatableHandle` argument | same handle when projected; allocation state changes in place |
+| allocatable array `intent(out)` | hidden unless optional | wrapper-owned `AllocatableArray` |
+| allocatable array `intent(inout)` | visible `AllocatableArray` argument | same handle when projected; allocation state changes in place |
 | supported derived `intent(out)` | hidden | new wrapper-owned instance |
 
 `optional, intent(out)` is the visibility exception for normally hidden

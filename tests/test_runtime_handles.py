@@ -17,17 +17,17 @@ from x2py.runtime_handles import (
     _native_array_descriptor_handoff_for_binding_positional,
     _native_array_handle_from_generated_ops,
     _numpy_view_from_pointer_c_descriptor,
-    AllocatableHandle,
+    AllocatableArray,
     NativeArrayHandleBase,
-    PointerHandle,
+    PointerArray,
 )
 
 
 def test_runtime_handle_classes_are_public_api_exports():
-    assert x2py.AllocatableHandle is AllocatableHandle
+    assert x2py.AllocatableArray is AllocatableArray
     assert x2py.NativeArrayHandleBase is NativeArrayHandleBase
-    assert x2py.PointerHandle is PointerHandle
-    assert {"AllocatableHandle", "NativeArrayHandleBase", "PointerHandle"} <= set(x2py.__all__)
+    assert x2py.PointerArray is PointerArray
+    assert {"AllocatableArray", "NativeArrayHandleBase", "PointerArray"} <= set(x2py.__all__)
 
 
 class _ArrayState:
@@ -97,7 +97,7 @@ def test_generated_handle_factory_adapts_private_operations_to_runtime_protocol(
         generation=9,
     )
 
-    assert isinstance(handle, AllocatableHandle)
+    assert isinstance(handle, AllocatableArray)
     assert handle.owner is owner
     assert handle.generation == 9
     assert handle.shape == (3,)
@@ -257,7 +257,7 @@ def test_allocatable_handle_uses_common_metadata_shape_owner_and_numpy_dispatch(
         "resize": lambda _handle, shape: setattr(state, "shape", shape),
     }
 
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype="float64",
         rank=2,
         ops=ops,
@@ -281,7 +281,7 @@ def test_allocatable_handle_uses_common_metadata_shape_owner_and_numpy_dispatch(
 
 
 def test_allocatable_to_numpy_short_circuits_unallocated_state_before_generated_extraction():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype="float64",
         rank=1,
         ops={
@@ -296,7 +296,7 @@ def test_allocatable_to_numpy_short_circuits_unallocated_state_before_generated_
 
 
 def test_pointer_to_numpy_short_circuits_unassociated_state_before_unsupported_policy():
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype="float64",
         rank=1,
         ops={
@@ -315,7 +315,7 @@ def test_shape_short_circuits_absent_descriptor_state_before_generated_shape():
     def fail_shape(_handle):
         pytest.fail("absent descriptor state must not call generated shape")
 
-    allocatable = AllocatableHandle(
+    allocatable = AllocatableArray(
         dtype="float64",
         rank=1,
         ops={
@@ -325,7 +325,7 @@ def test_shape_short_circuits_absent_descriptor_state_before_generated_shape():
         },
         to_numpy_policy="unsupported",
     )
-    pointer = PointerHandle(
+    pointer = PointerArray(
         dtype="float64",
         rank=1,
         ops={
@@ -344,7 +344,7 @@ def test_shape_short_circuits_absent_descriptor_state_before_generated_shape():
 def test_owned_handle_close_calls_destroy_once_and_blocks_later_use():
     calls = []
     state = _ArrayState(shape=(2,), value=np.zeros(2, dtype=np.float64))
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype="float64",
         rank=1,
         ops={
@@ -373,7 +373,7 @@ def test_owned_handle_close_marks_closed_when_destroy_raises():
         calls.append("destroy")
         raise RuntimeError("boom")
 
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype="float64",
         rank=1,
         ops={
@@ -400,7 +400,7 @@ def test_owned_handle_close_marks_closed_when_destroy_raises():
 def test_owned_handle_finalizer_calls_destroy_once():
     calls = []
 
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype="float64",
         rank=1,
         ops={
@@ -421,7 +421,7 @@ def test_owned_handle_finalizer_calls_destroy_once():
 
 def test_owned_handle_construction_requires_generated_destroy_operation():
     with pytest.raises(ValueError, match="owned native array handle requires generated operation 'destroy'"):
-        AllocatableHandle(
+        AllocatableArray(
             dtype="float64",
             rank=1,
             ops={
@@ -437,7 +437,7 @@ def test_owned_handle_construction_requires_generated_destroy_operation():
 def test_borrowed_handle_close_and_finalizer_do_not_destroy_native_storage():
     calls = []
 
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype="float64",
         rank=1,
         ops={
@@ -466,7 +466,7 @@ def test_allocatable_handle_reports_absent_state_and_routes_resize_deallocate():
         "deallocate": lambda _handle: setattr(state, "shape", None),
         "resize": lambda _handle, shape: setattr(state, "shape", shape),
     }
-    handle = AllocatableHandle(dtype="float64", rank=1, ops=ops)
+    handle = AllocatableArray(dtype="float64", rank=1, ops=ops)
 
     assert handle.allocated is False
     assert handle.shape is None
@@ -484,7 +484,7 @@ def test_allocatable_handle_reports_absent_state_and_routes_resize_deallocate():
 def test_allocatable_to_numpy_policy_returns_mutable_borrowed_view():
     source = np.array([1.0, 2.0, 3.0], dtype=np.float64)
     state = _ArrayState(shape=source.shape, value=source)
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -507,7 +507,7 @@ def test_allocatable_to_numpy_policy_returns_mutable_borrowed_view():
 def test_allocatable_to_numpy_policy_returns_read_only_detached_snapshot():
     source = np.array([1.0, 2.0, 3.0], dtype=np.float64)
     state = _ArrayState(shape=source.shape, value=source)
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -532,7 +532,7 @@ def test_allocatable_to_numpy_policy_returns_read_only_detached_snapshot():
 def test_to_numpy_contiguous_view_policy_rejects_non_contiguous_storage():
     source = np.arange(8, dtype=np.float64)
     strided = source[::2]
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -551,7 +551,7 @@ def test_to_numpy_contiguous_view_policy_rejects_non_contiguous_storage():
 
 def test_to_numpy_copy_only_policy_returns_detached_writeable_copy():
     source = np.arange(4, dtype=np.float64)
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -577,7 +577,7 @@ def test_to_numpy_copy_only_policy_returns_detached_writeable_copy():
     ["borrowed_view", "contiguous_view", "copy_only", "descriptor_view", "read_only_detached_copy"],
 )
 def test_to_numpy_rejects_generated_non_numpy_results(policy: str):
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -596,7 +596,7 @@ def test_to_numpy_rejects_generated_non_numpy_results(policy: str):
 
 
 def test_to_numpy_rejects_generated_none_for_present_descriptor_state():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -612,7 +612,7 @@ def test_to_numpy_rejects_generated_none_for_present_descriptor_state():
 
 
 def test_to_numpy_rejects_generated_array_with_wrong_rank_or_dtype():
-    wrong_rank = AllocatableHandle(
+    wrong_rank = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -625,7 +625,7 @@ def test_to_numpy_rejects_generated_array_with_wrong_rank_or_dtype():
     with pytest.raises(ValueError, match="to_numpy result rank 2 does not match declared rank 1"):
         wrong_rank.to_numpy()
 
-    wrong_dtype = AllocatableHandle(
+    wrong_dtype = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -643,7 +643,7 @@ def test_allocatable_array_actual_hook_requires_allocated_state_without_to_numpy
     actual = _handoff(201)
     calls = []
     state = _ArrayState()
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -665,7 +665,7 @@ def test_allocatable_array_actual_hook_requires_allocated_state_without_to_numpy
 
 
 def test_array_actual_hook_rejects_generated_none_handoff():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -694,7 +694,7 @@ def test_native_array_handoff_requires_non_null_pointer_address():
 
 
 def test_array_actual_hook_rejects_generated_untyped_handoff_object():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -711,7 +711,7 @@ def test_array_actual_hook_rejects_generated_untyped_handoff_object():
 
 
 def test_array_actual_hook_validates_expected_dtype_and_rank():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=2,
         ops={
@@ -732,7 +732,7 @@ def test_array_actual_hook_validates_expected_dtype_and_rank():
 def test_array_actual_hook_validates_expected_shape_layout_and_writeability():
     actual = _handoff(206)
     calls = []
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=2,
         ops={
@@ -766,7 +766,7 @@ def test_array_actual_hook_validates_expected_shape_layout_and_writeability():
     with pytest.raises(ValueError, match="expected layout 'C'"):
         handle._array_actual_for_binding(expected_layout="C")
 
-    read_only = AllocatableHandle(
+    read_only = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -781,7 +781,7 @@ def test_array_actual_hook_validates_expected_shape_layout_and_writeability():
     with pytest.raises(TypeError, match="must be writeable"):
         read_only._array_actual_for_binding(require_writeable=True)
 
-    missing_writeable = AllocatableHandle(
+    missing_writeable = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -797,7 +797,7 @@ def test_array_actual_hook_validates_expected_shape_layout_and_writeability():
 
 
 def test_array_actual_hook_rejects_unsupported_layout_names_before_handoff():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -813,7 +813,7 @@ def test_array_actual_hook_rejects_unsupported_layout_names_before_handoff():
     with pytest.raises(ValueError, match="unsupported expected NumPy array layout 'A'"):
         handle._array_actual_for_binding(expected_layout="A")
 
-    invalid_actual = AllocatableHandle(
+    invalid_actual = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -831,7 +831,7 @@ def test_array_actual_hook_rejects_unsupported_layout_names_before_handoff():
 
 def test_array_actual_hook_validates_native_byte_order_and_alignment_ops():
     actual = _handoff(214)
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -853,7 +853,7 @@ def test_array_actual_hook_validates_native_byte_order_and_alignment_ops():
         is actual
     )
 
-    byte_swapped = AllocatableHandle(
+    byte_swapped = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -868,7 +868,7 @@ def test_array_actual_hook_validates_native_byte_order_and_alignment_ops():
     with pytest.raises(TypeError, match="native byte order"):
         byte_swapped._array_actual_for_binding(require_native_byte_order=True)
 
-    unaligned = AllocatableHandle(
+    unaligned = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -931,7 +931,7 @@ def test_array_actual_binding_helper_routes_handles_without_numpy_conversion():
     alloc_actual = _handoff(220)
     pointer_actual = _handoff(221)
     calls = []
-    alloc_handle = AllocatableHandle(
+    alloc_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -946,7 +946,7 @@ def test_array_actual_binding_helper_routes_handles_without_numpy_conversion():
             "array_actual": lambda _handle: calls.append("alloc") or alloc_actual,
         },
     )
-    pointer_handle = PointerHandle(
+    pointer_handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -998,7 +998,7 @@ def test_array_actual_binding_helper_preserves_zero_length_array_actuals():
 
     alloc_actual = _handoff(224)
     pointer_actual = _handoff(225)
-    alloc_handle = AllocatableHandle(
+    alloc_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1009,7 +1009,7 @@ def test_array_actual_binding_helper_preserves_zero_length_array_actuals():
         },
         to_numpy_policy="unsupported",
     )
-    pointer_handle = PointerHandle(
+    pointer_handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1047,7 +1047,7 @@ def test_array_actual_argument_abi_packer_uses_ndarray_data_pointer_and_shape_fi
 def test_array_actual_argument_abi_packer_uses_allocatable_native_array_actual_without_numpy_conversion():
     actual = _handoff(246)
     calls = []
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1081,7 +1081,7 @@ def test_array_actual_argument_abi_packer_uses_allocatable_native_array_actual_w
 
 def test_array_actual_argument_abi_packer_uses_pointer_native_array_actual_dtype_metadata():
     actual = _handoff(248)
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float32),
         rank=1,
         ops={
@@ -1110,7 +1110,7 @@ def test_array_actual_argument_abi_packer_uses_pointer_native_array_actual_dtype
 
 
 def test_array_actual_argument_abi_packer_rejects_absent_handles_before_generated_handoff():
-    alloc_handle = AllocatableHandle(
+    alloc_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1121,7 +1121,7 @@ def test_array_actual_argument_abi_packer_rejects_absent_handles_before_generate
             "array_actual": lambda _handle: pytest.fail("unallocated handle must block native array handoff"),
         },
     )
-    pointer_handle = PointerHandle(
+    pointer_handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1141,7 +1141,7 @@ def test_array_actual_argument_abi_packer_rejects_absent_handles_before_generate
 
 
 def test_runtime_handle_shapes_reject_negative_extents_before_binding_handoff():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1162,7 +1162,7 @@ def test_runtime_handle_shapes_reject_negative_extents_before_binding_handoff():
     with pytest.raises(ValueError, match="non-negative"):
         handle.resize(-1)
 
-    valid_handle = AllocatableHandle(
+    valid_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1178,7 +1178,7 @@ def test_runtime_handle_shapes_reject_negative_extents_before_binding_handoff():
 
 
 def test_array_actual_binding_helper_rejects_absent_handles_none_and_non_arrays():
-    alloc_handle = AllocatableHandle(
+    alloc_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1189,7 +1189,7 @@ def test_array_actual_binding_helper_rejects_absent_handles_none_and_non_arrays(
             "array_actual": lambda _handle: _handoff(231),
         },
     )
-    pointer_handle = PointerHandle(
+    pointer_handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1215,7 +1215,7 @@ def test_array_actual_binding_helper_rejects_absent_handles_none_and_non_arrays(
 def test_allocatable_descriptor_hook_accepts_unallocated_descriptor_without_numpy_conversion():
     descriptor = _handoff(234)
     calls = []
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1238,7 +1238,7 @@ def test_allocatable_descriptor_hook_accepts_unallocated_descriptor_without_nump
 
 
 def test_descriptor_hook_rejects_generated_none_handoff():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1258,7 +1258,7 @@ def test_descriptor_hook_rejects_generated_none_handoff():
 
 def test_descriptor_hook_validates_expected_dtype_rank_and_current_shape():
     descriptor = _handoff(235)
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=2,
         ops={
@@ -1294,7 +1294,7 @@ def test_descriptor_hook_validates_expected_dtype_rank_and_current_shape():
 def test_descriptor_binding_helper_accepts_matching_handles_and_optional_none():
     alloc_descriptor = _handoff(236)
     pointer_descriptor = _handoff(237)
-    alloc_handle = AllocatableHandle(
+    alloc_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1305,7 +1305,7 @@ def test_descriptor_binding_helper_accepts_matching_handles_and_optional_none():
         },
         to_numpy_policy="unsupported",
     )
-    pointer_handle = PointerHandle(
+    pointer_handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1345,7 +1345,7 @@ def test_descriptor_binding_helper_accepts_matching_handles_and_optional_none():
 
 
 def test_descriptor_binding_helper_rejects_plain_arrays_none_and_wrong_kind():
-    alloc_handle = AllocatableHandle(
+    alloc_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1371,7 +1371,7 @@ def test_descriptor_binding_helper_rejects_plain_arrays_none_and_wrong_kind():
 
 def test_descriptor_argument_abi_packer_returns_required_descriptor_fields():
     descriptor = _handoff(239)
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1394,7 +1394,7 @@ def test_descriptor_argument_abi_packer_returns_required_descriptor_fields():
 
 def test_descriptor_argument_abi_packer_positional_helper_matches_generated_call_shape():
     descriptor = _handoff(242)
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1426,7 +1426,7 @@ def test_descriptor_argument_abi_packer_positional_helper_matches_generated_call
 
 def test_descriptor_argument_abi_packer_maps_optional_presence_and_absence():
     descriptor = _handoff(240)
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1458,7 +1458,7 @@ def test_descriptor_argument_abi_packer_maps_optional_presence_and_absence():
 
 
 def test_descriptor_argument_abi_packer_rejects_wrong_kind_and_unsupported_descriptor_kind():
-    alloc_handle = AllocatableHandle(
+    alloc_handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1480,7 +1480,7 @@ def test_descriptor_argument_abi_packer_rejects_wrong_kind_and_unsupported_descr
 
 def test_projected_descriptor_handoff_requires_persistent_standard_descriptor_storage():
     direct = _NativeArrayDescriptorHandoff(0x1234)
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1516,7 +1516,7 @@ def test_projected_descriptor_handoff_requires_persistent_standard_descriptor_st
         True,
     ) == (None, None)
 
-    fact_packed = AllocatableHandle(
+    fact_packed = AllocatableArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1544,7 +1544,7 @@ def test_pointer_handle_uses_common_base_and_nullify_operation():
         "nullify": nullify,
         "destroy": lambda _handle: None,
     }
-    handle = PointerHandle(dtype="int32", rank=1, ops=ops, descriptor_ownership="owned")
+    handle = PointerArray(dtype="int32", rank=1, ops=ops, descriptor_ownership="owned")
 
     assert isinstance(handle, NativeArrayHandleBase)
     assert handle.descriptor_kind == "pointer"
@@ -1563,7 +1563,7 @@ def test_pointer_array_actual_hook_requires_associated_state_without_to_numpy():
     actual = _handoff(242)
     calls = []
     state = _ArrayState()
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1587,7 +1587,7 @@ def test_pointer_array_actual_hook_requires_associated_state_without_to_numpy():
 
 def test_pointer_allocation_operations_are_policy_gated_by_ops_table():
     state = _ArrayState(shape=(1,), value=object())
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype="float64",
         rank=1,
         ops={
@@ -1620,7 +1620,7 @@ def test_pointer_allocation_operations_route_when_policy_ops_exist():
         state.shape = shape
         state.value = object()
 
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype="float64",
         rank=2,
         ops={
@@ -1647,7 +1647,7 @@ def test_pointer_allocation_operations_route_when_policy_ops_exist():
 
 
 def test_pointer_to_numpy_reports_missing_descriptor_extraction():
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype="float64",
         rank=1,
         ops={
@@ -1781,7 +1781,7 @@ def test_pointer_descriptor_view_policy_uses_decoded_descriptor_fields_for_strid
     source = np.arange(10, dtype=np.float64)
     strided = source[1::2]
     state = _ArrayState(shape=strided.shape, value=strided)
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1805,7 +1805,7 @@ def test_pointer_descriptor_view_policy_uses_decoded_descriptor_fields_for_strid
 
 def test_pointer_descriptor_view_policy_rejects_decoded_descriptor_rank_mismatch():
     source = np.arange(4, dtype=np.float64)
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=2,
         ops={
@@ -1825,7 +1825,7 @@ def test_pointer_descriptor_view_policy_rejects_decoded_descriptor_rank_mismatch
 def test_pointer_descriptor_view_policy_maps_null_decoded_descriptor_to_none():
     source = np.arange(4, dtype=np.float64)
     descriptor = {**_pointer_descriptor_for_array(source), "base_addr": 0}
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1844,7 +1844,7 @@ def test_pointer_descriptor_view_policy_maps_null_decoded_descriptor_to_none():
 def test_pointer_descriptor_view_policy_rejects_null_descriptor_for_present_state():
     source = np.arange(4, dtype=np.float64)
     descriptor = {**_pointer_descriptor_for_array(source), "base_addr": 0}
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1862,7 +1862,7 @@ def test_pointer_descriptor_view_policy_rejects_null_descriptor_for_present_stat
 
 
 def test_to_numpy_policy_unsupported_reports_completed_policy_block():
-    handle = PointerHandle(
+    handle = PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
@@ -1880,7 +1880,7 @@ def test_to_numpy_policy_unsupported_reports_completed_policy_block():
 
 
 def test_common_shape_dispatch_validates_rank():
-    handle = AllocatableHandle(
+    handle = AllocatableArray(
         dtype="float64",
         rank=2,
         ops={
@@ -1910,19 +1910,19 @@ def test_common_handle_rejects_invalid_descriptor_kind():
 
 def test_common_handle_rejects_invalid_generated_operation_table():
     with pytest.raises(TypeError, match="operation names must be strings"):
-        AllocatableHandle(dtype="float64", rank=1, ops={1: lambda _handle: None})
+        AllocatableArray(dtype="float64", rank=1, ops={1: lambda _handle: None})
     with pytest.raises(TypeError, match="operation 'shape' must be callable"):
-        AllocatableHandle(dtype="float64", rank=1, ops={"shape": None})
+        AllocatableArray(dtype="float64", rank=1, ops={"shape": None})
 
 
 def test_common_handle_requires_generated_shape_operation():
     with pytest.raises(ValueError, match="requires generated operation 'shape'"):
-        AllocatableHandle(dtype="float64", rank=1, ops={})
+        AllocatableArray(dtype="float64", rank=1, ops={})
 
 
 def test_common_handle_requires_generated_handoff_operations():
     with pytest.raises(ValueError, match="requires generated operation 'array_actual'"):
-        AllocatableHandle(
+        AllocatableArray(
             dtype="float64",
             rank=1,
             ops={
@@ -1932,7 +1932,7 @@ def test_common_handle_requires_generated_handoff_operations():
             to_numpy_policy="unsupported",
         )
     with pytest.raises(ValueError, match="requires generated operation 'descriptor'"):
-        AllocatableHandle(
+        AllocatableArray(
             dtype="float64",
             rank=1,
             ops={
@@ -1946,7 +1946,7 @@ def test_common_handle_requires_generated_handoff_operations():
 
 def test_extraction_enabled_handle_requires_generated_to_numpy_operation():
     with pytest.raises(ValueError, match="requires generated operation 'to_numpy'"):
-        AllocatableHandle(
+        AllocatableArray(
             dtype="float64",
             rank=1,
             ops={
@@ -1960,7 +1960,7 @@ def test_extraction_enabled_handle_requires_generated_to_numpy_operation():
 
 def test_allocatable_handle_requires_generated_allocated_operation():
     with pytest.raises(ValueError, match="requires generated operation 'allocated'"):
-        AllocatableHandle(
+        AllocatableArray(
             dtype="float64",
             rank=1,
             ops={
@@ -1973,7 +1973,7 @@ def test_allocatable_handle_requires_generated_allocated_operation():
 
 def test_pointer_handle_requires_generated_associated_and_nullify_operations():
     with pytest.raises(ValueError, match="requires generated operation 'associated'"):
-        PointerHandle(
+        PointerArray(
             dtype="float64",
             rank=1,
             ops={
@@ -1983,7 +1983,7 @@ def test_pointer_handle_requires_generated_associated_and_nullify_operations():
             },
         )
     with pytest.raises(ValueError, match="requires generated operation 'nullify'"):
-        PointerHandle(
+        PointerArray(
             dtype="float64",
             rank=1,
             ops={
@@ -1996,9 +1996,9 @@ def test_pointer_handle_requires_generated_associated_and_nullify_operations():
 
 def test_common_handle_rejects_invalid_descriptor_ownership():
     with pytest.raises(ValueError, match="descriptor_ownership must be 'borrowed' or 'owned'"):
-        AllocatableHandle(dtype="float64", rank=1, ops={}, descriptor_ownership="temporary")
+        AllocatableArray(dtype="float64", rank=1, ops={}, descriptor_ownership="temporary")
 
 
 def test_common_handle_rejects_invalid_to_numpy_policy():
     with pytest.raises(ValueError, match="to_numpy_policy must be one of"):
-        AllocatableHandle(dtype="float64", rank=1, ops={}, to_numpy_policy="maybe_copy")
+        AllocatableArray(dtype="float64", rank=1, ops={}, to_numpy_policy="maybe_copy")

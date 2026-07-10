@@ -6219,7 +6219,7 @@ class CPythonBindingGenerator(BindingGenerator):
         decision = getattr(var, "ownership_decision", None)
         handle_policy = getattr(var, "native_array_handle_policy", None)
         if handle_policy is not None:
-            handle_name = "AllocatableHandle" if handle_policy.descriptor_kind == "allocatable" else "PointerHandle"
+            handle_name = "AllocatableArray" if handle_policy.descriptor_kind == "allocatable" else "PointerArray"
             doc_type = f"{handle_name}[{CPythonBindingGenerator._dtype_doc(var)}]"
         elif decision is not None and decision.python_barrier_action is PythonBarrierAction.STRING_STORAGE:
             doc_type = "ndarray[bytes]"

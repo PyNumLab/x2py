@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import _build_source_or_generated_pyi_and_import, wrapper_source
-from x2py.runtime_handles import _NativeArrayHandoff, AllocatableHandle, PointerHandle
+from x2py.runtime_handles import _NativeArrayHandoff, AllocatableArray, PointerArray
 
 ASSUMED_RANK_F90_SOURCE = wrapper_source("fassumed_rank_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
@@ -14,7 +14,7 @@ _MAX_WRAPPER_TEST_RANK = 15
 
 
 def _allocated_handle_for_rejected_assumed_rank(value):
-    return AllocatableHandle(
+    return AllocatableArray(
         dtype=value.dtype,
         rank=value.ndim,
         ops={
@@ -34,7 +34,7 @@ def _allocated_handle_for_rejected_assumed_rank(value):
 
 
 def _unassociated_handle_for_rejected_assumed_rank():
-    return PointerHandle(
+    return PointerArray(
         dtype=np.dtype(np.float64),
         rank=1,
         ops={

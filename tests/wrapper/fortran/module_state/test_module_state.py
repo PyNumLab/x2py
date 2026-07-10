@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from x2py.runtime_handles import AllocatableHandle
+from x2py.runtime_handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
@@ -122,7 +122,7 @@ def test_aliased_derived_module_object_borrows_native_state(
     current = module.current
     assert isinstance(current, module.box)
     values = current.values
-    assert isinstance(values, AllocatableHandle)
+    assert isinstance(values, AllocatableArray)
     assert values.owner is current
     assert values.allocated is False
     assert values.to_numpy() is None
@@ -156,6 +156,6 @@ def test_aliased_derived_module_object_borrows_native_state(
 
     module.deallocate_current()
     current_values = module.current.values
-    assert isinstance(current_values, AllocatableHandle)
+    assert isinstance(current_values, AllocatableArray)
     assert current_values.allocated is False
     assert current_values.to_numpy() is None

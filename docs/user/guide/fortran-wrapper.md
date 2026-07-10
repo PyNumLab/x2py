@@ -487,9 +487,9 @@ The central rule is:
 
 For example, both a non-optional allocatable output dummy and an allocatable
 component use the Fortran `allocatable` attribute, but they have different
-owners. The output dummy becomes an owned `AllocatableHandle` whose finalizer
+owners. The output dummy becomes an owned `AllocatableArray` whose finalizer
 releases x2py-owned descriptor storage. A component becomes a borrowed
-`AllocatableHandle` that retains its containing native wrapper.
+`AllocatableArray` that retains its containing native wrapper.
 
 ### Ownership Vocabulary
 
@@ -755,7 +755,7 @@ the return value unless other outputs require a tuple.
 ### Allocatable Outputs
 
 A non-optional allocatable array `intent(out)` dummy is hidden and returned as
-an owned `AllocatableHandle`. The generated binding transfers the native result
+an owned `AllocatableArray`. The generated binding transfers the native result
 into persistent descriptor storage. Allocated and unallocated results both
 return a present handle; allocation state is read through `handle.allocated`.
 
@@ -900,7 +900,7 @@ Allocatable behavior depends on where the allocation lives.
 ### Allocatable Output And Function Results
 
 Top-level allocatable array function results and non-optional hidden
-allocatable array outputs return wrapper-owned `AllocatableHandle` objects.
+allocatable array outputs return wrapper-owned `AllocatableArray` objects.
 Allocated and unallocated native states both return a present handle. The
 handle owns persistent descriptor storage and releases it on `close()` or
 finalization.
@@ -930,7 +930,7 @@ assert missing.to_numpy() is None
 
 ### Allocatable `intent(inout)` Handle Mutation
 
-An allocatable array `intent(inout)` dummy accepts an `AllocatableHandle`, not
+An allocatable array `intent(inout)` dummy accepts an `AllocatableArray`, not
 a plain NumPy array. Native code reads and changes that descriptor directly. If
 the semantic contract projects the argument as a result, Python receives the
 same handle object rather than a replacement ndarray or a second handle.
@@ -956,7 +956,7 @@ np.testing.assert_array_equal(values.to_numpy(), [10.0, 20.0])
 ### Allocatable Fields And Module Arrays
 
 An allocatable derived-type field is owned by its containing native instance.
-Access returns an `AllocatableHandle` that retains the wrapper owner. An
+Access returns an `AllocatableArray` that retains the wrapper owner. An
 allocatable module array also returns a handle whose descriptor storage remains
 module-owned. `Aliased` permits borrowed view extraction; otherwise completed
 policy may select a detached read-only extraction. The attribute itself remains
@@ -1048,7 +1048,7 @@ Runtime tests: [`test_pointers.py`](../../../tests/wrapper/fortran/derived_types
 
 Numeric explicit-shape and automatic-shape array function results are returned
 as new Python-owned NumPy arrays. Allocatable array results use owned
-`AllocatableHandle` objects instead. Pointer-array results remain blocked
+`AllocatableArray` objects instead. Pointer-array results remain blocked
 because a returned pointer association does not establish stable owner storage
 or target lifetime.
 

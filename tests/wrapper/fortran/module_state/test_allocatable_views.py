@@ -17,7 +17,7 @@ from tests.wrapper.fortran._support import (
     wrapper_source,
 )
 from x2py import build_pyi_extension
-from x2py.runtime_handles import AllocatableHandle
+from x2py.runtime_handles import AllocatableArray
 
 ALLOCATABLE_VIEW_F90_SOURCE = wrapper_source("fallocatable_views_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
@@ -285,17 +285,17 @@ def test_allocatable_module_fields_and_results_expose_lifetime_safe_handles(
     assert "Functions" in module.__doc__
     assert "build_values" in module.__doc__
     assert "buffer" in module.__doc__
-    assert "build_values(n) -> AllocatableHandle[float64]" in module.build_values.__doc__
-    assert "values : AllocatableHandle[float64]" in module.build_values.__doc__
+    assert "build_values(n) -> AllocatableArray[float64]" in module.build_values.__doc__
+    assert "values : AllocatableArray[float64]" in module.build_values.__doc__
     assert "Descriptor ownership: owned" in module.build_values.__doc__
     assert "Unallocated state remains inside the returned handle." in module.build_values.__doc__
     assert not hasattr(module, "get_module_values")
     assert "Fields" in module.buffer.__doc__
-    assert "values : AllocatableHandle[float64]" in module.buffer.__doc__
+    assert "values : AllocatableArray[float64]" in module.buffer.__doc__
     assert "allocatable array descriptor handle" in module.buffer.values.__doc__
 
     module_values = module.module_values
-    assert isinstance(module_values, AllocatableHandle)
+    assert isinstance(module_values, AllocatableArray)
     assert module_values.allocated is False
     assert module_values.shape is None
     assert module_values.to_numpy() is None
@@ -313,13 +313,13 @@ def test_allocatable_module_fields_and_results_expose_lifetime_safe_handles(
     assert module_values.to_numpy() is None
 
     built_values = module.build_values(np.int32(4))
-    assert isinstance(built_values, AllocatableHandle)
+    assert isinstance(built_values, AllocatableArray)
     assert built_values.descriptor_ownership == "owned"
     np.testing.assert_allclose(built_values.to_numpy(), np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
     built_values.to_numpy()[0] = np.float64(-1.0)
     np.testing.assert_allclose(built_values.to_numpy(), np.array([-1.0, 4.0, 6.0, 8.0], dtype=np.float64))
     empty_values = module.build_values(np.int32(0))
-    assert isinstance(empty_values, AllocatableHandle)
+    assert isinstance(empty_values, AllocatableArray)
     assert empty_values.allocated is False
     assert empty_values.to_numpy() is None
 
@@ -329,7 +329,7 @@ def test_allocatable_module_fields_and_results_expose_lifetime_safe_handles(
         np.array([[11.0, 21.0], [12.0, 22.0]], dtype=np.float64),
     )
     empty_matrix = module.build_matrix(np.int32(0), np.int32(2))
-    assert isinstance(empty_matrix, AllocatableHandle)
+    assert isinstance(empty_matrix, AllocatableArray)
     assert empty_matrix.allocated is False
 
     made_values = module.make_values(np.int32(3))
@@ -350,7 +350,7 @@ def test_allocatable_module_fields_and_results_expose_lifetime_safe_handles(
 
     values = module.buffer()
     field_handle = values.values
-    assert isinstance(field_handle, AllocatableHandle)
+    assert isinstance(field_handle, AllocatableArray)
     assert field_handle.owner is values
     assert field_handle.allocated is False
     values.allocate_values(np.int32(3))
@@ -444,7 +444,7 @@ def test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction
     assert "Returned module snapshots are read-only and detached from later native changes." in wrapper_source_text
 
     handle = module.values
-    assert isinstance(handle, AllocatableHandle)
+    assert isinstance(handle, AllocatableArray)
     assert handle.allocated is False
     assert handle.shape is None
     assert handle.to_numpy() is None

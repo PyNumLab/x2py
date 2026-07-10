@@ -548,10 +548,10 @@ Add or reuse one internal runtime base for both public handle classes.
   `to_numpy_policy="unsupported"`.
 - [x] Enforce contiguous-view and copy-only `.to_numpy()` policies in the
   shared runtime handle.
-- [x] Implement `AllocatableHandle` as a descriptor-specific subclass.
+- [x] Implement `AllocatableArray` as a descriptor-specific subclass.
 - [x] Require allocatable runtime handles to provide the generated `allocated`
   operation at construction time.
-- [x] Implement `PointerHandle` as a descriptor-specific subclass.
+- [x] Implement `PointerArray` as a descriptor-specific subclass.
 - [x] Require pointer runtime handles to provide generated `associated` and
   default `nullify` operations at construction time.
 
@@ -747,9 +747,9 @@ and native handle inputs, but do not implement handle inputs by implicitly
 calling `.to_numpy()`. The handle path should route to a native array-actual
 handoff when the wrapped call is native.
 
-- [x] Accept `AllocatableHandle` objects for `Allocatable[T[...]]` parameters.
+- [x] Accept `AllocatableArray` objects for `Allocatable[T[...]]` parameters.
 - [x] Reject plain NumPy arrays for `Allocatable[T[...]]` parameters.
-- [x] Accept `PointerHandle` objects for `Pointer[T[...]]` parameters.
+- [x] Accept `PointerArray` objects for `Pointer[T[...]]` parameters.
 - [x] Reject plain NumPy arrays for `Pointer[T[...]]` parameters.
 - [x] Accept `None` for optional-absent handle parameters only when the `.pyi`
   annotation includes `| None`.
@@ -872,7 +872,7 @@ handoff when the wrapped call is native.
 
 ### Shared Runtime Handle Tests
 
-- [x] Verify `AllocatableHandle` and `PointerHandle` use the same common
+- [x] Verify `AllocatableArray` and `PointerArray` use the same common
   `to_numpy()`, `shape`, dtype, rank, owner-retention, and ops-table path.
 - [x] Verify common shape metadata is reported consistently.
 - [x] Verify common dtype metadata is reported consistently.

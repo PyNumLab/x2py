@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from x2py.runtime_handles import AllocatableHandle
+from x2py.runtime_handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     WRAPPER_TEST_ROOT,
     _build_source_or_generated_pyi_and_import,
@@ -59,11 +59,11 @@ def test_allocatable_inout_arrays_mutate_and_return_the_same_handle(
 
     factory = _build_allocatable_factory(pyi_parity_build_mode, tmp_path / "factory")
 
-    assert "replace_values(values, mode) -> AllocatableHandle[float64]" in module.replace_values.__doc__
-    assert "values : AllocatableHandle[float64]" in module.replace_values.__doc__
+    assert "replace_values(values, mode) -> AllocatableArray[float64]" in module.replace_values.__doc__
+    assert "values : AllocatableArray[float64]" in module.replace_values.__doc__
 
     values = factory.build_values(np.int32(2))
-    assert isinstance(values, AllocatableHandle)
+    assert isinstance(values, AllocatableArray)
     returned = module.replace_values(values, np.int32(1))
     assert returned is values
     np.testing.assert_allclose(values.to_numpy(), np.array([12.0, 14.0], dtype=np.float64))

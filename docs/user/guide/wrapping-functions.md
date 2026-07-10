@@ -113,7 +113,7 @@ Fortran-oriented element ordering, and returned ordinary arrays are independent
 Python-owned copies.
 
 An allocatable array function result has a different public shape: it returns a
-present `AllocatableHandle`, including when the native result is unallocated.
+present `AllocatableArray`, including when the native result is unallocated.
 Check `handle.allocated` and call `handle.to_numpy()` for explicit extraction.
 Pointer-array function results remain blocked until x2py can prove stable owner
 storage and target lifetime.

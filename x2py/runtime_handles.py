@@ -113,8 +113,8 @@ def _native_array_handle_from_generated_ops(
         normalized_ops[name] = normalized
     try:
         handle_cls = {
-            "allocatable": AllocatableHandle,
-            "pointer": PointerHandle,
+            "allocatable": AllocatableArray,
+            "pointer": PointerArray,
         }[descriptor_kind]
     except KeyError:
         raise ValueError("generated native array handle kind must be 'allocatable' or 'pointer'") from None
@@ -760,7 +760,7 @@ class NativeArrayHandleBase:
         return snapshot
 
 
-class AllocatableHandle(NativeArrayHandleBase):
+class AllocatableArray(NativeArrayHandleBase):
     """Runtime handle for a native allocatable array descriptor."""
 
     _REQUIRED_DESCRIPTOR_OPS = frozenset({"allocated"})
@@ -805,7 +805,7 @@ class AllocatableHandle(NativeArrayHandleBase):
         return self._call_op("resize", self._normalize_shape(shape))
 
 
-class PointerHandle(NativeArrayHandleBase):
+class PointerArray(NativeArrayHandleBase):
     """Runtime handle for a native pointer array descriptor."""
 
     _REQUIRED_DESCRIPTOR_OPS = frozenset({"associated", "nullify"})
@@ -964,8 +964,8 @@ def _native_array_descriptor_for_binding(
     """Return a generated native descriptor for a handle-typed binding argument."""
     try:
         expected_type = {
-            "allocatable": AllocatableHandle,
-            "pointer": PointerHandle,
+            "allocatable": AllocatableArray,
+            "pointer": PointerArray,
         }[descriptor_kind]
     except KeyError:
         raise ValueError(f"unsupported native array descriptor kind: {descriptor_kind!r}") from None
@@ -1160,7 +1160,7 @@ def _validate_ndarray_expected_layout(value: np.ndarray, expected_layout: str | 
 
 
 __all__ = (
-    "AllocatableHandle",
+    "AllocatableArray",
     "NativeArrayHandleBase",
-    "PointerHandle",
+    "PointerArray",
 )

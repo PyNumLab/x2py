@@ -17,7 +17,7 @@ from tests.wrapper.fortran._support import (
     wrapper_source,
 )
 from x2py import build_pyi_extension
-from x2py.runtime_handles import AllocatableHandle, PointerHandle
+from x2py.runtime_handles import AllocatableArray, PointerArray
 
 POINTERS_F90_SOURCE = wrapper_source("fpointers_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
@@ -154,7 +154,7 @@ def test_module_and_derived_pointer_handles_track_native_association(
     module = _pointer_handle_module(pyi_parity_build_mode, tmp_path)
 
     module_handle = module.module_values
-    assert isinstance(module_handle, PointerHandle)
+    assert isinstance(module_handle, PointerArray)
     assert module_handle.owner.__name__ == module.__name__.split(".", maxsplit=1)[0]
     assert module_handle.associated is False
     assert module_handle.shape is None
@@ -179,7 +179,7 @@ def test_module_and_derived_pointer_handles_track_native_association(
 
     owner = module.pointer_box()
     field_handle = owner.values
-    assert isinstance(field_handle, PointerHandle)
+    assert isinstance(field_handle, PointerArray)
     assert field_handle.owner is owner
     assert field_handle.associated is False
     assert field_handle.shape is None
@@ -211,7 +211,7 @@ def test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifeti
     assert module.sum_pointer_descriptor(module_handle) == np.float64(14.0)
 
     allocatable_handle = module.module_allocatable
-    assert isinstance(allocatable_handle, AllocatableHandle)
+    assert isinstance(allocatable_handle, AllocatableArray)
     assert allocatable_handle.allocated is False
     assert module.sum_allocatable_descriptor(allocatable_handle) == np.float64(-1.0)
     module.allocate_module_values()

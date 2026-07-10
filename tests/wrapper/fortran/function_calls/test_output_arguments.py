@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from x2py.runtime_handles import AllocatableHandle
+from x2py.runtime_handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
@@ -37,7 +37,7 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert "Direction:" not in module.fill_vector.__doc__
     assert "Initial contents are ignored." not in module.fill_vector.__doc__
     assert "Ownership: Caller-owned" in module.fill_vector.__doc__
-    assert "build_alloc(n) -> AllocatableHandle[float64]" in module.build_alloc.__doc__
+    assert "build_alloc(n) -> AllocatableArray[float64]" in module.build_alloc.__doc__
     assert "Descriptor ownership: owned" in module.build_alloc.__doc__
     assert "Unallocated state remains inside the returned handle." in module.build_alloc.__doc__
     assert "make_label() -> str" in module.make_label.__doc__
@@ -59,11 +59,11 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     )
 
     allocated = module.build_alloc(np.int32(3))
-    assert isinstance(allocated, AllocatableHandle)
+    assert isinstance(allocated, AllocatableArray)
     assert allocated.owned is True
     np.testing.assert_allclose(allocated.to_numpy(), np.array([3.0, 6.0, 9.0], dtype=np.float64))
     unallocated = module.build_alloc(np.int32(0))
-    assert isinstance(unallocated, AllocatableHandle)
+    assert isinstance(unallocated, AllocatableArray)
     assert unallocated.allocated is False
     assert unallocated.to_numpy() is None
 
@@ -75,7 +75,7 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert mixed_result[1] is mixed_vector
     assert mixed_result[2] == np.int32(23)
     np.testing.assert_allclose(mixed_result[1], np.array([101.0, 102.0, 103.0], dtype=np.float64))
-    assert isinstance(mixed_result[3], AllocatableHandle)
+    assert isinstance(mixed_result[3], AllocatableArray)
     np.testing.assert_allclose(
         mixed_result[3].to_numpy(),
         np.array([201.0, 202.0, 203.0], dtype=np.float64),

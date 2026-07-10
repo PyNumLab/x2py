@@ -116,14 +116,18 @@ generated stubs.
 | Symbol | Purpose |
 | --- | --- |
 | `NativeArrayHandleBase` | Common runtime base for generated native array descriptor handles. |
-| `AllocatableHandle` | Runtime handle for a native allocatable array descriptor. |
-| `PointerHandle` | Runtime handle for a native pointer array descriptor. |
+| `AllocatableArray` | Runtime object for a native allocatable array descriptor. |
+| `PointerArray` | Runtime object for a native pointer array descriptor. |
 
 Generated wrappers use these handle classes when an allocatable or pointer array
 descriptor is exposed as a Python object. Users can test for these classes when
 they need to distinguish descriptor handles from ordinary NumPy arrays. Borrowed
 handles do not own native storage. Owned handles expose `close()` and `closed`;
 their finalizer attempts generated owner-storage destruction at most once.
+
+These classes are array-only. Scalar `Allocatable[T]` and `Pointer[T]`
+projections remain ordinary `T | None` values and never produce an
+`AllocatableArray` or `PointerArray`.
 
 `to_numpy()` returns `None` when the descriptor is currently unallocated or
 unassociated. Otherwise, the completed wrapper policy decides whether the result
