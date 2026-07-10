@@ -968,7 +968,10 @@ Allocatable scalar derived-type dummy replacement remains blocked because a
 safe contract must define native construction, replacement, finalization, and
 exactly-once destruction of the whole wrapped object.
 
-Runtime tests: [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
+Runtime tests:
+[`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py)
+and
+[`test_allocatable_replacement.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
 
 ## Pointer Arguments, Results, And Association
 

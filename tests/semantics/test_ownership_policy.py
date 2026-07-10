@@ -802,6 +802,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         (CPythonBindingGenerator, "_PROPERTY_SETTER_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_BORROWED_GETTER_POLICY_DISPATCHER"),
         (CPythonBindingGenerator, "_NATIVE_ARRAY_HANDLE_DISPATCHER"),
+        (CPythonBindingGenerator, "_NATIVE_ARRAY_DESCRIPTOR_ARGUMENT_DISPATCHER"),
         (CPythonBindingGenerator, "_ARGUMENT_RETURN_PROJECTION_DISPATCHER"),
         (CPythonBindingGenerator, "_PROJECTED_ARGUMENT_OBJECT_DISPATCHER"),
         (CPythonBindingGenerator, "_ARRAY_ACCESS_VALIDATION_DISPATCHER"),

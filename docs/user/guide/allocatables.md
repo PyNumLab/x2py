@@ -458,6 +458,9 @@ independent = view.copy()
 Owned results, module and component handles, unallocated state, extraction, and
 owner retention are exercised by
 [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
+Allocatable descriptor `intent(inout)` mutation and same-handle projection are
+exercised by
+[`test_allocatable_replacement.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
 Character descriptor generation in source and generated-`.pyi` modes is
 exercised by
 [`test_character_arguments.py`](../../../tests/wrapper/fortran/strings/test_character_arguments.py).

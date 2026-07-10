@@ -6,12 +6,15 @@ import pytest
 
 import x2py
 from x2py.runtime_handles import (
+    _NativeArrayDescriptorHandoff,
     _NativeArrayHandoff,
     _native_array_actual_argument_for_binding_positional,
     _native_array_actual_for_binding,
     _native_array_descriptor_argument_for_binding,
     _native_array_descriptor_argument_for_binding_positional,
     _native_array_descriptor_for_binding,
+    _native_array_descriptor_handoff_for_binding,
+    _native_array_descriptor_handoff_for_binding_positional,
     _native_array_handle_from_generated_ops,
     _numpy_view_from_pointer_c_descriptor,
     AllocatableHandle,
@@ -161,7 +164,7 @@ def test_generated_owned_handle_factory_passes_persistent_owner_to_every_operati
         {
             "shape": operation("shape", (3,)),
             "array_actual": operation("array_actual", 0x5678),
-            "descriptor": operation("descriptor", 0x5678),
+            "descriptor": operation("descriptor", 0x9ABC),
             "allocated": operation("allocated", True),
             "to_numpy": operation("to_numpy", value),
             "resize": operation("resize"),
@@ -174,6 +177,12 @@ def test_generated_owned_handle_factory_passes_persistent_owner_to_every_operati
     assert handle.shape == (3,)
     assert handle.to_numpy() is value
     assert handle._array_actual_for_binding().address == 0x5678
+    assert _native_array_descriptor_handoff_for_binding(
+        handle,
+        descriptor_kind="allocatable",
+        expected_dtype=np.float64,
+        expected_rank=1,
+    ) == (0x9ABC,)
     handle.resize((5,))
     handle.close()
 
@@ -186,6 +195,9 @@ def test_generated_owned_handle_factory_passes_persistent_owner_to_every_operati
         ("allocated", owner, ()),
         ("shape", owner, ()),
         ("array_actual", owner, ()),
+        ("allocated", owner, ()),
+        ("shape", owner, ()),
+        ("descriptor", owner, ()),
         ("resize", owner, (np.int64(5),)),
         ("destroy", owner, ()),
     ]
@@ -1464,6 +1476,59 @@ def test_descriptor_argument_abi_packer_rejects_wrong_kind_and_unsupported_descr
         _native_array_descriptor_argument_for_binding(None, descriptor_kind="coarray", optional_absent=True)
     with pytest.raises(TypeError, match="received ndarray"):
         _native_array_descriptor_argument_for_binding(np.ones(1), descriptor_kind="allocatable")
+
+
+def test_projected_descriptor_handoff_requires_persistent_standard_descriptor_storage():
+    direct = _NativeArrayDescriptorHandoff(0x1234)
+    handle = AllocatableHandle(
+        dtype=np.dtype(np.float64),
+        rank=1,
+        ops={
+            "array_actual": lambda _handle: pytest.fail("descriptor handoff must not request array actual"),
+            "shape": lambda _handle: (2,),
+            "allocated": lambda _handle: True,
+            "descriptor": lambda _handle: direct,
+        },
+        to_numpy_policy="unsupported",
+    )
+
+    assert _native_array_descriptor_handoff_for_binding(
+        handle,
+        descriptor_kind="allocatable",
+        expected_dtype=np.float64,
+        expected_rank=1,
+        expected_shape=(2,),
+    ) == (direct.address,)
+    assert _native_array_descriptor_handoff_for_binding_positional(
+        handle,
+        "allocatable",
+        "float64",
+        1,
+        (2,),
+        False,
+    ) == (direct.address,)
+    assert _native_array_descriptor_handoff_for_binding_positional(
+        None,
+        "allocatable",
+        "float64",
+        1,
+        None,
+        True,
+    ) == (None, None)
+
+    fact_packed = AllocatableHandle(
+        dtype=np.dtype(np.float64),
+        rank=1,
+        ops={
+            "array_actual": lambda _handle: pytest.fail("descriptor handoff must not request array actual"),
+            "shape": lambda _handle: (2,),
+            "allocated": lambda _handle: True,
+            "descriptor": lambda _handle: _handoff(0x5678),
+        },
+        to_numpy_policy="unsupported",
+    )
+    with pytest.raises(TypeError, match="requires a generated direct descriptor handoff"):
+        _native_array_descriptor_handoff_for_binding(fact_packed, descriptor_kind="allocatable")
 
 
 def test_pointer_handle_uses_common_base_and_nullify_operation():

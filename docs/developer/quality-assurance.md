@@ -75,6 +75,14 @@ publish the coverage report. Add the `run-coverage` PR label, or pass
 `coverage: true` to the reusable workflow, to request the same coverage gate
 outside the main branch.
 
+Every matrix test run also writes a path-aware JUnit report. If pytest fails, the final
+workflow step reads that report and prints a compact `Failed pytest nodes`
+section containing every failed test node ID, including parametrization such
+as `[source]` or `[generated-pyi]`. This summary is intentionally separate from
+pytest's traceback output so failed names remain easy to find at the end of a
+long GitHub Actions log. If pytest exits before producing a readable report,
+the final step says that no report was available instead of hiding the failure.
+
 Reproduce an order-dependent failure from the stable CI seed:
 
 ```bash
@@ -235,6 +243,11 @@ platforms, compilers, compiler flags, or source revisions; a key change
 intentionally rebuilds them. Cold object builds compile independent sources in
 parallel after required module sources; set `X2PY_REAL_LIBRARY_NATIVE_JOBS` to
 override the bounded worker count.
+
+**Failure reporting:** each pytest matrix invocation writes
+`pytest-results.xml`; the final failure-only step runs
+`tools/print_pytest_failures.py` so all failed node IDs appear together at the
+end of the job log.
 
 **Decision:** keep. Review scheduled results and record actionable failures
 until fixed.

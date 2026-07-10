@@ -71,15 +71,6 @@ class CFIDescriptorStorageType(Type):
             raise ValueError("CFI descriptor storage rank must be non-negative")
         return cls._get_new(rank)
 
-    @classmethod
-    @cache
-    def _get_new(cls, rank):
-        def __init__(self):
-            self._rank = rank
-            Type.__init__(self)
-
-        return type(f"CFIDescriptorStorage{rank}DType", (CFIDescriptorStorageType,), {"__init__": __init__})()
-
     @property
     def rank(self):
         """Descriptor storage is a scalar C object."""
@@ -104,6 +95,17 @@ class CFIDescriptorStorageType(Type):
     def datatype(self):
         """Descriptor storage is its own datatype."""
         return self
+
+    @classmethod
+    @cache
+    def _get_new(cls, rank):
+        """Create the cached rank-specific descriptor storage type."""
+
+        def __init__(self):
+            self._rank = rank
+            Type.__init__(self)
+
+        return type(f"CFIDescriptorStorage{rank}DType", (CFIDescriptorStorageType,), {"__init__": __init__})()
 
 
 class CFIDimensionType(FixedSizeType):
@@ -212,6 +214,7 @@ class CFIDescriptorEstablish:
         element_length=None,
         extents=(),
     ):
+        """Initialize one standard descriptor-establishment expression."""
         if not is_model_object(descriptor):
             raise TypeError("descriptor must be a model object")
         if not isinstance(element_type, Type):
@@ -278,6 +281,7 @@ class CFIDescriptorAllocate:
     _attribute_nodes = ("_descriptor", "_element_length", "_lower_bounds", "_upper_bounds")
 
     def __init__(self, descriptor, lower_bounds, upper_bounds, element_length):
+        """Initialize one persistent descriptor-allocation expression."""
         lower_bounds = tuple(lower_bounds)
         upper_bounds = tuple(upper_bounds)
         if not is_model_object(descriptor):
@@ -298,18 +302,22 @@ class CFIDescriptorAllocate:
 
     @property
     def descriptor(self):
+        """Descriptor pointer whose payload is allocated."""
         return self._descriptor
 
     @property
     def lower_bounds(self):
+        """Inclusive lower bounds passed to ``CFI_allocate``."""
         return self._lower_bounds
 
     @property
     def upper_bounds(self):
+        """Inclusive upper bounds passed to ``CFI_allocate``."""
         return self._upper_bounds
 
     @property
     def element_length(self):
+        """Runtime element length passed to ``CFI_allocate``."""
         return self._element_length
 
 
@@ -320,6 +328,7 @@ class CFIDescriptorDeallocate:
     _attribute_nodes = ("_descriptor",)
 
     def __init__(self, descriptor):
+        """Initialize one persistent descriptor-deallocation expression."""
         if not is_model_object(descriptor):
             raise TypeError("descriptor must be a model object")
         self._descriptor = descriptor
@@ -329,6 +338,7 @@ class CFIDescriptorDeallocate:
 
     @property
     def descriptor(self):
+        """Descriptor pointer whose payload is deallocated."""
         return self._descriptor
 
 
@@ -339,6 +349,7 @@ class CFIDescriptorStorageSize:
     _attribute_nodes = ()
 
     def __init__(self, rank):
+        """Initialize storage-size lookup for one descriptor rank."""
         rank = int(rank)
         if rank < 0:
             raise ValueError("CFI descriptor storage rank must be non-negative")
@@ -349,6 +360,7 @@ class CFIDescriptorStorageSize:
 
     @property
     def rank(self):
+        """Descriptor rank whose storage size is requested."""
         return self._rank
 
 

@@ -166,6 +166,30 @@ class NativeArrayHandlePolicyDispatcher:
 
 
 @dataclass(frozen=True)
+class NativeArrayOutputProjectionDispatcher:
+    """Dispatch handle boundary work from completed output projection."""
+
+    handlers: Mapping[str, str]
+
+    def dispatch(
+        self,
+        target: Any,
+        subject: Any,
+        policy: NativeArrayHandlePolicy,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        try:
+            handler_name = self.handlers[policy.output_projection]
+        except KeyError:
+            name = str(getattr(subject, "name", getattr(subject, "python_name", type(subject).__name__)))
+            raise ValueError(
+                f"No native-array output-projection handler for {name!r}: {policy.output_projection}"
+            ) from None
+        return getattr(target, handler_name)(subject, policy, *args, **kwargs)
+
+
+@dataclass(frozen=True)
 class NativeArrayHandleFacts:
     """Common semantic facts carried by any native array descriptor handle."""
 

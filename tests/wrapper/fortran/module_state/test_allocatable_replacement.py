@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from x2py.runtime_handles import AllocatableHandle
 from tests.wrapper.fortran._support import (
     WRAPPER_TEST_ROOT,
     _build_source_or_generated_pyi_and_import,
@@ -16,6 +17,7 @@ from tests.wrapper.fortran._support import (
 )
 
 ALLOCATABLE_INOUT_F90_SOURCE = wrapper_source("fallocatable_inout_f90.f90")
+ALLOCATABLE_FACTORY_F90_SOURCE = wrapper_source("fallocatable_views_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 
 
@@ -25,13 +27,27 @@ def _allocatable_replacement_build_dir(tmp_path: Path, build_mode: str) -> Path:
     return tmp_path / "generated_pyi_build" / "pyi_build"
 
 
-def test_allocatable_inout_arrays_are_replaced_with_python_owned_results(
+def _build_allocatable_factory(build_mode: str, tmp_path: Path):
+    return _build_source_or_generated_pyi_and_import(
+        ALLOCATABLE_FACTORY_F90_SOURCE,
+        tmp_path,
+        {
+            "bind_c_fallocatable_views_f90_wrapper.f90",
+            "fallocatable_views_f90_wrapper.c",
+            "fallocatable_views_f90_wrapper.h",
+        },
+        CONTRACT_FIXTURES / "fallocatable_views_f90",
+        build_mode,
+    )
+
+
+def test_allocatable_inout_arrays_mutate_and_return_the_same_handle(
     pyi_parity_build_mode: str,
     tmp_path: Path,
 ):
     module = _build_source_or_generated_pyi_and_import(
         ALLOCATABLE_INOUT_F90_SOURCE,
-        tmp_path,
+        tmp_path / "replacement",
         {
             "bind_c_fallocatable_inout_f90_wrapper.f90",
             "fallocatable_inout_f90_wrapper.c",
@@ -41,33 +57,32 @@ def test_allocatable_inout_arrays_are_replaced_with_python_owned_results(
         pyi_parity_build_mode,
     )
 
-    assert "values : ndarray[float64] or None" in module.replace_values.__doc__
-    assert "May be passed as None for initially unallocated storage." in module.replace_values.__doc__
-    assert "Mutates: no; returns a replacement array or None" in module.replace_values.__doc__
+    factory = _build_allocatable_factory(pyi_parity_build_mode, tmp_path / "factory")
 
-    allocated = module.replace_values(None, np.int32(1))
-    np.testing.assert_allclose(allocated, np.array([1.0, 2.0], dtype=np.float64))
-    assert allocated.base is not None
+    assert "replace_values(values, mode) -> AllocatableHandle[float64]" in module.replace_values.__doc__
+    assert "values : AllocatableHandle[float64]" in module.replace_values.__doc__
 
-    original = np.array([3.0, 4.0], dtype=np.float64)
-    replaced = module.replace_values(original, np.int32(1))
-    np.testing.assert_allclose(original, np.array([3.0, 4.0], dtype=np.float64))
-    np.testing.assert_allclose(replaced, np.array([13.0, 14.0], dtype=np.float64))
+    values = factory.build_values(np.int32(2))
+    assert isinstance(values, AllocatableHandle)
+    returned = module.replace_values(values, np.int32(1))
+    assert returned is values
+    np.testing.assert_allclose(values.to_numpy(), np.array([12.0, 14.0], dtype=np.float64))
 
-    reallocated = module.replace_values(original, np.int32(3))
-    np.testing.assert_allclose(original, np.array([3.0, 4.0], dtype=np.float64))
-    np.testing.assert_allclose(reallocated, np.array([3.0, 6.0, 9.0], dtype=np.float64))
+    returned = module.replace_values(values, np.int32(3))
+    assert returned is values
+    np.testing.assert_allclose(values.to_numpy(), np.array([3.0, 6.0, 9.0], dtype=np.float64))
 
-    assert module.replace_values(reallocated, np.int32(0)) is None
-    assert module.replace_values(None, np.int32(0)) is None
+    returned = module.replace_values(values, np.int32(0))
+    assert returned is values
+    assert values.allocated is False
+    assert values.to_numpy() is None
 
-    del allocated, replaced, reallocated
+    returned = module.replace_values(values, np.int32(1))
+    assert returned is values
+    np.testing.assert_allclose(values.to_numpy(), np.array([1.0, 2.0], dtype=np.float64))
+
+    del values
     gc.collect()
-
-    for mode in (1, 2, 0) * 5:
-        transient = module.replace_values(None, np.int32(mode))
-        del transient
-        gc.collect()
 
     with pytest.raises(TypeError):
         module.replace_values(np.array([1.0], dtype=np.float32), np.int32(1))
@@ -79,7 +94,7 @@ def test_allocatable_inout_arrays_are_replaced_with_python_owned_results(
 def test_allocatable_replacement_has_no_native_memory_errors(pyi_parity_build_mode: str, tmp_path: Path):
     _build_source_or_generated_pyi_and_import(
         ALLOCATABLE_INOUT_F90_SOURCE,
-        tmp_path,
+        tmp_path / "replacement",
         {
             "bind_c_fallocatable_inout_f90_wrapper.f90",
             "fallocatable_inout_f90_wrapper.c",
@@ -88,16 +103,26 @@ def test_allocatable_replacement_has_no_native_memory_errors(pyi_parity_build_mo
         CONTRACT_FIXTURES / "fallocatable_inout_f90",
         pyi_parity_build_mode,
     )
-    build_dir = _allocatable_replacement_build_dir(tmp_path, pyi_parity_build_mode)
-    script = """
+    _build_allocatable_factory(pyi_parity_build_mode, tmp_path / "factory")
+    build_dir = _allocatable_replacement_build_dir(tmp_path / "replacement", pyi_parity_build_mode)
+    factory_build_dir = _allocatable_replacement_build_dir(tmp_path / "factory", pyi_parity_build_mode)
+    script = f"""
 import gc
 import numpy as np
+import sys
+
+sys.path.insert(0, {str(factory_build_dir)!r})
 import fallocatable_inout_f90 as module
+import fallocatable_views_f90 as factory
+
 module = module.fallocatable_inout_f90
+factory = factory.fallocatable_views_f90
+value = factory.build_values(np.int32(2))
 
 for mode in (1, 2, 0) * 50:
-    value = module.replace_values(None, np.int32(mode))
-    del value
+    returned = module.replace_values(value, np.int32(mode))
+    assert returned is value
+value.close()
 gc.collect()
 """
     result = subprocess.run(

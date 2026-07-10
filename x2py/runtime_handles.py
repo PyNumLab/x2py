@@ -42,6 +42,20 @@ class _NativeArrayHandoff:
             raise ValueError("native array handoff address must be a non-null positive pointer value")
 
 
+@dataclass(frozen=True)
+class _NativeArrayDescriptorHandoff:
+    """Internal opaque handoff for persistent standard C descriptor storage."""
+
+    address: int
+    owner: Any = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.address, bool) or not isinstance(self.address, int):
+            raise TypeError("native array descriptor handoff address must be an integer")
+        if self.address <= 0:
+            raise ValueError("native array descriptor handoff address must be a non-null positive pointer value")
+
+
 def _numpy_view_from_pointer_c_descriptor(
     descriptor: Any,
     *,
@@ -88,6 +102,8 @@ def _native_array_handle_from_generated_ops(
     for name, operation in ops.items():
         if name == "array_actual":
             normalized = _generated_handoff_operation(operation, owner=owner, pass_owner=owned)
+        elif name == "descriptor" and owned:
+            normalized = _generated_owned_descriptor_operation(operation, owner)
         elif name in {"allocate", "resize"}:
             normalized = _generated_shape_operation(operation, owner=owner if owned else None)
         elif owned:
@@ -137,6 +153,16 @@ def _generated_owned_handle_operation(operation: HandleOperation, owner: Any) ->
     return call
 
 
+def _generated_owned_descriptor_operation(operation: HandleOperation, owner: Any) -> HandleOperation:
+    """Adapt an owned standard-descriptor pointer operation to typed handoff."""
+
+    def call(_handle: NativeArrayHandleBase, *args: Any) -> _NativeArrayDescriptorHandoff:
+        value = operation(owner, *args)
+        return _native_array_descriptor_handoff_from_generated_result(value, owner=owner)
+
+    return call
+
+
 def _generated_shape_operation(operation: HandleOperation, *, owner: Any = None) -> HandleOperation:
     """Adapt generated shape operations from one runtime shape tuple to scalar extents."""
 
@@ -171,6 +197,23 @@ def _native_array_handoff_from_generated_result(value: Any, *, owner: Any = None
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"generated native array handoff address must be an integer; received {type(value).__name__}")
     return _NativeArrayHandoff(value, owner=owner)
+
+
+def _native_array_descriptor_handoff_from_generated_result(
+    value: Any,
+    *,
+    owner: Any = None,
+) -> _NativeArrayDescriptorHandoff:
+    """Normalize a generated standard-descriptor pointer into a typed handoff."""
+    if isinstance(value, _NativeArrayDescriptorHandoff):
+        return value
+    if isinstance(value, ctypes.c_void_p):
+        value = value.value
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(
+            f"generated native array descriptor handoff address must be an integer; received {type(value).__name__}"
+        )
+    return _NativeArrayDescriptorHandoff(value, owner=owner)
 
 
 def _pointer_descriptor_base_addr(descriptor: Any) -> int:
@@ -455,6 +498,8 @@ class NativeArrayHandleBase:
         if shape is not None:
             self._validate_expected_shape(shape, expected_shape)
         descriptor = self._call_op("descriptor")
+        if isinstance(descriptor, _NativeArrayDescriptorHandoff):
+            return descriptor
         if _is_pointer_descriptor_record(descriptor):
             _validate_pointer_descriptor_itemsize(descriptor, np.dtype(self.dtype))
             descriptor_shape, _ = _pointer_descriptor_shape_and_strides(descriptor)
@@ -989,6 +1034,54 @@ def _native_array_descriptor_argument_for_binding_positional(
 ) -> tuple[Any, ...]:
     """Positional wrapper used by generated CPython binding code."""
     return _native_array_descriptor_argument_for_binding(
+        value,
+        descriptor_kind=str(descriptor_kind),
+        expected_dtype=None if expected_dtype is None else np.dtype(expected_dtype),
+        expected_rank=None if expected_rank is None else int(expected_rank),
+        expected_shape=expected_shape,
+        optional_absent=bool(optional_absent),
+    )
+
+
+def _native_array_descriptor_handoff_for_binding(
+    value: Any,
+    *,
+    descriptor_kind: str,
+    expected_dtype: Any = None,
+    expected_rank: int | None = None,
+    expected_shape: Sequence[int | None] | int | None = None,
+    optional_absent: bool = False,
+) -> tuple[int | None, ...]:
+    """Pack a direct standard-descriptor pointer for projected handle mutation."""
+    descriptor = _native_array_descriptor_for_binding(
+        value,
+        descriptor_kind=descriptor_kind,
+        expected_dtype=expected_dtype,
+        expected_rank=expected_rank,
+        expected_shape=expected_shape,
+        optional=optional_absent,
+    )
+    if descriptor is None:
+        return (None, None) if optional_absent else (None,)
+    if not isinstance(descriptor, _NativeArrayDescriptorHandoff):
+        raise TypeError(
+            f"writable {descriptor_kind} descriptor argument requires a generated direct descriptor handoff"
+        )
+    if optional_absent:
+        return descriptor.address, _PRESENT_NATIVE_ARRAY_DESCRIPTOR_ARGUMENT_ADDRESS
+    return (descriptor.address,)
+
+
+def _native_array_descriptor_handoff_for_binding_positional(
+    value: Any,
+    descriptor_kind: str,
+    expected_dtype: Any = None,
+    expected_rank: int | None = None,
+    expected_shape: Sequence[int | None] | int | None = None,
+    optional_absent: bool = False,
+) -> tuple[int | None, ...]:
+    """Positional wrapper used by projected-handle CPython binding code."""
+    return _native_array_descriptor_handoff_for_binding(
         value,
         descriptor_kind=str(descriptor_kind),
         expected_dtype=None if expected_dtype is None else np.dtype(expected_dtype),

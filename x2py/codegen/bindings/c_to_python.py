@@ -34,7 +34,11 @@ from x2py.semantics.models import (
     RUNTIME_RETAIN_RESULT_OWNER_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
 )
-from x2py.semantics.native_array_handles import ArrayInteropPolicyDispatcher, NativeArrayHandlePolicyDispatcher
+from x2py.semantics.native_array_handles import (
+    ArrayInteropPolicyDispatcher,
+    NativeArrayHandlePolicyDispatcher,
+    NativeArrayOutputProjectionDispatcher,
+)
 
 from ..bind_c import (
     BindCArrayVariable,
@@ -456,6 +460,12 @@ class CPythonBindingGenerator(BindingGenerator):
                 "_bind_materialized_native_array_handle_result"
             ),
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT, False): ("_bind_materialized_native_array_handle_result"),
+        }
+    )
+    _NATIVE_ARRAY_DESCRIPTOR_ARGUMENT_DISPATCHER = NativeArrayOutputProjectionDispatcher(
+        {
+            "none": "_bind_fact_packed_native_array_descriptor_argument",
+            "projected_handle": "_bind_direct_native_array_descriptor_argument",
         }
     )
     _ARRAY_INTEROP_POLICY_DISPATCHER = ArrayInteropPolicyDispatcher(
@@ -2346,17 +2356,17 @@ class CPythonBindingGenerator(BindingGenerator):
 
     def _owned_allocatable_result_operation_items(self, subject, policy):
         """Generate private C operations over one persistent CFI descriptor owner."""
-        descriptor = self._owned_allocatable_descriptor_operation(subject, "descriptor")
+        descriptor_fields = self._owned_allocatable_descriptor_operation(subject, "descriptor_fields")
         items = [
-            ("shape", descriptor),
+            ("shape", descriptor_fields),
             ("array_actual", self._owned_allocatable_pointer_operation(subject)),
-            ("descriptor", descriptor),
+            ("descriptor", self._owned_allocatable_descriptor_pointer_operation(subject)),
             ("allocated", self._owned_allocatable_state_operation(subject)),
             ("native_byte_order", self._owned_allocatable_true_operation(subject, "native_byte_order")),
             ("aligned", self._owned_allocatable_true_operation(subject, "aligned")),
             ("writeable", self._owned_allocatable_true_operation(subject, "writeable")),
             ("layout", self._owned_allocatable_layout_operation(subject)),
-            ("to_numpy", descriptor),
+            ("to_numpy", descriptor_fields),
             ("destroy", self._owned_allocatable_destroy_operation(subject)),
         ]
         if policy.allows("deallocate"):
@@ -2491,6 +2501,16 @@ class CPythonBindingGenerator(BindingGenerator):
         context = self._owned_allocatable_operation_context(subject, operation)
         result = self._new_python_object(f"{subject.name}_{operation}_descriptor")
         body = self._native_array_descriptor_view_body(context["descriptor"], result, rank=subject.rank)
+        return self._finish_owned_allocatable_operation(context, body, result)
+
+    def _owned_allocatable_descriptor_pointer_operation(self, subject):
+        """Return the persistent standard C descriptor address for mutation."""
+        context = self._owned_allocatable_operation_context(subject, "descriptor")
+        result = self._new_python_object(f"{subject.name}_descriptor_address")
+        body = [
+            AliasAssign(result, PyLong_FromVoidPtr(context["descriptor"])),
+            If(IfSection(Is(result, NIL), [Return(self._error_exit_code)])),
+        ]
         return self._finish_owned_allocatable_operation(context, body, result)
 
     def _owned_allocatable_pointer_operation(self, subject):
@@ -2663,7 +2683,28 @@ class CPythonBindingGenerator(BindingGenerator):
         *,
         arg_var=None,
     ):
-        """Validate a runtime handle and pack its descriptor/presence ABI fields."""
+        """Dispatch descriptor binding from completed output-projection policy."""
+        return self._NATIVE_ARRAY_DESCRIPTOR_ARGUMENT_DISPATCHER.dispatch(
+            self,
+            subject,
+            policy,
+            collect_arg,
+            bound_argument,
+            _is_bind_c_argument,
+            arg_var=arg_var,
+        )
+
+    def _bind_fact_packed_native_array_descriptor_argument(
+        self,
+        subject,
+        policy,
+        collect_arg,
+        bound_argument,
+        _is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
+        """Validate a handle and establish call-local CFI storage from facts."""
         if bound_argument or arg_var is not None:
             raise ValueError(f"Native array descriptor argument {subject.name!r} requires a standalone value slot")
         descriptor_type = self._native_array_descriptor_argument_type(policy)
@@ -2749,6 +2790,155 @@ class CPythonBindingGenerator(BindingGenerator):
             "default_init": default_init,
             "owns_type_check": True,
         }
+
+    def _bind_direct_native_array_descriptor_argument(
+        self,
+        subject,
+        policy,
+        collect_arg,
+        bound_argument,
+        _is_bind_c_argument,
+        *,
+        arg_var=None,
+    ):
+        """Pass persistent standard descriptor storage for projected mutation."""
+        if bound_argument or arg_var is not None:
+            raise ValueError(f"Native array descriptor argument {subject.name!r} requires a standalone value slot")
+        descriptor_type = self._native_array_descriptor_argument_type(policy)
+        descriptor_arg = Variable(
+            descriptor_type,
+            self.scope.get_new_name(subject.name),
+            shape=(convert_to_literal(len(descriptor_type)),),
+        )
+        descriptor_pointer = Variable(
+            CFIDescriptorType(),
+            self.scope.get_new_name(f"{subject.name}_descriptor"),
+            memory_handling=StorageMode.ALIAS.value,
+        )
+        self.scope.insert_variable(descriptor_pointer)
+        self.scope.insert_symbolic_alias(
+            IndexedElement(descriptor_arg, convert_to_literal(0)),
+            ObjectAddress(descriptor_pointer),
+        )
+        presence_pointer = None
+        if descriptor_type.has_presence:
+            presence_pointer = Variable(
+                BindCPointer(),
+                self.scope.get_new_name(f"{subject.name}_present"),
+                memory_handling=StorageMode.ALIAS.value,
+            )
+            self.scope.insert_variable(presence_pointer)
+            self.scope.insert_symbolic_alias(IndexedElement(descriptor_arg, convert_to_literal(1)), presence_pointer)
+        body = self._direct_native_array_descriptor_argument_body(
+            subject,
+            policy,
+            collect_arg,
+            descriptor_pointer,
+            presence_pointer,
+        )
+        default_init = [AliasAssign(descriptor_pointer, NIL)]
+        if presence_pointer is not None:
+            default_init.append(AliasAssign(presence_pointer, NIL))
+        return {
+            "body": body,
+            "args": [descriptor_arg],
+            "default_init": default_init,
+            "owns_type_check": True,
+        }
+
+    def _direct_native_array_descriptor_argument_body(
+        self,
+        subject,
+        policy,
+        collect_arg,
+        descriptor_pointer,
+        presence_pointer,
+    ):
+        """Build the runtime call that returns a persistent CFI descriptor pointer."""
+        runtime_module = self._new_python_object(f"{subject.name}_runtime_handles")
+        helper = self._new_python_object(f"{subject.name}_descriptor_helper")
+        descriptor_kind = self._new_python_object(f"{subject.name}_descriptor_kind")
+        dtype = self._new_python_object(f"{subject.name}_dtype")
+        rank = self._new_python_object(f"{subject.name}_rank")
+        expected_shape = self._new_python_object(f"{subject.name}_shape")
+        optional_absent = self._new_python_object(f"{subject.name}_optional")
+        helper_args = self._new_python_object(f"{subject.name}_descriptor_helper_args")
+        packed = self._new_python_object(f"{subject.name}_descriptor_handoff")
+        descriptor_item = self._new_python_object(f"{subject.name}_descriptor_item")
+        owned_args = [descriptor_kind, dtype, rank, expected_shape, optional_absent]
+        body = [
+            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime_handles")))),
+            If(IfSection(Is(runtime_module, NIL), [Return(self._error_exit_code)])),
+            AliasAssign(
+                helper,
+                PyObject_GetAttrString(
+                    runtime_module,
+                    CStrStr(convert_to_literal("_native_array_descriptor_handoff_for_binding_positional")),
+                ),
+            ),
+            If(IfSection(Is(helper, NIL), [Py_DECREF(runtime_module), Return(self._error_exit_code)])),
+            AliasAssign(descriptor_kind, PyUnicode_FromString(CStrStr(convert_to_literal(policy.descriptor_kind)))),
+            *self._native_array_descriptor_dtype_object(subject, dtype),
+            AliasAssign(rank, PyLong_FromLong(convert_to_literal(subject.rank, dtype=CNativeInt()))),
+            *self._native_array_descriptor_shape_object(subject, expected_shape),
+            AliasAssign(
+                optional_absent,
+                PyLong_FromLong(convert_to_literal(1 if policy.optional_absent else 0, dtype=CNativeInt())),
+            ),
+        ]
+        body.extend(self._return_if_any_native_array_helper_arg_failed(runtime_module, helper, owned_args))
+        body.extend(
+            [
+                AliasAssign(
+                    helper_args,
+                    PyTuple_Pack(
+                        ObjectAddress(collect_arg),
+                        ObjectAddress(descriptor_kind),
+                        ObjectAddress(dtype),
+                        ObjectAddress(rank),
+                        ObjectAddress(expected_shape),
+                        ObjectAddress(optional_absent),
+                    ),
+                ),
+                If(
+                    IfSection(
+                        Is(helper_args, NIL),
+                        [
+                            *self._decref_all([*owned_args, helper, runtime_module]),
+                            Return(self._error_exit_code),
+                        ],
+                    )
+                ),
+                AliasAssign(packed, PyObject_CallObject(helper, helper_args)),
+                Py_DECREF(helper_args),
+                *self._decref_all([*owned_args, helper, runtime_module]),
+                If(IfSection(Is(packed, NIL), [Return(self._error_exit_code)])),
+                AliasAssign(descriptor_item, PyTuple_GetItem(packed, convert_to_literal(0))),
+                If(IfSection(Is(descriptor_item, NIL), [Py_DECREF(packed), Return(self._error_exit_code)])),
+                *self._assign_native_array_descriptor_pointer(
+                    descriptor_pointer,
+                    descriptor_item,
+                    packed,
+                    allow_none=policy.optional_absent,
+                ),
+            ]
+        )
+        if presence_pointer is not None:
+            presence_item = self._new_python_object(f"{subject.name}_presence_item")
+            body.extend(
+                [
+                    AliasAssign(presence_item, PyTuple_GetItem(packed, convert_to_literal(1))),
+                    If(IfSection(Is(presence_item, NIL), [Py_DECREF(packed), Return(self._error_exit_code)])),
+                    *self._assign_native_array_descriptor_pointer(
+                        presence_pointer,
+                        presence_item,
+                        packed,
+                        allow_none=True,
+                    ),
+                ]
+            )
+        body.append(Py_DECREF(packed))
+        return body
 
     def _native_array_descriptor_argument_body(
         self,

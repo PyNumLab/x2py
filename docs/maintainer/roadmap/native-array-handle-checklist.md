@@ -514,8 +514,12 @@ Add or reuse one internal runtime base for both public handle classes.
 - [x] Add an internal runtime descriptor-argument field packer that returns
   validated `base_addr`, `elem_len`, `rank`, and per-dimension lower-bound,
   extent, and stride-multiplier facts. Generated C uses those facts to establish
-  call-local `CFI_CDESC_T(rank)` storage; Python never supplies compiler-private
-  descriptor storage.
+  call-local `CFI_CDESC_T(rank)` storage for non-projected descriptor calls;
+  Python never supplies compiler-private descriptor storage.
+- [x] Add a distinct direct standard-C-descriptor handoff for projected writable
+  handles. Owned allocatable handles pass their persistent `CFI_cdesc_t*` so
+  native allocation, deallocation, and shape changes update the same caller
+  handle instead of a discarded call-local descriptor copy.
 - [x] Use a dedicated non-null runtime presence token for present optional
   handle arguments, rather than reusing the descriptor handoff object as the
   presence field.
@@ -674,10 +678,11 @@ specialize operation bodies by descriptor kind.
   completed handle policy before ordinary array argument dispatch.
 - [x] Model native descriptor-handle argument handoff as a dedicated Bind-C
   descriptor tuple selected by bridge and binding descriptor-argument handlers
-  through one shared Bind-C ABI helper. Generated C establishes standard
-  call-local descriptor storage from validated runtime facts and passes its
-  pointer plus, only for optional absent-handle paths, an explicit presence
-  token.
+  through completed output-projection policy. Non-projected calls establish
+  standard call-local descriptor storage from validated runtime facts.
+  Projected writable calls pass persistent standard C descriptor storage
+  directly so descriptor mutation remains attached to the caller handle. Both
+  paths add an explicit presence token only for optional absent handles.
 - [x] Generate pointer descriptor-argument handoff for `Pointer[T[...]]`
   parameters.
 - [x] Route allocatable descriptor-argument bridge and binding generation
@@ -940,10 +945,14 @@ handoff when the wrapped call is native.
   `base_addr`, `elem_len`, `rank`, and each dimension's lower bound, extent, and
   stride multiplier; maps optional absent-handle `None` to null fact fields;
   and uses a distinct non-null presence token for present optional handles.
+- [x] Verify projected writable handle arguments require a typed direct
+  standard-descriptor handoff and reject fact-only descriptors before native
+  mutation can detach the caller's handle state.
 - [x] Verify CPython binding generation packs required and optional
-  descriptor-handle arguments through the runtime helper, establishes standard
-  call-local CFI storage from the validated fields, and passes the descriptor
-  pointer through the completed Bind-C tuple shape.
+  descriptor-handle arguments through the runtime helper, dispatches
+  non-projected calls to standard call-local CFI storage, dispatches projected
+  writable calls to persistent descriptor storage, and passes the selected
+  descriptor pointer through the completed Bind-C tuple shape.
 - [x] Verify allocatable handles without generated `allocated` fail at
   construction.
 - [x] Verify pointer handles without generated `associated` or `nullify` fail

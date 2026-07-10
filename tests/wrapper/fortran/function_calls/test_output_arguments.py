@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from x2py.runtime_handles import AllocatableHandle
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
@@ -17,7 +18,6 @@ CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     pyi_parity_build_mode: str,
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ):
     module = _build_source_or_generated_pyi_and_import(
         OUTPUTS_F90_SOURCE,
@@ -37,10 +37,9 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert "Direction:" not in module.fill_vector.__doc__
     assert "Initial contents are ignored." not in module.fill_vector.__doc__
     assert "Ownership: Caller-owned" in module.fill_vector.__doc__
-    assert "Allocatable array outputs and replacements are copied into Python-owned NumPy arrays." in (
-        module.build_alloc.__doc__
-    )
-    assert "copy adds overhead" in module.build_alloc.__doc__
+    assert "build_alloc(n) -> AllocatableHandle[float64]" in module.build_alloc.__doc__
+    assert "Descriptor ownership: owned" in module.build_alloc.__doc__
+    assert "Unallocated state remains inside the returned handle." in module.build_alloc.__doc__
     assert "make_label() -> str" in module.make_label.__doc__
     assert "make_point(scale) -> output_point" in module.make_point.__doc__
 
@@ -60,9 +59,13 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     )
 
     allocated = module.build_alloc(np.int32(3))
-    np.testing.assert_allclose(allocated, np.array([3.0, 6.0, 9.0], dtype=np.float64))
-    assert allocated.base is not None
-    assert module.build_alloc(np.int32(0)) is None
+    assert isinstance(allocated, AllocatableHandle)
+    assert allocated.owned is True
+    np.testing.assert_allclose(allocated.to_numpy(), np.array([3.0, 6.0, 9.0], dtype=np.float64))
+    unallocated = module.build_alloc(np.int32(0))
+    assert isinstance(unallocated, AllocatableHandle)
+    assert unallocated.allocated is False
+    assert unallocated.to_numpy() is None
 
     assert module.with_scalar(np.int32(4)) == (np.int32(8), np.int32(7))
 
@@ -72,7 +75,11 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert mixed_result[1] is mixed_vector
     assert mixed_result[2] == np.int32(23)
     np.testing.assert_allclose(mixed_result[1], np.array([101.0, 102.0, 103.0], dtype=np.float64))
-    np.testing.assert_allclose(mixed_result[3], np.array([201.0, 202.0, 203.0], dtype=np.float64))
+    assert isinstance(mixed_result[3], AllocatableHandle)
+    np.testing.assert_allclose(
+        mixed_result[3].to_numpy(),
+        np.array([201.0, 202.0, 203.0], dtype=np.float64),
+    )
 
     inout_values = np.array([1.0, 2.0], dtype=np.float64)
     assert module.increment(inout_values) is None
@@ -99,7 +106,3 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
         module.fill_vector(np.int32(4), np.empty(3, dtype=np.float64))
     with pytest.raises(TypeError):
         module.fill_matrix(np.int32(2), np.int32(3), np.empty((2, 3), dtype=np.float64, order="C"))
-
-    monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
-    with pytest.raises(MemoryError, match="copy-return output array"):
-        module.build_alloc(np.int32(3))

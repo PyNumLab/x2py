@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
+from x2py.runtime_handles import AllocatableHandle
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
@@ -120,11 +121,14 @@ def test_aliased_derived_module_object_borrows_native_state(
 
     current = module.current
     assert isinstance(current, module.box)
-    assert current.values is None
+    values = current.values
+    assert isinstance(values, AllocatableHandle)
+    assert values.owner is current
+    assert values.allocated is False
+    assert values.to_numpy() is None
 
     module.allocate_current(np.int32(3))
-    view = current.values
-    assert view.base is current
+    view = values.to_numpy()
     np.testing.assert_allclose(view, np.array([1.0, 2.0, 3.0], dtype=np.float64))
 
     view[0] = np.float64(10.0)
@@ -133,7 +137,7 @@ def test_aliased_derived_module_object_borrows_native_state(
 
     owned = module.box()
     owned.allocate_values(np.int32(2))
-    owned.values[0] = np.float64(20.0)
+    owned.values.to_numpy()[0] = np.float64(20.0)
     assert owned.values_sum() == np.float64(22.0)
     assert module.current_sum() == np.float64(15.0)
 
@@ -151,4 +155,7 @@ def test_aliased_derived_module_object_borrows_native_state(
     assert "bind_c_set_current" not in bridge_source
 
     module.deallocate_current()
-    assert module.current.values is None
+    current_values = module.current.values
+    assert isinstance(current_values, AllocatableHandle)
+    assert current_values.allocated is False
+    assert current_values.to_numpy() is None
