@@ -22816,15 +22816,9 @@
       "n_classes": 1,
       "n_variables": 657,
       "messages": [
-        "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
         "Fortran arrays of derived type values need explicit layout and ownership policy."
       ],
       "blockers": [
-        {
-          "code": "fortran_ownership_policy_blocked",
-          "message": "This value needs explicit ownership, transfer, lifetime, and destruction policy before it can be wrapped safely.",
-          "n_items": 657
-        },
         {
           "code": "fortran_derived_type_array_policy_missing",
           "message": "Fortran arrays of derived type values need explicit layout and ownership policy.",

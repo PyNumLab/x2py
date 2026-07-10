@@ -67,6 +67,11 @@ No native setter exists for a parameter. Assigning `module.nmax` in Python can
 only shadow the attribute on that Python module object; it does not mutate the
 native parameter.
 
+Derived-type parameters follow the same constant rule. A copy-safe
+`Final[DerivedType]` is materialized as a wrapper-owned value copy and has no
+native setter; it is not mutable native module storage and does not require an
+`Aliased` annotation.
+
 Public module variables already have module lifetime, whether or not `save` is
 written explicitly. Procedure-local saved variables remain internal, but their
 state persists across calls. Multiple imported Python module objects backed by

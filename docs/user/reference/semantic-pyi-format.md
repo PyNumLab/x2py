@@ -2003,6 +2003,13 @@ No setter is generated for parameters. Python module namespaces remain ordinary
 Python module namespaces, so assigning to `mod.nmax` can rebind that Python name
 without modifying native Fortran state.
 
+A derived-type `parameter` remains a `Final[DerivedType]` constant rather than
+mutable module storage. When its fields have a complete value-copy policy, the
+wrapper materializes a wrapper-owned copy from the native parameter and exposes
+no native setter. Mutating that Python wrapper cannot modify the Fortran
+parameter. Derived constants whose fields cannot be copied safely fail policy
+completion explicitly instead of being treated as `Aliased` module variables.
+
 <!-- X2PY_C_DOCS_START
 Allocatable array function results and non-optional allocatable output array
 arguments use owned-handle policy. The generated binding transfers the native

@@ -250,10 +250,13 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     )
     _MODULE_VARIABLE_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
+            (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_literal_module_constant",
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_scalar_module_variable",
             (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_scalar_module_variable",
+            (ObjectKind.STRING, CodegenAction.DIRECT_VALUE): "_literal_module_constant",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_array_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_array_module_variable",
+            (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_copied_derived_module_constant",
             (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_snapshot_derived_module_variable",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_derived_module_variable",
         }
@@ -716,8 +719,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             The AST object describing the code which must be printed in
             the wrapping module to expose the variable.
         """
-        if isinstance(expr.class_type, FinalType):
-            return expr.clone(expr.name, new_class=BindCModuleConstant)
         if expr.array_interop_policy is not None:
             return self._ARRAY_INTEROP_POLICY_DISPATCHER.dispatch(
                 self,
@@ -4403,6 +4404,24 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             setter_function=setter,
         )
 
+    @staticmethod
+    def _literal_module_constant(expr, _decision):
+        """Expose one literal scalar or string constant without native storage."""
+        return expr.clone(expr.name, new_class=BindCModuleConstant)
+
+    def _copied_derived_module_constant(self, expr, decision):
+        """Expose one derived constant through a wrapper-owned value copy."""
+        if decision.transfer is not TransferMode.WRAPPER_INSTANCE:
+            raise ValueError(f"Derived module constant {expr.name!r} is missing completed copy policy")
+        if expr.setter_ownership_decision.setter_action is not SetterAction.OMIT:
+            raise ValueError(f"Derived module constant {expr.name!r} unexpectedly exposes a setter")
+        return expr.clone(
+            expr.name,
+            new_class=BindCScalarModuleVariable,
+            getter_function=self._derived_module_copy_getter(expr),
+            setter_function=None,
+        )
+
     def _derived_module_variable(self, expr, decision):
         """Expose one addressable native module object through a borrowed wrapper."""
         if decision.boundary_storage_mode is not StorageMode.ALIAS:
@@ -4425,15 +4444,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         return expr.clone(
             expr.name,
             new_class=BindCScalarModuleVariable,
-            getter_function=self._derived_module_snapshot_getter(expr),
+            getter_function=self._derived_module_copy_getter(expr),
             setter_function=None,
         )
 
-    def _derived_module_snapshot_getter(self, expr):
-        """Return a pointer to an owned copy of a non-aliased derived module object."""
+    def _derived_module_copy_getter(self, expr):
+        """Return a pointer to an owned copy of a derived module value."""
         getter_policy = expr.getter_ownership_decision
         if getter_policy is None:
             raise ValueError(f"Module variable {expr.name!r} is missing completed getter policy")
+        value_type = expr.class_type.underlying_type if isinstance(expr.class_type, FinalType) else expr.class_type
         scope = self.scope
         public_name = f"get_{expr.name}"
         original_name = self._generated_module_function_name(public_name)
@@ -4442,6 +4462,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope = func_scope
         source_value = expr.clone(
             expr.name,
+            class_type=value_type,
             is_argument=False,
             is_optional=False,
             memory_handling=getter_policy.storage_mode.value,
@@ -4450,6 +4471,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
         local_var = expr.clone(
             f"{expr.name}_snapshot",
+            class_type=value_type,
             is_argument=False,
             is_optional=False,
             memory_handling=getter_policy.storage_mode.value,
@@ -4457,7 +4479,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             new_class=Variable,
         )
         pointer_var = Variable(
-            expr.class_type,
+            value_type,
             func_scope.get_new_name(f"{expr.name}_snapshot_ptr"),
             memory_handling="alias",
         )
@@ -4469,6 +4491,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
 
         original_result = expr.clone(
             f"{expr.name}_value",
+            class_type=value_type,
             is_argument=False,
             is_optional=False,
             memory_handling=getter_policy.storage_mode.value,

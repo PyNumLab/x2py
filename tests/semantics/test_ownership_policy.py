@@ -17,6 +17,7 @@ from x2py.codegen.bind_c import (
     BindCNativeArrayHandleProperty,
     BindCNativeArrayHandleVariable,
     BindCPointer,
+    BindCScalarModuleVariable,
     native_array_descriptor_argument_type,
 )
 from x2py.codegen.bindings.c_concepts import CFIDescriptorType
@@ -77,6 +78,7 @@ from x2py.semantics.models import (
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
+    SemanticConstraint,
     SemanticField,
     SemanticFunction,
     SemanticModule,
@@ -2793,6 +2795,45 @@ def test_plain_derived_module_object_blocks_without_live_borrow_policy():
         for semantic_class in module.classes
         for field in semantic_class.fields
     )
+
+
+def test_derived_module_constant_uses_wrapper_owned_copy_without_setter():
+    constant_type = _derived_type("rgb_color")
+    constant_type.constraints.append(SemanticConstraint("Constant"))
+    module = SemanticModule(
+        name="colors",
+        variables=[SemanticVariable("black", constant_type)],
+        classes=[
+            SemanticClass(
+                "rgb_color",
+                fields=[
+                    SemanticField("r", _scalar_type()),
+                    SemanticField("g", _scalar_type()),
+                    SemanticField("b", _scalar_type()),
+                ],
+            )
+        ],
+    )
+
+    complete_semantic_policies(module)
+
+    variable = module.variables[0]
+    storage = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    getter = variable.metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA]
+    setter = variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    assert storage.kind is ObjectKind.DERIVED_TYPE
+    assert storage.owner is OwnershipOwner.WRAPPER
+    assert storage.transfer is TransferMode.WRAPPER_INSTANCE
+    assert storage.destruction is DestructionPolicy.WRAPPER_DEALLOC
+    assert getter.transfer is TransferMode.WRAPPER_INSTANCE
+    assert setter.setter_action is SetterAction.OMIT
+
+    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    generator = FortranToCBridgeGenerator("", 0)
+    generator.scope = lowered.scope
+    constant = generator._visit_Variable(lowered.variables[0])
+    assert isinstance(constant, BindCScalarModuleVariable)
+    assert constant.setter_function is None
 
 
 def test_stale_snapshot_metadata_blocks_in_policy_completion():

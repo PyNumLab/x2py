@@ -254,6 +254,27 @@ current: Annotated[box, Aliased]
     assert aliased["wrappability_blockers"] == []
 
 
+def test_derived_type_parameter_is_a_value_constant_not_mutable_module_storage():
+    parsed = parse_fortran_file(
+        """
+module colors
+  type rgb_color
+    integer :: r
+    integer :: g
+    integer :: b
+  end type rgb_color
+  type(rgb_color), parameter :: black = rgb_color(0, 0, 0)
+end module colors
+"""
+    )
+    module = fortran_module_to_semantic_module(parsed.modules[0])
+
+    report = assess_semantic_wrap_readiness(module)
+
+    assert report["wrappable"] is True
+    assert "fortran_ownership_policy_blocked" not in _blocker_codes(report)
+
+
 def test_plain_derived_module_object_with_pointer_field_blocks_until_aliased_policy_is_explicit():
     report = _readiness_from_pyi(
         """

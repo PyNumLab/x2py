@@ -42,6 +42,11 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     )
 
     assert module.nmax == np.int32(12)
+    assert isinstance(module.black, module.rgb_color)
+    assert module.black.r == np.int32(0)
+    assert module.black.g == np.int32(0)
+    assert module.black.b == np.int32(0)
+    assert module.black_sum() == np.int32(0)
     assert module.counter == np.int32(3)
     assert module.scale == np.float64(1.5)
     assert not hasattr(module, "get_counter")
@@ -50,6 +55,7 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     assert not hasattr(module, "set_scale")
     assert not hasattr(module, "set_nmax")
     assert not hasattr(module, "set_red")
+    assert not hasattr(module, "set_black")
     assert not hasattr(module, "hidden_counter")
     assert not hasattr(module, "get_hidden_counter")
 
@@ -101,6 +107,13 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     assert second_module.nmax == np.int32(12)
     assert module.summarize() == np.int32(16)
     assert second_module.summarize() == np.int32(16)
+
+    black_copy = module.black
+    black_copy.r = np.int32(17)
+    assert black_copy.r == np.int32(17)
+    assert module.black.r == np.int32(0)
+    assert module.black_sum() == np.int32(0)
+    assert second_module.black.r == np.int32(0)
 
 
 def test_aliased_derived_module_object_borrows_native_state(

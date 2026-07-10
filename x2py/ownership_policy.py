@@ -512,6 +512,7 @@ class OwnershipDecision:
 class _StorageFacts:
     rank: int
     name: str
+    constant: bool = False
     allocatable: bool = False
     pointer: bool = False
     is_ndarray: bool = False
@@ -589,6 +590,12 @@ class OwnershipPolicyResolver:
     ) -> OwnershipDecision:
         """Decide setter availability and its incoming value conversion."""
         storage = self.decide_semantic_variable(variable, context)
+        if self._is_semantic_constant(variable.semantic_type):
+            return replace(
+                storage,
+                assignment_mode=AssignmentMode.NONE,
+                setter_action=SetterAction.OMIT,
+            )
         if storage.is_blocked:
             return replace(
                 storage,
@@ -1236,6 +1243,8 @@ class OwnershipPolicyResolver:
         )
 
     def _module_variable_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.constant:
+            return self._module_constant_decision(facts)
         if facts.allocatable and facts.rank == 0:
             return self._allocatable_scalar_decision(facts, context)
         if facts.pointer and facts.rank == 0:
@@ -1277,6 +1286,36 @@ class OwnershipPolicyResolver:
             storage_mode=StorageMode.ALIAS if facts.rank > 0 else StorageMode.STACK,
             borrowed=True,
             reason="module variable storage is owned by native module state",
+        )
+
+    def _module_constant_decision(self, facts: _StorageFacts) -> OwnershipDecision:
+        """Return immutable value policy for one module-level constant."""
+        if facts.rank > 0 or facts.is_ndarray:
+            return OwnershipDecision(
+                ObjectKind.NUMPY_ARRAY,
+                OwnershipOwner.UNKNOWN,
+                TransferMode.BLOCKED,
+                DestructionPolicy.BLOCKED,
+                storage_mode=StorageMode.STACK,
+                blocker="array constants need explicit immutable value-copy policy",
+                reason="module constants are values rather than mutable native array storage",
+            )
+        if facts.is_custom:
+            return OwnershipDecision(
+                ObjectKind.DERIVED_TYPE,
+                OwnershipOwner.WRAPPER,
+                TransferMode.WRAPPER_INSTANCE,
+                DestructionPolicy.WRAPPER_DEALLOC,
+                storage_mode=StorageMode.STACK,
+                reason="derived module constant is materialized as a wrapper-owned value copy",
+            )
+        return OwnershipDecision(
+            self._kind(facts, OwnershipContext()),
+            OwnershipOwner.PYTHON,
+            TransferMode.BY_VALUE,
+            DestructionPolicy.PYTHON_REFCOUNT,
+            storage_mode=StorageMode.STACK,
+            reason="module constant is materialized directly as an immutable Python value",
         )
 
     def _derived_field_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
@@ -1771,6 +1810,7 @@ class OwnershipPolicyResolver:
     @staticmethod
     def _semantic_facts(semantic_type: Any) -> _StorageFacts:
         metadata = getattr(semantic_type, "metadata", {}) or {}
+        constraints = getattr(semantic_type, "constraints", ()) or ()
         storage = getattr(semantic_type, "storage", None)
         array = getattr(storage, "array", None) if storage is not None else None
         storage_metadata = getattr(storage, "metadata", {}) if storage is not None else {}
@@ -1781,6 +1821,7 @@ class OwnershipPolicyResolver:
         return _StorageFacts(
             rank=rank,
             name=name,
+            constant=any(getattr(constraint, "name", None) == "Constant" for constraint in constraints),
             allocatable=bool(getattr(array, "allocatable", False) or metadata.get("fortran_allocatable")),
             pointer=bool(getattr(array, "pointer", False) or metadata.get("fortran_pointer")),
             is_string=is_string,
@@ -1794,6 +1835,11 @@ class OwnershipPolicyResolver:
             scalar_storage=bool(getattr(array, "category", None) == SCALAR_STORAGE_CATEGORY),
             metadata=metadata,
         )
+
+    @staticmethod
+    def _is_semantic_constant(semantic_type: Any) -> bool:
+        constraints = getattr(semantic_type, "constraints", ()) or ()
+        return any(getattr(constraint, "name", None) == "Constant" for constraint in constraints)
 
     @staticmethod
     def _semantic_variable_context(variable: Any) -> OwnershipContext:
