@@ -13,7 +13,7 @@ import pytest
 
 from x2py import build_pyi_extension
 from x2py.semantics.native_array_handles import NativeArrayBuildRequirement, NativeArrayBuildRequirements
-from x2py.wrapping import _manifest_native_array_requirements, build_fortran_extension
+from x2py.pipeline.build import _manifest_native_array_requirements, build_fortran_extension
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran._support import (
     REPO_ROOT,

@@ -37,8 +37,8 @@ from x2py.semantics.fortran2ir import (
 )
 from x2py.semantics import models as semantic_models
 from x2py.semantics.native_contract import native_contract_issues
-from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
-from x2py.semantic_metadata import SCALAR_STORAGE_CATEGORY
+from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
+from x2py.semantics.metadata import SCALAR_STORAGE_CATEGORY
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.codegen.printers.pyi_printer import emit_module
 

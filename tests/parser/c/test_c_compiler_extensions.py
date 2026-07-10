@@ -268,7 +268,7 @@ extern int consume_wire(struct wire_value *value)
 
 def test_gcc_preprocessed_standard_headers_remain_parseable(tmp_path: Path):
     from x2py.c_parser import parse_c_file
-    from x2py.preprocessing import PreprocessingConfig, preprocess_source
+    from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
     compiler = shutil.which("cc")
     if compiler is None:

@@ -102,7 +102,7 @@ X2PY_C_DOCS_END -->
 `tests/tools/test_documentation_examples.py` executes explicitly marked
 `bash` CLI examples and `python` API snippets from `README.md` and Markdown
 files under `docs/`. Bash examples must be `python3 -m x2py` or
-`python3 -m x2py.type_mapping_report` commands; the test replaces `python3`
+`python3 -m x2py.probes.report` commands; the test replaces `python3`
 with the active test interpreter and runs them without a shell. It rejects
 shell operators, output-writing options, and options that select custom
 executables or preprocessing command templates. Python snippets run with the
@@ -205,22 +205,22 @@ implementation files.
 | --- | --- | --- |
 | Fortran parse output | `x2py/fortran_parser/parser.py`, `x2py/fortran_parser/models.py`, `x2py/fortran_parser/lexer.py` | `tests/parser/test_procedure_and_type_parsing.py`, `tests/parser/test_fortran_fixture_suite.py`, `tests/parser/test_error_handling.py` |
 | CLI stage selection and output | `x2py/cli.py`, `x2py/fortran_parser/cli.py` | `tests/parser/test_cli.py` |
-| Fortran target type probing and cache | `x2py/fortran_type_probe.py` | `tests/parser/test_fortran_type_probe.py` |
-| Generated target datatype mapping examples | `x2py/type_mapping_report.py` | `tests/tools/test_type_mapping_report.py`, `tests/tools/test_documentation_examples.py` |
+| Fortran target type probing and cache | `x2py/probes/fortran_types.py` | `tests/parser/test_fortran_type_probe.py` |
+| Generated target datatype mapping examples | `x2py/probes/report.py` | `tests/tools/test_type_mapping_report.py`, `tests/tools/test_documentation_examples.py` |
 | Fortran to semantic IR | `x2py/semantics/fortran2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_fortran2ir.py` |
 | `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
-| `.pyi` parsing/loading/editing | `x2py/pyi_parser/parser.py`, `x2py/pyi_pipeline.py`, `x2py/semantics/pyi2ir.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
-| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/ownership_policy.py` | `tests/semantics/test_ownership_policy.py`, `tests/semantics/test_ir2ast.py` |
+| `.pyi` parsing/loading/editing | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
+| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | `tests/semantics/test_ownership_policy.py`, `tests/semantics/test_ir2ast.py` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
-| Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
+| Fortran wrapper orchestration | `x2py/pipeline/build.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
 | Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
 | Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/tools/test_documentation_examples.py` |
 
 <!-- X2PY_C_DOCS_START
 | C parse output | `x2py/c_parser/parser.py`, `x2py/c_parser/models.py`, `x2py/c_parser/lexer.py` | `tests/parser/c/test_c_declarations_and_declarators.py`, `tests/parser/c/test_c_fixture_suite.py`, `tests/parser/c/test_c_error_fixture_suite.py` |
-| Compiler preprocessing | `x2py/preprocessing.py` | `tests/parser/test_preprocessing_cli.py`, `tests/parser/test_preprocessor_and_execution_boundaries.py`, `tests/parser/c/test_c_lexer_preprocessor.py` |
-| C target ABI probing and cache | `x2py/c_type_probe.py` | `tests/parser/test_c_standard_type_probe.py` |
+| Compiler preprocessing | `x2py/pipeline/preprocessing.py` | `tests/parser/test_preprocessing_cli.py`, `tests/parser/test_preprocessor_and_execution_boundaries.py`, `tests/parser/c/test_c_lexer_preprocessor.py` |
+| C target ABI probing and cache | `x2py/probes/c_types.py` | `tests/parser/test_c_standard_type_probe.py` |
 | C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_c2ir.py`, `tests/semantics/test_c_semantic_readiness.py` |
 | Fortran-to-C bridge and CPython binding | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | `tests/wrapper/` subject suites |
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
@@ -257,7 +257,7 @@ Use the same visible section banners as `FortranParser`, for example
 helpers`. Keep related visitors adjacent instead of sorting methods merely by
 name.
 
-All model-type dispatch goes through `x2py.visitor.ClassVisitor._visit` and a
+All model-type dispatch goes through `x2py.utilities.visitor.ClassVisitor._visit` and a
 matching `<prefix>_<ClassName>` handler. Parser-model converters, semantic
 lowering, `.pyi` AST visitors, bridges, bindings, and printers share that one
 implementation; do not duplicate its MRO lookup in an individual class.
@@ -279,7 +279,7 @@ module-level function only to preserve an old internal call path.
 
 User-visible `.pyi` syntax is first parsed to Python AST by
 `x2py/pyi_parser/parser.py`, loaded from text/files by
-`x2py/pyi_pipeline.py`, converted to semantic IR by
+`x2py/pipeline/pyi.py`, converted to semantic IR by
 `x2py/semantics/pyi2ir.py`, and printed by
 `x2py/codegen/printers/pyi_printer.py`. The converter and printer operate on
 `x2py/semantics/models.py`.
@@ -321,7 +321,7 @@ Mapping happens during parser-to-IR conversion:
   `x2py/semantics/fortran2ir.py`.
 - The shared dtype names and storage contracts live in `x2py/semantics/models.py`.
 - Compiler-measured mapping snapshots are generated by
-  `x2py/type_mapping_report.py`.
+  `x2py/probes/report.py`.
 
 <!-- X2PY_C_DOCS_START
 - C primitive, typedef, and probe-aware mapping lives in `x2py/semantics/c2ir.py`.
@@ -347,13 +347,13 @@ When changing datatype mapping:
 X2PY_C_DOCS_END -->
 
    ```bash
-   python3 -m x2py.type_mapping_report --language fortran
+   python3 -m x2py.probes.report --language fortran
    ```
 
 <!-- X2PY_C_DOCS_START
    ```bash
-   python3 -m x2py.type_mapping_report &#45;&#45;language c
-   python3 -m x2py.type_mapping_report &#45;&#45;language fortran
+   python3 -m x2py.probes.report &#45;&#45;language c
+   python3 -m x2py.probes.report &#45;&#45;language fortran
    ```
 X2PY_C_DOCS_END -->
 
@@ -433,7 +433,7 @@ X2PY_C_DOCS_END -->
 - dispatching the requested stage flags;
 - defaulting recognizable Fortran sources to a wrapper build when no stage is
   selected;
-- routing `--wrap` and `--makefile` through `x2py/wrapping.py`;
+- routing `--wrap` and `--makefile` through `x2py/pipeline/build.py`;
 - routing text, JSON, and `--out` output.
 
 <!-- X2PY_C_DOCS_START
@@ -452,7 +452,7 @@ package entrypoint. New cross-language user behavior normally belongs in
 
 ### Preprocessing Internals
 
-`x2py/preprocessing.py` owns compiler-backed preprocessing and provenance. The
+`x2py/pipeline/preprocessing.py` owns compiler-backed preprocessing and provenance. The
 main value object is `PreprocessingConfig`; the main execution path is
 `run_compiler_preprocessor_with_recipe(...)`.
 
@@ -512,7 +512,7 @@ from pathlib import Path
 
 from x2py import parse_fortran_file
 from semantics.fortran2ir import fortran_file_to_semantic_modules
-from x2py.preprocessing import PreprocessingConfig, preprocess_source
+from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
 path = Path("configured.F90")
 preprocessed = preprocess_source(
@@ -582,7 +582,7 @@ from pathlib import Path
 from c_parser.cli import attach_preprocessing_recipe
 from x2py import parse_c_file
 from semantics.c2ir import c_file_to_semantic_modules
-from x2py.preprocessing import PreprocessingConfig, preprocess_source
+from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
 path = Path("api.h")
 preprocessed = preprocess_source(
@@ -677,7 +677,7 @@ CLI `.pyi` readiness:
 ```text
 .pyi path(s) or directory
   -> x2py/pyi_parser/parser.py
-  -> x2py/pyi_pipeline.py pyi_paths_to_semantic_modules(...)
+  -> x2py/pipeline/pyi.py pyi_paths_to_semantic_modules(...)
   -> x2py/semantics/pyi2ir.py
   -> SemanticModule list
   -> x2py/semantics/policy_completion.py
@@ -782,7 +782,7 @@ configured, it runs `probe_c_standard_types_cached(...)` and passes the report
 to `x2py/semantics/c2ir.py`. Compile databases and custom preprocessing templates
 must use an explicit reusable `&#45;&#45;c-type-report` because a single automatic ABI
 probe cannot represent every per-file recipe in those modes. Probe runner,
-cache directory, and refresh flags belong to `x2py/c_type_probe.py`.
+cache directory, and refresh flags belong to `x2py/probes/c_types.py`.
 X2PY_C_DOCS_END -->
 
 Fortran target datatype mapping and compile-time path:
@@ -809,7 +809,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 Generated datatype mapping reports are documentation and verification outputs,
-not a separate parse path. `x2py/type_mapping_report.py` uses the C and Fortran
+not a separate parse path. `x2py/probes/report.py` uses the C and Fortran
 converter/probe machinery to print target-specific mapping examples for
 `docs/user/reference/semantic-ir.md`; changes there need both semantic conversion tests and
 documentation-example verification.
@@ -817,8 +817,8 @@ X2PY_C_DOCS_END -->
 
 ### Fortran Runtime Wrapper Path
 
-`x2py/wrapping.py::build_fortran_extension(...)` and
-`x2py/wrapping.py::build_pyi_extension(...)` are the public orchestration
+`x2py/pipeline/build.py::build_fortran_extension(...)` and
+`x2py/pipeline/build.py::build_pyi_extension(...)` are the public orchestration
 boundaries for wrapper builds. Keep their stages explicit:
 
 ```text
@@ -835,7 +835,7 @@ ordered source paths
 
 The main ownership boundaries are:
 
-- `x2py/wrapping.py`: source order, preprocessing/probing, semantic merge,
+- `x2py/pipeline/build.py`: source order, preprocessing/probing, semantic merge,
   `.pyi` entry-contract loading, native build plan assembly, output placement,
   direct-versus-Makefile mode, and artifact reporting;
 - `x2py/semantics/ir2ast.py`: semantic contract validation and conversion to
@@ -928,7 +928,7 @@ X2PY_C_DOCS_END -->
   and compile-time values.
 - `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
 - `x2py/pyi_parser/parser.py` parses edited contracts to Python AST.
-- `x2py/pyi_pipeline.py` converts edited contract text, files, and path sets.
+- `x2py/pipeline/pyi.py` converts edited contract text, files, and path sets.
 - `x2py/semantics/pyi2ir.py` converts parsed `.pyi` AST back into semantic IR.
 - `x2py/semantics/native_contract.py` validates immutable native scope, ABI,
   placement, type, callback, and projection facts before source-free codegen.
@@ -1214,7 +1214,7 @@ X2PY_C_DOCS_END -->
 Example target: add a new `Annotated[...]` metadata item or projection helper.
 
 1. Add loader tests in `tests/pyi/test_pyi_to_ir.py`.
-2. Update `x2py/semantics/pyi2ir.py`. Update `x2py/pyi_pipeline.py`
+2. Update `x2py/semantics/pyi2ir.py`. Update `x2py/pipeline/pyi.py`
    when loading or cross-file reconciliation changes. Update
    `x2py/pyi_parser/parser.py` only when the raw Python AST parsing boundary
    changes.
@@ -1288,7 +1288,7 @@ diagnostic formatting.
 1. Add CLI tests in `tests/parser/test_cli.py` first.
 2. Implement shared dispatch and output behavior in `x2py/cli.py`.
 3. Keep Fortran package-specific CLI behavior in `x2py/fortran_parser/cli.py`.
-4. If compiler preprocessing behavior changes, update `x2py/preprocessing.py`
+4. If compiler preprocessing behavior changes, update `x2py/pipeline/preprocessing.py`
    and preprocessing tests.
 5. Update [Basic wrapper tutorial](../user/tutorials/basic-wrapper.md) or [Verified examples cookbook](../user/examples/verified-cookbook.md) for
    user-facing commands and this guide for developer command maps.

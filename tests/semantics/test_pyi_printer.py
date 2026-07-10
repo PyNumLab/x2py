@@ -5,7 +5,7 @@ import pytest
 import x2py
 from x2py.contracts import CONTRACT_SYMBOLS
 from x2py import parse_fortran_file as parse_fortran_source
-from x2py.semantic_metadata import SNAPSHOT_TYPE_METADATA
+from x2py.semantics.metadata import SNAPSHOT_TYPE_METADATA
 from x2py.codegen.binding_pipeline import BindingPipeline
 from x2py.codegen.codegen import Codegen
 from x2py.codegen.scope import Scope
@@ -14,7 +14,7 @@ from x2py.semantics.fortran2ir import (
     fortran_module_to_semantic_module,
 )
 
-from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
+from x2py.pipeline.pyi import pyi_text_to_semantic_module as _parse_pyi_text
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.codegen.printers.pyi_printer import (
     emit_module,

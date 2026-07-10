@@ -1,6 +1,6 @@
 """Shared visitor base for bridge and binding generators."""
 
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 from .scope import Scope
 

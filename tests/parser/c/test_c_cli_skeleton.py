@@ -13,7 +13,7 @@ import pytest
 from x2py.c_parser import CParseError
 from x2py.c_parser import cli as c_parser_cli
 from x2py import cli as x2py_cli
-from x2py.preprocessing import PreprocessingConfig
+from x2py.pipeline.preprocessing import PreprocessingConfig
 
 CONTRACT_IMPORT = "from x2py.contracts import Int32\n\n"
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from x2py.runtime_handles import AllocatableArray
+from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,

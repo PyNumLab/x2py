@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Any
 
-from x2py.semantic_metadata import (
+from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,

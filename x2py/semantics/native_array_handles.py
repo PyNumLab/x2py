@@ -5,8 +5,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
-from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_METADATA
-from x2py.semantic_metadata import (
+from x2py.semantics.ownership import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_METADATA
+from x2py.semantics.metadata import (
     NATIVE_ARRAY_DESCRIPTOR_METADATA,
     NATIVE_ARRAY_HANDLE_POLICY_METADATA,
     OPTIONAL_ABSENT_HANDLE_METADATA,

@@ -9,15 +9,21 @@ jumping directly into generated-code internals.
 | File or package | Owns |
 | --- | --- |
 | `cli.py` | User CLI stages, output routing, diagnostics, and wrapper option validation. |
-| `wrapping.py` | End-to-end Fortran source and semantic `.pyi` extension builds. |
-| `preprocessing.py` | Compiler-backed preprocessing before parser entry. |
-| `c_type_probe.py` | C target ABI type facts. |
-| `fortran_type_probe.py` | Fortran kind and storage facts. |
-| `ownership_policy.py` | Wrapper ownership, transfer, destruction, and codegen action policy. |
+| `contracts/` | Public names used by semantic `.pyi` contracts. |
+| `pipeline/` | Preprocessing, semantic `.pyi` loading, and end-to-end wrapper builds. |
+| `probes/` | C ABI facts, Fortran kind/storage facts, and type mapping reports. |
+| `runtime/` | Python runtime objects used by generated extensions. |
+| `types/` | Semantic-to-Python ecosystem type mappings. |
 | `c_parser/` and `fortran_parser/` | Native source frontends and parser models. |
-| `semantics/` | Language-neutral semantic IR, readiness, `.pyi` parsing, and codegen lowering. |
+| `semantics/` | Language-neutral semantic IR, policy completion, readiness, `.pyi` conversion, and codegen lowering. |
 | `codegen/` | Codegen AST, Fortran bridge generation, CPython binding generation, and printers. |
 | `compiling/` | Native compiler objects, wrapper compilation, runtime support installation, and linking. |
+| `utilities/` | Small domain-neutral helpers, including class visitor dispatch. |
+
+The package root contains only `__init__.py`, `__main__.py`, and `cli.py`.
+Supported library symbols are flattened through `x2py.__init__`; internal code
+imports the canonical owning module. `x2py.contracts` remains a deliberate
+public submodule because its import path is part of semantic `.pyi` syntax.
 
 ## Source Navigation Docs
 

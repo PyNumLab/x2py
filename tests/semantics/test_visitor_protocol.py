@@ -17,7 +17,7 @@ from x2py.semantics.c2ir import CToIRConverter
 from x2py.semantics.fortran2ir import FortranToIRConverter, _FortranVariableContextVisitor
 from x2py.semantics.ir2ast import _SemanticIrToCodegenAstVisitor
 from x2py.semantics.pyi2ir import _ClassBodyVisitor, _ModuleVisitor
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 
 VISITOR_CLASSES = (
@@ -137,4 +137,4 @@ def test_shared_visitor_is_the_only_mro_dispatch_implementation():
         for node in ast.walk(tree):
             if isinstance(node, ast.Attribute) and node.attr in {"__mro__", "mro"}:
                 invalid.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno}")
-    assert not invalid, "Use x2py.visitor.ClassVisitor instead of local MRO dispatch:\n" + "\n".join(invalid)
+    assert not invalid, "Use x2py.utilities.visitor.ClassVisitor instead of local MRO dispatch:\n" + "\n".join(invalid)

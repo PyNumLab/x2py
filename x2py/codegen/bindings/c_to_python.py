@@ -7,7 +7,7 @@ import ast
 from functools import reduce
 from typing import ClassVar
 
-from x2py.ownership_policy import (
+from x2py.semantics.ownership import (
     CodegenAction,
     DestructionPolicy,
     DestructionPolicyDispatcher,
@@ -24,7 +24,7 @@ from x2py.ownership_policy import (
     TransferMode,
     ownership_decision_for_codegen_variable,
 )
-from x2py.semantic_metadata import SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA
+from x2py.semantics.metadata import SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA
 from x2py.semantics.models import (
     INTERNAL_MODULE_VARIABLE_ACCESS_METADATA,
     INTERNAL_MODULE_VARIABLE_NAME_METADATA,
@@ -1839,7 +1839,7 @@ class CPythonBindingGenerator(BindingGenerator):
         ]
         body = [
             *owner_setup,
-            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime_handles")))),
+            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime.handles")))),
             If(IfSection(Is(runtime_module, NIL), [*failure_cleanup, Return(self._error_exit_code)])),
             AliasAssign(
                 helper,
@@ -2867,7 +2867,7 @@ class CPythonBindingGenerator(BindingGenerator):
         descriptor_item = self._new_python_object(f"{subject.name}_descriptor_item")
         owned_args = [descriptor_kind, dtype, rank, expected_shape, optional_absent]
         body = [
-            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime_handles")))),
+            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime.handles")))),
             If(IfSection(Is(runtime_module, NIL), [Return(self._error_exit_code)])),
             AliasAssign(
                 helper,
@@ -2968,7 +2968,7 @@ class CPythonBindingGenerator(BindingGenerator):
         packed = self._new_python_object(f"{subject.name}_descriptor_fields")
         owned_args = [descriptor_kind, dtype, rank, expected_shape, optional_absent]
         body = [
-            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime_handles")))),
+            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime.handles")))),
             If(IfSection(Is(runtime_module, NIL), [Return(self._error_exit_code)])),
             AliasAssign(
                 helper,
@@ -4486,7 +4486,7 @@ class CPythonBindingGenerator(BindingGenerator):
             include_strides,
         ]
         body = [
-            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime_handles")))),
+            AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime.handles")))),
             If(IfSection(Is(runtime_module, NIL), [Return(self._error_exit_code)])),
             AliasAssign(
                 helper,

@@ -38,13 +38,12 @@ from x2py.semantics.c2ir import (
     c_type_to_semantic_type,
 )
 from x2py.semantics.pyi2ir import convert_pyi_to_ir
-from x2py.pyi_pipeline import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
+from x2py.pipeline.pyi import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
 from x2py.codegen.printers.pyi_printer import emit_module_stubs, opaque_dependency_modules
 from x2py.semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
-from x2py.runtime_handles import AllocatableArray, NativeArrayHandleBase, PointerArray
+from x2py.runtime.handles import AllocatableArray, NativeArrayHandleBase, PointerArray
 
-from .cli import main
-
+_CLI_EXPORTS = {"main"}
 _FORTRAN_TYPE_PROBE_EXPORTS = {
     "FortranTypeProbeError",
     "FortranTypeProbeReport",
@@ -73,14 +72,17 @@ _WRAPPING_EXPORTS = {
 
 
 def __getattr__(name: str):
+    if name in _CLI_EXPORTS:
+        module = import_module("x2py.cli")
+        return getattr(module, name)
     if name in _FORTRAN_TYPE_PROBE_EXPORTS:
-        module = import_module("x2py.fortran_type_probe")
+        module = import_module("x2py.probes.fortran_types")
         return getattr(module, name)
     if name in _NUMPY_TYPE_EXPORTS:
-        module = import_module("x2py.numpy_types")
+        module = import_module("x2py.types.numpy")
         return getattr(module, name)
     if name in _WRAPPING_EXPORTS:
-        module = import_module("x2py.wrapping")
+        module = import_module("x2py.pipeline.build")
         return getattr(module, name)
     raise AttributeError(f"module 'x2py' has no attribute {name!r}")
 

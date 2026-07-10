@@ -9,7 +9,7 @@ from dataclasses import replace
 from functools import reduce
 from typing import ClassVar
 
-from x2py.ownership_policy import (
+from x2py.semantics.ownership import (
     AssignmentMode,
     CodegenAction,
     DestructionPolicy,

@@ -139,7 +139,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact linux-x86_64 -->
 <!-- X2PY_C_DOCS_START
 ```bash
-python3 -m x2py.type_mapping_report &#45;&#45;language c
+python3 -m x2py.probes.report &#45;&#45;language c
 ```
 X2PY_C_DOCS_END -->
 
@@ -183,7 +183,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact linux-x86_64 -->
 <!-- X2PY_C_DOCS_START
 ```bash
-python3 -m x2py.type_mapping_report &#45;&#45;language fortran
+python3 -m x2py.probes.report &#45;&#45;language fortran
 ```
 X2PY_C_DOCS_END -->
 
@@ -295,7 +295,7 @@ X2PY_C_DOCS_END -->
 - `void` return -> `None`.
 - `_Bool` -> `Bool`.
 - All modeled primitive integer, real, and complex spellings consume supplied
-  `x2py.c_type_probe` facts. Plain `char` signedness, integer widths, real
+  `x2py.probes.c_types` facts. Plain `char` signedness, integer widths, real
   storage widths and precision metadata, and complex storage widths come from
   the selected compiler target.
 - `int` keeps semantic name `Int` while its concrete dtype follows the target.
@@ -307,7 +307,7 @@ X2PY_C_DOCS_END -->
 - Local typedef chains are resolved when their parser model definitions are
   available.
 - `size_t` maps to `SizeT` without a target probe; supplied
-  `x2py.c_type_probe` facts override standard typedefs with width-specific
+  `x2py.probes.c_types` facts override standard typedefs with width-specific
   `Int*`, `UInt*`, or `Float*` semantic names.
 - Opaque standard-type probe facts such as `FILE` create named opaque semantic
   classes when referenced by converted declarations.
@@ -444,7 +444,7 @@ temporaries, but they must not infer or override a barrier action from datatype,
 source-declaration direction, array category, aliasing, or memory-storage checks.
 
 Parser-model conversion and codegen model traversal use the shared
-`x2py.visitor.ClassVisitor` dispatcher and one configured
+`x2py.utilities.visitor.ClassVisitor` dispatcher and one configured
 `<prefix>_<ClassName>` protocol. The default prefix is `_visit`; specialized
 visitors may choose clearer names such as `_print` or `_parse` while still using
 the same MRO dispatcher. Barrier/action dispatch tables are allowed only for

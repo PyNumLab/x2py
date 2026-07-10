@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-import x2py.pyi_pipeline as pyi_pipeline
+import x2py.pipeline.pyi as pyi_pipeline
 from tests._shared.fixture_outputs import (
     C_PYI_FIXTURE_DIR,
     FORTRAN_DATA_DIR,
@@ -13,9 +13,9 @@ from tests._shared.fixture_outputs import (
     iter_general_fortran_fixtures,
     pyi_files_for_fixture,
 )
-from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
+from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.codegen.printers.pyi_printer import emit_module
-from x2py.wrapping import _discover_pyi_imports, _pyi_contract_bundle
+from x2py.pipeline.build import _discover_pyi_imports, _pyi_contract_bundle
 
 
 FORTRAN_FIXTURES = iter_general_fortran_fixtures()

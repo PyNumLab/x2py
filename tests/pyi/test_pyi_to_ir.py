@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-import x2py.pyi_pipeline as pyi_pipeline
+import x2py.pipeline.pyi as pyi_pipeline
 from x2py.contracts import CONTRACT_SYMBOLS
-from x2py.semantic_metadata import (
+from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
@@ -45,7 +45,7 @@ from x2py.semantics.pyi2ir import (
     _node_text,
     convert_pyi_to_ir,
 )
-from x2py.pyi_pipeline import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
+from x2py.pipeline.pyi import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
 from x2py.pyi_parser import parse_pyi_text as parse_pyi_ast_text
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.native_contract import native_contract_issues

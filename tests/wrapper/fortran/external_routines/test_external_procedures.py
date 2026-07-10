@@ -17,7 +17,7 @@ from tests.wrapper.fortran._support import (
     wrapper_source,
 )
 from x2py import build_pyi_extension
-from x2py.wrapping import build_fortran_extension
+from x2py.pipeline.build import build_fortran_extension
 
 FIXED_EXTERNAL = wrapper_source("fixed_external.f")
 FREE_EXTERNAL = wrapper_source("free_external.f90")

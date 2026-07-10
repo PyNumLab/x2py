@@ -26,7 +26,7 @@ from x2py.semantics.models import (
     SemanticStorageContract,
     SemanticType,
 )
-from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
+from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.semantics.readiness import (
     _SemanticTypeIndex,
     _called_shape_intrinsics,

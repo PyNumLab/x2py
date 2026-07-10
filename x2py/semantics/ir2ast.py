@@ -37,7 +37,7 @@ from x2py.codegen.models.datatypes import (
     convert_to_literal,
     original_type_to_x2py_type,
 )
-from x2py.semantic_metadata import (
+from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
@@ -55,7 +55,7 @@ from x2py.semantics.models import (
 from x2py.semantics.native_array_handles import array_interop_policy, native_array_descriptor_kind
 from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 
 _SEMANTIC_ORDER_TO_NUMPY_ORDER = {

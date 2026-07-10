@@ -24,7 +24,7 @@ import subprocess
 import tempfile
 from typing import Any
 
-from .preprocessing import PreprocessingConfig, PreprocessingError, validate_macro_name
+from x2py.pipeline.preprocessing import PreprocessingConfig, PreprocessingError, validate_macro_name
 
 
 class FortranTypeProbeError(ValueError):

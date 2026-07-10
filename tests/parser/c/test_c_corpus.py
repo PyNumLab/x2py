@@ -15,7 +15,7 @@ _CJSON_DIR = _TESTS_DIR / "data" / "c" / "json"
 
 
 def _preprocessed_cjson_source(filename: str) -> str:
-    from x2py.preprocessing import PreprocessingConfig, preprocess_source
+    from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
     compiler = shutil.which("cc")
     if compiler is None:

@@ -1212,7 +1212,7 @@ The standalone probe can create a reusable report containing the exact
 compile-time and storage expressions needed by a source:
 
 ```bash
-python3 -m x2py.fortran_type_probe --compiler gfortran \
+python3 -m x2py.probes.fortran_types --compiler gfortran \
   --expr='selected_real_kind(12)' \
   --expr='storage_size(real(0.0,kind=8))' \
   > build/fortran-types.json

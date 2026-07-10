@@ -34,7 +34,7 @@ implementation details. Object kind, ownership, transfer, destruction,
 mutability/writeback, result projection, nullability, release responsibility,
 contract/boundary storage modes, Python-barrier action, and native-barrier
 action must be completed before this boundary by `policy_completion.py` using
-`x2py/ownership_policy.py`. Getter result, native setter assignment, and Python
+`x2py/semantics/ownership.py`. Getter result, native setter assignment, and Python
 setter exposure policies are completed there as well.
 
 The Python barrier and native barrier are separate policy decisions. The Python
@@ -60,7 +60,7 @@ be typed expressions such as `Int32(1)` or `String[1]("N")`.
 `readiness.py`, `ir2ast.py`, bridges, and bindings consume those decisions
 instead of making local policy guesses. Bridge and binding dispatch is strict:
 an unregistered barrier action or object-kind/action pair is an error rather
-than a fallback. Model-node dispatch uses `x2py.visitor.ClassVisitor` and the
+than a fallback. Model-node dispatch uses `x2py.utilities.visitor.ClassVisitor` and the
 `_visit_<ClassName>` protocol across parser-model conversion, `.pyi` AST
 conversion, semantic lowering, bridges, bindings, and printers. Barrier/action
 dispatch tables are separate and must not be used as model-node visitors.

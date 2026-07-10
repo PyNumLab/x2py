@@ -22,9 +22,9 @@ from x2py.fortran_parser.models import (
     FortranUseMapping,
     FortranVariable,
 )
-from x2py.ownership_policy import set_ownership_metadata
-from x2py.semantic_metadata import PROJECTED_OUTPUT_METADATA, SCALAR_STORAGE_CATEGORY
-from x2py.visitor import ClassVisitor
+from x2py.semantics.ownership import set_ownership_metadata
+from x2py.semantics.metadata import PROJECTED_OUTPUT_METADATA, SCALAR_STORAGE_CATEGORY
+from x2py.utilities.visitor import ClassVisitor
 
 from .models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,

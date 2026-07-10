@@ -574,7 +574,7 @@ an independent lifetime.
 
 ### Policy Overrides In Semantic `.pyi` Files
 
-Ownership decisions are centralized in `x2py.ownership_policy`. Semantic
+Ownership decisions are centralized in `x2py.semantics.ownership`. Semantic
 lowering and both bridge layers consume that resolved decision; low-level
 printers do not invent ownership behavior.
 

@@ -15,14 +15,14 @@ pytest.importorskip("hypothesis")
 
 from hypothesis import given, strategies as st
 
-import x2py.preprocessing as preprocessing
+import x2py.pipeline.preprocessing as preprocessing
 from x2py.c_parser import CParseError, parse_c_file
 from x2py.c_parser.lexer import split_top_level_c_source, top_level_split
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
-from x2py.pyi_pipeline import pyi_text_to_semantic_module as parse_pyi_text
+from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.codegen.printers.pyi_printer import emit_module_stubs
 from x2py import FortranParseError, parse_fortran_file
-from x2py.preprocessing import PreprocessingConfig, preprocess_source
+from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
 
 _FORTRAN_SCALAR_TYPES = st.sampled_from(["integer", "real", "logical"])

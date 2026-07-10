@@ -6,9 +6,9 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from x2py.contracts import CONTRACT_SYMBOLS, CONTRACT_TYPE_NAMES
-from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
-from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, set_ownership_metadata, set_pointer_policy_metadata
-from x2py.semantic_metadata import (
+from x2py.types.numpy import SEMANTIC_SCALAR_TYPE_NAMES
+from x2py.semantics.ownership import OWNERSHIP_POLICY_METADATA, set_ownership_metadata, set_pointer_policy_metadata
+from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
@@ -21,7 +21,7 @@ from x2py.semantic_metadata import (
     USER_PRIVATE_METADATA,
 )
 from x2py.semantics.native_array_handles import mark_native_array_handle, native_array_descriptor_kind
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 from .models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,

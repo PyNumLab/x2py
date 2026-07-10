@@ -96,7 +96,7 @@ argument handoff from the native barrier action.
   `fortran_array_category`; the remaining category field is ABI metadata.
 - [x] Parser grammar units, parser-model converters, `.pyi` AST conversion,
   semantic lowering, bridges, bindings, and printers now share
-  `x2py.visitor.ClassVisitor` and configured `<prefix>_<ClassName>` handlers
+  `x2py.utilities.visitor.ClassVisitor` and configured `<prefix>_<ClassName>` handlers
   instead of parallel visitor implementations or local `isinstance` dispatch
   ladders.
 - [x] Structural evidence lives in `tests/semantics/test_visitor_protocol.py`
@@ -558,7 +558,7 @@ X2PY_C_DOCS_END -->
   implemented. Remaining rank, datatype, `is_alias`, and storage checks in
   bridge and binding code are local emitted-code, ABI, documentation, or
   object-model mechanics rather than semantic policy selection. Evidence:
-  `x2py/ownership_policy.py`,
+  `x2py/semantics/ownership.py`,
   `x2py/codegen/bridges/fortran_to_c.py`,
   `x2py/codegen/bindings/c_to_python.py`,
   `tests/semantics/test_ownership_policy.py`,

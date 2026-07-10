@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import _build_source_or_generated_pyi_and_import, wrapper_source
-from x2py.runtime_handles import _NativeArrayHandoff, AllocatableArray, PointerArray
+from x2py.runtime.handles import _NativeArrayHandoff, AllocatableArray, PointerArray
 
 ASSUMED_RANK_F90_SOURCE = wrapper_source("fassumed_rank_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"

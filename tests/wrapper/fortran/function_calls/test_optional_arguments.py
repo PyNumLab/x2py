@@ -13,7 +13,7 @@ from tests.wrapper.fortran._support import (
     _sole_native_module,
     wrapper_source,
 )
-from x2py.runtime_handles import _NativeArrayHandoff, AllocatableArray, PointerArray
+from x2py.runtime.handles import _NativeArrayHandoff, AllocatableArray, PointerArray
 
 OPTIONAL_F90_SOURCE = wrapper_source("foptional_f90.f90")
 OPTIONAL_FIXED_SOURCE = wrapper_source("foptional_fixed.f")

@@ -8,13 +8,13 @@ from types import SimpleNamespace
 
 import pytest
 
-import x2py.fortran_type_probe as fortran_type_probe
+import x2py.probes.fortran_types as fortran_type_probe
 from x2py.semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_module_to_semantic_module,
 )
 from x2py import parse_fortran_file as parse_fortran_source
-from x2py.fortran_type_probe import (
+from x2py.probes.fortran_types import (
     FortranTypeProbeRecipe,
     FortranTypeProbeReport,
     FortranTypeProbeError,
@@ -28,7 +28,7 @@ from x2py.fortran_type_probe import (
     probe_fortran_type_expressions,
     probe_fortran_type_expressions_cached,
 )
-from x2py.preprocessing import PreprocessingConfig
+from x2py.pipeline.preprocessing import PreprocessingConfig
 
 
 _FC = shutil.which("gfortran") or shutil.which("f95")
@@ -441,7 +441,7 @@ def test_fortran_type_probe_module_cli_emits_json_for_semantic_input(tmp_path):
         [
             sys.executable,
             "-m",
-            "x2py.fortran_type_probe",
+            "x2py.probes.fortran_types",
             "--compiler",
             compiler,
             "--expr",

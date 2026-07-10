@@ -38,12 +38,12 @@ X2PY_C_DOCS_END -->
 | Stage | Main source | Input | Output | Primary evidence |
 | --- | --- | --- | --- | --- |
 | CLI request | `x2py/cli.py` | source paths and stage flags | selected stage or wrapper build options | `tests/parser/test_cli.py` |
-| Build orchestration | `x2py/wrapping.py` | ordered Fortran sources or `.pyi` contracts plus explicit native artifacts | `WrapperBuildResult`, `NativeBuildPlan`, and generated artifact plan | wrapper build-mode tests |
-| Preprocessing | `x2py/preprocessing.py` | source path, compiler config | preprocessed source and dependency facts | preprocessing tests |
+| Build orchestration | `x2py/pipeline/build.py` | ordered Fortran sources or `.pyi` contracts plus explicit native artifacts | `WrapperBuildResult`, `NativeBuildPlan`, and generated artifact plan | wrapper build-mode tests |
+| Preprocessing | `x2py/pipeline/preprocessing.py` | source path, compiler config | preprocessed source and dependency facts | preprocessing tests |
 | Parser project model | `x2py/fortran_parser/parser.py` | preprocessed Fortran source | parser project with modules, procedures, types, visibility | Fortran parser fixture tests |
-| Target probes | `x2py/fortran_type_probe.py` | semantic type requirements and compiler flags | resolved kind/storage facts | Fortran type probe tests |
+| Target probes | `x2py/probes/fortran_types.py` | semantic type requirements and compiler flags | resolved kind/storage facts | Fortran type probe tests |
 | Semantic IR | `x2py/semantics/fortran2ir.py` | parser project and target facts | `SemanticModule` objects | semantic Fortran tests |
-| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/ownership_policy.py` | full semantic modules with signatures and `.pyi` overrides | semantic modules annotated with completed ownership, transfer, and destruction decisions | ownership-policy, readiness, and lowering tests |
+| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | full semantic modules with signatures and `.pyi` overrides | semantic modules annotated with completed ownership, transfer, and destruction decisions | ownership-policy, readiness, and lowering tests |
 | Readiness | `x2py/semantics/readiness.py` | prepared semantic modules | blockers and support status | readiness tests and fixtures |
 | Codegen lowering | `x2py/semantics/ir2ast.py` | policy-completed semantic modules | codegen AST consuming completed policy decisions | `tests/semantics/test_ir2ast.py`, wrapper tests |
 | Printing | `x2py/codegen/printers/` | generated ASTs | wrapper source files | generated build artifacts and wrapper tests |
@@ -60,15 +60,30 @@ The pipeline keeps separate concepts for contract facts, policy decisions,
 generated implementation, and emitted source. Similar names across layers do
 not mean those classes should be merged.
 
+The Python package layout follows those ownership boundaries:
+
+| Package | Owns | Must not become |
+| --- | --- | --- |
+| `x2py/contracts/` | The public semantic `.pyi` vocabulary | A home for semantic conversion or runtime type mapping |
+| `x2py/types/` | Mappings from resolved semantic types to Python ecosystem types | A second semantic IR model |
+| `x2py/probes/` | Compiler-derived target facts and reports built from those facts | Semantic policy or build orchestration |
+| `x2py/pipeline/` | Source preprocessing, semantic `.pyi` loading, and end-to-end wrapper build orchestration | Parser models, semantic decisions, or compiler implementation details |
+| `x2py/runtime/` | Python objects used by generated extensions at execution time | Build-time semantic or codegen policy |
+| `x2py/utilities/` | Small domain-neutral mechanisms such as class visitor dispatch | A miscellaneous home for semantic or pipeline concepts |
+
+Semantic metadata and ownership policy remain in `x2py/semantics/` even when
+codegen consumes them. Downstream use does not turn semantic authority into
+cross-cutting infrastructure.
+
 | Concept family | Owner | What belongs there | What must stay out |
 | --- | --- | --- | --- |
 | Parser facts | parser packages | Source syntax, native declaration structure, source locations, and parser diagnostics | Wrapper policy, Python API projection, generated names, and compile/link decisions |
-| Readiness and ownership policy | `x2py/semantics/readiness.py`, `x2py/semantics/policy_completion.py`, and `x2py/ownership_policy.py` | Semantic policy completion, support blockers, and policy choices for ownership, lifetime, output projection, replacement, and ABI safety | Raw parser syntax, backend-specific statement trees, and hidden lowering-time policy decisions |
+| Readiness and ownership policy | `x2py/semantics/readiness.py`, `x2py/semantics/policy_completion.py`, and `x2py/semantics/ownership.py` | Semantic policy completion, support blockers, and policy choices for ownership, lifetime, output projection, replacement, and ABI safety | Raw parser syntax, backend-specific statement trees, and hidden lowering-time policy decisions |
 | Core codegen AST | `x2py/codegen/models/` and `x2py/semantics/ir2ast.py` outputs | The implementation plan after a semantic contract is accepted: generated functions, variables as storage locations, statements, expressions, control flow, temporaries, scopes, and imports/includes | Source-contract authority, `.pyi` persistence, and readiness-only facts |
 | Printers and compilation | `x2py/codegen/printers/`, `x2py/compiling/`, and wrapper orchestration | Text emission, generated artifact layout, compiler commands, native objects, libraries, include directories, and link inputs | Semantic support decisions and generated-AST rewriting policy |
 
 <!-- X2PY_C_DOCS_START
-| Semantic IR | `x2py/semantics/models.py`, `x2py/semantic_metadata.py`, and source-to-IR converters | Language-neutral contract facts: public names, native identities, source origins, visibility, type/storage/access facts, module/class/function/variable structure, and metadata that must survive parser, policy, printer, and lowering boundaries | Generated bodies, temporaries, target-language scopes, include/import mechanics, CPython calls, and printer-only syntax |
+| Semantic IR | `x2py/semantics/models.py`, `x2py/semantics/metadata.py`, and source-to-IR converters | Language-neutral contract facts: public names, native identities, source origins, visibility, type/storage/access facts, module/class/function/variable structure, and metadata that must survive parser, policy, printer, and lowering boundaries | Generated bodies, temporaries, target-language scopes, include/import mechanics, CPython calls, and printer-only syntax |
 | Backend codegen AST | `x2py/codegen/bridges/`, `x2py/codegen/bindings/`, and backend API helpers | Fortran bridge nodes, C/CPython binding nodes, target ABI/API calls, and backend-specific adapter structure | Language-neutral semantic meaning |
 | Naming policy | `x2py/naming/` | Shared public-name and generated-symbol decisions for Python, C, and Fortran targets | Semantic IR ownership or codegen tree ownership |
 X2PY_C_DOCS_END -->
@@ -142,10 +157,10 @@ X2PY_C_DOCS_END -->
 | Stage family | First files to read | Source navigation owner |
 | --- | --- | --- |
 | CLI and output routing | `x2py/cli.py`, parser CLI helpers | `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md` |
-| Source loading and preprocessing | `x2py/preprocessing.py` | `docs/developer/source-map.md`, parser references |
-| Editable semantic contracts | `x2py/pyi_parser/parser.py`, `x2py/pyi_pipeline.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md` |
+| Source loading and preprocessing | `x2py/pipeline/preprocessing.py` | `docs/developer/source-map.md`, parser references |
+| Editable semantic contracts | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md` |
 | Readiness | `x2py/semantics/readiness.py` | `docs/user/reference/diagnostic-codes.md` |
-| Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/ownership_policy.py`, `x2py/semantics/ir2ast.py` | `docs/user/guide/fortran-wrapper.md`, ownership docs |
+| Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/semantics/ir2ast.py` | `docs/user/guide/fortran-wrapper.md`, ownership docs |
 | Native build | `x2py/compiling/python_wrapper.py`, `x2py/compiling/runtime_support.py` | compiling package README and build-system docs |
 
 <!-- X2PY_C_DOCS_START
@@ -163,7 +178,7 @@ the Python API.
 ```text
 .pyi contract
   -> x2py/pyi_parser/parser.py
-  -> x2py/pyi_pipeline.py
+  -> x2py/pipeline/pyi.py
   -> x2py/semantics/pyi2ir.py
   -> x2py/semantics/native_contract.py
   -> x2py/semantics/policy_completion.py
@@ -195,7 +210,7 @@ X2PY_C_DOCS_END -->
 ```text
 C parser -> x2py/semantics/c2ir.py
 Fortran parser -> x2py/semantics/fortran2ir.py
-.pyi parser -> x2py/pyi_parser/parser.py -> x2py/pyi_pipeline.py -> x2py/semantics/pyi2ir.py
+.pyi parser -> x2py/pyi_parser/parser.py -> x2py/pipeline/pyi.py -> x2py/semantics/pyi2ir.py
   -> SemanticModule objects
   -> x2py/semantics/policy_completion.py
   -> readiness and lowering
@@ -259,10 +274,10 @@ X2PY_C_DOCS_END -->
 
 | Failure type | Preferred owner |
 | --- | --- |
-| Source cannot be preprocessed | `x2py/preprocessing.py` |
+| Source cannot be preprocessed | `x2py/pipeline/preprocessing.py` |
 | Native syntax is unsupported | parser package |
 | Source facts cannot form a safe semantic contract | semantic conversion or readiness |
-| Ownership, lifetime, ABI, or projection policy is unsafe | `x2py/ownership_policy.py`, readiness, or `ir2ast` |
+| Ownership, lifetime, ABI, or projection policy is unsafe | `x2py/semantics/ownership.py`, readiness, or `ir2ast` |
 | Generated code cannot represent a supported contract | bridge or binding generator with focused tests |
-| Compiler/linker invocation is wrong | `x2py/compiling/` or `x2py/wrapping.py` |
+| Compiler/linker invocation is wrong | `x2py/compiling/` or `x2py/pipeline/build.py` |
 | Python runtime behavior is wrong | generated binding, runtime support, or ownership policy |

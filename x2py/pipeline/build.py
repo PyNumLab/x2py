@@ -17,9 +17,9 @@ from x2py.compiling.basic import CompileObj
 from x2py.compiling.compilers import Compiler, get_condaless_search_path
 from x2py.compiling.python_wrapper import create_shared_library
 from x2py.fortran_parser.parser import parse_fortran_project
-from x2py.fortran_type_probe import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
+from x2py.probes.fortran_types import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
 from x2py.naming import NamingPolicy
-from x2py.preprocessing import PreprocessingConfig, preprocess_source
+from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 from x2py.semantics.fortran2ir import (
     collect_fortran_type_storage_requirements,
     collect_semantic_compile_time_requirements,
@@ -42,7 +42,7 @@ from x2py.semantics.native_array_handles import (
     native_array_handle_build_requirements,
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.pyi_pipeline import _PyiSemanticModuleCache
+from x2py.pipeline.pyi import _PyiSemanticModuleCache
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
 
 

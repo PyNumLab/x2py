@@ -10,7 +10,7 @@ from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
 )
-from x2py.runtime_handles import _NativeArrayHandoff, AllocatableArray, PointerArray
+from x2py.runtime.handles import _NativeArrayHandoff, AllocatableArray, PointerArray
 
 ARRAY_CONTRACTS_F90_SOURCE = wrapper_source("farray_contracts_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"

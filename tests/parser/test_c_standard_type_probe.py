@@ -9,8 +9,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import x2py.c_type_probe as c_type_probe
-from x2py.c_type_probe import (
+import x2py.probes.c_types as c_type_probe
+from x2py.probes.c_types import (
     CStandardTypeProbeRecipe,
     CStandardTypeProbeReport,
     CStandardTypeProbeError,
@@ -21,7 +21,7 @@ from x2py.c_type_probe import (
     probe_c_standard_types_cached,
     probe_c_standard_types,
 )
-from x2py.preprocessing import PreprocessingConfig
+from x2py.pipeline.preprocessing import PreprocessingConfig
 
 
 _CC = shutil.which("cc")
@@ -317,7 +317,7 @@ def test_c_standard_type_probe_cache_directory_precedence(monkeypatch, tmp_path)
 def test_c_standard_type_probe_module_cli_emits_json_for_semantic_input():
     compiler = _required_c_compiler()
     completed = subprocess.run(
-        [sys.executable, "-m", "x2py.c_type_probe", "--compiler", compiler],
+        [sys.executable, "-m", "x2py.probes.c_types", "--compiler", compiler],
         capture_output=True,
         text=True,
         check=True,

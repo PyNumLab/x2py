@@ -13,7 +13,7 @@ import pytest
 from x2py.fortran_parser import cli as fortran_parser_cli
 from x2py import FortranParseError
 from x2py import cli as x2py_cli
-from x2py.preprocessing import PreprocessingConfig, PreprocessingDiagnostic, PreprocessingError
+from x2py.pipeline.preprocessing import PreprocessingConfig, PreprocessingDiagnostic, PreprocessingError
 
 
 TEST_FILE = Path(__file__).parent.parent / "data" / "fortran" / "general" / "basic_subroutine.f90"
@@ -2868,8 +2868,8 @@ def test_x2py_fortran_readiness_helpers_attach_and_compile(monkeypatch):
 
     monkeypatch.setattr("x2py.semantics.fortran2ir.collect_semantic_compile_time_requirements", collect_requirements)
     monkeypatch.setattr("x2py.semantics.fortran2ir.collect_fortran_type_storage_requirements", collect_storage)
-    monkeypatch.setattr("x2py.fortran_type_probe.evaluate_fortran_type_requirements", evaluate_requirements)
-    monkeypatch.setattr("x2py.fortran_type_probe.evaluate_fortran_type_facts", evaluate_facts)
+    monkeypatch.setattr("x2py.probes.fortran_types.evaluate_fortran_type_requirements", evaluate_requirements)
+    monkeypatch.setattr("x2py.probes.fortran_types.evaluate_fortran_type_facts", evaluate_facts)
 
     raw_config_with_compiler = x2py_cli.PreprocessingConfig(compiler="gfortran")
     assert x2py_cli._fortran_compile_time_values(parsed, raw_config_with_compiler) is None

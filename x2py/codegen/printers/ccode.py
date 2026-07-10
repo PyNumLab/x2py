@@ -7,7 +7,7 @@ from itertools import chain
 from typing import ClassVar
 
 
-from x2py.ownership_policy import NativeBarrierAction, ObjectKind
+from x2py.semantics.ownership import NativeBarrierAction, ObjectKind
 from x2py.semantics.native_array_handles import NativeArrayHandlePolicy
 
 from ..bind_c import BindCPointer

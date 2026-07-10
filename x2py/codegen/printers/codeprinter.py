@@ -6,7 +6,7 @@ used by all code printers, such as the management of imports and the current
 scope.
 """
 
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 from ..models.core import Module, ModuleHeader
 

@@ -13,8 +13,8 @@ import pytest
 
 from tests.wrapper.fortran._support import _assert_fmath_examples, _sole_native_module, wrapper_source
 from x2py.compiling.basic import CompileObj
-from x2py.preprocessing import PreprocessingConfig
-from x2py.wrapping import NativeBuildPlan, NativeLinkItem, build_fortran_extension
+from x2py.pipeline.preprocessing import PreprocessingConfig
+from x2py.pipeline.build import NativeBuildPlan, NativeLinkItem, build_fortran_extension
 
 VERBOSE_SOURCE = wrapper_source("verbose_api.f90")
 DEFAULT_OUTPUT_SOURCE = wrapper_source("fdefault_output.f")

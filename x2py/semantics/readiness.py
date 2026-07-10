@@ -4,7 +4,7 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
-from x2py.semantic_metadata import PROJECTED_OUTPUT_METADATA
+from x2py.semantics.metadata import PROJECTED_OUTPUT_METADATA
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -93,7 +93,7 @@ def assess_pyi_wrap_readiness(
     encoding: str = "utf-8",
 ) -> dict:
     """Load one or more edited .pyi files and assess semantic wrap-readiness."""
-    from x2py.pyi_pipeline import pyi_paths_to_semantic_modules
+    from x2py.pipeline.pyi import pyi_paths_to_semantic_modules
 
     raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
     expanded = _expand_pyi_paths(raw_paths)

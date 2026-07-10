@@ -16,6 +16,11 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | Path | Purpose |
 | --- | --- |
 | `x2py/` | Python package implementation. Start with [source-map.md](source-map.md) for entrypoints and [feature-to-code-map.md](feature-to-code-map.md) when starting from behavior. |
+| `x2py/contracts/` | Public semantic `.pyi` contract vocabulary imported directly by generated and edited contracts. |
+| `x2py/pipeline/` | Shared preprocessing, semantic `.pyi` loading, and high-level wrapper build orchestration. |
+| `x2py/probes/` | Compiler-derived target facts and target type mapping reports. |
+| `x2py/runtime/` | Python runtime objects used by generated extension modules. |
+| `x2py/types/` | Cross-layer mappings from resolved semantic types to Python ecosystem types. |
 | `x2py/fortran_parser/` | Fortran parser frontend and Fortran parse report helpers. |
 | `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, readiness, and codegen lowering. |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, runtime support installation, and linking. |
@@ -31,6 +36,13 @@ X2PY_C_DOCS_END -->
 The major source packages have local README files under `x2py/` for
 developers reading directly in the source tree. Those README files should link
 back to the maintained source-navigation docs instead of old top-level docs.
+
+Only `x2py/__init__.py`, `x2py/__main__.py`, and `x2py/cli.py` live directly at
+the package root. Public library symbols are deliberately flattened through
+`x2py/__init__.py`; internal modules are imported through their owning package.
+The one public submodule namespace is `x2py.contracts`, because semantic `.pyi`
+files use direct `from x2py.contracts import ...` declarations as part of their
+contract syntax.
 
 ## Tests
 

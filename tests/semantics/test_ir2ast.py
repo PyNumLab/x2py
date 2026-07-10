@@ -14,12 +14,12 @@ from x2py.codegen.models.datatypes import (
     NumpyNDArrayType,
 )
 from x2py.codegen.scope import Scope
-from x2py.ownership_policy import CodegenAction, NativeBarrierAction
+from x2py.semantics.ownership import CodegenAction, NativeBarrierAction
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, SemanticModule
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
+from x2py.pipeline.pyi import pyi_text_to_semantic_module as _parse_pyi_text
 
 
 WRAPPER_FORTRAN_DATA = Path(__file__).parents[1] / "data" / "fortran" / "wrapper"

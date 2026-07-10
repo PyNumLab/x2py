@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 from x2py.c_parser import CParser
 from x2py.c_parser.cli import attach_preprocessing_recipe
 from x2py import parse_fortran_file
-from x2py.preprocessing import PreprocessingConfig, preprocess_source
+from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 from x2py.semantics.c2ir import c_project_to_semantic_module
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules, fortran_module_to_semantic_module
 from x2py.codegen.printers.pyi_printer import emit_module

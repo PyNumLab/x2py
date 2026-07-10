@@ -210,7 +210,7 @@ def test_fortran_cpp_corpus_fixtures_require_compiler_preprocessing(fixture):
 
 @pytest.mark.parametrize("fixture", _CPP_FIXTURES, ids=lambda f: str(f.relative_to(_TESTS_DIR)))
 def test_fortran_cpp_corpus_fixtures_parse_after_compiler_preprocessing(fixture, tmp_path):
-    from x2py.preprocessing import PreprocessingConfig, preprocess_source
+    from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
     compiler = shutil.which("gfortran")
     if compiler is None:

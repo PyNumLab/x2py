@@ -31,10 +31,10 @@ from x2py.fortran_parser.models import FortranVariable
 from x2py.semantics.c2ir import CToIRConverter
 from x2py.semantics.fortran2ir import FortranToIRConverter, fortran_type_storage_expression
 
-from .c_type_probe import probe_c_standard_types_cached
-from .fortran_type_probe import evaluate_fortran_type_facts, probe_fortran_type_expressions_cached
-from .numpy_types import numpy_dtype_expression
-from .preprocessing import PreprocessingConfig
+from x2py.pipeline.preprocessing import PreprocessingConfig
+from x2py.probes.c_types import probe_c_standard_types_cached
+from x2py.probes.fortran_types import evaluate_fortran_type_facts, probe_fortran_type_expressions_cached
+from x2py.types.numpy import numpy_dtype_expression
 
 
 _C_TYPES = (

@@ -3,7 +3,7 @@ from dataclasses import replace
 import pytest
 
 from x2py.contracts import CONTRACT_SYMBOLS
-from x2py.semantic_metadata import (
+from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
@@ -40,7 +40,7 @@ from x2py.codegen.printers.cpythoncode import CPythonCodePrinter
 from x2py.codegen.printers.fcode import FCodePrinter
 from x2py.codegen.printers.pyi_printer import PyiPrinter
 from x2py.codegen.scope import Scope
-from x2py.ownership_policy import (
+from x2py.semantics.ownership import (
     AssignmentMode,
     CodegenAction,
     DestructionPolicy,
@@ -96,7 +96,7 @@ from x2py.semantics.native_array_handles import (
     native_array_handle_build_requirements,
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.pyi_pipeline import pyi_text_to_semantic_module as _parse_pyi_text
+from x2py.pipeline.pyi import pyi_text_to_semantic_module as _parse_pyi_text
 
 
 CONTRACT_IMPORT = f"from x2py.contracts import {', '.join(sorted(CONTRACT_SYMBOLS))}\n"

@@ -9,9 +9,9 @@ import re
 
 from x2py.contracts import CONTRACT_SYMBOLS, CONTRACT_TYPE_NAMES
 from x2py.naming import NamingPolicy
-from x2py.ownership_policy import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_FIELDS, POINTER_POLICY_METADATA
-from x2py.numpy_types import SEMANTIC_DTYPE_TO_NUMPY_DTYPE, SEMANTIC_SCALAR_TYPE_NAMES
-from x2py.semantic_metadata import (
+from x2py.semantics.ownership import OWNERSHIP_POLICY_METADATA, POINTER_POLICY_FIELDS, POINTER_POLICY_METADATA
+from x2py.types.numpy import SEMANTIC_DTYPE_TO_NUMPY_DTYPE, SEMANTIC_SCALAR_TYPE_NAMES
+from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
@@ -52,7 +52,7 @@ from x2py.semantics.models import (
     _iter_module_semantic_types,
 )
 from x2py.semantics.native_array_handles import native_array_data_type, native_array_descriptor_kind
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 _WRAPPED_CALLABLE_TYPE_METADATA = "pyi_wrapped_callable_type"
 _CONTRACT_MODULE = "x2py.contracts"

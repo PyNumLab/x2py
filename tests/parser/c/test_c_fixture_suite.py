@@ -99,7 +99,7 @@ def test_c_fixture_headers_with_macros_require_preprocessing(fixture):
 )
 def test_c_fixture_headers_parse_after_compiler_preprocessing(fixture, defines):
     from x2py.c_parser import parse_c_file
-    from x2py.preprocessing import PreprocessingConfig, preprocess_source
+    from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
     compiler = shutil.which("cc")
     if compiler is None:

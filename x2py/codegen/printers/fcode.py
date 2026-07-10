@@ -64,7 +64,7 @@ from ..models.core import (
 
 from ..models.core import Variable
 from .codeprinter import CodePrinter
-from ...ownership_policy import CodegenAction, ownership_decision_for_codegen_variable
+from x2py.semantics.ownership import CodegenAction, ownership_decision_for_codegen_variable
 
 # TODO: add examples
 

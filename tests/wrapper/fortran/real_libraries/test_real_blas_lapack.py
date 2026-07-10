@@ -19,7 +19,7 @@ from tests._shared.fixture_outputs import FORTRAN_SUFFIXES
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran._support import REPO_ROOT
 from x2py import build_pyi_extension
-from x2py.pyi_pipeline import pyi_paths_to_semantic_modules
+from x2py.pipeline.pyi import pyi_paths_to_semantic_modules
 
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 FORTRAN_LIBRARY_ROOT = REPO_ROOT / "tests" / "data" / "fortran"

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from x2py.semantic_metadata import BIND_TARGET_METADATA
+from x2py.semantics.metadata import BIND_TARGET_METADATA
 
 from .pyi_metadata import PYI_LOADED_METADATA
 from .models import (

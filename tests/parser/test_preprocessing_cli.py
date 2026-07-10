@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-import x2py.preprocessing as preprocessing
-from x2py.preprocessing import (
+import x2py.pipeline.preprocessing as preprocessing
+from x2py.pipeline.preprocessing import (
     PreprocessingError,
     PreprocessingConfig,
     build_compile_commands_invocation,

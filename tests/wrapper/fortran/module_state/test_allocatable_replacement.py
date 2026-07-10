@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from x2py.runtime_handles import AllocatableArray
+from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     WRAPPER_TEST_ROOT,
     _build_source_or_generated_pyi_and_import,

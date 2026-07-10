@@ -14,7 +14,7 @@ from copy import deepcopy
 from pathlib import Path
 from dataclasses import dataclass, replace
 
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 from .lexer import preprocess_lines
 from .models import (

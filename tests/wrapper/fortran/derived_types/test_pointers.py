@@ -17,7 +17,7 @@ from tests.wrapper.fortran._support import (
     wrapper_source,
 )
 from x2py import build_pyi_extension
-from x2py.runtime_handles import AllocatableArray, PointerArray
+from x2py.runtime.handles import AllocatableArray, PointerArray
 
 POINTERS_F90_SOURCE = wrapper_source("fpointers_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"

@@ -6,8 +6,8 @@ import re
 from collections.abc import Iterable
 from dataclasses import replace
 
-from x2py.numpy_types import SEMANTIC_SCALAR_TYPE_NAMES
-from x2py.ownership_policy import (
+from x2py.types.numpy import SEMANTIC_SCALAR_TYPE_NAMES
+from x2py.semantics.ownership import (
     DestructionPolicy,
     OWNERSHIP_POLICY_METADATA,
     POINTER_POLICY_METADATA,
@@ -19,7 +19,7 @@ from x2py.ownership_policy import (
     default_ownership_policy,
     ownership_context_for_argument,
 )
-from x2py.semantic_metadata import (
+from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,

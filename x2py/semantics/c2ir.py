@@ -48,7 +48,7 @@ from x2py.c_parser.models import (
     CVolatile,
     CInt,
 )
-from x2py.visitor import ClassVisitor
+from x2py.utilities.visitor import ClassVisitor
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 import x2py
-from x2py.runtime_handles import (
+from x2py.runtime.handles import (
     _NativeArrayDescriptorHandoff,
     _NativeArrayHandoff,
     _native_array_actual_argument_for_binding_positional,
