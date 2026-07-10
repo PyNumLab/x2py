@@ -10,11 +10,15 @@ from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
 )
-from x2py.runtime_handles import AllocatableHandle, PointerHandle
+from x2py.runtime_handles import _NativeArrayHandoff, AllocatableHandle, PointerHandle
 
 ARRAY_CONTRACTS_F90_SOURCE = wrapper_source("farray_contracts_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 _MAX_WRAPPER_TEST_RANK = 15
+
+
+def _handoff(address):
+    return _NativeArrayHandoff(address)
 
 
 def _absent_allocatable_handle():
@@ -22,6 +26,8 @@ def _absent_allocatable_handle():
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
+            "array_actual": lambda _handle: pytest.fail("absent allocatable must not provide an array actual"),
+            "descriptor": lambda _handle: _handoff(301),
             "shape": lambda _handle: None,
             "to_numpy": lambda _handle: None,
             "allocated": lambda _handle: False,
@@ -36,7 +42,13 @@ def _array_allocatable_handle(value):
         dtype=value.dtype,
         rank=value.ndim,
         ops={
+            "array_actual": lambda _handle: _handoff(value.ctypes.data),
+            "descriptor": lambda _handle: _handoff(303),
             "shape": lambda _handle: value.shape,
+            "layout": lambda _handle: "F" if value.flags.f_contiguous else "C",
+            "writeable": lambda _handle: value.flags.writeable,
+            "native_byte_order": lambda _handle: value.dtype.isnative,
+            "aligned": lambda _handle: value.flags.aligned,
             "to_numpy": lambda _handle: value,
             "allocated": lambda _handle: True,
             "deallocate": lambda _handle: None,
@@ -50,6 +62,8 @@ def _absent_pointer_handle():
         dtype=np.dtype(np.float64),
         rank=1,
         ops={
+            "array_actual": lambda _handle: pytest.fail("absent pointer must not provide an array actual"),
+            "descriptor": lambda _handle: _handoff(304),
             "shape": lambda _handle: None,
             "to_numpy": lambda _handle: None,
             "associated": lambda _handle: False,
@@ -63,7 +77,13 @@ def _array_pointer_handle(value):
         dtype=value.dtype,
         rank=value.ndim,
         ops={
+            "array_actual": lambda _handle: _handoff(value.ctypes.data),
+            "descriptor": lambda _handle: _handoff(306),
             "shape": lambda _handle: value.shape,
+            "layout": lambda _handle: "F" if value.flags.f_contiguous else "C",
+            "writeable": lambda _handle: value.flags.writeable,
+            "native_byte_order": lambda _handle: value.dtype.isnative,
+            "aligned": lambda _handle: value.flags.aligned,
             "to_numpy": lambda _handle: value,
             "associated": lambda _handle: True,
             "nullify": lambda _handle: None,
@@ -95,6 +115,16 @@ def test_remaining_array_contracts_are_validated_before_fortran_calls(
         module.sum_in(absent_allocatable.to_numpy())
     with pytest.raises(TypeError):
         module.sum_in(absent_pointer.to_numpy())
+    with pytest.raises(ValueError, match="unallocated"):
+        module.sum_in(absent_allocatable)
+    with pytest.raises(ValueError, match="unassociated"):
+        module.sum_in(absent_pointer)
+
+    actual_values = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+    assert module.sum_in(_array_allocatable_handle(actual_values)) == np.float64(10.0)
+    assert module.sum_in(_array_pointer_handle(actual_values)) == np.float64(10.0)
+    with pytest.raises(TypeError, match="dtype"):
+        module.sum_in(_array_allocatable_handle(np.array([1.0, 2.0], dtype=np.float32)))
 
     readonly_allocatable_array = np.array([1.0, 2.0], dtype=np.float64)
     readonly_allocatable_array.setflags(write=False)

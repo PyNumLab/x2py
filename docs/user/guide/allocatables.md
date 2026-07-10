@@ -20,7 +20,7 @@ descriptor, not a NumPy array.
 | Allocatable descriptor argument | `Allocatable[T[...]]` handle | the handle passes the native allocatable descriptor |
 | Module allocatable array | `Allocatable[T[...]]` handle | the Fortran module owns allocation and release |
 | Derived allocatable field | `Allocatable[T[...]]` handle | the containing generated wrapper owns the native instance |
-| Owned allocatable result | `Allocatable[T[...]]` handle when stable owner storage is available | x2py-owned storage releases the native allocation with the handle |
+| Owned allocatable result | `Allocatable[T[...]]` handle | x2py-owned descriptor storage releases the native allocation with the handle |
 
 `Allocatable` is the dynamic-storage fact shared by all rows. It does not by
 itself choose copy, replacement, borrowed-view, or owned-handle behavior. The
@@ -75,7 +75,17 @@ NumPy array when they need independent lifetime.
 A borrowed view is a NumPy array that points at storage Python does not own.
 Mutating the view mutates the owner. Deallocating or reallocating the owner can
 make existing views stale, so copy the view when Python needs an independent
-lifetime.
+lifetime. Each fresh extraction starts at the array's current native lower
+bounds; changing lower bounds during native reallocation must not offset the
+first element exposed to NumPy.
+
+An allocatable array returned by a function or hidden output is different from
+a borrowed module or field handle. x2py transfers the result into persistent
+descriptor storage owned by the returned handle. The handle remains
+usable after the native call returns, and `close()` or finalization releases the
+native allocation. A NumPy view extracted from that handle retains the handle;
+as with every live view, explicitly closing or resizing the handle makes older
+views stale.
 
 ## Scalar Allocatable Projections
 
@@ -259,7 +269,7 @@ Build it:
 python3 -m x2py allocations.f90 --out-dir build/allocations
 ```
 
-Then exercise copy, replacement, and borrowed-view behavior:
+Then exercise owned-result, descriptor-argument, and module-handle behavior:
 
 ```python
 import sys
@@ -270,29 +280,29 @@ import allocations
 
 api = allocations.storage
 
-copy = api.make_values(np.int32(3))
-np.testing.assert_array_equal(copy, np.array([2.0, 4.0, 6.0], dtype=np.float64))
-assert api.make_values(np.int32(0)) is None
+values = api.make_values(np.int32(3))
+np.testing.assert_array_equal(values.to_numpy(), np.array([2.0, 4.0, 6.0], dtype=np.float64))
+assert api.make_values(np.int32(0)).allocated is False
 
-original = np.array([1.0, 2.0], dtype=np.float64)
-replacement = api.replace_values(original)
-np.testing.assert_array_equal(original, np.array([1.0, 2.0], dtype=np.float64))
-np.testing.assert_array_equal(replacement, np.array([10.0, 20.0], dtype=np.float64))
+returned = api.replace_values(values)
+assert returned is values
+np.testing.assert_array_equal(values.to_numpy(), np.array([10.0, 20.0], dtype=np.float64))
 
 api.allocate_shared(np.int32(3))
-view = api.shared_values
+shared = api.shared_values
+view = shared.to_numpy()
 view[0] = np.float64(10.0)
 assert api.shared_sum() == np.float64(15.0)
 
 api.allocate_snapshot(np.int32(3))
-snapshot = api.snapshot_values
+snapshot = api.snapshot_values.to_numpy()
 np.testing.assert_array_equal(snapshot, np.array([3.0, 6.0, 9.0], dtype=np.float64))
 assert not snapshot.flags.writeable
 
 api.scale_snapshot(np.float64(2.0))
 np.testing.assert_array_equal(snapshot, np.array([3.0, 6.0, 9.0], dtype=np.float64))
 np.testing.assert_array_equal(
-    api.snapshot_values,
+    api.snapshot_values.to_numpy(),
     np.array([6.0, 12.0, 18.0], dtype=np.float64),
 )
 ```
@@ -302,32 +312,28 @@ the previous borrowed view stale.
 
 ## Output And Function Results
 
-Allocated top-level results and non-optional hidden allocatable outputs use
-copy-return: x2py copies the native allocation into a new Python-owned NumPy
-array and then releases the native temporary. Unallocated storage becomes
-`None`, while allocated zero-sized storage remains a zero-sized array.
-Optional allocatable outputs remain visible so the caller can omit them and make
-native `present(...)` false.
+Allocated top-level results and non-optional hidden allocatable outputs return
+wrapper-owned `AllocatableHandle` objects. The generated binding transfers the
+result into persistent descriptor storage; the handle releases that storage on
+`close()` or finalization. Unallocated storage is represented by a present
+handle whose `allocated` property is false and whose `to_numpy()` result is
+`None`. Optional allocatable outputs remain visible so the caller can omit them
+and make native `present(...)` false.
 
-Changing the returned NumPy array does not mutate later native results or module
-state.
+A NumPy view returned by `to_numpy()` retains its handle owner. Changing that
+view changes the handle's current allocation, but does not affect later,
+independent result handles.
 
 ## Inout Replacement
 
-An allocatable `intent(inout)` argument is annotated with `| None` because
-`None` means initially unallocated native storage. When the value is an exact
-matching NumPy array, x2py copies that value into temporary native allocatable
-storage. The Python argument remains Python-owned and is not mutated. The NumPy
-array is only an initializer for a bridge-owned native allocatable temporary;
-Python is not passing that NumPy buffer as native allocatable storage.
-
-After the call, x2py copies the final native allocation into a new Python-owned
-return value, or returns `None` if native storage is unallocated. This is
-replacement behavior, not ordinary in-place array mutation. Assign the return
-value:
+An allocatable `intent(inout)` descriptor argument accepts an
+`AllocatableHandle`, not a plain NumPy array. A matching `Returns[...]`
+projection records that the same caller handle is the Python result. Policy
+completion marks that descriptor boundary read-write before lowering; generated
+binding code does not manufacture a replacement ndarray or a second handle.
 
 ```python
-values = api.replace_values(values)
+assert api.replace_values(values) is values
 ```
 
 The source for this call is already shown in the complete example above.
@@ -340,6 +346,7 @@ Allocatable character arrays use fixed-width NumPy bytes storage. Create
 ```fortran
 module character_names
   implicit none
+  character(len=:), allocatable :: stored_names(:)
 contains
   subroutine replace_names(names)
     character(len=:), allocatable, intent(inout) :: names(:)
@@ -368,6 +375,8 @@ the native allocation at runtime:
 ```python
 from x2py.contracts import Allocatable, Returns, String
 
+stored_names: Allocatable[String[:][:]]
+
 def replace_names(
     names: Allocatable[String[:][:]]
 ) -> Returns[
@@ -381,31 +390,26 @@ Build the example:
 python3 -m x2py character_allocatables.f90 --out-dir build/character_allocatables
 ```
 
-Pass a NumPy bytes array and assign the returned replacement:
+Pass an existing compatible allocatable character handle. The projected result
+is that same handle, and extraction remains explicit:
 
 ```python
 import sys
-import numpy as np
-
 sys.path.insert(0, "build/character_allocatables")
 import character_allocatables
 
 api = character_allocatables.character_names
-original = np.array([b"aa", b"bbb"], dtype="S3")
-replacement = api.replace_names(original)
-
-assert original.dtype == np.dtype("S3")
-assert original.tolist() == [b"aa", b"bbb"]
-assert replacement.dtype == np.dtype("S5")
-assert replacement.tolist() == [b"red  ", b"blue "]
-assert replacement is not original
+names = api.stored_names
+assert api.replace_names(names) is names
+assert names.to_numpy().dtype.itemsize == 5
+assert names.to_numpy().tolist() == [b"red  ", b"blue "]
 ```
 
 The `S5` itemsize comes from `allocate(character(len=5) :: names(count))`.
-x2py copies the final native allocation into the returned Python-owned array
-and releases the native temporary. Python inputs must use NumPy bytes dtype
-`S`; Unicode (`U`) and object (`O`) arrays are rejected. When the Fortran
-element length is fixed, the input dtype itemsize must match that length.
+Plain NumPy arrays are not allocatable descriptors and are rejected for this
+handle-typed parameter. When extracting character storage, x2py uses NumPy
+bytes dtype `S`; Unicode (`U`) and object (`O`) arrays are not descriptor-handle
+substitutes.
 
 ## Module Handles And Views
 
@@ -425,9 +429,9 @@ readiness blocks with a clear diagnostic.
 A supported allocatable component belongs to its containing native derived-type
 instance. The generated wrapper owns that native instance. The field exposes an
 `Allocatable[T[...]]` handle that retains the parent wrapper. Any borrowed NumPy
-view produced by `to_numpy()` uses the wrapper object as `view.base`, which
-keeps the owner alive. Assigning a replacement array directly to such a field is
-rejected when native reallocation must go through an explicit method.
+view produced by `to_numpy()` retains the field handle, and the field handle
+retains the parent wrapper. Assigning a replacement array directly to such a
+field is rejected when native reallocation must go through an explicit method.
 
 Neither owner model can invalidate an already-created NumPy object safely after
 native reallocation. Copy before any operation that may reallocate or
@@ -443,20 +447,20 @@ independent = view.copy()
 - Mutable scalar deferred-length character storage is blocked.
 - Borrowed views require a proved native or wrapper owner and `Aliased`
   storage when the owner is a module variable.
-- An edited `.pyi` cannot relabel a native-owned allocation as Python-owned
-  without choosing an implemented owner-storage or copy-return path.
+- An edited `.pyi` cannot relabel a native-owned descriptor as Python-owned.
+  Use an implemented owned-result handle or copy an extracted NumPy value when
+  Python needs independent storage.
 - `Annotated[T[...], Allocatable]` is no longer the active public spelling for
   allocatable array descriptors; use `Allocatable[T[...]]`.
 
 ## Evidence And Troubleshooting
 
-Results, module views, component views, `None`, and owner retention are exercised
-by
+Owned results, module and component handles, unallocated state, extraction, and
+owner retention are exercised by
 [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
-Replacement behavior and invalid dtype/rank calls are exercised by
-[`test_allocatable_replacement.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
-Character array replacement and generated-`.pyi` builds are exercised by
-[`test_character_edge_cases.py`](../../../tests/wrapper/fortran/strings/test_character_edge_cases.py).
+Character descriptor generation in source and generated-`.pyi` modes is
+exercised by
+[`test_character_arguments.py`](../../../tests/wrapper/fortran/strings/test_character_arguments.py).
 
 A borrowed view can become stale after its native owner reallocates or
 deallocates storage, so copy any data that needs an independent lifetime.

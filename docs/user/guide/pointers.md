@@ -46,7 +46,10 @@ Passing an associated handle to a normal `T[...]` parameter uses ordinary
 Fortran array-actual semantics by handing off the handle's native array data
 facet. It is not an implicit call to `.to_numpy()`. A normal `T[...]` parameter
 rejects an unassociated pointer handle because there is no valid array actual
-to pass; an associated zero-length target remains valid.
+to pass; an associated zero-length target remains valid. The pointer/shape
+handoff accepts only targets proved contiguous. A noncontiguous target is
+rejected until descriptor-backed stride handoff is selected; x2py never treats
+such a target as contiguous.
 
 Plain NumPy arrays are accepted by normal `T[...]` array parameters. They are
 rejected for `Pointer[T[...]]` descriptor parameters because a NumPy array does
@@ -63,7 +66,9 @@ unavailable-operation error instead of fabricating a view.
 Any NumPy view returned by `p.to_numpy()` is tied to the pointer target at the
 time of extraction. After native code nullifies, reassociates, deallocates, or
 otherwise changes that target, discard older views and call `p.to_numpy()` again
-or copy the data before the target-changing operation.
+or copy the data before the target-changing operation. Each fresh extraction
+starts at the target's current native lower bounds rather than assuming a
+fixed Fortran lower bound.
 
 `p.nullify()` is the default pointer descriptor operation. `allocate(shape)`,
 `deallocate()`, and `resize(shape)` are exposed only when completed pointer
@@ -142,21 +147,42 @@ Create `pointers.f90`:
 ```fortran
 module pointers_api
   implicit none
+  real(8), target :: storage(3) = [1.0_8, 2.0_8, 3.0_8]
+  real(8), pointer :: values(:) => null()
 contains
-  real(8) function sum_pointer(values) result(total)
-    real(8), pointer, intent(in) :: values(:)
-    total = sum(values)
+  subroutine associate_values()
+    values => storage
+  end subroutine associate_values
+
+  real(8) function sum_array(actual) result(total)
+    real(8), intent(in) :: actual(:)
+    total = sum(actual)
+  end function sum_array
+
+  real(8) function sum_pointer(actual) result(total)
+    real(8), pointer, intent(in) :: actual(:)
+
+    if (associated(actual)) then
+      total = sum(actual)
+    else
+      total = -1.0_8
+    end if
   end function sum_pointer
-
-  function select_values(values, enabled) result(selected)
-    real(8), target, intent(in) :: values(:)
-    integer(4), intent(in) :: enabled
-    real(8), pointer :: selected(:)
-
-    nullify(selected)
-    if (enabled /= 0) selected => values
-  end function select_values
 end module pointers_api
+```
+
+The generated semantic contract distinguishes the module descriptor, an
+ordinary array parameter, and a pointer-descriptor parameter:
+
+```python
+from x2py.contracts import Aliased, Annotated, Float64, Pointer, PointerAssociation
+
+storage: Annotated[Float64[3], Aliased]
+values: Annotated[Pointer[Float64[:]], PointerAssociation("runtime")]
+
+def associate_values() -> None: ...
+def sum_array(actual: Float64[::]) -> Float64: ...
+def sum_pointer(actual: Pointer[Float64[:]]) -> Float64: ...
 ```
 
 Build it:
@@ -165,7 +191,8 @@ Build it:
 python3 -m x2py pointers.f90 --out-dir build/pointers
 ```
 
-Then verify call-local scalar-style input and detached output behavior:
+Then verify descriptor state, descriptor passing, and normal array-actual
+handoff from the same handle:
 
 ```python
 import sys
@@ -176,14 +203,27 @@ sys.path.insert(0, "build/pointers")
 import pointers
 
 api = pointers.pointers_api
-values = np.array([1.0, 2.0, 3.0], dtype=np.float64)
-assert api.sum_pointer(values) == np.float64(6.0)
+handle = api.values
 
-selected = api.select_values(values, np.int32(1))
-assert api.select_values(values, np.int32(0)) is None
-selected[0] = np.float64(99.0)
-np.testing.assert_array_equal(values, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+assert handle.associated is False
+assert handle.shape is None
+assert api.sum_pointer(handle) == np.float64(-1.0)
+
+api.associate_values()
+assert handle.associated is True
+assert handle.shape == (3,)
+assert api.sum_pointer(handle) == np.float64(6.0)
+assert api.sum_array(handle) == np.float64(6.0)
+
+handle.nullify()
+assert handle.associated is False
 ```
+
+The ordinary `sum_array` call uses the handle's valid contiguous array actual;
+it does not call `to_numpy()`. The descriptor-typed `sum_pointer` call requires
+the pointer handle and can observe unassociated state. Add explicit pointer
+policy when public NumPy extraction or ownership-changing operations are
+required.
 
 ## Call Compatibility
 
@@ -216,9 +256,10 @@ The containing object or module does not automatically own the pointer target.
 Derived-field handles keep the parent wrapper alive for descriptor access, but
 that retention is not target ownership. Plain `Pointer[T[...]]` has a default
 conservative handle policy for association inspection and legal descriptor
-operations. Generated field and module handle accessors remain a wrapper
-readiness blocker until descriptor-handle code generation is implemented; x2py
-does not expose a guessed borrowed view or ownership-changing operation.
+operations. Generated field operations address the component through its parent
+wrapper, and generated module operations address the native module variable.
+Neither path invents target ownership or enables ownership-changing operations
+that completed pointer policy did not allow.
 
 ## Unsupported Forms
 
@@ -236,7 +277,7 @@ implement a missing runtime path.
 ## Evidence And Troubleshooting
 
 Scalar pointer inputs, outputs, inout readback, nullable results, array pointer
-inputs, independent detached copies, and dtype rejection are exercised by
+handles, descriptor views, normal array-actual handoff, and dtype rejection are exercised by
 [`test_pointers.py`](../../../tests/wrapper/fortran/derived_types/test_pointers.py).
 The scalar `out` and `inout` parity cases are exercised by
 [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).

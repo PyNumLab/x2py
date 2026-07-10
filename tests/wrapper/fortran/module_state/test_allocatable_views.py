@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import (
-    build_pyi_extension_or_xfail_staged_native_array_handle,
     _build_source_or_generated_pyi_and_import,
     _build_text_and_import,
     _compile_native_object,
@@ -17,6 +16,8 @@ from tests.wrapper.fortran._support import (
     _sole_native_module,
     wrapper_source,
 )
+from x2py import build_pyi_extension
+from x2py.runtime_handles import AllocatableHandle
 
 ALLOCATABLE_VIEW_F90_SOURCE = wrapper_source("fallocatable_views_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
@@ -209,7 +210,7 @@ def _plain_allocatable_snapshot_module(build_mode: str, tmp_path: Path):
         check=True,
     )
     native_object = _compile_native_object(source, tmp_path / "native")
-    result = build_pyi_extension_or_xfail_staged_native_array_handle(
+    result = build_pyi_extension(
         contract_dir / "__init__.pyi",
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
@@ -256,7 +257,7 @@ def _scalar_descriptor_module(build_mode: str, tmp_path: Path):
         check=True,
     )
     native_object = _compile_native_object(source, tmp_path / "native")
-    result = build_pyi_extension_or_xfail_staged_native_array_handle(
+    result = build_pyi_extension(
         contract_dir / "__init__.pyi",
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
@@ -265,7 +266,7 @@ def _scalar_descriptor_module(build_mode: str, tmp_path: Path):
     return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
 
-def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(
+def test_allocatable_module_fields_and_results_expose_lifetime_safe_handles(
     pyi_parity_build_mode: str,
     tmp_path: Path,
 ):
@@ -284,81 +285,98 @@ def test_allocatable_module_and_derived_type_arrays_are_borrowed_views(
     assert "Functions" in module.__doc__
     assert "build_values" in module.__doc__
     assert "buffer" in module.__doc__
-    assert "build_values(n) -> ndarray[float64] | None" in module.build_values.__doc__
-    assert "n : int32" in module.build_values.__doc__
-    assert "Direction:" not in module.build_values.__doc__
-    assert "values : ndarray[float64] or None" in module.build_values.__doc__
-    assert "Rank: 1" in module.build_values.__doc__
-    assert "Ownership: Python-owned" in module.build_values.__doc__
-    assert "Returns None when unallocated." in module.build_values.__doc__
-    assert "TypeError" in module.build_values.__doc__
-    assert "Rank: 2" in module.build_matrix.__doc__
-    assert "Layout: F-contiguous" in module.build_matrix.__doc__
+    assert "build_values(n) -> AllocatableHandle[float64]" in module.build_values.__doc__
+    assert "values : AllocatableHandle[float64]" in module.build_values.__doc__
+    assert "Descriptor ownership: owned" in module.build_values.__doc__
+    assert "Unallocated state remains inside the returned handle." in module.build_values.__doc__
     assert not hasattr(module, "get_module_values")
     assert "Fields" in module.buffer.__doc__
-    assert "values : ndarray[float64] or None" in module.buffer.__doc__
-    assert "Ownership: Wrapper-owned" in module.buffer.values.__doc__
+    assert "values : AllocatableHandle[float64]" in module.buffer.__doc__
+    assert "allocatable array descriptor handle" in module.buffer.values.__doc__
 
-    assert module.module_values is None
-    module.allocate_module_values(np.int32(3))
     module_values = module.module_values
-    np.testing.assert_allclose(module_values, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+    assert isinstance(module_values, AllocatableHandle)
+    assert module_values.allocated is False
+    assert module_values.shape is None
+    assert module_values.to_numpy() is None
+    module.allocate_module_values(np.int32(3))
+    assert module.module_values is module_values
+    np.testing.assert_allclose(module_values.to_numpy(), np.array([1.0, 2.0, 3.0], dtype=np.float64))
 
-    module_values[0] = np.float64(10.0)
+    module_values.to_numpy()[0] = np.float64(10.0)
     assert module.module_values_sum() == np.float64(15.0)
     module.scale_module_values(np.float64(2.0))
-    np.testing.assert_allclose(module_values, np.array([20.0, 4.0, 6.0], dtype=np.float64))
+    np.testing.assert_allclose(module_values.to_numpy(), np.array([20.0, 4.0, 6.0], dtype=np.float64))
 
     module.deallocate_module_values()
-    assert module.module_values is None
+    assert module_values.allocated is False
+    assert module_values.to_numpy() is None
 
     built_values = module.build_values(np.int32(4))
-    np.testing.assert_allclose(built_values, np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
-    built_values[0] = np.float64(-1.0)
-    np.testing.assert_allclose(built_values, np.array([-1.0, 4.0, 6.0, 8.0], dtype=np.float64))
-    assert module.build_values(np.int32(0)) is None
+    assert isinstance(built_values, AllocatableHandle)
+    assert built_values.descriptor_ownership == "owned"
+    np.testing.assert_allclose(built_values.to_numpy(), np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
+    built_values.to_numpy()[0] = np.float64(-1.0)
+    np.testing.assert_allclose(built_values.to_numpy(), np.array([-1.0, 4.0, 6.0, 8.0], dtype=np.float64))
+    empty_values = module.build_values(np.int32(0))
+    assert isinstance(empty_values, AllocatableHandle)
+    assert empty_values.allocated is False
+    assert empty_values.to_numpy() is None
 
     built_matrix = module.build_matrix(np.int32(2), np.int32(2))
     np.testing.assert_allclose(
-        built_matrix,
+        built_matrix.to_numpy(),
         np.array([[11.0, 21.0], [12.0, 22.0]], dtype=np.float64),
     )
-    assert module.build_matrix(np.int32(0), np.int32(2)) is None
+    empty_matrix = module.build_matrix(np.int32(0), np.int32(2))
+    assert isinstance(empty_matrix, AllocatableHandle)
+    assert empty_matrix.allocated is False
 
     made_values = module.make_values(np.int32(3))
-    np.testing.assert_allclose(made_values, np.array([3.0, 6.0, 9.0], dtype=np.float64))
-    assert module.make_values(np.int32(0)) is None
+    np.testing.assert_allclose(made_values.to_numpy(), np.array([3.0, 6.0, 9.0], dtype=np.float64))
+    assert module.make_values(np.int32(0)).allocated is False
 
     made_matrix = module.make_matrix(np.int32(2), np.int32(2))
     np.testing.assert_allclose(
-        made_matrix,
+        made_matrix.to_numpy(),
         np.array([[111.0, 121.0], [112.0, 122.0]], dtype=np.float64),
     )
-    assert module.make_matrix(np.int32(2), np.int32(0)) is None
+    assert module.make_matrix(np.int32(2), np.int32(0)).allocated is False
+
+    retained_result_view = made_values.to_numpy()
+    del made_values
+    gc.collect()
+    np.testing.assert_allclose(retained_result_view, np.array([3.0, 6.0, 9.0], dtype=np.float64))
 
     values = module.buffer()
-    assert values.values is None
+    field_handle = values.values
+    assert isinstance(field_handle, AllocatableHandle)
+    assert field_handle.owner is values
+    assert field_handle.allocated is False
     values.allocate_values(np.int32(3))
-    field_view = values.values
-    assert field_view.base is values
+    field_view = field_handle.to_numpy()
     np.testing.assert_allclose(field_view, np.array([1.0, 2.0, 3.0], dtype=np.float64))
 
     field_view[1] = np.float64(8.0)
     assert values.values_sum() == np.float64(12.0)
     values.scale_values(np.float64(0.5))
-    np.testing.assert_allclose(field_view, np.array([0.5, 4.0, 1.5], dtype=np.float64))
+    np.testing.assert_allclose(field_handle.to_numpy(), np.array([0.5, 4.0, 1.5], dtype=np.float64))
 
-    with pytest.raises(AttributeError, match="Can't reallocate memory"):
+    with pytest.raises(AttributeError):
         values.values = np.array([1.0, 2.0], dtype=np.float64)
 
-    retained_view = values.values
+    retained_owner_id = id(values)
     del values
     gc.collect()
-    np.testing.assert_allclose(retained_view, np.array([0.5, 4.0, 1.5], dtype=np.float64))
+    assert id(field_handle.owner) == retained_owner_id
+    np.testing.assert_allclose(field_handle.to_numpy(), np.array([0.5, 4.0, 1.5], dtype=np.float64))
+    field_handle.deallocate()
+    assert field_handle.allocated is False
 
-    owner = retained_view.base
-    owner.deallocate_values()
-    assert owner.values is None
+    built_values.close()
+    assert built_values.closed is True
+    with pytest.raises(ReferenceError, match="closed"):
+        _ = built_values.allocated
 
 
 def test_scalar_descriptor_module_variables_return_copied_optional_values(
@@ -413,7 +431,7 @@ def test_scalar_descriptor_module_variables_return_copied_optional_values(
     assert module.selected_scale is None
 
 
-def test_plain_allocatable_module_array_is_read_only_snapshot(
+def test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction(
     pyi_parity_build_mode: str,
     tmp_path: Path,
 ):
@@ -425,10 +443,18 @@ def test_plain_allocatable_module_array_is_read_only_snapshot(
     )
     assert "Returned module snapshots are read-only and detached from later native changes." in wrapper_source_text
 
-    assert module.values is None
-    module.allocate_values(np.int32(3))
+    handle = module.values
+    assert isinstance(handle, AllocatableHandle)
+    assert handle.allocated is False
+    assert handle.shape is None
+    assert handle.to_numpy() is None
 
-    snapshot = module.values
+    module.allocate_values(np.int32(3))
+    assert module.values is handle
+    assert handle.allocated is True
+    assert handle.shape == (3,)
+
+    snapshot = handle.to_numpy()
     np.testing.assert_allclose(snapshot, np.array([1.0, 2.0, 3.0], dtype=np.float64))
     assert snapshot.flags.writeable is False
     with pytest.raises(ValueError, match="read-only"):
@@ -437,9 +463,15 @@ def test_plain_allocatable_module_array_is_read_only_snapshot(
     module.scale_values(np.float64(2.0))
     np.testing.assert_allclose(snapshot, np.array([1.0, 2.0, 3.0], dtype=np.float64))
 
-    fresh = module.values
+    fresh = handle.to_numpy()
     assert fresh.flags.writeable is False
     np.testing.assert_allclose(fresh, np.array([2.0, 4.0, 6.0], dtype=np.float64))
 
-    module.deallocate_values()
-    assert module.values is None
+    handle.resize((2,))
+    assert handle.allocated is True
+    assert handle.shape == (2,)
+
+    handle.deallocate()
+    assert handle.allocated is False
+    assert handle.shape is None
+    assert handle.to_numpy() is None

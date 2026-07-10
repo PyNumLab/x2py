@@ -9,9 +9,12 @@ EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
 CALLBACK_DECLARATION_ACCESS_METADATA = "callback_declaration_access"
 INTERNAL_MODULE_VARIABLE_ACCESS_METADATA = "internal_module_variable_access"
 INTERNAL_MODULE_VARIABLE_NAME_METADATA = "internal_module_variable_name"
+INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA = "internal_native_array_handle_operation"
+INTERNAL_NATIVE_ARRAY_HANDLE_OWNER_CLASS_METADATA = "internal_native_array_handle_owner_class"
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
 PYTHON_VALUE_IMMUTABLE = "immutable"
 RUNTIME_HOLD_GIL_METADATA = "runtime_hold_gil"
+RUNTIME_RETAIN_RESULT_OWNER_METADATA = "runtime_retain_result_owner"
 RUNTIME_STATUS_ERROR_METADATA = "runtime_status_error"
 
 

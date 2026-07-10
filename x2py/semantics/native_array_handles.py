@@ -80,6 +80,61 @@ class NativeArrayHandlePolicy:
         """Return whether this handle path needs TS 29113 C descriptor interop."""
         return self.descriptor_interop == "pointer_c_descriptor"
 
+    @property
+    def requires_c_descriptor_interop(self) -> bool:
+        """Return whether generated code needs standard C descriptor support."""
+        return self.descriptor_interop in {
+            "owned_allocatable_c_descriptor",
+            "pointer_c_descriptor",
+        }
+
+
+@dataclass(frozen=True)
+class ArrayInteropPolicy:
+    """Completed selector for the ABI lane used by an array-like boundary."""
+
+    abi: str
+    owner: str
+    descriptor_kind: str | None = None
+    handle_kind: str | None = None
+
+    @property
+    def is_data_buffer(self) -> bool:
+        """Return whether this boundary uses ordinary data-pointer array ABI."""
+        return self.abi == "data_buffer"
+
+    @property
+    def is_descriptor(self) -> bool:
+        """Return whether this boundary uses native descriptor-handle ABI."""
+        return self.abi == "descriptor"
+
+
+@dataclass(frozen=True)
+class ArrayInteropPolicyDispatcher:
+    """Dispatch array-like bridge/binding work from the completed ABI selector."""
+
+    handlers: Mapping[tuple[str, str], str]
+
+    def handler_name_for_policy(self, policy: ArrayInteropPolicy, context: str, name: str) -> str:
+        key = (context, policy.abi)
+        try:
+            return self.handlers[key]
+        except KeyError:
+            raise ValueError(f"No array interop codegen handler for {name!r}: {context}/{policy.abi}") from None
+
+    def dispatch(
+        self,
+        target: Any,
+        subject: Any,
+        policy: ArrayInteropPolicy,
+        context: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        name = str(getattr(subject, "name", getattr(subject, "python_name", type(subject).__name__)))
+        handler = getattr(target, self.handler_name_for_policy(policy, context, name))
+        return handler(subject, policy, *args, **kwargs)
+
 
 @dataclass(frozen=True)
 class NativeArrayHandlePolicyDispatcher:
@@ -225,25 +280,49 @@ def native_array_handle_facts(semantic_type: SemanticType) -> NativeArrayHandleF
     )
 
 
+def array_interop_policy(
+    semantic_type: SemanticType | None,
+    *,
+    owner: str,
+    native_array_handle_policy: NativeArrayHandlePolicy | None = None,
+) -> ArrayInteropPolicy | None:
+    """Return the completed ABI selector for an array-like boundary."""
+    if native_array_handle_policy is not None:
+        return ArrayInteropPolicy(
+            abi="descriptor",
+            owner=owner,
+            descriptor_kind=native_array_handle_policy.descriptor_kind,
+            handle_kind=native_array_handle_policy.handle_kind,
+        )
+    if semantic_type is None:
+        return None
+    storage = semantic_type.storage
+    if semantic_type.rank > 0 and storage is not None and storage.array is not None:
+        return ArrayInteropPolicy(abi="data_buffer", owner=owner)
+    return None
+
+
 def native_array_handle_build_requirements(
     semantic_ir: SemanticModule | Iterable[SemanticModule],
 ) -> NativeArrayBuildRequirements:
     """Return build requirements selected by completed native-array handle policies."""
     modules = [semantic_ir] if isinstance(semantic_ir, SemanticModule) else list(semantic_ir)
     requirements = tuple(
-        _pointer_c_descriptor_requirement(owner, item, policy)
+        _c_descriptor_requirement(owner, item, policy)
         for owner, item, policy in _iter_native_array_handle_policies(modules)
-        if policy.requires_pointer_c_descriptor_interop
+        if policy.requires_c_descriptor_interop
     )
     headers = (NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER,) if requirements else ()
     return NativeArrayBuildRequirements(
-        pointer_c_descriptor_interop=bool(requirements),
+        pointer_c_descriptor_interop=any(
+            requirement.descriptor_interop == "pointer_c_descriptor" for requirement in requirements
+        ),
         headers=headers,
         items=requirements,
     )
 
 
-def _pointer_c_descriptor_requirement(
+def _c_descriptor_requirement(
     owner: str,
     item: str,
     policy: NativeArrayHandlePolicy,
@@ -313,11 +392,14 @@ def _variable_native_array_policy(variable: SemanticVariable, *, owner: str):
 
 __all__ = (
     "NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER",
+    "ArrayInteropPolicy",
+    "ArrayInteropPolicyDispatcher",
     "NativeArrayBuildRequirement",
     "NativeArrayBuildRequirements",
     "NativeArrayHandleFacts",
     "NativeArrayHandlePolicy",
     "NativeArrayHandlePolicyDispatcher",
+    "array_interop_policy",
     "is_native_array_handle",
     "mark_native_array_handle",
     "native_array_data_type",

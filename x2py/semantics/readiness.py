@@ -63,7 +63,7 @@ _IDENTIFIER_RE = re.compile(r"\b[A-Za-z_]\w*\b")
 _SHAPE_INTRINSIC_CALLS = frozenset({"lbound", "shape", "size", "ubound"})
 _NON_EXTENT_DIMENSIONS = frozenset({"", "*", ":", "::", "..."})
 _MAX_SUPPORTED_ARRAY_RANK = 15
-_POINTER_C_DESCRIPTOR_INTEROP_AVAILABLE = False
+_POINTER_C_DESCRIPTOR_INTEROP_AVAILABLE = True
 _ISO_C_KIND_TOKENS = frozenset(
     {
         "c_bool",
@@ -803,21 +803,7 @@ class _SemanticReadinessChecker:
         )
 
     @staticmethod
-    def _native_array_handle_codegen_blocker(policy) -> str | None:
-        descriptor_kind = getattr(policy, "descriptor_kind", None)
-        handle_kind = getattr(policy, "handle_kind", None)
-        if handle_kind == "unsupported":
-            return None
-        if descriptor_kind == "allocatable" and handle_kind == "owned_result_descriptor":
-            return "allocatable result handles need generated wrapper-owned descriptor storage before wrapper lowering"
-        if handle_kind == "argument_descriptor":
-            return (
-                f"{descriptor_kind} descriptor-argument handoff needs generated handle support before wrapper lowering"
-            )
-        if handle_kind == "optional_absent_handle":
-            return f"{descriptor_kind} optional descriptor-handle arguments need generated absent-handle support before wrapper lowering"
-        if getattr(policy, "handle_kind", None) in {"borrowed_field_descriptor", "borrowed_module_descriptor"}:
-            return f"{descriptor_kind} array handle accessors need generated descriptor-handle support before wrapper lowering"
+    def _native_array_handle_codegen_blocker(_policy) -> str | None:
         return None
 
     def _check_array_contract(

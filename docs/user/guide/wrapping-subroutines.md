@@ -22,15 +22,16 @@ from the storage that the Python caller must allocate.
 | array `intent(in)` | visible NumPy array | no result |
 | array `intent(out)` | visible writable NumPy array | same array when projected |
 | array `intent(inout)` | visible writable NumPy array | mutated in place; not duplicated unless explicitly projected |
-| allocatable `intent(out)` | hidden | Python-owned array or `None` |
-| allocatable `intent(inout)` | visible `source | None` argument | bridge-owned native temporary during the call; new replacement array or `None` after |
+| allocatable array `intent(out)` | hidden unless optional | wrapper-owned `AllocatableHandle` |
+| allocatable array `intent(inout)` | visible `AllocatableHandle` argument | same handle when projected; allocation state changes in place |
 | supported derived `intent(out)` | hidden | new wrapper-owned instance |
 
 `optional, intent(out)` is the visibility exception for normally hidden
 outputs. The argument remains visible so the caller can omit it and make native
 `present(...)` false. Optional scalar outputs use mutable rank-zero storage such
-as `Int32[()]`; optional array and allocatable outputs use visible optional
-storage and return `None` when absent.
+as `Int32[()]`. An optional allocatable array argument uses
+`Allocatable[T[...]] | None = ...`: omission means native absence, while a
+present handle carries allocated or unallocated descriptor state.
 
 The generated `.pyi` is authoritative when a procedure combines several of
 these forms.
@@ -168,8 +169,9 @@ contract, not the normal source-generated subroutine API. Editing Semantic
 
 ## Limitations
 
-- Pointer scalar output and inout use nullable copied-value projection; pointer
-  array and persistent reassociation remain blocked.
+- Pointer scalar output and inout use nullable copied-value projection. Pointer
+  array descriptor arguments use `Pointer[T[...]]` handles; pointer results and
+  reassociation without completed policy remain blocked.
 - Character arrays require fixed-width NumPy bytes dtype storage. Arrays of
   derived types are blocked.
 - Allocatable scalar derived-type replacement is blocked.

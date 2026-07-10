@@ -74,21 +74,28 @@ the same extension observe the same native module storage.
 
 ## Module Arrays
 
-An `Aliased` allocatable module array is a native-owned borrowed view or
-`None` when unallocated. A plain allocatable module array returns a read-only
-snapshot copy instead:
+An allocatable module array is exposed as a persistent
+`Allocatable[T[...]]` handle. `Aliased` permits live view extraction; without
+that fact, completed policy may select a read-only detached extraction. The
+module attribute remains a handle even when native storage is unallocated:
 
 ```python
 module.allocate_values(np.int32(3))
-view = module.values
+handle = module.values
+assert handle.allocated is True
+view = handle.to_numpy()
 view[0] = np.float64(5.0)
 ```
 
-For aliased arrays, mutation reaches native module storage. A later native
-deallocation or reallocation invalidates old views; use `view.copy()` first when
-Python needs an independent lifetime. Pointer-array module variables have a
-default conservative handle policy, but generated descriptor-handle accessors
-are still a readiness blocker.
+For a borrowed extraction, mutation reaches native module storage. A later
+native deallocation or reallocation invalidates old views; use `view.copy()`
+first when Python needs an independent lifetime. The same handle object then
+reports the new allocation state.
+
+Pointer-array module variables expose `Pointer[T[...]]` handles with a default
+conservative operation policy. Association inspection and `nullify()` are
+available by default. `to_numpy()` requires a completed extraction path, and
+ownership-changing operations require explicit pointer policy.
 
 ## Derived Module Objects
 
@@ -109,9 +116,9 @@ current: Annotated[box, Aliased]
 
 Reading `module.current` returns a native-owned borrowed wrapper. The wrapper
 does not copy or destroy `current`; it retains the module object's address and
-allows supported component access such as `module.current.values`.
-An allocatable component view is writable and reaches native module state until
-native code reallocates or deallocates that component.
+allows supported component access such as `module.current.values`. That
+component is an `Allocatable[T[...]]` handle retaining the wrapper; call
+`to_numpy()` to obtain its current view.
 
 Without `Aliased` or another completed live-borrow policy, x2py blocks the
 plain derived module variable before wrapper lowering. Whole-object
@@ -120,7 +127,8 @@ or accept them as a detached fallback.
 
 Whole object replacement through `module.current = other` is not exposed.
 Mutate native module state through an `Aliased` borrowed object or a wrapped
-native procedure, then read a new snapshot when Python needs a detached copy.
+native procedure, then call `.copy()` on an extracted view when Python needs a
+detached value.
 
 ## Common Blocks
 

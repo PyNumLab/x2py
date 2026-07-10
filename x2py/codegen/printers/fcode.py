@@ -9,6 +9,7 @@ from typing import ClassVar
 
 
 from ..bind_c import (
+    BindCNativeArrayHandleProperty,
     BindCFunctionDef,
     BindCModule,
     BindCModuleConstant,
@@ -318,6 +319,10 @@ class FCodePrinter(CodePrinter):
             blocks.extend("".join((separator, self._visit(wrapper), separator)) for wrapper in module.variable_wrappers)
         return "\n".join(blocks)
 
+    def _visit_BindCNativeArrayHandleVariable(self, expr):
+        """Render generated native-array-handle operation functions."""
+        return "\n".join(self._visit(function) for _name, function in expr.operation_function_items)
+
     def _visit_Import(self, expr):
         """Render the ``Import`` model node."""
         source = ""
@@ -465,6 +470,18 @@ class FCodePrinter(CodePrinter):
             return f"len({arg_code})"
         raise NotImplementedError(f"Don't know how to represent shape of object of type {arg.class_type}")
 
+    def _visit_ArrayLowerBound(self, expr):
+        """Render the ``ArrayLowerBound`` model node."""
+        arg = expr.arg
+        if not isinstance(arg.class_type, NumpyNDArrayType):
+            raise NotImplementedError(f"Don't know how to represent lower bound of object of type {arg.class_type}")
+        index = (
+            Minus(convert_to_literal(arg.rank), expr.index)
+            if arg.order == "C"
+            else Add(expr.index, convert_to_literal(1))
+        )
+        return f"lbound({self._visit(arg)}, {self._visit(index)}, kind={self._kind(expr)})"
+
     def _visit_ArrayAllocated(self, expr):
         """Render the ``ArrayAllocated`` model node."""
         return f"allocated({self._visit(expr.arg)})"
@@ -472,6 +489,10 @@ class FCodePrinter(CodePrinter):
     def _visit_ArrayAssociated(self, expr):
         """Render the ``ArrayAssociated`` model node."""
         return f"associated({self._visit(expr.arg)})"
+
+    def _visit_ArrayContiguous(self, expr):
+        """Render the ``ArrayContiguous`` model node."""
+        return f"is_contiguous({self._visit(expr.arg)})"
 
     def _visit_Declare(self, expr):
         # ... ignored declarations
@@ -838,6 +859,10 @@ class FCodePrinter(CodePrinter):
         """Render the ``DeallocatePointer`` model node."""
         var_code = self._visit(expr.variable)
         return f"deallocate({var_code})\n"
+
+    def _visit_Nullify(self, expr):
+        """Render the ``Nullify`` model node."""
+        return f"nullify({self._visit(expr.variable)})\n"
 
     # ------------------------------------------------------------------------------
 
@@ -1260,12 +1285,19 @@ class FCodePrinter(CodePrinter):
 
     def _visit_BindCClassDef(self, expr):
         """Render the ``BindCClassDef`` model node."""
+        handle_operations = [
+            function
+            for attribute in expr.attributes
+            if isinstance(attribute, BindCNativeArrayHandleProperty)
+            for _name, function in attribute.operation_function_items
+        ]
         funcs = [
             expr.new_func,
             *expr.methods,
             *[f for i in expr.overload_sets for f in i.functions],
-            *[a.getter for a in expr.attributes],
-            *[a.setter for a in expr.attributes if a.setter],
+            *[a.getter for a in expr.attributes if not isinstance(a, BindCNativeArrayHandleProperty)],
+            *[a.setter for a in expr.attributes if not isinstance(a, BindCNativeArrayHandleProperty) and a.setter],
+            *handle_operations,
         ]
         sep = f"\n{self._visit(SeparatorComment(40))}\n"
         return "", sep.join(self._visit(f) for f in funcs)

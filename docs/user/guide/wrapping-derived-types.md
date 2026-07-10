@@ -97,9 +97,13 @@ Public supported scalar fields become Python descriptors. Private fields are
 omitted. A nested scalar derived component is a borrowed child wrapper: it
 retains its parent owner and never destroys the component independently.
 
-Allocatable fields use borrowed NumPy views. Pointer-array fields have a
-default conservative handle policy, but generated descriptor-handle accessors
-are still a readiness blocker. Arrays of derived types are blocked because
+Allocatable fields expose `Allocatable[T[...]]` handles, and pointer-array
+fields expose `Pointer[T[...]]` handles. Each field handle retains the parent
+wrapper for descriptor access. Call `to_numpy()` to extract the current NumPy
+view or detached copy selected by policy; discard old views after native
+deallocation, reallocation, nullification, or reassociation. Pointer fields use
+a conservative default operation policy, while ownership-changing operations
+require explicit pointer policy. Arrays of derived types remain blocked because
 element construction, destruction, layout, aliasing, and copy policy are
 incomplete.
 

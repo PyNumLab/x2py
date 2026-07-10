@@ -8,10 +8,12 @@ status: maintained
 
 # Arrays
 
-Numeric Fortran arrays cross the Python boundary as NumPy arrays. The semantic
-contract records element dtype, rank, known extents, layout, allowed strides,
-mutability, and storage category. The wrapper validates these facts before the
-native call and does not silently repair an incompatible array.
+Ordinary numeric Fortran arrays cross the Python boundary as NumPy arrays.
+Native allocatable and pointer array descriptors instead cross as
+`Allocatable[T[...]]` and `Pointer[T[...]]` handles. In both cases, the
+semantic contract records element dtype, rank, known extents, layout, allowed
+strides, mutability, and storage category. The wrapper validates these facts
+before the native call and does not silently repair an incompatible value.
 
 ## Complete Array Example
 
@@ -145,14 +147,17 @@ movement do not by themselves make the layout invalid.
 - Input arrays remain caller-owned and may be read-only.
 - Ordinary output arrays remain visible; the caller allocates writable storage.
 - Inout arrays remain visible and mutate in place.
-- Array function results and non-optional hidden allocatable outputs are
-  Python-owned copies.
+- Ordinary array function results are Python-owned NumPy copies.
+- Non-optional hidden allocatable outputs are wrapper-owned
+  `Allocatable[T[...]]` handles. Unallocated state remains inside the present
+  handle.
 - Optional allocatable outputs remain visible so the caller controls native
   `present(...)`.
 - Pointer-array handle results remain blocked until owner storage, target
   lifetime, descriptor extraction, and destroy behavior are implemented.
-- Borrowed allocatable module views are native-owned; borrowed component views
-  are owned through the containing wrapper. Both require lifetime care.
+- Allocatable and pointer module variables and supported components are handle
+  objects. NumPy views are obtained explicitly with `to_numpy()` and require
+  lifetime care after native descriptor changes.
 
 Caller-provided output storage is demonstrated with complete source in
 [Wrapping Subroutines](wrapping-subroutines.md#complete-output-example).
@@ -177,11 +182,17 @@ its own runtime rank. Rank-zero values and ranks above 15 are rejected.
 
 ## Array Results
 
-Supported numeric and fixed-width character array results preserve dtype, rank,
-and Fortran-oriented multidimensional data. Character arrays use NumPy bytes
-dtypes such as `S5`, where the dtype itemsize is the Fortran element length.
-Allocated zero-sized results are arrays; unallocated allocatable or
-unassociated pointer results are `None`.
+Supported ordinary numeric and fixed-width character array results preserve
+dtype, rank, and Fortran-oriented multidimensional data as NumPy arrays.
+Character arrays use NumPy bytes dtypes such as `S5`, where the dtype itemsize
+is the Fortran element length. Ordinary zero-sized results remain zero-sized
+arrays.
+
+An allocatable array result instead returns an `Allocatable[T[...]]` handle.
+An allocated zero-sized result is a handle whose shape contains a zero extent;
+an unallocated result is a present handle with `allocated is False` and
+`to_numpy() is None`. Pointer-array results remain blocked until their owner
+and target lifetime can be represented safely.
 
 ## Unsupported Forms
 
@@ -189,7 +200,8 @@ unassociated pointer results are `None`.
 - character arrays that cannot be represented as fixed-width NumPy bytes
   storage;
 - arrays of derived types;
-- general borrowed pointer array views and reassociation; and
+- pointer-array results and reassociation without completed owner, lifetime,
+  and operation policy; and
 - any kind or rank whose portable NumPy storage contract cannot be proved.
 
 ## Evidence And Troubleshooting

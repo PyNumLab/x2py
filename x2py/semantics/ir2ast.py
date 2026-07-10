@@ -52,7 +52,7 @@ from x2py.semantics.models import (
     OVERLOAD_KIND_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
 )
-from x2py.semantics.native_array_handles import native_array_descriptor_kind
+from x2py.semantics.native_array_handles import array_interop_policy, native_array_descriptor_kind
 from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
 from x2py.visitor import ClassVisitor
@@ -1281,6 +1281,11 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             result_shape = None
         result_ownership = _function_return_ownership_decision(node)
         native_array_handle_policy = _native_array_function_result_policy(node)
+        array_policy = array_interop_policy(
+            node.return_type,
+            owner=f"function {node.name} result",
+            native_array_handle_policy=native_array_handle_policy,
+        )
         result_var = Variable(
             return_dtype,
             node.name,
@@ -1289,6 +1294,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             fortran_character_length=_fortran_character_length(node.return_type),
             ownership_decision=result_ownership,
             native_array_handle_policy=native_array_handle_policy,
+            array_interop_policy=array_policy,
         )
         func_scope.insert_variable(result_var, name=node.name)
         return FunctionDefResult(result_var)
@@ -1725,6 +1731,11 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         )
         fortran_array_category, fortran_source_shape = _fortran_array_category_and_source_shape(semantic_type)
         native_array_handle_policy = _native_array_variable_policy(node)
+        array_policy = array_interop_policy(
+            semantic_type,
+            owner=f"variable {node.name}",
+            native_array_handle_policy=native_array_handle_policy,
+        )
         var = Variable(
             dtype,
             name,
@@ -1743,6 +1754,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             setter_ownership_decision=node.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA),
             snapshot_field_action=node.metadata.get(models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA),
             native_array_handle_policy=native_array_handle_policy,
+            array_interop_policy=array_policy,
             projected_output=bool(node.metadata.get(PROJECTED_OUTPUT_METADATA)),
             assumed_rank=_is_assumed_rank(semantic_type),
             cls_base=self.cls_base,

@@ -5,7 +5,10 @@ printing the C-Python interface.
 
 from typing import ClassVar
 
-from x2py.semantics.models import INTERNAL_MODULE_VARIABLE_NAME_METADATA
+from x2py.semantics.models import (
+    INTERNAL_MODULE_VARIABLE_NAME_METADATA,
+    INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA,
+)
 
 from ..bind_c import BindCFunctionDef, BindCModule, BindCPointer
 from ..bindings.c_concepts import CStrStr, ObjectAddress
@@ -414,7 +417,10 @@ class CPythonCodePrinter(CCodePrinter):
             if getattr(function, "is_header", False):
                 continue
             original = getattr(function, "original_function", None)
-            if INTERNAL_MODULE_VARIABLE_NAME_METADATA in getattr(original, "decorators", {}):
+            decorators = getattr(original, "decorators", {})
+            if INTERNAL_MODULE_VARIABLE_NAME_METADATA in decorators and not decorators.get(
+                INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA
+            ):
                 continue
             exports = (
                 expr.get_python_exports(function)

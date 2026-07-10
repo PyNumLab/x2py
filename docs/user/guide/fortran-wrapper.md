@@ -475,8 +475,9 @@ unclear, x2py blocks generation instead of guessing.
 
 ## Ownership And Lifetime
 
-Ownership determines whether Python sees a value, a copy, or a view; whether
-mutation reaches native storage; and which runtime destroys the storage.
+Ownership determines whether Python sees a value, copy, descriptor handle,
+extracted view, or generated object; whether mutation reaches native storage;
+and which runtime destroys the storage.
 
 The central rule is:
 
@@ -486,9 +487,9 @@ The central rule is:
 
 For example, both a non-optional allocatable output dummy and an allocatable
 component use the Fortran `allocatable` attribute, but they have different
-owners. The output dummy crosses the boundary as a replacement value and is
-copied into Python-owned memory. A component belongs to a containing native
-object and can be exposed as a borrowed view whose base keeps that object alive.
+owners. The output dummy becomes an owned `AllocatableHandle` whose finalizer
+releases x2py-owned descriptor storage. A component becomes a borrowed
+`AllocatableHandle` that retains its containing native wrapper.
 
 ### Ownership Vocabulary
 
@@ -496,11 +497,12 @@ object and can be exposed as a borrowed view whose base keeps that object alive.
 | --- | --- | --- |
 | Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, pointer detached copies. |
 | Caller-owned | The caller supplied the Python object and retains ownership. | A NumPy array passed as `intent(in)`, `intent(out)`, or `intent(inout)`. |
-| Wrapper-owned | A Python extension object owns one native Fortran instance. | A wrapped derived-type result. |
+| Wrapper-owned | A Python object owns or controls native storage. | A wrapped derived-type result or owned allocatable result handle. |
 | Native-owned | Fortran or an external library owns storage independently of Python. | A module allocatable array or external-library buffer. |
-| Borrowed view | Python references storage owned elsewhere and does not destroy it. | An allocatable component view or module-array attribute. |
-| Copy-return | Native output is copied into a new Python-owned value before return. | Allocatable output arrays and array function results. |
-| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Scalar pointer copied values and allocatable snapshots. |
+| Descriptor handle | Python carries native allocation or association state and a completed owner policy. | An allocatable or pointer module variable, field, argument, or supported result. |
+| Borrowed view | Python references storage owned elsewhere and does not destroy it. | A NumPy array extracted from a borrowed descriptor handle. |
+| Copy-return | Native output is copied into a new Python-owned value before return. | An ordinary array result or immutable replacement. |
+| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Scalar pointer copied values or detached handle extraction. |
 | Call-local association | Native code may use Python storage only during the wrapped call. | Pointer `intent(in)` array arguments. |
 | Blocked | Generation stops because a safe contract cannot be proven. | Pointer reassociation without owner and release policy. |
 
@@ -532,8 +534,9 @@ X2PY_C_DOCS_END -->
 | Caller-supplied NumPy array | The Python caller | According to normal Python lifetime. |
 | Wrapper-owned derived instance | Generated wrapper deallocator | When the owning wrapper is collected. |
 | Borrowed nested component | The parent wrapper | When parent and all borrowed children are gone. |
-| Borrowed allocatable component view | The containing native instance | When that instance releases or reallocates the component. |
-| Borrowed module array view | The Fortran module | When native code deallocates or reallocates it. |
+| Borrowed allocatable or pointer handle | The containing wrapper or native module | The handle does not release borrowed descriptor storage. |
+| NumPy view extracted from a handle | The handle's completed owner policy | The view retains the handle, but can become stale after descriptor changes. |
+| Owned allocatable result handle | Generated handle finalizer | On `close()` or when the handle is collected. |
 | Pointer target | The explicit pointer policy's owner | Never inferred from the pointer declaration alone. |
 | Call-local temporary | The generated bridge | Before the wrapped call returns. |
 
@@ -542,7 +545,7 @@ objects. Native allocation or deallocation routines that are part of the
 Fortran API remain ordinary callable routines, but invoking one can invalidate
 borrowed views.
 
-### Borrowed View Example
+### Borrowed Handle And View Example
 
 ```fortran
 type :: buffer
@@ -554,13 +557,14 @@ end type buffer
 b = buffer()
 b.allocate_values(3)
 
-view = b.values
-assert view.base is b
+handle = b.values
+assert handle.owner is b
+view = handle.to_numpy()
 
 view[0] = 9.0          # mutates b%values
 independent = view.copy()
 
-del b                  # view keeps the wrapper owner alive
+del b                  # handle and view retain the wrapper owner chain
 print(view[0])
 ```
 
@@ -589,8 +593,9 @@ values: Annotated[
 
 Metadata describes policy; it does not create backend support. Pointer metadata,
 for example, must still provide the required shape, nullability, target owner,
-lifetime, and release facts, and it cannot enable an unimplemented borrowed-view
-or reassociation path.
+lifetime, and release facts. It can select implemented descriptor extraction or
+policy-gated operations, but it cannot manufacture stable owner storage for a
+pointer-array result.
 
 The Semantic `.pyi` Format reference later gives canonical spellings and
 examples for every `Transfer(...)` and `Destruction(...)` mode.
@@ -749,9 +754,10 @@ the return value unless other outputs require a tuple.
 
 ### Allocatable Outputs
 
-An allocatable `intent(out)` dummy is hidden. If Fortran allocates it, the bridge
-copies the data into Python-owned NumPy storage and deallocates the native
-temporary. If it remains unallocated, Python receives `None`.
+A non-optional allocatable array `intent(out)` dummy is hidden and returned as
+an owned `AllocatableHandle`. The generated binding transfers the native result
+into persistent descriptor storage. Allocated and unallocated results both
+return a present handle; allocation state is read through `handle.allocated`.
 
 ```fortran
 subroutine build_values(n, values)
@@ -765,12 +771,17 @@ end subroutine build_values
 ```
 
 ```python
-values = build_values(3)  # Python-owned ndarray
-missing = build_values(0) # None
+values = build_values(3)
+assert values.allocated is True
+np.testing.assert_allclose(values.to_numpy(), np.full(3, 2.0))
+
+missing = build_values(0)
+assert missing.allocated is False
+assert missing.to_numpy() is None
 ```
 
-Failure to allocate the Python copy after Fortran produced a non-empty result
-raises `MemoryError`; it is not confused with an unallocated result.
+Failure to allocate owned descriptor storage after Fortran produced a result
+raises `MemoryError`; it is not confused with an unallocated descriptor.
 
 ### Tuple Ordering
 
@@ -794,7 +805,9 @@ value, status, message = analyze(2.0)
 Generated `.pyi` signatures and NumPy-style docstrings use the same projection.
 `Returns["name", T]` is reserved for a returned value that also remains a
 Python-visible argument, such as caller-provided output storage. Hidden outputs
-use ordinary return annotations; hidden allocatable outputs include `None`.
+use ordinary return annotations; hidden allocatable array outputs use
+`Allocatable[T[...]]` handles whose unallocated state remains inside the
+handle.
 
 Runtime tests: [`test_output_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_output_arguments.py),
 [`test_native_call_examples.py`](../../../tests/wrapper/fortran/function_calls/test_native_call_examples.py).
@@ -820,15 +833,17 @@ step(0.1, tol=1.0e-8)
 step(0.1, max_iter=None)
 ```
 
-For Python-visible optional inputs, omission and explicit `None` both mean that
-no native actual argument is passed, so `present(dummy)` is false. Passing a
-concrete value makes it true.
+For ordinary Python-visible optional inputs, omission and explicit `None` both
+mean that no native actual argument is passed, so `present(dummy)` is false.
+Optional scalar allocatable and pointer descriptors are the three-state
+exception: omission means absent, explicit `None` means a present unallocated
+or unassociated descriptor, and a concrete value means present storage.
 
 Optional `intent(out)` and `intent(inout)` dummies remain visible so omission or
 `None` makes native `present(dummy)` false. Optional scalar outputs use mutable
-rank-zero storage such as `Int32[()]`. Optional output arrays, including
-allocatable outputs, use visible optional storage and return `None` for their
-result position when absent. Hidden scalar or derived-type `Return(...)`
+rank-zero storage such as `Int32[()]`. An optional allocatable or pointer array
+dummy accepts the matching handle or `None`; a present handle contains its own
+unallocated or unassociated state. Hidden scalar or derived-type `Return(...)`
 outputs are different: the wrapper requests them with native temporary storage,
 so they are present and returned on every call.
 
@@ -884,10 +899,11 @@ Allocatable behavior depends on where the allocation lives.
 
 ### Allocatable Output And Function Results
 
-Top-level function results and non-optional hidden allocatable outputs use
-copy-return ownership. Allocated storage becomes a Python-owned NumPy array;
-unallocated storage becomes `None`. The bridge releases the temporary Fortran
-allocation after the copy.
+Top-level allocatable array function results and non-optional hidden
+allocatable array outputs return wrapper-owned `AllocatableHandle` objects.
+Allocated and unallocated native states both return a present handle. The
+handle owns persistent descriptor storage and releases it on `close()` or
+finalization.
 
 ```fortran
 function make_vector(n) result(values)
@@ -903,17 +919,21 @@ end function make_vector
 
 ```python
 values = make_vector(4)
-values[0] = 9.0          # modifies only the Python-owned copy
+assert values.allocated is True
+view = values.to_numpy()
+view[0] = 9.0
+
+missing = make_vector(0)
+assert missing.allocated is False
+assert missing.to_numpy() is None
 ```
 
-### Allocatable `intent(inout)` Replacement
+### Allocatable `intent(inout)` Handle Mutation
 
-An allocatable `intent(inout)` array is replacement-oriented. Its Python-visible
-argument type includes `| None`: `None` means initially unallocated storage. A
-supplied matching NumPy array is copied into a bridge-owned native allocatable
-temporary and is not mutated. The NumPy buffer itself is not passed as native
-allocatable storage. After the call, Python receives `None` or a new
-Python-owned array reflecting the final native allocation.
+An allocatable array `intent(inout)` dummy accepts an `AllocatableHandle`, not
+a plain NumPy array. Native code reads and changes that descriptor directly. If
+the semantic contract projects the argument as a result, Python receives the
+same handle object rather than a replacement ndarray or a second handle.
 
 ```fortran
 subroutine replace_values(values)
@@ -926,28 +946,29 @@ end subroutine replace_values
 ```
 
 ```python
-original = np.array([1.0, 2.0], dtype=np.float64)
-replacement = replace_values(original)
+values = make_vector(2)
+returned = replace_values(values)
 
-np.testing.assert_array_equal(original, [1.0, 2.0])
-np.testing.assert_array_equal(replacement, [10.0, 20.0])
+assert returned is values
+np.testing.assert_array_equal(values.to_numpy(), [10.0, 20.0])
 ```
 
 ### Allocatable Fields And Module Arrays
 
 An allocatable derived-type field is owned by its containing native instance.
-Access returns a borrowed NumPy view whose base keeps the wrapper owner alive.
-An `Aliased` allocatable module array is native-owned and may also be exposed
-through a borrowed getter. A plain allocatable module array is exposed as a
-read-only snapshot copy or `None`. Borrowed views can become stale after native
-reallocation; copy before reallocation when independent lifetime is required.
+Access returns an `AllocatableHandle` that retains the wrapper owner. An
+allocatable module array also returns a handle whose descriptor storage remains
+module-owned. `Aliased` permits borrowed view extraction; otherwise completed
+policy may select a detached read-only extraction. The attribute itself remains
+a handle when unallocated. Views returned by `to_numpy()` can become stale
+after native reallocation; copy before reallocation when independent lifetime
+is required.
 
 Allocatable scalar derived-type dummy replacement remains blocked because a
 safe contract must define native construction, replacement, finalization, and
 exactly-once destruction of the whole wrapped object.
 
-Runtime tests: [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py)
-and [`test_allocatable_replacement.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
+Runtime tests: [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
 
 ## Pointer Arguments, Results, And Association
 
@@ -959,10 +980,14 @@ callee allocation, or nothing. x2py therefore supports a conservative subset:
 - pointer scalar `intent(out)` and `intent(inout)` use nullable copied-value
   projection;
 - associated pointer scalar results become copied Python scalars;
-- pointer-array handles, results, fields, and module variables block wrapper
-  lowering until descriptor handoff, extraction, target lifetime, and release
-  policy are implemented; and
-- pointer array `intent(out)` and `intent(inout)` reassociation is blocked.
+- pointer-array descriptor arguments, module variables, and supported fields use
+  `Pointer[T[...]]` handles;
+- descriptor-backed `to_numpy()` extraction can expose contiguous or strided
+  targets when policy provides the required owner and lifetime facts;
+- pointer-array results remain blocked until stable owner storage and target
+  lifetime are implemented; and
+- pointer array `intent(out)` and `intent(inout)` reassociation without complete
+  policy is blocked.
 
 ### Call-Local Input
 
@@ -974,13 +999,14 @@ end function total
 ```
 
 ```python
-values = np.array([1.0, 2.0, 3.0], dtype=np.float64)
-assert total(values) == 6.0
+assert total(pointer_handle) == 6.0
 ```
 
-The native pointer may reference `values` only while `total` runs. Fortran must
-not save the association for later use. Scalar pointer inputs similarly use a
-temporary converted value and do not expose writes or reassociation to Python.
+The pointer-descriptor signature requires a `Pointer[T[...]]` handle; a plain
+NumPy array has no pointer descriptor and is rejected. Scalar pointer inputs
+remain call-local nullable values and do not expose persistent association to
+Python. The complete pointer example earlier in the guide demonstrates a
+module handle passed to both descriptor and ordinary array parameters.
 
 ### Pointer Result Boundary
 
@@ -1009,18 +1035,19 @@ pointer results still use copied Python values or `None`.
 Semantic `.pyi` metadata can record `nullable`, transfer mode, target owner,
 lifetime, deallocation, shape source, contiguity, reassociation, aliasing, and
 mutability. Contradictory or incomplete facts produce a readiness blocker.
-Metadata cannot turn general pointer reassociation or borrowed pointer views
-into supported behavior; those paths remain unsettled and are summarized in
-[Not Handled Or Not Yet Settled](#not-handled-or-not-yet-settled).
+Metadata can select implemented descriptor extraction and policy-gated
+operations. It cannot invent stable owner storage for a pointer-array result or
+make an unproved persistent reassociation safe.
 
 Runtime tests: [`test_pointers.py`](../../../tests/wrapper/fortran/derived_types/test_pointers.py).
 
 ## Array-Valued Function Results
 
-Numeric explicit-shape, automatic-shape, allocatable, and supported pointer
-array function results are returned as new Python-owned NumPy arrays. x2py does
-not expose a zero-copy view of a function result because its temporary or
-pointer association does not establish a stable Python lifetime.
+Numeric explicit-shape and automatic-shape array function results are returned
+as new Python-owned NumPy arrays. Allocatable array results use owned
+`AllocatableHandle` objects instead. Pointer-array results remain blocked
+because a returned pointer association does not establish stable owner storage
+or target lifetime.
 
 ```fortran
 function spectrum(n) result(values)
@@ -1037,11 +1064,12 @@ assert values.flags.owndata or values.base is not None
 np.testing.assert_array_equal(values, [1.0, 2.0, 3.0, 4.0])
 ```
 
-Returned arrays preserve dtype, rank, bounds information needed by the wrapper,
-and Fortran ordering for multidimensional results. Numeric results support ranks
-1 through 15 and zero-sized dimensions. Allocatable unallocated results and
-unassociated pointer results return `None`; an allocated zero-sized result is a
-zero-sized array, not `None`.
+Ordinary returned arrays preserve dtype, rank, bounds information needed by the
+wrapper, and Fortran ordering for multidimensional results. Numeric results
+support ranks 1 through 15 and zero-sized dimensions. An allocatable zero-sized
+result is a present handle with a zero extent; an unallocated result is a
+present handle whose `allocated` property is false and whose `to_numpy()`
+result is `None`.
 
 Arrays of derived types are blocked because their element layout,
 construction, destruction, aliasing, and copy policy are not defined.
@@ -1050,8 +1078,12 @@ Runtime tests: [`test_array_results.py`](../../../tests/wrapper/fortran/arrays/t
 
 ## NumPy Array Argument Contracts
 
-Numeric explicit-shape, assumed-size, assumed-shape, supported allocatable and
-pointer dummies, and assumed-rank arguments are accepted within the rules below.
+Numeric explicit-shape, assumed-size, assumed-shape, and assumed-rank ordinary
+array arguments accept NumPy arrays within the rules below. An allocated
+`Allocatable[T[...]]` handle or associated contiguous `Pointer[T[...]]` handle
+may also satisfy a normal `T[...]` parameter through native array-actual
+handoff. Descriptor parameters annotated as `Allocatable[T[...]]` or
+`Pointer[T[...]]` require the matching handle and reject plain NumPy arrays.
 
 ### Validation
 
@@ -1221,10 +1253,10 @@ origin.x = 4.0          # valid: origin retains the parent owner
 ```
 
 Private components are omitted from Python descriptors. Allocatable fields use
-borrowed views. Pointer-array fields have a default conservative handle policy,
-but generated descriptor-handle accessors are still a readiness blocker; the
-containing object does not automatically own pointer targets. Arrays of derived
-types are blocked.
+`Allocatable[T[...]]` handles, and pointer-array fields use
+`Pointer[T[...]]` handles. Each handle retains the containing wrapper for
+descriptor access; that retention does not make the wrapper owner of a pointer
+target. Arrays of derived types are blocked.
 
 Runtime tests: [`test_derived_type_boundaries.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py)
 and [`test_derived_type_methods.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_methods.py).
@@ -1378,20 +1410,23 @@ a Python literal; no setter is generated. Rebinding `module.max_count` only
 shadows the Python attribute and does not change native Fortran state. Private
 variables are omitted.
 
-Target-backed allocatable module arrays are attributes returning native-owned
-borrowed views or `None`:
+Allocatable module arrays are attributes returning persistent
+`Allocatable[T[...]]` handles:
 
 ```python
 allocate_values(3)
-view = values
+handle = values
+assert handle.allocated is True
+view = handle.to_numpy()
 view[0] = 5.0            # writes native module storage
 
 independent = view.copy()
 deallocate_values()      # invalidates the native storage behind view
 ```
 
-Pointer-array module variables have a default conservative handle policy, but
-generated descriptor-handle accessors are still a readiness blocker. Explicit
+Pointer-array module variables return `Pointer[T[...]]` handles with a default
+conservative policy for association inspection and legal descriptor operations.
+Extraction and ownership-changing operations remain policy-gated. Explicit
 `save` on a public module variable does not change exposure because module
 storage already has module lifetime. Procedure-local `save` variables remain
 internal.
@@ -2019,19 +2054,19 @@ projection path. Some output decisions are still represented by the established
 lowered argument/result structures. This is an internal integration gap, not a
 different user-visible tuple or mutation contract.
 
-### Borrowed Pointer Views And Reassociation
+### Pointer Views, Results, And Reassociation
 
-General borrowed pointer views are not supported. x2py cannot yet:
+Module and derived-field pointer handles can expose borrowed NumPy views when
+completed policy proves descriptor extraction, target owner, lifetime, shape,
+and mutability. Descriptor metadata supports contiguous and strided targets.
+The handle retains the descriptor owner, but x2py cannot invalidate an existing
+NumPy view after native reassociation, nullification, owner destruction, or
+target reallocation. Discard old views after those operations.
 
-- keep every possible native pointer target alive while a Python view exists;
-- guarantee that Python never frees a borrowed target under all owner kinds;
-- invalidate a view after native reassociation, owner destruction, or target
-  reallocation; or
-- lower pointer array or persistent pointer reassociation with a complete copy,
-  borrow, ownership-transfer, and release policy.
-
-Use supported detached copies when complete target facts are known. Otherwise
-readiness blocks the declaration.
+Pointer-array results remain blocked until stable owner storage and target
+lifetime are available. Persistent reassociation and pointer-driven allocation,
+deallocation, or resize require explicit completed policy; readiness blocks an
+unproved request instead of guessing ownership.
 
 ### Advanced Multi-Source Integration
 
@@ -2072,7 +2107,7 @@ wrappers:
 | Arrays | Assumed type `type(*)` | Runtime dtype and descriptor policy. |
 | Arrays | Character arrays not representable as fixed-width bytes dtype | Encoding, ABI, allocation, and ownership. |
 | Arrays | Derived-type arrays | Element layout, construction, destruction, aliasing, and copy/view behavior. |
-| Pointers | Pointer output/inout and borrowed targets | Owner, lifetime, reassociation, release, and stale-view behavior. |
+| Pointers | Pointer-array results and unproved reassociation or ownership-changing operations | Stable result owner storage, target lifetime, or explicit operation policy. |
 | Polymorphism | Results, mutable dummies, arrays, allocatable/pointer scalars, `class(*)` | Dynamic type, allocation, replacement, and ownership. |
 | Constructors | Generic constructor interfaces and overloaded runtime initialization | Deterministic Python constructor selection and lowering. |
 | Characters | Mutable scalar allocatable character dummies and deferred-length mutable fields | Allocation, encoding, replacement, and destruction. |

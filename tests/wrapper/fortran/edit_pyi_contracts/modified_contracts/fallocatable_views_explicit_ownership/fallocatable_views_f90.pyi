@@ -1,4 +1,4 @@
-# Intentional difference: the three array contexts state their complete owner,
+# Intentional difference: every handle context states its complete owner,
 # boundary-transfer, and destruction policy explicitly.
 from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Destruction, Float64, Int32, Ownership, Pass, Return, Transfer, native_call
 
@@ -59,7 +59,7 @@ def build_values(
     n: Int32
 ) -> Annotated[
     Allocatable[Float64[:]],
-    Ownership("python"),
-    Transfer("copy_return"),
-    Destruction("python_refcount"),
+    Ownership("wrapper"),
+    Transfer("wrapper_instance"),
+    Destruction("wrapper_dealloc"),
 ]: ...

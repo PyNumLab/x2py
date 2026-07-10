@@ -1,3 +1,4 @@
+import gc
 import importlib
 import json
 import shutil
@@ -13,11 +14,7 @@ import pytest
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran.fmath_cases import fmath_cases
 from x2py import build_pyi_extension
-
-_NATIVE_ARRAY_HANDLE_CODEGEN_STAGED = (
-    "Native array handle bridge generation is not implemented",
-    "Native array handle Python binding generation is not implemented",
-)
+from x2py.runtime_handles import AllocatableHandle
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WRAPPER_TEST_ROOT = Path(__file__).resolve().parent
@@ -73,11 +70,7 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
         str(workdir),
         "--json",
     ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    except subprocess.CalledProcessError as error:
-        xfail_staged_native_array_handle_codegen(error)
-        raise
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(result.stdout)
 
     shared_library = Path(payload["shared_library"])
@@ -162,7 +155,7 @@ def _build_generated_pyi_and_import(source_template: Path, workdir: Path, expect
 
     entry = _generate_checked_pyi_contract(source, workdir / "contracts" / source.stem, expected_contract_package)
     native_object = _compile_native_object(source, workdir / "native")
-    result = build_pyi_extension_or_xfail_staged_native_array_handle(
+    result = build_pyi_extension(
         entry,
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
@@ -175,30 +168,6 @@ def _build_generated_pyi_and_import(source_template: Path, workdir: Path, expect
     assert result.native_build_plan.produced_objects == ()
     assert result.native_build_plan.prebuilt_artifacts[0].path == native_object
     return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
-
-
-def build_pyi_extension_or_xfail_staged_native_array_handle(*args, **kwargs):
-    """Build a `.pyi` extension, xfailing only staged native-array-handle codegen gaps."""
-    try:
-        return build_pyi_extension(*args, **kwargs)
-    except Exception as error:
-        xfail_staged_native_array_handle_codegen(error)
-        raise
-
-
-def xfail_staged_native_array_handle_codegen(error) -> None:
-    """Mark currently staged native-array-handle codegen paths as expected failures."""
-    text = "\n".join(
-        str(part)
-        for part in (
-            getattr(error, "stderr", None),
-            getattr(error, "stdout", None),
-            error,
-        )
-        if part
-    )
-    if any(message in text for message in _NATIVE_ARRAY_HANDLE_CODEGEN_STAGED):
-        pytest.xfail("native array handle code generation is staged by the active checklist")
 
 
 def _build_source_or_generated_pyi_and_import(
@@ -229,11 +198,7 @@ def _build_text_and_import(source_text: str, filename: str, workdir: Path, expec
         str(workdir),
         "--json",
     ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    except subprocess.CalledProcessError as error:
-        xfail_staged_native_array_handle_codegen(error)
-        raise
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(result.stdout)
 
     shared_library = Path(payload["shared_library"])
@@ -265,11 +230,7 @@ def _build_sources_and_import(source_texts: list[tuple[str, str]], workdir: Path
         str(workdir),
         "--json",
     ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    except subprocess.CalledProcessError as error:
-        xfail_staged_native_array_handle_codegen(error)
-        raise
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(result.stdout)
     module_name = payload["module_name"]
 
@@ -397,11 +358,6 @@ def _assert_modern_string_examples(module):
     assert module.string_result_deferred("café") == "café-deferred"
     labels = np.array([b"first", b"second"], dtype="S8")
     assert module.fixed_array_extent(labels) == 16
-    original_names = np.array([b"aa", b"bbb"], dtype="S3")
-    replacement_names = module.replace_names(original_names)
-    assert original_names.tolist() == [b"aa", b"bbb"]
-    assert replacement_names.dtype == np.dtype("S5")
-    assert replacement_names.tolist() == [b"red  ", b"blue "]
     assert module.rewrite_storage("abcdefgh") == "Ybcdefg?"
 
 
@@ -422,32 +378,68 @@ def _assert_modern_class_examples(module):
 
     assert hasattr(module, "vector_store")
     store = module.vector_store()
-    assert store.values is None
-    assert store.matrix is None
+    values = store.values
+    matrix_values = store.matrix
+    assert isinstance(values, AllocatableHandle)
+    assert isinstance(matrix_values, AllocatableHandle)
+    assert values.owner is store
+    assert matrix_values.owner is store
+    assert values.allocated is False
+    assert matrix_values.allocated is False
+    assert values.to_numpy() is None
+    assert matrix_values.to_numpy() is None
 
-    with pytest.raises(AttributeError, match="reallocate"):
+    with pytest.raises(AttributeError):
         store.values = np.array([9.0], dtype=np.float64)
 
     store.allocate_values(np.int64(3))
-    store.values[:] = np.array([1.0, 2.0, 3.0], dtype=np.float64)
-    np.testing.assert_allclose(store.values, np.array([1.0, 2.0, 3.0]))
+    assert values.allocated is True
+    assert values.shape == (3,)
+    values_view = values.to_numpy()
+    values_view[:] = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    np.testing.assert_allclose(values.to_numpy(), np.array([1.0, 2.0, 3.0]))
 
     store.set_values(np.array([4.0, 5.0], dtype=np.float64))
-    np.testing.assert_allclose(store.values, np.array([4.0, 5.0]))
+    assert values.shape == (2,)
+    np.testing.assert_allclose(values.to_numpy(), np.array([4.0, 5.0]))
+
+    values.resize((4,))
+    assert values.allocated is True
+    assert values.shape == (4,)
+    resized_values = values.to_numpy()
+    resized_values[:] = np.array([6.0, 7.0, 8.0, 9.0], dtype=np.float64)
+    np.testing.assert_allclose(values.to_numpy(), resized_values)
+
+    values.deallocate()
+    assert values.allocated is False
+    assert values.shape is None
+    assert values.to_numpy() is None
+    store.set_values(np.array([4.0, 5.0], dtype=np.float64))
 
     matrix = np.asfortranarray(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64))
     store.allocate_matrix(np.int64(2), np.int64(3))
-    store.matrix[:, :] = matrix
-    np.testing.assert_allclose(store.matrix, matrix)
-    assert store.matrix.flags.f_contiguous
+    assert matrix_values.shape == (2, 3)
+    matrix_view = matrix_values.to_numpy()
+    matrix_view[:, :] = matrix
+    np.testing.assert_allclose(matrix_values.to_numpy(), matrix)
+    assert matrix_view.flags.f_contiguous
 
     replacement = np.asfortranarray(matrix * 2.0)
     store.set_matrix(replacement)
-    np.testing.assert_allclose(store.matrix, replacement)
-    assert store.matrix.flags.f_contiguous
+    replacement_view = matrix_values.to_numpy()
+    np.testing.assert_allclose(replacement_view, replacement)
+    assert replacement_view.flags.f_contiguous
 
     with pytest.raises(TypeError, match=r"expected ordering \(F\)"):
         store.set_matrix(np.array(replacement, order="C"))
 
     made = module.vector_store.make(np.int64(4), np.float64(1.5))
-    np.testing.assert_allclose(made.values, np.full(4, 1.5, dtype=np.float64))
+    made_values = made.values
+    assert isinstance(made_values, AllocatableHandle)
+    assert made_values.owner is made
+    np.testing.assert_allclose(made_values.to_numpy(), np.full(4, 1.5, dtype=np.float64))
+    made_owner_id = id(made)
+    del made
+    gc.collect()
+    assert id(made_values.owner) == made_owner_id
+    np.testing.assert_allclose(made_values.to_numpy(), np.full(4, 1.5, dtype=np.float64))

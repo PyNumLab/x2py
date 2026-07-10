@@ -2,22 +2,298 @@
 
 from __future__ import annotations
 
+import ctypes
+import operator
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import suppress
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 
 
 HandleOperation = Callable[..., Any]
+_PRESENT_NATIVE_ARRAY_DESCRIPTOR_ARGUMENT = ctypes.c_int(1)
+_PRESENT_NATIVE_ARRAY_DESCRIPTOR_ARGUMENT_ADDRESS = ctypes.addressof(_PRESENT_NATIVE_ARRAY_DESCRIPTOR_ARGUMENT)
+
+
+class _OwnerRetainedNDArray(np.ndarray):
+    """Internal ndarray view carrying a strong reference to native owner state."""
+
+
+def _retain_numpy_owner(value: np.ndarray, owner: Any) -> np.ndarray:
+    """Return a zero-copy ndarray view that retains one Python owner object."""
+    retained = value.view(_OwnerRetainedNDArray)
+    retained._x2py_owner = owner
+    return retained
+
+
+@dataclass(frozen=True)
+class _NativeArrayHandoff:
+    """Internal opaque native pointer handoff returned by generated handle ops."""
+
+    address: int
+    owner: Any = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.address, bool) or not isinstance(self.address, int):
+            raise TypeError("native array handoff address must be an integer")
+        if self.address <= 0:
+            raise ValueError("native array handoff address must be a non-null positive pointer value")
+
+
+def _numpy_view_from_pointer_c_descriptor(
+    descriptor: Any,
+    *,
+    dtype: Any,
+    expected_rank: int | None = None,
+) -> np.ndarray | None:
+    """Build a NumPy view from generated TS 29113 pointer descriptor fields."""
+    base_addr = _pointer_descriptor_base_addr(descriptor)
+    if base_addr == 0:
+        return None
+    array_dtype = np.dtype(dtype)
+    _validate_pointer_descriptor_itemsize(descriptor, array_dtype)
+    shape, strides = _pointer_descriptor_shape_and_strides(descriptor)
+    if expected_rank is not None and len(shape) != int(expected_rank):
+        raise ValueError(
+            f"pointer descriptor rank {len(shape)} does not match declared handle rank {int(expected_rank)}"
+        )
+    buffer_offset, buffer_nbytes, view_offset = _descriptor_view_buffer_window(
+        tuple(shape),
+        tuple(strides),
+        array_dtype.itemsize,
+    )
+    buffer_addr = base_addr + buffer_offset
+    if buffer_addr < 0:
+        raise ValueError("pointer descriptor view buffer starts before address zero")
+    buffer_type = ctypes.c_char * buffer_nbytes
+    buffer = buffer_type.from_address(buffer_addr)
+    return np.ndarray(tuple(shape), dtype=array_dtype, buffer=buffer, strides=tuple(strides), offset=view_offset)
+
+
+def _native_array_handle_from_generated_ops(
+    descriptor_kind: str,
+    dtype: Any,
+    rank: int,
+    ops: Mapping[str, HandleOperation],
+    owner: Any = None,
+    descriptor_ownership: str = "borrowed",
+    to_numpy_policy: str = "borrowed_view",
+    generation: int | None = None,
+) -> NativeArrayHandleBase:
+    """Build a runtime handle from generated operation callables."""
+    owned = descriptor_ownership == "owned"
+    normalized_ops = {}
+    for name, operation in ops.items():
+        if name == "array_actual":
+            normalized = _generated_handoff_operation(operation, owner=owner, pass_owner=owned)
+        elif name in {"allocate", "resize"}:
+            normalized = _generated_shape_operation(operation, owner=owner if owned else None)
+        elif owned:
+            normalized = _generated_owned_handle_operation(operation, owner)
+        else:
+            normalized = _generated_handle_operation(operation)
+        normalized_ops[name] = normalized
+    try:
+        handle_cls = {
+            "allocatable": AllocatableHandle,
+            "pointer": PointerHandle,
+        }[descriptor_kind]
+    except KeyError:
+        raise ValueError("generated native array handle kind must be 'allocatable' or 'pointer'") from None
+    try:
+        return handle_cls(
+            dtype=dtype,
+            rank=rank,
+            ops=normalized_ops,
+            owner=owner,
+            descriptor_ownership=descriptor_ownership,
+            to_numpy_policy=to_numpy_policy,
+            generation=generation,
+        )
+    except BaseException:
+        if owned and "destroy" in normalized_ops:
+            with suppress(Exception):
+                normalized_ops["destroy"](None)
+        raise
+
+
+def _generated_handle_operation(operation: HandleOperation) -> HandleOperation:
+    """Adapt a generated operation callable to the handle operation protocol."""
+
+    def call(_handle: NativeArrayHandleBase, *args: Any) -> Any:
+        return operation(*args)
+
+    return call
+
+
+def _generated_owned_handle_operation(operation: HandleOperation, owner: Any) -> HandleOperation:
+    """Adapt an operation whose first argument is persistent native owner storage."""
+
+    def call(_handle: NativeArrayHandleBase, *args: Any) -> Any:
+        return operation(owner, *args)
+
+    return call
+
+
+def _generated_shape_operation(operation: HandleOperation, *, owner: Any = None) -> HandleOperation:
+    """Adapt generated shape operations from one runtime shape tuple to scalar extents."""
+
+    def call(_handle: NativeArrayHandleBase, shape: Sequence[int]) -> Any:
+        extents = tuple(np.int64(extent) for extent in shape)
+        return operation(*extents) if owner is None else operation(owner, *extents)
+
+    return call
+
+
+def _generated_handoff_operation(
+    operation: HandleOperation,
+    *,
+    owner: Any,
+    pass_owner: bool = False,
+) -> HandleOperation:
+    """Adapt a generated pointer-address operation to the runtime handoff protocol."""
+
+    def call(_handle: NativeArrayHandleBase, *args: Any) -> _NativeArrayHandoff:
+        value = operation(owner, *args) if pass_owner else operation(*args)
+        return _native_array_handoff_from_generated_result(value, owner=owner)
+
+    return call
+
+
+def _native_array_handoff_from_generated_result(value: Any, *, owner: Any = None) -> _NativeArrayHandoff:
+    """Normalize a generated pointer operation result into a native handoff."""
+    if isinstance(value, _NativeArrayHandoff):
+        return value
+    if isinstance(value, ctypes.c_void_p):
+        value = value.value
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"generated native array handoff address must be an integer; received {type(value).__name__}")
+    return _NativeArrayHandoff(value, owner=owner)
+
+
+def _pointer_descriptor_base_addr(descriptor: Any) -> int:
+    base_addr = _required_descriptor_int(descriptor, "base_addr")
+    if base_addr < 0:
+        raise ValueError(f"pointer descriptor base_addr must be non-negative; received {base_addr}")
+    return base_addr
+
+
+def _validate_pointer_descriptor_itemsize(descriptor: Any, array_dtype: np.dtype) -> None:
+    elem_len = _required_descriptor_int(descriptor, "elem_len")
+    if elem_len != array_dtype.itemsize:
+        raise ValueError(
+            f"pointer descriptor elem_len {elem_len} does not match NumPy dtype itemsize {array_dtype.itemsize}"
+        )
+
+
+def _pointer_descriptor_shape_and_strides(descriptor: Any) -> tuple[list[int], list[int]]:
+    dimensions = _pointer_descriptor_dimensions(descriptor)
+    shape: list[int] = []
+    strides: list[int] = []
+    for index, dimension in enumerate(dimensions):
+        extent, stride = _pointer_descriptor_dimension_extent_stride(index, dimension)
+        shape.append(extent)
+        strides.append(stride)
+    return shape, strides
+
+
+def _pointer_descriptor_dimensions(descriptor: Any) -> Sequence[Any]:
+    rank = _pointer_descriptor_rank(descriptor)
+    dimensions = _required_descriptor_field(descriptor, "dim")
+    if not isinstance(dimensions, Sequence) or isinstance(dimensions, (str, bytes)):
+        raise TypeError("pointer descriptor field 'dim' must be a sequence of dimension records")
+    if rank != len(dimensions):
+        raise ValueError(f"pointer descriptor rank {rank} does not match {len(dimensions)} dimension records")
+    return dimensions
+
+
+def _pointer_descriptor_rank(descriptor: Any) -> int:
+    rank = _required_descriptor_int(descriptor, "rank")
+    if rank < 0:
+        raise ValueError(f"pointer descriptor rank must be non-negative; received {rank}")
+    return rank
+
+
+def _pointer_descriptor_dimension_extent_stride(index: int, dimension: Any) -> tuple[int, int]:
+    if not _is_pointer_descriptor_dimension_record(dimension):
+        raise TypeError(f"pointer descriptor dimension {index} must be a mapping or field-record object")
+    _required_descriptor_int(dimension, "lower_bound", field_owner=f"dim[{index}]")
+    extent = _required_descriptor_int(dimension, "extent", field_owner=f"dim[{index}]")
+    stride = _required_descriptor_int(dimension, "sm", field_owner=f"dim[{index}]")
+    if extent < 0:
+        raise ValueError(f"pointer descriptor dim[{index}].extent must be non-negative; received {extent}")
+    return extent, stride
+
+
+def _required_descriptor_int(
+    descriptor: Any,
+    field: str,
+    *,
+    field_owner: str = "descriptor",
+) -> int:
+    value = _required_descriptor_field(descriptor, field, field_owner=field_owner)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"pointer {field_owner} field {field!r} must be an integer")
+    return value
+
+
+def _required_descriptor_field(
+    record: Any,
+    field: str,
+    *,
+    field_owner: str = "descriptor",
+) -> Any:
+    if isinstance(record, Mapping):
+        try:
+            return record[field]
+        except KeyError:
+            pass
+    else:
+        missing = object()
+        value = getattr(record, field, missing)
+        if value is not missing:
+            return value
+    raise TypeError(f"pointer {field_owner} field {field!r} is required")
+
+
+def _is_pointer_descriptor_record(value: Any) -> bool:
+    fields = ("base_addr", "elem_len", "rank", "dim")
+    return isinstance(value, Mapping) or all(hasattr(value, field) for field in fields)
+
+
+def _is_pointer_descriptor_dimension_record(value: Any) -> bool:
+    fields = ("lower_bound", "extent", "sm")
+    return isinstance(value, Mapping) or all(hasattr(value, field) for field in fields)
+
+
+def _descriptor_view_buffer_window(
+    shape: tuple[int, ...],
+    strides: tuple[int, ...],
+    itemsize: int,
+) -> tuple[int, int, int]:
+    if not shape:
+        return 0, itemsize, 0
+    if any(extent == 0 for extent in shape):
+        return 0, 0, 0
+    axis_offsets = [(extent - 1) * stride for extent, stride in zip(shape, strides, strict=True)]
+    min_offset = sum(min(0, offset) for offset in axis_offsets)
+    max_offset = sum(max(0, offset) for offset in axis_offsets)
+    return min_offset, max_offset - min_offset + itemsize, -min_offset
 
 
 class NativeArrayHandleBase:
     """Shared runtime state and operation dispatch for native array handles."""
 
+    _REQUIRED_DESCRIPTOR_OPS: frozenset[str] = frozenset()
+    _VALID_DESCRIPTOR_KINDS = frozenset({"allocatable", "pointer"})
     _VALID_DESCRIPTOR_OWNERSHIP = frozenset({"borrowed", "owned"})
     _VALID_TO_NUMPY_POLICIES = frozenset(
         {
             "borrowed_view",
+            "contiguous_view",
+            "copy_only",
             "descriptor_view",
             "read_only_detached_copy",
             "unsupported",
@@ -36,8 +312,11 @@ class NativeArrayHandleBase:
         to_numpy_policy: str = "borrowed_view",
         generation: int | None = None,
     ) -> None:
+        self._closed = True
         if rank < 0:
             raise ValueError("native array handle rank must be non-negative")
+        if descriptor_kind not in self._VALID_DESCRIPTOR_KINDS:
+            raise ValueError("native array handle descriptor_kind must be 'allocatable' or 'pointer'")
         if descriptor_ownership not in self._VALID_DESCRIPTOR_OWNERSHIP:
             raise ValueError("native array handle descriptor_ownership must be 'borrowed' or 'owned'")
         if to_numpy_policy not in self._VALID_TO_NUMPY_POLICIES:
@@ -46,12 +325,14 @@ class NativeArrayHandleBase:
             )
         self._dtype = dtype
         self._rank = int(rank)
-        self._ops = dict(ops)
+        self._ops = self._normalize_ops(ops)
         self._owner = owner
         self._descriptor_kind = descriptor_kind
         self._descriptor_ownership = descriptor_ownership
         self._to_numpy_policy = to_numpy_policy
         self._generation = generation
+        self._validate_required_ops()
+        self._closed = False
 
     @property
     def dtype(self) -> Any:
@@ -63,9 +344,13 @@ class NativeArrayHandleBase:
 
     @property
     def shape(self) -> tuple[int, ...] | None:
+        if self._to_numpy_absent_state():
+            return None
         shape = self._call_op("shape")
         if shape is None:
             return None
+        if _is_pointer_descriptor_record(shape):
+            shape, _strides = _pointer_descriptor_shape_and_strides(shape)
         normalized = self._normalize_shape(shape)
         if len(normalized) != self.rank:
             raise ValueError(
@@ -101,6 +386,24 @@ class NativeArrayHandleBase:
     def generation(self) -> int | None:
         return self._generation
 
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    def close(self) -> Any:
+        """Release generated owner storage for an owned native descriptor handle."""
+        if self.closed or not self.owned:
+            return None
+        operation = self._ops["destroy"]
+        try:
+            return operation(self)
+        finally:
+            self._closed = True
+
+    def __del__(self) -> None:
+        with suppress(Exception):
+            self.close()
+
     def _array_actual_for_binding(
         self,
         *,
@@ -130,7 +433,7 @@ class NativeArrayHandleBase:
         self._validate_writeable(require_writeable)
         self._validate_native_byte_order(require_native_byte_order)
         self._validate_aligned(require_aligned)
-        return self._call_op("array_actual")
+        return self._required_handoff_result("array_actual", self._call_op("array_actual"))
 
     def _descriptor_for_binding(
         self,
@@ -151,31 +454,126 @@ class NativeArrayHandleBase:
         shape = self.shape
         if shape is not None:
             self._validate_expected_shape(shape, expected_shape)
-        return self._call_op("descriptor")
+        descriptor = self._call_op("descriptor")
+        if _is_pointer_descriptor_record(descriptor):
+            _validate_pointer_descriptor_itemsize(descriptor, np.dtype(self.dtype))
+            descriptor_shape, _ = _pointer_descriptor_shape_and_strides(descriptor)
+            if len(descriptor_shape) != self.rank:
+                raise ValueError(
+                    f"{self.descriptor_kind} descriptor rank {len(descriptor_shape)} "
+                    f"does not match declared rank {self.rank}"
+                )
+            return descriptor
+        address = descriptor.address if isinstance(descriptor, _NativeArrayHandoff) else descriptor
+        if isinstance(address, ctypes.c_void_p):
+            address = address.value or 0
+        if isinstance(address, bool) or not isinstance(address, int):
+            raise TypeError(
+                f"{self.descriptor_kind} handle descriptor operation must return descriptor fields "
+                f"or an integer data address; received {type(descriptor).__name__}"
+            )
+        return self._contiguous_descriptor_record(address, shape)
+
+    def _contiguous_descriptor_record(self, address: int, shape: tuple[int, ...] | None) -> dict[str, Any]:
+        """Build standard descriptor fields for a contiguous native array actual."""
+        dtype = np.dtype(self.dtype)
+        extents = (0,) * self.rank if shape is None else shape
+        strides = []
+        stride = dtype.itemsize
+        for extent in extents:
+            strides.append(stride)
+            stride *= max(int(extent), 1)
+        return {
+            "base_addr": int(address),
+            "elem_len": dtype.itemsize,
+            "rank": self.rank,
+            "dim": [
+                {"lower_bound": 0, "extent": int(extent), "sm": int(axis_stride)}
+                for extent, axis_stride in zip(extents, strides, strict=True)
+            ],
+        }
 
     def to_numpy(self) -> Any:
         """Return the current NumPy view/copy, or ``None`` for absent state."""
+        if self._to_numpy_absent_state():
+            return None
         if self.to_numpy_policy == "unsupported":
             raise NotImplementedError(
                 f"{self.descriptor_kind} handle to_numpy extraction is unsupported by completed policy"
             )
+        if (
+            self.to_numpy_policy in {"contiguous_view", "copy_only"}
+            and "contiguous" in self._ops
+            and not bool(self._call_op("contiguous"))
+        ):
+            raise ValueError(f"{self.descriptor_kind} handle to_numpy target must be contiguous")
         value = self._call_op("to_numpy")
         if value is None:
-            return None
+            raise TypeError(
+                f"{self.descriptor_kind} handle to_numpy operation returned None for present descriptor state"
+            )
+        if _is_pointer_descriptor_record(value):
+            value = _numpy_view_from_pointer_c_descriptor(value, dtype=self.dtype, expected_rank=self.rank)
+            if value is None:
+                raise TypeError(
+                    f"{self.descriptor_kind} handle extraction returned a null descriptor for present descriptor state"
+                )
+            value = _retain_numpy_owner(value, self)
+        self._validate_numpy_result(value)
+        if self.to_numpy_policy == "contiguous_view":
+            self._validate_contiguous_numpy_result(value)
+            return value
+        if self.to_numpy_policy == "copy_only":
+            return self._detached_numpy_copy(value)
         if self.to_numpy_policy == "read_only_detached_copy":
             return self._read_only_detached_numpy_copy(value)
         return value
 
     def _call_op(self, name: str, *args: Any) -> Any:
+        if self.closed:
+            raise ReferenceError(f"{self.descriptor_kind} handle is closed")
         try:
             operation = self._ops[name]
         except KeyError:
             raise NotImplementedError(f"{self.descriptor_kind} handle operation {name!r} is not available") from None
         return operation(self, *args)
 
+    def _required_handoff_result(self, operation: str, value: Any) -> Any:
+        if not isinstance(value, _NativeArrayHandoff):
+            raise TypeError(
+                f"{self.descriptor_kind} handle {operation} operation must return a native handoff object; "
+                f"received {type(value).__name__}"
+            )
+        return value
+
     def _validate_array_actual_state(self) -> None:
         """Validate descriptor-specific presence before native array-actual handoff."""
         raise NotImplementedError(f"{self.descriptor_kind} handle array-actual validation is not available")
+
+    def _to_numpy_absent_state(self) -> bool:
+        """Return whether descriptor state makes extraction produce ``None``."""
+        return False
+
+    def _validate_numpy_result(self, value: Any) -> None:
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                f"{self.descriptor_kind} handle to_numpy operation must return a NumPy array or None; "
+                f"received {type(value).__name__}"
+            )
+        if value.ndim != self.rank:
+            raise ValueError(
+                f"{self.descriptor_kind} handle to_numpy result rank {value.ndim} does not match declared "
+                f"rank {self.rank}"
+            )
+        if not self._dtype_matches(value.dtype):
+            raise TypeError(
+                f"{self.descriptor_kind} handle to_numpy result dtype {value.dtype!r} does not match declared "
+                f"dtype {self.dtype!r}"
+            )
+
+    def _validate_contiguous_numpy_result(self, value: np.ndarray) -> None:
+        if not (value.flags.c_contiguous or value.flags.f_contiguous):
+            raise ValueError(f"{self.descriptor_kind} handle to_numpy result must be contiguous")
 
     def _dtype_matches(self, expected_dtype: Any) -> bool:
         try:
@@ -208,8 +606,10 @@ class NativeArrayHandleBase:
         """Validate a required native layout before native array-actual handoff."""
         if expected_layout is None:
             return
+        required = self._normalize_expected_layout_name(expected_layout)
         actual_layout = self._call_op("layout")
-        if actual_layout != expected_layout:
+        actual = self._normalize_actual_layout_name(actual_layout)
+        if actual != required:
             raise ValueError(
                 f"{self.descriptor_kind} handle layout {actual_layout!r} does not match expected layout "
                 f"{expected_layout!r}"
@@ -236,9 +636,42 @@ class NativeArrayHandleBase:
         if not bool(self._call_op("aligned")):
             raise TypeError(f"{self.descriptor_kind} handle array actual must be aligned")
 
+    def _validate_required_ops(self) -> None:
+        if "shape" not in self._ops:
+            raise ValueError(f"{self.descriptor_kind} native array handle requires generated operation 'shape'")
+        if "array_actual" not in self._ops:
+            raise ValueError(f"{self.descriptor_kind} native array handle requires generated operation 'array_actual'")
+        if "descriptor" not in self._ops:
+            raise ValueError(f"{self.descriptor_kind} native array handle requires generated operation 'descriptor'")
+        for name in sorted(self._REQUIRED_DESCRIPTOR_OPS):
+            if name not in self._ops:
+                raise ValueError(f"{self.descriptor_kind} native array handle requires generated operation {name!r}")
+        if self.to_numpy_policy != "unsupported" and "to_numpy" not in self._ops:
+            raise ValueError(
+                f"{self.descriptor_kind} native array handle with to_numpy_policy "
+                f"{self.to_numpy_policy!r} requires generated operation 'to_numpy'"
+            )
+        if self.owned and "destroy" not in self._ops:
+            raise ValueError(f"{self.descriptor_kind} owned native array handle requires generated operation 'destroy'")
+
+    @staticmethod
+    def _normalize_ops(ops: Mapping[str, HandleOperation]) -> dict[str, HandleOperation]:
+        normalized = dict(ops)
+        for name, operation in normalized.items():
+            if not isinstance(name, str):
+                raise TypeError(f"native array handle operation names must be strings; received {type(name).__name__}")
+            if not callable(operation):
+                raise TypeError(
+                    f"native array handle operation {name!r} must be callable; received {type(operation).__name__}"
+                )
+        return normalized
+
     @staticmethod
     def _normalize_shape(shape: Sequence[int] | int) -> tuple[int, ...]:
-        normalized = (int(shape),) if isinstance(shape, int) else tuple(int(dimension) for dimension in shape)
+        try:
+            normalized = (operator.index(shape),)
+        except TypeError:
+            normalized = tuple(operator.index(dimension) for dimension in shape)
         for dimension in normalized:
             if dimension < 0:
                 raise ValueError(f"native array handle shape dimensions must be non-negative; received {normalized!r}")
@@ -246,9 +679,9 @@ class NativeArrayHandleBase:
 
     @staticmethod
     def _normalize_expected_shape(shape: Sequence[int | None] | int) -> tuple[int | None, ...]:
-        if isinstance(shape, int):
-            normalized = (int(shape),)
-        else:
+        try:
+            normalized = (operator.index(shape),)
+        except TypeError:
             normalized = tuple(None if dimension is None else int(dimension) for dimension in shape)
         for dimension in normalized:
             if dimension is not None and dimension < 0:
@@ -258,7 +691,25 @@ class NativeArrayHandleBase:
         return normalized
 
     @staticmethod
-    def _read_only_detached_numpy_copy(value: Any) -> np.ndarray:
+    def _normalize_expected_layout_name(layout: str) -> str:
+        required = layout.upper()
+        if required not in {"C", "F"}:
+            raise ValueError(f"unsupported expected NumPy array layout {layout!r}")
+        return required
+
+    @staticmethod
+    def _normalize_actual_layout_name(layout: Any) -> str:
+        actual = str(layout).upper()
+        if actual not in {"C", "F"}:
+            raise ValueError(f"native array handle layout operation returned unsupported layout {layout!r}")
+        return actual
+
+    @staticmethod
+    def _detached_numpy_copy(value: np.ndarray) -> np.ndarray:
+        return np.array(value, copy=True, order="K")
+
+    @staticmethod
+    def _read_only_detached_numpy_copy(value: np.ndarray) -> np.ndarray:
         snapshot = np.array(value, copy=True, order="K")
         snapshot.setflags(write=False)
         return snapshot
@@ -266,6 +717,8 @@ class NativeArrayHandleBase:
 
 class AllocatableHandle(NativeArrayHandleBase):
     """Runtime handle for a native allocatable array descriptor."""
+
+    _REQUIRED_DESCRIPTOR_OPS = frozenset({"allocated"})
 
     def __init__(
         self,
@@ -297,6 +750,9 @@ class AllocatableHandle(NativeArrayHandleBase):
         if not self.allocated:
             raise ValueError("allocatable handle is unallocated and cannot be passed as an array actual")
 
+    def _to_numpy_absent_state(self) -> bool:
+        return not self.allocated
+
     def deallocate(self) -> Any:
         return self._call_op("deallocate")
 
@@ -306,6 +762,8 @@ class AllocatableHandle(NativeArrayHandleBase):
 
 class PointerHandle(NativeArrayHandleBase):
     """Runtime handle for a native pointer array descriptor."""
+
+    _REQUIRED_DESCRIPTOR_OPS = frozenset({"associated", "nullify"})
 
     def __init__(
         self,
@@ -336,6 +794,13 @@ class PointerHandle(NativeArrayHandleBase):
     def _validate_array_actual_state(self) -> None:
         if not self.associated:
             raise ValueError("pointer handle is unassociated and cannot be passed as an array actual")
+        if "contiguous" in self._ops and not bool(self._call_op("contiguous")):
+            raise ValueError(
+                "pointer handle target is noncontiguous and cannot use the pointer/shape array-actual handoff"
+            )
+
+    def _to_numpy_absent_state(self) -> bool:
+        return not self.associated
 
     def nullify(self) -> Any:
         return self._call_op("nullify")
@@ -389,6 +854,59 @@ def _native_array_actual_for_binding(
     raise TypeError(f"expected NumPy array or native array handle argument; received {type(value).__name__}")
 
 
+def _native_array_actual_argument_for_binding_positional(
+    value: Any,
+    expected_dtype: Any = None,
+    expected_rank: int | None = None,
+    expected_shape: Sequence[int | None] | int | None = None,
+    expected_layout: str | None = None,
+    require_writeable: bool = False,
+    require_native_byte_order: bool = False,
+    require_aligned: bool = False,
+    include_rank: bool = False,
+    include_itemsize: bool = False,
+    include_strides: bool = False,
+) -> tuple[int, ...]:
+    """Pack a normal array actual into generated Bind-C array descriptor fields."""
+    actual = _native_array_actual_for_binding(
+        value,
+        expected_dtype=expected_dtype,
+        expected_rank=expected_rank,
+        expected_shape=expected_shape,
+        expected_layout=expected_layout,
+        require_writeable=bool(require_writeable),
+        require_native_byte_order=bool(require_native_byte_order),
+        require_aligned=bool(require_aligned),
+    )
+    address, shape, itemsize = _normal_array_actual_abi_facts(value, actual, expected_dtype)
+    fields = [address]
+    if include_rank:
+        fields.append(len(shape))
+    if include_itemsize:
+        fields.append(itemsize)
+    fields.extend(shape)
+    if include_strides:
+        fields.extend(shape)
+        fields.extend(1 for _axis in shape)
+    return tuple(fields)
+
+
+def _normal_array_actual_abi_facts(
+    value: Any,
+    actual: Any,
+    expected_dtype: Any,
+) -> tuple[int, tuple[int, ...], int]:
+    if isinstance(actual, _NativeArrayHandoff):
+        shape = value.shape
+        if shape is None:
+            raise ValueError("native array handle array actual must report shape for binding handoff")
+        dtype = expected_dtype if expected_dtype is not None else value.dtype
+        return actual.address, tuple(int(axis) for axis in shape), int(np.dtype(dtype).itemsize)
+    if isinstance(actual, np.ndarray):
+        return int(actual.ctypes.data), tuple(int(axis) for axis in actual.shape), int(actual.dtype.itemsize)
+    raise TypeError(f"normal array actual operation returned unsupported value {type(actual).__name__}")
+
+
 def _native_array_descriptor_for_binding(
     value: Any,
     *,
@@ -399,10 +917,6 @@ def _native_array_descriptor_for_binding(
     optional: bool = False,
 ) -> Any:
     """Return a generated native descriptor for a handle-typed binding argument."""
-    if value is None:
-        if optional:
-            return None
-        raise TypeError(f"{descriptor_kind} native array handle argument is required; received None")
     try:
         expected_type = {
             "allocatable": AllocatableHandle,
@@ -410,12 +924,77 @@ def _native_array_descriptor_for_binding(
         }[descriptor_kind]
     except KeyError:
         raise ValueError(f"unsupported native array descriptor kind: {descriptor_kind!r}") from None
+    if value is None:
+        if optional:
+            return None
+        raise TypeError(f"{descriptor_kind} native array handle argument is required; received None")
     if not isinstance(value, expected_type):
         raise TypeError(f"expected {descriptor_kind} native array handle argument; received {type(value).__name__}")
     return value._descriptor_for_binding(
         expected_dtype=expected_dtype,
         expected_rank=expected_rank,
         expected_shape=expected_shape,
+    )
+
+
+def _native_array_descriptor_argument_for_binding(
+    value: Any,
+    *,
+    descriptor_kind: str,
+    expected_dtype: Any = None,
+    expected_rank: int | None = None,
+    expected_shape: Sequence[int | None] | int | None = None,
+    optional_absent: bool = False,
+) -> tuple[Any, ...]:
+    """Pack standard descriptor fields for generated CPython binding code."""
+    descriptor = _native_array_descriptor_for_binding(
+        value,
+        descriptor_kind=descriptor_kind,
+        expected_dtype=expected_dtype,
+        expected_rank=expected_rank,
+        expected_shape=expected_shape,
+        optional=optional_absent,
+    )
+    if descriptor is None:
+        if expected_rank is None:
+            raise ValueError("optional absent native array descriptor arguments require an expected rank")
+        fields = (None,) * (3 + 3 * int(expected_rank))
+        return (*fields, None)
+    dimensions = _pointer_descriptor_dimensions(descriptor)
+    fields = [
+        _required_descriptor_int(descriptor, "base_addr"),
+        _required_descriptor_int(descriptor, "elem_len"),
+        _required_descriptor_int(descriptor, "rank"),
+    ]
+    for index, dimension in enumerate(dimensions):
+        fields.extend(
+            [
+                _required_descriptor_int(dimension, "lower_bound", field_owner=f"dim[{index}]"),
+                _required_descriptor_int(dimension, "extent", field_owner=f"dim[{index}]"),
+                _required_descriptor_int(dimension, "sm", field_owner=f"dim[{index}]"),
+            ]
+        )
+    if optional_absent:
+        fields.append(_PRESENT_NATIVE_ARRAY_DESCRIPTOR_ARGUMENT_ADDRESS)
+    return tuple(fields)
+
+
+def _native_array_descriptor_argument_for_binding_positional(
+    value: Any,
+    descriptor_kind: str,
+    expected_dtype: Any = None,
+    expected_rank: int | None = None,
+    expected_shape: Sequence[int | None] | int | None = None,
+    optional_absent: bool = False,
+) -> tuple[Any, ...]:
+    """Positional wrapper used by generated CPython binding code."""
+    return _native_array_descriptor_argument_for_binding(
+        value,
+        descriptor_kind=str(descriptor_kind),
+        expected_dtype=None if expected_dtype is None else np.dtype(expected_dtype),
+        expected_rank=None if expected_rank is None else int(expected_rank),
+        expected_shape=expected_shape,
+        optional_absent=bool(optional_absent),
     )
 
 
@@ -481,13 +1060,8 @@ def _validate_ndarray_expected_shape(
 def _validate_ndarray_expected_layout(value: np.ndarray, expected_layout: str | None) -> None:
     if expected_layout is None:
         return
-    required = expected_layout.upper()
-    if required == "F":
-        matches = value.flags.f_contiguous
-    elif required == "C":
-        matches = value.flags.c_contiguous
-    else:
-        raise ValueError(f"unsupported expected NumPy array layout {expected_layout!r}")
+    required = NativeArrayHandleBase._normalize_expected_layout_name(expected_layout)
+    matches = value.flags.f_contiguous if required == "F" else value.flags.c_contiguous
     if not matches:
         raise ValueError(f"NumPy array layout does not match expected layout {expected_layout!r}")
 

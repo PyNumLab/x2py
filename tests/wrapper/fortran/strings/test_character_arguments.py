@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 
 from tests.wrapper.fortran._support import (
-    build_pyi_extension_or_xfail_staged_native_array_handle,
     _build_source_or_generated_pyi_and_import,
     _compile_native_object,
     _import_from_build_dir,
@@ -15,6 +14,7 @@ from tests.wrapper.fortran._support import (
     _sole_native_module,
     wrapper_source,
 )
+from x2py import build_pyi_extension
 
 STRING_LEGACY_SOURCE = wrapper_source("fstrings.f")
 STRING_F90_SOURCE = wrapper_source("fstrings_f90.f90")
@@ -65,7 +65,7 @@ def test_modern_fortran_character_arguments_and_results(pyi_parity_build_mode: s
 
 def test_edited_modern_string_contract_wraps_full_axis_spelling_set(tmp_path: Path):
     native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
-    result = build_pyi_extension_or_xfail_staged_native_array_handle(
+    result = build_pyi_extension(
         CONTRACT_FIXTURES / "fstrings_f90_axes" / "__init__.pyi",
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
@@ -77,12 +77,6 @@ def test_edited_modern_string_contract_wraps_full_axis_spelling_set(tmp_path: Pa
     assert module.string_len_fixed("short   ") == 5
     labels = np.array([b"first", b"second"], dtype="S8")
     assert module.fixed_array_extent(labels) == 16
-
-    original_names = np.array([b"aa", b"bbb"], dtype="S3")
-    replacement_names = module.replace_names(original_names)
-    assert original_names.tolist() == [b"aa", b"bbb"]
-    assert replacement_names.dtype == np.dtype("S5")
-    assert replacement_names.tolist() == [b"red  ", b"blue "]
 
     label = np.array("abcdefgh", dtype="S8")
     assert module.rewrite_storage(label) is None

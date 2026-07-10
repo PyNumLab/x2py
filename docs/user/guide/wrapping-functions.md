@@ -107,11 +107,16 @@ np.testing.assert_array_equal(
 )
 ```
 
-Allocated zero-sized results are zero-sized arrays. An unallocated allocatable
-result or unassociated pointer result is `None`. Multidimensional results retain
-Fortran-oriented element ordering. Returned function arrays are independent
-Python-owned copies. Arrays and Allocatables expand validation and storage
-behavior later in the guide.
+The `squares` result is an ordinary array contract, so allocated zero-sized
+results remain zero-sized NumPy arrays. Multidimensional results retain
+Fortran-oriented element ordering, and returned ordinary arrays are independent
+Python-owned copies.
+
+An allocatable array function result has a different public shape: it returns a
+present `AllocatableHandle`, including when the native result is unallocated.
+Check `handle.allocated` and call `handle.to_numpy()` for explicit extraction.
+Pointer-array function results remain blocked until x2py can prove stable owner
+storage and target lifetime.
 
 ## Functions With Output Arguments
 

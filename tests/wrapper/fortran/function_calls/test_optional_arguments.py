@@ -13,10 +13,42 @@ from tests.wrapper.fortran._support import (
     _sole_native_module,
     wrapper_source,
 )
+from x2py.runtime_handles import _NativeArrayHandoff, AllocatableHandle, PointerHandle
 
 OPTIONAL_F90_SOURCE = wrapper_source("foptional_f90.f90")
 OPTIONAL_FIXED_SOURCE = wrapper_source("foptional_fixed.f")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
+
+
+def _unallocated_handle_for_rejected_optional_array():
+    return AllocatableHandle(
+        dtype=np.dtype(np.float64),
+        rank=1,
+        ops={
+            "array_actual": lambda _handle: pytest.fail("optional array path must reject handles before handoff"),
+            "descriptor": lambda _handle: _NativeArrayHandoff(501),
+            "shape": lambda _handle: None,
+            "to_numpy": lambda _handle: None,
+            "allocated": lambda _handle: False,
+            "deallocate": lambda _handle: None,
+            "resize": lambda _handle, _shape: None,
+        },
+    )
+
+
+def _unassociated_handle_for_rejected_optional_array():
+    return PointerHandle(
+        dtype=np.dtype(np.float64),
+        rank=1,
+        ops={
+            "array_actual": lambda _handle: pytest.fail("optional array path must reject handles before handoff"),
+            "descriptor": lambda _handle: _NativeArrayHandoff(502),
+            "shape": lambda _handle: None,
+            "to_numpy": lambda _handle: None,
+            "associated": lambda _handle: False,
+            "nullify": lambda _handle: None,
+        },
+    )
 
 
 def test_optional_allocatable_scalar_descriptor_distinguishes_omitted_none_and_value(tmp_path: Path):
@@ -133,6 +165,10 @@ def test_optional_arguments_drive_fortran_present_behavior(
         module.summarize(np.int32(5), scale="bad")
     with pytest.raises(TypeError):
         module.fill_optional(np.int32(3), np.empty(3, dtype=np.float32))
+    with pytest.raises(TypeError):
+        module.fill_optional(np.int32(3), _unallocated_handle_for_rejected_optional_array())
+    with pytest.raises(TypeError):
+        module.fill_optional(np.int32(3), _unassociated_handle_for_rejected_optional_array())
 
 
 def test_fixed_form_optional_arguments_drive_fortran_present_behavior(

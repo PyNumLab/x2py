@@ -159,7 +159,7 @@ def step(
     assert report["wrappability_blockers"] == []
 
 
-def test_allocatable_handle_codegen_blocks_until_generated_accessors_exist():
+def test_allocatable_handle_codegen_accepts_owned_results_with_standard_cfi_storage():
     report = _readiness_from_pyi(
         """
 values: Allocatable[Float64[:]]
@@ -173,57 +173,11 @@ def make_pair() -> tuple[Returns["left", Allocatable[Float64[:]]], Returns["righ
 """
     )
 
-    assert report["wrappable"] is False
+    assert report["wrappable"] is True
     assert "allocatable_replacement_policy_missing" not in _blocker_codes(report)
     assert "allocatable_owner_policy_missing" not in _blocker_codes(report)
     assert "allocatable_multiple_copy_returns_unsupported" not in _blocker_codes(report)
-    blocker = next(
-        item for item in report["wrappability_blockers"] if item["code"] == "native_array_handle_codegen_unsupported"
-    )
-    assert blocker["items"] == [
-        {
-            "owner": "solver.values",
-            "item": "values",
-            "policy": "allocatable array handle accessors need generated descriptor-handle support before wrapper lowering",
-            "descriptor_kind": "allocatable",
-            "handle_kind": "borrowed_module_descriptor",
-        },
-        {
-            "owner": "solver.target_values",
-            "item": "target_values",
-            "policy": "allocatable array handle accessors need generated descriptor-handle support before wrapper lowering",
-            "descriptor_kind": "allocatable",
-            "handle_kind": "borrowed_module_descriptor",
-        },
-        {
-            "owner": "solver.fill.values",
-            "item": "values",
-            "policy": "allocatable descriptor-argument handoff needs generated handle support before wrapper lowering",
-            "descriptor_kind": "allocatable",
-            "handle_kind": "argument_descriptor",
-        },
-        {
-            "owner": "solver.make_values.return",
-            "item": "return",
-            "policy": "allocatable result handles need generated wrapper-owned descriptor storage before wrapper lowering",
-            "descriptor_kind": "allocatable",
-            "handle_kind": "owned_result_descriptor",
-        },
-        {
-            "owner": "solver.make_pair.left",
-            "item": "left",
-            "policy": "allocatable descriptor-argument handoff needs generated handle support before wrapper lowering",
-            "descriptor_kind": "allocatable",
-            "handle_kind": "argument_descriptor",
-        },
-        {
-            "owner": "solver.make_pair.right",
-            "item": "right",
-            "policy": "allocatable descriptor-argument handoff needs generated handle support before wrapper lowering",
-            "descriptor_kind": "allocatable",
-            "handle_kind": "argument_descriptor",
-        },
-    ]
+    assert "native_array_handle_codegen_unsupported" not in _blocker_codes(report)
 
 
 def test_explicit_borrowed_module_allocatable_requires_aliased_storage():
@@ -319,19 +273,10 @@ current: box
         "item": "current",
         "policy": "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only",
     } in blocker["items"]
-    codegen_blocker = next(
-        item for item in report["wrappability_blockers"] if item["code"] == "native_array_handle_codegen_unsupported"
-    )
-    assert {
-        "owner": "solver.box.values",
-        "item": "values",
-        "policy": "pointer array handle accessors need generated descriptor-handle support before wrapper lowering",
-        "descriptor_kind": "pointer",
-        "handle_kind": "borrowed_field_descriptor",
-    } in codegen_blocker["items"]
+    assert "native_array_handle_codegen_unsupported" not in _blocker_codes(report)
 
 
-def test_pointer_module_variable_uses_default_handle_policy_until_codegen_support_exists():
+def test_pointer_module_variable_default_handle_policy_is_codegen_ready():
     parsed = parse_fortran_file(
         """
 module pointer_module_mod
@@ -344,23 +289,11 @@ end module pointer_module_mod
     report = assess_semantic_wrap_readiness(module)
 
     assert "pointer_c_descriptor_interop_unavailable" not in _blocker_codes(report)
-    blocker = next(
-        blocker
-        for blocker in report["wrappability_blockers"]
-        if blocker["code"] == "native_array_handle_codegen_unsupported"
-    )
-    assert blocker["items"] == [
-        {
-            "owner": "pointer_module_mod.values",
-            "item": "values",
-            "policy": "pointer array handle accessors need generated descriptor-handle support before wrapper lowering",
-            "descriptor_kind": "pointer",
-            "handle_kind": "borrowed_module_descriptor",
-        }
-    ]
+    assert "native_array_handle_codegen_unsupported" not in _blocker_codes(report)
+    assert report["wrappable"] is True
 
 
-def test_pointer_descriptor_view_reports_unavailable_c_descriptor_interop():
+def test_pointer_descriptor_view_is_ready_with_standard_c_descriptor_interop():
     report = _readiness_from_pyi(
         """
 def inspect(
@@ -383,22 +316,8 @@ def inspect(
 """
     )
 
-    blocker = next(
-        item for item in report["wrappability_blockers"] if item["code"] == "pointer_c_descriptor_interop_unavailable"
-    )
-    assert blocker["items"] == [
-        {
-            "owner": "solver.inspect.values",
-            "item": "values",
-            "descriptor_kind": "pointer",
-            "handle_kind": "argument_descriptor",
-            "descriptor_interop": "pointer_c_descriptor",
-            "to_numpy": "descriptor_view",
-            "descriptor_layout": "ts29113_required",
-            "compiler_specific_layout": "rejected",
-            "fallback": "readiness_failure",
-        }
-    ]
+    assert "pointer_c_descriptor_interop_unavailable" not in _blocker_codes(report)
+    assert report["wrappable"] is True
 
 
 def test_shape_readiness_ignores_layout_syntax_and_called_array_intrinsics():
@@ -514,7 +433,7 @@ def combine(
     assert report["wrappable"] is True
 
 
-def test_pointer_descriptor_argument_blockers_are_reported_as_native_handle_policy():
+def test_pointer_descriptor_inputs_pass_while_reassociation_and_result_policies_block():
     report = _readiness_from_pyi(
         """
 def inspect(values: Pointer[Float64[:]]) -> None: ...
@@ -534,9 +453,16 @@ def choose() -> Pointer[Float64[:]]: ...
     )
     assert policy_blocker["items"] == [
         {
-            "owner": "solver.inspect.values",
+            "owner": "solver.attach.values",
             "item": "values",
-            "policy": "pointer descriptor-argument handoff needs generated handle support before wrapper lowering",
+            "policy": "pointer handle results need stable owner storage and target lifetime policy before wrapping",
+            "descriptor_kind": "pointer",
+            "handle_kind": "unsupported",
+        },
+        {
+            "owner": "solver.replace.values",
+            "item": "values",
+            "policy": "pointer array dummy reassociation needs explicit PointerPolicy metadata",
             "descriptor_kind": "pointer",
             "handle_kind": "argument_descriptor",
         },
@@ -549,27 +475,7 @@ def choose() -> Pointer[Float64[:]]: ...
         },
     ]
 
-    codegen_blocker = next(
-        blocker
-        for blocker in report["wrappability_blockers"]
-        if blocker["code"] == "native_array_handle_codegen_unsupported"
-    )
-    assert codegen_blocker["items"] == [
-        {
-            "owner": "solver.attach.values",
-            "item": "values",
-            "policy": "pointer descriptor-argument handoff needs generated handle support before wrapper lowering",
-            "descriptor_kind": "pointer",
-            "handle_kind": "argument_descriptor",
-        },
-        {
-            "owner": "solver.replace.values",
-            "item": "values",
-            "policy": "pointer descriptor-argument handoff needs generated handle support before wrapper lowering",
-            "descriptor_kind": "pointer",
-            "handle_kind": "argument_descriptor",
-        },
-    ]
+    assert "native_array_handle_codegen_unsupported" not in _blocker_codes(report)
 
 
 def test_bind_c_scalar_without_iso_c_kind_reports_readiness_blocker():

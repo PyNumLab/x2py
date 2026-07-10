@@ -1,6 +1,12 @@
 import pytest
 
-from x2py.codegen.bind_c import BindCArrayType, BindCPointer, BindCScalarDescriptorType
+from x2py.codegen.bind_c import (
+    BindCArrayType,
+    BindCNativeArrayDescriptorType,
+    BindCPointer,
+    BindCScalarDescriptorType,
+    native_array_descriptor_argument_type,
+)
 from x2py.codegen.models.core import Add, Declare, IndexedElement, Slice, Variable
 from x2py.codegen.models.datatypes import (
     Literal,
@@ -173,6 +179,58 @@ def test_bind_c_scalar_descriptor_type_expands_to_value_and_presence_pointers():
     assert all(isinstance(field, BindCPointer) for field in descriptor_type)
     assert descriptor_type.shape_is_compatible((convert_to_literal(2),))
     assert scope.collect_all_tuple_elements(packed) == [value, present]
+
+
+def test_bind_c_native_array_descriptor_type_describes_required_descriptor_pointer():
+    descriptor_type = BindCNativeArrayDescriptorType.get_new()
+
+    assert descriptor_type is BindCNativeArrayDescriptorType.get_new(has_presence=False)
+    assert descriptor_type.has_presence is False
+    assert descriptor_type.rank == 1
+    assert descriptor_type.container_rank == 1
+    assert descriptor_type.order is None
+    assert descriptor_type.datatype is descriptor_type
+    assert len(descriptor_type) == 1
+    assert isinstance(descriptor_type[0], BindCPointer)
+    assert descriptor_type.shape_is_compatible((convert_to_literal(1),))
+
+
+def test_bind_c_native_array_descriptor_type_expands_optional_presence_token():
+    scope = Scope(name="f", scope_type="function")
+    descriptor_type = BindCNativeArrayDescriptorType.get_new(has_presence=True)
+    packed = Variable(descriptor_type, "native_array_descriptor", shape=(convert_to_literal(2),))
+    descriptor = Variable(BindCPointer(), "descriptor")
+    present = Variable(BindCPointer(), "present")
+
+    scope.insert_symbolic_alias(IndexedElement(packed, 0), descriptor)
+    scope.insert_symbolic_alias(IndexedElement(packed, 1), present)
+
+    assert descriptor_type is BindCNativeArrayDescriptorType.get_new(has_presence=True)
+    assert descriptor_type.has_presence is True
+    assert len(descriptor_type) == 2
+    assert all(isinstance(field, BindCPointer) for field in descriptor_type)
+    assert descriptor_type.shape_is_compatible((convert_to_literal(2),))
+    assert scope.collect_all_tuple_elements(packed) == [descriptor, present]
+
+
+def test_bind_c_native_array_descriptor_type_validates_presence_flag_before_cache_lookup():
+    BindCNativeArrayDescriptorType.get_new(has_presence=True)
+
+    with pytest.raises(TypeError, match="has_presence must be a boolean"):
+        BindCNativeArrayDescriptorType.get_new(has_presence=1)
+
+
+def test_native_array_descriptor_argument_type_uses_completed_optional_absence_policy():
+    class Policy:
+        def __init__(self, optional_absent):
+            self.optional_absent = optional_absent
+
+    assert native_array_descriptor_argument_type(Policy(False)) is BindCNativeArrayDescriptorType.get_new(
+        has_presence=False
+    )
+    assert native_array_descriptor_argument_type(Policy(True)) is BindCNativeArrayDescriptorType.get_new(
+        has_presence=True
+    )
 
 
 def test_fortran_visiter_visits_array_slice_with_inclusive_stop():

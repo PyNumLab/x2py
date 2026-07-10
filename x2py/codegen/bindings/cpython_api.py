@@ -73,12 +73,17 @@ __all__ = (
     "PyFunctionDef",
     "PyFunctionOverloadSet",
     "PyGetSetDefElement",
+    "PyImport_ImportModule",
     "PyList_Append",
     "PyList_GetItem",
     "PyList_New",
     "PyList_SetItem",
+    "PyLong_AsLongLong",
     "PyLong_AsVoidPtr",
     "PyLong_Check",
+    "PyLong_FromLong",
+    "PyLong_FromLongLong",
+    "PyLong_FromVoidPtr",
     "PyMemoryError",
     "PyModInitFunc",
     "PyModule",
@@ -94,6 +99,7 @@ __all__ = (
     "PyRuntimeError",
     "PyRuntimeWarning",
     "PySys_GetObject",
+    "PyTuple_GetItem",
     "PyTuple_Pack",
     "PyTypeError",
     "PyType_Ready",
@@ -1486,6 +1492,13 @@ PyErr_WarnEx = FunctionDef(
     results=FunctionDefResult(Variable(CNativeInt(), name="status")),
 )
 
+PyImport_ImportModule = FunctionDef(
+    name="PyImport_ImportModule",
+    body=[],
+    arguments=[FunctionDefArgument(Variable(CharType(), name="name", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="module", memory_handling="alias")),
+)
+
 PyNotImplementedError = Variable(PythonObjectType(), name="PyExc_NotImplementedError")
 PyMemoryError = Variable(PythonObjectType(), name="PyExc_MemoryError")
 PyTypeError = Variable(PythonObjectType(), name="PyExc_TypeError")
@@ -1547,6 +1560,21 @@ PyList_SetItem = FunctionDef(
         FunctionDefArgument(Variable(PythonObjectType(), name="new_item", memory_handling="alias")),
     ],
     results=FunctionDefResult(Variable(CNativeInt(), "i")),
+)
+
+
+# -------------------------------------------------------------------
+#                         Tuple functions
+# -------------------------------------------------------------------
+
+PyTuple_GetItem = FunctionDef(
+    name="PyTuple_GetItem",
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), "tuple", memory_handling="alias")),
+        FunctionDefArgument(Variable(NumpyInt64Type(), "i")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), "item", memory_handling="alias")),
+    body=[],
 )
 
 
@@ -1654,6 +1682,34 @@ PyLong_AsVoidPtr = FunctionDef(
     name="PyLong_AsVoidPtr",
     arguments=[FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(BindCPointer(), "ptr", memory_handling="alias")),
+    body=[],
+)
+
+PyLong_AsLongLong = FunctionDef(
+    name="PyLong_AsLongLong",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(NumpyInt64Type(), "value")),
+    body=[],
+)
+
+PyLong_FromVoidPtr = FunctionDef(
+    name="PyLong_FromVoidPtr",
+    arguments=[FunctionDefArgument(Variable(BindCPointer(), "p", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "o", memory_handling="alias")),
+    body=[],
+)
+
+PyLong_FromLong = FunctionDef(
+    name="PyLong_FromLong",
+    arguments=[FunctionDefArgument(Variable(CNativeInt(), "value"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "o", memory_handling="alias")),
+    body=[],
+)
+
+PyLong_FromLongLong = FunctionDef(
+    name="PyLong_FromLongLong",
+    arguments=[FunctionDefArgument(Variable(NumpyInt64Type(), "value"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "o", memory_handling="alias")),
     body=[],
 )
 

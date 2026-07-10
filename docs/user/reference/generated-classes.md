@@ -70,10 +70,10 @@ Supported public scalar fields become Python descriptors. Assigning to a
 writable field uses the completed setter policy. Private fields are omitted.
 
 Nested scalar derived components are borrowed child wrappers that retain their
-owning parent. Allocatable fields can expose borrowed NumPy views when
-ownership and lifetime are explicit. Pointer-array fields have a default
-conservative handle policy, but generated descriptor-handle accessors are still
-a readiness blocker. Arrays of derived types are unsupported.
+owning parent. Allocatable fields expose `Allocatable[T[...]]` handles, and
+pointer-array fields expose `Pointer[T[...]]` handles. Each field handle retains
+its parent wrapper; `to_numpy()` performs explicit extraction when completed
+policy supports it. Arrays of derived types are unsupported.
 
 Whole-object snapshot classes are not part of the active generated contract.
 Plain derived module variables need a completed live-borrow policy, such as

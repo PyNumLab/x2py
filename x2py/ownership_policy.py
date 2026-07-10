@@ -40,10 +40,6 @@ POINTER_POLICY_FIELDS = (
 )
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
 PYTHON_VALUE_IMMUTABLE = "immutable"
-POINTER_ARRAY_CONTAINER_HANDLE_BLOCKER = (
-    "pointer array field and module handles remain blocked until descriptor extraction, "
-    "target lifetime, and release policy are implemented"
-)
 
 
 class ObjectKind(str, Enum):
@@ -392,6 +388,7 @@ def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipCon
         or (
             not explicit_call_local_input
             and not _is_source_free_scalar_descriptor_input(argument, type_metadata, projects_result)
+            and not _is_source_free_native_array_handle_input(argument, type_metadata, projects_result)
             and _argument_has_mutable_storage(argument, storage)
         )
     )
@@ -403,9 +400,17 @@ def ownership_context_for_argument(function: Any, argument: Any) -> OwnershipCon
     )
 
 
-def _is_native_array_handle_type(type_metadata: Mapping[str, Any]) -> bool:
-    """Return whether metadata identifies an allocatable/pointer array handle."""
-    return type_metadata.get(NATIVE_ARRAY_DESCRIPTOR_METADATA) in {"allocatable", "pointer"}
+def _is_native_array_handle_facts(facts: _StorageFacts) -> bool:
+    """Return whether completed storage facts identify an array descriptor handle."""
+    metadata = facts.metadata or {}
+    return bool(
+        facts.rank > 0
+        and (
+            facts.allocatable
+            or facts.pointer
+            or metadata.get(NATIVE_ARRAY_DESCRIPTOR_METADATA) in {"allocatable", "pointer"}
+        )
+    )
 
 
 def _is_source_free_scalar_descriptor_input(
@@ -425,6 +430,36 @@ def _is_source_free_scalar_descriptor_input(
         and source_language is None
         and getattr(semantic_type, "rank", None) == 0
         and (type_metadata.get("fortran_allocatable") or type_metadata.get("fortran_pointer"))
+    )
+
+
+def _is_source_free_native_array_handle_input(
+    argument: Any,
+    type_metadata: Mapping[str, Any],
+    projects_result: bool,
+) -> bool:
+    """Return whether a `.pyi` array descriptor is a normal read-only input."""
+    semantic_type = getattr(argument, "semantic_type", None)
+    source_language = getattr(getattr(argument, "origin", None), "source_language", None) or getattr(
+        getattr(semantic_type, "origin", None),
+        "source_language",
+        None,
+    )
+    storage = getattr(semantic_type, "storage", None)
+    array_storage = getattr(storage, "array", None)
+    descriptor = type_metadata.get(NATIVE_ARRAY_DESCRIPTOR_METADATA)
+    return bool(
+        not projects_result
+        and getattr(semantic_type, "rank", 0) > 0
+        and (
+            descriptor in {"allocatable", "pointer"}
+            or (
+                source_language is None
+                and (
+                    bool(getattr(array_storage, "allocatable", False)) or bool(getattr(array_storage, "pointer", False))
+                )
+            )
+        )
     )
 
 
@@ -506,7 +541,7 @@ class OwnershipPolicyResolver:
 
     def decide_semantic_type(self, semantic_type: Any, context: OwnershipContext) -> OwnershipDecision:
         facts = self._semantic_facts(semantic_type)
-        decision = self._apply_overrides(self._decide(facts, context), facts)
+        decision = self._apply_overrides(self._decide(facts, context), facts, context)
         decision = self._validate_aliased_decision(decision, facts, context)
         decision = self._validate_scalar_descriptor_decision(decision, facts, context)
         decision = self._validate_pointer_decision(decision, facts, context)
@@ -941,8 +976,10 @@ class OwnershipPolicyResolver:
         )
 
     def _array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
-        if context.is_argument and _is_native_array_handle_type(facts.metadata or {}):
-            return self._native_array_handle_argument_decision(facts)
+        if context.is_argument and _is_native_array_handle_facts(facts):
+            if context.projects_result and not context.python_visible:
+                return self._native_array_handle_projected_output_decision(facts)
+            return self._native_array_handle_argument_decision(facts, context)
         if facts.pointer:
             return self._pointer_array_decision(facts, context)
         if facts.allocatable:
@@ -973,8 +1010,38 @@ class OwnershipPolicyResolver:
         )
 
     @staticmethod
-    def _native_array_handle_argument_decision(facts: _StorageFacts) -> OwnershipDecision:
+    def _native_array_handle_argument_decision(
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
         """Pass a native descriptor handle as a caller-owned descriptor argument."""
+        if context.writes_argument:
+            if facts.pointer and not isinstance((facts.metadata or {}).get(POINTER_POLICY_METADATA), Mapping):
+                return OwnershipDecision(
+                    ObjectKind.NUMPY_ARRAY,
+                    OwnershipOwner.UNKNOWN,
+                    TransferMode.BLOCKED,
+                    DestructionPolicy.BLOCKED,
+                    storage_mode=StorageMode.ALIAS,
+                    boundary_storage_mode=StorageMode.ALIAS,
+                    nullable=True,
+                    descriptor_boundary=True,
+                    blocker="pointer array dummy reassociation needs explicit PointerPolicy metadata",
+                    reason="writable pointer descriptor ownership and reassociation are not implicit",
+                )
+            return OwnershipDecision(
+                ObjectKind.NUMPY_ARRAY,
+                OwnershipOwner.CALLER,
+                TransferMode.IN_PLACE,
+                DestructionPolicy.CALLER,
+                storage_mode=StorageMode.ALIAS if facts.pointer else StorageMode.HEAP,
+                boundary_storage_mode=StorageMode.ALIAS,
+                nullable=True,
+                borrowed=True,
+                mutates_native=True,
+                descriptor_boundary=True,
+                reason="native array handle argument passes a caller descriptor that native code may update",
+            )
         return OwnershipDecision(
             ObjectKind.NUMPY_ARRAY,
             OwnershipOwner.CALLER,
@@ -986,6 +1053,36 @@ class OwnershipPolicyResolver:
             borrowed=True,
             descriptor_boundary=True,
             reason="native array handle argument passes the caller descriptor for the call",
+        )
+
+    @staticmethod
+    def _native_array_handle_projected_output_decision(facts: _StorageFacts) -> OwnershipDecision:
+        """Create stable wrapper-owned storage for a Python-hidden descriptor output."""
+        if facts.pointer:
+            return OwnershipDecision(
+                ObjectKind.NUMPY_ARRAY,
+                OwnershipOwner.UNKNOWN,
+                TransferMode.BLOCKED,
+                DestructionPolicy.BLOCKED,
+                storage_mode=StorageMode.ALIAS,
+                boundary_storage_mode=StorageMode.ALIAS,
+                nullable=True,
+                descriptor_boundary=True,
+                blocker="pointer handle results need stable owner storage and target lifetime policy before wrapping",
+                reason="hidden pointer descriptor output has no completed target lifetime",
+            )
+        return OwnershipDecision(
+            ObjectKind.NUMPY_ARRAY,
+            OwnershipOwner.WRAPPER,
+            TransferMode.WRAPPER_INSTANCE,
+            DestructionPolicy.WRAPPER_DEALLOC,
+            storage_mode=StorageMode.HEAP,
+            boundary_storage_mode=StorageMode.ALIAS,
+            nullable=True,
+            borrowed=False,
+            mutates_native=True,
+            descriptor_boundary=True,
+            reason="hidden allocatable descriptor output moves into wrapper-owned stable storage",
         )
 
     def _allocatable_array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
@@ -1213,11 +1310,19 @@ class OwnershipPolicyResolver:
             reason="field storage is part of the containing wrapper instance",
         )
 
-    def _apply_overrides(self, decision: OwnershipDecision, facts: _StorageFacts) -> OwnershipDecision:
+    def _apply_overrides(
+        self,
+        decision: OwnershipDecision,
+        facts: _StorageFacts,
+        context: OwnershipContext,
+    ) -> OwnershipDecision:
         metadata = facts.metadata or {}
         raw = metadata.get(OWNERSHIP_POLICY_METADATA)
         pointer_policy = metadata.get(POINTER_POLICY_METADATA)
-        if facts.pointer and isinstance(pointer_policy, Mapping):
+        pointer_container = (
+            facts.pointer and facts.rank > 0 and (context.is_argument or context.is_field or context.is_module_variable)
+        )
+        if facts.pointer and isinstance(pointer_policy, Mapping) and not pointer_container:
             raw = {**(raw if isinstance(raw, Mapping) else {}), **pointer_policy}
         if not isinstance(raw, Mapping):
             return decision
@@ -1327,7 +1432,7 @@ class OwnershipPolicyResolver:
     ) -> OwnershipDecision:
         if not facts.pointer or decision.is_blocked:
             return decision
-        if context.is_argument and _is_native_array_handle_type(facts.metadata or {}):
+        if context.is_argument and _is_native_array_handle_facts(facts):
             return decision
         blocker = (
             OwnershipPolicyResolver._pointer_argument_blocker(decision, facts, context)
@@ -1372,12 +1477,11 @@ class OwnershipPolicyResolver:
         if not (context.is_field or context.is_module_variable):
             return None
         if facts.rank > 0:
-            metadata = facts.metadata or {}
-            if isinstance(metadata.get(POINTER_POLICY_METADATA), Mapping) or isinstance(
-                metadata.get(OWNERSHIP_POLICY_METADATA),
-                Mapping,
-            ):
-                return POINTER_ARRAY_CONTAINER_HANDLE_BLOCKER
+            if isinstance((facts.metadata or {}).get(OWNERSHIP_POLICY_METADATA), Mapping):
+                return (
+                    "pointer array container descriptor ownership is fixed by its native parent; "
+                    "use PointerPolicy for extraction and descriptor operations"
+                )
             return None
         if decision.transfer is not TransferMode.SNAPSHOT_COPY:
             return "scalar pointer field and module accessors require snapshot_copy detached values"

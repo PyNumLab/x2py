@@ -484,10 +484,10 @@ nullability, projection, and available release mechanism. An edit can choose
 between implemented boundary behaviors; it cannot retroactively change where a
 native allocation came from.
 
-### One `values` example with three owners
+### One `values` example in three descriptor contexts
 
-The following variants all expose a rank-one `Float64` array named `values`,
-but their native storage contexts make their lifetimes different.
+The following variants all expose a rank-one `Float64` allocatable handle named
+`values`, but their descriptor contexts make ownership and lifetime different.
 
 #### Fortran-owned module storage
 
@@ -503,17 +503,19 @@ module_values: Annotated[
 ]
 ```
 
-Python receives a zero-copy NumPy view. Mutation reaches the Fortran module
-allocation. NumPy must not free the data. A native allocate/deallocate routine
-controls the allocation, and a later native deallocation or reallocation makes
-previous views stale. Fetching the property again returns `None` when the
-allocatable is unallocated.
+Python receives a persistent `AllocatableHandle` for the module descriptor.
+`handle.to_numpy()` may expose a zero-copy view because `Aliased` proves the
+required addressability. NumPy must not free the data. A native
+allocate/deallocate routine controls the allocation, and a later native
+deallocation or reallocation makes previous views stale. The same handle then
+reports `allocated is False`; the module attribute itself does not become
+`None`.
 
 Lifecycle:
 
 ```text
-Fortran allocates -> Python borrows -> Python releases view (no native free)
-                                 \-> Fortran deallocates authoritative storage
+Fortran owns descriptor -> handle borrows descriptor -> view borrows allocation
+                                      \-> Fortran deallocates authoritative storage
 ```
 
 #### Wrapper-owned component storage
@@ -531,21 +533,22 @@ class buffer:
 ```
 
 The containing Python extension object owns the native derived-type instance;
-the allocatable component belongs to that instance. `values.base` keeps the
-wrapper object alive while a view exists. NumPy releases only its view object.
-The generated wrapper deallocator finalizes/releases the native instance after
-the last owning reference is gone. An explicit native component-deallocation
-method may make an existing view stale sooner, so callers must not retain views
-across such calls.
+the allocatable component belongs to that instance. Access returns an
+`AllocatableHandle` that retains the wrapper. A NumPy view returned by
+`handle.to_numpy()` retains the handle, so the owner chain remains live. The
+generated wrapper deallocator finalizes/releases the native instance after the
+last owning reference is gone. An explicit native component-deallocation method
+may make an existing view stale sooner, so callers must not retain views across
+such calls.
 
 Lifecycle:
 
 ```text
-wrapper allocates instance -> component allocates -> NumPy view retains wrapper
-                                           \-> wrapper deallocator finalizes instance
+wrapper allocates instance -> field handle retains wrapper -> view retains handle
+                                               \-> wrapper finalizes instance
 ```
 
-#### NumPy-owned copy
+#### Wrapper-owned result descriptor
 
 ```python
 from x2py.contracts import Addr, Allocatable, Annotated, Arg, Destruction, Float64, Int32, Ownership, Return, Transfer, native_call
@@ -555,30 +558,31 @@ def build_values(
     n: Int32,
 ) -> Annotated[
     Allocatable[Float64[:]],
-    Ownership("python"),
-    Transfer("copy_return"),
-    Destruction("python_refcount"),
+    Ownership("wrapper"),
+    Transfer("wrapper_instance"),
+    Destruction("wrapper_dealloc"),
 ]: ...
 ```
 
-Native code produces allocatable output storage. Before that storage is
-released, the bridge copies it into a new Python-visible NumPy allocation.
-Later native changes do not affect the array. NumPy or its generated base
-capsule releases the copy after Python references are gone.
+Native code produces allocatable output storage. The generated binding
+transfers its values into persistent descriptor storage and returns an owned
+`AllocatableHandle`. The handle remains valid after the native call;
+`handle.close()` or finalization releases its allocation. A NumPy view extracted
+with `to_numpy()` retains the handle and is not a detached copy.
 
 Lifecycle:
 
 ```text
-Fortran allocates output -> wrapper copies -> Fortran output is released
-                                      \-> NumPy owns and later releases the copy
+Fortran allocates output -> wrapper-owned descriptor receives values
+                         -> result handle releases descriptor on finalization
 ```
 
-These are three supported ownership outcomes for the same Python-level array
-concept, not permission to relabel one allocation arbitrarily. In particular,
-changing the module-storage example to `Destruction("wrapper_dealloc")` would
-be unsafe: the generated module wrapper has no right to finalize storage owned
-by Fortran module state. Use a copy if Python must own an independent lifetime,
-or keep the native-owned borrowed view.
+These are supported contexts for the same handle concept, not permission to
+relabel one allocation arbitrarily. In particular, changing the module-storage
+example to `Destruction("wrapper_dealloc")` would be unsafe: the generated
+module wrapper has no right to finalize storage owned by Fortran module state.
+Call `.copy()` on an extracted view when Python needs an independent NumPy
+lifetime.
 
 ### Supported transfer modes
 
@@ -587,10 +591,10 @@ or keep the native-owned borrowed view.
 | `by_value` | Scalar values returned to Python. | `python_refcount` |
 | `call_local` | Converted scalar/string/array inputs, pointer inputs associated only for one call, and explicitly discarded immutable mutation. | `none` or `call_local` |
 | `in_place` | Caller-supplied writable scalar storage, NumPy arrays, and existing wrapper instances. | `caller` or the existing wrapper's `wrapper_dealloc` |
-| `copy_return` | Strings, array results, non-optional hidden allocatable outputs, and immutable replacement results copied to Python. | `python_refcount` |
+| `copy_return` | Strings, ordinary array results, and immutable replacement results copied to Python. | `python_refcount` |
 | `snapshot_copy` | Detached copies for explicitly supported projections. Pointer-array handle results remain blocked until owner storage, target lifetime, descriptor extraction, and destroy behavior are implemented. | `python_refcount` |
 | `borrowed_view` | Target-backed module allocatables and supported fields/components whose owner remains identifiable. | `native_owner` or `wrapper_dealloc` |
-| `wrapper_instance` | Derived-type output represented by a Python extension object owning a native instance. | `wrapper_dealloc` |
+| `wrapper_instance` | Derived-type output or owned allocatable result represented by a Python object controlling native storage. | `wrapper_dealloc` |
 | `blocked` | Intentional declaration that no safe implemented transfer exists. | `blocked` |
 
 ### Destruction responsibilities
@@ -615,11 +619,11 @@ Examples include:
 
 - `Immutable` writable storage with `Transfer("borrowed_view")`;
 - `Transfer("copy_return")` on an argument with no projected replacement;
-- pointer array handles or persistent pointer reassociation without implemented
-  owner, shape, lifetime, descriptor handoff, and release behavior;
-- pointer module variables or derived-type pointer fields without an
-  implemented detached-copy or borrowed-accessor path;
-- borrowed pointer views without owner retention and stale-view invalidation;
+- pointer-array results without stable owner storage and target lifetime;
+- pointer reassociation or ownership-changing operations without completed
+  owner, shape, lifetime, and release behavior;
+- borrowed pointer views whose policy cannot retain a descriptor owner or
+  provide descriptor extraction;
 - `Ownership("native")` with `Destruction("python_refcount")` for the same
   authoritative allocation; and
 - `Ownership("python")` with `Destruction("native_owner")`.
@@ -679,8 +683,9 @@ Editable-contract runtime fixtures live under
 
 - `test_native_order_contracts.py` removes `@native_call` and exposes native
   argument order;
-- `test_ownership_contracts.py` applies explicit native-owned, wrapper-owned,
-  and Python/NumPy-owned lifetime policies to the same array example;
+- `test_ownership_contracts.py` applies explicit native-owned module,
+  wrapper-owned field, and wrapper-owned result-handle lifetime policies to the
+  same descriptor concept;
 - `test_visibility_contracts.py` removes and hides declarations while checking
   unaffected runtime behavior;
 - `test_surface_edit_contracts.py` removes classes, methods, constructors,
@@ -688,9 +693,7 @@ Editable-contract runtime fixtures live under
 - `test_policy_dispatch_contracts.py` proves immutable replacement through the
   completed ownership/action policy.
 
-Broader ownership lifetime evidence is in
-[`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py)
-and
-[`test_allocatable_replacement.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
+Broader handle ownership and lifetime evidence is in
+[`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
 The Semantic `.pyi` Wrapper Checklist later provides the active completion
 ledger.

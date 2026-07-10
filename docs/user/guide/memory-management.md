@@ -18,12 +18,12 @@ guess from datatype or intent.
 
 | Owner or transfer | Meaning | First complete example |
 | --- | --- | --- |
-| Python-owned value or copy | Python or NumPy releases detached storage after references are gone. | [`allocations.f90` copy result](allocatables.md#complete-allocatable-example) |
+| Python-owned value or copy | Python or NumPy releases detached storage after references are gone. | an ordinary array function result or `.copy()` of an extracted view |
 | Caller-owned storage | The Python caller retains the exact object supplied to the call. | [`outputs.f90` output array](wrapping-subroutines.md#complete-output-example) |
 | Wrapper-owned instance | A generated Python extension object owns one native derived instance. | [`points.f90` result](wrapping-derived-types.md#complete-derived-type-example) |
-| Native-owned storage | Native module state or another native owner controls allocation and release. | [`allocations.f90` module view](allocatables.md#complete-allocatable-example) |
+| Native-owned storage | Native module state or another native owner controls allocation and release. | [`allocations.f90` module handle](allocatables.md#complete-allocatable-example) |
 | Borrowed view or child | Python refers to storage owned by a module or containing wrapper. | [`points.f90` nested child](wrapping-derived-types.md#complete-derived-type-example) |
-| Detached copy (`snapshot_copy` policy) | Python receives copied current native state, without a live view. | [`allocations.f90` module snapshot](allocatables.md#complete-allocatable-example) |
+| Detached copy (`snapshot_copy` policy) | Python receives copied current native state, without a live view. | [`allocations.f90` handle extraction](allocatables.md#complete-allocatable-example) |
 | Call-local association | Native code may refer to Python storage only during one wrapped call. | [`pointers.f90` input](pointers.md#complete-pointer-example) |
 
 Those linked pages contain the full source, build commands, and asserted
@@ -85,7 +85,9 @@ it does not transfer native release responsibility.
 - Ordinary caller-owned arrays **mutate in place**;
 - Python strings use **replacement** because `str` is immutable;
 - Allocatable array descriptors use **handles** because native allocation identity may change;
-- Array/function results use **copy-return**;
+- Ordinary non-descriptor array/function results use **copy-return**;
+- Allocatable array results use wrapper-owned handles whose finalizer releases
+  x2py-owned descriptor storage;
 - Pointer-array handle results block readiness until owner storage, target
   lifetime, descriptor extraction, and destroy behavior are implemented; plain
   derived module variables without `Aliased` or another completed policy also

@@ -47,6 +47,8 @@ __all__ = (
     "ArithmeticOperator",
     "ArrayAllocated",
     "ArrayAssociated",
+    "ArrayContiguous",
+    "ArrayLowerBound",
     "ArrayShapeElement",
     "ArraySize",
     "AsName",
@@ -94,6 +96,7 @@ __all__ = (
     "Mul",
     "Ne",
     "Not",
+    "Nullify",
     "Operator",
     "Or",
     "Pass",
@@ -384,6 +387,9 @@ class Variable:
     native_array_handle_policy : object, default: None
         Completed policy for native allocatable or pointer array handle lowering.
 
+    array_interop_policy : object, default: None
+        Completed selector for ordinary data-buffer versus native descriptor array ABI.
+
     shape : tuple, default: None
         The shape of the array. A tuple whose elements indicate the number of elements along
         each of the dimensions of an array. The elements of the tuple should be None or model objects.
@@ -413,6 +419,7 @@ class Variable:
 
     __slots__ = (
         "_alloc_shape",
+        "_array_interop_policy",
         "_assumed_rank",
         "_class_type",
         "_cls_base",
@@ -458,6 +465,7 @@ class Variable:
         setter_ownership_decision=None,
         snapshot_field_action=None,
         native_array_handle_policy=None,
+        array_interop_policy=None,
         projected_output=False,
         assumed_rank=False,
         shape=None,
@@ -512,6 +520,7 @@ class Variable:
         self._setter_ownership_decision = setter_ownership_decision
         self._snapshot_field_action = snapshot_field_action
         self._native_array_handle_policy = native_array_handle_policy
+        self._array_interop_policy = array_interop_policy
         if not isinstance(projected_output, bool):
             raise TypeError("projected_output must be a boolean.")
         self._projected_output = projected_output
@@ -719,6 +728,11 @@ class Variable:
     def native_array_handle_policy(self):
         """Completed policy for native allocatable or pointer array handles."""
         return self._native_array_handle_policy
+
+    @property
+    def array_interop_policy(self):
+        """Completed selector for the generated array ABI lane."""
+        return self._array_interop_policy
 
     @property
     def assumed_rank(self):
@@ -1283,6 +1297,24 @@ class Allocate:
 
     def __hash__(self):
         return hash((id(self.variable), self.shape, self.order, self.status))
+
+
+# ------------------------------------------------------------------------------
+class Nullify:
+    """Fortran pointer nullification statement."""
+
+    __slots__ = ("_variable",)
+    _attribute_nodes = ("_variable",)
+
+    def __init__(self, variable):
+        if not isinstance(variable, Variable):
+            raise TypeError(f"Can only nullify a 'Variable' object, got {type(variable)} instead")
+        self._variable = variable
+        init_model_object(self)
+
+    @property
+    def variable(self):
+        return self._variable
 
 
 # ------------------------------------------------------------------------------
@@ -4482,6 +4514,29 @@ class ArrayShapeElement(Function):
         return self._args[1]
 
 
+class ArrayLowerBound(Function):
+    """Gets the lower bound of one array dimension."""
+
+    __slots__ = ()
+    name = "lbound"
+
+    _shape = None
+    _class_type = NumpyInt64Type()
+
+    def __init__(self, arg, index):
+        super().__init__(arg, index)
+
+    @property
+    def arg(self):
+        """Object whose lower bound is investigated."""
+        return self._args[0]
+
+    @property
+    def index(self):
+        """Zero-based dimension index."""
+        return self._args[1]
+
+
 class ArrayAllocated(Function):
     """
     Tests whether an allocatable array is allocated.
@@ -4519,6 +4574,24 @@ class ArrayAssociated(Function):
     @property
     def arg(self):
         """Object whose pointer association status is investigated."""
+        return self._args[0]
+
+
+class ArrayContiguous(Function):
+    """Tests whether an array occupies contiguous native storage."""
+
+    __slots__ = ()
+    name = "is_contiguous"
+
+    _shape = None
+    _class_type = NumpyBoolType()
+
+    def __init__(self, arg):
+        super().__init__(arg)
+
+    @property
+    def arg(self):
+        """Object whose storage contiguity is investigated."""
         return self._args[0]
 
 
@@ -4733,6 +4806,8 @@ for _model_cls in (
     Function,
     ArrayAllocated,
     ArrayAssociated,
+    ArrayContiguous,
+    ArrayLowerBound,
     ArrayShapeElement,
     FortranCharacterLength,
     Slice,

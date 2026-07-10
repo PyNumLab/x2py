@@ -121,7 +121,25 @@ generated stubs.
 
 Generated wrappers use these handle classes when an allocatable or pointer array
 descriptor is exposed as a Python object. Users can test for these classes when
-they need to distinguish descriptor handles from ordinary NumPy arrays.
+they need to distinguish descriptor handles from ordinary NumPy arrays. Borrowed
+handles do not own native storage. Owned handles expose `close()` and `closed`;
+their finalizer attempts generated owner-storage destruction at most once.
+
+`to_numpy()` returns `None` when the descriptor is currently unallocated or
+unassociated. Otherwise, the completed wrapper policy decides whether the result
+is a live view, a detached copy, or an unsupported extraction. Once the handle
+has reported allocated or associated state, generated extraction must return
+array storage rather than `None`. Results must match the handle's declared dtype
+and rank. Contiguous-view policy rejects non-contiguous storage, copy-only policy
+returns detached NumPy storage, and pointer descriptor-view extraction can expose
+positive or negative stride views when generated TS 29113 descriptor support is
+available.
+
+When a generated wrapper accepts a handle for an ordinary `T[...]` argument, it
+uses an internal native array-actual handoff rather than an implicit
+`to_numpy()` call. Parameters annotated as `Allocatable[T[...]]` or
+`Pointer[T[...]]` use descriptor handoff and require the matching handle class;
+plain NumPy arrays are for ordinary array-data parameters.
 
 ## Wrapper build API
 

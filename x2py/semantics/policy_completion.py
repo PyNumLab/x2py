@@ -11,7 +11,6 @@ from x2py.ownership_policy import (
     DestructionPolicy,
     OWNERSHIP_POLICY_METADATA,
     POINTER_POLICY_METADATA,
-    POINTER_ARRAY_CONTAINER_HANDLE_BLOCKER,
     OwnershipDecision,
     OwnershipContext,
     OwnershipOwner,
@@ -265,7 +264,7 @@ def _native_array_handle_policy(
         target_lifetime=_native_array_target_lifetime(descriptor_kind, handle_kind, semantic_type, blocker),
         destroy_behavior=_native_array_destroy_behavior(handle_kind, blocker),
         to_numpy=to_numpy,
-        descriptor_interop=_native_array_descriptor_interop_requirement(descriptor_kind, to_numpy),
+        descriptor_interop=_native_array_descriptor_interop_requirement(descriptor_kind, handle_kind),
         nullable=bool(decision.nullable or optional_absent),
         optional_absent=optional_absent,
         storage_mode=decision.storage_mode.value,
@@ -286,6 +285,10 @@ def _native_array_handle_kind(
         return "borrowed_module_descriptor"
     if context.is_field:
         return "borrowed_field_descriptor"
+    if context.is_argument and context.projects_result and not context.python_visible:
+        if descriptor_kind == "allocatable":
+            return "owned_result_descriptor"
+        return "unsupported"
     if context.is_argument:
         return "argument_descriptor"
     if context.is_result and descriptor_kind == "allocatable":
@@ -299,6 +302,8 @@ def _native_array_handle_origin(context: OwnershipContext) -> str:
     if context.is_field:
         return "derived_field"
     if context.is_argument:
+        if context.projects_result and not context.python_visible:
+            return "projected_result"
         return "argument"
     if context.is_result:
         return "result"
@@ -430,14 +435,31 @@ def _native_array_to_numpy_policy(
     if handle_kind == "unsupported":
         return "unsupported"
     if descriptor_kind == "pointer":
-        if POINTER_POLICY_METADATA not in semantic_type.metadata:
-            return "unsupported"
-        return "descriptor_view"
+        return _native_array_pointer_to_numpy_policy(semantic_type)
     if decision.is_blocked:
         return "unsupported"
     if handle_kind == "borrowed_module_descriptor" and not decision.borrowed:
         return "read_only_detached_copy"
     return "borrowed_view"
+
+
+def _native_array_pointer_to_numpy_policy(semantic_type: models.SemanticType) -> str:
+    pointer_policy = _pointer_policy_metadata(semantic_type)
+    if not pointer_policy:
+        return "unsupported"
+    if _pointer_policy_value(pointer_policy, "contiguity") == "contiguous":
+        if _pointer_policy_requests_copy_extraction(pointer_policy):
+            return "copy_only"
+        return "contiguous_view"
+    return "descriptor_view"
+
+
+def _pointer_policy_requests_copy_extraction(policy: dict[str, object]) -> bool:
+    return (
+        _pointer_policy_value(policy, "transfer") == "snapshot_copy"
+        or _pointer_policy_value(policy, "aliasing") == "independent_copy"
+        or _pointer_policy_value(policy, "mutability") == "copy"
+    )
 
 
 def _native_array_handle_operations(
@@ -466,8 +488,10 @@ def _native_array_handle_operations(
     return tuple(sorted(operations))
 
 
-def _native_array_descriptor_interop_requirement(descriptor_kind: str, to_numpy: str) -> str:
-    if descriptor_kind == "pointer" and to_numpy == "descriptor_view":
+def _native_array_descriptor_interop_requirement(descriptor_kind: str, handle_kind: str) -> str:
+    if descriptor_kind == "allocatable" and handle_kind == "owned_result_descriptor":
+        return "owned_allocatable_c_descriptor"
+    if descriptor_kind == "pointer" and handle_kind != "unsupported":
         return "pointer_c_descriptor"
     return "none"
 
@@ -501,33 +525,13 @@ def _native_array_handle_blocker(
     handle_kind: str,
     decision: OwnershipDecision,
 ) -> str | None:
-    if handle_kind in {"argument_descriptor", "optional_absent_handle"} and not decision.projects_result:
-        return f"{descriptor_kind} descriptor-argument handoff needs generated handle support before wrapper lowering"
     if decision.is_blocked:
-        if _is_generic_blocked_pointer_container(descriptor_kind, handle_kind, decision):
-            return POINTER_ARRAY_CONTAINER_HANDLE_BLOCKER
         return decision.blocker or decision.reason
     if handle_kind == "unsupported" and descriptor_kind == "pointer":
         return "pointer handle results need stable owner storage and target lifetime policy before wrapping"
     if handle_kind == "unsupported":
         return "native array handle origin is unsupported before wrapper lowering"
     return None
-
-
-def _is_generic_blocked_pointer_container(
-    descriptor_kind: str,
-    handle_kind: str,
-    decision: OwnershipDecision,
-) -> bool:
-    if descriptor_kind != "pointer" or handle_kind not in {
-        "borrowed_field_descriptor",
-        "borrowed_module_descriptor",
-    }:
-        return False
-    return (
-        decision.blocker in {None, "blocked by ownership policy"}
-        and decision.reason == "explicit ownership policy metadata"
-    )
 
 
 def _complete_callable_address_policy(function: models.SemanticFunction) -> None:
