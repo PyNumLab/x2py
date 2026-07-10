@@ -113,7 +113,7 @@ index and from `mkdocs.yml`.
 Documentation-only changes normally run:
 
 ```bash
-python3 -m pytest -q tests/tools/test_documentation_examples.py tests/tools/test_documentation_structure.py
+python3 -m pytest -q tests/docs/test_examples.py tests/docs/test_structure.py
 git diff --check
 ```
 
@@ -129,8 +129,8 @@ source-build Makefile behavior by
 [`test_build_modes.py`](../../../tests/wrapper/fortran/build_from_source/test_build_modes.py).
 
 Tooling configuration is covered by
-[`test_documentation_structure.py`](../../../tests/tools/test_documentation_structure.py),
-[`test_documentation_examples.py`](../../../tests/tools/test_documentation_examples.py), and
+[`test_documentation_structure.py`](../../../tests/docs/test_structure.py),
+[`test_documentation_examples.py`](../../../tests/docs/test_examples.py), and
 [`test_check_static_analysis_versions.py`](../../../tests/tools/test_check_static_analysis_versions.py).
 
 When a generated file contract changes, update this page with the CLI reference,

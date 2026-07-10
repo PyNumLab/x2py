@@ -35,4 +35,4 @@ binding source for the implemented Fortran wrapper path.
 - Source navigation: `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`
 - Pipeline map: `docs/maintainer/internal-architecture/pipeline-map.md`
 - Runtime tests: `tests/wrapper/fortran/`
-- `.pyi` printer tests: `tests/semantics/test_pyi_printer.py`
+- `.pyi` printer tests: `tests/codegen/printers/`

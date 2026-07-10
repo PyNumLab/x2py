@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 from collections import Counter
 from pathlib import Path
+import re
 
 from tests.wrapper.fortran._support import REPO_ROOT, WRAPPER_FORTRAN_DATA, WRAPPER_TEST_ROOT
 
@@ -105,10 +107,7 @@ SUBJECT_TEST_MODULES = {
         "test_naming_generated_pyi_contracts.py",
         "test_visibility_naming.py",
     ),
-    "layout_rules": (
-        "test_codegen_structure.py",
-        "test_wrapper_guide_layout.py",
-    ),
+    "layout_rules": ("test_wrapper_guide_layout.py",),
 }
 ALLOWED_SUBJECTS = tuple(SUBJECT_TEST_MODULES)
 SUBJECT_TEST_PATHS = tuple(
@@ -256,6 +255,31 @@ def test_subject_readmes_and_checklist_coverage_index_the_layout():
     missing_tests = [test_path for test_path in SUBJECT_TEST_PATHS if test_path not in coverage_text]
     assert missing_subjects == []
     assert missing_tests == []
+
+
+def test_wrapper_checklist_python_evidence_references_existing_test_nodes():
+    coverage_text = CHECKLIST_COVERAGE.read_text(encoding="utf-8")
+    references = set(re.findall(r"`([^`]+\.py(?:::[A-Za-z0-9_]+)?)`", coverage_text))
+    assert references
+
+    missing = []
+    for reference in sorted(references):
+        path_text, _, node_name = reference.partition("::")
+        if path_text.startswith("tests/"):
+            path = REPO_ROOT / path_text
+        elif path_text.split("/", 1)[0] in ALLOWED_SUBJECTS:
+            path = WRAPPER_ROOT / path_text
+        else:
+            continue
+        if not path.is_file():
+            missing.append(reference)
+            continue
+        if node_name:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            function_names = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
+            if node_name not in function_names:
+                missing.append(reference)
+    assert missing == []
 
 
 def test_wrapper_language_suite_and_user_guide_link_current_subject_paths():

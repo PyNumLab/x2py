@@ -407,19 +407,19 @@ choices currently reconstructed from raw facts during lowering or codegen.
 
 ## Phase 9 — Focused Evidence
 
-- [ ] `tests/semantics/test_ownership_policy.py` covers immutable completed
+- [ ] `tests/semantics/policy/` covers immutable completed
   policy, complete recursive decision sets, and strict dispatcher behavior.
-- [ ] `tests/semantics/test_semantic_wrap_readiness.py` covers the completed-to-
+- [ ] `tests/semantics/readiness/` covers the completed-to-
   validated transition and non-mutating readiness.
-- [ ] `tests/semantics/test_ir2ast.py` covers validated-only lowering and absence
+- [ ] `tests/lowering/test_semantic_ir.py` covers validated-only lowering and absence
   of policy/readiness inference.
-- [ ] `tests/semantics/test_pyi_printer.py` covers printer-only emission without
+- [ ] `tests/codegen/printers/` covers printer-only emission without
   hidden policy completion.
-- [ ] `tests/pyi/test_pyi_to_ir.py` covers semantic draft construction and
+- [ ] `tests/parsing/pyi/` covers semantic draft construction and
   contract round-tripping.
 - [ ] `tests/wrapper/fortran/edit_pyi_contracts/` proves edited policy remains
   authoritative through runtime behavior.
-- [ ] `tests/wrapper/fortran/layout_rules/test_codegen_structure.py` enforces
+- [ ] `tests/architecture/test_dependency_boundaries.py` enforces
   dependency and inference restrictions mechanically.
 - [ ] Source and semantic `.pyi` build-mode tests prove the mandatory stage
   sequence.

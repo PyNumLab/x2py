@@ -77,7 +77,7 @@ Source navigation is considered maintained when these files agree:
   docs, implementation files, tests, and support evidence.
 - `x2py/README.md` and package README files: local entry points for developers
   already browsing the source tree.
-- `tests/tools/test_documentation_structure.py`: mechanical coverage for the
+- `tests/docs/test_structure.py`: mechanical coverage for the
   navigation pages and README links.
 
 ## Generated And Fixture Areas

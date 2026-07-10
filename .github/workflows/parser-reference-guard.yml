@@ -46,8 +46,8 @@ jobs:
             exit 0
           fi
 
-          C_DOC="docs/c_parser.md"
-          FORTRAN_DOC="docs/fortran_parser.md"
+          C_DOC="docs/developer/c-parser-reference.md"
+          FORTRAN_DOC="docs/developer/fortran-parser-reference.md"
 
           C_DOC_CHANGED=false
           FORTRAN_DOC_CHANGED=false
@@ -64,29 +64,15 @@ jobs:
 
           while IFS= read -r changed_file; do
             case "$changed_file" in
-              c_parser/*|x2py/c_parser/*|tests/parser/c/*|tests/data/c/*|tests/parser/test_c_standard_type_probe.py)
+              c_parser/*|x2py/c_parser/*|tests/parser/c/*|tests/parsing/c/*|tests/data/c/*|tests/probes/test_c_types.py)
                 C_PARSER_CHANGED=true
                 ;;
-              fortran_parser/*|x2py/fortran_parser/*|tests/parser/fortran/*|tests/data/fortran/*)
-                FORTRAN_PARSER_CHANGED=true
-                ;;
-              tests/parser/test_declaration_and_interface_edges.py|\
-              tests/parser/test_error_handling.py|\
-              tests/parser/test_fortran_fixture_suite.py|\
-              tests/parser/test_fortran_json_sanity.py|\
-              tests/parser/test_fortran_parser_regression_contracts.py|\
-              tests/parser/test_fortran_type_probe.py|\
-              tests/parser/test_function_header_parsing.py|\
-              tests/parser/test_parser_developer_tutorial.py|\
-              tests/parser/test_parser_public_entrypoints.py|\
-              tests/parser/test_procedure_and_type_parsing.py|\
-              tests/parser/test_project_scope_models.py|\
-              tests/parser/test_scope_handling.py)
+              fortran_parser/*|x2py/fortran_parser/*|tests/parser/fortran/*|tests/parsing/fortran/*|tests/data/fortran/*|tests/probes/test_fortran_types.py)
                 FORTRAN_PARSER_CHANGED=true
                 ;;
               tests/parser/conftest.py|\
-              tests/parser/test_cli.py|\
-              tests/parser/test_preprocessing_cli.py|\
+              tests/cli/*|\
+              tests/pipeline/preprocessing/*|\
               x2py/preprocessing.py)
                 SHARED_PARSER_CHANGED=true
                 ;;

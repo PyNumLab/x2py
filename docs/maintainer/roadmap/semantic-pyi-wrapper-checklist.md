@@ -99,8 +99,8 @@ argument handoff from the native barrier action.
   `x2py.utilities.visitor.ClassVisitor` and configured `<prefix>_<ClassName>` handlers
   instead of parallel visitor implementations or local `isinstance` dispatch
   ladders.
-- [x] Structural evidence lives in `tests/semantics/test_visitor_protocol.py`
-  and `tests/semantics/test_ownership_policy.py`; runtime evidence covers scalar
+- [x] Structural evidence lives in `tests/lowering/test_visitor_protocol.py`
+  and `tests/semantics/policy/`; runtime evidence covers scalar
   value/address projection, rank-0 scalar storage, arrays, strings, raw
   addresses, and wrapper instances through focused `tests/wrapper/fortran/`
   slices.
@@ -306,7 +306,7 @@ X2PY_C_DOCS_END -->
 
 Runtime evidence lives in
 `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py` and CLI
-surface evidence lives in `tests/parser/test_cli.py`.
+surface evidence lives in `tests/cli/`.
 
 - [x] Python API `.pyi` builds accept output directory, extension naming,
   Makefile, verbose, and strict-wrapper-name controls. `--makefile` and
@@ -409,15 +409,15 @@ X2PY_C_DOCS_END -->
   `x2py/semantics/policy_completion.py`; direct ownership subpasses stay behind
   that entrypoint. Readiness and lowering consume completed policy metadata
   instead of recomputing policy from raw datatypes. Evidence:
-  `tests/semantics/test_ownership_policy.py`,
-  `tests/semantics/test_ir2ast.py`,
-  `tests/semantics/test_semantic_wrap_readiness.py`,
+  `tests/semantics/policy/`,
+  `tests/lowering/test_semantic_ir.py`,
+  `tests/semantics/readiness/`,
   and `x2py/semantics/README.md`.
 - [x] `.pyi` parsing and `.pyi` semantic conversion are separate stages:
   `x2py/pyi_parser/parser.py` parses text/files to Python AST, and
   `x2py/semantics/pyi2ir.py` converts that AST into `SemanticModule` objects
   before semantic policy completion runs. Evidence:
-  `tests/pyi/test_pyi_to_ir.py::test_pyi_parser_returns_python_ast_only`,
+  `tests/parsing/pyi/test_python_ast_contracts.py::test_pyi_parser_returns_python_ast_only`,
   `x2py/semantics/README.md`, and
   `docs/maintainer/internal-architecture/pipeline-map.md`.
 - [x] Risky-but-explicit identity contracts document their exact behavior
@@ -432,7 +432,7 @@ X2PY_C_DOCS_END -->
   `Transfer("borrowed_view")` means no-copy shared storage; combining them on a
   writable native argument reports a direct `.pyi` contract error. Evidence:
   `docs/user/reference/semantic-pyi-format.md` and
-  `tests/pyi/test_pyi_to_ir.py::test_convert_pyi_to_ir_rejects_immutable_writable_borrowed_view_argument`.
+  `tests/semantics/conversion/pyi/test_types_and_values.py::test_convert_pyi_to_ir_rejects_immutable_writable_borrowed_view_argument`.
 - [x] Edited-contract misuse has a documented diagnostic model: loader errors,
   structural contract errors, readiness blockers, and native artifact failures
   are separated, and diagnostics identify the contract path, declaration,
@@ -440,7 +440,7 @@ X2PY_C_DOCS_END -->
   loader semantic errors prefix messages with the `.pyi` contract path while
   syntax errors keep Python's filename field. Evidence:
   `docs/user/reference/semantic-pyi-format.md` and
-  `tests/pyi/test_pyi_to_ir.py::test_pyi_file_to_semantic_module_and_modules_forward_module_name_encoding_and_filename`.
+  `tests/semantics/conversion/pyi/test_pyi_conversion_imports_and_packages.py::test_pyi_file_to_semantic_module_and_modules_forward_module_name_encoding_and_filename`.
 - [x] A modified module `.pyi` can remove a public function and hide public
   declarations with `@private` or `private[...]` while preserving unaffected
   runtime behavior. Evidence:
@@ -453,7 +453,7 @@ X2PY_C_DOCS_END -->
   edited contracts. Evidence:
   `docs/user/guide/editing-semantic-pyi-contracts.md`,
   `docs/user/guide/fortran-wrapper.md`, and
-  `tests/tools/test_documentation_structure.py`.
+  `tests/docs/test_structure.py`.
 - [x] Edited contracts can remove a class, method, generated constructor, class
   member, and individual overload candidate from the Python API. They can also
   add renamed `@bind(...)` declarations and a renamed module overload group
@@ -466,14 +466,14 @@ X2PY_C_DOCS_END -->
 - [x] Module overload groups can be renamed while preserving the native generic
   name with `@overload("specific", generic="native_generic")`, and the printer
   round-trips that metadata. Evidence:
-  `tests/pyi/test_pyi_to_ir.py::test_convert_pyi_to_ir_renames_module_generic_and_round_trips_native_name`
+  `tests/semantics/conversion/pyi/test_classes_and_overloads.py::test_convert_pyi_to_ir_renames_module_generic_and_round_trips_native_name`
   and `docs/user/reference/semantic-pyi-format.md`.
 - [x] Explicit owner, transfer, and destruction triples are validated as a
   complete lifetime policy instead of independent switches. Supported triples
   remain codegen-ready; contradictory triples normalize to a blocked policy and
   fail before bridge source is emitted. Evidence:
-  `tests/semantics/test_ownership_policy.py::test_explicit_supported_ownership_triples_remain_codegen_ready`,
-  `tests/semantics/test_ownership_policy.py::test_contradictory_ownership_triples_fail_closed`,
+  `tests/semantics/policy/test_native_array_ownership.py::test_explicit_supported_ownership_triples_remain_codegen_ready`,
+  `tests/semantics/policy/test_native_array_ownership.py::test_contradictory_ownership_triples_fail_closed`,
   `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_contradictory_ownership_contract_fails_before_bridge_generation`,
   and
   `tests/wrapper/fortran/edit_pyi_contracts/invalid_contracts/contradictory_ownership/`.
@@ -482,7 +482,7 @@ X2PY_C_DOCS_END -->
   [Semantic `.pyi` format](../../user/reference/semantic-pyi-format.md#ownership-transfer-and-destruction-policies)
   resolves during policy completion to either a concrete codegen action or a
   fail-closed blocker. Evidence:
-  `tests/semantics/test_ownership_policy.py::test_documented_transfer_and_destruction_modes_resolve_or_fail_closed`.
+  `tests/semantics/policy/test_native_array_ownership.py::test_documented_transfer_and_destruction_modes_resolve_or_fail_closed`.
 - [x] One editable ownership fixture proves three lifetimes for the same
   rank-one `Float64` array concept: native-owned borrowed module storage,
   wrapper-owned borrowed component storage, and Python/NumPy-owned copy-return
@@ -499,11 +499,11 @@ X2PY_C_DOCS_END -->
   policy exists. Evidence:
   `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_immutable_scalar_string_array_and_derived_policies_return_replacements`
   and
-  `tests/semantics/test_ownership_policy.py::test_immutable_derived_output_selects_wrapper_instance_and_inout_blocks`.
+  `tests/semantics/policy/test_policy_defaults_and_validation.py::test_immutable_derived_output_selects_wrapper_instance_and_replacement_blocks`.
 - [x] Generic `Annotated` constraints and semantic coercions are not silently
   accepted as runtime validation. Fortran wrapper readiness reports direct
   blockers until named validators or conversion actions exist. Evidence:
-  `tests/semantics/test_semantic_wrap_readiness.py::test_readiness_blocks_generic_constraints_that_have_no_runtime_validator`
+  `tests/semantics/readiness/test_reports.py::test_readiness_blocks_generic_constraints_that_have_no_runtime_validator`
   and `docs/user/reference/semantic-pyi-format.md`.
 - [x] The currently documented editable-contract surface has direct modified
   runtime evidence or focused semantic/readiness evidence: removal and hiding,
@@ -513,7 +513,7 @@ X2PY_C_DOCS_END -->
   `@hold_gil`, and native-artifact failures. Evidence:
   `docs/user/guide/editing-semantic-pyi-contracts.md`,
   `tests/wrapper/fortran/edit_pyi_contracts/`,
-  `tests/semantics/test_semantic_wrap_readiness.py`,
+  `tests/semantics/readiness/`,
   `tests/wrapper/fortran/runtime_behavior/test_runtime_policy_decorators.py`,
   `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py`, and
   `tests/wrapper/CHECKLIST_COVERAGE.md`.
@@ -527,7 +527,7 @@ X2PY_C_DOCS_END -->
   result-helper eligibility also dispatches from completed result policy instead
   of checking `COPY_OUT` locally. Evidence:
   `x2py/codegen/bridges/fortran_to_c.py` and
-  `tests/semantics/test_ownership_policy.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
+  `tests/codegen/bindings/test_binding_handle_policy_dispatch.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
 - [x] Binding-side projected argument returns now dispatch through completed
   object-kind/action/projection policy. Native replacement outputs, hidden
   outputs, Python-visible in-place returns, and non-projected arguments each use
@@ -548,7 +548,7 @@ X2PY_C_DOCS_END -->
   ownership at each result-wrapping site.
   Evidence:
   `x2py/codegen/bindings/c_to_python.py` and
-  `tests/semantics/test_ownership_policy.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
+  `tests/codegen/bindings/test_binding_handle_policy_dispatch.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
 - [x] The remaining Stage 8 bridge and binding policy dispatch audit is closed
   for the current supported surface. Bridge field getters and setters dispatch
   from completed getter/setter policy, derived value-copy setters are selected
@@ -561,7 +561,7 @@ X2PY_C_DOCS_END -->
   `x2py/semantics/ownership.py`,
   `x2py/codegen/bridges/fortran_to_c.py`,
   `x2py/codegen/bindings/c_to_python.py`,
-  `tests/semantics/test_ownership_policy.py`,
+  `tests/semantics/policy/`,
   `tests/wrapper/fortran/derived_types/test_derived_layout.py`, and
   `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py`.
 X2PY_C_DOCS_END -->

@@ -132,14 +132,14 @@ prints the exact native commands and stage timings.
 | The checked smoke test passes but an advanced construct fails | The language feature matrix later records its support status and focused evidence. |
 
 Contributors changing documentation should run
-`python3 -m pytest -q tests/tools/test_documentation_examples.py tests/tools/test_documentation_structure.py`.
+`python3 -m pytest -q tests/docs/test_examples.py tests/docs/test_structure.py`.
 Wrapper behavior changes require the focused `tests/wrapper/fortran/...` path;
 the full GitHub Actions matrix is the final cross-version evidence.
 
 ## Evidence
 
 The linked `scale.f90` input is checked against the repository fixture by
-[`test_documentation_examples.py`](../../../tests/tools/test_documentation_examples.py).
+[`test_documentation_examples.py`](../../../tests/docs/test_examples.py).
 Native artifact placement and runtime calls are checked by
 [`test_build_modes.py`](../../../tests/wrapper/fortran/build_from_source/test_build_modes.py)
 and

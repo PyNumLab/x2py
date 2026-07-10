@@ -36,25 +36,25 @@ change crosses ownership boundaries.
 
 | Change area | Open first | Public docs to update | Focused evidence |
 | --- | --- | --- | --- |
-| CLI flags, stage selection, output formatting, diagnostics | `x2py/cli.py` | `docs/user/reference/cli-commands.md`, `docs/user/tutorials/basic-wrapper.md`, `docs/user/examples/verified-cookbook.md` | `tests/parser/test_cli.py`, `tests/tools/test_documentation_examples.py` |
-| Compiler preprocessing, include paths, macros, and target flags | `x2py/pipeline/preprocessing.py` | `docs/user/examples/recipes/compiler-preprocessing.md`, `docs/developer/fortran-parser-reference.md` | `tests/parser/test_preprocessing_cli.py`, `tests/parser/test_preprocessor_and_execution_boundaries.py` |
-| Fortran parser facts and diagnostics | `x2py/fortran_parser/parser.py` | `docs/developer/fortran-parser-reference.md`, `docs/user/examples/recipes/inspect-fortran-api.md` | `tests/parser/`, `tests/parser/test_fortran_fixture_suite.py` |
-| Semantic `.pyi` parsing, conversion, printing, package generation, and round-trip behavior | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md`, `docs/user/guide/editing-semantic-pyi-contracts.md`, `docs/user/examples/recipes/semantic-pyi-contracts.md` | `tests/pyi/`, `tests/pyi/test_contract_package_generation.py`, `tests/semantics/test_pyi_printer.py` |
-| Readiness blockers and support claims | `x2py/semantics/readiness.py` | `docs/user/reference/diagnostic-codes.md`, `docs/user/language-support/feature-matrix.md` | `tests/semantics/test_semantic_wrap_readiness.py`, readiness fixture tests |
+| CLI flags, stage selection, output formatting, diagnostics | `x2py/cli.py` | `docs/user/reference/cli-commands.md`, `docs/user/tutorials/basic-wrapper.md`, `docs/user/examples/verified-cookbook.md` | `tests/cli/`, `tests/docs/test_examples.py` |
+| Compiler preprocessing, include paths, macros, and target flags | `x2py/pipeline/preprocessing.py` | `docs/user/examples/recipes/compiler-preprocessing.md`, `docs/developer/fortran-parser-reference.md` | `tests/pipeline/preprocessing/`, `tests/pipeline/preprocessing/test_parser_boundaries.py` |
+| Fortran parser facts and diagnostics | `x2py/fortran_parser/parser.py` | `docs/developer/fortran-parser-reference.md`, `docs/user/examples/recipes/inspect-fortran-api.md` | `tests/parser/`, `tests/parsing/fortran/test_fortran_fixture_suite.py` |
+| Semantic `.pyi` parsing, conversion, printing, package generation, and round-trip behavior | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md`, `docs/user/guide/editing-semantic-pyi-contracts.md`, `docs/user/examples/recipes/semantic-pyi-contracts.md` | `tests/pyi/`, `tests/pipeline/pyi_builds/test_contract_package_generation.py`, `tests/codegen/printers/` |
+| Readiness blockers and support claims | `x2py/semantics/readiness.py` | `docs/user/reference/diagnostic-codes.md`, `docs/user/language-support/feature-matrix.md` | `tests/semantics/readiness/`, readiness fixture tests |
 | Source-driven Fortran wrapper orchestration | `x2py/pipeline/build.py` | `docs/user/guide/fortran-wrapper.md`, `docs/user/examples/recipes/build-and-import-cli.md` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
 | Semantic `.pyi` wrapper orchestration from native artifacts | `x2py/pipeline/build.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py` | `docs/user/guide/fortran-wrapper.md`, `docs/user/reference/semantic-pyi-format.md` | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py`, `tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py` |
-| Ownership, lifetime, output projection, and unsupported wrapper policy | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/semantics/ir2ast.py` | `docs/user/guide/fortran-wrapper.md`, `docs/user/guide/editing-semantic-pyi-contracts.md` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/fortran/` |
+| Ownership, lifetime, output projection, and unsupported wrapper policy | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/semantics/ir2ast.py` | `docs/user/guide/fortran-wrapper.md`, `docs/user/guide/editing-semantic-pyi-contracts.md` | `tests/lowering/test_semantic_ir.py`, `tests/wrapper/fortran/` |
 | Native compilation, runtime support, and shared-library linking | `x2py/compiling/python_wrapper.py`, `x2py/compiling/runtime_support.py` | `docs/user/guide/fortran-wrapper.md`, `docs/developer/build-system.md` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
-| Public Python exports | `x2py/__init__.py` | `README.md`, `docs/user/reference/python-api.md` | `tests/parser/test_parser_public_entrypoints.py` |
-| Source navigation documentation | `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`, package README files | `docs/developer/source-map.md` | `tests/tools/test_documentation_structure.py` |
+| Public Python exports | `x2py/__init__.py` | `README.md`, `docs/user/reference/python-api.md` | `tests/parsing/fortran/test_public_entrypoints.py` |
+| Source navigation documentation | `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`, package README files | `docs/developer/source-map.md` | `tests/docs/test_structure.py` |
 
 <!-- X2PY_C_DOCS_START
-| Compiler preprocessing, include paths, macros, target flags | `x2py/pipeline/preprocessing.py` | `docs/user/examples/recipes/compiler-preprocessing.md`, `docs/developer/c-parser-reference.md`, `docs/developer/fortran-parser-reference.md` | `tests/parser/test_preprocessing_cli.py`, `tests/parser/test_preprocessor_and_execution_boundaries.py` |
+| Compiler preprocessing, include paths, macros, target flags | `x2py/pipeline/preprocessing.py` | `docs/user/examples/recipes/compiler-preprocessing.md`, `docs/developer/c-parser-reference.md`, `docs/developer/fortran-parser-reference.md` | `tests/pipeline/preprocessing/`, `tests/pipeline/preprocessing/test_parser_boundaries.py` |
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-| C parser facts and diagnostics | `x2py/c_parser/parser.py` | `docs/developer/c-parser-reference.md`, `docs/user/examples/recipes/inspect-c-api.md` | `tests/parser/c/`, `tests/semantics/test_c2ir.py` |
-| Semantic IR shape and cross-stage metadata | `x2py/semantics/models.py`, `x2py/semantics/metadata.py`, `x2py/semantics/fortran2ir.py`, `x2py/semantics/c2ir.py` | `docs/user/reference/semantic-ir.md` | `tests/semantics/test_fortran2ir.py`, `tests/semantics/test_c2ir.py` |
+| C parser facts and diagnostics | `x2py/c_parser/parser.py` | `docs/developer/c-parser-reference.md`, `docs/user/examples/recipes/inspect-c-api.md` | `tests/parser/c/`, `tests/semantics/conversion/c/` |
+| Semantic IR shape and cross-stage metadata | `x2py/semantics/models.py`, `x2py/semantics/metadata.py`, `x2py/semantics/fortran2ir.py`, `x2py/semantics/c2ir.py` | `docs/user/reference/semantic-ir.md` | `tests/semantics/conversion/fortran/`, `tests/semantics/conversion/c/` |
 | Generated Fortran bridge | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/printers/fcode.py` | `docs/user/guide/fortran-wrapper.md` | `tests/wrapper/fortran/`, generated artifact assertions |
 | Generated CPython binding and Python-visible runtime behavior | `x2py/codegen/bindings/c_to_python.py`, `x2py/codegen/printers/cpythoncode.py` | `docs/user/guide/fortran-wrapper.md`, `docs/user/reference/python-api.md` | `tests/wrapper/fortran/` |
 X2PY_C_DOCS_END -->
@@ -67,7 +67,7 @@ X2PY_C_DOCS_END -->
 | `x2py/pipeline/` | Source preprocessing, semantic `.pyi` loading, and wrapper build orchestration | `preprocessing.py`, `pyi.py`, `build.py` | preprocessing, `.pyi`, and wrapper build tests |
 | `x2py/probes/` | Compiler-derived target facts plus mapping reports | `fortran_types.py`, `report.py` | target probe and type mapping report tests |
 | `x2py/runtime/` | Python runtime objects consumed by generated extensions | `handles.py` | runtime handle and wrapper runtime tests |
-| `x2py/types/` | Semantic-to-Python ecosystem type mappings | `numpy.py` | `tests/tools/test_numpy_types.py` |
+| `x2py/types/` | Semantic-to-Python ecosystem type mappings | `numpy.py` | `tests/types/test_numpy.py` |
 | `x2py/fortran_parser/` | Fortran lexer, recursive parser, models, type resolver, and parser CLI helpers | `parser.py`, `lexer.py`, `models.py`, `type_resolver.py`, `cli.py` | `tests/parser/`, `tests/parser/fortran/`, `docs/developer/fortran-parser-reference.md` |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, shared-library linking, and runtime support installation | `basic.py`, `compilers.py`, `python_wrapper.py`, `runtime_support.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/build_from_source/test_runtime_abi.py` |
 | `x2py/stdlib/` | Native runtime support files copied into generated wrapper builds | `x2py_runtime/` | wrapper runtime tests |
@@ -76,9 +76,9 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | `x2py/probes/c_types.py` | Compiler-derived target ABI facts for C inspection workflows | `c_types.py` | C target probe tests |
 | `x2py/c_parser/` | C lexer, parser, models, preprocessing metadata, and C parser CLI helpers | `parser.py`, `lexer.py`, `models.py`, `preprocessor.py`, `type_resolver.py`, `cli.py` | `tests/parser/c/`, `docs/developer/c-parser-reference.md` |
-| `x2py/pyi_parser/` | Semantic `.pyi` text/file parsing to Python AST. | `parser.py` | `tests/pyi/test_pyi_to_ir.py`, `docs/user/reference/semantic-pyi-format.md` |
+| `x2py/pyi_parser/` | Semantic `.pyi` text/file parsing to Python AST. | `parser.py` | `tests/parsing/pyi/`, `docs/user/reference/semantic-pyi-format.md` |
 | `x2py/semantics/` | Language-neutral semantic IR, source-to-IR conversion, `.pyi` AST conversion, policy completion, readiness, and codegen lowering | `models.py`, `fortran2ir.py`, `c2ir.py`, `pyi2ir.py`, `policy_completion.py`, `readiness.py`, `ir2ast.py` | `tests/semantics/`, `tests/pyi/`, `docs/user/reference/semantic-ir.md`, `docs/user/reference/semantic-pyi-format.md` |
-| `x2py/codegen/` | Codegen AST, bridge and binding generation, printers, and semantic `.pyi` printing | `models/`, `bridges/fortran_to_c.py`, `bindings/c_to_python.py`, `printers/`, `binding_pipeline.py` | `tests/wrapper/`, `tests/semantics/test_pyi_printer.py`, `docs/user/guide/fortran-wrapper.md` |
+| `x2py/codegen/` | Codegen AST, bridge and binding generation, printers, and semantic `.pyi` printing | `models/`, `bridges/fortran_to_c.py`, `bindings/c_to_python.py`, `printers/`, `binding_pipeline.py` | `tests/wrapper/`, `tests/codegen/printers/`, `docs/user/guide/fortran-wrapper.md` |
 | `x2py/naming/` | Unified public-name and generated-symbol policy for Python, C, and Fortran targets | `policy.py` | naming, visibility, and wrapper runtime tests |
 X2PY_C_DOCS_END -->
 
@@ -86,7 +86,7 @@ X2PY_C_DOCS_END -->
 
 These files are the maintained source-navigation anchors. If ownership moves,
 update this table, the package README files, and the mechanical checks in
-`tests/tools/test_documentation_structure.py` in the same change.
+`tests/docs/test_structure.py` in the same change.
 
 | Hotspot | Owns |
 | --- | --- |

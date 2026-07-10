@@ -37,7 +37,7 @@ X2PY_C_DOCS_END -->
 
 | Stage | Main source | Input | Output | Primary evidence |
 | --- | --- | --- | --- | --- |
-| CLI request | `x2py/cli.py` | source paths and stage flags | selected stage or wrapper build options | `tests/parser/test_cli.py` |
+| CLI request | `x2py/cli.py` | source paths and stage flags | selected stage or wrapper build options | `tests/cli/` |
 | Build orchestration | `x2py/pipeline/build.py` | ordered Fortran sources or `.pyi` contracts plus explicit native artifacts | `WrapperBuildResult`, `NativeBuildPlan`, and generated artifact plan | wrapper build-mode tests |
 | Preprocessing | `x2py/pipeline/preprocessing.py` | source path, compiler config | preprocessed source and dependency facts | preprocessing tests |
 | Parser project model | `x2py/fortran_parser/parser.py` | preprocessed Fortran source | parser project with modules, procedures, types, visibility | Fortran parser fixture tests |
@@ -45,7 +45,7 @@ X2PY_C_DOCS_END -->
 | Semantic IR | `x2py/semantics/fortran2ir.py` | parser project and target facts | `SemanticModule` objects | semantic Fortran tests |
 | Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | full semantic modules with signatures and `.pyi` overrides | semantic modules annotated with completed ownership, transfer, and destruction decisions | ownership-policy, readiness, and lowering tests |
 | Readiness | `x2py/semantics/readiness.py` | prepared semantic modules | blockers and support status | readiness tests and fixtures |
-| Codegen lowering | `x2py/semantics/ir2ast.py` | policy-completed semantic modules | codegen AST consuming completed policy decisions | `tests/semantics/test_ir2ast.py`, wrapper tests |
+| Codegen lowering | `x2py/semantics/ir2ast.py` | policy-completed semantic modules | codegen AST consuming completed policy decisions | `tests/lowering/test_semantic_ir.py`, wrapper tests |
 | Printing | `x2py/codegen/printers/` | generated ASTs | wrapper source files | generated build artifacts and wrapper tests |
 | Compile and link | `x2py/compiling/` | user objects, wrapper sources, runtime support | shared library | wrapper runtime tests |
 

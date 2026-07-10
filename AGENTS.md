@@ -39,7 +39,7 @@ For documentation-only changes that do not modify executable Python code,
 runtime behavior, build configuration, or test logic, do not run the complete
 static-analysis suite by default. Run the focused documentation checks and
 whitespace check instead:
-- `python3 -m pytest -q tests/tools/test_documentation_examples.py tests/tools/test_documentation_structure.py`
+- `python3 -m pytest -q tests/docs/test_examples.py tests/docs/test_structure.py`
 - `git diff --check`
 Run the complete static-analysis suite when code, tests, build behavior, or
 tooling configuration changes, or when explicitly requested for pre-merge or

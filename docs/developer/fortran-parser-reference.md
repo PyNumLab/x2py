@@ -304,13 +304,13 @@ When adding another parser, keep these test layers separate:
 
 Executable references:
 
-- Fortran parser walkthrough: `tests/parser/test_parser_developer_tutorial.py`
-- Procedure/type parsing: `tests/parser/test_procedure_and_type_parsing.py`
-- Scope and project behavior: `tests/parser/test_scope_handling.py` and
-  `tests/parser/test_project_scope_models.py`
-- Fortran fixture workflow: `tests/parser/test_fortran_fixture_suite.py`
-- Shared CLI behavior: `tests/parser/test_cli.py`
-- Fortran semantic handoff: `tests/semantics/test_fortran2ir.py`
+- Fortran parser walkthrough: `tests/parsing/fortran/test_developer_tutorial.py`
+- Procedure/type parsing: `tests/parsing/fortran/`
+- Scope and project behavior: `tests/parsing/fortran/test_scope_handling.py` and
+  `tests/parsing/fortran/test_project_scope_models.py`
+- Fortran fixture workflow: `tests/parsing/fortran/test_fortran_fixture_suite.py`
+- Shared CLI behavior: `tests/cli/`
+- Fortran semantic handoff: `tests/semantics/conversion/fortran/`
 
 ## 3) Terminal usage and expected outputs
 
@@ -726,41 +726,41 @@ Run parser-focused tests:
 
 ```bash
 python -m x2py tests/data/fortran/general/basic_subroutine.f90 --language fortran --parse --json
-PYTHONPATH=. pytest -q tests/parser/test_procedure_and_type_parsing.py
-PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py
-PYTHONPATH=. pytest -q tests/parser/test_cli.py
+PYTHONPATH=. pytest -q tests/parsing/fortran/
+PYTHONPATH=. pytest -q tests/parsing/fortran/test_fortran_fixture_suite.py
+PYTHONPATH=. pytest -q tests/cli/
 ```
 
 Focused test files by implementation area:
 
 - Parser walkthrough and expected developer flow:
-  `tests/parser/test_parser_developer_tutorial.py`
+  `tests/parsing/fortran/test_developer_tutorial.py`
 - Procedure headers, declarations, derived types, interfaces, and type-bound
   procedures:
-  `tests/parser/test_procedure_and_type_parsing.py`
+  `tests/parsing/fortran/`
 - Function header edge cases:
-  `tests/parser/test_function_header_parsing.py`
+  `tests/parsing/fortran/test_function_headers.py`
 - Scope handling and project namespace behavior:
-  `tests/parser/test_scope_handling.py` and
-  `tests/parser/test_project_scope_models.py`
+  `tests/parsing/fortran/test_scope_handling.py` and
+  `tests/parsing/fortran/test_project_scope_models.py`
 - Preprocessing, native includes, and execution-boundary skipping:
-  `tests/parser/test_preprocessor_and_execution_boundaries.py`
+  `tests/pipeline/preprocessing/test_parser_boundaries.py`
 - Parser diagnostics and fatal error contracts:
-  `tests/parser/test_error_handling.py`
+  `tests/parsing/fortran/test_error_handling.py`
 - Regression contracts:
-  `tests/parser/test_fortran_parser_regression_contracts.py`
+  `tests/parsing/fortran/`
 - Public entrypoints:
-  `tests/parser/test_parser_public_entrypoints.py`
+  `tests/parsing/fortran/test_public_entrypoints.py`
 - Parser fixture goldens:
-  `tests/parser/test_fortran_fixture_suite.py`
+  `tests/parsing/fortran/test_fortran_fixture_suite.py`
 - Parser error fixture goldens:
-  `tests/parser/test_fortran_error_fixture_suite.py`
+  `tests/parsing/fortran/test_error_fixture_suite.py`
 - Parser JSON shape:
-  `tests/parser/test_fortran_json_sanity.py`
+  `tests/parsing/fortran/test_json_sanity.py`
 - Cached Fortran compiler/type and intrinsic-storage probing:
-  `tests/parser/test_fortran_type_probe.py`
+  `tests/probes/test_fortran_types.py`
 - Shared CLI behavior:
-  `tests/parser/test_cli.py`
+  `tests/cli/`
 
 When adding or changing a Fortran parser feature, add a focused parser test
 near the implementation concern first, then update fixture goldens only when
@@ -781,7 +781,7 @@ python tests/parser/fortran/generate_fortran_parser_goldens.py tests/data/fortra
 In-test auto-update mode:
 
 ```bash
-FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/test_fortran_fixture_suite.py --confcutdir=tests/
+FORTRAN_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parsing/fortran/test_fortran_fixture_suite.py --confcutdir=tests/
 ```
 
 Semantic and `.pyi` fixtures have separate generators:

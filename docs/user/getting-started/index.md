@@ -59,6 +59,6 @@ failures are routed through [Troubleshooting](../troubleshooting/index.md).
 
 The standalone example used throughout this section is checked against its
 fixture by
-[`test_documentation_examples.py`](../../../tests/tools/test_documentation_examples.py),
+[`test_documentation_examples.py`](../../../tests/docs/test_examples.py),
 and its `7.5` runtime result is checked by
 [`test_build_modes.py`](../../../tests/wrapper/fortran/build_from_source/test_build_modes.py).
