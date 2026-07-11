@@ -30,6 +30,7 @@ from x2py.semantics.metadata import (
 )
 from x2py.semantics import models
 from x2py.semantics.native_array_handles import NativeArrayHandlePolicy, native_array_descriptor_kind
+from x2py.semantics.scalar_wrapper_policy import build_scalar_wrapper_function_policy
 
 __all__ = ("complete_semantic_policies",)
 
@@ -125,12 +126,12 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
         _complete_module_variable_initializer(variable)
         _block_unsupported_snapshot_contract(variable)
     for semantic_class in module.classes:
-        _complete_class(semantic_class)
+        _complete_class(semantic_class, f"{module.name}.{semantic_class.name}")
     for function in module.functions:
-        _complete_function(function)
+        _complete_function(function, f"{module.name}.{function.name}")
     for overload_set in module.overload_sets:
         for procedure in overload_set.procedures:
-            _complete_function(procedure)
+            _complete_function(procedure, f"{module.name}.{overload_set.name}.{procedure.name}")
     module.metadata[models.POLICY_COMPLETION_PREPARED_METADATA] = True
     return module
 
@@ -162,7 +163,7 @@ def _blocked_snapshot_decision(decision: OwnershipDecision) -> OwnershipDecision
     )
 
 
-def _complete_class(semantic_class: models.SemanticClass) -> None:
+def _complete_class(semantic_class: models.SemanticClass, owner_path: str) -> None:
     class_type = models.SemanticType(name=semantic_class.name, dtype=semantic_class.name)
     semantic_class.metadata[models.RESOLVED_CLASS_INSTANCE_POLICY_METADATA] = (
         default_ownership_policy.decide_semantic_type(class_type, OwnershipContext.result())
@@ -175,15 +176,15 @@ def _complete_class(semantic_class: models.SemanticClass) -> None:
         _complete_variable(field, OwnershipContext.field())
         _complete_accessor_policies(field, OwnershipContext.field())
     for nested in semantic_class.classes:
-        _complete_class(nested)
+        _complete_class(nested, f"{owner_path}.{nested.name}")
     for method in semantic_class.methods:
-        _complete_function(method)
+        _complete_function(method, f"{owner_path}.{method.name}")
     for overload_set in semantic_class.overload_sets:
         for procedure in overload_set.procedures:
-            _complete_function(procedure)
+            _complete_function(procedure, f"{owner_path}.{overload_set.name}.{procedure.name}")
 
 
-def _complete_function(function: models.SemanticFunction) -> None:
+def _complete_function(function: models.SemanticFunction, owner_path: str) -> None:
     _complete_callable_address_policy(function)
     for argument in function.arguments:
         _complete_variable(argument, ownership_context_for_argument(function, argument))
@@ -194,6 +195,10 @@ def _complete_function(function: models.SemanticFunction) -> None:
     else:
         function.metadata.pop(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA, None)
         function.metadata.pop(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, None)
+    function.metadata[models.RESOLVED_SCALAR_WRAPPER_POLICY_METADATA] = build_scalar_wrapper_function_policy(
+        function,
+        owner_path=owner_path,
+    )
 
 
 def _complete_native_array_handle_result_policy(
