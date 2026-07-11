@@ -1,3 +1,5 @@
+from x2py.contracts import CStruct, Float64, Int, private
+
 class particle(CStruct):
     id: Int
     x: Float64[3]
@@ -5,16 +7,16 @@ class particle(CStruct):
 current_particle: private[particle]
 
 def particle_touch(
-    p: Ref(particle)
+    p: particle
 ) -> None: ...
 
 def particle_reset(
-    p: Ref(particle)
+    p: particle
 ) -> None: ...
 
 def particle_move(
-    p: Ref(particle),
-    delta: Const(Float64[3])
+    p: particle,
+    delta: Float64[3]
 ) -> None: ...
 
-def particle_current() -> Ref(Const(particle)): ...
+def particle_current() -> particle: ...

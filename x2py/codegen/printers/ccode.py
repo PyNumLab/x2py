@@ -7,8 +7,16 @@ from itertools import chain
 from typing import ClassVar
 
 
+from x2py.semantics.ownership import NativeBarrierAction, ObjectKind
+from x2py.semantics.native_array_handles import NativeArrayHandlePolicy
+
 from ..bind_c import BindCPointer
 from ..bindings.c_concepts import (
+    CFIDescriptorDimField,
+    CFIDescriptorField,
+    CFIDescriptorStorageType,
+    CFIDescriptorType,
+    CFIDimensionType,
     CStrStr,
     ObjectAddress,
     PointerCast,
@@ -56,6 +64,7 @@ from .codeprinter import CodePrinter
 __all__ = ["CCodePrinter"]
 
 c_library_headers = (
+    "ISO_Fortran_binding",
     "complex",
     "ctype",
     "float",
@@ -75,6 +84,7 @@ import_dict = {"omp_lib": "omp"}
 c_imports = {
     n: Import(n, Module(n, (), ()))
     for n in [
+        "ISO_Fortran_binding",
         "assert",
         "complex",
         "float",
@@ -130,6 +140,8 @@ class CCodePrinter(CodePrinter):
         (PrimitiveIntegerType(), 2): "int16_t",
         (PrimitiveIntegerType(), 1): "int8_t",
         (PrimitiveBooleanType(), -1): "bool",
+        CFIDescriptorType(): "CFI_cdesc_t",
+        CFIDimensionType(): "CFI_dim_t",
     }
 
     # ------------------------------------------------------------------
@@ -632,6 +644,8 @@ class CCodePrinter(CodePrinter):
 
     def _visit_Variable(self, expr):
         """Render the ``Variable`` model node."""
+        if isinstance(expr.class_type, BindCPointer):
+            return expr.name
         if self._is_c_pointer(expr):
             return f"(*{expr.name})"
         return expr.name
@@ -703,6 +717,86 @@ class CCodePrinter(CodePrinter):
         """Render the ``CustomDataType`` model node."""
         return "struct " + expr.low_level_name
 
+    def _visit_CFIDescriptorField(self, expr):
+        """Render a field read from a TS 29113 descriptor pointer."""
+        descriptor = self._cfi_descriptor_pointer(expr.owner)
+        return f"{descriptor}->{expr.field}"
+
+    def _visit_CFIDescriptorDimField(self, expr):
+        """Render a dimension field read from a TS 29113 descriptor pointer."""
+        descriptor = self._cfi_descriptor_pointer(expr.owner)
+        index = self._visit(expr.index)
+        return f"{descriptor}->dim[{index}].{expr.field}"
+
+    def _visit_CFIDescriptorEstablish(self, expr):
+        """Establish a standard disassociated pointer descriptor."""
+        self.add_import(c_imports["ISO_Fortran_binding"])
+        descriptor = self._visit(ObjectAddress(expr.descriptor))
+        element_type = expr.element_type
+        c_type = self._c_type(element_type)
+        cfi_type = self._cfi_element_type_code(element_type)
+        base_address = (
+            "NULL"
+            if expr.base_address is None
+            else self._visit(ObjectAddress(expr.base_address))
+            if isinstance(expr.base_address, Variable) and expr.base_address.is_alias
+            else self._visit(expr.base_address)
+        )
+        element_length = f"sizeof({c_type})" if expr.element_length is None else self._visit(expr.element_length)
+        extents = (
+            "NULL"
+            if not expr.extents
+            else f"(CFI_index_t[]){{{', '.join(self._visit(extent) for extent in expr.extents)}}}"
+        )
+        return (
+            f"CFI_establish({descriptor}, {base_address}, CFI_attribute_{expr.attribute}, {cfi_type}, "
+            f"{element_length}, {expr.rank}, {extents})"
+        )
+
+    def _visit_CFIDescriptorAllocate(self, expr):
+        """Allocate payload storage through a standard allocatable descriptor."""
+        self.add_import(c_imports["ISO_Fortran_binding"])
+        descriptor = self._visit(ObjectAddress(expr.descriptor))
+        lower_bounds = self._cfi_index_array(expr.lower_bounds)
+        upper_bounds = self._cfi_index_array(expr.upper_bounds)
+        return f"CFI_allocate({descriptor}, {lower_bounds}, {upper_bounds}, {self._visit(expr.element_length)})"
+
+    def _visit_CFIDescriptorDeallocate(self, expr):
+        """Deallocate payload storage through a standard allocatable descriptor."""
+        self.add_import(c_imports["ISO_Fortran_binding"])
+        return f"CFI_deallocate({self._visit(ObjectAddress(expr.descriptor))})"
+
+    def _visit_CFIDescriptorStorageSize(self, expr):
+        """Render the size of rank-specific standard descriptor storage."""
+        self.add_import(c_imports["ISO_Fortran_binding"])
+        return f"sizeof(CFI_CDESC_T({expr.rank}))"
+
+    def _cfi_index_array(self, values):
+        """Render one temporary CFI index array."""
+        return f"(CFI_index_t[]){{{', '.join(self._visit(value) for value in values)}}}"
+
+    @staticmethod
+    def _cfi_element_type_code(dtype):
+        """Return the standard CFI type code for one intrinsic element type."""
+        primitive = dtype.primitive_type
+        if isinstance(primitive, PrimitiveBooleanType):
+            return "CFI_type_Bool"
+        if isinstance(primitive, PrimitiveIntegerType):
+            return f"CFI_type_int{dtype.precision * 8}_t"
+        if isinstance(primitive, PrimitiveFloatingPointType):
+            return {4: "CFI_type_float", 8: "CFI_type_double"}[dtype.precision]
+        if isinstance(primitive, PrimitiveComplexType):
+            return {4: "CFI_type_float_Complex", 8: "CFI_type_double_Complex"}[dtype.precision]
+        if isinstance(dtype, CharType):
+            return "CFI_type_char"
+        raise TypeError(f"Unsupported CFI descriptor element dtype: {dtype}")
+
+    def _cfi_descriptor_pointer(self, owner):
+        """Render a model object as a ``CFI_cdesc_t*`` expression."""
+        self.add_import(c_imports["ISO_Fortran_binding"])
+        pointer = ObjectAddress(owner) if isinstance(owner, Variable) and owner.is_alias else owner
+        return f"((CFI_cdesc_t*){self._visit(pointer)})"
+
     # ================== String methods ==================
 
     def _visit_CStrStr(self, expr):
@@ -748,12 +842,16 @@ class CCodePrinter(CodePrinter):
         """
         if a is NIL or isinstance(a, ObjectAddress | PointerCast | CStrStr):
             return True
+        if isinstance(a, CFIDescriptorField | CFIDescriptorDimField) and isinstance(a.class_type, BindCPointer):
+            return True
         if isinstance(a, FunctionCall):
             a = a.funcdef.results.var
         # STC _at and _at_mut functions return pointers
         if isinstance(a, IndexedElement):
             return self._indexed_element_is_c_pointer(a)
         if not isinstance(a, Variable):
+            return False
+        if self._is_scalar_native_value_barrier(a):
             return False
         additional_argument = self._is_additional_c_argument(a)
         if isinstance(a.class_type, NumpyNDArrayType):
@@ -763,6 +861,25 @@ class CCodePrinter(CodePrinter):
             return True
 
         return a.is_alias or a.is_optional or additional_argument
+
+    @staticmethod
+    def _is_scalar_native_value_barrier(variable):
+        """Return whether scalar address/storage policy still prints as a C value."""
+        if isinstance(variable.class_type, BindCPointer):
+            return False
+        decision = getattr(variable, "ownership_decision", None)
+        return bool(
+            decision is not None
+            and not variable.is_optional
+            and not decision.mutates_native
+            and decision.kind is ObjectKind.SCALAR
+            and decision.native_barrier_action
+            in {
+                NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+                NativeBarrierAction.PASS_RAW_ADDRESS,
+                NativeBarrierAction.PASS_STORAGE_ADDRESS,
+            }
+        )
 
     @staticmethod
     def _indexed_element_is_c_pointer(element):
@@ -812,6 +929,10 @@ class CCodePrinter(CodePrinter):
         TypeError
             If the dtype is not found in the dtype_registry.
         """
+        if isinstance(dtype, CFIDescriptorType | CFIDimensionType):
+            self.add_import(c_imports["ISO_Fortran_binding"])
+            return self.dtype_registry[dtype]
+
         if isinstance(dtype, FixedSizeNumericType):
             primitive_type = dtype.primitive_type
             if isinstance(primitive_type, PrimitiveComplexType):
@@ -876,6 +997,11 @@ class CCodePrinter(CodePrinter):
         >>> self._get_declare_type(v)
         'array_int64_1d*'
         """
+        if isinstance(expr.class_type, CFIDescriptorStorageType):
+            self.add_import(c_imports["ISO_Fortran_binding"])
+            return f"CFI_CDESC_T({expr.class_type.descriptor_rank})"
+        if self._is_native_array_descriptor_dummy(expr):
+            return "void*"
         class_type = expr.class_type
 
         if isinstance(class_type, NumpyNDArrayType) and class_type.raw:
@@ -888,6 +1014,16 @@ class CCodePrinter(CodePrinter):
         if self._is_c_pointer(expr) and not (isinstance(class_type, NumpyNDArrayType) and class_type.raw):
             return f"{dtype}*"
         return dtype
+
+    @staticmethod
+    def _is_native_array_descriptor_dummy(expr) -> bool:
+        """Return whether a bind(C) array dummy is passed as a TS29113 descriptor pointer in C."""
+        policy = getattr(expr, "native_array_handle_policy", None)
+        return bool(
+            isinstance(policy, NativeArrayHandlePolicy)
+            and policy.handle_kind in {"argument_descriptor", "optional_absent_handle"}
+            and isinstance(expr.class_type, NumpyNDArrayType)
+        )
 
     def _function_signature(self, expr, print_arg_names=True):
         """

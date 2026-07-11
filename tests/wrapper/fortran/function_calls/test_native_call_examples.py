@@ -43,7 +43,9 @@ def _assert_native_call_examples(module) -> None:
     assert module.scale_with_status(inout) == np.int32(3)
     np.testing.assert_allclose(inout, np.array([4.0, 10.0, 14.0], dtype=np.float64))
 
-    assert module.fixed_inout("abc") == "Xbc    !"
+    assert module.fixed_inout("abc     ") == "Xbc    !"
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.fixed_inout("abc")
     assert module.make_label() == "done  "
 
     mixed_values = np.empty(3, dtype=np.float64)

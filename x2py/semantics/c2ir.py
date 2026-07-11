@@ -48,6 +48,7 @@ from x2py.c_parser.models import (
     CVolatile,
     CInt,
 )
+from x2py.utilities.visitor import ClassVisitor
 
 from .models import (
     EXTERNAL_TYPE_REF_METADATA,
@@ -188,7 +189,7 @@ _C_INT_FALLBACK_FACT = {
 }
 
 
-class CToIRConverter:
+class CToIRConverter(ClassVisitor):
     """Convert parsed C models into the shared semantic IR.
 
     The converter intentionally keeps C parser facts as provenance and blocker
@@ -214,31 +215,21 @@ class CToIRConverter:
         self.opaque_standard_types: set[str] = set()
 
     def visit(self, node, **context):
-        if isinstance(node, CProject):
-            return self.visit_project(node)
-        if isinstance(node, CFile):
-            return self.visit_file(node, **context)
-        if isinstance(node, CFunction):
-            return self.visit_function(node)
-        if isinstance(node, CParameter):
-            return self.visit_parameter(node, position=context.get("position", 0))
-        if isinstance(node, CStruct):
-            return self.visit_struct(node)
-        if isinstance(node, CUnion):
-            return self.visit_union(node)
-        if isinstance(node, CVariable):
-            return self.visit_variable(node)
-        if isinstance(node, CType):
-            return self.visit_type(node)
+        """Dispatch one parsed C model through its class visitor."""
+        return self._visit(node, **context)
+
+    @staticmethod
+    def _visit_not_supported(node):
+        """Reject parser models without a semantic conversion visitor."""
         raise TypeError(f"Unsupported C parse object: {type(node)!r}")
 
-    def visit_project(self, project: CProject) -> list[SemanticModule]:
+    def _visit_CProject(self, project: CProject) -> list[SemanticModule]:
         self.typedefs = dict(project.typedefs)
         self.structs = dict(project.structs)
         self.unions = dict(project.unions)
         self.enums = dict(project.enums)
         modules = [
-            self.visit_file(
+            self.visit(
                 c_file,
                 typedefs=self.typedefs,
                 structs=self.structs,
@@ -250,7 +241,7 @@ class CToIRConverter:
         self._classify_project_external_types(modules, project)
         return modules
 
-    def visit_project_module(
+    def project_to_semantic_module(
         self,
         project: CProject,
         *,
@@ -263,7 +254,7 @@ class CToIRConverter:
         self.enums = dict(project.enums)
         self.opaque_standard_types = set()
         try:
-            semantic_functions = [self.visit_function(function) for function in project.functions.values()]
+            semantic_functions = [self.visit(function) for function in project.functions.values()]
             semantic_variables = [
                 *[
                     enumerator
@@ -271,11 +262,11 @@ class CToIRConverter:
                     for enumerator in self._enum_constants_for_enum(enum)
                 ],
                 *self._macro_constants_from_macros(list(project.macros.values())),
-                *[self.visit_variable(variable) for variable in project.variables.values()],
+                *[self.visit(variable) for variable in project.variables.values()],
             ]
             semantic_classes = [
-                *[self.visit_struct(struct) for struct in project.structs.values()],
-                *[self.visit_union(union) for union in project.unions.values()],
+                *[self.visit(struct) for struct in project.structs.values()],
+                *[self.visit(union) for union in project.unions.values()],
                 *self._opaque_standard_type_classes(),
             ]
             return SemanticModule(
@@ -295,7 +286,7 @@ class CToIRConverter:
         finally:
             self.typedefs, self.structs, self.unions, self.enums, self.opaque_standard_types = previous
 
-    def visit_file(
+    def _visit_CFile(
         self,
         c_file: CFile,
         *,
@@ -311,15 +302,15 @@ class CToIRConverter:
         self.enums = enums or {enum.name: enum for enum in c_file.enums if enum.name}
         try:
             self.opaque_standard_types = set()
-            semantic_functions = [self.visit_function(function) for function in c_file.functions]
+            semantic_functions = [self.visit(function) for function in c_file.functions]
             semantic_variables = [
                 *[enumerator for enum in c_file.enums for enumerator in self._enum_constants_for_enum(enum)],
                 *self._macro_constants(c_file),
-                *[self.visit_variable(variable) for variable in c_file.variables],
+                *[self.visit(variable) for variable in c_file.variables],
             ]
             semantic_classes = [
-                *[self.visit_struct(struct) for struct in c_file.structs],
-                *[self.visit_union(union) for union in c_file.unions],
+                *[self.visit(struct) for struct in c_file.structs],
+                *[self.visit(union) for union in c_file.unions],
                 *self._opaque_standard_type_classes(),
             ]
             module = SemanticModule(
@@ -344,9 +335,9 @@ class CToIRConverter:
         finally:
             self.typedefs, self.structs, self.unions, self.enums = previous
 
-    def visit_function(self, function: CFunction) -> SemanticFunction:
+    def _visit_CFunction(self, function: CFunction) -> SemanticFunction:
         arguments = [
-            self.visit_parameter(parameter, position=index, owner=function.name)
+            self.visit(parameter, position=index, owner=function.name)
             for index, parameter in enumerate(function.parameters)
         ]
         metadata: dict[str, Any] = {
@@ -386,7 +377,6 @@ class CToIRConverter:
                     native_name=parameter.name or argument.name,
                     native_position=index,
                     python_position=index,
-                    intent=argument.intent,
                 )
                 for index, (parameter, argument) in enumerate(zip(function.parameters, arguments, strict=False))
             ],
@@ -401,7 +391,7 @@ class CToIRConverter:
             ),
         )
 
-    def visit_parameter(
+    def _visit_CParameter(
         self,
         parameter: CParameter,
         *,
@@ -410,7 +400,7 @@ class CToIRConverter:
     ) -> SemanticArgument:
         name = parameter.name or f"arg{position}"
         source_type = parameter.declared_type or parameter.type
-        semantic_type = self.visit_type(source_type, owner=f"{owner or '<function>'}.{name}")
+        semantic_type = self.visit(source_type, owner=f"{owner or '<function>'}.{name}", as_type=True)
         metadata: dict[str, Any] = {"native_position": position}
         blockers = []
         if parameter.callback_candidate:
@@ -421,7 +411,7 @@ class CToIRConverter:
                 blockers.append(
                     self._blocker(
                         "c_pointer_ownership_ambiguous",
-                        "Mutable C pointer parameters need explicit ownership, scalar-reference, or array policy.",
+                        "Mutable C pointer parameters need explicit ownership, scalar-storage, or array policy.",
                         {
                             "owner": f"{owner}.{name}" if owner else name,
                             "parameter": name,
@@ -429,14 +419,12 @@ class CToIRConverter:
                         },
                     )
                 )
-        intent = self._inferred_intent(semantic_type)
         if blockers:
             metadata["readiness_blockers"] = blockers
 
         return SemanticArgument(
             name=name,
             semantic_type=semantic_type,
-            intent=intent,
             metadata=metadata,
             origin=SemanticOrigin(
                 source_language="c",
@@ -448,7 +436,7 @@ class CToIRConverter:
             ),
         )
 
-    def visit_variable(
+    def _visit_CVariable(
         self,
         variable: CVariable,
         *,
@@ -456,7 +444,7 @@ class CToIRConverter:
         source_kind: str = "variable",
     ) -> SemanticVariable:
         name = variable.name or "<anonymous>"
-        semantic_type = self.visit_type(variable.type, owner=name)
+        semantic_type = self.visit(variable.type, owner=name, as_type=True)
         self._add_incomplete_by_value_blocker(semantic_type, owner=name)
         if variable.bit_width is not None:
             semantic_type.metadata.setdefault("readiness_blockers", []).append(
@@ -468,7 +456,7 @@ class CToIRConverter:
             )
         if variable.callback_candidate:
             semantic_type = self._callback_placeholder(variable.type)
-        binding = binding_cls(
+        return binding_cls(
             name=name,
             semantic_type=semantic_type,
             visibility="private" if "static" in variable.storage else "public",
@@ -482,10 +470,12 @@ class CToIRConverter:
                 metadata={"storage": list(variable.storage), "bit_width": variable.bit_width},
             ),
         )
-        binding.intent = self._inferred_intent(semantic_type)
-        return binding
 
-    def visit_struct(self, struct: CStruct) -> SemanticClass:
+    def _visit_CStruct(
+        self, struct: CStruct, *, as_type: bool = False, owner: str | None = None
+    ) -> SemanticClass | SemanticType:
+        if as_type:
+            return self._struct_type(struct, owner=owner)
         name = self._struct_name(struct)
         metadata: dict[str, Any] = {"c_kind": "struct", "incomplete": struct.is_incomplete}
         if struct.name is None:
@@ -509,7 +499,11 @@ class CToIRConverter:
             ),
         )
 
-    def visit_union(self, union: CUnion) -> SemanticClass:
+    def _visit_CUnion(
+        self, union: CUnion, *, as_type: bool = False, owner: str | None = None
+    ) -> SemanticClass | SemanticType:
+        if as_type:
+            return self._union_type(union, owner=owner)
         metadata: dict[str, Any] = {"c_kind": "union", "incomplete": union.is_incomplete}
         if union.name is None:
             metadata["c_anonymous"] = True
@@ -565,7 +559,7 @@ class CToIRConverter:
 
             if member.name is None:
                 continue
-            fields.append(self.visit_variable(member, binding_cls=SemanticField, source_kind="field"))
+            fields.append(self.visit(member, binding_cls=SemanticField, source_kind="field"))
 
         return fields, nested_classes
 
@@ -662,7 +656,7 @@ class CToIRConverter:
     ) -> SemanticField:
         if anonymous_member:
             semantic_type.constraints.append(SemanticConstraint("CAnonymousMember"))
-        binding = SemanticField(
+        return SemanticField(
             name=name,
             semantic_type=semantic_type,
             visibility="private" if "static" in member.storage else "public",
@@ -676,39 +670,45 @@ class CToIRConverter:
                 metadata={"storage": list(member.storage), "bit_width": member.bit_width},
             ),
         )
-        binding.intent = self._inferred_intent(semantic_type)
-        return binding
 
-    def visit_type(self, type_: CType, *, owner: str | None = None) -> SemanticType:
-        structural_type = self._structural_type(type_, owner=owner)
-        if structural_type is not None:
-            return structural_type
+    def _visit_CType(
+        self,
+        type_: CType,
+        *,
+        owner: str | None = None,
+        as_type: bool = False,
+    ) -> SemanticType:
+        """Convert arithmetic primitives through the explicit ABI type table."""
         return self._primitive_type(type_, owner=owner)
 
-    def _structural_type(self, type_: CType, *, owner: str | None) -> SemanticType | None:
-        """Convert non-primitive C types, leaving arithmetic types to the ABI mapper."""
-        if isinstance(type_, CComposedType):
-            return self._composed_type(type_, owner=owner)
-        if isinstance(type_, CTypedef):
-            return self._typedef_type(type_, owner=owner)
-        if isinstance(type_, CStruct):
-            return self._struct_type(type_, owner=owner)
-        if isinstance(type_, CUnion):
-            return self._union_type(type_, owner=owner)
-        if isinstance(type_, CEnum):
-            return self._enum_type(type_)
-        if isinstance(type_, CFunctionType):
-            return self._callback_placeholder(type_)
-        if isinstance(type_, CUnknownType):
-            return self._unresolved_type(type_.spelling, owner=owner, source_type=self._type_text(type_))
-        if isinstance(type_, CVoid):
-            return SemanticType(
-                name="Any",
-                dtype="Any",
-                metadata={"c_void_pointer_pointee": True},
-                origin=self._type_origin(type_),
-            )
-        return None
+    def _visit_CComposedType(self, type_: CComposedType, *, owner: str | None = None, **_context) -> SemanticType:
+        """Convert a composed declarator type."""
+        return self._composed_type(type_, owner=owner)
+
+    def _visit_CTypedef(self, type_: CTypedef, *, owner: str | None = None, **_context) -> SemanticType:
+        """Resolve and convert a typedef reference."""
+        return self._typedef_type(type_, owner=owner)
+
+    def _visit_CEnum(self, type_: CEnum, **_context) -> SemanticType:
+        """Convert an enum to its semantic integer representation."""
+        return self._enum_type(type_)
+
+    def _visit_CFunctionType(self, type_: CFunctionType, **_context) -> SemanticType:
+        """Convert a function type to a callback contract placeholder."""
+        return self._callback_placeholder(type_)
+
+    def _visit_CUnknownType(self, type_: CUnknownType, *, owner: str | None = None, **_context) -> SemanticType:
+        """Preserve an unresolved C spelling as a readiness blocker."""
+        return self._unresolved_type(type_.spelling, owner=owner, source_type=self._type_text(type_))
+
+    def _visit_CVoid(self, type_: CVoid, **_context) -> SemanticType:
+        """Represent void when it is used as a pointer pointee."""
+        return SemanticType(
+            name="Any",
+            dtype="Any",
+            metadata={"c_void_pointer_pointee": True},
+            origin=self._type_origin(type_),
+        )
 
     def _primitive_type(self, type_: CType, *, owner: str | None) -> SemanticType:
         """Convert one modeled C arithmetic primitive using target ABI facts."""
@@ -771,7 +771,7 @@ class CToIRConverter:
     def _return_type(self, type_: CType, *, owner: str) -> SemanticType | None:
         if isinstance(type_, CVoid):
             return None
-        semantic_type = self.visit_type(type_, owner=owner)
+        semantic_type = self.visit(type_, owner=owner, as_type=True)
         self._add_incomplete_by_value_blocker(semantic_type, owner=owner)
         return semantic_type
 
@@ -804,7 +804,7 @@ class CToIRConverter:
                     owner=owner,
                     source_type=self._type_text(type_),
                 )
-            element = self.visit_type(remaining[-1], owner=owner)
+            element = self.visit(remaining[-1], owner=owner, as_type=True)
             return self._array_type(element, leading_arrays, source_type=type_, owner=owner)
 
         leading_pointers = self._leading_components(components, CPointer)
@@ -818,7 +818,7 @@ class CToIRConverter:
                     source_type=self._type_text(type_),
                 )
             if self._has_component(remaining[:-1], CArray):
-                element = self.visit_type(remaining[-1], owner=owner)
+                element = self.visit(remaining[-1], owner=owner, as_type=True)
                 arrays = [component for component in remaining[:-1] if isinstance(component, CArray)]
                 semantic_type = self._array_type(element, arrays, source_type=type_, owner=owner)
                 semantic_type.storage = semantic_type.storage or SemanticStorageContract(kind="array")
@@ -832,11 +832,11 @@ class CToIRConverter:
                     owner=owner,
                     source_type=self._type_text(type_),
                 )
-            pointee = self.visit_type(remaining[0], owner=owner)
+            pointee = self.visit(remaining[0], owner=owner, as_type=True)
             return self._pointer_type(pointee, leading_pointers, pointee_type=remaining[0], source_type=type_)
 
         if len(components) == 1:
-            return self.visit_type(components[0], owner=owner)
+            return self.visit(components[0], owner=owner, as_type=True)
         return self._unsupported_type(
             "c_unsupported_composed_type",
             "This C declarator composition needs explicit semantic policy.",
@@ -847,11 +847,11 @@ class CToIRConverter:
     def _typedef_type(self, typedef: CTypedef, *, owner: str | None) -> SemanticType:
         resolved = self._resolve_typedef(typedef)
         if resolved is not None and resolved is not typedef:
-            semantic_type = self.visit_type(resolved.type or resolved, owner=owner)
+            semantic_type = self.visit(resolved.type or resolved, owner=owner, as_type=True)
             semantic_type.metadata.setdefault("c_typedefs", []).append(typedef.name)
             return semantic_type
         if typedef.type is not None:
-            semantic_type = self.visit_type(typedef.type, owner=owner)
+            semantic_type = self.visit(typedef.type, owner=owner, as_type=True)
             semantic_type.metadata.setdefault("c_typedefs", []).append(typedef.name)
             return semantic_type
 
@@ -927,7 +927,7 @@ class CToIRConverter:
                     "c_enum_type_fact_source": "compiler_probe",
                 },
             )
-        underlying_type = self.visit_type(CInt())
+        underlying_type = self.visit(CInt(), as_type=True)
         underlying_type.metadata["c_enum"] = enum.reference_name
         underlying_type.metadata["c_enum_underlying_assumption"] = "int"
         return underlying_type
@@ -1615,15 +1615,6 @@ class CToIRConverter:
         return any(isinstance(qualifier, qualifier_type) for qualifier in getattr(type_, "qualifiers", []))
 
     @staticmethod
-    def _inferred_intent(semantic_type: SemanticType) -> str:
-        storage = semantic_type.storage
-        if storage is None:
-            return "in"
-        if storage.kind in {"array", "reference", "pointer"} and not storage.read_only:
-            return "inout"
-        return "in"
-
-    @staticmethod
     def _ambiguous_pointer_argument(semantic_type: SemanticType) -> bool:
         storage = semantic_type.storage
         if storage is None or storage.kind not in {"reference", "pointer"}:
@@ -1722,7 +1713,7 @@ def c_type_to_semantic_type(
     *,
     standard_type_report: Any | None = None,
 ) -> SemanticType:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_type(type_)
+    return CToIRConverter(standard_type_report=standard_type_report).visit(type_, as_type=True)
 
 
 def c_parameter_to_semantic_argument(
@@ -1731,7 +1722,7 @@ def c_parameter_to_semantic_argument(
     position: int = 0,
     standard_type_report: Any | None = None,
 ) -> SemanticArgument:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_parameter(
+    return CToIRConverter(standard_type_report=standard_type_report).visit(
         parameter,
         position=position,
     )
@@ -1742,7 +1733,7 @@ def c_function_to_semantic_function(
     *,
     standard_type_report: Any | None = None,
 ) -> SemanticFunction:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_function(function)
+    return CToIRConverter(standard_type_report=standard_type_report).visit(function)
 
 
 def c_struct_to_semantic_class(
@@ -1750,7 +1741,7 @@ def c_struct_to_semantic_class(
     *,
     standard_type_report: Any | None = None,
 ) -> SemanticClass:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_struct(struct)
+    return CToIRConverter(standard_type_report=standard_type_report).visit(struct)
 
 
 def c_file_to_semantic_module(
@@ -1758,7 +1749,7 @@ def c_file_to_semantic_module(
     *,
     standard_type_report: Any | None = None,
 ) -> SemanticModule:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_file(parsed_file)
+    return CToIRConverter(standard_type_report=standard_type_report).visit(parsed_file)
 
 
 def c_file_to_semantic_modules(
@@ -1774,7 +1765,7 @@ def c_project_to_semantic_modules(
     *,
     standard_type_report: Any | None = None,
 ) -> list[SemanticModule]:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_project(project)
+    return CToIRConverter(standard_type_report=standard_type_report).visit(project)
 
 
 def c_project_to_semantic_module(
@@ -1783,7 +1774,7 @@ def c_project_to_semantic_module(
     name: str = "c_project",
     standard_type_report: Any | None = None,
 ) -> SemanticModule:
-    return CToIRConverter(standard_type_report=standard_type_report).visit_project_module(
+    return CToIRConverter(standard_type_report=standard_type_report).project_to_semantic_module(
         project,
         name=name,
     )

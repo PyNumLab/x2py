@@ -24,7 +24,7 @@ FINALIZER_CONTRACT = (
 )
 
 
-def test_same_array_concept_uses_native_wrapper_and_numpy_lifetimes(tmp_path: Path):
+def test_explicit_handle_ownership_uses_native_wrapper_and_result_lifetimes(tmp_path: Path):
     native_object = _compile_native_object(NATIVE_SOURCE, tmp_path / "native")
     result = build_pyi_extension(
         OWNERSHIP_CONTRACT,
@@ -37,34 +37,36 @@ def test_same_array_concept_uses_native_wrapper_and_numpy_lifetimes(tmp_path: Pa
     # Native-owned: releasing the NumPy view does not release module storage;
     # the explicit native operation remains responsible for deallocation.
     module.allocate_module_values(np.int32(3))
-    native_view = module.module_values
+    native_handle = module.module_values
+    native_view = native_handle.to_numpy()
     np.testing.assert_allclose(native_view, np.array([1.0, 2.0, 3.0], dtype=np.float64))
     del native_view
     gc.collect()
     assert module.module_values_sum() == np.float64(6.0)
     module.deallocate_module_values()
-    assert module.module_values is None
+    assert native_handle.allocated is False
 
     # Wrapper-owned: the borrowed field view retains the containing extension
     # object as its base until the view itself is released.
     owner = module.buffer()
     owner.allocate_values(np.int32(3))
-    wrapper_view = owner.values
-    assert wrapper_view.base is owner
+    wrapper_handle = owner.values
+    wrapper_view = wrapper_handle.to_numpy()
+    assert wrapper_handle.owner is owner
     del owner
     gc.collect()
     np.testing.assert_allclose(wrapper_view, np.array([1.0, 2.0, 3.0], dtype=np.float64))
-    retained_owner = wrapper_view.base
+    retained_owner = wrapper_handle.owner
     retained_owner.deallocate_values()
-    assert retained_owner.values is None
+    assert wrapper_handle.allocated is False
 
-    # Python-owned: native allocatable output is copied into a detached array.
-    # Python reference collection then owns the copy's release boundary.
-    python_copy = module.build_values(np.int32(4))
-    np.testing.assert_allclose(python_copy, np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
+    # Wrapper-owned result storage remains live through the handle and is
+    # released when that handle is collected.
+    result_handle = module.build_values(np.int32(4))
+    np.testing.assert_allclose(result_handle.to_numpy(), np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
     released: list[bool] = []
-    weakref.finalize(python_copy, released.append, True)
-    del python_copy
+    weakref.finalize(result_handle, released.append, True)
+    del result_handle
     gc.collect()
     assert released == [True]
 

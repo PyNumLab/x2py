@@ -1,3 +1,4 @@
+import gc
 import importlib
 import json
 import shutil
@@ -13,6 +14,7 @@ import pytest
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran.fmath_cases import fmath_cases
 from x2py import build_pyi_extension
+from x2py.runtime.handles import AllocatableArray
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WRAPPER_TEST_ROOT = Path(__file__).resolve().parent
@@ -322,8 +324,11 @@ def _assert_array_rejects_strided_views(module, function_name):
 def _assert_legacy_string_examples(module):
     assert module.char_code_default("A") == ord("A")
     assert module.char_code_star1(np.str_("B")) == ord("B")
-    assert module.string_len_star8("short") == 5
-    assert module.string_len_star8("too-long-value") == 8
+    assert module.string_len_star8("short   ") == 5
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_star8("short")
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_star8("too-long-value")
     assert module.string_len_assumed("variable length") == 15
     assert module.string_len_entity("python") == 6
     assert module.char_result_default() == "L"
@@ -337,10 +342,13 @@ def _assert_modern_string_examples(module):
     assert module.char_code_len1(np.str_("B")) == ord("B")
     assert module.char_code_kind1("C") == ord("C")
     assert module.char_code_c_char("D") == ord("D")
-    assert module.string_len_fixed("short") == 5
-    assert module.string_len_fixed("too-long-value") == 8
+    assert module.string_len_fixed("short   ") == 5
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_fixed("short")
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        module.string_len_fixed("too-long-value")
     assert module.string_len_assumed("variable length") == 15
-    assert module.string_len_c_char("c-char") == 6
+    assert module.string_len_c_char("c-char  ") == 6
     assert module.char_result_default() == "M"
     assert module.char_result_c_char() == "C"
     assert module.string_result_fixed() == "MODERN!!"
@@ -348,6 +356,9 @@ def _assert_modern_string_examples(module):
     assert module.string_result_c_char() == "C-CHAR!!"
     assert module.string_result_deferred("dynamic") == "dynamic-deferred"
     assert module.string_result_deferred("café") == "café-deferred"
+    labels = np.array([b"first", b"second"], dtype="S8")
+    assert module.fixed_array_extent(labels) == 16
+    assert module.rewrite_storage("abcdefgh") == "Ybcdefg?"
 
 
 def _assert_modern_class_examples(module):
@@ -367,32 +378,68 @@ def _assert_modern_class_examples(module):
 
     assert hasattr(module, "vector_store")
     store = module.vector_store()
-    assert store.values is None
-    assert store.matrix is None
+    values = store.values
+    matrix_values = store.matrix
+    assert isinstance(values, AllocatableArray)
+    assert isinstance(matrix_values, AllocatableArray)
+    assert values.owner is store
+    assert matrix_values.owner is store
+    assert values.allocated is False
+    assert matrix_values.allocated is False
+    assert values.to_numpy() is None
+    assert matrix_values.to_numpy() is None
 
-    with pytest.raises(AttributeError, match="reallocate"):
+    with pytest.raises(AttributeError):
         store.values = np.array([9.0], dtype=np.float64)
 
     store.allocate_values(np.int64(3))
-    store.values[:] = np.array([1.0, 2.0, 3.0], dtype=np.float64)
-    np.testing.assert_allclose(store.values, np.array([1.0, 2.0, 3.0]))
+    assert values.allocated is True
+    assert values.shape == (3,)
+    values_view = values.to_numpy()
+    values_view[:] = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    np.testing.assert_allclose(values.to_numpy(), np.array([1.0, 2.0, 3.0]))
 
     store.set_values(np.array([4.0, 5.0], dtype=np.float64))
-    np.testing.assert_allclose(store.values, np.array([4.0, 5.0]))
+    assert values.shape == (2,)
+    np.testing.assert_allclose(values.to_numpy(), np.array([4.0, 5.0]))
+
+    values.resize((4,))
+    assert values.allocated is True
+    assert values.shape == (4,)
+    resized_values = values.to_numpy()
+    resized_values[:] = np.array([6.0, 7.0, 8.0, 9.0], dtype=np.float64)
+    np.testing.assert_allclose(values.to_numpy(), resized_values)
+
+    values.deallocate()
+    assert values.allocated is False
+    assert values.shape is None
+    assert values.to_numpy() is None
+    store.set_values(np.array([4.0, 5.0], dtype=np.float64))
 
     matrix = np.asfortranarray(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float64))
     store.allocate_matrix(np.int64(2), np.int64(3))
-    store.matrix[:, :] = matrix
-    np.testing.assert_allclose(store.matrix, matrix)
-    assert store.matrix.flags.f_contiguous
+    assert matrix_values.shape == (2, 3)
+    matrix_view = matrix_values.to_numpy()
+    matrix_view[:, :] = matrix
+    np.testing.assert_allclose(matrix_values.to_numpy(), matrix)
+    assert matrix_view.flags.f_contiguous
 
     replacement = np.asfortranarray(matrix * 2.0)
     store.set_matrix(replacement)
-    np.testing.assert_allclose(store.matrix, replacement)
-    assert store.matrix.flags.f_contiguous
+    replacement_view = matrix_values.to_numpy()
+    np.testing.assert_allclose(replacement_view, replacement)
+    assert replacement_view.flags.f_contiguous
 
     with pytest.raises(TypeError, match=r"expected ordering \(F\)"):
         store.set_matrix(np.array(replacement, order="C"))
 
     made = module.vector_store.make(np.int64(4), np.float64(1.5))
-    np.testing.assert_allclose(made.values, np.full(4, 1.5, dtype=np.float64))
+    made_values = made.values
+    assert isinstance(made_values, AllocatableArray)
+    assert made_values.owner is made
+    np.testing.assert_allclose(made_values.to_numpy(), np.full(4, 1.5, dtype=np.float64))
+    made_owner_id = id(made)
+    del made
+    gc.collect()
+    assert id(made_values.owner) == made_owner_id
+    np.testing.assert_allclose(made_values.to_numpy(), np.full(4, 1.5, dtype=np.float64))

@@ -244,7 +244,7 @@ be exposed as a borrowed view whose base keeps that object alive.
 
 | Term | Meaning | Typical example |
 | --- | --- | --- |
-| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, pointer snapshots. |
+| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, pointer detached copies. |
 | Caller-owned | The caller supplied the Python object and retains ownership. | A NumPy array passed as `intent(in)`, `intent(out)`, or `intent(inout)`. |
 | Wrapper-owned | A Python extension object owns one native Fortran instance. | A wrapped derived-type result. |
 | Native-owned | Fortran or an external library owns storage independently of Python. | A module allocatable array or external-library buffer. |
@@ -577,7 +577,7 @@ Runtime tests: [`test_optional_arguments.py`](../tests/wrapper/fortran/feature_p
 
 The Python call does not expose Fortran ABI mechanics, but x2py preserves them.
 A scalar `value` dummy is passed as a C value; the same declaration without
-`value` remains a by-reference Fortran dummy.
+`value` remains an address-passed Fortran dummy.
 
 ```fortran
 integer(c_int) function add_one(n) bind(C, name="solver_add_one")
@@ -597,7 +597,7 @@ extension can call the existing symbol `solver_add_one` directly. The
 rename the Python function.
 
 Arrays, character buffers, derived types, optionals, outputs, pointers,
-allocatables, by-reference dummies, or any non-interoperable declaration retain
+allocatables, address-passed dummies, or any non-interoperable declaration retain
 a generated Fortran shim or produce a readiness diagnostic when no safe shim
 contract exists.
 
@@ -682,7 +682,7 @@ callee allocation, or nothing. x2py therefore supports a conservative subset:
 - associated pointer scalar results become copied Python scalars;
 - associated pointer array results become Python-owned snapshot copies;
 - unassociated results become `None`;
-- pointer-backed fields and module variables are snapshot-or-block; and
+- pointer-backed fields and module variables are detached-copy-or-block; and
 - pointer `intent(out)` and `intent(inout)` are blocked by default.
 
 ### Call-Local Input
@@ -879,7 +879,7 @@ C never guesses the memory layout of the type.
 
 ### Scalar Arguments And Results
 
-- `intent(in)` passes the existing native instance by reference without
+- `intent(in)` passes the existing native instance by address without
   transferring ownership;
 - `intent(inout)` mutates that existing instance;
 - hidden `intent(out)` produces a new wrapper-owned object; and
@@ -926,7 +926,7 @@ origin.x = 4.0          # valid: origin retains the parent owner
 ```
 
 Private components are omitted from Python descriptors. Allocatable fields use
-borrowed views. Pointer fields use snapshot-or-block policy; the containing
+borrowed views. Pointer fields use detached-copy-or-block policy; the containing
 object does not automatically own pointer targets. Arrays of derived types are
 blocked.
 
@@ -1085,7 +1085,7 @@ independent = view.copy()
 deallocate_values()      # invalidates the native storage behind view
 ```
 
-Pointer module variables use snapshot-or-block policy. Explicit `save` on a
+Pointer module variables use detached-copy-or-block policy. Explicit `save` on a
 public module variable does not change exposure because module storage already
 has module lifetime. Procedure-local `save` variables remain internal.
 
@@ -1161,10 +1161,10 @@ end subroutine edit_name
 ```
 
 ```python
-original = "alpha"
+original = "alpha   "
 replacement = edit_name(original)
 
-assert original == "alpha"       # Python str is immutable
+assert original == "alpha   "    # Python str is immutable
 assert replacement.startswith("X")
 ```
 
@@ -1175,10 +1175,10 @@ other scalar output.
 ### Length, Encoding, And NUL Rules
 
 Python input uses CPython's UTF-8 bytes at the ABI boundary. For a fixed-length
-dummy, longer input is truncated to the declared byte length and shorter input
-is blank-padded. The returned Python value reflects the complete post-call
-Fortran buffer, including trailing blanks. An assumed-length `intent(inout)`
-dummy uses the encoded input byte length.
+dummy, the encoded input length must exactly match the declared byte length;
+x2py does not pad or truncate the public value. The returned Python value
+reflects the complete post-call Fortran buffer, including trailing blanks. An
+assumed-length `intent(inout)` dummy uses the encoded input byte length.
 
 ```fortran
 character(len=8) function label()

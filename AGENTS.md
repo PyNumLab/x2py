@@ -17,6 +17,20 @@ When updating tests, remove obsolete tests that only assert removed/old implemen
 
 Before `x2py/semantics/ir2ast.py` runs, the post-IR policy stage must have completed every semantic decision needed by wrapper generation, including object kind, ownership, transfer, destruction, mutability/writeback, nullability, output projection, release responsibility, contract-value storage mode (`stack`, `heap`, or `alias`), getter behavior, native setter assignment, and Python setter exposure. Bridge and binding generators may only dispatch from those completed decisions into small named implementation methods. They must not infer or override semantic policy from datatype, `intent`, dotted-variable shape, `is_alias`, or local memory checks, and they must not contain a fallback that silently chooses a different behavior. When such a decision is found in bridge or binding code, remove it there and move it into post-IR policy completion. Backend-local helper temporaries may still be created inside the selected implementation method because they are emitted-code details, not semantic policy.
 
+After every implementation task, the final summary must include a breakdown of
+the stages that actually changed. Relevant stages include parsing, semantic IR
+construction, post-IR policy completion, IR-to-AST/lowering, binding
+generation, bridge generation, compilation/build integration, and
+documentation. For each changed stage, state what behavior or representation
+changed there. Do not include unchanged stages or empty stage headings. Also
+identify the tests that were added or updated, where they live, what behavior
+they cover, and the relevant verification results. When the implementation
+reused or improved an existing code path, name that path and explain how it was
+reused or changed. The stage breakdown is a required part of the summary, not a
+restriction on the rest of it: add any relevant cross-cutting outcomes,
+decisions, risks, limitations, verification gaps, or handoff details outside
+the stage breakdown when they help explain the implementation.
+
 Changes in `x2py/semantics/ir2ast.py`, `x2py/codegen/`, and `x2py/compiling/` are separated from the rest of the project. For modifications limited to those areas, run only `tests/wrapper` tests unless a broader test run is explicitly requested.
 Do not run LAPACK wrapper tests locally unless the user explicitly asks for them. Local verification may run everything else, including BLAS-only real-library tests; leave LAPACK coverage to GitHub Actions by default.
 Do not run the full coverage workflow for routine changes. Run focused tests plus the required static-analysis suite. Reserve the complete CI-style coverage workflow for explicit pre-merge or pull-request verification, or when the user specifically requests it.
@@ -25,7 +39,7 @@ For documentation-only changes that do not modify executable Python code,
 runtime behavior, build configuration, or test logic, do not run the complete
 static-analysis suite by default. Run the focused documentation checks and
 whitespace check instead:
-- `python3 -m pytest -q tests/tools/test_documentation_examples.py tests/tools/test_documentation_structure.py`
+- `python3 -m pytest -q tests/docs/test_examples.py tests/docs/test_structure.py`
 - `git diff --check`
 Run the complete static-analysis suite when code, tests, build behavior, or
 tooling configuration changes, or when explicitly requested for pre-merge or

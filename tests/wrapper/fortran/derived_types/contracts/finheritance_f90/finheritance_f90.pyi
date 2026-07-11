@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Arg, Float64, Pass, Polymorphic, bind, native_call
+
 class base_shape:
     def __init__(
         self,
@@ -11,10 +13,10 @@ class base_shape:
     def area(self) -> Float64: ...
 
     @bind("base_set_size")
-    @native_call([Pass(), Ref(Arg(0))])
+    @native_call([Pass(), Addr(Arg(0))])
     def set_size(
         self,
-        value: Const(Float64)
+        value: Float64
     ) -> None: ...
 
 class circle(base_shape):
@@ -42,23 +44,23 @@ class box(base_shape):
     def area(self) -> Float64: ...
 
 def base_area(
-    self: Annotated[Ref(Const(base_shape)), Polymorphic]
+    self: Annotated[base_shape, Polymorphic]
 ) -> Float64: ...
 
-@native_call([Arg(0), Ref(Arg(1))])
+@native_call([Arg(0), Addr(Arg(1))])
 def base_set_size(
-    self: Annotated[Ref(base_shape), Polymorphic],
-    value: Const(Float64)
+    self: Annotated[base_shape, Polymorphic],
+    value: Float64
 ) -> None: ...
 
 def circle_area(
-    self: Annotated[Ref(Const(circle)), Polymorphic]
+    self: Annotated[circle, Polymorphic]
 ) -> Float64: ...
 
 def box_area(
-    self: Annotated[Ref(Const(box)), Polymorphic]
+    self: Annotated[box, Polymorphic]
 ) -> Float64: ...
 
 def describe_shape(
-    item: Annotated[Ref(Const(base_shape)), Polymorphic]
+    item: Annotated[base_shape, Polymorphic]
 ) -> Float64: ...

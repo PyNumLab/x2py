@@ -1,6 +1,8 @@
+from x2py.contracts import Addr, Arg, Int32, external, native_call
+
 @external
-@native_call([Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def optional_scale(
-    base: Const(Int32),
-    factor: Const(Int32) = ...
+    base: Int32,
+    factor: Int32 = ...
 ) -> Int32: ...

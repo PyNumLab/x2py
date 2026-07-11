@@ -274,7 +274,6 @@ class FortranVariable:
 @dataclass
 class FortranArgument(FortranVariable):
     procedure: str | None = None
-    intent: str = "unknown"
     optional: bool = False
     pass_by_value: bool = False
     allocatable: bool = False
@@ -288,6 +287,34 @@ class FortranArgument(FortranVariable):
     @contiguous.setter
     def contiguous(self, value: bool) -> None:
         self._contiguous = bool(value)
+
+    @property
+    def intent(self) -> str | None:
+        """Exact Fortran INTENT attribute on this dummy argument, when present."""
+        value = getattr(self, "_intent", None)
+        return None if value is None else str(value)
+
+    @intent.setter
+    def intent(self, value: str | None) -> None:
+        self._intent = None if value is None else re.sub(r"\s+", "", str(value).lower())
+
+    @property
+    def reads_argument(self) -> bool | None:
+        value = getattr(self, "_reads_argument", None)
+        return None if value is None else bool(value)
+
+    @reads_argument.setter
+    def reads_argument(self, value: bool | None) -> None:
+        self._reads_argument = None if value is None else bool(value)
+
+    @property
+    def writes_argument(self) -> bool | None:
+        value = getattr(self, "_writes_argument", None)
+        return None if value is None else bool(value)
+
+    @writes_argument.setter
+    def writes_argument(self, value: bool | None) -> None:
+        self._writes_argument = None if value is None else bool(value)
 
 
 @dataclass(eq=False)

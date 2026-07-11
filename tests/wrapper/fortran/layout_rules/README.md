@@ -1,7 +1,8 @@
 # Layout Rules
 
 Scope: wrapper test layout, documentation routing, checklist coverage, fixture
-data routing, stale-path rejection, and codegen organization policy.
+data routing, and stale-path rejection. Repository dependency and codegen
+organization policy lives in `tests/architecture/`.
 
 Focused pytest command: `python3 -m pytest -q tests/wrapper/fortran/layout_rules`
 
@@ -14,4 +15,4 @@ subject's `contracts/<case>/` tree.
 Roadmap items: Stage 1 layout guard, checklist coverage, and source-data
 routing.
 
-Tests: `test_codegen_structure.py`, `test_wrapper_guide_layout.py`.
+Tests: `test_wrapper_guide_layout.py`.

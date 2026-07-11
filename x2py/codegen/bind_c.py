@@ -36,8 +36,12 @@ __all__ = (
     "BindCModule",
     "BindCModuleConstant",
     "BindCModuleVariable",
+    "BindCNativeArrayDescriptorType",
+    "BindCNativeArrayHandleProperty",
+    "BindCNativeArrayHandleVariable",
     "BindCPointer",
     "BindCResultTupleType",
+    "BindCScalarDescriptorType",
     "BindCScalarModuleVariable",
     "BindCSizeOf",
     "BindCVariable",
@@ -46,6 +50,7 @@ __all__ = (
     "DeallocatePointer",
     "FortranTransfer",
     "c_malloc",
+    "native_array_descriptor_argument_type",
 )
 
 # =======================================================================================
@@ -191,6 +196,129 @@ class BindCArrayType(Type, TupleType):
 
     def __iter__(self):
         return iter(self._element_types)
+
+
+class BindCScalarDescriptorType(Type, TupleType):
+    """Two-pointer C descriptor for nullable optional scalar dummies."""
+
+    __slots__ = ()
+    _name = "BindCScalarDescriptorType"
+    _element_types = (BindCPointer(), BindCPointer())
+
+    @property
+    def element_types(self):
+        """Types of the value pointer and supplied/present token fields."""
+        return self._element_types
+
+    @property
+    def container_rank(self):
+        """Rank of the packed descriptor itself."""
+        return 1
+
+    @property
+    def rank(self):
+        """Rank of the packed descriptor itself."""
+        return 1
+
+    @property
+    def order(self):
+        """Memory order is not applicable to the packed descriptor."""
+        return None
+
+    @property
+    def datatype(self):
+        """The descriptor is heterogeneous, so its datatype is the descriptor itself."""
+        return self
+
+    def shape_is_compatible(self, shape):
+        """Return whether ``shape`` has one entry with the descriptor field count."""
+        return isinstance(shape, tuple) and len(shape) == 1 and shape[0] == len(self)
+
+    def __getitem__(self, index):
+        return self._element_types[index]
+
+    def __len__(self):
+        return len(self._element_types)
+
+    def __iter__(self):
+        return iter(self._element_types)
+
+
+class BindCNativeArrayDescriptorType(Type, TupleType):
+    """C descriptor-pointer tuple for native array handle dummy arguments."""
+
+    __slots__ = ("_element_types", "_has_presence")
+    _name = "BindCNativeArrayDescriptorType"
+
+    @classmethod
+    def get_new(cls, *, has_presence=False):
+        """Return the descriptor tuple shape for required or optional handles."""
+        if not isinstance(has_presence, bool):
+            raise TypeError("has_presence must be a boolean")
+        return cls._get_new(has_presence)
+
+    @classmethod
+    @cache
+    def _get_new(cls, has_presence):
+        element_types = (BindCPointer(), BindCPointer()) if has_presence else (BindCPointer(),)
+
+        def __init__(self):
+            self._has_presence = has_presence
+            self._element_types = element_types
+            Type.__init__(self)
+
+        name = "BindCNativeArrayDescriptorType"
+        if has_presence:
+            name += "_present"
+        return type(name, (BindCNativeArrayDescriptorType,), {"__init__": __init__})()
+
+    @property
+    def has_presence(self):
+        """Whether the tuple includes an optional-dummy presence token."""
+        return self._has_presence
+
+    @property
+    def element_types(self):
+        """Types of the descriptor pointer and optional presence fields."""
+        return self._element_types
+
+    @property
+    def container_rank(self):
+        """Rank of the packed descriptor itself."""
+        return 1
+
+    @property
+    def rank(self):
+        """Rank of the packed descriptor itself."""
+        return 1
+
+    @property
+    def order(self):
+        """Memory order is not applicable to the packed descriptor."""
+        return None
+
+    @property
+    def datatype(self):
+        """The descriptor is heterogeneous, so its datatype is the descriptor itself."""
+        return self
+
+    def shape_is_compatible(self, shape):
+        """Return whether ``shape`` has one entry with the descriptor field count."""
+        return isinstance(shape, tuple) and len(shape) == 1 and shape[0] == len(self)
+
+    def __getitem__(self, index):
+        return self._element_types[index]
+
+    def __len__(self):
+        return len(self._element_types)
+
+    def __iter__(self):
+        return iter(self._element_types)
+
+
+def native_array_descriptor_argument_type(policy):
+    """Return the Bind-C tuple shape selected for a native array descriptor argument."""
+    return BindCNativeArrayDescriptorType.get_new(has_presence=bool(policy.optional_absent))
 
 
 class BindCResultTupleType(Type, TupleType):
@@ -410,7 +538,12 @@ class BindCModule(Module):
     """
 
     __slots__ = ("_orig_mod", "_removed_functions", "_variable_wrappers")
-    _attribute_nodes = (*Module._attribute_nodes, "_orig_mod", "_variable_wrappers", "_removed_functions")
+    _attribute_nodes = (
+        *Module._attribute_nodes,
+        "_orig_mod",
+        "_variable_wrappers",
+        "_removed_functions",
+    )
 
     def __init__(
         self,
@@ -592,6 +725,115 @@ class BindCArrayVariable(Variable):
 # =======================================================================================
 
 
+class BindCNativeArrayHandleVariable(Variable):
+    """
+    Generated operation wrappers for a borrowed native array handle module variable.
+    """
+
+    __slots__ = ("_operation_function_items", "_original_variable")
+    _attribute_nodes = ("_original_variable",)
+
+    def __init__(self, *args, operation_functions, original_variable, **kwargs):
+        items = operation_functions.items() if hasattr(operation_functions, "items") else operation_functions
+        self._operation_function_items = tuple((str(name), function) for name, function in items)
+        self._original_variable = original_variable
+        super().__init__(*args, **kwargs)
+
+    @property
+    def operation_functions(self):
+        """Generated native operations used by the runtime handle object."""
+        return dict(self._operation_function_items)
+
+    @property
+    def operation_function_items(self):
+        """Generated native operation functions paired with their runtime operation names."""
+        return self._operation_function_items
+
+    @property
+    def original_variable(self):
+        """Original module variable exposed as a borrowed runtime handle."""
+        return self._original_variable
+
+
+# =======================================================================================
+
+
+class BindCNativeArrayHandleProperty:
+    """Generated operation methods for a borrowed native-array field handle."""
+
+    __slots__ = (
+        "_class_type",
+        "_native_array_handle_policy",
+        "_operation_function_items",
+        "_original_variable",
+        "_owner_class",
+        "_python_name",
+    )
+    _attribute_nodes = ("_original_variable",)
+
+    def __init__(
+        self,
+        python_name,
+        *,
+        class_type,
+        operation_functions,
+        original_variable,
+        owner_class,
+        native_array_handle_policy,
+    ):
+        items = operation_functions.items() if hasattr(operation_functions, "items") else operation_functions
+        self._python_name = str(python_name)
+        self._class_type = class_type
+        self._operation_function_items = tuple((str(name), function) for name, function in items)
+        self._original_variable = original_variable
+        self._owner_class = owner_class
+        self._native_array_handle_policy = native_array_handle_policy
+        init_model_object(self)
+
+    @property
+    def name(self):
+        return self._original_variable.name
+
+    @property
+    def python_name(self):
+        return self._python_name
+
+    @property
+    def class_type(self):
+        return self._class_type
+
+    @property
+    def dtype(self):
+        return self._original_variable.dtype
+
+    @property
+    def rank(self):
+        return self._original_variable.rank
+
+    @property
+    def operation_functions(self):
+        return dict(self._operation_function_items)
+
+    @property
+    def operation_function_items(self):
+        return self._operation_function_items
+
+    @property
+    def original_variable(self):
+        return self._original_variable
+
+    @property
+    def owner_class(self):
+        return self._owner_class
+
+    @property
+    def native_array_handle_policy(self):
+        return self._native_array_handle_policy
+
+
+# =======================================================================================
+
+
 class BindCClassProperty:
     """
     A class which wraps a class attribute.
@@ -747,6 +989,11 @@ class BindCClassDef(ClassDef):
         Get the wrapper for `__new__` which allocates the memory for the class instance.
         """
         return self._new_func
+
+    @property
+    def original_class(self):
+        """Return the source class wrapped by this Bind-C class."""
+        return self._original_class
 
 
 # =======================================================================================
@@ -949,6 +1196,8 @@ c_malloc = FunctionDef(
 
 for _model_cls in (
     BindCClassProperty,
+    BindCNativeArrayHandleProperty,
+    BindCNativeArrayHandleVariable,
     CLocFunc,
     C_F_Pointer,
     C_NULL_CHAR,

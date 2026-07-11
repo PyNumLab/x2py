@@ -28,10 +28,10 @@ readiness. Those decisions happen before generated sources reach this package.
 
 ## Tests And Docs
 
-- Wrapper guide: `docs/user-guide/fortran-wrapper.md`
-- Build-system docs: `docs/developer-guide/build-system.md`
-- Quality and static checks: `docs/developer-guide/quality-assurance.md`
-- Source navigation: `docs/developer-guide/source-map.md`, `docs/developer-guide/feature-to-code-map.md`
-- Pipeline map: `docs/internal-architecture/pipeline-map.md`
+- Wrapper guide: `docs/user/guide/fortran-wrapper.md`
+- Build-system docs: `docs/developer/build-system.md`
+- Quality and static checks: `docs/developer/quality-assurance.md`
+- Source navigation: `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`
+- Pipeline map: `docs/maintainer/internal-architecture/pipeline-map.md`
 - Build-mode tests: `tests/wrapper/fortran/test_build_modes.py`
 - Runtime ABI tests: `tests/wrapper/fortran/test_runtime_abi.py`

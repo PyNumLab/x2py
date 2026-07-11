@@ -1,4 +1,7 @@
+from x2py.contracts import Addr, Arg, Int32, external, native_call
+
 @external
+@native_call([Addr(Arg(0))])
 def add_one(
-    value: Ref(Int32)
+    value: Int32
 ) -> Int32: ...

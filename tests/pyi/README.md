@@ -16,5 +16,5 @@ Explicit package fixtures can be refreshed after a reviewed contract-format
 change with:
 
 ```bash
-WRAPPER_UPDATE_PYI_FIXTURES=1 python3 -m pytest -q tests/pyi/test_contract_package_generation.py
+WRAPPER_UPDATE_PYI_FIXTURES=1 python3 -m pytest -q tests/pipeline/pyi_builds/test_contract_package_generation.py
 ```

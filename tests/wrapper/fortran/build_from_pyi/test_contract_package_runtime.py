@@ -192,7 +192,7 @@ def test_recursive_graph_preserves_module_and_symbol_aliases_and_ignores_support
     nested.mkdir(parents=True)
     entry.write_text(
         "from types import SimpleNamespace\n"
-        "from typing import Callable\n"
+        "from x2py.contracts import Callable\n"
         "from . import facade as m2\n"
         "from .m1 import func as f\n",
         encoding="utf-8",

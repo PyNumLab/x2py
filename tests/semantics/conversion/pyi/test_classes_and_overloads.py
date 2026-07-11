@@ -1,0 +1,598 @@
+"""Tests split by stable ownership concept from `test_python_ast_contracts.py`."""
+
+from tests._shared.pyi_conversion_support import (
+    BIND_TARGET_METADATA,
+    CPythonBindingGenerator,
+    PROJECTED_OUTPUT_METADATA,
+    SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
+    Scope,
+    USER_PRIVATE_METADATA,
+    asdict,
+    emit_module,
+    parse_pyi_text,
+    pytest,
+    re,
+    semantic_ir_to_codegen_ast,
+)
+
+
+def test_convert_pyi_to_ir_rejects_enum_classes():
+    source = """class status(Enum[Int]):
+    pass
+"""
+
+    with pytest.raises(ValueError, match=r"Enum declarations are not supported"):
+        parse_pyi_text(source, module_name="status_api")
+
+
+def test_convert_pyi_to_ir_class_body_visibility_and_native_call():
+    module = parse_pyi_text(
+        """
+class wrapper:
+    pass
+
+class particle:
+    @private
+    @native_call([Pass()])
+    def reset(self) -> Int32: ...
+""",
+        module_name="edited",
+    )
+
+    empty_cls, particle_cls = module.classes
+    assert empty_cls.name == "wrapper"
+    assert particle_cls.methods[0].name == "reset"
+    assert particle_cls.methods[0].native_name == "reset"
+    assert particle_cls.methods[0].visibility == "private"
+    assert particle_cls.methods[0].origin.metadata[USER_PRIVATE_METADATA] is True
+    assert [arg.name for arg in particle_cls.methods[0].arguments] == ["self"]
+    assert particle_cls.methods[0].return_type.name == "Int32"
+    assert asdict(particle_cls.methods[0].projection[0]) == {
+        "python_name": "self",
+        "native_name": "self",
+        "native_position": 0,
+        "python_position": 0,
+        "result_position": None,
+        "value_kind": None,
+        "value": None,
+    }
+    emitted = emit_module(module)
+    assert "    @private\n    def reset(self) -> Int32: ..." in emitted
+    reparsed = parse_pyi_text(emitted, module_name="edited")
+    assert reparsed.classes[1].methods[0].visibility == "private"
+    assert reparsed.classes[1].methods[0].origin.metadata[USER_PRIVATE_METADATA] is True
+    assert emit_module(reparsed) == emitted
+
+
+def test_convert_pyi_to_ir_distinguishes_generated_and_linked_constructors():
+    generated = parse_pyi_text(
+        """
+class state:
+    def __init__(
+        self,
+        *,
+        id: Int32 = 7,
+        scale: Float64 = 2.5
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="generated",
+    )
+
+    generated_cls = generated.classes[0]
+    assert generated_cls.origin.source_language == "fortran"
+    assert generated_cls.methods == []
+
+    linked = parse_pyi_text(
+        """
+@private
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
+def init_state(
+    self: state,
+    seed: Int32,
+    scale: Float64 = ...
+) -> None: ...
+
+class state:
+    def __init__(
+        self,
+        *,
+        id: Int32 = 7,
+        scale: Float64 = 2.5
+    ) -> None: ...
+
+    @overload("init_state")
+    def __init__(
+        self,
+        seed: Int32,
+        scale: Float64 = ...
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="edited",
+    )
+
+    linked_cls = linked.classes[0]
+    assert linked_cls.origin.source_language == "fortran"
+    assert linked_cls.methods == []
+    assert [overload.name for overload in linked_cls.overload_sets] == ["__init__"]
+    init = linked_cls.overload_sets[0].procedures[0]
+    assert init.name == "init_state"
+    assert init.metadata["overload_target"] == "init_state"
+    assert init.metadata["overload_kind"] == "constructor"
+    assert init.metadata["python_method_name"] == "__init__"
+    assert init.metadata["python_bound_position"] == 0
+    assert [arg.name for arg in init.arguments] == ["self", "seed", "scale"]
+    assert [arg.optional for arg in init.arguments] == [False, False, True]
+
+    emitted = emit_module(linked)
+    assert "def __init__(\n        self,\n        *,\n        id: Int32 = 7," in emitted
+    assert '    @overload("init_state")\n    def __init__(' in emitted
+    assert '    @overload("init_state")\n    @native_call' not in emitted
+    assert parse_pyi_text(emitted, module_name="edited") == linked
+
+    with pytest.raises(ValueError, match="Constructor overload dispatch is not mapped"):
+        semantic_ir_to_codegen_ast(
+            linked,
+            Scope(name=linked.name, scope_type="module"),
+        )
+
+
+def test_convert_pyi_to_ir_removed_constructor_suppresses_keyword_initializer():
+    module = parse_pyi_text(
+        """
+class state:
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert cls.origin.source_language is None
+    assert cls.origin.metadata[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert "def __init__" not in emit_module(module)
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+    codegen_cls = codegen_module.classes[0]
+    assert codegen_cls.decorators[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
+
+
+def test_convert_pyi_to_ir_self_only_generated_constructor_keeps_default_initializer():
+    module = parse_pyi_text(
+        """
+class state:
+    def __init__(self) -> None: ...
+
+    values: Allocatable[Float64[:]]
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert cls.origin.source_language == "fortran"
+    assert SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA not in cls.origin.metadata
+    assert cls.methods == []
+    assert "    def __init__(self) -> None: ..." in emit_module(module)
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+    codegen_cls = codegen_module.classes[0]
+    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is False
+
+
+def test_convert_pyi_to_ir_bound_constructor_replaces_generated_keyword_initializer():
+    module = parse_pyi_text(
+        """
+class state:
+    @private
+    def init_state(
+        self,
+        seed: Addr(Int32),
+        scale: Addr(Float64) = ...
+    ) -> None: ...
+
+    @bind("init_state")
+    def __init__(
+        self,
+        seed: Addr(Int32),
+        scale: Addr(Float64) = ...
+    ) -> None: ...
+
+    id: Int32 = 7
+    scale: Float64 = 2.5
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert cls.origin.metadata[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert [method.name for method in cls.methods] == ["init_state", "__init__"]
+    target = cls.methods[0]
+    assert target.visibility == "private"
+    init = cls.methods[1]
+    assert init.native_name == "init_state"
+    assert init.metadata[BIND_TARGET_METADATA] == "init_state"
+    assert [arg.name for arg in init.arguments] == ["seed", "scale"]
+
+    emitted = emit_module(module)
+    assert "    @private\n    def init_state(" in emitted
+    assert '    @bind("init_state")\n    def __init__(' in emitted
+    assert "def __init__(\n        self,\n        *," not in emitted
+    assert parse_pyi_text(emitted, module_name="edited") == module
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+    codegen_cls = codegen_module.classes[0]
+    assert codegen_cls.decorators[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
+    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
+    codegen_init = next(
+        method for method in codegen_cls.methods if codegen_cls.scope.get_python_name(method.name) == "__init__"
+    )
+    assert codegen_cls.scope.get_python_name(codegen_init.name) == "__init__"
+    assert codegen_init.arguments[0].bound_argument is True
+    assert codegen_init.arguments[0].bound_argument_position == 0
+    assert [str(arg.name) for arg in codegen_init.arguments[1:]] == ["seed", "scale"]
+
+
+def test_convert_pyi_to_ir_bound_constructor_allows_public_target_method():
+    module = parse_pyi_text(
+        """
+class state:
+    def init_state(self, seed: Int32) -> None: ...
+
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+        module_name="edited",
+    )
+
+    cls = module.classes[0]
+    assert [(method.name, method.visibility) for method in cls.methods] == [
+        ("init_state", "public"),
+        ("__init__", "public"),
+    ]
+    emitted = emit_module(module)
+    assert "    def init_state(" in emitted
+    assert '    @bind("init_state")\n    def __init__(' in emitted
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        (
+            """
+class state:
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            'Non-generated __init__ declarations must use @bind("specific_name")',
+        ),
+        (
+            """
+class state:
+    def __init__(self, *, id: Int32 = 7) -> None: ...
+
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            "Direct constructor bindings replace the generated field constructor",
+        ),
+        (
+            """
+class state:
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            "Bound constructor references missing class method 'init_state'",
+        ),
+        (
+            """
+class state:
+    def init_state(self, seed: Int32, scale: Float64) -> None: ...
+
+    @bind("init_state")
+    def __init__(self, seed: Int32) -> None: ...
+""",
+            "Bound constructor declaration is incompatible with class method 'init_state'",
+        ),
+    ],
+)
+def test_convert_pyi_to_ir_rejects_ambiguous_constructor_declarations(source: str, message: str):
+    with pytest.raises(ValueError, match=re.escape(message)):
+        parse_pyi_text(source, module_name="edited")
+
+
+def test_convert_pyi_to_ir_applies_decorators_after_native_call():
+    module = parse_pyi_text(
+        """
+@native_call([])
+@private
+def hidden() -> None: ...
+""",
+        module_name="edited",
+    )
+
+    assert module.functions[0].visibility == "private"
+
+
+def test_convert_pyi_to_ir_resolves_x2py_overload_by_explicit_specific_name():
+    module = parse_pyi_text(
+        """
+def convert_integer(value: Int32) -> Int32: ...
+
+@overload("convert_integer")
+def convert(value: Int32) -> Int32: ...
+""",
+        module_name="generic_mod",
+    )
+
+    assert [function.name for function in module.functions] == ["convert_integer"]
+    assert [(item.name, [procedure.name for procedure in item.procedures]) for item in module.overload_sets] == [
+        ("convert", ["convert_integer"])
+    ]
+    assert module.overload_sets[0].procedures[0].metadata["overload_target"] == "convert_integer"
+
+
+def test_convert_pyi_to_ir_renames_module_generic_and_round_trips_native_name():
+    module = parse_pyi_text(
+        """
+@bind("convert")
+def convert_integer(value: Int32) -> Int32: ...
+
+@overload("convert_integer", generic="convert")
+def convert_number(value: Int32) -> Int32: ...
+""",
+        module_name="generic_mod",
+    )
+
+    overload = module.overload_sets[0]
+    assert overload.name == "convert_number"
+    assert overload.procedures[0].metadata["fortran_generic_name"] == "convert"
+    emitted = emit_module(module)
+    assert '@overload("convert_integer", generic="convert")' in emitted
+
+
+@pytest.mark.parametrize(
+    ("source", "message"),
+    [
+        (
+            "@overload\ndef convert(value: Int32) -> Int32: ...\n",
+            "overload expects one specific procedure name",
+        ),
+        (
+            "from typing import overload\n",
+            "typing.overload is not supported",
+        ),
+        (
+            """
+def compare(left: item, right: item) -> Bool: ...
+class item:
+    @overload("compare", generic="operator(.eqv.)")
+    def __add__(self, right: item) -> Bool: ...
+""",
+            "generic 'operator\\(\\.eqv\\.\\)' is incompatible with method '__add__'",
+        ),
+        (
+            '@overload("missing")\ndef convert(value: Int32) -> Int32: ...\n',
+            "missing specific procedure 'missing'",
+        ),
+        (
+            """
+def convert_integer(value: Int32) -> Int32: ...
+def convert_integer(value: Int32) -> Int32: ...
+@overload("convert_integer")
+def convert(value: Int32) -> Int32: ...
+""",
+            "target 'convert_integer' is ambiguous",
+        ),
+        (
+            """
+def convert_integer(value: Int32) -> Int32: ...
+@overload("convert_integer")
+def convert(value: Float64) -> Int32: ...
+""",
+            "declaration 'convert' is incompatible",
+        ),
+        (
+            """
+def convert_integer(value: Int32) -> Int32: ...
+@overload("convert_integer")
+def convert(value: Int32) -> Int32: ...
+@overload("convert_integer")
+def convert(value: Int32) -> Int32: ...
+""",
+            "references specific procedure 'convert_integer' more than once",
+        ),
+        (
+            """
+def convert_integer(value: Int32) -> Int32: ...
+@overload("convert_integer")
+@native_call([Addr(Arg(0))])
+def convert(value: Int32) -> Int32: ...
+""",
+            "overload cannot be combined with native_call",
+        ),
+        (
+            """
+def set_integer(self: item, value: Int32) -> None: ...
+class item:
+    @overload("set_integer")
+    @native_call([Pass(), Addr(Arg(0))])
+    def set(self, value: Int32) -> None: ...
+""",
+            "overload cannot be combined with native_call",
+        ),
+    ],
+)
+def test_convert_pyi_to_ir_rejects_invalid_x2py_overload_links(source: str, message: str):
+    with pytest.raises(ValueError, match=message):
+        parse_pyi_text(source, module_name="generic_mod")
+
+
+def test_identity_returns_reconstruct_native_projection_without_decorator():
+    source = """
+def fill(values: Float64[3]) -> Returns["values", Float64[3]]: ...
+"""
+    module = parse_pyi_text(source, module_name="identity_returns")
+    function = module.functions[0]
+
+    assert len(function.projection) == 1
+    assert function.projection[0].native_position == 0
+    assert function.projection[0].python_position == 0
+    assert function.projection[0].result_position == 0
+    assert (
+        emit_module(module)
+        .strip()
+        .endswith('def fill(\n    values: Float64[3]\n) -> Returns["values", Float64[3]]: ...')
+    )
+
+
+def test_compact_assignment_overload_projects_visible_destination_without_direction_label():
+    from_pyi = parse_pyi_text(
+        """
+class vector:
+    value: Float64
+
+    @overload("assign_vector_real")
+    def assign(
+        self,
+        right: Float64
+    ) -> vector: ...
+
+@private
+@native_call([Arg(0), Addr(Arg(1))])
+def assign_vector_real(
+    left: vector,
+    right: Float64
+) -> Returns["left", vector]: ...
+""",
+        module_name="edited",
+    )
+    func = from_pyi.functions[0]
+
+    assert func.arguments[0].metadata[PROJECTED_OUTPUT_METADATA] is True
+    assert func.projection[0].result_position == 0
+    assert from_pyi.classes[0].overload_sets[0].procedures[0].metadata["overload_kind"] == "assignment"
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        from_pyi,
+        Scope(name=from_pyi.name, scope_type="module"),
+    )
+    assign = next(item for item in codegen_module.classes[0].overload_sets if item.name == "assign")
+    assert assign.functions[0].arguments[0].var.projected_output is True
+
+
+def test_type_bound_method_declarations_restore_root_target_metadata():
+    from_pyi = parse_pyi_text(
+        """
+class vector:
+    def scale(
+        self,
+        factor: Addr(Float64)
+    ) -> None: ...
+
+    @bind("shift_vector")
+    @native_call([Arg(0), Pass(), Arg(1)])
+    def shift(
+        self,
+        dx: Addr(Float64),
+        dy: Addr(Float64)
+    ) -> None: ...
+
+def scale(
+    self: Annotated[vector, Polymorphic],
+    factor: Addr(Float64)
+) -> None: ...
+
+def shift_vector(
+    dx: Addr(Float64),
+    owner: Annotated[vector, Polymorphic],
+    dy: Addr(Float64)
+) -> None: ...
+""",
+        module_name="edited",
+    )
+    functions = {func.name: func for func in from_pyi.functions}
+
+    assert functions["scale"].metadata["fortran_type_bound_target"] is True
+    assert functions["scale"].metadata["fortran_passed_object_name"] == "self"
+    assert functions["scale"].metadata["fortran_passed_object_position"] == 0
+    assert functions["shift_vector"].metadata["fortran_type_bound_target"] is True
+    assert functions["shift_vector"].metadata["fortran_passed_object_name"] == "owner"
+    assert functions["shift_vector"].metadata["fortran_passed_object_position"] == 1
+
+
+def test_pyi_codegen_keyword_normalized_type_bound_method_uses_native_binding_name():
+    module = parse_pyi_text(
+        """
+class visible_t:
+    @bind("visible_from")
+    def from_(self) -> Int32: ...
+""",
+        module_name="fnaming_f90",
+    )
+
+    codegen_module = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    method = codegen_module.classes[0].methods_as_dict["from_"]
+
+    assert method.name == "visible_from"
+    assert method.type_bound_name == "from"
+
+
+def test_method_equality_treats_argument_names_as_placeholders():
+    left = parse_pyi_text(
+        """
+class vector:
+    def scale(
+        self,
+        n: Int32,
+        x: Float64[1:n]
+    ) -> None: ...
+""",
+        module_name="edited",
+    )
+    right = parse_pyi_text(
+        """
+class vector:
+    def scale(
+        self,
+        extent: Int32,
+        values: Float64[1:extent]
+    ) -> None: ...
+""",
+        module_name="edited",
+    )
+
+    assert left == right
+
+
+def test_convert_pyi_to_ir_accepts_multiline_native_call_decorator():
+    module = parse_pyi_text(
+        """
+@native_call([
+    Arg(0),
+    Return(0),
+])
+def wrapper(
+    x: Int32
+) -> Float64: ...
+""",
+        module_name="edited",
+    )
+
+    func = module.functions[0]
+    assert func.name == "wrapper"
+    assert func.projection[0].python_position == 0
+    assert func.projection[1].result_position == 0

@@ -26,8 +26,8 @@ python3 -m x2py --help
 ```
 
 Expected result: the install command completes successfully, and `--help`
-prints the CLI usage with input selection, inspection stages, wrapper builds,
-and output options.
+prints the CLI usage with input selection, wrapper builds, `.pyi` contracts,
+verbose mode, and output options.
 
 The default user-facing action for a single Fortran source is to build a Python
 extension. Create `scale.f90` with this input:
@@ -117,9 +117,10 @@ Expected contract (`contracts/__init__.pyi`):
 
 ```python
 @external
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
-    value: Ref(Const(Float64)),
-    factor: Ref(Const(Float64))
+    value: Float64,
+    factor: Float64
 ) -> Float64: ...
 ```
 
@@ -178,10 +179,118 @@ Both calls print:
 7.5
 ```
 
+For a small derived-type wrapper, create `points.f90`:
+
+```fortran
+module points
+  implicit none
+  type :: point
+    real(8) :: x
+    real(8) :: y
+  end type point
+contains
+  subroutine move(item, dx, dy)
+    type(point), intent(inout) :: item
+    real(8), intent(in) :: dx
+    real(8), intent(in) :: dy
+    item%x = item%x + dx
+    item%y = item%y + dy
+  end subroutine move
+
+  real(8) function norm_squared(item) result(value)
+    type(point), intent(in) :: item
+    value = item%x * item%x + item%y * item%y
+  end function norm_squared
+end module points
+```
+
+Generate its semantic contract:
+
+```bash
+python3 -m x2py points.f90 --pyi --out contracts
+```
+
+Expected contract (`contracts/points.pyi`):
+
+```python
+class point:
+    def __init__(
+        self,
+        *,
+        x: Float64 = ...,
+        y: Float64 = ...
+    ) -> None: ...
+
+    x: Float64
+    y: Float64
+
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
+def move(
+    item: point,
+    dx: Float64,
+    dy: Float64
+) -> None: ...
+
+def norm_squared(
+    item: point
+) -> Float64: ...
+```
+
+Build and import it with a clean Python module name:
+
+```bash
+python3 -m x2py points.f90 --out geometry --out-dir build/geometry
+```
+
+```python
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "build/geometry")
+import geometry
+
+p = geometry.points.point(x=np.float64(3.0), y=np.float64(4.0))
+geometry.points.move(p, np.float64(1.0), np.float64(-2.0))
+
+print(p.x, p.y)
+print(geometry.points.norm_squared(p))
+```
+
+Expected result:
+
+```text
+4.0 2.0
+20.0
+```
+
+Use `--verbose` when you want to see the compiler commands and confirm which
+wrapper flags reached the build:
+
+```bash
+python3 -m x2py scale.f90 \
+  --out SCALE_debug \
+  --out-dir build/SCALE_debug \
+  --verbose \
+  --compiler gfortran \
+  --wrapper-fortran-flags=-O2 \
+  --wrapper-c-flags=-O2
+```
+
+The verbose output includes native source compilation, generated bridge
+compilation, generated Python binding compilation, and the final link command.
+The custom wrapper flags appear in the relevant command lines:
+
+```text
+<fortran compiler> ... -O2 ... generated bridge ...
+<python-binding compiler> ... -O2 ... generated Python binding ...
+<fortran compiler> -shared ... -O2 ... SCALE_debug ...
+```
+
 Standalone procedures are the smallest wrapper surface and therefore come
 first. Contained Fortran module procedures are preserved under Python child
 modules; continue with the
-[first wrapped module](docs/getting-started/first-wrapped-module.md) for that
+[first wrapped module](docs/user/getting-started/first-wrapped-module.md) for that
 layout and for public module state.
 
 The runtime wrapper mechanism is:
@@ -209,25 +318,9 @@ Fortran sources
 ```
 X2PY_C_DOCS_END -->
 
-The inspection workflow also has four explicit stages:
-
-```text
-native source
-  -> parser facts
-  -> semantic IR
-  -> editable .pyi
-  -> readiness report
-```
-
-| Goal | Command flag |
-| --- | --- |
-| Inspect native declarations and diagnostics | `--parse` |
-| Consume language-neutral semantic facts | `--semantics` |
-| Generate an editable semantic interface | `--pyi` |
-| Find missing information or unsupported contracts | `--wrap-readiness` |
-
-`Wrappable: yes` means the Fortran semantic contract has no known readiness
-blockers. Native compilation and runtime verification remain separate steps.
+For diagnostic and inspection commands beyond the main build path, start with
+`python3 -m x2py --help`, then continue to the
+[Fortran wrapper guide](docs/user/guide/fortran-wrapper.md).
 
 <!-- X2PY_C_DOCS_START
 `Wrappable: yes` means the semantic contract has no known readiness blockers.
@@ -235,79 +328,9 @@ The runtime build path accepts one or more ordered Fortran sources. C parsing,
 semantic IR, `.pyi`, and readiness are implemented, but wrapping user-supplied
 C libraries is a later backend. The generated C code used internally by the
 Fortran wrapper is not that future C-input backend.
-The [generated target datatype mapping example](docs/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
+The [generated target datatype mapping example](docs/user/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
 shows how the GitHub Actions C and Fortran scalar types map to NumPy dtypes.
 X2PY_C_DOCS_END -->
-
-### Fortran
-
-Recognizable Fortran files do not require an explicit language. Parse the same
-checked source used in the Quick Start:
-
-Input (`scale.f90`):
-
-<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->
-```fortran
-real(8) function scale(value, factor) result(output)
-  real(8), intent(in) :: value
-  real(8), intent(in) :: factor
-  output = value * factor
-end function scale
-```
-
-```bash
-python3 -m x2py scale.f90 --parse
-```
-
-```text
-File: scale.f90
-  Procedures: 1
-    - function scale(value:real(8)[0], factor:real(8)[0]) -> real(8)[0]
-```
-
-Generate its editable `.pyi` contract:
-
-```bash
-python3 -m x2py scale.f90 --pyi
-```
-
-```python
-File: scale.f90
-Root contract: scale/scale.pyi
-@external
-def scale(
-    value: Ref(Const(Float64)),
-    factor: Ref(Const(Float64))
-) -> Float64: ...
-```
-
-Check semantic readiness:
-
-```bash
-python3 -m x2py scale.f90 --wrap-readiness
-```
-
-```text
-File: scale.f90
-  Source: fortran
-  Semantic modules: scale
-  Wrappable: yes
-  Public functions: 1
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
-```
-
-Write a draft interface, edit it when source facts are not enough, then check
-the edited contract:
-
-```bash
-python3 -m x2py scale.f90 --pyi --out contracts
-python3 -m x2py contracts/__init__.pyi --wrap-readiness
-```
-
-Expected result: the first command writes `contracts/__init__.pyi`; the
-second command reports the same `Wrappable: yes` readiness result shown above.
 
 <!-- X2PY_C_DOCS_START
 ### C
@@ -398,21 +421,10 @@ X2PY_C_DOCS_END -->
 
 ## Native Project Inputs
 
-Fortran preprocessing defaults to `gfortran`. Pass the native project's include
-directories, definitions, language standard, and target flags when inspecting
-or building a real source tree:
-
-```bash
-python3 -m x2py scale.f90 --parse \
-  --compiler gfortran \
-  --std f2018
-```
-
-Expected result: the command prints the same parser report shape shown in the
-Fortran inspection example, with preprocessing routed through `gfortran`.
-
-For a real project, replace the checked input path with your source path and
-add the project's include directories, definitions, and target flags.
+Fortran builds default to `gfortran`. For a real project, replace the checked
+input path with your source path, use `--help` to choose the compiler and native
+project options you need, and enable `--verbose` when you want to audit the
+exact compiler and linker commands.
 
 <!-- X2PY_C_DOCS_START
 The CLI uses compiler preprocessing for native source. C defaults to `cc` and
@@ -448,8 +460,8 @@ python3 -m x2py src/api.c &#45;&#45;language c &#45;&#45;semantics \
 ```
 X2PY_C_DOCS_END -->
 
-Use `--parse --json` for complete machine-readable parser facts and `--out`
-to write selected output to a file or beside each source.
+Use `--out` to select generated contract locations, wrapper module names, or
+explicit build directories, depending on the command mode.
 
 ## Python API
 
@@ -468,7 +480,8 @@ print(result.module_name)
 print(result.shared_library)
 ```
 
-Parser and semantic entrypoints remain available independently:
+Parser and semantic entrypoints remain available independently for controlled
+strings, focused tests, and already-preprocessed inputs.
 
 <!-- X2PY_C_DOCS_START
 ```python
@@ -486,10 +499,8 @@ report = assess_semantic_wrap_readiness(modules, source="api.h")
 ```
 X2PY_C_DOCS_END -->
 
-Direct Python parser entrypoints are useful for controlled strings, focused
-tests, and already-preprocessed inputs. For native projects with macros,
-includes, or target flags, use the compiler-preprocessed CLI path or an
-equivalent preprocessing configuration.
+For native projects with macros, includes, or target flags, use the
+compiler-preprocessed CLI path or an equivalent preprocessing configuration.
 
 ## Supported Scope
 
@@ -500,9 +511,14 @@ Current support includes:
 - free-form and fixed-form Fortran, procedures, modules, derived types,
   imports, arrays, and wrapper-relevant declaration attributes;
 - language-neutral semantic IR, editable `.pyi` interfaces, and semantic
-  readiness reports.
+  readiness reports;
 - compiled Python extensions from one or more ordered fixed-form or free-form
-  Fortran sources, with an optional GNU Make build.
+  Fortran sources, with an optional GNU Make build;
+- documented runtime wrapper behavior for scalar and array calls, strings,
+  module state, derived types, generic interfaces, optional and output
+  arguments, and immediate call-scoped Python callbacks. The
+  [language feature matrix](docs/user/language-support/feature-matrix.md) is the
+  authoritative support-status summary.
 
 <!-- X2PY_C_DOCS_START
 - compiled CPython extensions from one or more ordered fixed-form or free-form
@@ -525,23 +541,29 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 - [Documentation](docs/index.md): browse getting-started guides, tutorials,
   examples, reference material, language support, and troubleshooting.
-- [Getting started](docs/getting-started/index.md): installation, verification,
+- [Getting started](docs/user/getting-started/index.md): installation, verification,
   standalone procedures, modules, and the normal rebuild workflow.
-- [User guide](docs/user-guide/index.md): feature-focused wrapper guidance for
-  data types, functions, subroutines, modules, arrays, ownership, runtime
-  behavior, packaging, and distribution.
-- [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported Fortran
+- [User guide](docs/user/guide/index.md): feature-focused wrapper guidance for
+  data types, functions, subroutines, modules, arrays, callbacks, ownership,
+  runtime behavior, packaging, and distribution.
+- [Tutorial](docs/user/tutorials/basic-wrapper.md): the complete supported Fortran
   workflow from source inspection to an imported extension.
-- [Examples cookbook](docs/examples-gallery/verified-cookbook.md): checked Fortran wrapper builds and
+- [Examples cookbook](docs/user/examples/verified-cookbook.md): checked Fortran wrapper builds and
   calls, inspection commands, compiler recipes, and Python API examples.
-- [Fortran wrapper guide](docs/user-guide/fortran-wrapper.md): generated Python behavior,
-  ownership, lifetime, arrays, derived types, callbacks, build modes, and
-  limitations.
-- [Developer guide](docs/developer-guide/maintainer-guide.md): implementation ownership,
+- [Reference](docs/user/reference/index.md): CLI, Python API, semantic contracts,
+  diagnostics, and generated wrapper surfaces.
+- [Language support](docs/user/language-support/index.md): implemented, partial,
+  unsupported, and planned language features.
+- [FAQ](docs/user/faq/index.md): concise answers to common usage questions.
+- [Troubleshooting](docs/user/troubleshooting/index.md): installation, compiler,
+  build, runtime, and platform failures.
+- [Changelog](docs/user/changelog/index.md): user-visible changes by release.
+- [Developer documentation](docs/developer/index.md): implementation ownership,
   parser references, testing, fixtures, and change workflows.
+- [Contributing](docs/developer/contributing/index.md): repository contribution workflow.
 
 <!-- X2PY_C_DOCS_START
-- [Tutorial](docs/tutorials/basic-wrapper.md): the complete supported user workflow,
+- [Tutorial](docs/user/tutorials/basic-wrapper.md): the complete supported user workflow,
   Fortran extension build, semantic interface editing, readiness, and current
   C boundary.
 X2PY_C_DOCS_END -->
@@ -555,4 +577,7 @@ PYTHONPATH=. python3 -m pytest -q
 ```
 
 Focused verification commands and fixture-maintenance workflows are in the
-[Developer guide](docs/developer-guide/maintainer-guide.md#testing-map).
+[Developer guide](docs/developer/development-workflow.md#testing-map).
+Repository governance, internal architecture, design records, release policy,
+and active completion ledgers remain in the GitHub-only
+[Maintainer documentation](docs/maintainer/README.md).

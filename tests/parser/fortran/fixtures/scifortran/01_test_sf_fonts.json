@@ -30,7 +30,6 @@
           "dimensions": [],
           "visibility": "public",
           "procedure": null,
-          "intent": "unknown",
           "optional": false,
           "pass_by_value": false,
           "allocatable": false,

@@ -1,26 +1,28 @@
+from x2py.contracts import Addr, CStruct, Float64, Int, SizeT
+
 class node(CStruct):
     id: Int
     xyz: Float64[3]
 
 class mesh(CStruct):
     nnodes: SizeT
-    nodes: Ref(node)
+    nodes: Addr(node)
 
 def node_move(
-    node: Ref(node),
-    delta: Const(Float64[3])
+    node: node,
+    delta: Float64[3]
 ) -> None: ...
 
 def mesh_init(
-    mesh: Ref(mesh),
+    mesh: mesh,
     nnodes: SizeT
 ) -> Int: ...
 
 def mesh_clear(
-    mesh: Ref(mesh)
+    mesh: mesh
 ) -> None: ...
 
 def mesh_node_at(
-    mesh: Ref(mesh),
+    mesh: mesh,
     index: SizeT
-) -> Ref(node): ...
+) -> node: ...

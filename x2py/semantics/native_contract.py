@@ -3,10 +3,11 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from x2py.semantics.metadata import BIND_TARGET_METADATA
+
+from .pyi_metadata import PYI_LOADED_METADATA
 from .models import (
     OVERLOAD_TARGET_METADATA,
-    PYI_BIND_TARGET_METADATA,
-    PYI_LOADED_METADATA,
     ProjectionMapping,
     SemanticClass,
     SemanticFunction,
@@ -15,6 +16,9 @@ from .models import (
     SemanticType,
     _iter_module_semantic_types,
 )
+
+
+NATIVE_CONTRACT_PREPARED_METADATA = "native_contract_prepared"
 
 
 @dataclass(frozen=True)
@@ -134,7 +138,7 @@ def _class_issues(
     for field in semantic_class.fields:
         issues.extend(_type_issues(field.semantic_type, f"{owner}.{field.name}"))
     for method in semantic_class.methods:
-        if method.name == "__init__" and method.metadata.get(PYI_BIND_TARGET_METADATA):
+        if method.name == "__init__" and method.metadata.get(BIND_TARGET_METADATA):
             continue
         issues.extend(_function_issues(method, module, owner_kind="type_bound", prefix=owner))
     for overload_set in semantic_class.overload_sets:

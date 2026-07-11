@@ -5,24 +5,24 @@ Parsing sketch
 
 The public wrappers call the same orchestration object:
 
-    parse_c_file(...) -> CParser.visit_file(...) -> CFile
-    parse_c_project(...) -> CParser.visit_project(...) -> CProject
+    parse_c_file(...) -> CParser.parse_file(...) -> CFile
+    parse_c_project(...) -> CParser.parse_project(...) -> CProject
 
 Recommended reading order for maintainers:
 
 1. Start from the module-level wrappers: `parse_c_file` and `parse_c_project`.
-2. Read `CParser.visit_file`, `visit_project`, and `visit_parsed_project`.
+2. Read `CParser.parse_file`, `parse_project`, and `_assemble_project`.
 3. Follow `_parse_translation_unit`, which dispatches one top-level C segment.
 4. Read the declaration/declarator helpers used by each dispatched segment.
 5. Finish with `_build_project` and the index helpers.
 
 `CParser` is organized in that same order:
 
-- public visitor entrypoints;
+- public parse entrypoints;
 - source locations, diagnostics, macro provenance, and redeclaration merging;
 - declaration-specifier and compiler-extension lexical helpers;
 - recursive declarator grammar and parameter helpers;
-- function and aggregate visitors;
+- function and aggregate parsers;
 - translation-unit dispatch and project assembly;
 - thin module-level wrappers backed by `_DEFAULT_PARSER`.
 
@@ -53,7 +53,7 @@ Compiler/preprocessed input is parsed by the same route after linemarkers are
 mapped back to original source locations.
 
 Executable walkthroughs live in
-``tests/parser/c/test_c_parser_developer_tutorial.py``.
+``tests/parsing/c/test_c_parser_developer_tutorial.py``.
 """
 
 from __future__ import annotations
@@ -385,23 +385,23 @@ class CParser:
     """Parser orchestration object for the partial typed C model.
 
     The instance carries no parse stack; per-call input and preprocessing
-    configuration flow explicitly through `visit_file` and `visit_project`.
+    configuration flow explicitly through `parse_file` and `parse_project`.
     See the module sketch and developer tutorial tests for the helper path.
 
     Class section map:
-    - public file/project visitor entrypoints;
+    - public file/project parse entrypoints;
     - source-location, diagnostic, macro, and redeclaration helpers;
     - declaration-specifier and compiler-extension helpers;
     - recursive declarator and parameter grammar helpers;
-    - function and aggregate visitors;
+    - function and aggregate parsers;
     - translation-unit dispatch and project assembly.
     """
 
     # ------------------------------------------------------------------
-    # Public visitor entrypoints
+    # Public parse entrypoints
     # ------------------------------------------------------------------
 
-    def visit_file(
+    def parse_file(
         self,
         source_or_path: str | Path,
         filename: str | None = None,
@@ -549,7 +549,7 @@ class CParser:
             endif_record.original_start_line,
         }
 
-    def visit_project(
+    def parse_project(
         self,
         files: Mapping[str, str] | Sequence[str | Path] | str | Path,
         *,
@@ -565,7 +565,7 @@ class CParser:
         """
         if isinstance(files, Mapping):
             parsed_files = {
-                name: self.visit_file(
+                name: self.parse_file(
                     source,
                     filename=name,
                     include_dirs=include_dirs,
@@ -574,7 +574,7 @@ class CParser:
                 )
                 for name, source in files.items()
             }
-            return self.visit_parsed_project(parsed_files)
+            return self._assemble_project(parsed_files)
 
         paths: list[Path] = []
         root: Path | None = None
@@ -593,25 +593,25 @@ class CParser:
             key = path.name if root is not None else str(path)
             if root is not None:
                 key = str(path.relative_to(root))
-            parsed_files[key] = self.visit_file(
+            parsed_files[key] = self.parse_file(
                 path,
                 filename=key,
                 include_dirs=include_dirs,
                 preprocessing=preprocessing,
                 encoding=encoding,
             )
-        return self.visit_parsed_project(parsed_files)
+        return self._assemble_project(parsed_files)
 
-    def visit_parsed_project(self, files: Mapping[str, CFile]) -> CProject:
+    def _assemble_project(self, files: Mapping[str, CFile]) -> CProject:
         """Assemble already parsed translation units into one `CProject`.
 
-        This visitor is useful when an orchestration layer preprocesses each
+        This helper is useful when an orchestration layer preprocesses each
         source first and attaches recipe metadata before project resolution.
 
         Example:
             >>> parser = CParser()
-            >>> parsed = parser.visit_file("int answer(void);", filename="api.h")
-            >>> project = parser.visit_parsed_project({"api.h": parsed})
+            >>> parsed = parser.parse_file("int answer(void);", filename="api.h")
+            >>> project = parser._assemble_project({"api.h": parsed})
             >>> sorted(project.functions)
             ['answer']
         """
@@ -3124,7 +3124,7 @@ def parse_c_file(
         >>> parse_c_file("int answer(void);", filename="api.h").functions[0].name
         'answer'
     """
-    return _DEFAULT_PARSER.visit_file(
+    return _DEFAULT_PARSER.parse_file(
         source_or_path,
         filename=filename,
         include_dirs=include_dirs,
@@ -3147,7 +3147,7 @@ def parse_c_project(
         >>> sorted(project.functions)
         ['answer']
     """
-    return _DEFAULT_PARSER.visit_project(
+    return _DEFAULT_PARSER.parse_project(
         files,
         include_dirs=include_dirs,
         preprocessing=preprocessing,

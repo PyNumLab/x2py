@@ -1,6 +1,12 @@
 import pytest
 
-from x2py.codegen.bind_c import BindCArrayType, BindCPointer
+from x2py.codegen.bind_c import (
+    BindCArrayType,
+    BindCNativeArrayDescriptorType,
+    BindCPointer,
+    BindCScalarDescriptorType,
+    native_array_descriptor_argument_type,
+)
 from x2py.codegen.models.core import Add, Declare, IndexedElement, Slice, Variable
 from x2py.codegen.models.datatypes import (
     Literal,
@@ -49,6 +55,47 @@ def test_cast_to_uses_shared_cast_concept_with_requested_datatype():
 
     assert type(cast) is Cast
     assert cast.dtype is NumpyInt32Type()
+
+
+def test_fortran_declaration_access_prints_intent_and_value_suppresses_it():
+    value = Variable(NumpyFloat64Type(), "value", is_argument=True)
+    printer = FCodePrinter("test.f90", verbose=0)
+    printer._kind = lambda expr: "f64"
+
+    assert printer._visit(Declare(value, access="readwrite")) == "real(f64), intent(inout) :: value\n"
+    assert printer._visit(Declare(value, access="write")) == "real(f64), intent(out) :: value\n"
+    assert printer._visit(Declare(value, access="readwrite", by_value=True)) == "real(f64), value :: value\n"
+
+
+def test_callback_adapter_declaration_preserves_missing_access():
+    value = Variable(NumpyFloat64Type(), "value", is_argument=True, fortran_callback_access="unspecified")
+    read_value = Variable(NumpyFloat64Type(), "read_value", is_argument=True, fortran_callback_access="read")
+    scalar_value = Variable(
+        NumpyFloat64Type(),
+        "scalar_value",
+        is_argument=True,
+        fortran_callback_access="read",
+        passes_by_value=True,
+    )
+    missing_value = Variable(
+        NumpyFloat64Type(),
+        "missing_value",
+        is_argument=True,
+        fortran_callback_access="unspecified",
+        passes_by_value=True,
+    )
+    printer = FCodePrinter("test.f90", verbose=0)
+    printer._kind = lambda expr: "f64"
+
+    assert printer._callback_native_argument_declaration(value) == "real(f64) :: value\n"
+    assert printer._callback_native_argument_declaration(read_value) == "real(f64), intent(in) :: read_value\n"
+    assert (
+        printer._callback_native_argument_declaration(scalar_value) == "real(f64), intent(in), value :: scalar_value\n"
+    )
+    assert (
+        printer._callback_native_argument_declaration(missing_value)
+        == "real(f64), intent(in), value :: missing_value\n"
+    )
 
 
 def test_bind_c_array_type_describes_packed_strided_layout():
@@ -118,6 +165,74 @@ def test_scope_expands_bind_c_array_to_registered_fields():
     assert scope.collect_all_tuple_elements(packed) == fields
 
 
+def test_bind_c_scalar_descriptor_type_expands_to_value_and_presence_pointers():
+    scope = Scope(name="f", scope_type="function")
+    descriptor_type = BindCScalarDescriptorType()
+    packed = Variable(descriptor_type, "descriptor", shape=(convert_to_literal(2),))
+    value = Variable(BindCPointer(), "value")
+    present = Variable(BindCPointer(), "present")
+
+    scope.insert_symbolic_alias(IndexedElement(packed, 0), value)
+    scope.insert_symbolic_alias(IndexedElement(packed, 1), present)
+
+    assert len(descriptor_type) == 2
+    assert all(isinstance(field, BindCPointer) for field in descriptor_type)
+    assert descriptor_type.shape_is_compatible((convert_to_literal(2),))
+    assert scope.collect_all_tuple_elements(packed) == [value, present]
+
+
+def test_bind_c_native_array_descriptor_type_describes_required_descriptor_pointer():
+    descriptor_type = BindCNativeArrayDescriptorType.get_new()
+
+    assert descriptor_type is BindCNativeArrayDescriptorType.get_new(has_presence=False)
+    assert descriptor_type.has_presence is False
+    assert descriptor_type.rank == 1
+    assert descriptor_type.container_rank == 1
+    assert descriptor_type.order is None
+    assert descriptor_type.datatype is descriptor_type
+    assert len(descriptor_type) == 1
+    assert isinstance(descriptor_type[0], BindCPointer)
+    assert descriptor_type.shape_is_compatible((convert_to_literal(1),))
+
+
+def test_bind_c_native_array_descriptor_type_expands_optional_presence_token():
+    scope = Scope(name="f", scope_type="function")
+    descriptor_type = BindCNativeArrayDescriptorType.get_new(has_presence=True)
+    packed = Variable(descriptor_type, "native_array_descriptor", shape=(convert_to_literal(2),))
+    descriptor = Variable(BindCPointer(), "descriptor")
+    present = Variable(BindCPointer(), "present")
+
+    scope.insert_symbolic_alias(IndexedElement(packed, 0), descriptor)
+    scope.insert_symbolic_alias(IndexedElement(packed, 1), present)
+
+    assert descriptor_type is BindCNativeArrayDescriptorType.get_new(has_presence=True)
+    assert descriptor_type.has_presence is True
+    assert len(descriptor_type) == 2
+    assert all(isinstance(field, BindCPointer) for field in descriptor_type)
+    assert descriptor_type.shape_is_compatible((convert_to_literal(2),))
+    assert scope.collect_all_tuple_elements(packed) == [descriptor, present]
+
+
+def test_bind_c_native_array_descriptor_type_validates_presence_flag_before_cache_lookup():
+    BindCNativeArrayDescriptorType.get_new(has_presence=True)
+
+    with pytest.raises(TypeError, match="has_presence must be a boolean"):
+        BindCNativeArrayDescriptorType.get_new(has_presence=1)
+
+
+def test_native_array_descriptor_argument_type_uses_completed_optional_absence_policy():
+    class Policy:
+        def __init__(self, optional_absent):
+            self.optional_absent = optional_absent
+
+    assert native_array_descriptor_argument_type(Policy(False)) is BindCNativeArrayDescriptorType.get_new(
+        has_presence=False
+    )
+    assert native_array_descriptor_argument_type(Policy(True)) is BindCNativeArrayDescriptorType.get_new(
+        has_presence=True
+    )
+
+
 def test_fortran_visiter_visits_array_slice_with_inclusive_stop():
     array_type = NumpyNDArrayType.get_new(NumpyFloat32Type(), 1, None)
     array = Variable(array_type, "values", shape=(convert_to_literal(8),))
@@ -144,7 +259,6 @@ def test_external_interface_preserves_multidimensional_assumed_size_source_shape
         array_type,
         "A",
         memory_handling="alias",
-        intent="inout",
         fortran_array_category="assumed_size",
         fortran_source_shape=("LDA", "*"),
         is_argument=True,
@@ -153,4 +267,4 @@ def test_external_interface_preserves_multidimensional_assumed_size_source_shape
     printer = FCodePrinter("test.f90", verbose=0)
     printer._kind = lambda expr: "f64"
 
-    assert printer._external_interface_argument_declaration(array) == "real(f64), intent(inout) :: A(LDA, *)"
+    assert printer._external_interface_argument_declaration(array) == "real(f64) :: A(LDA, *)"

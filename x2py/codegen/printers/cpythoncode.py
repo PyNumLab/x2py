@@ -5,7 +5,10 @@ printing the C-Python interface.
 
 from typing import ClassVar
 
-from x2py.semantics.models import INTERNAL_MODULE_VARIABLE_NAME_METADATA
+from x2py.semantics.models import (
+    INTERNAL_MODULE_VARIABLE_NAME_METADATA,
+    INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA,
+)
 
 from ..bind_c import BindCFunctionDef, BindCModule, BindCPointer
 from ..bindings.c_concepts import CStrStr, ObjectAddress
@@ -24,6 +27,8 @@ from ..bindings.cpython_api import (
     PyTuple_Pack,
     PythonClassType,
     WrapperCustomDataType,
+    c_to_py_registry,
+    py_to_c_registry,
 )
 from ..models.datatypes import (
     FinalType,
@@ -412,7 +417,10 @@ class CPythonCodePrinter(CCodePrinter):
             if getattr(function, "is_header", False):
                 continue
             original = getattr(function, "original_function", None)
-            if INTERNAL_MODULE_VARIABLE_NAME_METADATA in getattr(original, "decorators", {}):
+            decorators = getattr(original, "decorators", {})
+            if INTERNAL_MODULE_VARIABLE_NAME_METADATA in decorators and not decorators.get(
+                INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA
+            ):
                 continue
             exports = (
                 expr.get_python_exports(function)
@@ -1050,30 +1058,21 @@ class CPythonCodePrinter(CCodePrinter):
 
     def _callback_scalar_to_python(self, var, value):
         """Handle callback scalar to python for the current generation context."""
-        primitive = var.dtype.primitive_type
-        if isinstance(primitive, PrimitiveBooleanType):
-            return f"PyBool_FromLong(({value}) ? 1 : 0)"
-        if isinstance(primitive, PrimitiveIntegerType):
-            return f"PyLong_FromLongLong((long long)({value}))"
-        if isinstance(primitive, PrimitiveFloatingPointType):
-            return f"PyFloat_FromDouble((double)({value}))"
-        if isinstance(primitive, PrimitiveComplexType):
-            return f"PyComplex_FromDoubles((double)creal({value}), (double)cimag({value}))"
-        raise TypeError(f"Unsupported callback scalar type {var.class_type}")
+        try:
+            cast_function = c_to_py_registry[var.dtype]
+        except KeyError:
+            raise TypeError(f"Unsupported callback scalar type {var.class_type}") from None
+        return f"{cast_function}(&{value})"
 
     def _callback_scalar_from_python(self, var, value):
         """Handle callback scalar from python for the current generation context."""
         primitive = var.dtype.primitive_type
         c_type = self._get_declare_type(var)
-        if isinstance(primitive, PrimitiveBooleanType):
-            return f"({c_type})PyObject_IsTrue({value})"
-        if isinstance(primitive, PrimitiveIntegerType):
-            return f"({c_type})PyLong_AsLongLong({value})"
-        if isinstance(primitive, PrimitiveFloatingPointType):
-            return f"({c_type})PyFloat_AsDouble({value})"
-        if isinstance(primitive, PrimitiveComplexType):
-            return f"({c_type})(PyComplex_RealAsDouble({value}) + PyComplex_ImagAsDouble({value}) * I)"
-        raise TypeError(f"Unsupported callback scalar type {var.class_type}")
+        try:
+            cast_function = py_to_c_registry[(primitive, var.dtype.precision)]
+        except KeyError:
+            raise TypeError(f"Unsupported callback scalar type {var.class_type}") from None
+        return f"({c_type}){cast_function}({value})"
 
     def _callback_wrapped_class(self, native_var, callback):
         """Handle callback wrapped class for the current generation context."""
@@ -1090,6 +1089,39 @@ class CPythonCodePrinter(CCodePrinter):
         if mapping["kind"] == "scalar":
             expression = self._callback_scalar_to_python(native, str(abi[0].name))
             setup = f"PyObject *{py_name} = {expression};\n"
+        elif mapping["kind"] == "scalar_storage":
+            data = abi[0]
+            flags = "NPY_ARRAY_ALIGNED"
+            decision = getattr(native, "ownership_decision", None)
+            if bool(getattr(native, "projected_output", False) or getattr(decision, "mutates_native", False)):
+                flags += " | NPY_ARRAY_WRITEABLE"
+            setup = (
+                f"PyObject *{py_name} = PyArray_New(&PyArray_Type, 0, NULL, "
+                f"{self._callback_numpy_typenum(native.dtype)}, NULL, {data.name}, 0, {flags}, NULL);\n"
+            )
+        elif mapping["kind"] == "string":
+            data, length = abi
+            setup = (
+                f"PyObject *{py_name} = PyUnicode_FromStringAndSize("
+                f"(const char *){data.name}, (Py_ssize_t){length.name});\n"
+            )
+        elif mapping["kind"] == "string_storage":
+            data, length = abi
+            flags = "NPY_ARRAY_ALIGNED"
+            decision = getattr(native, "ownership_decision", None)
+            if bool(getattr(native, "projected_output", False) or getattr(decision, "mutates_native", False)):
+                flags += " | NPY_ARRAY_WRITEABLE"
+            setup = (
+                f"PyArray_Descr *callback_descr_{index} = PyArray_DescrNewFromType(NPY_STRING);\n"
+                f'if (callback_descr_{index} == NULL) {abort_name}("failed to create callback bytes dtype");\n'
+                "#if defined(PyDataType_SET_ELSIZE)\n"
+                f"PyDataType_SET_ELSIZE(callback_descr_{index}, (npy_intp){length.name});\n"
+                "#else\n"
+                f"callback_descr_{index}->elsize = (int){length.name};\n"
+                "#endif\n"
+                f"PyObject *{py_name} = PyArray_NewFromDescr(&PyArray_Type, callback_descr_{index}, "
+                f"0, NULL, NULL, {data.name}, {flags}, NULL);\n"
+            )
         elif mapping["kind"] == "array":
             data, *shape = abi
             dims_name = f"callback_dims_{index}"
@@ -1100,7 +1132,8 @@ class CPythonCodePrinter(CCodePrinter):
                 f"{strides_name}[{i}] = {strides_name}[{i - 1}] * {dims_name}[{i - 1}];" for i in range(1, native.rank)
             )
             flags = "NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_ALIGNED"
-            if getattr(native, "intent", "in") != "in":
+            decision = getattr(native, "ownership_decision", None)
+            if bool(getattr(native, "projected_output", False) or getattr(decision, "mutates_native", False)):
                 flags += " | NPY_ARRAY_WRITEABLE"
             setup = (
                 f"npy_intp {dims_name}[{native.rank}] = {{{dimensions}}};\n"

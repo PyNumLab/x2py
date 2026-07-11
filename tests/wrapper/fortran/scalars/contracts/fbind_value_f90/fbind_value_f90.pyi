@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Bool, Complex128, Float64, Int32, String, native_call
+
 def plus_value(
     n: Int32
 ) -> Int32: ...
@@ -6,9 +8,9 @@ def double_value(
     n: Int32
 ) -> Int32: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def plus_reference(
-    n: Const(Int32)
+    n: Int32
 ) -> Int32: ...
 
 def scale_real(

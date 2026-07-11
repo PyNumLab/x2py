@@ -163,16 +163,18 @@ Expected output:
 <!-- x2py-doc-test-output -->
 ```python
 File: tests/data/fortran/general/basic_subroutine.f90
+@native_call([Addr(Arg(0)), Arg(1)])
 def add1(
-    n: Ref(Const(Int32)),
+    n: Int32,
     x: Float64[n]
 ) -> None: ...
 ```
 
 The stub preserves the exact native contract:
 
-- `n` is a read-only scalar reference because the Fortran dummy argument is
-  not declared with `value`.
+- `n` is a read-only scalar value at the Python boundary; the native call uses
+  the address of x2py's converted native slot because the Fortran dummy argument
+  is not declared with `value`.
 - `x` is a writable rank-one array whose extent is `n`.
 
 Write the stub to an explicit path:
@@ -351,7 +353,7 @@ Expected output:
 File: tests/data/c/general/math_api.h
 def norm2(
     n: Int,
-    x: Const(Float64[1])
+    x: Float64[1]
 ) -> Float64: ...
 
 def scale(
@@ -362,8 +364,8 @@ def scale(
 
 def dot(
     n: Int,
-    x: Ref(Const(Float64)),
-    y: Ref(Const(Float64))
+    x: Addr(Float64),
+    y: Addr(Float64)
 ) -> Float64: ...
 
 def fill_identity3(

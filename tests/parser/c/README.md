@@ -32,7 +32,7 @@ curated fixture workflow.
 
 `test_c_parser_developer_tutorial.py` is an executable reading guide for
 `x2py/c_parser/parser.py`. It shows the shared declaration/declarator gateway, the
-`visit_file` dispatch of declaration roles, and the preprocessed linemarker
+`parse_file` routing of declaration roles, and the preprocessed linemarker
 path without replacing the feature-focused test modules.
 
 `test_c_fixture_suite.py` keeps fixture grouping coverage and verifies that
@@ -44,7 +44,7 @@ Fatal diagnostic fixtures live in `tests/data/c/errors/parser/` and their
 expected metadata lives in `fixtures/errors/`. Regenerate them with:
 
 ```bash
-C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parser/c/test_c_error_fixture_suite.py
+C_PARSER_UPDATE_GOLDENS=1 PYTHONPATH=. pytest -q tests/parsing/c/test_c_error_fixture_suite.py
 ```
 
 The standalone error generator remains available for targeted refreshes, and

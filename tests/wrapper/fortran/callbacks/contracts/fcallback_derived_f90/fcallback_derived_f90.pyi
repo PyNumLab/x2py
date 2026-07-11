@@ -1,3 +1,5 @@
+from x2py.contracts import Arg, Callable, Float64, In, Return, native_call
+
 class point_t:
     def __init__(
         self,
@@ -11,6 +13,6 @@ class point_t:
 
 @native_call([Arg(0), Arg(1), Return('output', 0)])
 def apply_point(
-    callback: Callable[[Ref(Const(point_t))], point_t],
-    value: Ref(Const(point_t))
+    callback: Callable[[In(point_t)], point_t],
+    value: point_t
 ) -> point_t: ...

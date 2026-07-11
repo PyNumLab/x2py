@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Any, CStruct, CUnion, Final, Float64, Int, Int8, Opaque, SizeT, UInt32, UInt64
+
 class x2py_flags(CStruct):
     ready: UInt32
     mode: UInt32
@@ -20,21 +22,21 @@ X2PY_STATUS_ERROR: Final[Int] = -1
 def x2py_slow_path() -> Int: ...
 
 def x2py_sort(
-    items: Ref(Any),
+    items: Any,
     count: SizeT,
     item_size: SizeT,
     compare: CFunctionPointer
 ) -> Int: ...
 
 def x2py_register_callback(
-    context: Ref(x2py_context),
+    context: x2py_context,
     callback: CFunctionPointer,
-    userdata: Ref(Any)
+    userdata: Any
 ) -> Int: ...
 
 def x2py_status_message(
     status: Int
-) -> Ref(Const(Int8)): ...
+) -> Addr(Int8): ...
 
 def x2py_fill_matrix(
     rows: SizeT,

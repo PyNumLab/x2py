@@ -274,12 +274,12 @@ def _serialize_project(fixtures: list[Path]) -> dict:
     for fixture in sorted(fixtures, key=_fixture_sort_key):
         filename = _parser_filename_for_fixture(fixture)
         parsed_files[filename] = _parse_fixture(parser, fixture, filename=filename, include_dirs=include_dirs)
-    project = parser.visit_parsed_project(parsed_files)
+    project = parser._assemble_project(parsed_files)
     return _stable_project_payload(_normalize_resolved_paths(project.to_dict()))
 
 
 def _parse_fixture(parser, fixture: Path, *, filename: str, include_dirs: list[Path]):
-    from x2py.preprocessing import PreprocessingConfig, preprocess_source
+    from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
     compiler = shutil.which("cc")
     if compiler is None:
@@ -294,7 +294,7 @@ def _parse_fixture(parser, fixture: Path, *, filename: str, include_dirs: list[P
             defines=list(_DEFINE_OVERRIDES.get(fixture.name, ())),
         ),
     )
-    return parser.visit_file(
+    return parser.parse_file(
         preprocessed.source,
         filename=filename,
         include_dirs=include_dirs,

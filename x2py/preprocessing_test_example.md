@@ -1,6 +1,6 @@
 # Compiler-Backed Preprocessing Notes
 
-`x2py/preprocessing.py` owns compiler-backed preprocessing for the wrapper
+`x2py/pipeline/preprocessing.py` owns compiler-backed preprocessing for the wrapper
 pipeline. The parsers consume one expanded source stream; they do not evaluate
 CPP branches or emulate macro expansion.
 

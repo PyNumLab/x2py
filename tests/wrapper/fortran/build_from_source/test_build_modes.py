@@ -13,8 +13,8 @@ import pytest
 
 from tests.wrapper.fortran._support import _assert_fmath_examples, _sole_native_module, wrapper_source
 from x2py.compiling.basic import CompileObj
-from x2py.preprocessing import PreprocessingConfig
-from x2py.wrapping import NativeBuildPlan, NativeLinkItem, build_fortran_extension
+from x2py.pipeline.preprocessing import PreprocessingConfig
+from x2py.pipeline.build import NativeBuildPlan, NativeLinkItem, build_fortran_extension
 
 VERBOSE_SOURCE = wrapper_source("verbose_api.f90")
 DEFAULT_OUTPUT_SOURCE = wrapper_source("fdefault_output.f")
@@ -58,6 +58,42 @@ def test_verbose_mode_prints_full_direct_build_commands(tmp_path: Path):
     assert "Built extension:" in result.stdout
 
 
+def test_verbose_mode_prints_custom_wrapper_flags(tmp_path: Path):
+    source = tmp_path / SCALE_SOURCE.name
+    shutil.copyfile(SCALE_SOURCE, source)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            str(source),
+            "--out",
+            "SCALE_debug",
+            "--out-dir",
+            str(tmp_path / "build" / "SCALE_debug"),
+            "--verbose",
+            "--compiler",
+            "gfortran",
+            "--wrapper-fortran-flags=-O2",
+            "--wrapper-c-flags=-O2",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    command_lines = result.stdout.splitlines()
+
+    fortran_wrapper_command = next(
+        line for line in command_lines if "bind_c_SCALE_debug_wrapper.f90" in line and "-c" in line
+    )
+    c_wrapper_command = next(line for line in command_lines if "SCALE_debug_wrapper.c" in line and "-c" in line)
+    link_command = next(line for line in command_lines if "-shared" in line and "SCALE_debug" in line)
+    assert "-O2" in shlex.split(fortran_wrapper_command)
+    assert "-O2" in shlex.split(c_wrapper_command)
+    assert "-O2" in shlex.split(link_command)
+
+
 def test_fortran_wrapper_default_places_extension_beside_source(tmp_path: Path):
     source = tmp_path / DEFAULT_OUTPUT_SOURCE.name
     shutil.copyfile(DEFAULT_OUTPUT_SOURCE, source)
@@ -74,6 +110,33 @@ def test_fortran_wrapper_default_places_extension_beside_source(tmp_path: Path):
     assert Path(payload["output_dir"]) == build_dir
     assert (build_dir / "bind_c_fdefault_output_wrapper.f90").exists()
     assert not list(tmp_path.glob("*_wrapper.c"))
+
+
+def test_fortran_wrapper_default_module_name_does_not_collide_with_root_function(tmp_path: Path):
+    source = tmp_path / SCALE_SOURCE.name
+    shutil.copyfile(SCALE_SOURCE, source)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", str(source), "--json"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+
+    shared_library = Path(payload["shared_library"])
+    assert payload["module_name"] == "scale"
+    assert shared_library.parent == tmp_path
+    assert shared_library.name == "scale.so"
+    assert shared_library.exists()
+
+    sys.modules.pop("scale", None)
+    sys.path.insert(0, str(tmp_path))
+    try:
+        module = importlib.import_module("scale")
+    finally:
+        sys.path.remove(str(tmp_path))
+    assert module.scale(np.float64(3.0), np.float64(2.5)) == np.float64(7.5)
 
 
 def test_fortran_wrapper_out_names_importable_shared_library(tmp_path: Path):

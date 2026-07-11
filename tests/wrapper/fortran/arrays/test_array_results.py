@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
@@ -15,7 +16,7 @@ CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 _MAX_WRAPPER_TEST_RANK = 15
 
 
-def test_array_valued_function_results_are_python_owned_copies(
+def test_array_results_follow_data_buffer_and_descriptor_handle_contracts(
     pyi_parity_build_mode: str,
     tmp_path: Path,
 ):
@@ -73,13 +74,18 @@ def test_array_valued_function_results_are_python_owned_copies(
     assert zero.base is not None
 
     zero_alloc = module.zero_alloc_vector()
+    assert isinstance(zero_alloc, AllocatableArray)
+    assert zero_alloc.allocated is True
     assert zero_alloc.shape == (0,)
-    assert zero_alloc.base is not None
+    assert zero_alloc.to_numpy().shape == (0,)
 
     allocated = module.maybe_alloc_vector(np.int32(3))
-    np.testing.assert_allclose(allocated, np.array([5.0, 10.0, 15.0], dtype=np.float64))
-    assert allocated.base is not None
-    assert module.maybe_alloc_vector(np.int32(0)) is None
+    assert isinstance(allocated, AllocatableArray)
+    np.testing.assert_allclose(allocated.to_numpy(), np.array([5.0, 10.0, 15.0], dtype=np.float64))
+    unallocated = module.maybe_alloc_vector(np.int32(0))
+    assert isinstance(unallocated, AllocatableArray)
+    assert unallocated.allocated is False
+    assert unallocated.to_numpy() is None
 
     del module
     gc.collect()

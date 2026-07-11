@@ -722,9 +722,9 @@ True
 
 <!-- x2py-doc-test: exact -->
 ```python
-from x2py import assess_semantic_wrap_readiness, parse_pyi_text
+from x2py import assess_semantic_wrap_readiness, pyi_text_to_semantic_module
 
-module = parse_pyi_text(
+module = pyi_text_to_semantic_module(
     """
 from typing import Callable
 
@@ -750,9 +750,9 @@ True
 ### Check `.pyi` Files Or Directories
 
 ```python
-from x2py import assess_pyi_wrap_readiness, load_pyi_modules
+from x2py import assess_pyi_wrap_readiness, pyi_paths_to_semantic_modules
 
-modules = load_pyi_modules("path/to/interfaces")
+modules = pyi_paths_to_semantic_modules("path/to/interfaces")
 report = assess_pyi_wrap_readiness("path/to/interfaces")
 
 print([module.name for module in modules])
@@ -765,14 +765,15 @@ These examples show semantic syntax accepted by the current loader. They are
 contracts and metadata; they are not executable Python wrapper
 implementations.
 
-### Scalars, References, And Arrays
+### Scalars, Addresses, And Arrays
 
 ```python
 def direct(value: Float64) -> Float64: ...
-def inspect(value: Ref(Const(Int32))) -> None: ...
-def update(value: Ref(Float64)) -> None: ...
+def inspect(value: Int32[()]) -> None: ...
+def update(value: Float64[()]) -> None: ...
+def update_raw(value: Addr(Float64)) -> None: ...
 def scale(n: Int32, values: Float64[n]) -> None: ...
-def dot3(a: Const(Float64[3]), b: Const(Float64[3])) -> Float64: ...
+def dot3(a: Float64[3], b: Float64[3]) -> Float64: ...
 ```
 
 ### Constants, Visibility, And Classes
@@ -789,7 +790,7 @@ class particle:
     position: Float64[3]
 
 @private
-def helper(x: Ref(Const(Int32))) -> None: ...
+def helper(x: Addr(Int32)) -> None: ...
 ```
 
 ### Opaque Types
@@ -798,19 +799,19 @@ def helper(x: Ref(Const(Int32))) -> None: ...
 class context(Opaque):
     pass
 
-def context_create() -> Ref(context): ...
-def context_destroy(ctx: Ref(context)) -> None: ...
+def context_create() -> Addr(context): ...
+def context_destroy(ctx: Addr(context)) -> None: ...
 ```
 
-### Intent And Array Metadata
+### Array Metadata
 
 ```python
 def fill(
-    values: Annotated[Float64[:], Intent("out")]
+    values: Float64[:]
 ) -> None: ...
 
 def fill_matrix(
-    values: Annotated[Float64[3, 3], ORDER_F, Intent("out")]
+    values: Annotated[Float64[3, 3], ORDER_F]
 ) -> None: ...
 ```
 

@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Destruction, Float64, Int32, Ownership, Returns, Transfer
+
 def scale_with_status(
     values: Annotated[
         Float64[:],
@@ -5,5 +7,5 @@ def scale_with_status(
         Transfer("copy_return"),
         Destruction("native_owner"),
     ],
-    status: Annotated[Ref(Int32), Intent("out")]
+    status: Addr(Int32)
 ) -> Returns["values", Float64[:]]: ...

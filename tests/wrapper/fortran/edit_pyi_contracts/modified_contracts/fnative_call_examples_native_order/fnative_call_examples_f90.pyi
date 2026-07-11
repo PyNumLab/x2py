@@ -1,5 +1,7 @@
 # Intentional difference: no native-call decorators.  Output slots stay
 # visible in native dummy-argument order.
+from x2py.contracts import Addr, Annotated, Float64, Int32, ORDER_F, String, bind
+
 class summary_point:
     def __init__(
         self,
@@ -12,43 +14,65 @@ class summary_point:
     code: Int32
 
 def scalar_status(
-    base: Ref(Const(Int32)),
-    status: Annotated[Ref(Int32), Intent("out")]
+    base: Int32[()],
+    status: Int32[()]
+) -> None: ...
+
+@bind("scalar_status")
+def scalar_status_raw(
+    base: Addr(Int32),
+    status: Addr(Int32)
 ) -> None: ...
 
 def fill_vector(
-    n: Ref(Const(Int32)),
-    values: Annotated[Float64[n], Intent("out")]
+    n: Int32[()],
+    values: Float64[n]
+) -> None: ...
+
+@bind("fill_vector")
+def fill_vector_raw(
+    n: Int32[()],
+    values: Addr(Float64[n])
 ) -> None: ...
 
 def shift_matrix(
-    n: Ref(Const(Int32)),
-    m: Ref(Const(Int32)),
-    values: Annotated[Const(Float64[n, m]), ORDER_F],
-    out: Annotated[Float64[n, m], ORDER_F, Intent("out")]
+    n: Int32[()],
+    m: Int32[()],
+    values: Annotated[Float64[n, m], ORDER_F],
+    out: Annotated[Float64[n, m], ORDER_F]
 ) -> None: ...
 
 def scale_with_status(
     values: Float64[::],
-    status: Annotated[Ref(Int32), Intent("out")]
+    status: Int32[()]
 ) -> None: ...
 
 def fixed_inout(
-    label: Ref(String[8])
+    label: String[8]
+) -> None: ...
+
+@bind("fixed_inout")
+def fixed_inout_raw(
+    label: Addr(String[8])
+) -> None: ...
+
+@bind("fixed_inout")
+def fixed_inout_storage(
+    label: String[8][()]
 ) -> None: ...
 
 def make_label(
-    label: Annotated[Ref(String[6]), Intent("out")]
+    label: String[6]
 ) -> None: ...
 
 def summarize_mixed(
-    n: Ref(Const(Int32)),
-    values: Annotated[Float64[n], Intent("out")],
-    status: Annotated[Ref(Int32), Intent("out")],
-    label: Annotated[Ref(String[6]), Intent("out")]
+    n: Int32[()],
+    values: Float64[n],
+    status: Int32[()],
+    label: String[6]
 ) -> Float64: ...
 
 def make_point(
-    scale: Ref(Const(Int32)),
-    point: Annotated[summary_point, Intent("out")]
+    scale: Int32[()],
+    point: summary_point
 ) -> None: ...

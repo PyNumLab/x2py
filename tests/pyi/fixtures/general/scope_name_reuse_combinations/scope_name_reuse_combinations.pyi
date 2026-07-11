@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Bool, Complex64, Float32, Int32, String, native_call, overload
+
 class same_name:
     def __init__(
         self,
@@ -17,55 +19,56 @@ same_name_c: Complex64
 
 same_name_s: String[8]
 
+@native_call([Addr(Arg(0))])
 def do_work_i(
-    same_name: Ref(Int32)
+    same_name: Int32
 ) -> None: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def do_work_r(
-    same_name: Const(Float32)
+    same_name: Float32
 ) -> None: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def do_work_l(
-    same_name: Const(Bool)
+    same_name: Bool
 ) -> None: ...
 
+@native_call([Addr(Arg(0))])
 def host_one(
-    same_name: Ref(Int32)
+    same_name: Int32
 ) -> None: ...
 
+@native_call([Addr(Arg(0))])
 def host_two(
-    same_name: Ref(Float32)
+    same_name: Float32
 ) -> None: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert_to_complex(
-    same_name: Const(Int32)
+    same_name: Int32
 ) -> Complex64: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert_to_char(
-    same_name: Const(Float32)
+    same_name: Float32
 ) -> String[16]: ...
 
 def convert_to_logical(
-    same_name: Ref(Const(String))
+    same_name: String
 ) -> Bool: ...
 
 @overload("do_work_i")
 def do_work(
-    same_name: Ref(Int32)
+    same_name: Int32
 ) -> None: ...
 
 @overload("do_work_r")
-@native_call([Ref(Arg(0))])
 def do_work(
-    same_name: Const(Float32)
+    same_name: Float32
 ) -> None: ...
 
 @overload("do_work_l")
-@native_call([Ref(Arg(0))])
 def do_work(
-    same_name: Const(Bool)
+    same_name: Bool
 ) -> None: ...

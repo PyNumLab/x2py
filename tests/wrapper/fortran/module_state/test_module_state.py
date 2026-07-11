@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
+from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     wrapper_source,
@@ -41,6 +42,11 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     )
 
     assert module.nmax == np.int32(12)
+    assert isinstance(module.black, module.rgb_color)
+    assert module.black.r == np.int32(0)
+    assert module.black.g == np.int32(0)
+    assert module.black.b == np.int32(0)
+    assert module.black_sum() == np.int32(0)
     assert module.counter == np.int32(3)
     assert module.scale == np.float64(1.5)
     assert not hasattr(module, "get_counter")
@@ -49,6 +55,7 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     assert not hasattr(module, "set_scale")
     assert not hasattr(module, "set_nmax")
     assert not hasattr(module, "set_red")
+    assert not hasattr(module, "set_black")
     assert not hasattr(module, "hidden_counter")
     assert not hasattr(module, "get_hidden_counter")
 
@@ -101,6 +108,13 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     assert module.summarize() == np.int32(16)
     assert second_module.summarize() == np.int32(16)
 
+    black_copy = module.black
+    black_copy.r = np.int32(17)
+    assert black_copy.r == np.int32(17)
+    assert module.black.r == np.int32(0)
+    assert module.black_sum() == np.int32(0)
+    assert second_module.black.r == np.int32(0)
+
 
 def test_aliased_derived_module_object_borrows_native_state(
     pyi_parity_build_mode: str,
@@ -120,11 +134,14 @@ def test_aliased_derived_module_object_borrows_native_state(
 
     current = module.current
     assert isinstance(current, module.box)
-    assert current.values is None
+    values = current.values
+    assert isinstance(values, AllocatableArray)
+    assert values.owner is current
+    assert values.allocated is False
+    assert values.to_numpy() is None
 
     module.allocate_current(np.int32(3))
-    view = current.values
-    assert view.base is current
+    view = values.to_numpy()
     np.testing.assert_allclose(view, np.array([1.0, 2.0, 3.0], dtype=np.float64))
 
     view[0] = np.float64(10.0)
@@ -133,7 +150,7 @@ def test_aliased_derived_module_object_borrows_native_state(
 
     owned = module.box()
     owned.allocate_values(np.int32(2))
-    owned.values[0] = np.float64(20.0)
+    owned.values.to_numpy()[0] = np.float64(20.0)
     assert owned.values_sum() == np.float64(22.0)
     assert module.current_sum() == np.float64(15.0)
 
@@ -151,4 +168,7 @@ def test_aliased_derived_module_object_borrows_native_state(
     assert "bind_c_set_current" not in bridge_source
 
     module.deallocate_current()
-    assert module.current.values is None
+    current_values = module.current.values
+    assert isinstance(current_values, AllocatableArray)
+    assert current_values.allocated is False
+    assert current_values.to_numpy() is None

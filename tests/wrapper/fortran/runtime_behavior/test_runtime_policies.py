@@ -25,13 +25,13 @@ MODIFIED_POLICY_CONTRACT = (
 
 
 def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_path: Path, monkeypatch):
-    from x2py import wrapping
+    from x2py.pipeline import build
     from x2py.semantics.models import RUNTIME_HOLD_GIL_METADATA, RUNTIME_STATUS_ERROR_METADATA
 
     source = tmp_path / "fruntime_policy_f90.f90"
     shutil.copyfile(RUNTIME_POLICY_SOURCE, source)
 
-    convert = wrapping.fortran_project_to_semantic_modules
+    convert = build.fortran_project_to_semantic_modules
 
     def convert_with_runtime_policy(*args, **kwargs):
         modules = convert(*args, **kwargs)
@@ -44,8 +44,8 @@ def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_pat
         }
         return modules
 
-    monkeypatch.setattr(wrapping, "fortran_project_to_semantic_modules", convert_with_runtime_policy)
-    result = wrapping.build_fortran_extension(source, output_dir=tmp_path)
+    monkeypatch.setattr(build, "fortran_project_to_semantic_modules", convert_with_runtime_policy)
+    result = build.build_fortran_extension(source, output_dir=tmp_path)
 
     sys.modules.pop(result.module_name, None)
     sys.path.insert(0, str(tmp_path))

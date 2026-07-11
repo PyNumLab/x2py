@@ -1,97 +1,99 @@
-@native_call([Ref(Arg(0))])
+from x2py.contracts import Addr, Arg, Bool, Complex128, Complex64, Float32, Float64, Int16, Int32, Int64, Int8, Returns, native_call
+
+@native_call([Addr(Arg(0))])
 def id_i8(
-    value: Const(Int8)
+    value: Int8
 ) -> Int8: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_i16(
-    value: Const(Int16)
+    value: Int16
 ) -> Int16: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_i32(
-    value: Const(Int32)
+    value: Int32
 ) -> Int32: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_i64(
-    value: Const(Int64)
+    value: Int64
 ) -> Int64: ...
 
-@native_call([Ref(Arg(0)), Arg(1), Arg(2)])
+@native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def copy_i16(
-    n: Const(Int32),
-    values: Const(Int16[n]),
+    n: Int32,
+    values: Int16[n],
     out: Int16[n]
 ) -> Returns["out", Int16[n]]: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def not_flag(
-    value: Const(Bool)
+    value: Bool
 ) -> Bool: ...
 
-@native_call([Ref(Arg(0)), Arg(1), Arg(2)])
+@native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def invert_flags(
-    n: Const(Int32),
-    values: Const(Bool[n]),
+    n: Int32,
+    values: Bool[n],
     out: Bool[n]
 ) -> Returns["out", Bool[n]]: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_r32(
-    value: Const(Float32)
+    value: Float32
 ) -> Float32: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_r64(
-    value: Const(Float64)
+    value: Float64
 ) -> Float64: ...
 
-@native_call([Ref(Arg(0)), Arg(1), Arg(2)])
+@native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def copy_r64(
-    n: Const(Int32),
-    values: Const(Float64[n]),
+    n: Int32,
+    values: Float64[n],
     out: Float64[n]
 ) -> Returns["out", Float64[n]]: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def conj_c64(
-    value: Const(Complex64)
+    value: Complex64
 ) -> Complex64: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def shift_c128(
-    value: Const(Complex128)
+    value: Complex128
 ) -> Complex128: ...
 
-@native_call([Ref(Arg(0)), Arg(1), Arg(2)])
+@native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def copy_c128(
-    n: Const(Int32),
-    values: Const(Complex128[n]),
+    n: Int32,
+    values: Complex128[n],
     out: Complex128[n]
 ) -> Returns["out", Complex128[n]]: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_c_i32(
-    value: Const(Int32)
+    value: Int32
 ) -> Int32: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_c_float(
-    value: Const(Float32)
+    value: Float32
 ) -> Float32: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def id_c_double(
-    value: Const(Float64)
+    value: Float64
 ) -> Float64: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def conj_c_float_complex(
-    value: Const(Complex64)
+    value: Complex64
 ) -> Complex64: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def conj_c_double_complex(
-    value: Const(Complex128)
+    value: Complex128
 ) -> Complex128: ...

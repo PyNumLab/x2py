@@ -17,7 +17,7 @@ from tests.wrapper.fortran._support import (
     wrapper_source,
 )
 from x2py import build_pyi_extension
-from x2py.wrapping import build_fortran_extension
+from x2py.pipeline.build import build_fortran_extension
 
 FIXED_EXTERNAL = wrapper_source("fixed_external.f")
 FREE_EXTERNAL = wrapper_source("free_external.f90")
@@ -216,7 +216,9 @@ def test_external_bridge_uses_explicit_interface_and_no_module_use(tmp_path: Pat
 
     bridge = (result.output_dir / f"bind_c_{result.module_name}_wrapper.f90").read_text(encoding="utf-8").lower()
     assert module.free_square(np.int32(3)) == np.int32(9)
-    assert entry.read_text(encoding="utf-8").startswith("@external\n")
+    assert entry.read_text(encoding="utf-8").startswith(
+        "from x2py.contracts import Addr, Arg, Int32, external, native_call\n\n@external\n"
+    )
     assert "function free_square(" in bridge
     assert "end function free_square" in bridge
     assert "private\n" not in bridge
@@ -309,8 +311,8 @@ def test_compact_blas_like_folder_generates_one_external_entry_and_preserves_sep
 
     assert sorted(path.relative_to(entry.parent).as_posix() for path in entry.parent.rglob("*.pyi")) == ["__init__.pyi"]
     text = entry.read_text(encoding="utf-8")
-    assert "@external\n@native_call([Ref(Arg(0)), Ref(Arg(1)), Arg(2), Arg(3)])\ndef daxpy_like(" in text
-    assert "@external\n@native_call([Ref(Arg(0)), Arg(1), Arg(2)])\ndef ddot_like(" in text
+    assert "@external\n@native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2), Arg(3)])\ndef daxpy_like(" in text
+    assert "@external\n@native_call([Addr(Arg(0)), Arg(1), Arg(2)])\ndef ddot_like(" in text
     assert generated_result.native_build_plan.to_dict()["link_items"] == [
         {"kind": "object", "path": str(tmp_path / "native" / "daxpy_like.o")},
         {"kind": "object", "path": str(tmp_path / "native" / "ddot_like.o")},
@@ -339,7 +341,12 @@ def test_namespace_imported_module_rejects_external_marker_before_codegen(tmp_pa
     source = _copy_sources((BASIC_SOURCE,), tmp_path / "sources")
     entry = _generate_contract(source, tmp_path / "contracts", _generated_contract_fixture(BASIC_SOURCE.stem))
     leaf = entry.parent / "m1.pyi"
-    leaf.write_text(leaf.read_text(encoding="utf-8").replace("def add1", "@external\ndef add1"), encoding="utf-8")
+    leaf_text = leaf.read_text(encoding="utf-8").replace(
+        "from x2py.contracts import ",
+        "from x2py.contracts import external, ",
+        1,
+    )
+    leaf.write_text(leaf_text.replace("def add1", "@external\ndef add1"), encoding="utf-8")
     native_objects = _compile_native_objects(source, tmp_path / "native")
     build_dir = tmp_path / "pyi_build"
 

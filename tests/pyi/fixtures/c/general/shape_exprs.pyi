@@ -1,3 +1,5 @@
+from x2py.contracts import Final, Float32, Int, Int32
+
 X2PY_EXPR_N0: Final[Int32] = 4
 
 X2PY_EXPR_N1: Final[Int32] = X2PY_EXPR_N0 + 2

@@ -1,3 +1,5 @@
+from x2py.contracts import CStruct, Float64, Int, private
+
 class modern_particle(CStruct):
     id: Int
     mass: Float64
@@ -11,7 +13,7 @@ modern_counter: Int
 hidden_scale: private[Float64] = 1.0
 
 def init_particle(
-    p: Ref(modern_particle),
+    p: modern_particle,
     pid: Int,
     mass: Float64,
     x: Float64,
@@ -20,7 +22,7 @@ def init_particle(
 ) -> None: ...
 
 def kinetic_energy(
-    p: Ref(modern_particle),
+    p: modern_particle,
     vx: Float64,
     vy: Float64,
     vz: Float64
@@ -33,8 +35,8 @@ def scale_vector(
 ) -> None: ...
 
 def dot3(
-    a: Const(Float64[3]),
-    b: Const(Float64[3])
+    a: Float64[3],
+    b: Float64[3]
 ) -> Float64: ...
 
 def fill_identity3_modern(
@@ -42,5 +44,5 @@ def fill_identity3_modern(
 ) -> None: ...
 
 def normalize_particle(
-    p: Ref(modern_particle)
+    p: modern_particle
 ) -> None: ...

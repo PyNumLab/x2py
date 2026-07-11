@@ -1,3 +1,6 @@
+from x2py.contracts import Addr, Arg, Int32, bind, external, native_call
+
 @external
 @bind("fixed_add")
-def renamed_increment(value: Ref(Const(Int32))) -> Int32: ...
+@native_call([Addr(Arg(0))])
+def renamed_increment(value: Int32) -> Int32: ...

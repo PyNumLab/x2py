@@ -183,13 +183,20 @@ jobs:
             test_paths=(tests)
           else
             test_paths=(
-              tests/parser
-              tests/property
-              tests/semantics
-              tests/pyi
-              tests/tools
+              tests/architecture
               tests/benchmarks
-              tests/test_naming_policy.py
+              tests/cli
+              tests/codegen
+              tests/docs
+              tests/lowering
+              tests/naming
+              tests/parsing
+              tests/pipeline
+              tests/probes
+              tests/runtime
+              tests/semantics
+              tests/tools
+              tests/types
               tests/wrapper/fortran/arrays
               tests/wrapper/fortran/build_from_pyi
               tests/wrapper/fortran/build_from_source
@@ -212,9 +219,13 @@ jobs:
 
           if [[ "${{ matrix.python-version }}" == "3.12" && "$X2PY_COVERAGE_REQUESTED" == "true" ]]; then
             COVERAGE_PROCESS_START="${{ github.workspace }}/pyproject.toml" \
-              python -m coverage run -m pytest -q --randomly-seed=1 "${test_paths[@]}"
+              python -m coverage run -m pytest -q --randomly-seed=1 \
+                -o junit_family=legacy \
+                --junitxml="$RUNNER_TEMP/pytest-results.xml" "${test_paths[@]}"
           else
-            python -m pytest -q --randomly-seed=1 "${test_paths[@]}"
+            python -m pytest -q --randomly-seed=1 \
+              -o junit_family=legacy \
+              --junitxml="$RUNNER_TEMP/pytest-results.xml" "${test_paths[@]}"
           fi
       - name: Upload coverage data
         if: matrix.python-version == '3.12' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-coverage')) || (github.event_name == 'workflow_call' && inputs.coverage))
@@ -224,6 +235,9 @@ jobs:
           path: .coverage.*
           include-hidden-files: true
           if-no-files-found: error
+      - name: Summarize failed pytest nodes
+        if: failure()
+        run: python tools/print_pytest_failures.py "$RUNNER_TEMP/pytest-results.xml"
 
   coverage-report:
     name: Coverage Report

@@ -1,5 +1,7 @@
 # Intentional difference: writable scalar, string, array, and derived-type
 # arguments use immutable Python-visible inputs and explicit replacement results.
+from x2py.contracts import Addr, Annotated, Arg, Float64, Immutable, Int32, Return, Returns, String, native_call
+
 class summary_point:
     def __init__(
         self,
@@ -11,21 +13,21 @@ class summary_point:
     total: Float64
     code: Int32
 
+@native_call([Addr(Arg(0)), Return("status", 0)])
 def scalar_status(
-    base: Ref(Const(Int32)),
-    status: Annotated[Ref(Int32), Intent("out"), Immutable]
+    base: Int32
 ) -> Returns["status", Int32]: ...
 
 def fixed_inout(
-    label: Annotated[Ref(String[8]), Immutable]
+    label: Annotated[String[8], Immutable]
 ) -> Returns["label", String[8]]: ...
 
 def scale_with_status(
     values: Annotated[Float64[:], Immutable],
-    status: Annotated[Ref(Int32), Intent("out")]
+    status: Int32[()]
 ) -> Returns["values", Float64[:]]: ...
 
+@native_call([Addr(Arg(0)), Return("point", 0)])
 def make_point(
-    scale: Ref(Const(Int32)),
-    point: Annotated[summary_point, Intent("out"), Immutable]
+    scale: Int32
 ) -> Returns["point", summary_point]: ...

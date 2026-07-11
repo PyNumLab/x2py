@@ -1,5 +1,7 @@
+from x2py.contracts import Float64, Int32
+
 def rank_weighted_sum(
-    values: Const(Float64[...])
+    values: Float64[...]
 ) -> Float64: ...
 
 def bump_assumed_rank(
@@ -7,6 +9,6 @@ def bump_assumed_rank(
 ) -> None: ...
 
 def rank_pair_score(
-    left: Const(Float64[...]),
-    right: Const(Float64[...])
+    left: Float64[...],
+    right: Float64[...]
 ) -> Int32: ...

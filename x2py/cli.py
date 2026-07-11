@@ -18,18 +18,18 @@ from x2py.fortran_parser.models import FortranParseError
 from x2py.fortran_parser.parser import FortranParser
 from x2py.semantics.c2ir import c_project_to_semantic_modules
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
-from x2py.semantics.pyi2ir import load_pyi_modules
+from x2py.pipeline.pyi import pyi_paths_to_semantic_modules
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
-from x2py.c_type_probe import (
+from x2py.probes.c_types import (
     CStandardTypeProbeError,
     load_c_standard_type_probe_report,
     probe_c_standard_types_cached,
 )
-from x2py.fortran_type_probe import (
+from x2py.probes.fortran_types import (
     FortranTypeProbeReport,
     load_fortran_type_probe_report,
 )
-from x2py.preprocessing import (
+from x2py.pipeline.preprocessing import (
     PreprocessingConfig,
     PreprocessingError,
     run_compiler_preprocessor_with_recipe,
@@ -244,7 +244,7 @@ def _parse_c_path(
 ):
     source_loader = _c_source_loader(preprocessing)
     if source_loader is None:
-        return parser.visit_file(
+        return parser.parse_file(
             path,
             filename=str(path),
             include_dirs=preprocessing.include_dirs,
@@ -252,7 +252,7 @@ def _parse_c_path(
         )
 
     source, preprocessing_recipe = source_loader(path)
-    parsed = parser.visit_file(
+    parsed = parser.parse_file(
         source,
         filename=str(path),
         include_dirs=preprocessing.include_dirs,
@@ -268,7 +268,7 @@ def _parse_c_project(
 ):
     parser = CParser()
     parsed_files = {str(path): _parse_c_path(parser, path, preprocessing) for path in expand_c_paths(paths)}
-    return parser.visit_parsed_project(parsed_files)
+    return parser._assemble_project(parsed_files)
 
 
 def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = None) -> dict[str, dict]:
@@ -277,7 +277,7 @@ def _parse_report(paths: list[str], preprocessing: PreprocessingConfig | None = 
     parser = FortranParser()
     for p in _expand_paths(paths):
         code, preprocessing_recipe = _fortran_source_for_path(p, preprocessing)
-        parsed = parser.visit_file(code, filename=str(p))
+        parsed = parser.parse_file(code, filename=str(p))
         payload = {
             "signatures": [_to_dict_no_parent(s) for s in parsed.procedures],
             "types": [_to_dict_no_parent(t) for t in parsed.derived_types],
@@ -314,7 +314,7 @@ def _c_standard_type_report(
     if preprocessing.compile_commands or preprocessing.command_template:
         raise CStandardTypeProbeError(
             "automatic C ABI probing requires a direct compiler configuration; "
-            "generate a reusable report with `python -m x2py.c_type_probe` and pass it with --c-type-report"
+            "generate a reusable report with `python -m x2py.probes.c_types` and pass it with --c-type-report"
         )
     return probe_c_standard_types_cached(
         preprocessing,
@@ -449,7 +449,7 @@ def _parse_fortran_source_files(
     parsed_files = []
     for path in paths:
         code, _preprocessing_recipe = _fortran_source_for_path(path, preprocessing)
-        parsed_files.append((path, parser.visit_file(code, filename=str(path))))
+        parsed_files.append((path, parser.parse_file(code, filename=str(path))))
 
     if len(parsed_files) > 1:
         _resolve_fortran_project_parameters(parser, [parsed for _path, parsed in parsed_files])
@@ -640,9 +640,29 @@ def _fortran_contract_payload(path: Path, modules, available_modules) -> dict[st
 
 
 def _source_root_stub(module_names: list[str], external_text: list[str]) -> str:
+    contract_imports: set[str] = set()
+    external_sections = []
+    for text in external_text:
+        imports, body = _split_contract_imports(text)
+        contract_imports.update(imports)
+        if body:
+            external_sections.append(body)
+    contract_section = f"from x2py.contracts import {', '.join(sorted(contract_imports))}" if contract_imports else ""
     lines = [f"from . import {name}" for name in module_names]
-    sections = ["\n".join(lines), *external_text]
+    import_section = "\n".join(line for line in [contract_section, *lines] if line)
+    sections = [import_section, *external_sections]
     return "\n\n".join(section for section in sections if section).strip()
+
+
+def _split_contract_imports(text: str) -> tuple[set[str], str]:
+    imports: set[str] = set()
+    body_lines = []
+    for line in text.splitlines():
+        if line.startswith("from x2py.contracts import "):
+            imports.update(item.strip() for item in line.removeprefix("from x2py.contracts import ").split(","))
+            continue
+        body_lines.append(line)
+    return imports, "\n".join(body_lines).strip()
 
 
 def _format_pyi_report(semantic_report: dict[str, dict]) -> str:
@@ -735,7 +755,9 @@ def _pyi_readiness_report(paths: list[str]) -> dict[str, dict]:
     pyi_paths = _expand_pyi_paths(paths)
     if not pyi_paths:
         return {}
-    modules = load_pyi_modules([raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"])
+    modules = pyi_paths_to_semantic_modules(
+        [raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"]
+    )
     return {
         str(path): {
             "source_kind": "pyi",
@@ -778,7 +800,7 @@ def _fortran_compile_time_values(
         return None
 
     from x2py.semantics.fortran2ir import collect_semantic_compile_time_requirements
-    from x2py.fortran_type_probe import evaluate_fortran_type_requirements
+    from x2py.probes.fortran_types import evaluate_fortran_type_requirements
 
     requirements = collect_semantic_compile_time_requirements(parsed)
     if not requirements:
@@ -806,7 +828,7 @@ def _fortran_type_facts(
         return None
 
     from x2py.semantics.fortran2ir import collect_fortran_type_storage_requirements
-    from x2py.fortran_type_probe import evaluate_fortran_type_facts
+    from x2py.probes.fortran_types import evaluate_fortran_type_facts
 
     requirements = collect_fortran_type_storage_requirements(parsed, compile_time_values=compile_time_values)
     if not requirements:
@@ -1370,7 +1392,7 @@ def _run_stage_reports_with_diagnostics(args: argparse.Namespace, preprocessing:
 
 
 def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig):
-    from x2py.wrapping import build_fortran_extension, build_pyi_extension, build_pyi_extension_from_manifest
+    from x2py.pipeline.build import build_fortran_extension, build_pyi_extension, build_pyi_extension_from_manifest
 
     if _wrap_uses_build_manifest(args):
         result = build_pyi_extension_from_manifest(
@@ -1800,7 +1822,7 @@ def main() -> int:
     type_probe_group.add_argument(
         "--c-type-report",
         metavar="PATH",
-        help="Reuse a C ABI report generated by `python3 -m x2py.c_type_probe`.",
+        help="Reuse a C ABI report generated by `python3 -m x2py.probes.c_types`.",
     )
     type_probe_group.add_argument(
         "--c-type-probe-runner",
@@ -1822,7 +1844,7 @@ def main() -> int:
     type_probe_group.add_argument(
         "--fortran-type-report",
         metavar="PATH",
-        help="Reuse a Fortran type report generated by `python3 -m x2py.fortran_type_probe`.",
+        help="Reuse a Fortran type report generated by `python3 -m x2py.probes.fortran_types`.",
     )
     type_probe_group.add_argument(
         "--fortran-type-probe-runner",

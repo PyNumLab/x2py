@@ -34,7 +34,7 @@ def split_csv(text: str | None) -> list[str]:
     parenthesized expressions, e.g.:
 
     - argument lists: ``sub(x, y)``
-    - attribute lists: ``intent(in), dimension(n, m)``
+    - attribute lists: ``dimension(n, m), contiguous``
     - shape lists: ``a(1:n, 0:m)``
 
     Only commas at parenthesis depth 0 are treated as separators.

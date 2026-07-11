@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, Return, Returns, native_call
+
 class particle:
     def __init__(
         self,
@@ -17,39 +19,38 @@ class vector3:
 
 counter: Int32
 
-@native_call([Return('p', 0), Ref(Arg(0)), Ref(Arg(1)), Ref(Arg(2)), Ref(Arg(3)), Ref(Arg(4))])
+@native_call([Return('p', 0), Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3)), Addr(Arg(4))])
 def init_particle(
-    pid: Const(Int32),
-    mass: Const(Float64),
-    x: Const(Float64),
-    y: Const(Float64),
-    z: Const(Float64)
+    pid: Int32,
+    mass: Float64,
+    x: Float64,
+    y: Float64,
+    z: Float64
 ) -> particle: ...
 
-@native_call([Arg(0), Ref(Arg(1)), Ref(Arg(2)), Ref(Arg(3))])
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2)), Addr(Arg(3))])
 def kinetic_energy(
-    p: Ref(Const(particle)),
-    vx: Const(Float64),
-    vy: Const(Float64),
-    vz: Const(Float64)
+    p: particle,
+    vx: Float64,
+    vy: Float64,
+    vz: Float64
 ) -> Float64: ...
 
-@native_call([Arg(0), Ref(Arg(1))])
+@native_call([Arg(0), Addr(Arg(1))])
 def scale_vector(
     v: Float64[::],
-    alpha: Const(Float64)
+    alpha: Float64
 ) -> None: ...
 
 def dot3(
-    a: Const(Float64[3]),
-    b: Const(Float64[3])
+    a: Float64[3],
+    b: Float64[3]
 ) -> Float64: ...
 
-@native_call([Arg(0)])
 def fill_identity3(
     a: Annotated[Float64[3, 3], ORDER_F]
 ) -> Returns["a", Annotated[Float64[3, 3], ORDER_F]]: ...
 
 def normalize_particle(
-    p: Ref(particle)
+    p: particle
 ) -> None: ...

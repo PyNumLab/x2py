@@ -12,7 +12,8 @@ import numpy as np
 import pytest
 
 from x2py import build_pyi_extension
-from x2py.wrapping import build_fortran_extension
+from x2py.semantics.native_array_handles import NativeArrayBuildRequirement, NativeArrayBuildRequirements
+from x2py.pipeline.build import _manifest_native_array_requirements, build_fortran_extension
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran._support import (
     REPO_ROOT,
@@ -254,6 +255,11 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
     assert manifest["compiler"]["wrapper_fortran_flags"] == ["-fno-range-check", "-g0"]
     assert manifest["compiler"]["wrapper_c_flags"] == ["-O0", "-g0"]
     assert manifest["entry_contract"].endswith("fruntime_abi_f90.pyi")
+    assert manifest["native_array_build_requirements"] == {
+        "pointer_c_descriptor_interop": False,
+        "headers": [],
+        "items": [],
+    }
     assert [item["kind"] for item in manifest["native_build_plan"]["link_items"]] == ["object"]
     assert manifest["native_build_plan"]["compilation_units"][0]["source"].endswith(native_source.name)
     assert "-O2" in makefile_text
@@ -366,6 +372,43 @@ def test_pyi_python_api_rejects_invalid_projection_before_codegen(tmp_path: Path
     assert not list((tmp_path / "build").glob("*_wrapper.*"))
 
 
+@pytest.mark.parametrize(
+    ("contract_text", "message"),
+    [
+        (
+            "from x2py.contracts import Addr, Float64\n\n"
+            "class particle:\n    value: Float64\n\n"
+            "def invalid(value: Addr(particle)) -> None: ...\n",
+            r"Addr\(WrappedType\) is not allowed",
+        ),
+        (
+            "from x2py.contracts import Addr, Arg, Float64, native_call\n\n"
+            "@native_call([Addr(Arg(0))])\n"
+            "def invalid(values: Float64[:]) -> None: ...\n",
+            "only valid for primitive scalar values",
+        ),
+        (
+            "from x2py.contracts import Addr, Float64\n\ndef invalid(values: Addr(Float64[:])) -> None: ...\n",
+            "raw arrays require a fully resolved rank and shape",
+        ),
+    ],
+)
+def test_pyi_python_api_rejects_invalid_address_contracts_before_codegen(
+    tmp_path: Path,
+    contract_text: str,
+    message: str,
+):
+    contract = tmp_path / "invalid_address.pyi"
+    contract.write_text(contract_text, encoding="utf-8")
+    native_object = tmp_path / "native.o"
+    native_object.touch()
+
+    with pytest.raises(ValueError, match=message):
+        build_pyi_extension(contract, native_objects=[native_object], output_dir=tmp_path / "build")
+
+    assert not list((tmp_path / "build").glob("*_wrapper.*"))
+
+
 def test_generated_pyi_fixture_builds_from_native_object_without_source_reparse(tmp_path: Path):
     native_object = _compile_native_object(SOURCE, tmp_path / "native")
     module, payload = _build_pyi_cli(PYI_FIXTURE, native_object, tmp_path / "pyi_build")
@@ -420,6 +463,40 @@ def test_pyi_cli_preserves_explicit_ordered_link_items(tmp_path: Path):
     assert manifest_link_items[1]["path"].endswith(native_object.name)
     assert manifest_link_items[2] == {"argument": "-Wl,--end-group", "kind": "linker_argument"}
     assert module.scale(np.float64(2.0), np.float64(4.0)) == np.float64(8.0)
+
+
+def test_pyi_manifest_records_pointer_descriptor_interop_requirements():
+    manifest_section = _manifest_native_array_requirements(
+        NativeArrayBuildRequirements(
+            pointer_c_descriptor_interop=True,
+            headers=("ISO_Fortran_binding.h",),
+            items=(
+                NativeArrayBuildRequirement(
+                    owner="api.inspect.target",
+                    item="target",
+                    descriptor_kind="pointer",
+                    handle_kind="argument_descriptor",
+                    descriptor_interop="pointer_c_descriptor",
+                    headers=("ISO_Fortran_binding.h",),
+                ),
+            ),
+        )
+    )
+
+    assert manifest_section == {
+        "pointer_c_descriptor_interop": True,
+        "headers": ["ISO_Fortran_binding.h"],
+        "items": [
+            {
+                "owner": "api.inspect.target",
+                "item": "target",
+                "descriptor_kind": "pointer",
+                "handle_kind": "argument_descriptor",
+                "descriptor_interop": "pointer_c_descriptor",
+                "headers": ["ISO_Fortran_binding.h"],
+            }
+        ],
+    }
 
 
 def test_generated_pyi_matches_checked_in_fixture(tmp_path: Path):
@@ -541,7 +618,7 @@ def test_entry_rejects_colliding_wildcard_exports(tmp_path: Path):
     first = tmp_path / "first.pyi"
     second = tmp_path / "second.pyi"
     entry.write_text("from .first import *\nfrom .second import *\n", encoding="utf-8")
-    declaration = "def update(value: Int32) -> Int32: ...\n"
+    declaration = "from x2py.contracts import Int32\n\ndef update(value: Int32) -> Int32: ...\n"
     first.write_text(declaration, encoding="utf-8")
     second.write_text(declaration, encoding="utf-8")
 

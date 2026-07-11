@@ -6,15 +6,15 @@ from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
+CALLBACK_DECLARATION_ACCESS_METADATA = "callback_declaration_access"
 INTERNAL_MODULE_VARIABLE_ACCESS_METADATA = "internal_module_variable_access"
 INTERNAL_MODULE_VARIABLE_NAME_METADATA = "internal_module_variable_name"
-PYI_BIND_TARGET_METADATA = "pyi_bind_target"
-PYI_PROJECTED_OUTPUT_METADATA = "pyi_projected_output"
-PYI_SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA = "pyi_suppress_default_constructor"
-PYI_USER_PRIVATE_METADATA = "pyi_user_private"
+INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA = "internal_native_array_handle_operation"
+INTERNAL_NATIVE_ARRAY_HANDLE_OWNER_CLASS_METADATA = "internal_native_array_handle_owner_class"
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
 PYTHON_VALUE_IMMUTABLE = "immutable"
 RUNTIME_HOLD_GIL_METADATA = "runtime_hold_gil"
+RUNTIME_RETAIN_RESULT_OWNER_METADATA = "runtime_retain_result_owner"
 RUNTIME_STATUS_ERROR_METADATA = "runtime_status_error"
 
 
@@ -152,20 +152,6 @@ class SemanticVariable:
     origin: SemanticOrigin = field(default_factory=SemanticOrigin, compare=False)
 
     @property
-    def intent(self) -> str:
-        """Compatibility view for data declarations carrying .pyi Intent metadata."""
-        value = self.metadata.get("intent", "in")
-        return str(value)
-
-    @intent.setter
-    def intent(self, value: str) -> None:
-        text = str(value)
-        if text == "in":
-            self.metadata.pop("intent", None)
-        else:
-            self.metadata["intent"] = text
-
-    @property
     def optional(self) -> bool:
         """Compatibility view for data declarations parsed from ``= ...``."""
         return bool(self.metadata.get("optional", False))
@@ -180,15 +166,12 @@ class SemanticVariable:
 
 @dataclass(init=False)
 class SemanticArgument(SemanticVariable):
-    intent: str = "in"
-
     optional: bool = False
 
     def __init__(
         self,
         name: str,
         semantic_type: SemanticType,
-        intent: str = "in",
         optional: bool = False,
         visibility: str = "public",
         default_value: str | None = None,
@@ -197,11 +180,10 @@ class SemanticArgument(SemanticVariable):
     ) -> None:
         self.name = name
         self.semantic_type = semantic_type
-        self.intent = intent
-        self.optional = optional
         self.visibility = visibility
         self.default_value = default_value
         self.metadata = {} if metadata is None else metadata
+        self.optional = optional
         self.origin = SemanticOrigin() if origin is None else origin
 
 
@@ -240,7 +222,6 @@ class ProjectionMapping:
     result_position: int | None = None
     value_kind: str = ""
     value: Any = None
-    intent: str = "in"
 
 
 # ============================================================
@@ -334,16 +315,15 @@ PYTHON_BOUND_POSITION_METADATA = "python_bound_position"
 PYTHON_METHOD_NAME_METADATA = "python_method_name"
 PYTHON_EXPORTS_METADATA = "python_exports"
 PYTHON_EXPORTS_PREPARED_METADATA = "python_exports_prepared"
-PYI_LOADED_METADATA = "pyi_loaded"
-PYI_NATIVE_CONTRACT_PREPARED_METADATA = "pyi_native_contract_prepared"
-PYI_NATIVE_PROJECTION_METADATA = "pyi_native_projection"
 POLICY_COMPLETION_PREPARED_METADATA = "policy_completion_prepared"
+RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA = "resolved_snapshot_field_action"
 RESOLVED_OWNERSHIP_POLICY_METADATA = "resolved_ownership_policy"
 RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA = "resolved_return_ownership_policy"
 RESOLVED_CLASS_INSTANCE_POLICY_METADATA = "resolved_class_instance_policy"
 RESOLVED_CLASS_SELF_POLICY_METADATA = "resolved_class_self_policy"
 RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA = "resolved_getter_ownership_policy"
 RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA = "resolved_setter_ownership_policy"
+RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA = "resolved_native_array_handle_policy"
 RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA = "resolved_module_variable_initializer"
 MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER = "module_variable_initializer_unsupported"
 PYTHON_STATIC_METADATA = "python_static"
@@ -370,7 +350,6 @@ def _function_argument_key(
 ) -> tuple[Any, ...]:
     return (
         _semantic_type_key(arg.semantic_type, name_map),
-        arg.intent,
         arg.optional,
         arg.visibility,
         _canonical_expression(arg.default_value, name_map),
@@ -474,7 +453,6 @@ def _projection_key(
             mapping.result_position,
             mapping.value_kind,
             _native_projection_value_key(mapping.value, name_map),
-            mapping.intent,
         )
         for mapping in projection
         if _requires_explicit_projection_mapping(mapping)
@@ -484,12 +462,8 @@ def _projection_key(
 def _requires_explicit_projection_mapping(mapping: ProjectionMapping) -> bool:
     if mapping.value_kind:
         return True
-    if mapping.intent == "inout":
-        return mapping.result_position is not None or mapping.python_position != mapping.native_position
-    if mapping.intent != "in":
-        return mapping.python_position is None
     if mapping.result_position is not None:
-        return True
+        return mapping.python_position is None or mapping.python_position != mapping.native_position
     if mapping.python_position is None:
         return True
     return mapping.native_position is not None and mapping.python_position != mapping.native_position

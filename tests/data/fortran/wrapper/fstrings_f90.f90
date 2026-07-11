@@ -66,4 +66,36 @@ contains
     character(len=:), allocatable :: value
     value = trim(text) // '-deferred'
   end function string_result_deferred
+
+  integer function fixed_array_extent(labels)
+    character(len=8), intent(in) :: labels(:)
+    if (size(labels) == 0) then
+      fixed_array_extent = 0
+    else
+      fixed_array_extent = len(labels(1)) * size(labels)
+    end if
+  end function fixed_array_extent
+
+  subroutine replace_names(names)
+    character(len=:), allocatable, intent(inout) :: names(:)
+    integer :: n
+
+    if (allocated(names)) then
+      n = size(names)
+    else
+      n = 2
+    end if
+
+    if (allocated(names)) deallocate(names)
+    allocate(character(len=5) :: names(n))
+    names = '     '
+    if (n >= 1) names(1) = 'red'
+    if (n >= 2) names(2) = 'blue'
+  end subroutine replace_names
+
+  subroutine rewrite_storage(label)
+    character(len=8), intent(inout) :: label
+    label(1:1) = 'Y'
+    label(8:8) = '?'
+  end subroutine rewrite_storage
 end module fstrings_f90

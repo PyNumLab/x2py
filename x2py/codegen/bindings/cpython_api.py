@@ -28,8 +28,13 @@ from ..models.datatypes import (
     PrimitiveFloatingPointType,
     PrimitiveIntegerType,
     NumpyBoolType,
+    NumpyComplex64Type,
     NumpyComplex128Type,
+    NumpyFloat32Type,
     NumpyFloat64Type,
+    NumpyInt8Type,
+    NumpyInt16Type,
+    NumpyInt32Type,
     NumpyInt64Type,
     attach_model_child,
     detach_model_child,
@@ -68,21 +73,33 @@ __all__ = (
     "PyFunctionDef",
     "PyFunctionOverloadSet",
     "PyGetSetDefElement",
+    "PyImport_ImportModule",
     "PyList_Append",
     "PyList_GetItem",
     "PyList_New",
     "PyList_SetItem",
+    "PyLong_AsLongLong",
+    "PyLong_AsVoidPtr",
+    "PyLong_Check",
+    "PyLong_FromLong",
+    "PyLong_FromLongLong",
+    "PyLong_FromVoidPtr",
     "PyMemoryError",
     "PyModInitFunc",
     "PyModule",
     "PyModule_AddObject",
     "PyModule_Create",
+    "PyModule_GetDict",
     "PyModule_SetPropertyType",
     "PyNotImplementedError",
+    "PyObject_CallObject",
+    "PyObject_GetAttrString",
     "PyObject_TypeCheck",
+    "PyRun_String",
     "PyRuntimeError",
     "PyRuntimeWarning",
     "PySys_GetObject",
+    "PyTuple_GetItem",
     "PyTuple_Pack",
     "PyTypeError",
     "PyType_Ready",
@@ -1423,8 +1440,13 @@ def C_to_Python(c_object):
 # Functions definitions are defined in x2py/stdlib/x2py_runtime/python_runtime.c
 c_to_py_registry = {
     NumpyBoolType(): "Bool_to_PyBool",
+    NumpyInt8Type(): "Int8_to_NumpyLong",
+    NumpyInt16Type(): "Int16_to_NumpyLong",
+    NumpyInt32Type(): "Int32_to_PyLong",
     NumpyInt64Type(): "Int" + str(NumpyInt64Type().precision * 8) + "_to_PyLong",
+    NumpyFloat32Type(): "Float_to_NumpyDouble",
     NumpyFloat64Type(): "Double_to_PyDouble",
+    NumpyComplex64Type(): "Complex64_to_NumpyComplex",
     NumpyComplex128Type(): "Complex128_to_PyComplex",
 }
 
@@ -1468,6 +1490,13 @@ PyErr_WarnEx = FunctionDef(
         FunctionDefArgument(Variable(Py_ssize_t(), name="stack_level")),
     ],
     results=FunctionDefResult(Variable(CNativeInt(), name="status")),
+)
+
+PyImport_ImportModule = FunctionDef(
+    name="PyImport_ImportModule",
+    body=[],
+    arguments=[FunctionDefArgument(Variable(CharType(), name="name", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="module", memory_handling="alias")),
 )
 
 PyNotImplementedError = Variable(PythonObjectType(), name="PyExc_NotImplementedError")
@@ -1535,6 +1564,21 @@ PyList_SetItem = FunctionDef(
 
 
 # -------------------------------------------------------------------
+#                         Tuple functions
+# -------------------------------------------------------------------
+
+PyTuple_GetItem = FunctionDef(
+    name="PyTuple_GetItem",
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), "tuple", memory_handling="alias")),
+        FunctionDefArgument(Variable(NumpyInt64Type(), "i")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), "item", memory_handling="alias")),
+    body=[],
+)
+
+
+# -------------------------------------------------------------------
 #                         Dict functions
 # -------------------------------------------------------------------
 
@@ -1557,6 +1601,49 @@ PyDict_SetItem = FunctionDef(
     ],
     results=FunctionDefResult(Variable(NumpyInt64Type(), "i")),
     body=[],
+)
+
+
+PyModule_GetDict = FunctionDef(
+    name="PyModule_GetDict",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "module", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "dict", memory_handling="alias")),
+    body=[],
+)
+
+
+PyRun_String = FunctionDef(
+    name="PyRun_String",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(CharType(), name="code", memory_handling="alias")),
+        FunctionDefArgument(Variable(CNativeInt(), name="start")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="globals", memory_handling="alias")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="locals", memory_handling="alias")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="result", memory_handling="alias")),
+)
+
+
+PyObject_GetAttrString = FunctionDef(
+    name="PyObject_GetAttrString",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), name="object", memory_handling="alias")),
+        FunctionDefArgument(Variable(CharType(), name="attr", memory_handling="alias")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="result", memory_handling="alias")),
+)
+
+
+PyObject_CallObject = FunctionDef(
+    name="PyObject_CallObject",
+    body=[],
+    arguments=[
+        FunctionDefArgument(Variable(PythonObjectType(), name="callable", memory_handling="alias")),
+        FunctionDefArgument(Variable(PythonObjectType(), name="args", memory_handling="alias")),
+    ],
+    results=FunctionDefResult(Variable(PythonObjectType(), name="result", memory_handling="alias")),
 )
 
 
@@ -1586,6 +1673,50 @@ PyUnicode_AsUTF8AndSize = FunctionDef(
 PyUnicode_Check = FunctionDef(
     name="PyUnicode_Check",
     arguments=[FunctionDefArgument(Variable(PythonObjectType(), "str", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(CNativeInt(), "out")),
+    body=[],
+)
+
+# https://docs.python.org/3/c-api/long.html#c.PyLong_AsVoidPtr
+PyLong_AsVoidPtr = FunctionDef(
+    name="PyLong_AsVoidPtr",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(BindCPointer(), "ptr", memory_handling="alias")),
+    body=[],
+)
+
+PyLong_AsLongLong = FunctionDef(
+    name="PyLong_AsLongLong",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(NumpyInt64Type(), "value")),
+    body=[],
+)
+
+PyLong_FromVoidPtr = FunctionDef(
+    name="PyLong_FromVoidPtr",
+    arguments=[FunctionDefArgument(Variable(BindCPointer(), "p", memory_handling="alias"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "o", memory_handling="alias")),
+    body=[],
+)
+
+PyLong_FromLong = FunctionDef(
+    name="PyLong_FromLong",
+    arguments=[FunctionDefArgument(Variable(CNativeInt(), "value"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "o", memory_handling="alias")),
+    body=[],
+)
+
+PyLong_FromLongLong = FunctionDef(
+    name="PyLong_FromLongLong",
+    arguments=[FunctionDefArgument(Variable(NumpyInt64Type(), "value"))],
+    results=FunctionDefResult(Variable(PythonObjectType(), "o", memory_handling="alias")),
+    body=[],
+)
+
+# https://docs.python.org/3/c-api/long.html#c.PyLong_Check
+PyLong_Check = FunctionDef(
+    name="PyLong_Check",
+    arguments=[FunctionDefArgument(Variable(PythonObjectType(), "o", memory_handling="alias"))],
     results=FunctionDefResult(Variable(CNativeInt(), "out")),
     body=[],
 )

@@ -1,31 +1,33 @@
+from x2py.contracts import Int32, String, bind, external
+
 @bind("CHAR_CODE_DEFAULT")
 @external
 def char_code_default(
-    C: Ref(Const(String[1]))
+    C: String[1]
 ) -> Int32: ...
 
 @bind("CHAR_CODE_STAR1")
 @external
 def char_code_star1(
-    C: Ref(Const(String[1]))
+    C: String[1]
 ) -> Int32: ...
 
 @bind("STRING_LEN_STAR8")
 @external
 def string_len_star8(
-    TEXT: Ref(Const(String[8]))
+    TEXT: String[8]
 ) -> Int32: ...
 
 @bind("STRING_LEN_ASSUMED")
 @external
 def string_len_assumed(
-    TEXT: Ref(Const(String))
+    TEXT: String
 ) -> Int32: ...
 
 @bind("STRING_LEN_ENTITY")
 @external
 def string_len_entity(
-    TEXT: Ref(Const(String[6]))
+    TEXT: String[6]
 ) -> Int32: ...
 
 @bind("CHAR_RESULT_DEFAULT")

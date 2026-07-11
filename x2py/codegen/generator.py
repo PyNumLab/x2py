@@ -1,11 +1,13 @@
 """Shared visitor base for bridge and binding generators."""
 
+from x2py.utilities.visitor import ClassVisitor
+
 from .scope import Scope
 
 __all__ = ("BindingGenerator", "BridgeGenerator")
 
 
-class _Generator:
+class _Generator(ClassVisitor):
     """Dispatch codegen model nodes to `_visit_<Model>` methods."""
 
     start_language = None
@@ -34,16 +36,6 @@ class _Generator:
     def generate(self, expr):
         """Generate a bridge or binding model for `expr`."""
         return self._visit(expr)
-
-    def _visit(self, expr):
-        for cls in type(expr).mro():
-            visit_method = "_visit_" + cls.__name__
-            if hasattr(self, visit_method):
-                if self._verbose > 2:
-                    print(f">>>> Calling {type(self).__name__}.{visit_method}")
-                return getattr(self, visit_method)(expr)
-
-        return self._visit_not_supported(expr)
 
     def _visit_not_supported(self, expr):
         """Raise an error when no visitor supports the model type."""

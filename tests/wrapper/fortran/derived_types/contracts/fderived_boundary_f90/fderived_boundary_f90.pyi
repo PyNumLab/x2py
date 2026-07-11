@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Float64, Return, native_call
+
 class point:
     def __init__(
         self,
@@ -20,33 +22,33 @@ class holder:
     scale: Float64
 
 def point_sum(
-    p: Ref(Const(point))
+    p: point
 ) -> Float64: ...
 
-@native_call([Arg(0), Ref(Arg(1)), Ref(Arg(2))])
+@native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
 def move_point(
-    p: Ref(point),
-    dx: Const(Float64),
-    dy: Const(Float64)
+    p: point,
+    dx: Float64,
+    dy: Float64
 ) -> None: ...
 
-@native_call([Return('p', 0), Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Return('p', 0), Addr(Arg(0)), Addr(Arg(1))])
 def make_point_out(
-    x: Const(Float64),
-    y: Const(Float64)
+    x: Float64,
+    y: Float64
 ) -> point: ...
 
-@native_call([Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def make_point(
-    x: Const(Float64),
-    y: Const(Float64)
+    x: Float64,
+    y: Float64
 ) -> point: ...
 
 def set_holder_origin(
-    h: Ref(holder),
-    p: Ref(Const(point))
+    h: holder,
+    p: point
 ) -> None: ...
 
 def holder_origin_x(
-    h: Ref(Const(holder))
+    h: holder
 ) -> Float64: ...

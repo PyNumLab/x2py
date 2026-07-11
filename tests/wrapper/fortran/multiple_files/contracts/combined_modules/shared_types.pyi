@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Int32, native_call
+
 class box:
     def __init__(
         self,
@@ -7,7 +9,7 @@ class box:
 
     value: Int32
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def make_box(
-    value: Const(Int32)
+    value: Int32
 ) -> box: ...

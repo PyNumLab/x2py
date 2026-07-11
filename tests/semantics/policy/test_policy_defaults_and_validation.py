@@ -1,0 +1,581 @@
+"""Tests split by stable ownership concept from `test_handle_policy_dispatch.py`."""
+
+from tests._shared.ownership_policy_support import (
+    ADDRESS_ROLE_PROJECTION,
+    ADDRESS_ROLE_RAW,
+    ArrayInteropPolicy,
+    ArrayInteropPolicyDispatcher,
+    AssignmentMode,
+    CPythonBindingGenerator,
+    CodegenAction,
+    DestructionPolicy,
+    NativeBarrierAction,
+    NativeBarrierDispatcher,
+    NumpyFloat64Type,
+    NumpyNDArrayType,
+    ObjectKind,
+    OwnershipContext,
+    OwnershipDecision,
+    OwnershipOwner,
+    OwnershipPolicyResolver,
+    POLICY_COMPLETION_PREPARED_METADATA,
+    PROJECTED_OUTPUT_METADATA,
+    PolicyActionDispatcher,
+    ProjectionMapping,
+    PythonBarrierAction,
+    PythonBarrierDispatcher,
+    RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
+    RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
+    Scope,
+    SemanticArgument,
+    SemanticClass,
+    SemanticField,
+    SemanticFunction,
+    SemanticModule,
+    SemanticVariable,
+    SetterAction,
+    StorageMode,
+    TransferMode,
+    Variable,
+    _address_type,
+    _array_type,
+    _derived_type,
+    _hidden_output_context,
+    _read_only_argument_context,
+    _scalar_storage_type,
+    _scalar_type,
+    _string_storage_type,
+    _string_type,
+    _writable_argument_context,
+    codegen_action_for_variable,
+    complete_semantic_policies,
+    default_ownership_policy,
+    parse_pyi_text,
+    pytest,
+    semantic_ir_to_codegen_ast,
+)
+
+
+def test_default_policy_decisions_cover_public_object_kinds():
+    resolver = default_ownership_policy
+
+    scalar = resolver.decide_semantic_type(_scalar_type(), OwnershipContext.result())
+    assert scalar.owner is OwnershipOwner.PYTHON
+    assert scalar.transfer is TransferMode.BY_VALUE
+    assert scalar.codegen_action is CodegenAction.DIRECT_VALUE
+
+    string = resolver.decide_semantic_type(_string_type(), OwnershipContext.result())
+    assert string.owner is OwnershipOwner.PYTHON
+    assert string.transfer is TransferMode.COPY_RETURN
+
+    string_replacement = resolver.decide_semantic_type(
+        _string_type(),
+        _writable_argument_context(projects_result=True),
+    )
+    assert string_replacement.owner is OwnershipOwner.PYTHON
+    assert string_replacement.transfer is TransferMode.COPY_RETURN
+    assert "immutable Python strings" in string_replacement.reason
+
+    caller_array = resolver.decide_semantic_type(_array_type(), _hidden_output_context())
+    assert caller_array.owner is OwnershipOwner.CALLER
+    assert caller_array.transfer is TransferMode.IN_PLACE
+    assert caller_array.codegen_action is CodegenAction.IDENTITY_OUTPUT
+
+    projected_caller_array = resolver.decide_semantic_type(
+        _array_type(),
+        _hidden_output_context(projects_result=True, python_visible=True),
+    )
+    assert projected_caller_array.transfer is TransferMode.IN_PLACE
+    assert projected_caller_array.codegen_action is CodegenAction.IDENTITY_OUTPUT
+
+    allocatable_output = resolver.decide_semantic_type(
+        _array_type(allocatable=True),
+        _hidden_output_context(projects_result=True, python_visible=False),
+    )
+    assert allocatable_output.owner is OwnershipOwner.WRAPPER
+    assert allocatable_output.transfer is TransferMode.WRAPPER_INSTANCE
+    assert allocatable_output.destruction is DestructionPolicy.WRAPPER_DEALLOC
+    assert allocatable_output.storage_mode is StorageMode.HEAP
+    assert allocatable_output.nullable is True
+
+    module_allocatable = resolver.decide_semantic_type(
+        _array_type(allocatable=True, metadata={"aliased": True}),
+        OwnershipContext.module_variable(),
+    )
+    assert module_allocatable.owner is OwnershipOwner.NATIVE
+    assert module_allocatable.transfer is TransferMode.BORROWED_VIEW
+    assert module_allocatable.destruction is DestructionPolicy.NATIVE_OWNER
+
+    snapshot_module_allocatable = resolver.decide_semantic_type(
+        _array_type(allocatable=True),
+        OwnershipContext.module_variable(),
+    )
+    assert snapshot_module_allocatable.owner is OwnershipOwner.PYTHON
+    assert snapshot_module_allocatable.transfer is TransferMode.SNAPSHOT_COPY
+    assert snapshot_module_allocatable.destruction is DestructionPolicy.PYTHON_REFCOUNT
+
+    derived_output = resolver.decide_semantic_type(_derived_type(), OwnershipContext.result())
+    assert derived_output.owner is OwnershipOwner.WRAPPER
+    assert derived_output.transfer is TransferMode.WRAPPER_INSTANCE
+
+    aliased_module_object = resolver.decide_semantic_type(
+        _derived_type(metadata={"aliased": True}),
+        OwnershipContext.module_variable(),
+    )
+    assert aliased_module_object.owner is OwnershipOwner.NATIVE
+    assert aliased_module_object.transfer is TransferMode.BORROWED_VIEW
+    assert aliased_module_object.destruction is DestructionPolicy.NATIVE_OWNER
+    assert aliased_module_object.boundary_storage_mode is StorageMode.ALIAS
+
+    plain_module_object = resolver.decide_semantic_type(
+        _derived_type(),
+        OwnershipContext.module_variable(),
+    )
+    assert plain_module_object.owner is OwnershipOwner.UNKNOWN
+    assert plain_module_object.transfer is TransferMode.BLOCKED
+    assert plain_module_object.destruction is DestructionPolicy.BLOCKED
+    assert plain_module_object.blocker == (
+        "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only"
+    )
+
+    projected_derived_output = resolver.decide_semantic_type(
+        _derived_type(),
+        _hidden_output_context(projects_result=True, python_visible=True),
+    )
+    assert projected_derived_output.transfer is TransferMode.IN_PLACE
+    assert projected_derived_output.codegen_action is CodegenAction.IDENTITY_OUTPUT
+
+    hidden_derived_output = resolver.decide_semantic_type(
+        _derived_type(),
+        _hidden_output_context(projects_result=True, python_visible=False),
+    )
+    assert hidden_derived_output.transfer is TransferMode.WRAPPER_INSTANCE
+    assert hidden_derived_output.codegen_action is CodegenAction.HIDDEN_OUTPUT
+
+    derived_field = resolver.decide_semantic_type(_derived_type(), OwnershipContext.field())
+    assert derived_field.owner is OwnershipOwner.WRAPPER
+    assert derived_field.transfer is TransferMode.BORROWED_VIEW
+    assert derived_field.destruction is DestructionPolicy.WRAPPER_DEALLOC
+
+
+def test_default_policy_completes_python_and_native_barrier_actions():
+    pointer_projection = _address_type(ADDRESS_ROLE_PROJECTION)
+    pointer_projection.metadata["fortran_pointer"] = True
+    cases = [
+        (
+            "scalar_value",
+            _scalar_type(),
+            _read_only_argument_context(),
+            PythonBarrierAction.SCALAR_VALUE,
+            NativeBarrierAction.PASS_VALUE,
+        ),
+        (
+            "scalar_address_projection",
+            _address_type(ADDRESS_ROLE_PROJECTION),
+            _read_only_argument_context(),
+            PythonBarrierAction.SCALAR_VALUE,
+            NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+        ),
+        (
+            "scalar_storage",
+            _scalar_storage_type(),
+            _writable_argument_context(),
+            PythonBarrierAction.SCALAR_STORAGE,
+            NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        ),
+        (
+            "pointer_scalar_address_projection",
+            pointer_projection,
+            _read_only_argument_context(),
+            PythonBarrierAction.SCALAR_VALUE,
+            NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        ),
+        (
+            "array_storage",
+            _array_type(),
+            _read_only_argument_context(),
+            PythonBarrierAction.ARRAY_STORAGE,
+            NativeBarrierAction.PASS_ARRAY_DESCRIPTOR,
+        ),
+        (
+            "string_value",
+            _string_type(),
+            _writable_argument_context(projects_result=True),
+            PythonBarrierAction.STRING_VALUE,
+            NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+        ),
+        (
+            "string_storage",
+            _string_storage_type(),
+            _writable_argument_context(),
+            PythonBarrierAction.STRING_STORAGE,
+            NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        ),
+        (
+            "raw_address",
+            _address_type(ADDRESS_ROLE_RAW),
+            _read_only_argument_context(),
+            PythonBarrierAction.RAW_ADDRESS,
+            NativeBarrierAction.PASS_RAW_ADDRESS,
+        ),
+        (
+            "wrapper_instance",
+            _derived_type(),
+            _read_only_argument_context(),
+            PythonBarrierAction.WRAPPER_INSTANCE,
+            NativeBarrierAction.PASS_WRAPPER_ADDRESS,
+        ),
+    ]
+
+    for label, semantic_type, context, python_action, native_action in cases:
+        decision = default_ownership_policy.decide_semantic_type(semantic_type, context)
+        assert decision.python_barrier_action is python_action, label
+        assert decision.native_barrier_action is native_action, label
+
+
+def test_policy_handler_dictionary_changes_one_object_kind():
+    def native_scalar_handler(_facts, _context):
+        return OwnershipDecision(
+            ObjectKind.SCALAR,
+            OwnershipOwner.NATIVE,
+            TransferMode.BORROWED_VIEW,
+            DestructionPolicy.NATIVE_OWNER,
+            borrowed=True,
+        )
+
+    resolver = OwnershipPolicyResolver({ObjectKind.SCALAR: native_scalar_handler})
+
+    scalar = resolver.decide_semantic_type(_scalar_type(), OwnershipContext.result())
+    array = resolver.decide_semantic_type(_array_type(allocatable=True), OwnershipContext.result())
+
+    assert scalar.owner is OwnershipOwner.NATIVE
+    assert scalar.transfer is TransferMode.BORROWED_VIEW
+    assert array.owner is OwnershipOwner.PYTHON
+    assert array.transfer is TransferMode.COPY_RETURN
+
+
+def test_codegen_action_dispatcher_routes_policy_actions_to_named_methods():
+    class FakeVar:
+        rank = 1
+        ownership_decision = OwnershipDecision(
+            ObjectKind.NUMPY_ARRAY,
+            OwnershipOwner.PYTHON,
+            TransferMode.SNAPSHOT_COPY,
+            DestructionPolicy.PYTHON_REFCOUNT,
+            storage_mode=StorageMode.ALIAS,
+            codegen_action=CodegenAction.SNAPSHOT_COPY,
+        )
+
+    class Target:
+        def snapshot(self, var, decision, marker):
+            return marker, var.rank, decision.codegen_action
+
+    dispatcher = PolicyActionDispatcher(
+        {(ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "snapshot"},
+    )
+
+    assert dispatcher.dispatch(Target(), FakeVar(), "seen") == (
+        "seen",
+        1,
+        CodegenAction.SNAPSHOT_COPY,
+    )
+
+
+def test_codegen_action_dispatcher_rejects_missing_policy_pairs():
+    class FakeVar:
+        ownership_decision = OwnershipDecision(
+            ObjectKind.STRING,
+            OwnershipOwner.TEMPORARY,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.CALL_LOCAL,
+            codegen_action=CodegenAction.CALL_LOCAL_INPUT,
+        )
+
+    dispatcher = PolicyActionDispatcher({})
+
+    with pytest.raises(ValueError, match="string/call_local_input"):
+        dispatcher.handler_name(FakeVar())
+
+
+def test_barrier_dispatchers_route_completed_actions_to_named_methods():
+    class FakeVar:
+        ownership_decision = OwnershipDecision(
+            ObjectKind.SCALAR,
+            OwnershipOwner.CALLER,
+            TransferMode.CALL_LOCAL,
+            DestructionPolicy.NONE,
+            codegen_action=CodegenAction.CALL_LOCAL_INPUT,
+            python_barrier_action=PythonBarrierAction.SCALAR_VALUE,
+            native_barrier_action=NativeBarrierAction.PASS_VALUE,
+        )
+
+    class Target:
+        def python_scalar(self, var, decision, marker):
+            return marker, var.ownership_decision.python_barrier_action, decision.python_barrier_action
+
+        def native_value(self, var, decision, marker):
+            return marker, var.ownership_decision.native_barrier_action, decision.native_barrier_action
+
+    python_dispatcher = PythonBarrierDispatcher({PythonBarrierAction.SCALAR_VALUE: "python_scalar"})
+    native_dispatcher = NativeBarrierDispatcher({NativeBarrierAction.PASS_VALUE: "native_value"})
+
+    assert python_dispatcher.dispatch(Target(), FakeVar(), "py") == (
+        "py",
+        PythonBarrierAction.SCALAR_VALUE,
+        PythonBarrierAction.SCALAR_VALUE,
+    )
+    assert native_dispatcher.dispatch(Target(), FakeVar(), "native") == (
+        "native",
+        NativeBarrierAction.PASS_VALUE,
+        NativeBarrierAction.PASS_VALUE,
+    )
+
+
+def test_barrier_dispatchers_reject_missing_completed_actions():
+    decision = OwnershipDecision(
+        ObjectKind.SCALAR,
+        OwnershipOwner.CALLER,
+        TransferMode.CALL_LOCAL,
+        DestructionPolicy.NONE,
+        codegen_action=CodegenAction.CALL_LOCAL_INPUT,
+        python_barrier_action=PythonBarrierAction.RAW_ADDRESS,
+        native_barrier_action=NativeBarrierAction.PASS_RAW_ADDRESS,
+    )
+
+    with pytest.raises(ValueError, match="Python-barrier handler"):
+        PythonBarrierDispatcher({}).handler_name_for_decision(decision, "x")
+    with pytest.raises(ValueError, match="native-barrier handler"):
+        NativeBarrierDispatcher({}).handler_name_for_decision(decision, "x")
+
+
+def test_array_interop_dispatcher_routes_completed_abi_selector_to_named_method():
+    class Subject:
+        name = "values"
+
+    class Target:
+        def data_buffer(self, subject, policy, marker):
+            return marker, subject.name, policy.abi
+
+        def descriptor(self, subject, policy, marker):
+            return marker, subject.name, policy.abi, policy.descriptor_kind
+
+    dispatcher = ArrayInteropPolicyDispatcher(
+        {
+            ("argument", "data_buffer"): "data_buffer",
+            ("argument", "descriptor"): "descriptor",
+        },
+    )
+
+    assert dispatcher.dispatch(
+        Target(),
+        Subject(),
+        ArrayInteropPolicy(abi="data_buffer", owner="argument values"),
+        "argument",
+        "seen",
+    ) == ("seen", "values", "data_buffer")
+    assert dispatcher.dispatch(
+        Target(),
+        Subject(),
+        ArrayInteropPolicy(
+            abi="descriptor",
+            owner="argument values",
+            descriptor_kind="allocatable",
+            handle_kind="argument_descriptor",
+        ),
+        "argument",
+        "seen",
+    ) == ("seen", "values", "descriptor", "allocatable")
+
+
+def test_optional_normal_array_bind_c_argument_does_not_use_native_handle_fallback():
+    argument = Variable(
+        NumpyNDArrayType.get_new(NumpyFloat64Type(), 1, "F"),
+        "values",
+        is_optional=True,
+    )
+    binding = CPythonBindingGenerator("", 0)
+
+    assert argument.is_optional is True
+    assert binding._bind_c_array_argument_uses_native_handle_fallback(argument) is False
+
+
+def test_immutable_replacement_policy_is_complete_before_ir_lowering():
+    module = parse_pyi_text(
+        """
+def normalize(
+    values: Annotated[Float64[:], Immutable]
+) -> Returns["values", Float64[:]]: ...
+""",
+        module_name="immutable_values",
+    )
+
+    complete_semantic_policies(module)
+
+    decision = module.functions[0].arguments[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert decision.kind is ObjectKind.NUMPY_ARRAY
+    assert decision.codegen_action is CodegenAction.COPY_IN_OUT
+    assert decision.storage_mode is StorageMode.STACK
+    assert decision.boundary_storage_mode is StorageMode.STACK
+    assert decision.projects_result is True
+    assert decision.python_visible is True
+
+
+def test_immutable_derived_output_selects_wrapper_instance_and_replacement_blocks():
+    semantic_type = _derived_type("point")
+    semantic_type.metadata["python_value_mutability"] = "immutable"
+
+    output = default_ownership_policy.decide_semantic_type(
+        semantic_type,
+        _hidden_output_context(projects_result=True, python_visible=True),
+    )
+    assert output.owner is OwnershipOwner.WRAPPER
+    assert output.transfer is TransferMode.WRAPPER_INSTANCE
+    assert output.destruction is DestructionPolicy.WRAPPER_DEALLOC
+    assert output.codegen_action is CodegenAction.HIDDEN_OUTPUT
+
+    replacement = default_ownership_policy.decide_semantic_type(
+        semantic_type,
+        _writable_argument_context(projects_result=True, python_visible=True),
+    )
+    assert replacement.is_blocked
+    assert replacement.blocker == "immutable derived replacement is not implemented"
+
+
+def test_recursive_module_policy_map_includes_nested_fields_and_functions():
+    module = SemanticModule(
+        name="geometry",
+        variables=[
+            SemanticVariable(
+                "values",
+                _array_type(allocatable=True, metadata={"aliased": True}),
+            )
+        ],
+        classes=[
+            SemanticClass(
+                "particle",
+                fields=[SemanticField("origin", _derived_type("point"))],
+                classes=[
+                    SemanticClass(
+                        "buffer",
+                        fields=[SemanticField("values", _array_type(allocatable=True))],
+                    )
+                ],
+            )
+        ],
+        functions=[
+            SemanticFunction(
+                "build",
+                arguments=[SemanticArgument("n", _scalar_type())],
+                return_type=_array_type(allocatable=True),
+            )
+        ],
+    )
+
+    decisions = default_ownership_policy.decide_semantic_module(module)
+
+    assert decisions["geometry.values"].owner is OwnershipOwner.NATIVE
+    assert decisions["geometry.particle.origin"].owner is OwnershipOwner.WRAPPER
+    assert decisions["geometry.particle.buffer.values"].transfer is TransferMode.BORROWED_VIEW
+    assert decisions["geometry.build.n"].transfer is TransferMode.CALL_LOCAL
+    assert decisions["geometry.build.return"].transfer is TransferMode.COPY_RETURN
+
+
+def test_policy_completion_attaches_decisions_before_ir_lowering():
+    module = SemanticModule(
+        name="generated_policy",
+        variables=[
+            SemanticVariable(
+                "module_values",
+                _array_type(allocatable=True, metadata={"aliased": True}),
+            )
+        ],
+        classes=[
+            SemanticClass(
+                "buffer",
+                fields=[SemanticField("values", _array_type(allocatable=True))],
+            )
+        ],
+        functions=[
+            SemanticFunction(
+                "replace",
+                arguments=[
+                    SemanticArgument(
+                        "values",
+                        _array_type(allocatable=True),
+                        metadata={PROJECTED_OUTPUT_METADATA: True},
+                    )
+                ],
+                return_type=None,
+                projection=[
+                    ProjectionMapping(
+                        python_name="values",
+                        native_name="values",
+                        native_position=0,
+                        python_position=0,
+                        result_position=0,
+                    )
+                ],
+            )
+        ],
+    )
+
+    complete_semantic_policies(module)
+
+    assert module.metadata[POLICY_COMPLETION_PREPARED_METADATA] is True
+    assert module.variables[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA].owner is OwnershipOwner.NATIVE
+    module_setter = module.variables[0].metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
+    assert module_setter.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert module_setter.setter_action is SetterAction.REJECT_REPLACEMENT
+    assert (
+        module.variables[0].metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA].codegen_action
+        is CodegenAction.BORROWED_VIEW
+    )
+    assert module.classes[0].fields[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA].owner is OwnershipOwner.WRAPPER
+    assert (
+        module.classes[0].fields[0].metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA].codegen_action
+        is CodegenAction.CALL_LOCAL_INPUT
+    )
+    assert (
+        module.functions[0].arguments[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA].transfer is TransferMode.IN_PLACE
+    )
+    assert RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA not in module.functions[0].metadata
+
+    codegen_module = semantic_ir_to_codegen_ast(
+        module,
+        Scope(name=module.name, scope_type="module"),
+    )
+
+    module_var = codegen_module.variables[0]
+    field_var = codegen_module.classes[0].attributes[0]
+    arg_var = codegen_module.funcs[0].arguments[0].var
+
+    assert module_var.ownership_decision.owner is OwnershipOwner.NATIVE
+    assert module_var.getter_ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
+    assert module_var.setter_ownership_decision.assignment_mode is AssignmentMode.VALUE_COPY
+    assert module_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
+    assert field_var.ownership_decision.owner is OwnershipOwner.WRAPPER
+    assert field_var.getter_ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
+    assert field_var.setter_ownership_decision.assignment_mode is AssignmentMode.VALUE_COPY
+    assert field_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
+    assert arg_var.ownership_decision.owner is OwnershipOwner.CALLER
+    assert codegen_action_for_variable(arg_var) is CodegenAction.IN_PLACE_ARGUMENT
+
+
+def test_stale_snapshot_metadata_blocks_in_policy_completion():
+    module = SemanticModule(
+        name="state",
+        variables=[SemanticVariable("current", _derived_type("box", metadata={"snapshot_type": True}))],
+        classes=[SemanticClass("box", fields=[SemanticField("value", _scalar_type())])],
+    )
+
+    complete_semantic_policies(module)
+
+    variable = module.variables[0]
+    decision = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert decision.is_blocked
+    assert decision.blocker == (
+        "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only"
+    )
+    assert "snapshot_type" not in variable.semantic_type.metadata

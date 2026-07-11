@@ -1,0 +1,37 @@
+---
+title: Roadmap
+audience: maintainers
+prerequisites: user language support, developer documentation
+related: ../../user/language-support/planned-features.md, stage-boundary-enforcement-checklist.md, semantic-pyi-wrapper-checklist.md, native-array-handle-checklist.md, documentation-content-checklist.md
+status: active-roadmap
+---
+
+# Roadmap
+
+This repository-only roadmap tracks implementation and documentation work for
+maintainers. Public support status remains in User documentation.
+
+## Planned Features
+
+- [Stage boundary enforcement checklist](stage-boundary-enforcement-checklist.md)
+- [Semantic `.pyi` wrapper checklist](semantic-pyi-wrapper-checklist.md)
+- [Native array handle checklist](native-array-handle-checklist.md)
+- [Documentation content checklist](documentation-content-checklist.md)
+- TODO: Populate from accepted roadmap issues and maintained checklists.
+
+## In-Progress Features
+
+- TODO: Link active work to feature pages and support evidence.
+
+## Future Ideas
+
+- TODO: Separate exploratory ideas from committed plans.
+
+## Long-Term Vision
+
+- TODO: Describe the long-term documentation and wrapper ecosystem goals.
+
+## TODO
+
+- TODO: Add tracking issue links when public issue tracking is available.
+- TODO: Keep language support status synchronized with the feature matrix.

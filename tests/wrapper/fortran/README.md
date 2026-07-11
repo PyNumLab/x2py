@@ -39,7 +39,7 @@ WRAPPER_UPDATE_PYI_FIXTURES=1 python3 -m pytest -q tests/wrapper/fortran/<subjec
 | `module_state/` | Module variables, allocatable state, borrowed views, replacement behavior, and common blocks. | `python3 -m pytest -q tests/wrapper/fortran/module_state` |
 | `runtime_behavior/` | Runtime policies, recursion, OpenMP/concurrency evidence, error projection, and GIL policy. | `python3 -m pytest -q tests/wrapper/fortran/runtime_behavior` |
 | `naming/` | Public names, visibility, keyword escaping, collision policy, generic interfaces, and defined operators. | `python3 -m pytest -q tests/wrapper/fortran/naming` |
-| `layout_rules/` | Test layout, documentation routing, checklist coverage, fixture placement, stale-path rejection, and codegen organization guards. | `python3 -m pytest -q tests/wrapper/fortran/layout_rules` |
+| `layout_rules/` | Wrapper test layout, documentation routing, checklist coverage, fixture placement, and stale-path rejection. | `python3 -m pytest -q tests/wrapper/fortran/layout_rules` |
 
 Run every Fortran wrapper subject with:
 

@@ -1,21 +1,23 @@
+from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int32, ORDER_F, native_call
+
 def fixed_vector() -> Float64[3]: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def automatic_vector(
-    n: Const(Int32)
+    n: Int32
 ) -> Float64[n]: ...
 
-@native_call([Ref(Arg(0)), Ref(Arg(1))])
+@native_call([Addr(Arg(0)), Addr(Arg(1))])
 def automatic_matrix(
-    rows: Const(Int32),
-    cols: Const(Int32)
+    rows: Int32,
+    cols: Int32
 ) -> Annotated[Float64[rows - 1 - 0 + 1, cols + 1 - 2 + 1], ORDER_F]: ...
 
-@native_call([Ref(Arg(0)), Ref(Arg(1)), Ref(Arg(2))])
+@native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2))])
 def rank3_cube(
-    n1: Const(Int32),
-    n2: Const(Int32),
-    n3: Const(Int32)
+    n1: Int32,
+    n2: Int32,
+    n3: Int32
 ) -> Annotated[Float64[n1, n2, n3], ORDER_F]: ...
 
 def rank1_result() -> Float64[2]: ...
@@ -50,9 +52,9 @@ def rank15_result() -> Annotated[Float64[2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
 
 def zero_vector() -> Float64[0]: ...
 
-def zero_alloc_vector() -> Annotated[Float64[:], Allocatable]: ...
+def zero_alloc_vector() -> Allocatable[Float64[:]]: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def maybe_alloc_vector(
-    n: Const(Int32)
-) -> Annotated[Float64[:], Allocatable]: ...
+    n: Int32
+) -> Allocatable[Float64[:]]: ...

@@ -48,7 +48,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "out",
                     "optional": false,
                     "value": false
                   }
@@ -56,7 +55,9 @@
               },
               "visibility": "public",
               "default_value": null,
-              "metadata": {},
+              "metadata": {
+                "projected_output": true
+              },
               "origin": {
                 "source_language": "fortran",
                 "native_name": "p",
@@ -73,12 +74,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "out",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "out",
               "optional": false
             },
             {
@@ -122,7 +121,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -147,12 +145,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -196,7 +192,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -221,12 +216,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -270,7 +263,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -295,12 +287,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -344,7 +334,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -369,12 +358,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -418,7 +405,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -443,12 +429,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             }
           ],
@@ -463,8 +447,7 @@
               "python_position": null,
               "result_position": 0,
               "value_kind": "",
-              "value": null,
-              "intent": "out"
+              "value": null
             },
             {
               "python_name": "pid",
@@ -473,8 +456,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "mass",
@@ -483,8 +465,7 @@
               "python_position": 1,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "x",
@@ -493,8 +474,7 @@
               "python_position": 2,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "y",
@@ -503,8 +483,7 @@
               "python_position": 3,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "z",
@@ -513,8 +492,7 @@
               "python_position": 4,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             }
           ],
           "metadata": {},
@@ -574,7 +552,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -599,12 +576,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -648,7 +623,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -673,12 +647,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -722,7 +694,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -747,12 +718,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -796,7 +765,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -821,12 +789,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             }
           ],
@@ -860,7 +826,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false
               }
@@ -876,8 +841,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "vx",
@@ -886,8 +850,7 @@
               "python_position": 1,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "vy",
@@ -896,8 +859,7 @@
               "python_position": 2,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "vz",
@@ -906,8 +868,7 @@
               "python_position": 3,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             }
           ],
           "metadata": {},
@@ -994,7 +955,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -1025,12 +985,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             },
             {
@@ -1074,7 +1032,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -1099,12 +1056,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             }
           ],
@@ -1119,8 +1074,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             },
             {
               "python_name": "alpha",
@@ -1129,8 +1083,7 @@
               "python_position": 1,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             }
           ],
           "metadata": {},
@@ -1217,7 +1170,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -1248,12 +1200,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             },
             {
@@ -1324,7 +1274,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -1355,12 +1304,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             }
           ],
@@ -1394,7 +1341,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false
               }
@@ -1410,8 +1356,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             },
             {
               "python_name": "b",
@@ -1420,8 +1365,7 @@
               "python_position": 1,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             }
           ],
           "metadata": {},
@@ -1515,7 +1459,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "out",
                     "optional": false,
                     "value": false
                   }
@@ -1523,7 +1466,9 @@
               },
               "visibility": "public",
               "default_value": null,
-              "metadata": {},
+              "metadata": {
+                "projected_output": true
+              },
               "origin": {
                 "source_language": "fortran",
                 "native_name": "a",
@@ -1549,12 +1494,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "out",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "out",
               "optional": false
             }
           ],
@@ -1569,8 +1512,7 @@
               "python_position": 0,
               "result_position": 0,
               "value_kind": "",
-              "value": null,
-              "intent": "out"
+              "value": null
             }
           ],
           "metadata": {},
@@ -1630,7 +1572,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "inout",
                     "optional": false,
                     "value": false
                   }
@@ -1655,12 +1596,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "inout",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "inout",
               "optional": false
             }
           ],
@@ -1675,8 +1614,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "inout"
+              "value": null
             }
           ],
           "metadata": {},
@@ -1736,7 +1674,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "in",
                     "optional": false,
                     "value": false
                   }
@@ -1761,12 +1698,10 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "in",
                   "optional": false,
                   "value": false
                 }
               },
-              "intent": "in",
               "optional": false
             }
           ],
@@ -1781,8 +1716,7 @@
               "python_position": 0,
               "result_position": null,
               "value_kind": "",
-              "value": null,
-              "intent": "in"
+              "value": null
             }
           ],
           "metadata": {},
@@ -1836,7 +1770,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "unknown",
                     "optional": false,
                     "value": false
                   }
@@ -1861,7 +1794,6 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "unknown",
                   "optional": false,
                   "value": false
                 }
@@ -1899,7 +1831,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "unknown",
                     "optional": false,
                     "value": false
                   }
@@ -1924,7 +1855,6 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "unknown",
                   "optional": false,
                   "value": false
                 }
@@ -1998,7 +1928,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "unknown",
                     "optional": false,
                     "value": false
                   }
@@ -2029,7 +1958,6 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "unknown",
                   "optional": false,
                   "value": false
                 }
@@ -2167,7 +2095,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "unknown",
                     "optional": false,
                     "value": false
                   }
@@ -2198,7 +2125,6 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "unknown",
                   "optional": false,
                   "value": false
                 }
@@ -2278,7 +2204,6 @@
                     "pointer": false,
                     "target": false,
                     "contiguous": false,
-                    "intent": "unknown",
                     "optional": false,
                     "value": false
                   }
@@ -2303,7 +2228,6 @@
                   "pointer": false,
                   "target": false,
                   "contiguous": false,
-                  "intent": "unknown",
                   "optional": false,
                   "value": false
                 }
@@ -2379,7 +2303,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false
               }
@@ -2404,7 +2327,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false
             }
@@ -2442,7 +2364,6 @@
                 "pointer": false,
                 "target": false,
                 "contiguous": false,
-                "intent": "unknown",
                 "optional": false,
                 "value": false
               }
@@ -2467,7 +2388,6 @@
               "pointer": false,
               "target": false,
               "contiguous": false,
-              "intent": "unknown",
               "optional": false,
               "value": false
             }

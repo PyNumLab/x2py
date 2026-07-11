@@ -1,3 +1,5 @@
+from x2py.contracts import Complex128, Float64, Int32, native_type
+
 @native_type(attributes=('bind(c)',))
 class point:
     def __init__(
@@ -22,7 +24,7 @@ class tagged_point:
     weight: Complex128
 
 def populate(
-    value: Ref(tagged_point),
+    value: tagged_point,
     x: Float64,
     axis: Int32,
     weight: Complex128

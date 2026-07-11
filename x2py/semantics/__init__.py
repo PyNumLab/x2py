@@ -16,7 +16,7 @@ from .c2ir import (
     c_struct_to_semantic_class,
     c_type_to_semantic_type,
 )
-from .pyi2ir import convert_pyi_to_ir, load_pyi_file, load_pyi_modules, parse_pyi_text
+from .pyi2ir import convert_pyi_to_ir
 from .policy_completion import complete_semantic_policies
 from .readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
@@ -38,8 +38,5 @@ __all__ = (
     "fortran_file_to_semantic_modules",
     "fortran_module_to_semantic_module",
     "fortran_project_to_semantic_modules",
-    "load_pyi_file",
-    "load_pyi_modules",
-    "parse_pyi_text",
     "resolve_semantic_compile_time_values",
 )

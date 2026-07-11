@@ -1,9 +1,9 @@
-from typing import Annotated
-from x2py.typing import Flat, Float64, Int32, Intent, ORDER_C, Ref, external
+from x2py.contracts import Addr, Annotated, Arg, Flat, Float64, Int32, ORDER_C, external, native_call
 
 @external
+@native_call([Addr(Arg(0)), Arg(1), Arg(2)])
 def row_sums_c(
-    n: Ref(Int32),
+    n: Int32,
     values: Annotated[Float64[Flat, 3], ORDER_C],
-    result: Annotated[Float64[Flat], Intent("out")],
+    result: Float64[Flat],
 ) -> None: ...

@@ -18,6 +18,7 @@ CASES = (
     source_contract_case(CONTRACT_ROOT, "fallocatable_inout_f90.f90"),
     source_contract_case(CONTRACT_ROOT, "fallocatable_views_f90.f90"),
     source_contract_case(CONTRACT_ROOT, "fcommon_block_f90.f90"),
+    source_contract_case(CONTRACT_ROOT, "fmodule_derived_snapshot_f90.f90"),
     source_contract_case(CONTRACT_ROOT, "fmodule_vars_f90.f90"),
 )
 

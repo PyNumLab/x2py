@@ -1,3 +1,5 @@
+from x2py.contracts import Addr, Arg, Bool, CStruct, Complex128, Float32, Int, Int8, native_call
+
 class same_name(CStruct):
     payload: Int
 
@@ -11,8 +13,9 @@ same_name_c: Complex128
 
 same_name_s: Int8[8]
 
+@native_call([Addr(Arg(0))])
 def do_work_i(
-    same_name: Ref(Int)
+    same_name: Int
 ) -> None: ...
 
 def do_work_r(
@@ -21,7 +24,7 @@ def do_work_r(
 
 def do_work_l(
     same_name: Bool,
-    shared: Ref(same_name)
+    shared: same_name
 ) -> None: ...
 
 def convert_to_complex(
@@ -33,7 +36,7 @@ def convert_to_string(
     shared: Int8[16]
 ) -> Int: ...
 
-@native_call([Ref(Arg(0))])
+@native_call([Addr(Arg(0))])
 def convert_to_logical(
-    same_name: Const(Int8)
+    same_name: Int8
 ) -> Bool: ...
