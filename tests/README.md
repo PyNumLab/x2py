@@ -73,8 +73,11 @@ know roadmap wording but not the feature module. Source-build,
 generated-`.pyi`, and modified-`.pyi` scenarios for one feature stay together;
 identical source/generated behavior uses one shared assertion body.
 
-Do not run LAPACK wrapper runtime tests locally. Leave LAPACK coverage to GitHub
-Actions unless the task explicitly requests it.
+During the wrapper-plan migration, do not run the full BLAS or LAPACK
+real-library wrapper tests locally or in GitHub Actions. Exclude
+`wrapper/fortran/real_libraries/test_real_blas_lapack.py`; keep the general
+native-bundle tests active. Re-enable both corpora only after every other
+migration row is complete.
 
 ## Adding a test or helper
 

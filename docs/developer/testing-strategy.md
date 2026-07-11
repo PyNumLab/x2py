@@ -58,14 +58,18 @@ modes execute one shared behavioral assertion body. Modified-contract behavior
 stays in the same feature subject but uses its intentionally different
 assertions.
 
-Run all Fortran wrapper subjects except real-library runtime work with:
+During the wrapper-plan migration, run all Fortran wrapper subjects except the
+deferred full BLAS/LAPACK corpus with:
 
 ```bash
-python3 -m pytest -q tests/wrapper/fortran --ignore=tests/wrapper/fortran/real_libraries
+python3 -m pytest -q tests/wrapper/fortran \
+  --ignore=tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py
 ```
 
-Do not run LAPACK runtime tests locally unless the task explicitly requests
-them. BLAS-only evidence may be selected separately when relevant.
+Do not run the full BLAS or LAPACK real-library wrapper tests locally or in
+GitHub Actions during migration. Re-enable both only after every other
+wrapper-plan migration row is complete. General native-bundle tests remain
+active.
 
 ## Fixtures and generated expectations
 
