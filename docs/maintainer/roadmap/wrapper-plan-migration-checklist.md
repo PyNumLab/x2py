@@ -1297,6 +1297,43 @@ bridge ABI slots, native slots, and lifecycle order. It must not render backend
 nodes, C/Fortran source, CPython reference-counting mechanics, or printer
 output.
 
+### Phase 0E Minimal Scalar Backend Foundation Contract
+
+Phase 0E introduces isolated backend syntax, naming, source assembly, and
+printer infrastructure only. It does not add scalar plan emitters, binding or
+bridge handlers, runtime helper implementations, compilation, route selection,
+or generated artifact parity checks.
+
+The legacy inventory for the first scalar backend foundation is:
+
+| Backend concern | Legacy Python source owner | Consumed behavior | Isolated Phase 0E choice |
+| --- | --- | --- | --- |
+| Generated symbol naming | `x2py/codegen/scope.py::Scope.get_new_name` | deterministic unique names and collision avoidance | rewrite as `NameAllocator`; no semantic scopes, categories, or lookup ownership |
+| Module/function contexts | `x2py/codegen/scope.py::Scope` plus binding/bridge generator-local state | per-module and per-function local names | rewrite as explicit `ModuleEmissionContext` and `FunctionEmissionContext` |
+| Generic node structure | `x2py/codegen/models/core.py::Module`, `FunctionDef`, `FunctionDefArgument`, `Return`, `Import`, `Declare` | module imports, function signatures, parameters, declarations, statements, returns | rewrite minimal frozen C/Fortran node dataclasses with only printer-consumed fields |
+| Scalar datatype/literal spelling | `x2py/codegen/models/datatypes.py` scalar `Numpy*Type` classes and `convert_to_literal` | C/Fortran scalar type spellings and literal text | rewrite as explicit `BackendScalarType` and expression/literal text nodes |
+| CPython/NumPy include/API concepts | `x2py/codegen/bindings/cpython_api.py`, `numpy_cpython_api.py`, and `CPythonCodePrinter` | `Python.h`, `numpy/arrayobject.h`, `PyObject*`, `PyArg_ParseTupleAndKeywords`, scalar conversion helper names, `PyMethodDef`, `PyModuleDef`, `import_array` | represent only include/API references as isolated node data; Phase 1 handlers decide which primitives to emit |
+| C and header printing | `x2py/codegen/printers/ccode.py::CCodePrinter` and `cpythoncode.py::CPythonCodePrinter` | include lines, header guards, prototypes, function signatures, declarations, expression statements, returns | rewrite `CSourcePrinter` over isolated C nodes only |
+| Fortran bridge printing | `x2py/codegen/printers/fcode.py::FCodePrinter` | module/use/contains, `bind(c, name=...)`, scalar declarations, assignments, calls | rewrite `FortranSourcePrinter` over isolated Fortran nodes only |
+| Source assembly orchestration | `x2py/codegen/binding_pipeline.py::BindingPipeline.generate/write` | create complete C source, C header, and Fortran module objects, then print modules | rewrite `BackendSourceAssembly.rendered_sources()` for in-memory source strings only |
+
+Every Phase 0E node field is consumed by a Phase 0E printer, source assembly,
+or context test. Phase 1 scalar emitters will be the first production
+consumers of these nodes; until then tests construct small representative
+modules directly. This phase intentionally keeps CPython reference counting,
+argument parsing, scalar conversion helper bodies, bridge call bodies, runtime
+support installation, file writes, compiler/linker calls, and route eligibility
+outside the implementation.
+
+Structural guarantees for this phase:
+
+- no `x2py.wrapper_codegen` backend module imports `x2py.codegen`;
+- C and Fortran source printers accept only isolated backend nodes and do not
+  import or inspect wrapper-plan models;
+- generated-source assertions stay focused on naming, declarations,
+  signatures, header guards, includes, `bind(c)` spelling, and
+  module-to-printer orchestration rather than full runtime wrapper snapshots.
+
 ### Intermediate Test Contract
 
 Add intermediate tests only where they protect a stable boundary or a failure
@@ -1601,28 +1638,28 @@ value review rather than continuing automatically.
 
 ### Phase 0E — Minimal Scalar Backend Foundation
 
-- [ ] Inventory the minimum dependency-closed set of scalar C/Fortran nodes,
+- [x] Inventory the minimum dependency-closed set of scalar C/Fortran nodes,
   datatype/literal behavior, CPython and NumPy API primitives, naming behavior,
   helper concepts, and printer cases required for Phase 1. Record each legacy
   source path and consumed field/method before implementation.
-- [ ] Implement a minimal `NameAllocator` and module/function emission contexts;
+- [x] Implement a minimal `NameAllocator` and module/function emission contexts;
   do not copy legacy `Scope` or its semantic lookup/categories.
-- [ ] For every required node/API/helper class, choose explicitly between a
+- [x] For every required node/API/helper class, choose explicitly between a
   small unchanged copy and a rewritten minimal class. Each new field and method
   must have a current Phase 1 emitter or printer consumer.
-- [ ] Do not import, alias, subclass, or adapt legacy model classes. Preserve
+- [x] Do not import, alias, subclass, or adapt legacy model classes. Preserve
   required behavior through the isolated implementation and later compiled
   parity evidence.
-- [ ] Add focused tests only for nontrivial naming/node/printer mechanics that
+- [x] Add focused tests only for nontrivial naming/node/printer mechanics that
   the selected existing wrapper fixture cannot isolate. Do not add exhaustive
   node tests or full generated-source snapshots.
-- [ ] Reproduce the legacy module/header assembly and
+- [x] Reproduce the legacy module/header assembly and
   `module -> doprint(module)` orchestration needed to create complete
   `c_module` and `fortran_module` objects before writing source.
-- [ ] Implement only the C/Fortran printer cases needed by the isolated scalar
+- [x] Implement only the C/Fortran printer cases needed by the isolated scalar
   nodes. Verify structurally that the printers consume only isolated nodes and
   cannot import or inspect wrapper-plan models.
-- [ ] Do not add scalar emitters, compilation, or production route selection in
+- [x] Do not add scalar emitters, compilation, or production route selection in
   this phase.
 
 ## Phase 1 — Scalar Function Inputs
