@@ -2,7 +2,7 @@
 title: Roadmap
 audience: maintainers
 prerequisites: user language support, developer documentation
-related: ../../user/language-support/planned-features.md, stage-boundary-enforcement-checklist.md, semantic-pyi-wrapper-checklist.md, native-array-handle-checklist.md, documentation-content-checklist.md
+related: ../../user/language-support/planned-features.md, wrapper-plan-migration-checklist.md, semantic-pyi-wrapper-checklist.md, native-array-handle-checklist.md, documentation-content-checklist.md
 status: active-roadmap
 ---
 
@@ -13,7 +13,7 @@ maintainers. Public support status remains in User documentation.
 
 ## Planned Features
 
-- [Stage boundary enforcement checklist](stage-boundary-enforcement-checklist.md)
+- [Wrapper plan migration checklist](wrapper-plan-migration-checklist.md)
 - [Semantic `.pyi` wrapper checklist](semantic-pyi-wrapper-checklist.md)
 - [Native array handle checklist](native-array-handle-checklist.md)
 - [Documentation content checklist](documentation-content-checklist.md)
