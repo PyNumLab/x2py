@@ -313,12 +313,15 @@ selected_scale: Pointer[Float64]
     assert policies["counter"].initializer == 3
     assert policies["target_scale"].getter_action is ModuleGetterAction.DIRECT_VALUE
     assert policies["target_scale"].setter_action is SetterAction.WRITE_THROUGH
+    assert policies["target_scale"].native_assignment is AssignmentMode.VALUE_COPY
     assert policies["optional_scale"].getter_action is ModuleGetterAction.NULLABLE_SNAPSHOT
     assert policies["optional_scale"].descriptor_kind == "allocatable"
     assert policies["optional_scale"].setter_action is SetterAction.REJECT_REPLACEMENT
+    assert policies["optional_scale"].native_assignment is AssignmentMode.NONE
     assert policies["selected_scale"].getter_action is ModuleGetterAction.NULLABLE_SNAPSHOT
     assert policies["selected_scale"].descriptor_kind == "pointer"
     assert policies["selected_scale"].setter_action is SetterAction.REJECT_REPLACEMENT
+    assert policies["selected_scale"].native_assignment is AssignmentMode.NONE
 
 
 def test_wrapper_policy_records_primitive_hidden_literals():

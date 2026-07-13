@@ -204,7 +204,7 @@ def build_module_variable_policy(
         getter_action=_scalar_module_getter_action(getter, constant),
         getter=getter,
         setter_action=setter.setter_action if setter is not None else SetterAction.OMIT,
-        native_assignment=setter.assignment_mode if setter is not None else AssignmentMode.NONE,
+        native_assignment=_scalar_module_native_assignment(setter),
         setter=setter,
         descriptor_kind=descriptor_kind,
         initializer=(
@@ -826,6 +826,15 @@ def _scalar_module_getter_action(
     if getter is not None and getter.codegen_action is CodegenAction.SNAPSHOT_COPY and getter.nullable:
         return ModuleGetterAction.NULLABLE_SNAPSHOT
     return ModuleGetterAction.DIRECT_VALUE
+
+
+def _scalar_module_native_assignment(
+    setter: OwnershipDecision | None,
+) -> AssignmentMode:
+    """Project the completed native setter action for bridge lowering."""
+    if setter is None or setter.setter_action is not SetterAction.WRITE_THROUGH:
+        return AssignmentMode.NONE
+    return setter.assignment_mode
 
 
 def _scalar_module_descriptor_kind(variable: models.SemanticVariable) -> str | None:

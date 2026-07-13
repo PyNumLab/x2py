@@ -99,46 +99,24 @@ for item in plan.namespaces:
         print(f"    Python name: {planned_function.binding.python_name}")
         print(f"    native target: {planned_function.bridge.native_name}")
         for argument in planned_function.arguments:
-            binding_method = binding_generator.lowering_method_name(
-                "argument",
-                argument.binding.optional_mode,
+            print(
+                f"    argument {argument.binding.python_name}: "
+                f"binding action={argument.binding.optional_mode!r}, "
+                f"bridge action={argument.bridge.optional_mode!r}"
             )
-            bridge_method = bridge_generator.lowering_method_name(
-                "argument",
-                argument.bridge.optional_mode,
-            )
-            print(f"    argument {argument.binding.python_name}: binding={binding_method}, bridge={bridge_method}")
-        result_action = planned_function.result.bridge.codegen_action if planned_function.result is not None else "none"
-        bridge_method = bridge_generator.lowering_method_name("result", result_action)
         if planned_function.result is None:
-            print(f"    result: binding=<return None>, bridge={bridge_method}")
+            print("    result: binding=<return None>, bridge=<no result>")
         else:
-            binding_method = binding_generator.lowering_method_name(
-                "result",
-                planned_function.result.binding.codegen_action,
+            print(
+                f"    result: binding action={planned_function.result.binding.codegen_action!r}, "
+                f"bridge action={planned_function.result.bridge.codegen_action!r}"
             )
-            print(f"    result: binding={binding_method}, bridge={bridge_method}")
     for variable in item.variables:
-        binding_getter = binding_generator.lowering_method_name(
-            "module_getter",
-            variable.binding.getter_action,
-        )
-        bridge_getter = bridge_generator.lowering_method_name(
-            "module_getter",
-            variable.bridge.getter_action,
-        )
-        binding_setter = binding_generator.lowering_method_name(
-            "module_setter",
-            variable.binding.setter_action,
-        )
-        bridge_setter = bridge_generator.lowering_method_name(
-            "module_setter",
-            variable.binding.setter_action,
-        )
         print(
             f"  variable {variable.binding.python_names}: "
-            f"binding getter={binding_getter}, setter={binding_setter}; "
-            f"bridge getter={bridge_getter}, setter={bridge_setter}"
+            f"binding getter={variable.binding.getter_action!r}, setter={variable.binding.setter_action!r}; "
+            f"bridge getter={variable.bridge.getter_action!r}, "
+            f"assignment={variable.bridge.native_assignment!r}"
         )
 print("native slots:", function.native_call_slots)
 print("result plan:", function.result)

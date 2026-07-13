@@ -38,6 +38,16 @@ def swap_args(x: Float64, y: Float64) -> Float64: ...
     )
 
 
+def _hidden_result_plan():
+    return _plan(
+        """
+@native_call([Int32(1), Arg(0), Bool(False), Return("result", 0)])
+def scale(x: Float64) -> Float64: ...
+""",
+        module_name="hidden_values",
+    )
+
+
 def _edit_first_function(plan, edit):
     root = plan.namespaces[0]
     functions = (edit(root.functions[0]), *root.functions[1:])
@@ -73,13 +83,7 @@ def test_planner_projects_one_shared_tree_with_explicit_backend_views():
 
 
 def test_planner_records_hidden_literals_and_hidden_result_slots():
-    plan = _plan(
-        """
-@native_call([Int32(1), Arg(0), Bool(False), Return("result", 0)])
-def scale(x: Float64) -> Float64: ...
-""",
-        module_name="hidden_values",
-    )
+    plan = _hidden_result_plan()
     function = plan.namespaces[0].functions[0]
 
     assert [(slot.source_kind, slot.literal_type, slot.literal_value) for slot in function.native_call_slots] == [
@@ -91,6 +95,58 @@ def scale(x: Float64) -> Float64: ...
     assert function.result.source_kind == "hidden_output"
     assert function.result.bridge.abi_position == 3
     assert function.result.native_call_slot == function.native_call_slots[3]
+
+
+def test_generator_rejects_hidden_result_native_action_disagreement():
+    plan = _hidden_result_plan()
+    function = plan.namespaces[0].functions[0]
+    result = function.result
+    replacement = (
+        NativeBarrierAction.PASS_VALUE
+        if result.bridge.native_action is not NativeBarrierAction.PASS_VALUE
+        else NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    )
+    invalid = _edit_first_function(
+        plan,
+        lambda item: replace(
+            item,
+            result=replace(result, bridge=replace(result.bridge, native_action=replacement)),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="inconsistent-result-native-action"):
+        WrapperCodeGenerator().generate(invalid)
+
+
+def test_generator_rejects_hidden_result_slot_codegen_action_disagreement():
+    plan = _hidden_result_plan()
+    function = plan.namespaces[0].functions[0]
+    result = function.result
+    edited_slot = replace(result.native_call_slot, codegen_action=CodegenAction.DIRECT_VALUE)
+    invalid = _edit_first_function(
+        plan,
+        lambda item: replace(
+            item,
+            result=replace(result, native_call_slot=edited_slot),
+            native_call_slots=tuple(
+                edited_slot if slot.native_position == edited_slot.native_position else slot
+                for slot in item.native_call_slots
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="inconsistent-result-slot-codegen-action"):
+        WrapperCodeGenerator().generate(invalid)
+
+
+def test_generator_rejects_advertised_role_without_a_plan_producer():
+    invalid = _edit_first_function(
+        _scalar_plan(),
+        lambda function: replace(function, available_roles=(*function.available_roles, "invented:role")),
+    )
+
+    with pytest.raises(ValueError, match="inconsistent-available-roles"):
+        WrapperCodeGenerator().generate(invalid)
 
 
 def test_planner_groups_completed_exports_into_explicit_namespace_nodes():

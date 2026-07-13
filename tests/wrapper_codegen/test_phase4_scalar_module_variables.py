@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from unittest.mock import Mock
 
 import pytest
 
@@ -36,6 +37,14 @@ def _source(artifacts, suffix: str) -> str:
     return next(item.text for item in artifacts.sources if item.path.name.endswith(suffix))
 
 
+def _replace_variable(plan, python_name: str, edit):
+    root = plan.namespaces[0]
+    variables = tuple(
+        edit(variable) if variable.binding.python_names == (python_name,) else variable for variable in root.variables
+    )
+    return replace(plan, namespaces=(replace(root, variables=variables), *plan.namespaces[1:]))
+
+
 def test_module_variable_plan_contains_only_completed_dispatch_facts():
     plan = _plan()
     variables = {variable.binding.python_names[0]: variable for variable in plan.namespaces[0].variables}
@@ -48,23 +57,96 @@ def test_module_variable_plan_contains_only_completed_dispatch_facts():
     assert variables["counter"].binding.setter_action is SetterAction.WRITE_THROUGH
     assert variables["counter"].bridge.native_assignment is AssignmentMode.VALUE_COPY
     assert variables["counter"].binding.initializer == 3
+    assert variables["target_scale"].bridge.native_assignment is AssignmentMode.VALUE_COPY
     assert variables["optional_scale"].binding.getter_action is ModuleGetterAction.NULLABLE_SNAPSHOT
     assert variables["optional_scale"].bridge.descriptor_kind == "allocatable"
     assert variables["optional_scale"].binding.setter_action is SetterAction.REJECT_REPLACEMENT
+    assert variables["optional_scale"].bridge.native_assignment is AssignmentMode.NONE
     assert variables["selected_scale"].bridge.descriptor_kind == "pointer"
+    assert variables["selected_scale"].bridge.native_assignment is AssignmentMode.NONE
 
 
-def test_module_variable_lowering_names_are_direct_and_identical_across_backends():
-    for generator in (CBindingGenerator, FortranBridgeGenerator):
-        assert generator.lowering_method_name("module_getter", ModuleGetterAction.DIRECT_VALUE) == (
-            "_lower_module_getter_direct_value"
-        )
-        assert generator.lowering_method_name("module_getter", ModuleGetterAction.NULLABLE_SNAPSHOT) == (
-            "_lower_module_getter_nullable_snapshot"
-        )
-        assert generator.lowering_method_name("module_setter", SetterAction.WRITE_THROUGH) == (
-            "_lower_module_setter_write_through"
-        )
+def test_module_variable_visitors_consume_their_backend_owned_actions():
+    plan = _plan()
+    counter = next(
+        variable for variable in plan.namespaces[0].variables if variable.binding.python_names == ("counter",)
+    )
+    split_actions = replace(
+        counter,
+        binding=replace(
+            counter.binding,
+            getter_action=ModuleGetterAction.CONSTANT_VALUE,
+            setter_action=SetterAction.OMIT,
+        ),
+        bridge=replace(
+            counter.bridge,
+            getter_action=ModuleGetterAction.DIRECT_VALUE,
+            native_assignment=AssignmentMode.VALUE_COPY,
+        ),
+    )
+
+    assert CBindingGenerator().visit(split_actions) == ()
+    assert [procedure.name for procedure in FortranBridgeGenerator().visit(split_actions)] == [
+        "bind_c_get_counter",
+        "bind_c_set_counter",
+    ]
+
+
+def test_fortran_module_setter_rejects_unsupported_bridge_assignment():
+    plan = _plan()
+    counter = next(
+        variable for variable in plan.namespaces[0].variables if variable.binding.python_names == ("counter",)
+    )
+    invalid = replace(counter, bridge=replace(counter.bridge, native_assignment=AssignmentMode.ALIAS))
+
+    with pytest.raises(ValueError, match="Unsupported Fortran module setter assignment"):
+        FortranBridgeGenerator().visit(invalid)
+
+
+@pytest.mark.parametrize(
+    ("python_name", "assignment"),
+    [
+        ("counter", AssignmentMode.NONE),
+        ("counter", AssignmentMode.ALIAS),
+        ("optional_scale", AssignmentMode.VALUE_COPY),
+        ("optional_scale", AssignmentMode.ALIAS),
+        ("limit", AssignmentMode.VALUE_COPY),
+    ],
+)
+def test_module_setter_assignment_mismatch_fails_before_backend_preflight_or_lowering(
+    python_name,
+    assignment,
+):
+    invalid = _replace_variable(
+        _plan(),
+        python_name,
+        lambda variable: replace(
+            variable,
+            bridge=replace(variable.bridge, native_assignment=assignment),
+        ),
+    )
+    c_generator = Mock(spec=CBindingGenerator)
+    fortran_generator = Mock(spec=FortranBridgeGenerator)
+    c_printer = Mock()
+    fortran_printer = Mock()
+    generator = WrapperCodeGenerator(
+        c_generator=c_generator,
+        fortran_generator=fortran_generator,
+        c_printer=c_printer,
+        fortran_printer=fortran_printer,
+    )
+
+    with pytest.raises(ValueError, match="invalid-module-native-assignment") as error:
+        generator.generate(invalid)
+
+    assert "Unsupported Fortran module setter assignment" not in str(error.value)
+    c_generator.require_supported.assert_not_called()
+    fortran_generator.require_supported.assert_not_called()
+    c_generator.visit.assert_not_called()
+    fortran_generator.visit.assert_not_called()
+    c_generator.requires_runtime_support.assert_not_called()
+    c_printer.doprint.assert_not_called()
+    fortran_printer.doprint.assert_not_called()
 
 
 def test_module_variable_generators_dispatch_get_set_and_rejection_from_plan():
@@ -88,6 +170,26 @@ def test_module_variable_generators_dispatch_get_set_and_rejection_from_plan():
     assert "associated(native_selected_scale)" in fortran_source
     assert "optional_scale = value" not in fortran_source
     assert "selected_scale = value" not in fortran_source
+
+
+def test_module_variable_literal_families_select_their_c_spelling():
+    module = parse_pyi_text(
+        """
+enabled: Bool = True
+count: Int32 = 3
+scale: Float64 = 1.5
+phase: Complex128 = 1 + 2j
+""",
+        module_name="literal_state",
+    )
+    complete_semantic_policies(module)
+
+    c_source = _source(WrapperCodeGenerator().generate(WrapperPlanner().build(module)), ".c")
+
+    assert "bind_c_set_enabled(true);" in c_source
+    assert "bind_c_set_count(3);" in c_source
+    assert "bind_c_set_scale(1.5);" in c_source
+    assert "bind_c_set_phase((1.0 + 2.0 * I));" in c_source
 
 
 def test_generator_rejects_python_module_setter_without_bridge_handoff():

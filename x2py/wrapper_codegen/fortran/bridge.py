@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from x2py.semantics.ownership import NativeBarrierAction
+from x2py.semantics.ownership import AssignmentMode, CodegenAction, NativeBarrierAction
 from x2py.semantics.wrapper_policy import ModuleGetterAction, OptionalMode
 from x2py.wrapper_codegen.nodes import (
     CodeExpression,
@@ -33,7 +33,7 @@ class FortranBridgeGenerator(ClassVisitor):
     """Recursively lower bridge plan views directly into Fortran nodes."""
 
     def require_supported(self, plan: ModulePlan) -> None:
-        """Reject actions without their directly named Fortran lowering method."""
+        """Reject unsupported Fortran ABI actions and scalar types."""
         for function in self._functions(plan):
             self._require_function_supported(function)
         for variable in self._variables(plan):
@@ -46,8 +46,6 @@ class FortranBridgeGenerator(ClassVisitor):
             NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
             NativeBarrierAction.PASS_STORAGE_ADDRESS,
         }
-        result_action = function.result.bridge.codegen_action if function.result is not None else "none"
-        self._require_lowering_method("result", result_action, function.owner_path)
         if self._has_optional_arguments(function) and any(
             slot.source_kind == "literal" for slot in function.native_call_slots
         ):
@@ -58,13 +56,18 @@ class FortranBridgeGenerator(ClassVisitor):
                     f"Unsupported Fortran argument action for {argument.owner_path!r}: "
                     f"{argument.bridge.native_action!r}"
                 )
-            self._require_lowering_method("argument", argument.bridge.optional_mode, argument.owner_path)
             PrimitiveScalarTypeRegistry.type_for(argument.semantic_type_name)
 
     def _require_variable_supported(self, variable: ModuleVariablePlan) -> None:
         """Reject unsupported actions in one planned module variable."""
-        self._require_lowering_method("module_getter", variable.bridge.getter_action, variable.owner_path)
-        self._require_lowering_method("module_setter", variable.binding.setter_action, variable.owner_path)
+        if variable.bridge.native_assignment not in {
+            AssignmentMode.NONE,
+            AssignmentMode.VALUE_COPY,
+        }:
+            raise ValueError(
+                f"Unsupported Fortran module setter assignment for {variable.owner_path!r}: "
+                f"{variable.bridge.native_assignment!r}"
+            )
         if (
             variable.bridge.getter_action is ModuleGetterAction.NULLABLE_SNAPSHOT
             and variable.bridge.descriptor_kind not in {"allocatable", "pointer"}
@@ -96,11 +99,7 @@ class FortranBridgeGenerator(ClassVisitor):
 
     def _visit_FunctionPlan(self, plan: FunctionPlan) -> FortranFunction:
         """Recursively assemble one complete bridge procedure."""
-        result_parameters, result_name, result_type = self._call_lowering(
-            "result",
-            plan.result.bridge.codegen_action if plan.result is not None else "none",
-            plan,
-        )
+        result_parameters, result_name, result_type = self._lower_result(plan)
         parameters = tuple(
             parameter
             for argument in sorted(plan.arguments, key=lambda item: item.bridge.abi_position)
@@ -119,6 +118,21 @@ class FortranBridgeGenerator(ClassVisitor):
             body=(*self._descriptor_initializers(plan), *self._function_body(plan, result_name)),
             is_subroutine=is_subroutine,
         )
+
+    def _lower_result(
+        self,
+        plan: FunctionPlan,
+    ) -> tuple[tuple[FortranParameter, ...], str | None, str | None]:
+        """Dispatch one completed bridge result action explicitly."""
+        if plan.result is None:
+            return self._lower_result_none(plan)
+        action = plan.result.bridge.codegen_action
+        match action:
+            case CodegenAction.DIRECT_VALUE:
+                return self._lower_result_direct_value(plan)
+            case CodegenAction.HIDDEN_OUTPUT:
+                return self._lower_result_hidden_output(plan)
+        raise ValueError(f"Unsupported Fortran result action for {plan.owner_path!r}: {action!r}")
 
     def _lower_result_none(
         self,
@@ -142,10 +156,23 @@ class FortranBridgeGenerator(ClassVisitor):
         return self._hidden_result_parameters(plan), None, None
 
     def _visit_ModuleVariablePlan(self, plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
-        """Lower getter and setter actions through their visible naming rule."""
-        getter = self._call_lowering("module_getter", plan.bridge.getter_action, plan)
-        setter = self._call_lowering("module_setter", plan.binding.setter_action, plan)
-        return (*getter, *setter)
+        """Lower bridge-owned getter and setter actions into procedures."""
+        return (
+            *self._lower_module_getter(plan),
+            *self._lower_module_setter(plan),
+        )
+
+    def _lower_module_getter(self, plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
+        """Dispatch one completed bridge getter action explicitly."""
+        action = plan.bridge.getter_action
+        match action:
+            case ModuleGetterAction.CONSTANT_VALUE:
+                return self._lower_module_getter_constant_value(plan)
+            case ModuleGetterAction.DIRECT_VALUE:
+                return self._lower_module_getter_direct_value(plan)
+            case ModuleGetterAction.NULLABLE_SNAPSHOT:
+                return self._lower_module_getter_nullable_snapshot(plan)
+        raise ValueError(f"Unsupported Fortran module getter action for {plan.owner_path!r}: {action!r}")
 
     def _lower_module_getter_constant_value(self, _plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
         """Constants are materialized directly by the Python binding."""
@@ -216,7 +243,21 @@ class FortranBridgeGenerator(ClassVisitor):
             ),
         )
 
-    def _lower_module_setter_write_through(self, plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
+    def _lower_module_setter(self, plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
+        """Dispatch one completed native assignment action explicitly."""
+        action = plan.bridge.native_assignment
+        match action:
+            case AssignmentMode.NONE:
+                return self._lower_module_setter_none(plan)
+            case AssignmentMode.VALUE_COPY:
+                return self._lower_module_setter_value_copy(plan)
+        raise ValueError(f"Unsupported Fortran module setter assignment for {plan.owner_path!r}: {action!r}")
+
+    def _lower_module_setter_none(self, _plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
+        """Return no native setter when the bridge assignment is omitted."""
+        return ()
+
+    def _lower_module_setter_value_copy(self, plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
         """Return one value-copy native module assignment."""
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
         name = self._module_bridge_setter_name(plan)
@@ -230,17 +271,21 @@ class FortranBridgeGenerator(ClassVisitor):
             ),
         )
 
-    def _lower_module_setter_reject_replacement(self, _plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
-        """Rejected replacement has no native setter procedure."""
-        return ()
-
-    def _lower_module_setter_omit(self, _plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
-        """Constants have no native setter procedure."""
-        return ()
-
     def _visit_ArgumentTransferPlan(self, plan: ArgumentTransferPlan) -> tuple[FortranParameter, ...]:
         """Lower one argument through the completed optional-mode action."""
-        return self._call_lowering("argument", plan.bridge.optional_mode, plan)
+        return self._lower_argument(plan)
+
+    def _lower_argument(self, plan: ArgumentTransferPlan) -> tuple[FortranParameter, ...]:
+        """Dispatch one completed bridge optional mode explicitly."""
+        mode = plan.bridge.optional_mode
+        match mode:
+            case OptionalMode.REQUIRED:
+                return self._lower_argument_required(plan)
+            case OptionalMode.NULLABLE_VALUE:
+                return self._lower_argument_nullable_value(plan)
+            case OptionalMode.DESCRIPTOR:
+                return self._lower_argument_descriptor(plan)
+        raise ValueError(f"Unsupported Fortran argument optional mode for {plan.owner_path!r}: {mode!r}")
 
     def _lower_argument_required(self, plan: ArgumentTransferPlan) -> tuple[FortranParameter, ...]:
         attributes = ("value",) if plan.bridge.native_action is NativeBarrierAction.PASS_VALUE else ()
@@ -541,22 +586,6 @@ class FortranBridgeGenerator(ClassVisitor):
 
     def _variables(self, plan: ModulePlan) -> tuple[ModuleVariablePlan, ...]:
         return tuple(variable for namespace in plan.namespaces for variable in namespace.variables)
-
-    @staticmethod
-    def lowering_method_name(subject: str, action: object) -> str:
-        """Return the exact implementation method selected by one plan action."""
-        value = getattr(action, "value", action)
-        return f"_lower_{subject}_{value}"
-
-    def _require_lowering_method(self, subject: str, action: object, owner_path: str) -> str:
-        method_name = self.lowering_method_name(subject, action)
-        if not callable(getattr(self, method_name, None)):
-            raise ValueError(f"Unsupported Fortran lowering action for {owner_path!r}: {method_name}")
-        return method_name
-
-    def _call_lowering(self, subject: str, action: object, *args):
-        method_name = self._require_lowering_method(subject, action, getattr(args[0], "owner_path", subject))
-        return getattr(self, method_name)(*args)
 
     def _iso_symbol(self, semantic_type_name: str) -> str:
         symbols = {

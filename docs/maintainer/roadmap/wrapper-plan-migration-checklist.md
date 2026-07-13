@@ -163,9 +163,11 @@ editable generated artifacts -- build integration --> frozen artifacts
 At the start of `WrapperCodeGenerator.generate(plan)`, the generator must:
 
 1. recursively freeze that exact plan object;
-2. run the complete structural validation on the final edited plan; and
-3. reject inconsistent handoffs, ABI slots, native ordering, lifecycle roles,
-   or unsupported lowering combinations before it creates backend nodes.
+2. run the complete binding/bridge plan-consistency validation on the final
+   edited plan;
+3. ask each backend to preflight only its own implementation capability; and
+4. recursively lower the validated plan into backend nodes before the printers
+   consume those nodes.
 
 Later mutation of the received plan raises `FrozenStageRecordError`. Backend
 nodes remain editable until their printer consumes them. Generated artifacts
@@ -177,15 +179,38 @@ it. `WrapperCodeGenerator` owns the private structured validation methods and
 is the only validation consumer. There is no standalone validator class or
 public validation operation.
 
+`WrapperCodeGenerator._validate_plan()` is the single plan-consistency gate.
+It validates the complete binding/bridge graph after the editable plan has
+been frozen and before either backend preflight or visitor runs. The gate stays
+small by composing `_plan_diagnostics()` from typed private diagnostics for
+namespaces, functions, arguments, results, lifecycle actions, and module
+variable getter/setter action families. A cross-view invariant belongs to the
+diagnostic for the lowest plan node that contains both views; for example, a
+module-variable diagnostic validates Python setter exposure against its native
+assignment and bridge setter role.
+
+`CBindingGenerator.require_supported()` and
+`FortranBridgeGenerator.require_supported()` are later backend-local
+capability preflights. They may reject a completed action, primitive type,
+descriptor kind, or ABI combination that their own backend cannot implement,
+but they do not establish whether binding and bridge views agree. Backend
+visitors and `_lower_*` methods mechanically consume the decisions owned by
+their view. Their exhaustive unmatched-action errors remain defensive
+protection for direct backend use; the public generation path must report a
+cross-view inconsistency from `_validate_plan()` first. No generator infers
+consistency by reading the other backend's plan view.
+
 Structural validation preserves these invariants:
 
+- module getter actions and roles agree, and Python setter exposure agrees with
+  native assignment, bridge setter roles, descriptor kinds, and constant state;
 - binding producer and bridge consumer roles agree;
 - bridge ABI coverage, positions, and owner roles are complete;
 - native-call slot coverage, exact ordering, hidden literals, and hidden
-  results agree;
+  results agree, including hidden-result native and codegen actions;
 - direct and hidden result producer/consumer roles agree;
 - writeback, cleanup, and release actions use available source roles in their
-  declared order;
+  declared order, and advertised roles exactly match their plan producers;
 - positions and symbolic roles are neither duplicate nor missing; and
 - external and bind-target requirements are complete.
 
@@ -252,20 +277,47 @@ policy; those remain in existing build/link orchestration.
 
 ## Direct Lowering Methods
 
-Each backend maps a completed plan action to one directly named method. The
-single visible rule is:
+Each backend visitor dispatches plan nodes by class through
+`_visit_<PlanClass>`. A visitor method then calls a typed
+`_lower_<subject>` helper for each completed action family owned by that
+backend. The helper uses an explicit, exhaustive action match and calls one
+concrete `_lower_<subject>_<action>` implementation method. For example:
 
 ```python
-method_name = f"_lower_{subject}_{action.value}"
+def _visit_ModuleVariablePlan(self, plan):
+    return (
+        *self._lower_module_getter(plan),
+        *self._lower_module_setter(plan),
+    )
+
+def _lower_module_getter(self, plan):
+    match plan.binding.getter_action:
+        case ModuleGetterAction.CONSTANT_VALUE:
+            return self._lower_module_getter_constant_value(plan)
+        case ModuleGetterAction.DIRECT_VALUE:
+            return self._lower_module_getter_direct_value(plan)
+        case ModuleGetterAction.NULLABLE_SNAPSHOT:
+            return self._lower_module_getter_nullable_snapshot(plan)
+    raise ValueError(...)
 ```
 
-For example, an argument whose completed optional mode is `required` uses
-`_lower_argument_required`; a module getter action `nullable_snapshot` uses
-`_lower_module_getter_nullable_snapshot`. `lowering_method_name(subject,
-action)` exposes that exact selection for inspection. Generator entry verifies
-that every selected method exists before lowering begins, and unsupported
-actions fail explicitly. No dispatcher dictionary or method-name string is
-stored in the plan.
+The C binding dispatches only from binding-owned actions, and the Fortran
+bridge dispatches only from bridge-owned actions. In particular, native module
+setter generation consumes the completed bridge assignment action rather than
+the Python setter-exposure action. Post-IR policy completion records
+`AssignmentMode.NONE` when no native setter is exposed and
+`AssignmentMode.VALUE_COPY` for supported scalar value write-through; bridge
+lowering does not reconstruct that choice from the Python setter action.
+Backend support checks retain genuine ABI and capability validation; action
+dispatch itself raises explicitly for every unsupported value, including an
+unsupported alias assignment.
+
+Do not synthesize implementation method names, use `getattr` to execute
+lowering, retain a fallback behavior, or store dispatcher names in the plan.
+Do not create extra getter or setter plan nodes solely to gain more
+`_visit_<PlanClass>` methods. Both visitor and lowering methods return backend
+syntax nodes; printers remain the only layer that renders those nodes as source
+text.
 
 Primitive dtype spelling and converter differences live in the intentionally
 scalar-specific `PrimitiveScalarTypeRegistry`; they do not duplicate control
@@ -319,8 +371,8 @@ function.bridge.native_name = "SUB_R8"
 
 binding = CBindingGenerator()
 bridge = FortranBridgeGenerator()
-print(binding.lowering_method_name("argument", function.arguments[0].binding.optional_mode))
-print(bridge.lowering_method_name("argument", function.arguments[0].bridge.optional_mode))
+print(function.arguments[0].binding.optional_mode)
+print(function.arguments[0].bridge.optional_mode)
 
 artifacts = WrapperCodeGenerator(
     c_generator=binding,
@@ -332,8 +384,9 @@ artifacts = WrapperCodeGenerator(
 ```
 
 It does not expose standalone validation. Printed plan inspection uses the
-actual namespace and owner records, and `lowering_method_name(subject, action)`
-shows the exact directly named implementation method selected in each backend.
+actual namespace, owner, and completed action records. The backend visitors
+make the corresponding explicit action matches visible in their typed lowering
+helpers.
 
 ## Required Evidence
 

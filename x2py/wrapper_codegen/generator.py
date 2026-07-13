@@ -70,13 +70,13 @@ class WrapperCodeGenerator:
         )
 
     def _validate_plan(self, plan: ModulePlan) -> None:
-        """Reject structural inconsistencies in the final frozen plan."""
+        """Reject complete-plan inconsistencies in the final frozen plan."""
         diagnostics = self._plan_diagnostics(plan)
         if diagnostics:
             raise ValueError(self._diagnostic_summary(diagnostics))
 
     def _plan_diagnostics(self, plan: ModulePlan) -> tuple[WrapperPlanDiagnostic, ...]:
-        """Return module and descendant diagnostics before lowering starts."""
+        """Return binding/bridge graph diagnostics before backend preflight."""
         diagnostics = []
         if plan.binding.owner_path != plan.owner_path:
             diagnostics.append(self._diagnostic(plan.owner_path, "binding-module-owner", plan.binding.owner_path))
@@ -244,13 +244,21 @@ class WrapperCodeGenerator:
             if role is None:
                 diagnostics.append(self._diagnostic(plan.owner_path, "missing-module-setter-role", action.value))
             return tuple(diagnostics)
+        diagnostics = []
+        if assignment is not AssignmentMode.NONE:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-module-native-assignment", assignment))
         if role is not None:
-            return (self._diagnostic(plan.owner_path, "setter-role-without-write-through", role),)
-        if action is SetterAction.REJECT_REPLACEMENT and plan.bridge.descriptor_kind is None:
-            return (self._diagnostic(plan.owner_path, "rejected-module-setter-without-descriptor", action.value),)
+            diagnostics.append(self._diagnostic(plan.owner_path, "setter-role-without-write-through", role))
+        if action is SetterAction.REJECT_REPLACEMENT and plan.bridge.descriptor_kind not in {
+            "allocatable",
+            "pointer",
+        }:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "rejected-module-setter-without-descriptor", action.value)
+            )
         if action is SetterAction.OMIT and plan.binding.getter_action is not ModuleGetterAction.CONSTANT_VALUE:
-            return (self._diagnostic(plan.owner_path, "omitted-nonconstant-module-setter", action.value),)
-        return ()
+            diagnostics.append(self._diagnostic(plan.owner_path, "omitted-nonconstant-module-setter", action.value))
+        return tuple(diagnostics)
 
     def _function_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return ordering, handoff, result, and lifecycle diagnostics."""
@@ -268,6 +276,7 @@ class WrapperCodeGenerator:
                 len(plan.native_call_slots),
             ),
             *self._duplicate_role_diagnostics(plan),
+            *self._available_role_diagnostics(plan),
             *self._function_output_diagnostics(plan),
         ]
         slots = {slot.native_position: slot for slot in plan.native_call_slots}
@@ -307,6 +316,10 @@ class WrapperCodeGenerator:
         if function_slots.get(plan.native_position) != plan.native_call_slot:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-function-native-slot", plan.native_position)
+            )
+        if plan.native_call_slot.source_kind not in {"implicit", "projection"}:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-argument-native-slot", plan.native_call_slot.source_kind)
             )
         diagnostics.extend(self._optional_argument_diagnostics(plan))
         return tuple(diagnostics)
@@ -418,6 +431,14 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-result-position", slot.result_position))
         if slot.symbolic_role != plan.bridge.native_result_role:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-result-role", slot.symbolic_role))
+        if slot.native_action is not plan.bridge.native_action:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "inconsistent-result-native-action", slot.native_action.value)
+            )
+        if slot.codegen_action is not plan.bridge.codegen_action:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "inconsistent-result-slot-codegen-action", slot.codegen_action.value)
+            )
         if function_slots.get(slot.native_position) != slot:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-function-result-slot", slot.native_position)
@@ -427,6 +448,8 @@ class WrapperCodeGenerator:
     def _native_slot_diagnostics(self, plan: NativeCallSlotPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return hidden literal and hidden result slot diagnostics."""
         diagnostics = []
+        if plan.source_kind not in {"implicit", "projection", "literal", "result"}:
+            diagnostics.append(self._diagnostic(plan.owner_path, "unknown-native-slot-source", plan.source_kind))
         if plan.source_kind == "literal":
             if plan.literal_type is None:
                 diagnostics.append(self._diagnostic(plan.owner_path, "missing-literal-type", plan.native_position))
@@ -576,6 +599,15 @@ class WrapperCodeGenerator:
             for role, count in Counter(roles).items()
             if count > 1
         )
+
+    def _available_role_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require the advertised roles to match argument and result producers."""
+        expected = [argument.binding.handoff_role for argument in plan.arguments]
+        if plan.result is not None:
+            expected.append(plan.result.bridge.native_result_role)
+        if Counter(plan.available_roles) != Counter(expected):
+            return (self._diagnostic(plan.owner_path, "inconsistent-available-roles", plan.available_roles),)
+        return ()
 
     def _diagnostic(self, owner_path: str, code: str, detail: object) -> WrapperPlanDiagnostic:
         return WrapperPlanDiagnostic(owner_path, code, str(detail))

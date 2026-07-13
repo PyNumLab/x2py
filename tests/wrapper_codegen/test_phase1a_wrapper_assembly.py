@@ -10,7 +10,7 @@ import pytest
 from tests._shared.ownership_policy_support import parse_pyi_text
 from x2py.semantics.ownership import CodegenAction
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.semantics.wrapper_policy import OptionalMode
+from x2py.semantics.wrapper_policy import WritebackPhase
 from x2py.stage_values import FrozenStageRecordError
 from x2py.wrapper_codegen import (
     CBindingGenerator,
@@ -70,15 +70,70 @@ def swap_args(x: Float64, y: Float64) -> Float64: ...
     assert "result = SWAP_ARGS(y, x)" in fortran_source
 
 
-def test_function_lowering_names_are_direct_and_identical_across_backends():
-    for generator in (CBindingGenerator, FortranBridgeGenerator):
-        assert generator.lowering_method_name("argument", OptionalMode.REQUIRED) == "_lower_argument_required"
-        assert (
-            generator.lowering_method_name("argument", OptionalMode.NULLABLE_VALUE) == "_lower_argument_nullable_value"
-        )
-        assert generator.lowering_method_name("argument", OptionalMode.DESCRIPTOR) == "_lower_argument_descriptor"
-        assert generator.lowering_method_name("result", CodegenAction.DIRECT_VALUE) == "_lower_result_direct_value"
-        assert generator.lowering_method_name("result", CodegenAction.HIDDEN_OUTPUT) == "_lower_result_hidden_output"
+@pytest.mark.parametrize(
+    ("source", "c_fragment", "fortran_fragment"),
+    [
+        (
+            "def required_value(x: Float64) -> Float64: ...",
+            "PyObject * x_obj;",
+            "result = native_required_value(x)",
+        ),
+        (
+            "def optional_value(x: Int32 = ...) -> Int32: ...",
+            "PyObject * x_obj = Py_None;",
+            "if (c_associated(bound_x)) then",
+        ),
+        (
+            """
+@native_call([Allocatable(Arg(0))])
+def descriptor_value(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
+""",
+            "PyObject * value_obj = NULL;",
+            "type(c_ptr), value :: bound_value_present",
+        ),
+        (
+            """
+@native_call([Addr(Arg(0)), Return("result", 0)])
+def hidden_value(x: Float64) -> Float64: ...
+""",
+            "void bind_c_hidden_value(double * x, double * result);",
+            "subroutine bind_c_hidden_value(x, result)",
+        ),
+    ],
+)
+def test_supported_function_actions_select_their_backend_behavior(source, c_fragment, fortran_fragment):
+    artifacts = WrapperCodeGenerator().generate(_plan(source, module_name="action_dispatch"))
+
+    assert c_fragment in _rendered_source(artifacts, ".c")
+    assert fortran_fragment in _rendered_source(artifacts, ".f90")
+
+
+@pytest.mark.parametrize(
+    "codegen_action",
+    (CodegenAction.COPY_IN_OUT, CodegenAction.IN_PLACE_ARGUMENT),
+)
+def test_supported_writeback_actions_select_scalar_result_behavior(codegen_action):
+    plan = _plan(
+        'def bump(value: Annotated[Int32, Immutable]) -> Returns["value", Int32]: ...',
+        module_name="writeback_dispatch",
+    )
+    function = plan.namespaces[0].functions[0]
+    actions = tuple(
+        replace(action, binding=replace(action.binding, codegen_action=codegen_action))
+        if action.phase is WritebackPhase.COPY_OUT
+        else action
+        for action in function.writeback_actions
+    )
+    root = plan.namespaces[0]
+    edited = replace(
+        plan,
+        namespaces=(replace(root, functions=(replace(function, writeback_actions=actions),)),),
+    )
+
+    c_source = _rendered_source(WrapperCodeGenerator().generate(edited), ".c")
+
+    assert "bind_c_bump(&value);" in c_source
+    assert "PyObject * result_obj = Int32_to_PyLong(&value);" in c_source
 
 
 def test_direct_plan_edits_change_binding_and_bridge_generation_then_freeze_plan():
@@ -151,5 +206,5 @@ def scale(x: Float64) -> Float64: ...
         namespaces=(replace(root, functions=(replace(function, arguments=(invalid_argument,)),)),),
     )
 
-    with pytest.raises(ValueError, match="Unsupported C lowering action"):
+    with pytest.raises(ValueError, match="Unsupported C argument optional mode"):
         WrapperCodeGenerator().generate(invalid)

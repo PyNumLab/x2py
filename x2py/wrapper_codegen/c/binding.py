@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from x2py.semantics.ownership import (
+    CodegenAction,
     NativeBarrierAction,
     PythonBarrierAction,
     SetterAction,
@@ -35,6 +36,7 @@ from x2py.wrapper_codegen.nodes import (
 )
 from x2py.wrapper_codegen.plan import (
     ArgumentTransferPlan,
+    DatatypeFamily,
     FunctionPlan,
     LifecycleActionPlan,
     ModulePlan,
@@ -65,31 +67,21 @@ class CBindingGenerator(ClassVisitor):
     """Recursively lower binding plan views directly into C syntax nodes."""
 
     def require_supported(self, plan: ModulePlan) -> None:
-        """Reject actions without their directly named C lowering method."""
+        """Reject unsupported C ABI actions and scalar types."""
         for function in self._functions(plan):
             for argument in function.arguments:
                 if argument.binding.python_action is not PythonBarrierAction.SCALAR_VALUE:
                     raise ValueError(
                         f"Unsupported C argument action for {argument.owner_path!r}: {argument.binding.python_action!r}"
                     )
-                self._require_lowering_method("argument", argument.binding.optional_mode, argument.owner_path)
                 PrimitiveScalarTypeRegistry.type_for(argument.semantic_type_name)
             if function.result is not None:
-                self._require_lowering_method(
-                    "result",
-                    function.result.binding.codegen_action,
-                    function.result.owner_path,
-                )
                 PrimitiveScalarTypeRegistry.type_for(function.result.semantic_type_name)
             for action in function.writeback_actions:
                 if action.phase is not WritebackPhase.COPY_OUT or action.binding is None:
                     continue
-                self._require_lowering_method("writeback", action.binding.codegen_action, action.owner_path)
                 PrimitiveScalarTypeRegistry.type_for(action.binding.semantic_type_name)
         for variable in self._variables(plan):
-            self._require_lowering_method("module_getter", variable.binding.getter_action, variable.owner_path)
-            self._require_lowering_method("module_setter", variable.binding.setter_action, variable.owner_path)
-            self._require_lowering_method("module_literal", variable.datatype_family, variable.owner_path)
             PrimitiveScalarTypeRegistry.type_for(variable.semantic_type_name)
 
     def _visit_ModulePlan(self, plan: ModulePlan) -> tuple[CModule, CHeader]:
@@ -222,10 +214,23 @@ class CBindingGenerator(ClassVisitor):
         )
 
     def _visit_ModuleVariablePlan(self, plan: ModuleVariablePlan) -> tuple[CFunction, ...]:
-        """Lower getter and setter actions through their visible naming rule."""
-        getter = self._call_lowering("module_getter", plan.binding.getter_action, plan)
-        setter = self._call_lowering("module_setter", plan.binding.setter_action, plan)
-        return (*getter, *setter)
+        """Lower binding-owned getter and setter actions into C functions."""
+        return (
+            *self._lower_module_getter(plan),
+            *self._lower_module_setter(plan),
+        )
+
+    def _lower_module_getter(self, plan: ModuleVariablePlan) -> tuple[CFunction, ...]:
+        """Dispatch one completed Python getter action explicitly."""
+        action = plan.binding.getter_action
+        match action:
+            case ModuleGetterAction.CONSTANT_VALUE:
+                return self._lower_module_getter_constant_value(plan)
+            case ModuleGetterAction.DIRECT_VALUE:
+                return self._lower_module_getter_direct_value(plan)
+            case ModuleGetterAction.NULLABLE_SNAPSHOT:
+                return self._lower_module_getter_nullable_snapshot(plan)
+        raise ValueError(f"Unsupported C module getter action for {plan.owner_path!r}: {action!r}")
 
     def _lower_module_getter_constant_value(self, _plan: ModuleVariablePlan) -> tuple[CFunction, ...]:
         """Constants are materialized in the module dictionary at initialization."""
@@ -288,6 +293,18 @@ class CBindingGenerator(ClassVisitor):
                 ),
             ),
         )
+
+    def _lower_module_setter(self, plan: ModuleVariablePlan) -> tuple[CFunction, ...]:
+        """Dispatch one completed Python setter action explicitly."""
+        action = plan.binding.setter_action
+        match action:
+            case SetterAction.WRITE_THROUGH:
+                return self._lower_module_setter_write_through(plan)
+            case SetterAction.REJECT_REPLACEMENT:
+                return self._lower_module_setter_reject_replacement(plan)
+            case SetterAction.OMIT:
+                return self._lower_module_setter_omit(plan)
+        raise ValueError(f"Unsupported C module setter action for {plan.owner_path!r}: {action!r}")
 
     def _lower_module_setter_write_through(self, plan: ModuleVariablePlan) -> tuple[CFunction, ...]:
         """Return a Python-to-native scalar write-through helper."""
@@ -359,9 +376,25 @@ class CBindingGenerator(ClassVisitor):
         plan: ArgumentTransferPlan,
         *,
         context: _CFunctionContext,
-    ) -> tuple[CDeclaration | CExpressionStatement, ...]:
-        """Lower one input through its directly named optional-mode method."""
-        return self._call_lowering("argument", plan.binding.optional_mode, plan, context)
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf, ...]:
+        """Lower one input through its completed optional mode."""
+        return self._lower_argument(plan, context)
+
+    def _lower_argument(
+        self,
+        plan: ArgumentTransferPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf, ...]:
+        """Dispatch one completed binding optional mode explicitly."""
+        mode = plan.binding.optional_mode
+        match mode:
+            case OptionalMode.REQUIRED:
+                return self._lower_argument_required(plan, context)
+            case OptionalMode.NULLABLE_VALUE:
+                return self._lower_argument_nullable_value(plan, context)
+            case OptionalMode.DESCRIPTOR:
+                return self._lower_argument_descriptor(plan, context)
+        raise ValueError(f"Unsupported C argument optional mode for {plan.owner_path!r}: {mode!r}")
 
     def _lower_argument_required(
         self,
@@ -465,8 +498,23 @@ class CBindingGenerator(ClassVisitor):
         function: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        """Lower one result through its directly named codegen-action method."""
-        return self._call_lowering("result", plan.binding.codegen_action, plan, function, context)
+        """Lower one result through its completed binding action."""
+        return self._lower_result(plan, function, context)
+
+    def _lower_result(
+        self,
+        plan: ResultPlan,
+        function: FunctionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
+        """Dispatch one completed binding result action explicitly."""
+        action = plan.binding.codegen_action
+        match action:
+            case CodegenAction.DIRECT_VALUE:
+                return self._lower_result_direct_value(plan, function, context)
+            case CodegenAction.HIDDEN_OUTPUT:
+                return self._lower_result_hidden_output(plan, function, context)
+        raise ValueError(f"Unsupported C result action for {plan.owner_path!r}: {action!r}")
 
     def _lower_result_direct_value(
         self,
@@ -547,7 +595,22 @@ class CBindingGenerator(ClassVisitor):
         if len(ordered) != 1:
             raise ValueError(f"{plan.owner_path!r} requires exactly one scalar writeback result")
         action = ordered[0]
-        return self._call_lowering("writeback", action.binding.codegen_action, plan, action, context)
+        return self._lower_writeback(plan, action, context)
+
+    def _lower_writeback(
+        self,
+        plan: FunctionPlan,
+        action: LifecycleActionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
+        """Dispatch one completed binding writeback action explicitly."""
+        codegen_action = action.binding.codegen_action
+        match codegen_action:
+            case CodegenAction.COPY_IN_OUT:
+                return self._lower_writeback_copy_in_out(plan, action, context)
+            case CodegenAction.IN_PLACE_ARGUMENT:
+                return self._lower_writeback_in_place_argument(plan, action, context)
+        raise ValueError(f"Unsupported C writeback action for {action.owner_path!r}: {codegen_action!r}")
 
     def _lower_writeback_copy_in_out(
         self,
@@ -917,7 +980,18 @@ class CBindingGenerator(ClassVisitor):
         return tuple(nodes)
 
     def _module_literal(self, plan: ModuleVariablePlan, value: object) -> str:
-        return self._call_lowering("module_literal", plan.datatype_family, value)
+        """Dispatch one completed datatype family to its C literal spelling."""
+        family = plan.datatype_family
+        match family:
+            case DatatypeFamily.BOOL:
+                return self._lower_module_literal_bool(value)
+            case DatatypeFamily.INTEGER:
+                return self._lower_module_literal_integer(value)
+            case DatatypeFamily.REAL:
+                return self._lower_module_literal_real(value)
+            case DatatypeFamily.COMPLEX:
+                return self._lower_module_literal_complex(value)
+        raise ValueError(f"Unsupported C module literal family for {plan.owner_path!r}: {family!r}")
 
     def _lower_module_literal_bool(self, value: object) -> str:
         return "true" if value else "false"
@@ -977,19 +1051,3 @@ class CBindingGenerator(ClassVisitor):
 
     def _namespace_module_name(self, module: ModulePlan, namespace: NamespacePlan) -> str:
         return ".".join((module.binding.owner_path, *namespace.python_path))
-
-    @staticmethod
-    def lowering_method_name(subject: str, action: object) -> str:
-        """Return the exact implementation method selected by one plan action."""
-        value = getattr(action, "value", action)
-        return f"_lower_{subject}_{value}"
-
-    def _require_lowering_method(self, subject: str, action: object, owner_path: str) -> str:
-        method_name = self.lowering_method_name(subject, action)
-        if not callable(getattr(self, method_name, None)):
-            raise ValueError(f"Unsupported C lowering action for {owner_path!r}: {method_name}")
-        return method_name
-
-    def _call_lowering(self, subject: str, action: object, *args):
-        method_name = self._require_lowering_method(subject, action, getattr(args[0], "owner_path", subject))
-        return getattr(self, method_name)(*args)
