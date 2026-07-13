@@ -43,7 +43,11 @@ def scale(x: Float64) -> Float64: ...
     assert decision.owner_path == "fmath"
     assert decision.selected_route == "wrapper-plan"
     assert decision.uses_wrapper_plan is True
-    assert decision.covered_lanes == ("scalar-inputs", "scalar-direct-results")
+    assert decision.covered_lanes == (
+        "scalar-inputs",
+        "scalar-direct-results",
+        "native-call-runtime",
+    )
     assert decision.blockers == ()
     assert decision.rollout_eligible is False
     assert decision.rollout_evidence == (
@@ -59,6 +63,15 @@ def scale(x: Float64) -> Float64: ...
         "test_whole_scalar_module_variable_behavior_matches_legacy_route",
         "tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py::"
         "test_complete_general_source_preserves_namespaces_through_both_routes",
+        "tests/wrapper/fortran/runtime_behavior/test_runtime_policies.py::"
+        "test_compiled_runtime_policies_release_gil_and_project_native_errors",
+        "tests/wrapper/fortran/runtime_behavior/test_runtime_policies.py::"
+        "test_pyi_runtime_policies_release_gil_and_project_native_errors",
+        "tests/wrapper/fortran/runtime_behavior/test_runtime_recursion.py::test_recursive_native_runtime_calls",
+        "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+        "test_scalar_value_storage_raw_address_out_and_inout_match_both_routes",
+        "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+        "test_scalar_primitive_kinds_match_both_routes_without_array_blockers",
     )
     assert decision.selection_reason == "wrapper-plan route forced for internal migration verification"
 
@@ -67,7 +80,7 @@ def scale(x: Float64) -> Float64: ...
     assert rendered.extension_init_name == "PyInit_fmath"
 
 
-def test_route_selector_keeps_core_scalar_module_legacy_while_production_rollout_is_deferred():
+def test_route_selector_selects_core_scalar_module_for_production_plan_rollout():
     module = _completed_module(
         """
 def scale(x: Float64) -> Float64: ...
@@ -81,11 +94,15 @@ def scale(x: Float64) -> Float64: ...
         strict_wrapper_names=False,
     )
 
-    assert decision.selected_route == "legacy"
-    assert decision.covered_lanes == ("scalar-inputs", "scalar-direct-results")
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.covered_lanes == (
+        "scalar-inputs",
+        "scalar-direct-results",
+        "native-call-runtime",
+    )
     assert decision.blockers == ()
-    assert decision.rollout_eligible is False
-    assert decision.selection_reason == "GIL runtime parity is deferred to Phase 2D"
+    assert decision.rollout_eligible is True
+    assert decision.selection_reason == "whole generation unit is covered by completed wrapper-plan lanes"
 
 
 @pytest.mark.parametrize(
@@ -98,7 +115,12 @@ def scale(x: Float64) -> Float64: ...
 def optional_value(base: Int32, value: Int32 = ...) -> Int32: ...
 """,
             "optional_value",
-            ("scalar-inputs", "scalar-optional-inputs", "scalar-direct-results"),
+            (
+                "scalar-inputs",
+                "scalar-optional-inputs",
+                "scalar-direct-results",
+                "native-call-runtime",
+            ),
         ),
         (
             """
@@ -111,12 +133,13 @@ def descriptor(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
                 "scalar-optional-inputs",
                 "scalar-descriptor-inputs",
                 "scalar-direct-results",
+                "native-call-runtime",
             ),
         ),
         (
             'def bump(value: Annotated[Int32, Immutable]) -> Returns["value", Int32]: ...',
             "scalar_writeback",
-            ("scalar-inputs", "scalar-writebacks"),
+            ("scalar-inputs", "scalar-writebacks", "native-call-runtime"),
         ),
     ),
 )
@@ -137,6 +160,65 @@ def test_route_selector_accepts_completed_phase3_scalar_lanes_for_forced_whole_m
     assert decision.selected_route == "wrapper-plan"
     assert decision.covered_lanes == covered_lanes
     assert decision.blockers == ()
+
+
+@pytest.mark.parametrize(
+    ("source", "module_name", "covered_lanes"),
+    (
+        (
+            "def update(value: Float64[()]) -> None: ...",
+            "scalar_storage_route",
+            ("scalar-storage-inputs", "void-calls", "native-call-runtime"),
+        ),
+        (
+            "def update(value: Addr(Float64)) -> None: ...",
+            "scalar_raw_address_route",
+            ("scalar-raw-address-inputs", "void-calls", "native-call-runtime"),
+        ),
+    ),
+)
+def test_route_selector_accepts_isolated_scalar_address_boundaries(
+    source: str,
+    module_name: str,
+    covered_lanes: tuple[str, ...],
+):
+    module = _completed_module(source, module_name=module_name)
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+        force_wrapper_plan=True,
+    )
+
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.covered_lanes == covered_lanes
+    assert decision.blockers == ()
+
+
+def test_route_selector_selects_completed_scalar_address_boundaries_in_production():
+    module = _completed_module(
+        """
+def update_storage(value: Float64[()]) -> None: ...
+def update_raw(value: Addr(Float64)) -> None: ...
+""",
+        module_name="scalar_address_boundaries",
+    )
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+    )
+
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.rollout_eligible is True
+    assert decision.covered_lanes == (
+        "scalar-storage-inputs",
+        "void-calls",
+        "native-call-runtime",
+        "scalar-raw-address-inputs",
+    )
 
 
 def test_route_selector_accepts_completed_scalar_module_variable_lane():
@@ -161,6 +243,7 @@ def summarize() -> Int32: ...
     assert decision.selected_route == "wrapper-plan"
     assert decision.covered_lanes == (
         "scalar-direct-results",
+        "native-call-runtime",
         "scalar-module-variables",
     )
     assert decision.blockers == ()
@@ -187,9 +270,36 @@ def value(x: Int32) -> Int32: ...
     assert decision.selected_route == "wrapper-plan"
     assert decision.covered_lanes == (
         "void-calls",
+        "native-call-runtime",
         "scalar-inputs",
         "scalar-direct-results",
         "python-namespaces",
+    )
+
+
+def test_route_selector_records_completed_native_status_error_lane():
+    module = _completed_module(
+        """
+@raises(status="status", message="message", success=0)
+@native_call([Addr(Arg(0)), Return("status", 0), Return("message", 1)])
+def solve(value: Int32) -> tuple[Int32, String[32]]: ...
+""",
+        module_name="runtime_status",
+    )
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+    )
+
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.rollout_eligible is True
+    assert decision.covered_lanes == (
+        "scalar-inputs",
+        "void-calls",
+        "native-call-runtime",
+        "native-status-errors",
     )
 
 
@@ -212,6 +322,46 @@ def sum_values(values: Float64[:]) -> Float64: ...
     assert decision.rollout_eligible is False
     assert {blocker.owner_path for blocker in decision.blockers} == {"fmath.sum_values"}
     assert decision.selection_reason == "generation unit has unsupported wrapper-plan owners"
+
+
+def test_route_selector_keeps_unimplemented_scalar_kinds_on_legacy_route():
+    module = _completed_module(
+        "def identity(value: Float128) -> Float128: ...",
+        module_name="wide_scalar",
+    )
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+    )
+
+    assert decision.selected_route == "legacy"
+    assert [blocker.reason for blocker in decision.blockers] == [
+        "argument 'value' is not a first-lane primitive scalar",
+        "result is not a first-lane primitive scalar",
+    ]
+
+
+def test_route_selector_never_silently_falls_back_when_plan_route_is_forced():
+    module = _completed_module(
+        """
+def scale(x: Float64) -> Float64: ...
+def sum_values(values: Float64[:]) -> Float64: ...
+""",
+        module_name="fmath",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"cannot force wrapper-plan route.*fmath\.sum_values",
+    ):
+        build_pipeline._select_wrapper_plan_route(
+            module,
+            makefile=False,
+            strict_wrapper_names=False,
+            force_wrapper_plan=True,
+        )
 
 
 def test_route_selector_keeps_an_explicitly_forced_legacy_module_entirely_legacy():
@@ -302,7 +452,7 @@ def test_source_plan_build_failure_does_not_retry_legacy_lowering(monkeypatch, t
         )
 
 
-def test_source_plan_construction_failure_does_not_pre_run_legacy_lowering(monkeypatch, tmp_path: Path):
+def test_default_source_plan_construction_failure_does_not_pre_run_legacy_lowering(monkeypatch, tmp_path: Path):
     class FailingWrapperPlanner:
         def __init__(self, **_kwargs):
             pass
@@ -320,7 +470,6 @@ def test_source_plan_construction_failure_does_not_pre_run_legacy_lowering(monke
         build_pipeline.build_fortran_extension(
             wrapper_source("fmath.f"),
             output_dir=tmp_path,
-            _force_wrapper_plan_route=True,
         )
 
 
@@ -350,6 +499,11 @@ def test_source_and_pyi_forced_plan_routes_build_complete_extensions(tmp_path: P
     assert pyi_result.module_name == "fmath"
     assert source_result.shared_library.exists()
     assert pyi_result.shared_library.exists()
+    assert pyi_result.manifest is not None
+    assert pyi_result.manifest["native_build_plan"] == build_pipeline._manifest_native_plan(
+        pyi_result.native_build_plan,
+        base=pyi_result.output_dir,
+    )
 
 
 def test_pyi_plan_build_failure_does_not_pre_run_or_retry_legacy_lowering(monkeypatch, tmp_path: Path):
@@ -374,7 +528,7 @@ def test_pyi_plan_build_failure_does_not_pre_run_or_retry_legacy_lowering(monkey
         )
 
 
-def test_pyi_plan_construction_failure_does_not_pre_run_legacy_lowering(monkeypatch, tmp_path: Path):
+def test_default_pyi_plan_construction_failure_does_not_pre_run_legacy_lowering(monkeypatch, tmp_path: Path):
     class FailingWrapperPlanner:
         def __init__(self, **_kwargs):
             pass
@@ -396,7 +550,6 @@ def test_pyi_plan_construction_failure_does_not_pre_run_legacy_lowering(monkeypa
             contract,
             native_objects=[native_object],
             output_dir=tmp_path / "build",
-            _force_wrapper_plan_route=True,
         )
 
 

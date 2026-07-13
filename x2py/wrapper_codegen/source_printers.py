@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from x2py.wrapper_codegen.nodes import (
+    CAllowThreadsBegin,
+    CAllowThreadsEnd,
     CDeclaration,
     CExpressionStatement,
     CFunction,
@@ -217,6 +219,14 @@ class CSourcePrinter(ClassVisitor):
     def _visit_CExpressionStatement(self, node: CExpressionStatement) -> str:
         """Render one C expression statement."""
         return f"{node.expression.text};"
+
+    def _visit_CAllowThreadsBegin(self, _node: CAllowThreadsBegin) -> str:
+        """Render the opening CPython thread-release macro without a semicolon."""
+        return "Py_BEGIN_ALLOW_THREADS"
+
+    def _visit_CAllowThreadsEnd(self, _node: CAllowThreadsEnd) -> str:
+        """Render the closing CPython thread-release macro without a semicolon."""
+        return "Py_END_ALLOW_THREADS"
 
     def _visit_CIf(self, node: CIf) -> str:
         """Render one C conditional statement."""

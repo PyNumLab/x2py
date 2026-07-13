@@ -39,6 +39,7 @@ from x2py.semantics.native_array_handles import (
     NativeArrayHandlePolicyDispatcher,
     NativeArrayOutputProjectionDispatcher,
 )
+from x2py.semantics.wrapper_policy import NativeStatusErrorPolicy, PythonExceptionKind
 
 from ..bind_c import (
     BindCArrayVariable,
@@ -7702,13 +7703,12 @@ class CPythonBindingGenerator(BindingGenerator):
     def _status_error_output_names(original_func):
         """Handle status error output names for the current generation context."""
         policy = getattr(original_func, "decorators", {}).get(RUNTIME_STATUS_ERROR_METADATA)
-        if not isinstance(policy, dict):
+        if not isinstance(policy, NativeStatusErrorPolicy):
             return set()
-        names = {policy.get("status")}
-        message = policy.get("message")
-        if message is not None:
-            names.add(message)
-        return {name for name in names if isinstance(name, str)}
+        names = {policy.status.name}
+        if policy.message is not None:
+            names.add(policy.message.name)
+        return names
 
     @staticmethod
     def _result_bindings_by_name(wrapped_results):
@@ -7721,31 +7721,24 @@ class CPythonBindingGenerator(BindingGenerator):
         return bindings
 
     @staticmethod
-    def _validate_status_error_binding(policy, bindings):
-        """Validate status error binding."""
-        status_name = policy.get("status")
-        if not isinstance(status_name, str):
-            raise ValueError("raises metadata requires a status output name")
-        status = bindings.get(status_name)
+    def _status_error_bindings(policy, bindings):
+        """Resolve already-completed status outputs in the lowered binding graph."""
+        status = bindings.get(policy.status.name)
         if status is None:
-            raise ValueError(f"raises status target {status_name!r} is not a native output")
-        status_var = status.get("c_result")
-        status_dtype = getattr(status_var, "dtype", None)
-        if not isinstance(getattr(status_dtype, "primitive_type", None), PrimitiveIntegerType):
-            raise ValueError(f"raises status target {status_name!r} must be a scalar integer output")
-
-        message_name = policy.get("message")
+            raise ValueError(f"completed raises status target {policy.status.name!r} is missing after lowering")
         message = None
-        if message_name is not None:
-            if not isinstance(message_name, str):
-                raise ValueError("raises message target must be an output name")
-            message = bindings.get(message_name)
+        if policy.message is not None:
+            message = bindings.get(policy.message.name)
             if message is None:
-                raise ValueError(f"raises message target {message_name!r} is not a native output")
-            original = message.get("original")
-            if not isinstance(getattr(original, "class_type", None), StringType):
-                raise ValueError(f"raises message target {message_name!r} must be a string output")
+                raise ValueError(f"completed raises message target {policy.message.name!r} is missing after lowering")
         return status, message
+
+    @staticmethod
+    def _status_error_exception(policy):
+        """Lower one completed Python exception kind without datatype inference."""
+        if policy.exception_kind is PythonExceptionKind.RUNTIME_ERROR:
+            return PyRuntimeError
+        raise ValueError(f"Unsupported completed Python exception kind: {policy.exception_kind!r}")
 
     def _status_error_check(
         self,
@@ -7757,18 +7750,19 @@ class CPythonBindingGenerator(BindingGenerator):
     ):
         """Handle status error check for the current generation context."""
         policy = getattr(original_func, "decorators", {}).get(RUNTIME_STATUS_ERROR_METADATA)
-        if not isinstance(policy, dict):
+        if not isinstance(policy, NativeStatusErrorPolicy):
             return []
 
         bindings = self._result_bindings_by_name(wrapped_results)
-        status, message = self._validate_status_error_binding(policy, bindings)
+        status, message = self._status_error_bindings(policy, bindings)
         status_var = status["c_result"]
-        success = int(policy.get("success", 0))
+        success = policy.success
+        exception = self._status_error_exception(policy)
         if message is not None:
-            set_error = PyErr_SetObject(PyRuntimeError, message["py_result"])
+            set_error = PyErr_SetObject(exception, message["py_result"])
         else:
             set_error = PyErr_SetString(
-                PyRuntimeError,
+                exception,
                 CStrStr(convert_to_literal(f"native call failed with status {status['name']} != {success}")),
             )
         error_body = [

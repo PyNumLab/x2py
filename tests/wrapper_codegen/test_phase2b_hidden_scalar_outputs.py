@@ -18,7 +18,14 @@ def scale(x: Float64) -> Float64: ...
         module_name="hidden_result",
     )
     complete_semantic_policies(module)
-    artifacts = WrapperCodeGenerator().generate(WrapperPlanner().build(module))
+    plan = WrapperPlanner().build(module)
+    function = plan.namespaces[0].functions[0]
+    result = function.result
+
+    assert result is not None
+    assert result.native_call_slot is function.native_call_slots[result.bridge.abi_position]
+
+    artifacts = WrapperCodeGenerator().generate(plan)
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     fortran_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 

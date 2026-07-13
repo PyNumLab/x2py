@@ -110,6 +110,7 @@ __all__ = (
     "SemanticType",
     "SemanticVariable",
     "_parse_pyi_text",
+    "complete_semantic_policies",
     "emit_module",
     "emit_module_stubs",
     "fortran_module_to_semantic_module",

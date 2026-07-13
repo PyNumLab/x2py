@@ -222,7 +222,6 @@ def test_external_bridge_uses_explicit_interface_and_no_module_use(tmp_path: Pat
     assert "function free_square(" in bridge
     assert "end function free_square" in bridge
     assert "private\n" not in bridge
-    assert "private :: c_malloc" in bridge
     assert "public :: bind_c_free_square" not in bridge
     assert "use free_external" not in bridge
 

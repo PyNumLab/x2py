@@ -16,6 +16,7 @@ PYTHON_VALUE_IMMUTABLE = "immutable"
 RUNTIME_HOLD_GIL_METADATA = "runtime_hold_gil"
 RUNTIME_RETAIN_RESULT_OWNER_METADATA = "runtime_retain_result_owner"
 RUNTIME_STATUS_ERROR_METADATA = "runtime_status_error"
+RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA = "resolved_runtime_status_error_policy"
 
 
 # ============================================================

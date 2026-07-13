@@ -6,16 +6,20 @@ from dataclasses import dataclass
 
 from x2py.semantics.ownership import (
     CodegenAction,
-    NativeBarrierAction,
     PythonBarrierAction,
     SetterAction,
 )
 from x2py.semantics.wrapper_policy import (
+    ArgumentHandoffMode,
+    BridgeDataAction,
     ModuleGetterAction,
     OptionalMode,
+    PythonExceptionKind,
     WritebackPhase,
 )
 from x2py.wrapper_codegen.nodes import (
+    CAllowThreadsBegin,
+    CAllowThreadsEnd,
     CDeclaration,
     CExpressionStatement,
     CFunction,
@@ -42,6 +46,7 @@ from x2py.wrapper_codegen.plan import (
     ModulePlan,
     ModuleVariablePlan,
     NamespacePlan,
+    NativeCallSlotPlan,
     ResultPlan,
 )
 from x2py.wrapper_codegen.primitive_scalar_types import PrimitiveScalarTypeRegistry
@@ -59,6 +64,7 @@ class _CArgumentNames:
 @dataclass
 class _CFunctionContext:
     arguments: dict[str, _CArgumentNames]
+    native_outputs: dict[str, str]
     result_name: str | None
     python_result_name: str | None
 
@@ -69,26 +75,74 @@ class CBindingGenerator(ClassVisitor):
     def require_supported(self, plan: ModulePlan) -> None:
         """Reject unsupported C ABI actions and scalar types."""
         for function in self._functions(plan):
-            for argument in function.arguments:
-                if argument.binding.python_action is not PythonBarrierAction.SCALAR_VALUE:
-                    raise ValueError(
-                        f"Unsupported C argument action for {argument.owner_path!r}: {argument.binding.python_action!r}"
-                    )
-                PrimitiveScalarTypeRegistry.type_for(argument.semantic_type_name)
-            if function.result is not None:
-                PrimitiveScalarTypeRegistry.type_for(function.result.semantic_type_name)
-            for action in function.writeback_actions:
-                if action.phase is not WritebackPhase.COPY_OUT or action.binding is None:
-                    continue
-                PrimitiveScalarTypeRegistry.type_for(action.binding.semantic_type_name)
+            self._require_function_supported(function)
         for variable in self._variables(plan):
             PrimitiveScalarTypeRegistry.type_for(variable.semantic_type_name)
+
+    def _require_function_supported(self, function: FunctionPlan) -> None:
+        """Reject unsupported actions and types for one binding function."""
+        for argument in function.arguments:
+            self._require_argument_supported(argument)
+        if function.result is not None:
+            PrimitiveScalarTypeRegistry.type_for(function.result.semantic_type_name)
+        for slot in function.native_call_slots:
+            self._require_native_result_supported(function, slot)
+        for action in function.writeback_actions:
+            self._require_writeback_supported(action)
+
+    def _require_argument_supported(self, argument: ArgumentTransferPlan) -> None:
+        """Reject one unsupported Python argument conversion."""
+        if argument.binding.python_action not in {
+            PythonBarrierAction.SCALAR_VALUE,
+            PythonBarrierAction.SCALAR_STORAGE,
+            PythonBarrierAction.RAW_ADDRESS,
+        }:
+            raise ValueError(
+                f"Unsupported C argument action for {argument.owner_path!r}: {argument.binding.python_action!r}"
+            )
+        if (
+            argument.binding.python_action in {PythonBarrierAction.SCALAR_STORAGE, PythonBarrierAction.RAW_ADDRESS}
+            and argument.bridge.handoff_mode is not ArgumentHandoffMode.OPAQUE_ADDRESS
+        ):
+            raise ValueError(f"Unsupported C address handoff for {argument.owner_path!r}")
+        PrimitiveScalarTypeRegistry.type_for(argument.semantic_type_name)
+
+    def _require_native_result_supported(self, function: FunctionPlan, slot: NativeCallSlotPlan) -> None:
+        """Reject one unsupported native result output."""
+        if slot.source_kind != "result":
+            return
+        if slot.datatype_family is DatatypeFamily.STRING:
+            self._require_string_result_supported(function, slot)
+            return
+        if slot.semantic_type_name is None:
+            raise ValueError(f"Missing C result datatype for {slot.owner_path!r}")
+        PrimitiveScalarTypeRegistry.type_for(slot.semantic_type_name)
+
+    def _require_string_result_supported(self, function: FunctionPlan, slot: NativeCallSlotPlan) -> None:
+        """Require fixed-length status-message storage for one string result."""
+        policy = function.binding.status_error
+        if policy is None:
+            raise ValueError(f"Unsupported C string output for {slot.owner_path!r}")
+        if policy.message_role != slot.symbolic_role:
+            raise ValueError(f"Unsupported C string output for {slot.owner_path!r}")
+        if slot.character_length is None:
+            raise ValueError(f"Unsupported C string output for {slot.owner_path!r}")
+        if slot.bridge_data_action is not BridgeDataAction.COPY_REPRESENTATION:
+            raise ValueError(f"Unsupported C string bridge data action for {slot.owner_path!r}")
+
+    def _require_writeback_supported(self, action: LifecycleActionPlan) -> None:
+        """Require a scalar type for one binding-owned copy-out action."""
+        if action.phase is not WritebackPhase.COPY_OUT:
+            return
+        if action.binding is None:
+            return
+        PrimitiveScalarTypeRegistry.type_for(action.binding.semantic_type_name)
 
     def _visit_ModulePlan(self, plan: ModulePlan) -> tuple[CModule, CHeader]:
         """Return a complete C module and header from one shared plan."""
         functions = tuple(function for namespace in plan.namespaces for function in self.visit(namespace))
         needs_runtime = self.requires_runtime_support(plan)
-        needs_free = self._module_needs_snapshot_allocator(plan)
+        needs_free = self._module_needs_allocator(plan)
         c_module = CModule(
             name=f"{plan.binding.owner_path}_wrapper",
             defines=self._module_defines(needs_runtime),
@@ -120,10 +174,15 @@ class CBindingGenerator(ClassVisitor):
             function.arguments or function.result is not None for function in self._functions(plan)
         )
 
-    def _module_needs_snapshot_allocator(self, plan: ModulePlan) -> bool:
-        """Return whether nullable module snapshots need the shared allocator."""
+    def _module_needs_allocator(self, plan: ModulePlan) -> bool:
+        """Return whether emitted bridge-owned copies need the shared allocator."""
         return any(
             variable.binding.getter_action is ModuleGetterAction.NULLABLE_SNAPSHOT for variable in self._variables(plan)
+        ) or any(
+            slot.datatype_family is DatatypeFamily.STRING
+            for function in self._functions(plan)
+            for slot in function.native_call_slots
+            if slot.source_kind == "result"
         )
 
     def _module_defines(self, needs_runtime: bool) -> tuple[CMacroDefinition, ...]:
@@ -364,7 +423,8 @@ class CBindingGenerator(ClassVisitor):
             body=(
                 self._keyword_declaration(plan),
                 *(node for node in argument_nodes if isinstance(node, CDeclaration)),
-                *(self._result_declaration(plan, context)),
+                *self._direct_result_declaration(plan, context),
+                *self._native_output_declarations(plan, context),
                 self._parse_statement(plan, context),
                 *(node for node in argument_nodes if not isinstance(node, CDeclaration)),
                 *output_nodes,
@@ -401,7 +461,23 @@ class CBindingGenerator(ClassVisitor):
         plan: ArgumentTransferPlan,
         context: _CFunctionContext,
     ) -> tuple[CDeclaration | CExpressionStatement, ...]:
-        """Return declarations and conversion statements for one scalar input."""
+        """Dispatch one required argument from its completed Python action."""
+        action = plan.binding.python_action
+        match action:
+            case PythonBarrierAction.SCALAR_VALUE:
+                return self._lower_argument_required_scalar_value(plan, context)
+            case PythonBarrierAction.SCALAR_STORAGE:
+                return self._lower_argument_required_scalar_storage(plan, context)
+            case PythonBarrierAction.RAW_ADDRESS:
+                return self._lower_argument_required_raw_address(plan, context)
+        raise ValueError(f"Unsupported required C argument action for {plan.owner_path!r}: {action!r}")
+
+    def _lower_argument_required_scalar_value(
+        self,
+        plan: ArgumentTransferPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CExpressionStatement, ...]:
+        """Return declarations and conversion statements for one scalar value."""
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
         if scalar_type.python_input_converter is None or scalar_type.python_input_check is None:
             raise ValueError(f"Unsupported scalar input type {plan.semantic_type_name!r}")
@@ -421,6 +497,80 @@ class CBindingGenerator(ClassVisitor):
                 CodeExpression(f"{names.value_name} = {scalar_type.python_input_converter}({names.object_name})")
             ),
             CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
+        )
+
+    def _lower_argument_required_scalar_storage(
+        self,
+        plan: ArgumentTransferPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CExpressionStatement, ...]:
+        """Validate and borrow one rank-zero NumPy scalar data address."""
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
+        if scalar_type.numpy_type_macro is None:
+            raise ValueError(f"Unsupported scalar storage type {plan.semantic_type_name!r}")
+        names = context.arguments[plan.owner_path]
+        array = f"(PyArrayObject *){names.object_name}"
+        expected = scalar_type.python_type_name
+        nodes = [
+            CDeclaration(names.object_name, "PyObject *"),
+            CDeclaration(names.value_name, "void *", CodeExpression("NULL")),
+            CExpressionStatement(
+                CodeExpression(
+                    f"if (!PyArray_Check({names.object_name}) || PyArray_TYPE({array}) != "
+                    f"{scalar_type.numpy_type_macro} || PyArray_NDIM({array}) != 0) {{ "
+                    f'PyErr_Format(PyExc_TypeError, "Expected a rank-zero numpy.ndarray of type '
+                    f"{expected} for argument {plan.binding.python_name}. Received <class '%s'>\", "
+                    f"Py_TYPE({names.object_name})->tp_name); return NULL; }}"
+                )
+            ),
+            CExpressionStatement(
+                CodeExpression(
+                    f"if (!PyArray_ISNOTSWAPPED({array})) {{ "
+                    f'PyErr_SetString(PyExc_TypeError, "Argument {plan.binding.python_name} must use native '
+                    'byte order"); return NULL; }'
+                )
+            ),
+            CExpressionStatement(
+                CodeExpression(
+                    f"if (!PyArray_ISALIGNED({array})) {{ "
+                    f'PyErr_SetString(PyExc_TypeError, "Argument {plan.binding.python_name} must be aligned"); '
+                    "return NULL; }"
+                )
+            ),
+        ]
+        if plan.binding.writable:
+            nodes.append(
+                CExpressionStatement(
+                    CodeExpression(
+                        f"if (!PyArray_ISWRITEABLE({array})) {{ "
+                        f'PyErr_SetString(PyExc_TypeError, "Argument {plan.binding.python_name} must be writeable"); '
+                        "return NULL; }"
+                    )
+                )
+            )
+        nodes.append(CExpressionStatement(CodeExpression(f"{names.value_name} = PyArray_DATA({array})")))
+        return tuple(nodes)
+
+    def _lower_argument_required_raw_address(
+        self,
+        plan: ArgumentTransferPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CExpressionStatement, ...]:
+        """Convert one Python integer into a caller-owned raw address."""
+        names = context.arguments[plan.owner_path]
+        return (
+            CDeclaration(names.object_name, "PyObject *"),
+            CDeclaration(names.value_name, "void *", CodeExpression("NULL")),
+            CExpressionStatement(
+                CodeExpression(
+                    f"if (!PyLong_Check({names.object_name})) {{ "
+                    f'PyErr_Format(PyExc_TypeError, "Expected an integer raw address for argument '
+                    f"{plan.binding.python_name}. Received <class '%s'>\", "
+                    f"Py_TYPE({names.object_name})->tp_name); return NULL; }}"
+                )
+            ),
+            CExpressionStatement(CodeExpression(f"{names.value_name} = PyLong_AsVoidPtr({names.object_name})")),
+            CExpressionStatement(CodeExpression(f"if ({names.value_name} == NULL && PyErr_Occurred()) return NULL")),
         )
 
     def _lower_argument_nullable_value(
@@ -495,50 +645,45 @@ class CBindingGenerator(ClassVisitor):
         self,
         plan: ResultPlan,
         *,
-        function: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
         """Lower one result through its completed binding action."""
-        return self._lower_result(plan, function, context)
+        return self._lower_result(plan, context)
 
     def _lower_result(
         self,
         plan: ResultPlan,
-        function: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
         """Dispatch one completed binding result action explicitly."""
         action = plan.binding.codegen_action
         match action:
             case CodegenAction.DIRECT_VALUE:
-                return self._lower_result_direct_value(plan, function, context)
+                return self._lower_result_direct_value(plan, context)
             case CodegenAction.HIDDEN_OUTPUT:
-                return self._lower_result_hidden_output(plan, function, context)
+                return self._lower_result_hidden_output(plan, context)
         raise ValueError(f"Unsupported C result action for {plan.owner_path!r}: {action!r}")
 
     def _lower_result_direct_value(
         self,
         plan: ResultPlan,
-        function: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        return self._lower_result_value(plan, function, context)
+        return self._lower_result_value(plan, context)
 
     def _lower_result_hidden_output(
         self,
         plan: ResultPlan,
-        function: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        return self._lower_result_value(plan, function, context)
+        return self._lower_result_value(plan, context)
 
     def _lower_result_value(
         self,
         plan: ResultPlan,
-        function: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        """Return the bridge call and Python scalar result projection."""
+        """Return Python scalar projection after the completed native envelope."""
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
         if (
             scalar_type.python_result_converter is None
@@ -546,14 +691,7 @@ class CBindingGenerator(ClassVisitor):
             or context.python_result_name is None
         ):
             raise ValueError(f"Unsupported scalar result type {plan.semantic_type_name!r}")
-        call = self._bridge_call(function, context)
-        call_statement = (
-            CExpressionStatement(CodeExpression(f"{context.result_name} = {call}"))
-            if plan.source_kind == "direct_return"
-            else CExpressionStatement(CodeExpression(call))
-        )
         return (
-            call_statement,
             CDeclaration(
                 context.python_result_name,
                 "PyObject *",
@@ -568,14 +706,116 @@ class CBindingGenerator(ClassVisitor):
         plan: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        """Return the native call and completed Python output projection."""
+        """Return the native envelope, status projection, and Python result."""
+        nodes = [
+            *self._lower_native_call(plan, self._bridge_call_statement(plan, context)),
+            *self._lower_status_error(plan, context),
+        ]
         if plan.result is not None:
-            return self.visit(plan.result, function=plan, context=context)
-        if plan.writeback_actions:
-            return self._writeback_nodes(plan, context)
+            nodes.extend(self.visit(plan.result, context=context))
+        elif plan.writeback_actions:
+            nodes.extend(self._writeback_nodes(plan, context))
+        else:
+            nodes.append(CExpressionStatement(CodeExpression("Py_RETURN_NONE")))
+        return tuple(nodes)
+
+    def _bridge_call_statement(self, plan: FunctionPlan, context: _CFunctionContext) -> CExpressionStatement:
+        """Return the mechanical bridge call selected by result storage."""
+        call = self._bridge_call(plan, context)
+        expression = (
+            f"{context.result_name} = {call}"
+            if plan.result is not None and plan.result.source_kind == "direct_return"
+            else call
+        )
+        return CExpressionStatement(CodeExpression(expression))
+
+    def _lower_native_call(
+        self,
+        plan: FunctionPlan,
+        call: CExpressionStatement,
+    ) -> tuple[CAllowThreadsBegin | CAllowThreadsEnd | CExpressionStatement, ...]:
+        """Dispatch the completed GIL envelope to directly named methods."""
+        if plan.binding.hold_gil:
+            return self._lower_native_call_held(call)
+        return self._lower_native_call_released(call)
+
+    def _lower_native_call_held(self, call: CExpressionStatement) -> tuple[CExpressionStatement, ...]:
+        """Emit one native bridge call while retaining the GIL."""
+        return (call,)
+
+    def _lower_native_call_released(
+        self,
+        call: CExpressionStatement,
+    ) -> tuple[CAllowThreadsBegin | CExpressionStatement | CAllowThreadsEnd, ...]:
+        """Release the GIL only for the native bridge call."""
+        return (CAllowThreadsBegin(), call, CAllowThreadsEnd())
+
+    def _lower_status_error(
+        self,
+        plan: FunctionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...]:
+        """Dispatch one completed post-call Python exception action."""
+        policy = plan.binding.status_error
+        if policy is None:
+            return ()
+        if policy.exception_kind is PythonExceptionKind.RUNTIME_ERROR:
+            return self._lower_status_error_runtime_error(plan, context)
+        raise ValueError(f"Unsupported C status exception for {plan.owner_path!r}: {policy.exception_kind!r}")
+
+    def _lower_status_error_runtime_error(
+        self,
+        plan: FunctionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...]:
+        """Raise RuntimeError from completed status/message roles with the GIL held."""
+        policy = plan.binding.status_error
+        status_name = context.native_outputs[policy.status_role]
+        condition = CodeExpression(f"{status_name} != {policy.success}")
+        if policy.message_role is None:
+            return (
+                CIf(
+                    condition,
+                    body=(
+                        CExpressionStatement(
+                            CodeExpression(
+                                f'PyErr_Format(PyExc_RuntimeError, "native call failed with status %d != {policy.success}", '
+                                f"(int){status_name})"
+                            )
+                        ),
+                        CReturn(CodeExpression("NULL")),
+                    ),
+                ),
+            )
+        message_name = context.native_outputs[policy.message_role]
+        message_object = f"{message_name}_obj"
         return (
-            CExpressionStatement(CodeExpression(self._bridge_call(plan, context))),
-            CExpressionStatement(CodeExpression("Py_RETURN_NONE")),
+            CIf(
+                CodeExpression(f"{message_name} == NULL"),
+                body=(
+                    CExpressionStatement(CodeExpression("PyErr_NoMemory()")),
+                    CReturn(CodeExpression("NULL")),
+                ),
+            ),
+            CDeclaration(
+                message_object,
+                "PyObject *",
+                CodeExpression(f"PyUnicode_FromString((const char *){message_name})"),
+            ),
+            CExpressionStatement(CodeExpression(f"free({message_name})")),
+            CIf(
+                CodeExpression(f"{message_object} == NULL"),
+                body=(CReturn(CodeExpression("NULL")),),
+            ),
+            CIf(
+                condition,
+                body=(
+                    CExpressionStatement(CodeExpression(f"PyErr_SetObject(PyExc_RuntimeError, {message_object})")),
+                    CExpressionStatement(CodeExpression(f"Py_DECREF({message_object})")),
+                    CReturn(CodeExpression("NULL")),
+                ),
+            ),
+            CExpressionStatement(CodeExpression(f"Py_DECREF({message_object})")),
         )
 
     def _writeback_nodes(
@@ -640,7 +880,6 @@ class CBindingGenerator(ClassVisitor):
         scalar_type = PrimitiveScalarTypeRegistry.type_for(action.binding.semantic_type_name)
         python_result_name = context.python_result_name or "result_obj"
         return (
-            CExpressionStatement(CodeExpression(self._bridge_call(plan, context))),
             CDeclaration(
                 python_result_name,
                 "PyObject *",
@@ -667,11 +906,20 @@ class CBindingGenerator(ClassVisitor):
             )
             for argument in plan.arguments
         }
+        native_outputs = {
+            slot.symbolic_role: slot.native_name.lower()
+            for slot in plan.native_call_slots
+            if slot.source_kind == "result"
+        }
         if plan.result is None:
             python_result = "result_obj" if plan.writeback_actions else None
-            return _CFunctionContext(arguments, None, python_result)
-        base = plan.result.bridge.native_name.lower() if plan.result.source_kind == "hidden_output" else "result"
-        return _CFunctionContext(arguments, base, "result_obj")
+            return _CFunctionContext(arguments, native_outputs, None, python_result)
+        base = (
+            native_outputs[plan.result.bridge.native_result_role]
+            if plan.result.source_kind == "hidden_output"
+            else "result"
+        )
+        return _CFunctionContext(arguments, native_outputs, base, "result_obj")
 
     def _keyword_declaration(self, plan: FunctionPlan) -> CDeclaration:
         keywords = ", ".join(
@@ -692,15 +940,35 @@ class CBindingGenerator(ClassVisitor):
             CodeExpression(f'if (!PyArg_ParseTupleAndKeywords(args, kwargs, "{units}", kwlist{suffix})) return NULL')
         )
 
-    def _result_declaration(
+    def _direct_result_declaration(
         self,
         plan: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CDeclaration, ...]:
-        if plan.result is None or context.result_name is None:
+        if plan.result is None or plan.result.source_kind != "direct_return" or context.result_name is None:
             return ()
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.result.semantic_type_name)
         return (CDeclaration(context.result_name, scalar_type.c_spelling),)
+
+    def _native_output_declarations(
+        self,
+        plan: FunctionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration, ...]:
+        """Declare bridge output storage from typed native result slots."""
+        declarations = []
+        for slot in sorted(plan.native_call_slots, key=lambda item: item.native_position):
+            if slot.source_kind != "result":
+                continue
+            name = context.native_outputs[slot.symbolic_role]
+            if slot.datatype_family is DatatypeFamily.STRING:
+                declarations.append(CDeclaration(name, "void *", CodeExpression("NULL")))
+                continue
+            if slot.semantic_type_name is None:
+                raise ValueError(f"Missing native result datatype for {slot.owner_path!r}")
+            scalar_type = PrimitiveScalarTypeRegistry.type_for(slot.semantic_type_name)
+            declarations.append(CDeclaration(name, scalar_type.c_spelling))
+        return tuple(declarations)
 
     def _bridge_call(self, plan: FunctionPlan, context: _CFunctionContext) -> str:
         arguments = []
@@ -710,37 +978,77 @@ class CBindingGenerator(ClassVisitor):
             arguments.append(value)
             if argument.bridge.optional_mode is OptionalMode.DESCRIPTOR:
                 arguments.append(names.present_name)
-        if plan.result is not None and plan.result.source_kind == "hidden_output":
-            arguments.append(f"&{context.result_name}")
+        arguments.extend(
+            f"&{context.native_outputs[slot.symbolic_role]}"
+            for slot in sorted(plan.native_call_slots, key=lambda item: item.native_position)
+            if slot.source_kind == "result"
+        )
         return f"{self._bridge_function_name(plan)}({', '.join(arguments)})"
 
     def _bridge_call_argument(self, plan: ArgumentTransferPlan, names: _CArgumentNames) -> str:
         """Return one binding-to-bridge C argument expression."""
         if plan.bridge.optional_mode is not OptionalMode.REQUIRED:
             return names.nullable_name
-        if plan.bridge.native_action is not NativeBarrierAction.PASS_VALUE:
+        if plan.bridge.handoff_mode is ArgumentHandoffMode.OPAQUE_ADDRESS:
+            return names.value_name
+        if plan.bridge.handoff_mode is ArgumentHandoffMode.TYPED_REFERENCE:
             return f"&{names.value_name}"
         return names.value_name
 
     def _bridge_prototype(self, plan: FunctionPlan) -> CFunctionPrototype:
-        return_type = "void"
-        if plan.result is not None and plan.result.source_kind == "direct_return":
-            return_type = PrimitiveScalarTypeRegistry.type_for(plan.result.semantic_type_name).c_spelling
-        parameters = []
-        for argument in sorted(plan.arguments, key=lambda item: item.bridge.abi_position):
-            if argument.bridge.optional_mode is OptionalMode.REQUIRED:
-                scalar_type = PrimitiveScalarTypeRegistry.type_for(argument.semantic_type_name).c_spelling
-                if argument.bridge.native_action is not NativeBarrierAction.PASS_VALUE:
-                    scalar_type = f"{scalar_type} *"
-            else:
-                scalar_type = "void *"
-            parameters.append(CParameter(argument.bridge.native_name.lower(), scalar_type))
-            if argument.bridge.optional_mode is OptionalMode.DESCRIPTOR:
-                parameters.append(CParameter(f"{argument.bridge.native_name.lower()}_present", "void *"))
-        if plan.result is not None and plan.result.source_kind == "hidden_output":
-            scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.result.semantic_type_name).c_spelling
-            parameters.append(CParameter(plan.result.bridge.native_name.lower(), f"{scalar_type} *"))
-        return CFunctionPrototype(self._bridge_function_name(plan), return_type, tuple(parameters))
+        argument_parameters = tuple(
+            parameter
+            for argument in sorted(plan.arguments, key=lambda item: item.bridge.abi_position)
+            for parameter in self._bridge_argument_parameters(argument)
+        )
+        result_parameters = tuple(
+            parameter
+            for slot in sorted(plan.native_call_slots, key=lambda item: item.native_position)
+            for parameter in self._bridge_result_parameters(slot)
+        )
+        return CFunctionPrototype(
+            self._bridge_function_name(plan),
+            self._bridge_return_type(plan),
+            (*argument_parameters, *result_parameters),
+        )
+
+    def _bridge_return_type(self, plan: FunctionPlan) -> str:
+        """Return the direct bridge result type, or void for subroutines."""
+        if plan.result is None:
+            return "void"
+        if plan.result.source_kind != "direct_return":
+            return "void"
+        return PrimitiveScalarTypeRegistry.type_for(plan.result.semantic_type_name).c_spelling
+
+    def _bridge_argument_parameters(self, argument: ArgumentTransferPlan) -> tuple[CParameter, ...]:
+        """Return the bridge ABI parameters for one Python argument."""
+        name = argument.bridge.native_name.lower()
+        scalar_type = self._bridge_argument_type(argument)
+        if argument.bridge.optional_mode is OptionalMode.DESCRIPTOR:
+            return (CParameter(name, scalar_type), CParameter(f"{name}_present", "void *"))
+        return (CParameter(name, scalar_type),)
+
+    def _bridge_argument_type(self, argument: ArgumentTransferPlan) -> str:
+        """Return the C ABI type for one bridge input."""
+        if argument.bridge.optional_mode is not OptionalMode.REQUIRED:
+            return "void *"
+        if argument.bridge.handoff_mode is ArgumentHandoffMode.OPAQUE_ADDRESS:
+            return "void *"
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(argument.semantic_type_name).c_spelling
+        if argument.bridge.handoff_mode is ArgumentHandoffMode.TYPED_REFERENCE:
+            return f"{scalar_type} *"
+        return scalar_type
+
+    def _bridge_result_parameters(self, slot: NativeCallSlotPlan) -> tuple[CParameter, ...]:
+        """Return the C ABI parameter for one native result slot."""
+        if slot.source_kind != "result":
+            return ()
+        if slot.datatype_family is DatatypeFamily.STRING:
+            return (CParameter(slot.native_name.lower(), "void **"),)
+        if slot.semantic_type_name is None:
+            raise ValueError(f"Missing bridge result datatype for {slot.owner_path!r}")
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(slot.semantic_type_name).c_spelling
+        return (CParameter(slot.native_name.lower(), f"{scalar_type} *"),)
 
     def _module_variable_bridge_prototypes(
         self,

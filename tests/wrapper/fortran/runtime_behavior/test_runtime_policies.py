@@ -22,9 +22,41 @@ RUNTIME_POLICY_SOURCE = wrapper_source("fruntime_policy_f90.f90")
 MODIFIED_POLICY_CONTRACT = (
     Path(__file__).parent / "modified_contracts" / "fruntime_policy_f90" / "fruntime_policy_f90.pyi"
 )
+ROUTES = (
+    pytest.param("legacy", {"_force_legacy_wrapper_route": True}, id="legacy"),
+    pytest.param("wrapper-plan", {"_force_wrapper_plan_route": True}, id="wrapper-plan"),
+)
 
 
-def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_path: Path, monkeypatch):
+def _wrapper_start(source: str, route: str, function_name: str) -> int:
+    marker = (
+        f"static PyObject* bind_c_{function_name}_wrapper"
+        if route == "legacy"
+        else f"static PyObject * wrap_{function_name}"
+    )
+    return source.index(marker)
+
+
+def _assert_runtime_policy_source(source: str, route: str) -> None:
+    released_start = _wrapper_start(source, route, "pause_for_one_second")
+    held_start = _wrapper_start(source, route, "pause_with_gil")
+    solve_start = _wrapper_start(source, route, "solve")
+    released_wrapper = source[released_start:held_start]
+    held_wrapper = source[held_start:solve_start]
+    assert "Py_BEGIN_ALLOW_THREADS" in released_wrapper
+    assert "Py_END_ALLOW_THREADS" in released_wrapper
+    assert "Py_BEGIN_ALLOW_THREADS" not in held_wrapper
+    assert "Py_END_ALLOW_THREADS" not in held_wrapper
+    assert "PyErr_SetObject(PyExc_RuntimeError" in source
+
+
+@pytest.mark.parametrize(("route", "route_kwargs"), ROUTES)
+def test_compiled_runtime_policies_release_gil_and_project_native_errors(
+    tmp_path: Path,
+    monkeypatch,
+    route: str,
+    route_kwargs: dict[str, bool],
+):
     from x2py.pipeline import build
     from x2py.semantics.models import RUNTIME_HOLD_GIL_METADATA, RUNTIME_STATUS_ERROR_METADATA
 
@@ -45,7 +77,7 @@ def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_pat
         return modules
 
     monkeypatch.setattr(build, "fortran_project_to_semantic_modules", convert_with_runtime_policy)
-    result = build.build_fortran_extension(source, output_dir=tmp_path)
+    result = build.build_fortran_extension(source, output_dir=tmp_path, **route_kwargs)
 
     sys.modules.pop(result.module_name, None)
     sys.path.insert(0, str(tmp_path))
@@ -80,25 +112,22 @@ def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_pat
         sys.path.remove(str(tmp_path))
 
     wrapper_source = (tmp_path / "fruntime_policy_f90_wrapper.c").read_text(encoding="utf-8")
-    released_start = wrapper_source.index("static PyObject* bind_c_pause_for_one_second_wrapper")
-    held_start = wrapper_source.index("static PyObject* bind_c_pause_with_gil_wrapper")
-    solve_start = wrapper_source.index("static PyObject* bind_c_solve_wrapper")
-    released_wrapper = wrapper_source[released_start:held_start]
-    held_wrapper = wrapper_source[held_start:solve_start]
-    assert "Py_BEGIN_ALLOW_THREADS" in released_wrapper
-    assert "Py_END_ALLOW_THREADS" in released_wrapper
-    assert "Py_BEGIN_ALLOW_THREADS" not in held_wrapper
-    assert "Py_END_ALLOW_THREADS" not in held_wrapper
-    assert "PyErr_SetObject(PyExc_RuntimeError" in wrapper_source
+    _assert_runtime_policy_source(wrapper_source, route)
 
 
-def test_pyi_runtime_policies_release_gil_and_project_native_errors(tmp_path: Path):
+@pytest.mark.parametrize(("route", "route_kwargs"), ROUTES)
+def test_pyi_runtime_policies_release_gil_and_project_native_errors(
+    tmp_path: Path,
+    route: str,
+    route_kwargs: dict[str, bool],
+):
     native_object = _compile_native_object(RUNTIME_POLICY_SOURCE, tmp_path / "native")
     result = build_pyi_extension(
         MODIFIED_POLICY_CONTRACT,
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
         output_dir=tmp_path / "pyi_build",
+        **route_kwargs,
     )
     module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
@@ -129,13 +158,4 @@ def test_pyi_runtime_policies_release_gil_and_project_native_errors(tmp_path: Pa
     assert failures == []
 
     wrapper_source = (result.output_dir / "fruntime_policy_f90_wrapper.c").read_text(encoding="utf-8")
-    released_start = wrapper_source.index("static PyObject* bind_c_pause_for_one_second_wrapper")
-    held_start = wrapper_source.index("static PyObject* bind_c_pause_with_gil_wrapper")
-    solve_start = wrapper_source.index("static PyObject* bind_c_solve_wrapper")
-    released_wrapper = wrapper_source[released_start:held_start]
-    held_wrapper = wrapper_source[held_start:solve_start]
-    assert "Py_BEGIN_ALLOW_THREADS" in released_wrapper
-    assert "Py_END_ALLOW_THREADS" in released_wrapper
-    assert "Py_BEGIN_ALLOW_THREADS" not in held_wrapper
-    assert "Py_END_ALLOW_THREADS" not in held_wrapper
-    assert "PyErr_SetObject(PyExc_RuntimeError" in wrapper_source
+    _assert_runtime_policy_source(wrapper_source, route)

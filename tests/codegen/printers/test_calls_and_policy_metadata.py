@@ -19,6 +19,7 @@ from tests.codegen.printers._support import (
     SemanticStorageContract,
     SemanticType,
     SemanticVariable,
+    complete_semantic_policies,
     emit_module,
     fortran_module_to_semantic_module,
     generate_pyi,
@@ -319,7 +320,7 @@ def test_runtime_status_policy_rejects_invalid_output_contracts(source: str, mes
     loaded = parse_pyi_text(source, module_name="invalid_runtime_policy")
 
     with pytest.raises(ValueError, match=message):
-        semantic_ir_to_codegen_ast(loaded, Scope(name=loaded.name, scope_type="module"))
+        complete_semantic_policies(loaded)
 
 
 @pytest.mark.parametrize(

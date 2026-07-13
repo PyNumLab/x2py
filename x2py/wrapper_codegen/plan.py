@@ -14,8 +14,11 @@ from x2py.semantics.ownership import (
     SetterAction,
 )
 from x2py.semantics.wrapper_policy import (
+    ArgumentHandoffMode,
+    BridgeDataAction,
     ModuleGetterAction,
     OptionalMode,
+    PythonExceptionKind,
     WritebackPhase,
 )
 from x2py.stage_values import StageRecord
@@ -28,6 +31,17 @@ class DatatypeFamily(Enum):
     INTEGER = "integer"
     REAL = "real"
     COMPLEX = "complex"
+    STRING = "string"
+
+
+@dataclass
+class BindingStatusErrorPlan(StageRecord):
+    """Binding-owned post-call native status projection."""
+
+    status_role: str
+    message_role: str | None
+    success: int
+    exception_kind: PythonExceptionKind
 
 
 @dataclass
@@ -86,6 +100,7 @@ class BindingFunctionPlan(StageRecord):
 
     python_name: str
     hold_gil: bool
+    status_error: BindingStatusErrorPlan | None
 
 
 @dataclass
@@ -107,6 +122,7 @@ class BindingArgumentPlan(StageRecord):
     handoff_role: str
     optional_mode: OptionalMode
     nullable: bool
+    writable: bool
     descriptor_boundary: bool
 
 
@@ -116,6 +132,9 @@ class BridgeArgumentPlan(StageRecord):
 
     native_name: str
     native_action: NativeBarrierAction
+    handoff_mode: ArgumentHandoffMode
+    data_action: BridgeDataAction
+    copy_reason: str | None
     abi_position: int
     handoff_role: str
     optional_mode: OptionalMode
@@ -137,6 +156,8 @@ class BridgeResultPlan(StageRecord):
 
     codegen_action: CodegenAction
     native_action: NativeBarrierAction
+    data_action: BridgeDataAction
+    copy_reason: str | None
     native_result_role: str
     native_name: str | None
     abi_position: int | None
@@ -175,9 +196,14 @@ class NativeCallSlotPlan(StageRecord):
     symbolic_role: str
     native_action: NativeBarrierAction
     codegen_action: CodegenAction
+    bridge_data_action: BridgeDataAction
+    bridge_copy_reason: str | None
     literal_type: str | None = None
     literal_value: Any = None
     result_position: int | None = None
+    semantic_type_name: str | None = None
+    datatype_family: DatatypeFamily | None = None
+    character_length: int | None = None
 
 
 @dataclass

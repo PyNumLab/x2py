@@ -12,6 +12,7 @@ from x2py.semantics.wrapper_policy import (
     FunctionWrapperPolicy,
     LifecyclePolicy,
     NativeCallSlotPolicy,
+    NativeStatusErrorPolicy,
     ResultPolicy,
     WritebackPhase,
     completed_module_variable_policy,
@@ -27,6 +28,7 @@ from x2py.wrapper_codegen.plan import (
     BindingModulePlan,
     BindingModuleVariablePlan,
     BindingResultPlan,
+    BindingStatusErrorPlan,
     BridgeArgumentPlan,
     BridgeFunctionPlan,
     BridgeLifecyclePlan,
@@ -48,11 +50,15 @@ from x2py.wrapper_codegen.visitor import ClassVisitor
 
 _DATATYPE_FAMILIES = {
     "Bool": DatatypeFamily.BOOL,
+    "Int8": DatatypeFamily.INTEGER,
+    "Int16": DatatypeFamily.INTEGER,
     "Int32": DatatypeFamily.INTEGER,
+    "Int64": DatatypeFamily.INTEGER,
     "Float32": DatatypeFamily.REAL,
     "Float64": DatatypeFamily.REAL,
     "Complex64": DatatypeFamily.COMPLEX,
     "Complex128": DatatypeFamily.COMPLEX,
+    "String": DatatypeFamily.STRING,
 }
 
 
@@ -179,12 +185,20 @@ class WrapperPlanner(ClassVisitor):
         module_name: str,
     ) -> FunctionPlan:
         """Return one exported function plan from completed policy."""
-        arguments = self._argument_plans(policy)
-        result = self._result_plan(policy)
+        native_call_slots = tuple(
+            self._native_slot_plan(slot, self._native_slot_role(slot, policy.result))
+            for slot in policy.native_call_slots
+        )
+        arguments = self._argument_plans(policy, native_call_slots)
+        result = self._result_plan(policy, native_call_slots)
         return FunctionPlan(
             owner_path=self._export_owner_path(module_name, export.namespace, export.name),
             symbol_name=export.name.casefold(),
-            binding=BindingFunctionPlan(export.name, policy.hold_gil),
+            binding=BindingFunctionPlan(
+                export.name,
+                policy.hold_gil,
+                self._status_error_plan(policy.status_error, native_call_slots),
+            ),
             bridge=BridgeFunctionPlan(
                 policy.native_name,
                 policy.external,
@@ -193,32 +207,45 @@ class WrapperPlanner(ClassVisitor):
             ),
             arguments=arguments,
             result=result,
-            native_call_slots=tuple(
-                self._native_slot_plan(slot, self._native_slot_role(slot, result)) for slot in policy.native_call_slots
-            ),
-            available_roles=self._available_roles(arguments, result),
+            native_call_slots=native_call_slots,
+            available_roles=self._available_roles(arguments, result, native_call_slots),
             writeback_actions=tuple(self.visit(action) for action in policy.writeback_actions),
             cleanup_actions=tuple(self.visit(action) for action in policy.cleanup_actions),
             release_actions=tuple(self.visit(action) for action in policy.release_actions),
         )
 
-    def _argument_plans(self, policy: FunctionWrapperPolicy) -> tuple[ArgumentTransferPlan, ...]:
-        """Return declared transfers wired to completed native slots."""
+    def _argument_plans(
+        self,
+        policy: FunctionWrapperPolicy,
+        native_call_slots: tuple[NativeCallSlotPlan, ...],
+    ) -> tuple[ArgumentTransferPlan, ...]:
+        """Return declared transfers sharing the function's native-slot records."""
         return tuple(
-            self.visit(argument, native_slot=self._native_slot(policy, argument)) for argument in policy.arguments
+            self.visit(
+                argument,
+                native_slot=self._planned_native_slot(native_call_slots, argument.owner_path),
+            )
+            for argument in policy.arguments
         )
 
-    def _result_plan(self, policy: FunctionWrapperPolicy) -> ResultPlan | None:
+    def _result_plan(
+        self,
+        policy: FunctionWrapperPolicy,
+        native_call_slots: tuple[NativeCallSlotPlan, ...],
+    ) -> ResultPlan | None:
         """Return one completed result plan when the function has a result."""
         if policy.result is None:
             return None
-        return self.visit(policy.result, native_slot=self._result_native_slot(policy))
+        return self.visit(
+            policy.result,
+            native_slot=self._result_native_slot(policy, native_call_slots),
+        )
 
     def _visit_ArgumentPolicy(
         self,
         policy: ArgumentPolicy,
         *,
-        native_slot: NativeCallSlotPolicy,
+        native_slot: NativeCallSlotPlan,
     ) -> ArgumentTransferPlan:
         """Return one transfer whose backend views share one handoff role."""
         role = self._value_role(policy.owner_path)
@@ -234,17 +261,21 @@ class WrapperPlanner(ClassVisitor):
                 role,
                 policy.optional_mode,
                 policy.nullable,
+                policy.writable,
                 policy.descriptor_boundary,
             ),
             bridge=BridgeArgumentPlan(
                 policy.native_name,
                 policy.native_barrier_action,
+                policy.handoff_mode,
+                policy.bridge_data_action,
+                policy.bridge_copy_reason,
                 native_slot.native_position,
                 role,
                 policy.optional_mode,
                 f"{policy.owner_path}:present" if policy.descriptor_boundary else None,
             ),
-            native_call_slot=self._native_slot_plan(native_slot, role),
+            native_call_slot=native_slot,
         )
 
     def _visit_LifecyclePolicy(
@@ -280,7 +311,7 @@ class WrapperPlanner(ClassVisitor):
         self,
         policy: ResultPolicy,
         *,
-        native_slot: NativeCallSlotPolicy | None,
+        native_slot: NativeCallSlotPlan | None,
     ) -> ResultPlan:
         """Return one result with binding consumer and bridge producer views."""
         native_role = f"{policy.owner_path}:native-result"
@@ -300,11 +331,13 @@ class WrapperPlanner(ClassVisitor):
             bridge=BridgeResultPlan(
                 policy.codegen_action,
                 policy.native_barrier_action,
+                policy.bridge_data_action,
+                policy.bridge_copy_reason,
                 native_role,
                 policy.native_name,
                 policy.native_position,
             ),
-            native_call_slot=self._native_slot_plan(native_slot, native_role) if native_slot is not None else None,
+            native_call_slot=native_slot,
         )
 
     def _native_slot_plan(self, slot: NativeCallSlotPolicy, role: str) -> NativeCallSlotPlan:
@@ -320,44 +353,81 @@ class WrapperPlanner(ClassVisitor):
             symbolic_role=role,
             native_action=slot.native_barrier_action,
             codegen_action=slot.codegen_action,
+            bridge_data_action=slot.bridge_data_action,
+            bridge_copy_reason=slot.bridge_copy_reason,
             literal_type=slot.literal_type,
             literal_value=slot.literal_value,
             result_position=slot.result_position,
+            semantic_type_name=slot.semantic_type_name,
+            datatype_family=(self._datatype_family(slot.semantic_type_name) if slot.semantic_type_name else None),
+            character_length=slot.character_length,
         )
 
-    def _native_slot(
+    def _status_error_plan(
         self,
-        function_policy: FunctionWrapperPolicy,
-        argument_policy: ArgumentPolicy,
-    ) -> NativeCallSlotPolicy:
-        """Return the completed native-call slot for one argument policy."""
-        for slot in function_policy.native_call_slots:
-            if slot.owner_path == argument_policy.owner_path:
+        policy: NativeStatusErrorPolicy | None,
+        native_call_slots: tuple[NativeCallSlotPlan, ...],
+    ) -> BindingStatusErrorPlan | None:
+        """Project one completed native-status decision into binding roles."""
+        if policy is None:
+            return None
+        roles = {slot.owner_path: slot.symbolic_role for slot in native_call_slots}
+        try:
+            status_role = roles[policy.status.owner_path]
+            message_role = roles[policy.message.owner_path] if policy.message is not None else None
+        except KeyError as error:
+            raise ValueError(f"Completed native status output {error.args[0]!r} has no native-call slot") from None
+        return BindingStatusErrorPlan(
+            status_role=status_role,
+            message_role=message_role,
+            success=policy.success,
+            exception_kind=policy.exception_kind,
+        )
+
+    def _planned_native_slot(
+        self,
+        native_call_slots: tuple[NativeCallSlotPlan, ...],
+        owner_path: str,
+    ) -> NativeCallSlotPlan:
+        """Return the one shared editable native-call slot for an owner."""
+        for slot in native_call_slots:
+            if slot.owner_path == owner_path:
                 return slot
-        raise ValueError(f"{argument_policy.owner_path!r} is missing a completed native-call slot")
+        raise ValueError(f"{owner_path!r} is missing a completed native-call slot")
 
     def _result_native_slot(
         self,
         function_policy: FunctionWrapperPolicy,
-    ) -> NativeCallSlotPolicy | None:
+        native_call_slots: tuple[NativeCallSlotPlan, ...],
+    ) -> NativeCallSlotPlan | None:
         """Return the completed slot for one hidden result, if any."""
         if function_policy.result is None or function_policy.result.source_kind != "hidden_output":
             return None
-        for slot in function_policy.native_call_slots:
-            if slot.owner_path == function_policy.result.owner_path:
-                return slot
-        raise ValueError(f"{function_policy.result.owner_path!r} is missing a completed native-call result slot")
+        return self._planned_native_slot(native_call_slots, function_policy.result.owner_path)
 
     def _available_roles(
         self,
         arguments: tuple[ArgumentTransferPlan, ...],
         result: ResultPlan | None,
+        native_call_slots: tuple[NativeCallSlotPlan, ...],
     ) -> tuple[str, ...]:
         """Return symbolic roles available after the native call."""
         roles = [argument.binding.handoff_role for argument in arguments]
-        if result is not None:
-            roles.append(result.bridge.native_result_role)
-        return tuple(roles)
+        roles.extend(self._native_result_roles(native_call_slots))
+        roles.extend(self._direct_result_roles(result))
+        return tuple(dict.fromkeys(roles))
+
+    def _native_result_roles(self, native_call_slots: tuple[NativeCallSlotPlan, ...]) -> tuple[str, ...]:
+        """Return every role produced through a native result slot."""
+        return tuple(slot.symbolic_role for slot in native_call_slots if slot.source_kind == "result")
+
+    def _direct_result_roles(self, result: ResultPlan | None) -> tuple[str, ...]:
+        """Return the direct-return role when the callable produces one."""
+        if result is None:
+            return ()
+        if result.source_kind != "direct_return":
+            return ()
+        return (result.bridge.native_result_role,)
 
     def _datatype_family(self, semantic_type_name: str) -> DatatypeFamily:
         """Copy the backend-relevant family of one supported semantic type."""
@@ -400,13 +470,27 @@ class WrapperPlanner(ClassVisitor):
     def _native_slot_role(
         self,
         native_slot: NativeCallSlotPolicy,
-        result: ResultPlan | None,
+        result: ResultPolicy | None,
     ) -> str:
         """Return the symbolic role for one native-call slot."""
         if native_slot.source_kind == "literal":
             return f"{native_slot.owner_path}:literal"
+        if self._is_public_result_slot(native_slot, result):
+            return f"{result.owner_path}:native-result"
         if native_slot.source_kind == "result":
-            if result is None or result.native_call_slot is None:
-                raise ValueError(f"{native_slot.owner_path!r} result slot has no result plan")
-            return result.bridge.native_result_role
+            return f"{native_slot.owner_path}:native-result"
         return self._value_role(native_slot.owner_path)
+
+    def _is_public_result_slot(
+        self,
+        native_slot: NativeCallSlotPolicy,
+        result: ResultPolicy | None,
+    ) -> bool:
+        """Return whether a native slot carries the Python-visible hidden result."""
+        if native_slot.source_kind != "result":
+            return False
+        if result is None:
+            return False
+        if result.source_kind != "hidden_output":
+            return False
+        return result.owner_path == native_slot.owner_path

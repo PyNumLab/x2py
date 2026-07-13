@@ -10,7 +10,7 @@ import pytest
 from tests._shared.ownership_policy_support import parse_pyi_text
 from x2py.pipeline.pyi import pyi_file_to_semantic_module
 from x2py.semantics.policy_completion import complete_semantic_policies
-from x2py.semantics.wrapper_policy import OptionalMode, WritebackPhase
+from x2py.semantics.wrapper_policy import BridgeDataAction, OptionalMode, WritebackPhase
 from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 
@@ -67,6 +67,8 @@ def alloc_state(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
 
     assert value.binding.optional_mode is OptionalMode.DESCRIPTOR
     assert value.bridge.presence_role == "scalar_optional_descriptors.alloc_state.value:present"
+    assert value.bridge.data_action is BridgeDataAction.COPY_REPRESENTATION
+    assert value.bridge.copy_reason == "materialize owned Fortran allocatable scalar storage from the binding value"
     artifacts = WrapperCodeGenerator().generate(plan)
     c_source = _source(artifacts, ".c")
     fortran_source = _source(artifacts, ".f90")

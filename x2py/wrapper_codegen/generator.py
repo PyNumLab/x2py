@@ -14,17 +14,22 @@ from x2py.semantics.ownership import (
     AssignmentMode,
     CodegenAction,
     NativeBarrierAction,
+    PythonBarrierAction,
     SetterAction,
 )
 from x2py.semantics.wrapper_policy import (
+    ArgumentHandoffMode,
+    BridgeDataAction,
     ModuleGetterAction,
     OptionalMode,
+    PythonExceptionKind,
     WritebackPhase,
 )
 from x2py.wrapper_codegen.c.binding import CBindingGenerator
 from x2py.wrapper_codegen.fortran.bridge import FortranBridgeGenerator
 from x2py.wrapper_codegen.plan import (
     ArgumentTransferPlan,
+    DatatypeFamily,
     FunctionPlan,
     LifecycleActionPlan,
     ModulePlan,
@@ -278,6 +283,7 @@ class WrapperCodeGenerator:
             *self._duplicate_role_diagnostics(plan),
             *self._available_role_diagnostics(plan),
             *self._function_output_diagnostics(plan),
+            *self._status_error_diagnostics(plan),
         ]
         slots = {slot.native_position: slot for slot in plan.native_call_slots}
         for slot in plan.native_call_slots:
@@ -297,6 +303,25 @@ class WrapperCodeGenerator:
         function_slots: dict[int, NativeCallSlotPlan],
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return binding-to-bridge handoff and slot diagnostics."""
+        diagnostics = [
+            *self._argument_policy_consistency_diagnostics(plan),
+            *self._argument_slot_consistency_diagnostics(plan, function_slots),
+            *self._optional_argument_diagnostics(plan),
+            *self._scalar_boundary_diagnostics(plan),
+            *self._argument_data_action_diagnostics(plan),
+            *self._bridge_data_diagnostics(
+                plan.owner_path,
+                plan.bridge.data_action,
+                plan.bridge.copy_reason,
+            ),
+        ]
+        return tuple(diagnostics)
+
+    def _argument_policy_consistency_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return cross-view role and completed-action diagnostics."""
         diagnostics = []
         role = plan.binding.handoff_role
         if plan.bridge.handoff_role != role:
@@ -307,6 +332,31 @@ class WrapperCodeGenerator:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-native-action", plan.bridge.native_action.value)
             )
+        if plan.bridge.data_action is not plan.native_call_slot.bridge_data_action:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "inconsistent-bridge-data-action",
+                    plan.native_call_slot.bridge_data_action.value,
+                )
+            )
+        if plan.bridge.copy_reason != plan.native_call_slot.bridge_copy_reason:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "inconsistent-bridge-copy-reason",
+                    plan.native_call_slot.bridge_copy_reason,
+                )
+            )
+        return tuple(diagnostics)
+
+    def _argument_slot_consistency_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+        function_slots: dict[int, NativeCallSlotPlan],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return argument position and native-slot graph diagnostics."""
+        diagnostics = []
         if plan.bridge.abi_position != plan.native_position:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-bridge-position", plan.native_position))
         if plan.native_call_slot.native_position != plan.native_position:
@@ -321,7 +371,65 @@ class WrapperCodeGenerator:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-argument-native-slot", plan.native_call_slot.source_kind)
             )
-        diagnostics.extend(self._optional_argument_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _argument_data_action_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require the completed data action to match the selected scalar path."""
+        if plan.bridge.optional_mode is OptionalMode.DESCRIPTOR:
+            expected = (
+                BridgeDataAction.COPY_REPRESENTATION
+                if plan.native_call_slot.value_kind == "allocatable"
+                else BridgeDataAction.ASSOCIATE_VIEW
+            )
+        elif (
+            plan.bridge.optional_mode is OptionalMode.NULLABLE_VALUE
+            or plan.bridge.handoff_mode is ArgumentHandoffMode.OPAQUE_ADDRESS
+        ):
+            expected = BridgeDataAction.ASSOCIATE_VIEW
+        else:
+            expected = BridgeDataAction.DIRECT_TRANSFER
+        if plan.bridge.data_action is expected:
+            return ()
+        return (
+            self._diagnostic(
+                plan.owner_path,
+                "invalid-bridge-data-action",
+                f"{plan.bridge.data_action.value}:{expected.value}",
+            ),
+        )
+
+    def _scalar_boundary_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return completed Python/native scalar boundary consistency diagnostics."""
+        action = plan.binding.python_action
+        expected = {
+            PythonBarrierAction.SCALAR_STORAGE: NativeBarrierAction.PASS_STORAGE_ADDRESS,
+            PythonBarrierAction.RAW_ADDRESS: NativeBarrierAction.PASS_RAW_ADDRESS,
+        }.get(action)
+        if expected is None:
+            if plan.bridge.handoff_mode is ArgumentHandoffMode.OPAQUE_ADDRESS:
+                return (self._diagnostic(plan.owner_path, "unexpected-opaque-address-handoff", action.value),)
+            return ()
+        diagnostics = []
+        if plan.bridge.native_action is not expected:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-scalar-address-action", plan.bridge.native_action.value)
+            )
+        if plan.bridge.handoff_mode is not ArgumentHandoffMode.OPAQUE_ADDRESS:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-scalar-address-handoff", plan.bridge.handoff_mode.value)
+            )
+        if plan.bridge.data_action is not BridgeDataAction.ASSOCIATE_VIEW:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-scalar-address-data-action", plan.bridge.data_action.value)
+            )
+        if plan.binding.optional_mode is not OptionalMode.REQUIRED:
+            diagnostics.append(self._diagnostic(plan.owner_path, "optional-scalar-address-boundary", action.value))
         return tuple(diagnostics)
 
     def _optional_argument_diagnostics(
@@ -382,6 +490,13 @@ class WrapperCodeGenerator:
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return direct or hidden result producer/consumer diagnostics."""
         diagnostics = list(self._result_role_diagnostics(plan, available_roles))
+        diagnostics.extend(
+            self._bridge_data_diagnostics(
+                plan.owner_path,
+                plan.bridge.data_action,
+                plan.bridge.copy_reason,
+            )
+        )
         if plan.bridge.codegen_action is not plan.binding.codegen_action:
             diagnostics.append(
                 self._diagnostic(
@@ -408,19 +523,40 @@ class WrapperCodeGenerator:
         return ()
 
     def _direct_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        diagnostics = []
         if plan.native_call_slot is not None or plan.bridge.abi_position is not None:
-            return (self._diagnostic(plan.owner_path, "direct-result-has-native-slot", plan.source_kind),)
-        return ()
+            diagnostics.append(self._diagnostic(plan.owner_path, "direct-result-has-native-slot", plan.source_kind))
+        if plan.bridge.data_action is not BridgeDataAction.DIRECT_TRANSFER:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-direct-result-data-action", plan.bridge.data_action.value)
+            )
+        return tuple(diagnostics)
 
     def _hidden_result_diagnostics(
         self,
         plan: ResultPlan,
         function_slots: dict[int, NativeCallSlotPlan],
     ) -> tuple[WrapperPlanDiagnostic, ...]:
-        diagnostics = []
         if plan.native_call_slot is None or plan.bridge.abi_position is None:
             return (self._diagnostic(plan.owner_path, "missing-result-native-slot", plan.bridge.native_name),)
         slot = plan.native_call_slot
+        diagnostics = [
+            *self._hidden_result_shape_diagnostics(plan, slot),
+            *self._hidden_result_policy_consistency_diagnostics(plan, slot),
+        ]
+        if function_slots.get(slot.native_position) != slot:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "inconsistent-function-result-slot", slot.native_position)
+            )
+        return tuple(diagnostics)
+
+    def _hidden_result_shape_diagnostics(
+        self,
+        plan: ResultPlan,
+        slot: NativeCallSlotPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return hidden-result native-slot shape diagnostics."""
+        diagnostics = []
         if slot.source_kind != "result":
             diagnostics.append(self._diagnostic(plan.owner_path, "invalid-result-native-slot", slot.source_kind))
         if slot.native_position != plan.bridge.abi_position:
@@ -431,6 +567,15 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-result-position", slot.result_position))
         if slot.symbolic_role != plan.bridge.native_result_role:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-result-role", slot.symbolic_role))
+        return tuple(diagnostics)
+
+    def _hidden_result_policy_consistency_diagnostics(
+        self,
+        plan: ResultPlan,
+        slot: NativeCallSlotPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return hidden-result completed-action consistency diagnostics."""
+        diagnostics = []
         if slot.native_action is not plan.bridge.native_action:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-result-native-action", slot.native_action.value)
@@ -439,29 +584,91 @@ class WrapperCodeGenerator:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-result-slot-codegen-action", slot.codegen_action.value)
             )
-        if function_slots.get(slot.native_position) != slot:
+        if slot.bridge_data_action is not plan.bridge.data_action:
             diagnostics.append(
-                self._diagnostic(plan.owner_path, "inconsistent-function-result-slot", slot.native_position)
+                self._diagnostic(plan.owner_path, "inconsistent-result-data-action", slot.bridge_data_action.value)
+            )
+        if slot.bridge_copy_reason != plan.bridge.copy_reason:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "inconsistent-result-copy-reason", slot.bridge_copy_reason)
             )
         return tuple(diagnostics)
 
     def _native_slot_diagnostics(self, plan: NativeCallSlotPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return hidden literal and hidden result slot diagnostics."""
-        diagnostics = []
+        diagnostics = list(
+            self._bridge_data_diagnostics(
+                plan.owner_path,
+                plan.bridge_data_action,
+                plan.bridge_copy_reason,
+            )
+        )
         if plan.source_kind not in {"implicit", "projection", "literal", "result"}:
             diagnostics.append(self._diagnostic(plan.owner_path, "unknown-native-slot-source", plan.source_kind))
         if plan.source_kind == "literal":
-            if plan.literal_type is None:
-                diagnostics.append(self._diagnostic(plan.owner_path, "missing-literal-type", plan.native_position))
-            if plan.literal_value is None:
-                diagnostics.append(self._diagnostic(plan.owner_path, "missing-literal-value", plan.native_position))
-            if plan.python_position is not None:
-                diagnostics.append(self._diagnostic(plan.owner_path, "literal-python-position", plan.python_position))
+            diagnostics.extend(self._literal_slot_diagnostics(plan))
         if plan.source_kind == "result":
-            if plan.result_position is None:
-                diagnostics.append(self._diagnostic(plan.owner_path, "missing-result-position", plan.native_position))
-            if plan.python_position is not None:
-                diagnostics.append(self._diagnostic(plan.owner_path, "result-python-position", plan.python_position))
+            diagnostics.extend(self._result_slot_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _bridge_data_diagnostics(
+        self,
+        owner_path: str,
+        action: BridgeDataAction,
+        copy_reason: str | None,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Reject uncompleted or unjustified bridge-side data movement."""
+        if action is BridgeDataAction.BLOCKED:
+            return (self._diagnostic(owner_path, "blocked-bridge-data-action", action.value),)
+        if action is BridgeDataAction.COPY_REPRESENTATION:
+            if not copy_reason or not copy_reason.strip():
+                return (self._diagnostic(owner_path, "missing-bridge-copy-reason", action.value),)
+            return ()
+        if copy_reason is not None:
+            return (self._diagnostic(owner_path, "unexpected-bridge-copy-reason", action.value),)
+        return ()
+
+    def _literal_slot_diagnostics(self, plan: NativeCallSlotPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return diagnostics for one hidden literal slot."""
+        diagnostics = []
+        if plan.literal_type is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-literal-type", plan.native_position))
+        if plan.literal_value is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-literal-value", plan.native_position))
+        if plan.python_position is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "literal-python-position", plan.python_position))
+        if plan.bridge_data_action is not BridgeDataAction.DIRECT_TRANSFER:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-literal-data-action", plan.bridge_data_action.value)
+            )
+        return tuple(diagnostics)
+
+    def _result_slot_diagnostics(self, plan: NativeCallSlotPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return diagnostics for one native result slot."""
+        diagnostics = []
+        if plan.result_position is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-result-position", plan.native_position))
+        if plan.python_position is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "result-python-position", plan.python_position))
+        if plan.semantic_type_name is None or plan.datatype_family is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-result-datatype", plan.native_position))
+        if plan.datatype_family is DatatypeFamily.STRING and plan.character_length is None:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "missing-result-character-length", plan.native_position)
+            )
+        expected = (
+            BridgeDataAction.COPY_REPRESENTATION
+            if plan.datatype_family is DatatypeFamily.STRING
+            else BridgeDataAction.DIRECT_TRANSFER
+        )
+        if plan.bridge_data_action is not expected:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-result-data-action",
+                    f"{plan.bridge_data_action.value}:{expected.value}",
+                )
+            )
         return tuple(diagnostics)
 
     def _lifecycle_diagnostics(
@@ -548,22 +755,112 @@ class WrapperCodeGenerator:
 
     def _function_output_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return output projection and native callable-kind diagnostics."""
-        diagnostics = []
+        diagnostics = [*self._mixed_output_diagnostics(plan)]
+        diagnostics.extend(self._writeback_result_diagnostics(plan))
+        diagnostics.extend(self._native_callable_kind_diagnostics(plan))
+        diagnostics.extend(self._unclaimed_result_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _mixed_output_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Reject simultaneous public result and writeback projections."""
         if plan.result is not None and plan.writeback_actions:
-            diagnostics.append(self._diagnostic(plan.owner_path, "mixed-result-and-writeback", plan.owner_path))
+            return (self._diagnostic(plan.owner_path, "mixed-result-and-writeback", plan.owner_path),)
+        return ()
+
+    def _writeback_result_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate contiguous Python result positions for copy-out actions."""
         result_positions = tuple(
             action.binding.result_position
             for action in plan.writeback_actions
             if action.phase is WritebackPhase.COPY_OUT and action.binding is not None
         )
-        diagnostics.extend(
-            self._sequence_diagnostics(plan.owner_path, "writeback-result", result_positions, len(result_positions))
+        return self._sequence_diagnostics(
+            plan.owner_path,
+            "writeback-result",
+            result_positions,
+            len(result_positions),
         )
+
+    def _native_callable_kind_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require callable kind to agree with the public result representation."""
         requires_subroutine = plan.result is None or plan.result.source_kind == "hidden_output"
         if plan.bridge.native_is_subroutine != requires_subroutine:
-            diagnostics.append(
-                self._diagnostic(plan.owner_path, "inconsistent-native-callable-kind", requires_subroutine)
-            )
+            return (self._diagnostic(plan.owner_path, "inconsistent-native-callable-kind", requires_subroutine),)
+        return ()
+
+    def _unclaimed_result_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require every native result slot to have an explicit binding consumer."""
+        claimed_roles = self._claimed_result_roles(plan)
+        return tuple(
+            self._diagnostic(plan.owner_path, "unclaimed-native-result", slot.symbolic_role)
+            for slot in plan.native_call_slots
+            if slot.source_kind == "result" and slot.symbolic_role not in claimed_roles
+        )
+
+    def _claimed_result_roles(self, plan: FunctionPlan) -> set[str]:
+        """Return public and status-policy consumers of native result slots."""
+        roles = set()
+        if plan.result is not None and plan.result.source_kind == "hidden_output":
+            roles.add(plan.result.bridge.native_result_role)
+        if plan.binding.status_error is not None:
+            roles.add(plan.binding.status_error.status_role)
+            if plan.binding.status_error.message_role is not None:
+                roles.add(plan.binding.status_error.message_role)
+        return roles
+
+    def _status_error_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate completed status/message roles before either backend emits."""
+        policy = plan.binding.status_error
+        if policy is None:
+            return ()
+        result_slots = {slot.symbolic_role: slot for slot in plan.native_call_slots if slot.source_kind == "result"}
+        diagnostics = [*self._status_role_diagnostics(plan, result_slots)]
+        diagnostics.extend(self._message_role_diagnostics(plan, result_slots))
+        diagnostics.extend(self._status_policy_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _status_role_diagnostics(
+        self,
+        plan: FunctionPlan,
+        result_slots: dict[str, NativeCallSlotPlan],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the completed integer status role."""
+        policy = plan.binding.status_error
+        status = result_slots.get(policy.status_role)
+        if status is None:
+            return (self._diagnostic(plan.owner_path, "missing-status-result-role", policy.status_role),)
+        if status.datatype_family is not DatatypeFamily.INTEGER:
+            return (self._diagnostic(plan.owner_path, "incompatible-status-result-role", policy.status_role),)
+        if status.semantic_type_name != "Int32":
+            return (self._diagnostic(plan.owner_path, "incompatible-status-result-role", policy.status_role),)
+        return ()
+
+    def _message_role_diagnostics(
+        self,
+        plan: FunctionPlan,
+        result_slots: dict[str, NativeCallSlotPlan],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the optional fixed-length status message role."""
+        policy = plan.binding.status_error
+        if policy.message_role is None:
+            return ()
+        message = result_slots.get(policy.message_role)
+        if message is None:
+            return (self._diagnostic(plan.owner_path, "missing-message-result-role", policy.message_role),)
+        if message.datatype_family is not DatatypeFamily.STRING:
+            return (self._diagnostic(plan.owner_path, "incompatible-message-result-role", policy.message_role),)
+        if message.character_length is None:
+            return (self._diagnostic(plan.owner_path, "incompatible-message-result-role", policy.message_role),)
+        return ()
+
+    def _status_policy_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate cross-role and exception facts for status handling."""
+        policy = plan.binding.status_error
+        diagnostics = []
+        if policy.message_role == policy.status_role:
+            diagnostics.append(self._diagnostic(plan.owner_path, "duplicate-status-message-role", policy.status_role))
+        if policy.exception_kind is not PythonExceptionKind.RUNTIME_ERROR:
+            diagnostics.append(self._diagnostic(plan.owner_path, "unsupported-status-exception", policy.exception_kind))
         return tuple(diagnostics)
 
     def _sequence_diagnostics(
@@ -592,7 +889,8 @@ class WrapperCodeGenerator:
         """Return duplicate symbolic producer/consumer role diagnostics."""
         roles = [argument.binding.handoff_role for argument in plan.arguments]
         roles.extend(slot.symbolic_role for slot in plan.native_call_slots if slot.source_kind == "literal")
-        if plan.result is not None:
+        roles.extend(slot.symbolic_role for slot in plan.native_call_slots if slot.source_kind == "result")
+        if plan.result is not None and plan.result.source_kind == "direct_return":
             roles.append(plan.result.bridge.native_result_role)
         return tuple(
             self._diagnostic(plan.owner_path, "duplicate-symbolic-role", role)
@@ -603,7 +901,8 @@ class WrapperCodeGenerator:
     def _available_role_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Require the advertised roles to match argument and result producers."""
         expected = [argument.binding.handoff_role for argument in plan.arguments]
-        if plan.result is not None:
+        expected.extend(slot.symbolic_role for slot in plan.native_call_slots if slot.source_kind == "result")
+        if plan.result is not None and plan.result.source_kind == "direct_return":
             expected.append(plan.result.bridge.native_result_role)
         if Counter(plan.available_roles) != Counter(expected):
             return (self._diagnostic(plan.owner_path, "inconsistent-available-roles", plan.available_roles),)

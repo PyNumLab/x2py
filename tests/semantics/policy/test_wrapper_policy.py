@@ -9,8 +9,9 @@ from x2py.pipeline.preprocessing import PreprocessingConfig
 from x2py.pipeline.pyi import pyi_file_to_semantic_module
 from x2py.semantics.fortran2ir import fortran_project_to_semantic_modules
 from x2py.semantics.models import (
-    RESOLVED_MODULE_VARIABLE_POLICY_METADATA,
     RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA,
+    RESOLVED_MODULE_VARIABLE_POLICY_METADATA,
+    RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA,
     SemanticFunction,
     SemanticType,
 )
@@ -25,10 +26,13 @@ from x2py.semantics.ownership import (
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import (
+    BridgeDataAction,
+    FunctionWrapperPolicy,
     ModuleGetterAction,
     ModuleVariablePolicy,
+    NativeStatusErrorPolicy,
     OptionalMode,
-    FunctionWrapperPolicy,
+    PythonExceptionKind,
     WritebackPhase,
     completed_function_wrapper_policy,
 )
@@ -97,6 +101,8 @@ def alloc_state(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
 
     assert policy.supported is True
     assert value.optional_mode is OptionalMode.DESCRIPTOR
+    assert value.bridge_data_action is BridgeDataAction.COPY_REPRESENTATION
+    assert value.bridge_copy_reason == "materialize owned Fortran allocatable scalar storage from the binding value"
     assert value.nullable is True
     assert value.descriptor_boundary is True
     assert policy.native_module == "scalar_optional_descriptors"
@@ -117,6 +123,27 @@ def test_scalar_copy_in_out_policy_completes_writeback_before_planning():
     assert tuple(action.phase for action in policy.writeback_actions) == tuple(WritebackPhase)
     assert {action.source_role for action in policy.writeback_actions} == {"scalar_writeback.bump.value:value"}
     assert {action.result_position for action in policy.writeback_actions} == {0}
+
+
+def test_native_call_policy_maps_visible_positions_when_hidden_output_precedes_input():
+    module = parse_pyi_text(
+        """
+@native_call([Return("status", 0), Addr(Arg(0))])
+def mapped_status(base: Int32) -> Int32: ...
+""",
+        module_name="scalar_native_order",
+    )
+    complete_semantic_policies(module)
+
+    policy = completed_function_wrapper_policy(module.functions[0])
+
+    assert [(argument.name, argument.python_position, argument.native_position) for argument in policy.arguments] == [
+        ("base", 0, 1)
+    ]
+    assert [(slot.owner_path, slot.source_kind, slot.native_position) for slot in policy.native_call_slots] == [
+        ("scalar_native_order.mapped_status.status", "result", 0),
+        ("scalar_native_order.mapped_status.base", "projection", 1),
+    ]
 
 
 def test_source_fmath_scalar_policy_accepts_storage_address_native_action():
@@ -263,6 +290,38 @@ def swap_args(x: Float64, y: Float64) -> Float64: ...
         (0, 1, "addr"),
         (1, 0, "addr"),
     ]
+
+
+def test_runtime_status_policy_is_completed_before_wrapper_planning():
+    module = parse_pyi_text(
+        """
+@raises(status="status", message="message", success=0)
+@native_call([Addr(Arg(0)), Return("status", 0), Return("message", 1)])
+def solve(value: Int32) -> tuple[Int32, String[32]]: ...
+""",
+        module_name="runtime_status",
+    )
+
+    complete_semantic_policies(module)
+
+    function = module.functions[0]
+    status_error = function.metadata[RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA]
+    policy = completed_function_wrapper_policy(function)
+    assert isinstance(status_error, NativeStatusErrorPolicy)
+    assert policy.status_error is status_error
+    assert status_error.success == 0
+    assert status_error.exception_kind is PythonExceptionKind.RUNTIME_ERROR
+    assert status_error.status.owner_path == "runtime_status.solve.status"
+    assert status_error.status.native_position == 1
+    assert status_error.status.semantic_type_name == "Int32"
+    assert status_error.message is not None
+    assert status_error.message.owner_path == "runtime_status.solve.message"
+    assert status_error.message.native_position == 2
+    assert status_error.message.semantic_type_name == "String"
+    assert status_error.message.character_length == 32
+    assert policy.result is None
+    assert [slot.semantic_type_name for slot in policy.native_call_slots] == ["Int32", "Int32", "String"]
+    assert [slot.character_length for slot in policy.native_call_slots] == [None, None, 32]
 
 
 def test_wrapper_policy_records_implicit_native_order():
@@ -427,9 +486,24 @@ def sum_values(values: Float64[:]) -> Float64: ...
     assert isinstance(policy, FunctionWrapperPolicy)
     assert policy.supported is False
     assert "argument 'values' is not a first-lane primitive scalar" in policy.blockers
+    assert "argument 'values' has no completed bridge data action" in policy.blockers
+    assert policy.arguments[0].bridge_data_action is BridgeDataAction.BLOCKED
 
     with pytest.raises(ValueError, match="blocked wrapper policy"):
         completed_function_wrapper_policy(function)
+
+
+def test_wrapper_policy_keeps_string_arguments_blocked_until_bridge_data_action_is_completed():
+    module = parse_pyi_text(
+        "def consume(value: String) -> None: ...",
+        module_name="string_argument",
+    )
+    complete_semantic_policies(module)
+    policy = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+
+    assert policy.supported is False
+    assert "argument 'value' has no completed bridge data action" in policy.blockers
+    assert policy.arguments[0].bridge_data_action is BridgeDataAction.BLOCKED
 
 
 def test_missing_wrapper_policy_fails_before_planning():

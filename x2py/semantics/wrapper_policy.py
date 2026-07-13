@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from x2py.types.numpy import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.semantics import models
 from x2py.semantics.wrapper_exports import PythonExportPolicy, completed_python_exports
 from x2py.semantics.ownership import (
@@ -22,12 +21,44 @@ from x2py.semantics.ownership import (
 )
 
 
+_PLAN_PRIMITIVE_SCALAR_TYPES = frozenset(
+    {
+        "Bool",
+        "Int8",
+        "Int16",
+        "Int32",
+        "Int64",
+        "Float32",
+        "Float64",
+        "Complex64",
+        "Complex128",
+    }
+)
+
+
 class OptionalMode(str, Enum):
     """Completed ABI behavior for one argument's presence states."""
 
     REQUIRED = "required"
     NULLABLE_VALUE = "nullable_value"
     DESCRIPTOR = "descriptor"
+
+
+class ArgumentHandoffMode(str, Enum):
+    """Completed binding-to-bridge ABI shape for one scalar argument."""
+
+    VALUE = "value"
+    TYPED_REFERENCE = "typed_reference"
+    OPAQUE_ADDRESS = "opaque_address"
+
+
+class BridgeDataAction(str, Enum):
+    """Completed bridge-side data movement for one boundary value."""
+
+    DIRECT_TRANSFER = "direct_transfer"
+    ASSOCIATE_VIEW = "associate_view"
+    COPY_REPRESENTATION = "copy_representation"
+    BLOCKED = "blocked"
 
 
 class WritebackPhase(str, Enum):
@@ -45,6 +76,36 @@ class ModuleGetterAction(str, Enum):
     CONSTANT_VALUE = "constant_value"
     DIRECT_VALUE = "direct_value"
     NULLABLE_SNAPSHOT = "nullable_snapshot"
+
+
+class PythonExceptionKind(str, Enum):
+    """Completed Python exception selected for one native failure policy."""
+
+    RUNTIME_ERROR = "RuntimeError"
+
+
+@dataclass(frozen=True)
+class NativeStatusOutputPolicy:
+    """One validated native output consumed by status-error handling."""
+
+    owner_path: str
+    name: str
+    native_name: str
+    native_position: int
+    result_position: int
+    semantic_type_name: str
+    rank: int
+    character_length: int | None = None
+
+
+@dataclass(frozen=True)
+class NativeStatusErrorPolicy:
+    """Completed native-status decision owned by post-IR policy completion."""
+
+    status: NativeStatusOutputPolicy
+    message: NativeStatusOutputPolicy | None
+    success: int
+    exception_kind: PythonExceptionKind
 
 
 @dataclass(frozen=True)
@@ -96,7 +157,11 @@ class ArgumentPolicy:
     rank: int
     optional: bool
     optional_mode: OptionalMode
+    handoff_mode: ArgumentHandoffMode
+    bridge_data_action: BridgeDataAction
+    bridge_copy_reason: str | None
     nullable: bool
+    writable: bool
     descriptor_boundary: bool
     ownership: OwnershipDecision
     codegen_action: CodegenAction
@@ -122,6 +187,8 @@ class ResultPolicy:
     native_barrier_action: NativeBarrierAction
     storage_mode: StorageMode
     boundary_storage_mode: StorageMode
+    bridge_data_action: BridgeDataAction
+    bridge_copy_reason: str | None
     source_kind: str = "direct_return"
     native_name: str | None = None
     native_position: int | None = None
@@ -141,9 +208,13 @@ class NativeCallSlotPolicy:
     value_kind: str
     native_barrier_action: NativeBarrierAction
     codegen_action: CodegenAction
+    bridge_data_action: BridgeDataAction
+    bridge_copy_reason: str | None
     literal_type: str | None = None
     literal_value: Any = None
     result_position: int | None = None
+    semantic_type_name: str | None = None
+    character_length: int | None = None
 
 
 @dataclass(frozen=True)
@@ -157,6 +228,7 @@ class FunctionWrapperPolicy:
     native_module: str | None
     native_is_subroutine: bool
     hold_gil: bool
+    status_error: NativeStatusErrorPolicy | None
     supported: bool
     arguments: tuple[ArgumentPolicy, ...] = ()
     result: ResultPolicy | None = None
@@ -243,11 +315,22 @@ def build_function_wrapper_policy(
     """Build typed function policy from completed post-IR decisions."""
 
     argument_native_positions, native_call_slots, slot_blockers = _native_call_slot_policies(function, owner_path)
-    arguments, argument_blockers = _argument_policies(function, owner_path, argument_native_positions)
+    arguments, argument_blockers = _argument_policies(
+        function,
+        owner_path,
+        argument_native_positions,
+        native_call_slots,
+    )
     result, result_blockers = _result_policy(function, owner_path)
     writeback_actions, lifecycle_blockers = _lifecycle_policies(arguments)
+    status_error = _completed_native_status_error_policy(function)
     blockers = (
-        _function_shape_blockers(function) + argument_blockers + result_blockers + slot_blockers + lifecycle_blockers
+        _function_shape_blockers(function)
+        + argument_blockers
+        + result_blockers
+        + slot_blockers
+        + lifecycle_blockers
+        + _runtime_status_plan_blockers(status_error)
     )
     return FunctionWrapperPolicy(
         owner_path=owner_path,
@@ -257,6 +340,7 @@ def build_function_wrapper_policy(
         native_module=_native_module(function, owner_path),
         native_is_subroutine=_native_is_subroutine(function),
         hold_gil=bool(function.metadata.get(models.RUNTIME_HOLD_GIL_METADATA)),
+        status_error=status_error,
         supported=not blockers,
         arguments=tuple(arguments),
         result=result,
@@ -270,34 +354,59 @@ def _argument_policies(
     function: models.SemanticFunction,
     owner_path: str,
     argument_native_positions: dict[int, int],
+    native_call_slots: tuple[NativeCallSlotPolicy, ...],
 ) -> tuple[list[ArgumentPolicy], tuple[str, ...]]:
     policies: list[ArgumentPolicy] = []
     blockers: list[str] = []
-    for python_position, argument in enumerate(function.arguments):
+    python_position = 0
+    for argument in function.arguments:
         decision = _ownership_decision(argument, models.RESOLVED_OWNERSHIP_POLICY_METADATA)
         if decision is None:
             blockers.append(f"argument {argument.name!r} is missing completed ownership policy")
             continue
         if decision.projects_result and not decision.python_visible:
             continue
-        blockers.extend(_argument_blockers(argument, decision))
-        native_position = argument_native_positions.get(python_position)
+        current_python_position = python_position
+        python_position += 1
+        native_position = argument_native_positions.get(current_python_position)
+        native_slot = next(
+            (slot for slot in native_call_slots if slot.python_position == current_python_position),
+            None,
+        )
         if native_position is None:
             blockers.append(f"argument {argument.name!r} has no completed native-call slot")
             native_position = -1
+        optional_mode = _optional_mode(argument, decision)
+        bridge_data_action, bridge_copy_reason = _argument_bridge_data_action(
+            decision,
+            optional_mode,
+            native_slot.value_kind if native_slot is not None else None,
+        )
+        blockers.extend(
+            _argument_blockers(
+                argument,
+                decision,
+                bridge_data_action,
+                bridge_copy_reason,
+            )
+        )
         policies.append(
             ArgumentPolicy(
                 owner_path=f"{owner_path}.{argument.name}",
                 name=argument.name,
                 python_name=argument.name,
-                native_name=_argument_native_name(function, python_position, argument),
-                python_position=python_position,
+                native_name=_argument_native_name(function, current_python_position, argument),
+                python_position=current_python_position,
                 native_position=native_position,
                 semantic_type_name=argument.semantic_type.name,
                 rank=int(argument.semantic_type.rank or 0),
                 optional=argument.optional,
-                optional_mode=_optional_mode(argument, decision),
+                optional_mode=optional_mode,
+                handoff_mode=_argument_handoff_mode(decision),
+                bridge_data_action=bridge_data_action,
+                bridge_copy_reason=bridge_copy_reason,
                 nullable=decision.nullable,
+                writable=decision.mutates_native,
                 descriptor_boundary=decision.descriptor_boundary,
                 ownership=decision,
                 codegen_action=decision.codegen_action,
@@ -307,7 +416,7 @@ def _argument_policies(
                 boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
                 projects_result=decision.projects_result,
                 python_visible=decision.python_visible,
-                result_position=_argument_result_position(function, python_position),
+                result_position=_argument_result_position(function, current_python_position),
             )
         )
     return policies, tuple(blockers)
@@ -332,6 +441,9 @@ def _result_policy(
     if not isinstance(decision, OwnershipDecision):
         return None, ("function result is missing completed ownership policy",)
     blockers = list(_result_blockers(function.return_type, decision))
+    bridge_data_action, bridge_copy_reason = _result_bridge_data_action(function.return_type)
+    if bridge_data_action is BridgeDataAction.BLOCKED and decision.kind is not ObjectKind.SCALAR:
+        blockers.append("result has no completed bridge data action")
     if hidden_results:
         blockers.append("direct scalar returns cannot share the first Phase 2B lane with hidden scalar outputs")
     return (
@@ -345,6 +457,8 @@ def _result_policy(
             native_barrier_action=decision.native_barrier_action,
             storage_mode=decision.storage_mode,
             boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
+            bridge_data_action=bridge_data_action,
+            bridge_copy_reason=bridge_copy_reason,
         ),
         tuple(blockers),
     )
@@ -356,9 +470,12 @@ def _hidden_result_policies(
 ) -> tuple[tuple[ResultPolicy | None, tuple[str, ...]], ...]:
     """Return completed policy candidates for hidden scalar output projections."""
     policies = []
+    suppressed_outputs = _runtime_status_output_owner_paths(function)
     for argument in function.arguments:
         decision = _ownership_decision(argument, models.RESOLVED_OWNERSHIP_POLICY_METADATA)
         if decision is None or not (decision.projects_result and not decision.python_visible):
+            continue
+        if f"{owner_path}.{argument.name}" in suppressed_outputs:
             continue
         mapping = next(
             (
@@ -372,6 +489,9 @@ def _hidden_result_policies(
             policies.append((None, (f"hidden result {argument.name!r} has no completed return projection",)))
             continue
         blockers = _hidden_result_blockers(argument, decision, mapping)
+        bridge_data_action, bridge_copy_reason = _result_bridge_data_action(argument.semantic_type)
+        if bridge_data_action is BridgeDataAction.BLOCKED and decision.kind is not ObjectKind.SCALAR:
+            blockers = (*blockers, f"hidden result {argument.name!r} has no completed bridge data action")
         policies.append(
             (
                 ResultPolicy(
@@ -384,6 +504,8 @@ def _hidden_result_policies(
                     native_barrier_action=decision.native_barrier_action,
                     storage_mode=decision.storage_mode,
                     boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
+                    bridge_data_action=bridge_data_action,
+                    bridge_copy_reason=bridge_copy_reason,
                     source_kind="hidden_output",
                     native_name=mapping.native_name or argument.name,
                     native_position=mapping.native_position,
@@ -411,6 +533,14 @@ def _projected_native_call_slot_policies(
     slots: list[NativeCallSlotPolicy] = []
     blockers: list[str] = []
     positions: dict[int, int] = {}
+    visible_arguments = tuple(
+        argument
+        for argument in function.arguments
+        if (
+            (decision := _ownership_decision(argument, models.RESOLVED_OWNERSHIP_POLICY_METADATA)) is not None
+            and decision.python_visible
+        )
+    )
     for mapping in sorted(
         function.projection, key=lambda item: item.native_position if item.native_position is not None else -1
     ):
@@ -437,10 +567,10 @@ def _projected_native_call_slot_policies(
         if python_position is None:
             blockers.append(f"native-call slot {native_position} is not a first-lane Python argument projection")
             continue
-        if not 0 <= python_position < len(function.arguments):
+        if not 0 <= python_position < len(visible_arguments):
             blockers.append(f"native-call slot {native_position} references argument position {python_position}")
             continue
-        argument = function.arguments[python_position]
+        argument = visible_arguments[python_position]
         decision = _ownership_decision(argument, models.RESOLVED_OWNERSHIP_POLICY_METADATA)
         if decision is None:
             blockers.append(f"native-call slot {native_position} references argument without completed policy")
@@ -451,6 +581,13 @@ def _projected_native_call_slot_policies(
         if python_position in positions:
             blockers.append(f"argument {argument.name!r} appears in more than one native-call slot")
         positions[python_position] = native_position
+        bridge_data_action, bridge_copy_reason = _argument_bridge_data_action(
+            decision,
+            _optional_mode(argument, decision),
+            value_kind,
+        )
+        if bridge_data_action is BridgeDataAction.BLOCKED:
+            blockers.append(f"native-call slot {native_position} has no completed bridge data action")
         slots.append(
             NativeCallSlotPolicy(
                 owner_path=f"{owner_path}.{argument.name}",
@@ -462,7 +599,11 @@ def _projected_native_call_slot_policies(
                 value_kind=value_kind,
                 native_barrier_action=decision.native_barrier_action,
                 codegen_action=decision.codegen_action,
+                bridge_data_action=bridge_data_action,
+                bridge_copy_reason=bridge_copy_reason,
                 result_position=mapping.result_position,
+                semantic_type_name=argument.semantic_type.name,
+                character_length=_character_length(argument.semantic_type),
             )
         )
     blockers.extend(_native_position_blockers(slot.native_position for slot in slots))
@@ -489,6 +630,8 @@ def _hidden_result_native_call_slot_policy(
                 value_kind=mapping.value_kind,
                 native_barrier_action=NativeBarrierAction.BLOCKED,
                 codegen_action=CodegenAction.BLOCKED,
+                bridge_data_action=BridgeDataAction.BLOCKED,
+                bridge_copy_reason=None,
                 result_position=mapping.result_position,
             ),
             (f"native-call result slot {native_position} has no hidden argument {mapping.python_name!r}",),
@@ -506,10 +649,20 @@ def _hidden_result_native_call_slot_policy(
                 value_kind=mapping.value_kind,
                 native_barrier_action=NativeBarrierAction.BLOCKED,
                 codegen_action=CodegenAction.BLOCKED,
+                bridge_data_action=BridgeDataAction.BLOCKED,
+                bridge_copy_reason=None,
                 result_position=mapping.result_position,
+                semantic_type_name=argument.semantic_type.name,
+                character_length=_character_length(argument.semantic_type),
             ),
             (f"native-call result slot {native_position} references argument without completed policy",),
         )
+    bridge_data_action, bridge_copy_reason = _native_result_bridge_data_action(argument.semantic_type)
+    blockers = (
+        (f"native-call result slot {native_position} has no completed bridge data action",)
+        if bridge_data_action is BridgeDataAction.BLOCKED
+        else ()
+    )
     return (
         NativeCallSlotPolicy(
             owner_path=f"{owner_path}.{argument.name}",
@@ -521,9 +674,13 @@ def _hidden_result_native_call_slot_policy(
             value_kind=mapping.value_kind,
             native_barrier_action=decision.native_barrier_action,
             codegen_action=decision.codegen_action,
+            bridge_data_action=bridge_data_action,
+            bridge_copy_reason=bridge_copy_reason,
             result_position=mapping.result_position,
+            semantic_type_name=argument.semantic_type.name,
+            character_length=_character_length(argument.semantic_type),
         ),
-        (),
+        blockers,
     )
 
 
@@ -545,8 +702,11 @@ def _literal_native_call_slot_policy(
             value_kind="literal",
             native_barrier_action=NativeBarrierAction.PASS_VALUE,
             codegen_action=CodegenAction.DIRECT_VALUE,
+            bridge_data_action=BridgeDataAction.DIRECT_TRANSFER,
+            bridge_copy_reason=None,
             literal_type=literal_type,
             literal_value=literal_value,
+            semantic_type_name=literal_type,
         ),
         tuple(blockers),
     )
@@ -584,6 +744,13 @@ def _implicit_native_call_slot_policies(
         if decision is None:
             blockers.append(f"implicit native-call slot {position} references argument without completed policy")
             continue
+        bridge_data_action, bridge_copy_reason = _argument_bridge_data_action(
+            decision,
+            _optional_mode(argument, decision),
+            "arg",
+        )
+        if bridge_data_action is BridgeDataAction.BLOCKED:
+            blockers.append(f"implicit native-call slot {position} has no completed bridge data action")
         positions[position] = position
         slots.append(
             NativeCallSlotPolicy(
@@ -596,12 +763,34 @@ def _implicit_native_call_slot_policies(
                 value_kind="arg",
                 native_barrier_action=decision.native_barrier_action,
                 codegen_action=decision.codegen_action,
+                bridge_data_action=bridge_data_action,
+                bridge_copy_reason=bridge_copy_reason,
+                semantic_type_name=argument.semantic_type.name,
             )
         )
     return positions, tuple(slots), tuple(blockers)
 
 
-def _argument_blockers(argument: models.SemanticArgument, decision: OwnershipDecision) -> tuple[str, ...]:
+def _argument_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    bridge_data_action: BridgeDataAction,
+    bridge_copy_reason: str | None,
+) -> tuple[str, ...]:
+    """Return scalar-lane blockers without reconstructing policy in a backend."""
+    return (
+        *_argument_shape_blockers(argument, decision),
+        *_argument_boundary_blockers(argument, decision),
+        *_argument_bridge_data_blockers(argument, bridge_data_action, bridge_copy_reason),
+        *_argument_projection_blockers(argument, decision),
+    )
+
+
+def _argument_shape_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Return ownership, type, and visibility blockers for one argument."""
     blockers: list[str] = []
     if decision.is_blocked:
         blockers.append(
@@ -613,27 +802,77 @@ def _argument_blockers(argument: models.SemanticArgument, decision: OwnershipDec
         blockers.append(f"argument {argument.name!r} is not Python-visible")
     if decision.kind is not ObjectKind.SCALAR:
         blockers.append(f"argument {argument.name!r} policy kind is {decision.kind.value}, not scalar")
-    if decision.python_barrier_action is not PythonBarrierAction.SCALAR_VALUE:
+    return tuple(blockers)
+
+
+def _argument_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Return Python/native boundary-action blockers for one argument."""
+    blockers: list[str] = []
+    if decision.python_barrier_action not in {
+        PythonBarrierAction.SCALAR_VALUE,
+        PythonBarrierAction.SCALAR_STORAGE,
+        PythonBarrierAction.RAW_ADDRESS,
+    }:
         blockers.append(
-            f"argument {argument.name!r} Python action is {decision.python_barrier_action.value}, not scalar_value"
+            f"argument {argument.name!r} has unsupported scalar Python action {decision.python_barrier_action.value}"
         )
     if decision.native_barrier_action not in {
         NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+        NativeBarrierAction.PASS_RAW_ADDRESS,
         NativeBarrierAction.PASS_STORAGE_ADDRESS,
         NativeBarrierAction.PASS_VALUE,
     }:
         blockers.append(
             f"argument {argument.name!r} native action is {decision.native_barrier_action.value}, "
-            "not pass_call_local_address, pass_storage_address, or pass_value"
+            "not a supported scalar handoff"
         )
+    if (
+        decision.python_barrier_action is PythonBarrierAction.SCALAR_STORAGE
+        and decision.native_barrier_action is not NativeBarrierAction.PASS_STORAGE_ADDRESS
+    ):
+        blockers.append(f"argument {argument.name!r} scalar storage does not use its storage address")
+    if (
+        decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+        and decision.native_barrier_action is not NativeBarrierAction.PASS_RAW_ADDRESS
+    ):
+        blockers.append(f"argument {argument.name!r} raw address is not forwarded as a raw address")
+    if argument.optional and decision.python_barrier_action is not PythonBarrierAction.SCALAR_VALUE:
+        blockers.append(f"argument {argument.name!r} optional storage/address boundaries are not supported")
+    return tuple(blockers)
+
+
+def _argument_bridge_data_blockers(
+    argument: models.SemanticArgument,
+    bridge_data_action: BridgeDataAction,
+    bridge_copy_reason: str | None,
+) -> tuple[str, ...]:
+    """Return incomplete or contradictory bridge data-action blockers."""
+    blockers: list[str] = []
+    if bridge_data_action is BridgeDataAction.BLOCKED:
+        blockers.append(f"argument {argument.name!r} has no completed bridge data action")
+    if bridge_data_action is BridgeDataAction.COPY_REPRESENTATION and not bridge_copy_reason:
+        blockers.append(f"argument {argument.name!r} bridge representation copy has no completed reason")
+    if bridge_data_action is not BridgeDataAction.COPY_REPRESENTATION and bridge_copy_reason is not None:
+        blockers.append(f"argument {argument.name!r} copy-free bridge action carries a copy reason")
+    return tuple(blockers)
+
+
+def _argument_projection_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Return projected-result action blockers for one argument."""
     if decision.projects_result and decision.codegen_action not in {
         CodegenAction.COPY_IN_OUT,
         CodegenAction.IN_PLACE_ARGUMENT,
     }:
-        blockers.append(
-            f"argument {argument.name!r} projects a result with unsupported action {decision.codegen_action.value}"
+        return (
+            f"argument {argument.name!r} projects a result with unsupported action {decision.codegen_action.value}",
         )
-    return tuple(blockers)
+    return ()
 
 
 def _result_blockers(semantic_type: models.SemanticType, decision: OwnershipDecision) -> tuple[str, ...]:
@@ -705,6 +944,44 @@ def _function_shape_blockers(function: models.SemanticFunction) -> tuple[str, ..
     return tuple(blockers)
 
 
+def _completed_native_status_error_policy(
+    function: models.SemanticFunction,
+) -> NativeStatusErrorPolicy | None:
+    policy = function.metadata.get(models.RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA)
+    return policy if isinstance(policy, NativeStatusErrorPolicy) else None
+
+
+def _runtime_status_output_owner_paths(function: models.SemanticFunction) -> frozenset[str]:
+    policy = _completed_native_status_error_policy(function)
+    if policy is None:
+        return frozenset()
+    outputs = [policy.status.owner_path]
+    if policy.message is not None:
+        outputs.append(policy.message.owner_path)
+    return frozenset(outputs)
+
+
+def _runtime_status_plan_blockers(policy: NativeStatusErrorPolicy | None) -> tuple[str, ...]:
+    """Return Phase 2D backend blockers after semantic validity is complete."""
+    if policy is None:
+        return ()
+    blockers = []
+    if policy.status.semantic_type_name != "Int32":
+        blockers.append("native status error projection requires an Int32 status in the current plan lane")
+    if policy.message is not None and policy.message.character_length is None:
+        blockers.append("native status error message requires a fixed positive character length")
+    return tuple(blockers)
+
+
+def _character_length(semantic_type: models.SemanticType) -> int | None:
+    value = semantic_type.metadata.get("fortran_character_length")
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value
+    if isinstance(value, str) and value.strip().isdigit() and int(value.strip()) > 0:
+        return int(value.strip())
+    return None
+
+
 def _lifecycle_policies(
     arguments: list[ArgumentPolicy],
 ) -> tuple[tuple[LifecyclePolicy, ...], tuple[str, ...]]:
@@ -750,7 +1027,7 @@ def _is_first_lane_scalar_type(semantic_type: models.SemanticType) -> bool:
     return bool(
         int(semantic_type.rank or 0) == 0
         and semantic_type.name != "String"
-        and scalar_name in SEMANTIC_SCALAR_TYPE_NAMES
+        and scalar_name in _PLAN_PRIMITIVE_SCALAR_TYPES
     )
 
 
@@ -888,6 +1165,72 @@ def _optional_mode(
     if decision.descriptor_boundary:
         return OptionalMode.DESCRIPTOR
     return OptionalMode.NULLABLE_VALUE
+
+
+def _argument_bridge_data_action(
+    decision: OwnershipDecision,
+    optional_mode: OptionalMode,
+    value_kind: str | None,
+) -> tuple[BridgeDataAction, str | None]:
+    """Complete whether the bridge reuses, views, or copies one input payload."""
+    if optional_mode is OptionalMode.DESCRIPTOR:
+        if value_kind == "pointer":
+            return BridgeDataAction.ASSOCIATE_VIEW, None
+        if value_kind == "allocatable":
+            return (
+                BridgeDataAction.COPY_REPRESENTATION,
+                "materialize owned Fortran allocatable scalar storage from the binding value",
+            )
+        return BridgeDataAction.BLOCKED, None
+    if optional_mode is OptionalMode.NULLABLE_VALUE:
+        return BridgeDataAction.ASSOCIATE_VIEW, None
+    if decision.python_barrier_action in {
+        PythonBarrierAction.SCALAR_STORAGE,
+        PythonBarrierAction.RAW_ADDRESS,
+    }:
+        return BridgeDataAction.ASSOCIATE_VIEW, None
+    if decision.python_barrier_action is PythonBarrierAction.SCALAR_VALUE and decision.native_barrier_action in {
+        NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+        NativeBarrierAction.PASS_STORAGE_ADDRESS,
+        NativeBarrierAction.PASS_VALUE,
+    }:
+        return BridgeDataAction.DIRECT_TRANSFER, None
+    return BridgeDataAction.BLOCKED, None
+
+
+def _result_bridge_data_action(
+    semantic_type: models.SemanticType,
+) -> tuple[BridgeDataAction, str | None]:
+    """Complete direct result transfer without widening unsupported lanes."""
+    if _is_first_lane_scalar_type(semantic_type):
+        return BridgeDataAction.DIRECT_TRANSFER, None
+    return BridgeDataAction.BLOCKED, None
+
+
+def _native_result_bridge_data_action(
+    semantic_type: models.SemanticType,
+) -> tuple[BridgeDataAction, str | None]:
+    """Complete bridge data movement for one hidden native output slot."""
+    if _is_first_lane_scalar_type(semantic_type):
+        return BridgeDataAction.DIRECT_TRANSFER, None
+    if semantic_type.name == "String" and _character_length(semantic_type) is not None:
+        return (
+            BridgeDataAction.COPY_REPRESENTATION,
+            "copy fixed-length Fortran character output into C-owned null-terminated storage",
+        )
+    return BridgeDataAction.BLOCKED, None
+
+
+def _argument_handoff_mode(decision: OwnershipDecision) -> ArgumentHandoffMode:
+    """Return the completed scalar ABI shape consumed by both backends."""
+    if decision.python_barrier_action in {
+        PythonBarrierAction.SCALAR_STORAGE,
+        PythonBarrierAction.RAW_ADDRESS,
+    }:
+        return ArgumentHandoffMode.OPAQUE_ADDRESS
+    if decision.native_barrier_action is NativeBarrierAction.PASS_VALUE:
+        return ArgumentHandoffMode.VALUE
+    return ArgumentHandoffMode.TYPED_REFERENCE
 
 
 def _argument_result_position(function: models.SemanticFunction, python_position: int) -> int | None:

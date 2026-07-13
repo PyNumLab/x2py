@@ -7,6 +7,7 @@ from x2py.semantics.wrapper_policy import (
     ModuleVariablePolicy,
     FunctionWrapperPolicy,
 )
+from x2py.semantics.ownership import PythonBarrierAction
 from x2py.wrapper_codegen.plan import WrapperPlanSupportBlocker, WrapperPlanSupportReport
 from x2py.wrapper_codegen.visitor import ClassVisitor
 
@@ -85,11 +86,21 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         """Return completed first-lane coverage for one supported function."""
         if policy.blockers:
             return ()
-        return (*self._argument_lanes(policy), *self._output_lanes(policy))
+        runtime_lanes = ["native-call-runtime"]
+        if policy.status_error is not None:
+            runtime_lanes.append("native-status-errors")
+        return (*self._argument_lanes(policy), *self._output_lanes(policy), *runtime_lanes)
 
     def _argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
         """Return input-related lanes selected by completed arguments."""
-        lanes = ["scalar-inputs"] if policy.arguments else []
+        actions = {argument.python_barrier_action for argument in policy.arguments}
+        lanes = []
+        if PythonBarrierAction.SCALAR_VALUE in actions:
+            lanes.append("scalar-inputs")
+        if PythonBarrierAction.SCALAR_STORAGE in actions:
+            lanes.append("scalar-storage-inputs")
+        if PythonBarrierAction.RAW_ADDRESS in actions:
+            lanes.append("scalar-raw-address-inputs")
         if any(argument.optional for argument in policy.arguments):
             lanes.append("scalar-optional-inputs")
         if any(argument.descriptor_boundary for argument in policy.arguments):

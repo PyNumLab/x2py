@@ -8,6 +8,7 @@ from dataclasses import replace
 
 from x2py.types.numpy import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.semantics.ownership import (
+    CodegenAction,
     DestructionPolicy,
     OWNERSHIP_POLICY_METADATA,
     POINTER_POLICY_METADATA,
@@ -31,6 +32,9 @@ from x2py.semantics.metadata import (
 from x2py.semantics import models
 from x2py.semantics.native_array_handles import NativeArrayHandlePolicy, native_array_descriptor_kind
 from x2py.semantics.wrapper_policy import (
+    NativeStatusErrorPolicy,
+    NativeStatusOutputPolicy,
+    PythonExceptionKind,
     build_module_variable_policy,
     build_function_wrapper_policy,
 )
@@ -203,10 +207,130 @@ def _complete_function(function: models.SemanticFunction, owner_path: str) -> No
     else:
         function.metadata.pop(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA, None)
         function.metadata.pop(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, None)
+    _complete_native_status_error_policy(function, owner_path)
     function.metadata[models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA] = build_function_wrapper_policy(
         function,
         owner_path=owner_path,
     )
+
+
+def _complete_native_status_error_policy(function: models.SemanticFunction, owner_path: str) -> None:
+    """Validate and complete one native-status-to-Python-exception decision."""
+    raw_policy = function.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA)
+    if raw_policy is None:
+        function.metadata.pop(models.RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA, None)
+        return
+    if not isinstance(raw_policy, dict):
+        raise ValueError(f"Function {function.name!r} has invalid raises metadata")
+
+    success = raw_policy.get("success", 0)
+    if not isinstance(success, int) or isinstance(success, bool):
+        raise ValueError(f"Function {function.name!r} raises success value must be an integer")
+    status = _native_status_output(function, owner_path, raw_policy.get("status"), subject="status")
+    if status.rank != 0 or not _is_scalar_integer_status(status.semantic_type_name):
+        raise ValueError(
+            f"Function {function.name!r} raises status target {status.name!r} must be a scalar integer hidden output"
+        )
+
+    message_name = raw_policy.get("message")
+    message = None
+    if message_name is not None:
+        message = _native_status_output(function, owner_path, message_name, subject="message")
+        if message.rank != 0 or message.semantic_type_name != "String":
+            raise ValueError(
+                f"Function {function.name!r} raises message target {message.name!r} "
+                "must be a scalar string hidden output"
+            )
+        if message.owner_path == status.owner_path:
+            raise ValueError(f"Function {function.name!r} raises status and message targets must be distinct")
+
+    function.metadata[models.RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA] = NativeStatusErrorPolicy(
+        status=status,
+        message=message,
+        success=success,
+        exception_kind=PythonExceptionKind.RUNTIME_ERROR,
+    )
+
+
+def _native_status_output(
+    function: models.SemanticFunction,
+    owner_path: str,
+    output_name: object,
+    *,
+    subject: str,
+) -> NativeStatusOutputPolicy:
+    """Return one completed hidden output selected by a runtime policy."""
+    if not isinstance(output_name, str) or not output_name:
+        raise ValueError(f"Function {function.name!r} raises {subject} target must name a hidden output")
+    mappings = tuple(
+        mapping
+        for mapping in function.projection
+        if (
+            mapping.python_position is None
+            and isinstance(mapping.result_position, int)
+            and output_name in {mapping.python_name, mapping.native_name}
+        )
+    )
+    if len(mappings) != 1:
+        raise ValueError(f"Function {function.name!r} raises {subject} target must name a hidden output")
+    mapping = mappings[0]
+    argument = next((item for item in function.arguments if item.name == mapping.python_name), None)
+    if argument is None or not isinstance(mapping.native_position, int):
+        raise ValueError(f"Function {function.name!r} raises {subject} target must name a hidden output")
+    decision = argument.metadata.get(models.RESOLVED_OWNERSHIP_POLICY_METADATA)
+    if not isinstance(decision, OwnershipDecision) or not _is_compatible_status_handoff(decision):
+        raise ValueError(
+            f"Function {function.name!r} raises {subject} target {output_name!r} "
+            "has no compatible completed hidden-output handoff"
+        )
+    semantic_type = argument.semantic_type
+    return NativeStatusOutputPolicy(
+        owner_path=f"{owner_path}.{argument.name}",
+        name=argument.name,
+        native_name=mapping.native_name or argument.name,
+        native_position=mapping.native_position,
+        result_position=mapping.result_position,
+        semantic_type_name=semantic_type.name,
+        rank=int(semantic_type.rank or 0),
+        character_length=_fixed_character_length(semantic_type),
+    )
+
+
+def _is_compatible_status_handoff(decision: OwnershipDecision) -> bool:
+    return bool(
+        decision.projects_result
+        and not decision.python_visible
+        and decision.codegen_action is CodegenAction.HIDDEN_OUTPUT
+    )
+
+
+def _is_scalar_integer_status(semantic_type_name: str) -> bool:
+    return semantic_type_name in {
+        "Byte",
+        "CEnum",
+        "Int",
+        "Int8",
+        "Int16",
+        "Int32",
+        "Int64",
+        "SizeT",
+        "UInt",
+        "UInt8",
+        "UInt16",
+        "UInt32",
+        "UInt64",
+    }
+
+
+def _fixed_character_length(semantic_type: models.SemanticType) -> int | None:
+    if semantic_type.rank != 0:
+        return None
+    value = semantic_type.metadata.get("fortran_character_length")
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value
+    if isinstance(value, str) and value.strip().isdigit() and int(value.strip()) > 0:
+        return int(value.strip())
+    return None
 
 
 def _complete_native_array_handle_result_policy(

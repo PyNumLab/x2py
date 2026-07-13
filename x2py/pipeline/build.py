@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import json
 import os
 from pathlib import Path
 import shlex
+import time
 
 from filelock import FileLock
 
@@ -15,7 +16,7 @@ from x2py.codegen.codegen import Codegen
 from x2py.codegen.scope import Scope
 from x2py.compiling.basic import CompileObj
 from x2py.compiling.compilers import Compiler, get_condaless_search_path
-from x2py.compiling.python_wrapper import create_shared_library
+from x2py.compiling.python_wrapper import _print_verbose_timing, create_shared_library
 from x2py.compiling.runtime_support import install_runtime_support
 from x2py.fortran_parser.parser import parse_fortran_project
 from x2py.probes.fortran_types import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
@@ -78,6 +79,8 @@ _RENDERED_WRAPPER_RUNTIME_IMPORTS = {
 _WRAPPER_PLAN_COMPLETED_LANES = frozenset(
     {
         "scalar-inputs",
+        "scalar-storage-inputs",
+        "scalar-raw-address-inputs",
         "scalar-direct-results",
         "scalar-hidden-outputs",
         "scalar-optional-inputs",
@@ -86,6 +89,8 @@ _WRAPPER_PLAN_COMPLETED_LANES = frozenset(
         "scalar-module-variables",
         "void-calls",
         "python-namespaces",
+        "native-call-runtime",
+        "native-status-errors",
     }
 )
 _WRAPPER_PLAN_EVIDENCE = (
@@ -101,8 +106,16 @@ _WRAPPER_PLAN_EVIDENCE = (
     "test_whole_scalar_module_variable_behavior_matches_legacy_route",
     "tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py::"
     "test_complete_general_source_preserves_namespaces_through_both_routes",
+    "tests/wrapper/fortran/runtime_behavior/test_runtime_policies.py::"
+    "test_compiled_runtime_policies_release_gil_and_project_native_errors",
+    "tests/wrapper/fortran/runtime_behavior/test_runtime_policies.py::"
+    "test_pyi_runtime_policies_release_gil_and_project_native_errors",
+    "tests/wrapper/fortran/runtime_behavior/test_runtime_recursion.py::test_recursive_native_runtime_calls",
+    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+    "test_scalar_value_storage_raw_address_out_and_inout_match_both_routes",
+    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+    "test_scalar_primitive_kinds_match_both_routes_without_array_blockers",
 )
-_WRAPPER_PLAN_PRODUCTION_DEFERRED_REASON = "GIL runtime parity is deferred to Phase 2D"
 
 
 @dataclass(frozen=True)
@@ -394,6 +407,7 @@ def _rendered_wrapper_compile_obj(
     link_args: tuple[str, ...],
     flags: tuple[str, ...],
     include_dirs: tuple[Path, ...],
+    library_dirs: tuple[Path, ...],
     language: str,
 ) -> CompileObj:
     """Return one compile object for a rendered wrapper-plan source."""
@@ -402,6 +416,7 @@ def _rendered_wrapper_compile_obj(
         _rendered_artifact_output_path(output_dir, source_path).parent,
         flags=flags,
         include=include_dirs,
+        libdir=library_dirs,
         link_args=link_args,
         dependencies=dependencies,
         extra_compilation_tools=("python",) if language == "c" else (),
@@ -417,6 +432,7 @@ def _rendered_wrapper_compile_objects(
     wrapper_fortran_flags: tuple[str, ...],
     wrapper_c_flags: tuple[str, ...],
     native_module_dirs: tuple[Path, ...],
+    native_library_dirs: tuple[Path, ...],
 ) -> tuple[tuple[CompileObj, str, Path], ...]:
     """Return compile objects for rendered wrapper-plan sources."""
     compiled: list[CompileObj] = []
@@ -433,6 +449,7 @@ def _rendered_wrapper_compile_objects(
             link_args=native_link_args if source_path == final_source else (),
             flags=flags,
             include_dirs=native_module_dirs if language == "fortran" else (),
+            library_dirs=native_library_dirs if source_path == final_source else (),
             language=language,
         )
         compiled.append(obj)
@@ -467,9 +484,12 @@ def _build_rendered_wrapper_extension(
     output_path.mkdir(parents=True, exist_ok=True)
     shared_output_path = Path(shared_library_output_dir) if shared_library_output_dir is not None else output_path
     shared_output_path.mkdir(parents=True, exist_ok=True)
+    printing_started = time.perf_counter()
     _write_rendered_wrapper_sources(rendered, output_path)
+    _print_verbose_timing(verbose, "Wrapper printing", time.perf_counter() - printing_started)
 
     compiler = compiler or _new_gnu_compiler()
+    resolved_native_build_plan = native_build_plan or NativeBuildPlan()
     compile_items = _rendered_wrapper_compile_objects(
         rendered,
         output_path,
@@ -477,8 +497,15 @@ def _build_rendered_wrapper_extension(
         native_link_args=tuple(native_link_args),
         wrapper_fortran_flags=_compiler_flags(wrapper_fortran_flags),
         wrapper_c_flags=_compiler_flags(wrapper_c_flags),
-        native_module_dirs=(native_build_plan or NativeBuildPlan()).module_dirs,
+        native_module_dirs=_unique_paths(
+            (
+                *resolved_native_build_plan.module_dirs,
+                *resolved_native_build_plan.include_dirs,
+            )
+        ),
+        native_library_dirs=resolved_native_build_plan.library_dirs,
     )
+    compilation_started = time.perf_counter()
     runtime_imports = _rendered_wrapper_runtime_imports(rendered.artifacts.runtime_support_keys)
     for compile_obj, language, source_path in compile_items:
         imports = runtime_imports if source_path in rendered.artifacts.binding_sources else ()
@@ -507,6 +534,7 @@ def _build_rendered_wrapper_extension(
             verbose=verbose,
         )
     )
+    _print_verbose_timing(verbose, "Wrapper compilation", time.perf_counter() - compilation_started)
     generated_sources = tuple(
         path
         for path in rendered.artifacts.generated_files
@@ -527,7 +555,7 @@ def _build_rendered_wrapper_extension(
             module_name=rendered.artifacts.module_name,
             shared_library=shared_library,
         ),
-        native_build_plan=native_build_plan or NativeBuildPlan(),
+        native_build_plan=resolved_native_build_plan,
     )
 
 
@@ -555,6 +583,11 @@ def _select_wrapper_plan_route(
             selection_reason="legacy route forced for migration rollback or comparison",
         )
     if not support_report.supported:
+        if force_wrapper_plan:
+            details = "; ".join(f"{item.owner_path}: {item.reason}" for item in support_report.blockers)
+            raise ValueError(
+                f"cannot force wrapper-plan route for unsupported generation unit {module.name!r}: {details}"
+            )
         return WrapperPlanRouteDecision(
             owner_path=module.name,
             selected_route="legacy",
@@ -573,15 +606,6 @@ def _select_wrapper_plan_route(
             rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
             selection_reason=f"{mode} mode remains on the legacy route",
         )
-    if not frozenset(support_report.covered_lanes) <= _WRAPPER_PLAN_COMPLETED_LANES:
-        return WrapperPlanRouteDecision(
-            owner_path=module.name,
-            selected_route="legacy",
-            support_report=support_report,
-            rollout_eligible=False,
-            rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-            selection_reason="covered lanes exceed the recorded wrapper-plan parity evidence",
-        )
     if force_wrapper_plan:
         return WrapperPlanRouteDecision(
             owner_path=module.name,
@@ -591,13 +615,22 @@ def _select_wrapper_plan_route(
             rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
             selection_reason="wrapper-plan route forced for internal migration verification",
         )
+    if not frozenset(support_report.covered_lanes) <= _WRAPPER_PLAN_COMPLETED_LANES:
+        return WrapperPlanRouteDecision(
+            owner_path=module.name,
+            selected_route="legacy",
+            support_report=support_report,
+            rollout_eligible=False,
+            rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
+            selection_reason="covered lanes exceed the recorded wrapper-plan parity evidence",
+        )
     return WrapperPlanRouteDecision(
         owner_path=module.name,
-        selected_route="legacy",
+        selected_route="wrapper-plan",
         support_report=support_report,
-        rollout_eligible=False,
+        rollout_eligible=True,
         rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-        selection_reason=_WRAPPER_PLAN_PRODUCTION_DEFERRED_REASON,
+        selection_reason="whole generation unit is covered by completed wrapper-plan lanes",
     )
 
 
@@ -614,8 +647,10 @@ def _generated_wrapper_plan_artifacts(
     strict_wrapper_names: bool,
     force_legacy: bool,
     force_wrapper_plan: bool,
+    verbose: bool | int = False,
 ) -> RenderedGeneratedWrapperArtifacts | None:
     """Complete policy and generate selected wrapper-plan artifacts, if chosen."""
+    creation_started = time.perf_counter()
     complete_semantic_policies(module)
     decision = _select_wrapper_plan_route(
         module,
@@ -624,7 +659,11 @@ def _generated_wrapper_plan_artifacts(
         force_legacy=force_legacy,
         force_wrapper_plan=force_wrapper_plan,
     )
-    return _render_selected_wrapper_plan(module) if decision.uses_wrapper_plan else None
+    if not decision.uses_wrapper_plan:
+        return None
+    rendered = _render_selected_wrapper_plan(module)
+    _print_verbose_timing(verbose, "Wrapper creation", time.perf_counter() - creation_started)
+    return rendered
 
 
 def _source_compile_object(
@@ -1374,6 +1413,37 @@ def _write_build_manifest(path: Path, manifest: dict[str, object]) -> Path:
     return path
 
 
+def _with_pyi_manifest(
+    result: WrapperBuildResult,
+    *,
+    bundle: _PyiContractBundle,
+    strict_wrapper_names: bool,
+    requested_output_name: str | None,
+    native_fortran_flags: tuple[str, ...],
+    wrapper_compiler_debug: bool,
+    wrapper_fortran_flags: tuple[str, ...],
+    wrapper_c_flags: tuple[str, ...],
+    native_array_build_requirements: NativeArrayBuildRequirements,
+) -> WrapperBuildResult:
+    """Attach the standard in-memory `.pyi` build manifest to a plan result."""
+    manifest = _pyi_build_manifest(
+        bundle=bundle,
+        module_name=result.module_name,
+        output_dir=result.output_dir,
+        shared_library=result.shared_library,
+        strict_wrapper_names=strict_wrapper_names,
+        requested_output_name=requested_output_name,
+        native_fortran_flags=native_fortran_flags,
+        wrapper_compiler_debug=wrapper_compiler_debug,
+        wrapper_fortran_flags=wrapper_fortran_flags,
+        wrapper_c_flags=wrapper_c_flags,
+        native_build_plan=result.native_build_plan,
+        native_array_build_requirements=native_array_build_requirements,
+        manifest_dir=result.output_dir,
+    )
+    return replace(result, manifest=manifest)
+
+
 def _load_build_manifest(path: str | Path) -> tuple[Path, dict[str, object]]:
     manifest_path = Path(path)
     if not manifest_path.is_file():
@@ -1788,6 +1858,7 @@ def build_fortran_extension(
         strict_wrapper_names=strict_wrapper_names,
         force_legacy=_force_legacy_wrapper_route,
         force_wrapper_plan=_force_wrapper_plan_route,
+        verbose=verbose,
     )
 
     wrapper_fortran_flags = _compiler_flags(wrapper_fortran_flags)
@@ -1957,6 +2028,7 @@ def build_pyi_extension(
         strict_wrapper_names=strict_wrapper_names,
         force_legacy=_force_legacy_wrapper_route,
         force_wrapper_plan=_force_wrapper_plan_route,
+        verbose=verbose,
     )
 
     include_dirs = _pyi_native_include_dirs(native_inputs, output_path=output_path)
@@ -1987,8 +2059,9 @@ def build_pyi_extension(
             verbose=verbose,
         )
 
+    native_array_build_requirements = native_array_handle_build_requirements(module)
     if rendered_wrapper_plan is not None:
-        return _build_rendered_wrapper_extension(
+        result = _build_rendered_wrapper_extension(
             rendered_wrapper_plan,
             output_dir=output_path,
             shared_library_output_dir=shared_library_output_path,
@@ -2001,8 +2074,18 @@ def build_pyi_extension(
             compiler=compiler,
             verbose=verbose,
         )
+        return _with_pyi_manifest(
+            result,
+            bundle=bundle,
+            strict_wrapper_names=strict_wrapper_names,
+            requested_output_name=output_name,
+            native_fortran_flags=native_inputs.source_flags,
+            wrapper_compiler_debug=wrapper_compiler_debug,
+            wrapper_fortran_flags=wrapper_fortran_flags,
+            wrapper_c_flags=wrapper_c_flags,
+            native_array_build_requirements=native_array_build_requirements,
+        )
 
-    native_array_build_requirements = native_array_handle_build_requirements(module)
     scope = Scope(
         name=module.name,
         scope_type="module",

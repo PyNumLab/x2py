@@ -622,7 +622,32 @@ Python immutable scalars cannot expose native in-place mutation. Scalar
 `intent(out)` values are hidden and returned as new Python values, while mutable
 semantics for strings use replacement projection as described below.
 
-Runtime tests: [`test_verified_baseline.py`](../../../tests/wrapper/fortran/scalars/test_verified_baseline.py).
+Editable semantic contracts distinguish three numeric scalar boundaries:
+
+- `Float64` accepts a scalar value. If a writable native reference is projected
+  back with `Returns["value", Float64]`, x2py copies into call-local storage and
+  returns the mutated replacement; the original Python scalar is unchanged.
+- `Float64[()]` accepts caller-owned rank-zero NumPy storage. x2py validates its
+  exact dtype, native byte order, alignment, rank, and writeability, then passes
+  its data address so native `out` or `inout` mutation remains visible in the
+  same array.
+- `Addr(Float64)` accepts an integer raw address and forwards it without copying
+  or owning the pointee. For a NumPy buffer, pass `value.ctypes.data`.
+
+```python
+storage = np.array(3.5, dtype=np.float64)
+update_storage(storage)
+
+raw_storage = np.array(4.5, dtype=np.float64)
+update_raw(raw_storage.ctypes.data)
+```
+
+`Addr(Arg(i))` inside `@native_call(...)` is different from `Addr(T)`: it tells
+the wrapper to take the address of its converted call-local scalar. It does not
+make the Python caller pass an address.
+
+Runtime tests: [`test_verified_baseline.py`](../../../tests/wrapper/fortran/scalars/test_verified_baseline.py)
+and [`test_scalar_boundary_plan.py`](../../../tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py).
 
 ## Generic Procedure Interfaces
 

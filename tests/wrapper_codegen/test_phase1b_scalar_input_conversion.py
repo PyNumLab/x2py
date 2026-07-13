@@ -12,8 +12,11 @@ from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 @pytest.mark.parametrize(
     ("type_name", "c_type", "converter", "check"),
     [
-        ("Bool", "bool", "PyBool_to_Bool", "PyArray_IsScalar(x_obj, Bool)"),
+        ("Bool", "bool", "PyBool_to_Bool", "PyIs_Bool(x_obj)"),
+        ("Int8", "int8_t", "PyInt8_to_Int8", "PyIs_Int8(x_obj)"),
+        ("Int16", "int16_t", "PyInt16_to_Int16", "PyIs_Int16(x_obj)"),
         ("Int32", "int32_t", "PyInt32_to_Int32", "PyArray_IsScalar(x_obj, Int)"),
+        ("Int64", "int64_t", "PyInt64_to_Int64", "PyIs_Int64(x_obj)"),
         ("Float32", "float", "PyFloat_to_Float", "PyArray_IsScalar(x_obj, Float)"),
         ("Float64", "double", "PyDouble_to_Double", "PyArray_IsScalar(x_obj, Double)"),
         ("Complex64", "float complex", "PyComplex_to_Complex64", "PyArray_IsScalar(x_obj, CFloat)"),

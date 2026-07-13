@@ -79,6 +79,7 @@ def scale(x: Float64) -> Float64: ...
         produced_objects=(native_obj.module_target,),
         link_items=(NativeLinkItem("object", native_obj.module_target),),
         module_dirs=(native_dir,),
+        library_dirs=(native_dir,),
     )
     compiler = RecordingCompiler()
 
@@ -116,6 +117,7 @@ def scale(x: Float64) -> Float64: ...
     assert native_dir in bridge_obj.include
     assert tuple(binding_obj.dependencies) == (native_obj, bridge_obj, runtime_obj)
     assert binding_obj.link_args == (str(native_obj.module_target),)
+    assert native_dir in binding_obj.libdir
     assert binding_obj.extra_compilation_tools == {"python"}
     assert compiler.linked == (binding_obj, tmp_path / "extension", "fortran", False, "plan_scalar_build")
 

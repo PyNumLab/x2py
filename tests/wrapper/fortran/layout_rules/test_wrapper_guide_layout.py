@@ -58,6 +58,7 @@ SUBJECT_TEST_MODULES = {
     ),
     "scalars": (
         "test_fortran_enums.py",
+        "test_scalar_boundary_plan.py",
         "test_scalar_generated_pyi_contracts.py",
         "test_scalar_kinds.py",
         "test_value_and_bind_c.py",

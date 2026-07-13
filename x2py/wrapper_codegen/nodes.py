@@ -129,6 +129,16 @@ class CExpressionStatement(StageRecord):
 
 
 @dataclass
+class CAllowThreadsBegin(StageRecord):
+    """Release the CPython GIL immediately before one native call."""
+
+
+@dataclass
+class CAllowThreadsEnd(StageRecord):
+    """Reacquire the CPython GIL immediately after one native call."""
+
+
+@dataclass
 class CIf(StageRecord):
     """C conditional with recursively printable statement bodies."""
 
@@ -151,7 +161,7 @@ class CFunction(StageRecord):
     name: str
     return_type: str
     parameters: tuple[CParameter, ...] = ()
-    body: tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...] = ()
+    body: tuple[CDeclaration | CExpressionStatement | CAllowThreadsBegin | CAllowThreadsEnd | CIf | CReturn, ...] = ()
     storage: str | None = None
 
 

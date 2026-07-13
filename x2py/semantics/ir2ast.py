@@ -55,6 +55,7 @@ from x2py.semantics.models import (
 from x2py.semantics.native_array_handles import array_interop_policy, native_array_descriptor_kind
 from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
+from x2py.semantics.wrapper_policy import NativeStatusErrorPolicy
 from x2py.utilities.visitor import ClassVisitor
 
 
@@ -752,54 +753,6 @@ def _raise_for_unsupported_polymorphic_contracts(
         )
 
 
-def _is_scalar_integer_runtime_status(semantic_type: models.SemanticType) -> bool:
-    if semantic_type.rank != 0:
-        return False
-    try:
-        numpy_dtype = SEMANTIC_DTYPE_TO_NUMPY_DTYPE[semantic_type.dtype]
-        return bool(np.issubdtype(np.dtype(_numpy_type(numpy_dtype)), np.integer))
-    except (AttributeError, KeyError, TypeError):
-        return False
-
-
-def _raise_for_invalid_runtime_policy(node: models.SemanticFunction) -> None:
-    policy = node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA)
-    if policy is None:
-        return
-    if not isinstance(policy, dict):
-        raise ValueError(f"Function {node.name!r} has invalid raises metadata")
-
-    success = policy.get("success", 0)
-    if not isinstance(success, int) or isinstance(success, bool):
-        raise ValueError(f"Function {node.name!r} raises success value must be an integer")
-
-    hidden_names = {
-        mapping.native_name or mapping.python_name
-        for mapping in node.projection
-        if mapping.result_position is not None and mapping.python_position is None
-    }
-    hidden_outputs = {argument.name: argument for argument in node.arguments if argument.name in hidden_names}
-    status_name = policy.get("status")
-    status = hidden_outputs.get(status_name) if isinstance(status_name, str) else None
-    if status is None:
-        raise ValueError(f"Function {node.name!r} raises status target must name a hidden output")
-    if not _is_scalar_integer_runtime_status(status.semantic_type):
-        raise ValueError(
-            f"Function {node.name!r} raises status target {status.name!r} must be a scalar integer hidden output"
-        )
-
-    message_name = policy.get("message")
-    if message_name is None:
-        return
-    message = hidden_outputs.get(message_name) if isinstance(message_name, str) else None
-    if message is None:
-        raise ValueError(f"Function {node.name!r} raises message target must name a hidden output")
-    if message.semantic_type.rank != 0 or message.semantic_type.name != "String":
-        raise ValueError(
-            f"Function {node.name!r} raises message target {message.name!r} must be a scalar string hidden output"
-        )
-
-
 def _is_bind_c_derived_type(
     semantic_type: models.SemanticType,
     class_lookup: dict[str, models.SemanticClass],
@@ -1065,8 +1018,15 @@ def _semantic_function_decorators(node):
         decorators[NATIVE_PROJECTION_METADATA] = True
     if node.metadata.get(models.RUNTIME_HOLD_GIL_METADATA):
         decorators[models.RUNTIME_HOLD_GIL_METADATA] = True
-    if isinstance(status_policy := node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA), dict):
-        decorators[models.RUNTIME_STATUS_ERROR_METADATA] = dict(status_policy)
+    raw_status_policy = node.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA)
+    if raw_status_policy is not None:
+        status_policy = node.metadata.get(models.RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA)
+        if not isinstance(status_policy, NativeStatusErrorPolicy):
+            raise ValueError(
+                f"Function {node.name!r} is missing completed native status error policy; "
+                "run complete_semantic_policies before ir2ast lowering"
+            )
+        decorators[models.RUNTIME_STATUS_ERROR_METADATA] = status_policy
     return decorators
 
 
@@ -1510,7 +1470,6 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         return overload_set
 
     def _visit_SemanticFunction(self, node):
-        _raise_for_invalid_runtime_policy(node)
         _raise_for_unsupported_bind_c_abi(node, self.class_lookup or {})
         _raise_for_unsupported_pointer_outputs(node)
         _raise_for_blocked_ownership_contracts_in_function(node)
