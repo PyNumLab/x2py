@@ -11,6 +11,7 @@ from x2py.semantics.fortran2ir import fortran_project_to_semantic_modules
 from x2py.semantics.models import (
     RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA,
     RESOLVED_MODULE_VARIABLE_POLICY_METADATA,
+    RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA,
     SemanticFunction,
     SemanticType,
@@ -118,7 +119,7 @@ def test_scalar_copy_in_out_policy_completes_writeback_before_planning():
     policy = completed_function_wrapper_policy(module.functions[0])
 
     assert policy.supported is True
-    assert policy.result is None
+    assert policy.results == ()
     assert policy.native_is_subroutine is True
     assert tuple(action.phase for action in policy.writeback_actions) == tuple(WritebackPhase)
     assert {action.source_role for action in policy.writeback_actions} == {"scalar_writeback.bump.value:value"}
@@ -144,6 +145,50 @@ def mapped_status(base: Int32) -> Int32: ...
         ("scalar_native_order.mapped_status.status", "result", 0),
         ("scalar_native_order.mapped_status.base", "projection", 1),
     ]
+
+
+def test_multiple_scalar_result_policy_completes_order_and_hidden_address_before_planning():
+    module = parse_pyi_text(
+        """
+@native_call([Addr(Arg(0)), Return("status", 1)])
+def with_scalar(n: Int32) -> tuple[Int32, Int32]: ...
+""",
+        module_name="multiple_scalar_results",
+    )
+    complete_semantic_policies(module)
+
+    policy = completed_function_wrapper_policy(module.functions[0])
+
+    assert policy.supported is True
+    assert [(result.source_kind, result.result_position) for result in policy.results] == [
+        ("direct_return", 0),
+        ("hidden_output", 1),
+    ]
+    hidden = policy.results[1]
+    assert hidden.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    assert policy.native_call_slots[1].owner_path == hidden.owner_path
+    assert policy.native_call_slots[1].result_position == hidden.result_position
+    assert policy.native_call_slots[1].native_barrier_action is hidden.native_barrier_action
+
+
+def test_hidden_scalar_descriptor_result_keeps_descriptor_policy_instead_of_plain_address_storage():
+    module = parse_pyi_text(
+        """
+@native_call([Allocatable(Return("value", 0))])
+def create_allocatable() -> Float64 | None: ...
+""",
+        module_name="descriptor_result",
+    )
+    function = module.functions[0]
+    result_argument = function.arguments[0]
+
+    complete_semantic_policies(module)
+
+    decision = result_argument.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
+    assert function.projection[0].value_kind == "allocatable"
+    assert result_argument.semantic_type.storage is None
+    assert decision.descriptor_boundary is True
+    assert decision.native_barrier_action is NativeBarrierAction.PASS_VALUE
 
 
 def test_source_fmath_scalar_policy_accepts_storage_address_native_action():
@@ -255,16 +300,17 @@ def test_fmath_scalar_policy_records_address_projected_call_slots():
         slot.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS for slot in policy.native_call_slots
     )
 
-    assert policy.result is not None
-    assert policy.result.owner_path == "fmath.add_r8.return"
-    assert policy.result.semantic_type_name == "Float64"
-    assert policy.result.rank == 0
-    assert policy.result.ownership.kind is ObjectKind.SCALAR
-    assert policy.result.codegen_action is CodegenAction.DIRECT_VALUE
-    assert policy.result.python_barrier_action is PythonBarrierAction.NONE
-    assert policy.result.native_barrier_action is NativeBarrierAction.NONE
-    assert policy.result.storage_mode is StorageMode.STACK
-    assert policy.result.boundary_storage_mode is StorageMode.STACK
+    assert len(policy.results) == 1
+    result = policy.results[0]
+    assert result.owner_path == "fmath.add_r8.return"
+    assert result.semantic_type_name == "Float64"
+    assert result.rank == 0
+    assert result.ownership.kind is ObjectKind.SCALAR
+    assert result.codegen_action is CodegenAction.DIRECT_VALUE
+    assert result.python_barrier_action is PythonBarrierAction.NONE
+    assert result.native_barrier_action is NativeBarrierAction.NONE
+    assert result.storage_mode is StorageMode.STACK
+    assert result.boundary_storage_mode is StorageMode.STACK
 
 
 def test_wrapper_policy_records_runtime_and_native_order_metadata():
@@ -319,7 +365,7 @@ def solve(value: Int32) -> tuple[Int32, String[32]]: ...
     assert status_error.message.native_position == 2
     assert status_error.message.semantic_type_name == "String"
     assert status_error.message.character_length == 32
-    assert policy.result is None
+    assert policy.results == ()
     assert [slot.semantic_type_name for slot in policy.native_call_slots] == ["Int32", "Int32", "String"]
     assert [slot.character_length for slot in policy.native_call_slots] == [None, None, 32]
 

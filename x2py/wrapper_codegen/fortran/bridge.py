@@ -31,6 +31,7 @@ from x2py.wrapper_codegen.plan import (
     ModuleVariablePlan,
     NamespacePlan,
     NativeCallSlotPlan,
+    ResultPlan,
 )
 from x2py.wrapper_codegen.primitive_scalar_types import PrimitiveScalarTypeRegistry
 from x2py.wrapper_codegen.visitor import ClassVisitor
@@ -176,14 +177,13 @@ class FortranBridgeGenerator(ClassVisitor):
         plan: FunctionPlan,
     ) -> tuple[str | None, str | None]:
         """Dispatch one completed bridge result action explicitly."""
-        if plan.result is None:
+        result = self._direct_result(plan)
+        if result is None:
             return self._lower_result_none(plan)
-        action = plan.result.bridge.codegen_action
+        action = result.bridge.codegen_action
         match action:
             case CodegenAction.DIRECT_VALUE:
-                return self._lower_result_direct_value(plan)
-            case CodegenAction.HIDDEN_OUTPUT:
-                return self._lower_result_hidden_output(plan)
+                return self._lower_result_direct_value(plan, result)
         raise ValueError(f"Unsupported Fortran result action for {plan.owner_path!r}: {action!r}")
 
     def _lower_result_none(
@@ -196,16 +196,10 @@ class FortranBridgeGenerator(ClassVisitor):
     def _lower_result_direct_value(
         self,
         plan: FunctionPlan,
+        result: ResultPlan,
     ) -> tuple[str | None, str | None]:
         """Return the procedure shape of a direct native function result."""
-        return "result", self._bridge_result_type(plan)
-
-    def _lower_result_hidden_output(
-        self,
-        plan: FunctionPlan,
-    ) -> tuple[str | None, str | None]:
-        """Return the procedure shape of a hidden native output parameter."""
-        return None, None
+        return "result", self._bridge_result_type(plan, result)
 
     def _visit_ModuleVariablePlan(self, plan: ModuleVariablePlan) -> tuple[FortranFunction, ...]:
         """Lower bridge-owned getter and setter actions into procedures."""
@@ -730,10 +724,15 @@ class FortranBridgeGenerator(ClassVisitor):
             raise ValueError(f"String output {slot.owner_path!r} is missing a fixed character length")
         return slot.character_length
 
-    def _bridge_result_type(self, plan: FunctionPlan) -> str:
-        if plan.result is None:
+    def _bridge_result_type(self, plan: FunctionPlan, result: ResultPlan | None = None) -> str:
+        result = result or self._direct_result(plan)
+        if result is None:
             raise ValueError(f"{plan.owner_path!r} native function has no result plan")
-        return PrimitiveScalarTypeRegistry.type_for(plan.result.semantic_type_name).fortran_spelling
+        return PrimitiveScalarTypeRegistry.type_for(result.semantic_type_name).fortran_spelling
+
+    def _direct_result(self, plan: FunctionPlan) -> ResultPlan | None:
+        """Return the sole direct result used by the Fortran function ABI."""
+        return next((result for result in plan.results if result.source_kind == "direct_return"), None)
 
     def _native_module_uses(self, plan: ModulePlan) -> tuple[FortranUse, ...]:
         modules: dict[str, list[str]] = {}
@@ -791,9 +790,10 @@ class FortranBridgeGenerator(ClassVisitor):
         )
         imports = tuple(dict.fromkeys(self._iso_symbol(argument.semantic_type_name) for argument in plan.arguments))
         result_name = None if plan.bridge.native_is_subroutine else "native_result"
-        result_type = self._bridge_result_type(plan) if result_name is not None else None
-        if result_type is not None and plan.result is not None:
-            imports = tuple(dict.fromkeys((*imports, self._iso_symbol(plan.result.semantic_type_name))))
+        direct_result = self._direct_result(plan)
+        result_type = self._bridge_result_type(plan, direct_result) if result_name is not None else None
+        if result_type is not None and direct_result is not None:
+            imports = tuple(dict.fromkeys((*imports, self._iso_symbol(direct_result.semantic_type_name))))
         return FortranInterfaceProcedure(
             name=plan.bridge.native_name,
             imports=imports,

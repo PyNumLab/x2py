@@ -78,8 +78,8 @@ def test_planner_projects_one_shared_tree_with_explicit_backend_views():
     assert first.bridge.native_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
     assert first.binding.handoff_role == first.bridge.handoff_role == first.native_call_slot.symbolic_role
     assert first.native_call_slot.codegen_action is CodegenAction.CALL_LOCAL_INPUT
-    assert function.result.binding.codegen_action is CodegenAction.DIRECT_VALUE
-    assert function.result.bridge.native_result_role in function.available_roles
+    assert function.results[0].binding.codegen_action is CodegenAction.DIRECT_VALUE
+    assert function.results[0].bridge.native_result_role in function.available_roles
 
 
 def test_planner_records_hidden_literals_and_hidden_result_slots():
@@ -92,15 +92,15 @@ def test_planner_records_hidden_literals_and_hidden_result_slots():
         ("literal", "Bool", False),
         ("result", None, None),
     ]
-    assert function.result.source_kind == "hidden_output"
-    assert function.result.bridge.abi_position == 3
-    assert function.result.native_call_slot == function.native_call_slots[3]
+    assert function.results[0].source_kind == "hidden_output"
+    assert function.results[0].bridge.abi_position == 3
+    assert function.results[0].native_call_slot is function.native_call_slots[3]
 
 
 def test_generator_rejects_hidden_result_native_action_disagreement():
     plan = _hidden_result_plan()
     function = plan.namespaces[0].functions[0]
-    result = function.result
+    result = function.results[0]
     replacement = (
         NativeBarrierAction.PASS_VALUE
         if result.bridge.native_action is not NativeBarrierAction.PASS_VALUE
@@ -110,7 +110,7 @@ def test_generator_rejects_hidden_result_native_action_disagreement():
         plan,
         lambda item: replace(
             item,
-            result=replace(result, bridge=replace(result.bridge, native_action=replacement)),
+            results=(replace(result, bridge=replace(result.bridge, native_action=replacement)),),
         ),
     )
 
@@ -121,13 +121,13 @@ def test_generator_rejects_hidden_result_native_action_disagreement():
 def test_generator_rejects_hidden_result_slot_codegen_action_disagreement():
     plan = _hidden_result_plan()
     function = plan.namespaces[0].functions[0]
-    result = function.result
+    result = function.results[0]
     edited_slot = replace(result.native_call_slot, codegen_action=CodegenAction.DIRECT_VALUE)
     invalid = _edit_first_function(
         plan,
         lambda item: replace(
             item,
-            result=replace(result, native_call_slot=edited_slot),
+            results=(replace(result, native_call_slot=edited_slot),),
             native_call_slots=tuple(
                 edited_slot if slot.native_position == edited_slot.native_position else slot
                 for slot in item.native_call_slots

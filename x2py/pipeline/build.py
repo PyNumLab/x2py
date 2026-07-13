@@ -83,6 +83,7 @@ _WRAPPER_PLAN_COMPLETED_LANES = frozenset(
         "scalar-raw-address-inputs",
         "scalar-direct-results",
         "scalar-hidden-outputs",
+        "scalar-multiple-results",
         "scalar-optional-inputs",
         "scalar-descriptor-inputs",
         "scalar-writebacks",
@@ -115,6 +116,8 @@ _WRAPPER_PLAN_EVIDENCE = (
     "test_scalar_value_storage_raw_address_out_and_inout_match_both_routes",
     "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
     "test_scalar_primitive_kinds_match_both_routes_without_array_blockers",
+    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+    "test_multiple_scalar_results_match_both_routes_without_array_blockers",
 )
 
 

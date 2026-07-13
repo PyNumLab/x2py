@@ -673,6 +673,7 @@ def _native_array_handle_blocker(
 
 def _complete_callable_address_policy(function: models.SemanticFunction) -> None:
     """Validate Python/native address boundaries and complete scalar projections."""
+    _complete_hidden_scalar_output_projections(function)
     visible_scalar_names = {
         argument.name for argument in function.arguments if _is_visible_extent_source(argument.semantic_type)
     }
@@ -691,6 +692,20 @@ def _complete_callable_address_policy(function: models.SemanticFunction) -> None
             visible_scalar_names=visible_scalar_names,
         )
     _complete_native_address_projections(function)
+
+
+def _complete_hidden_scalar_output_projections(function: models.SemanticFunction) -> None:
+    """Complete every primitive hidden ``Return(...)`` as address storage."""
+    arguments_by_name = {argument.name: argument for argument in function.arguments}
+    for mapping in function.projection:
+        if mapping.python_position is not None or mapping.result_position is None:
+            continue
+        if mapping.value_kind:
+            continue
+        argument = arguments_by_name.get(mapping.python_name)
+        if argument is None or not _is_primitive_scalar_value(argument.semantic_type, allow_completed_projection=True):
+            continue
+        _apply_scalar_address_projection(argument)
 
 
 def _complete_native_address_projections(function: models.SemanticFunction) -> None:

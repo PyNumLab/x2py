@@ -2,7 +2,8 @@
 
 Scope: scalar calls, scalar kind coverage, `value` and scalar `bind(C)`
 behavior, value/storage/raw-address boundaries, scalar output and inout
-projection, enum-like values, and the basic compiled-wrapper baseline.
+projection, direct-plus-hidden multiple-result assembly, enum-like values, and
+the basic compiled-wrapper baseline.
 
 Focused pytest command: `python3 -m pytest -q tests/wrapper/fortran/scalars`
 

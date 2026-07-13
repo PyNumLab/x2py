@@ -67,6 +67,7 @@ class _CFunctionContext:
     native_outputs: dict[str, str]
     result_name: str | None
     python_result_name: str | None
+    python_results: dict[str, str]
 
 
 class CBindingGenerator(ClassVisitor):
@@ -83,8 +84,8 @@ class CBindingGenerator(ClassVisitor):
         """Reject unsupported actions and types for one binding function."""
         for argument in function.arguments:
             self._require_argument_supported(argument)
-        if function.result is not None:
-            PrimitiveScalarTypeRegistry.type_for(function.result.semantic_type_name)
+        for result in function.results:
+            PrimitiveScalarTypeRegistry.type_for(result.semantic_type_name)
         for slot in function.native_call_slots:
             self._require_native_result_supported(function, slot)
         for action in function.writeback_actions:
@@ -171,7 +172,7 @@ class CBindingGenerator(ClassVisitor):
     def requires_runtime_support(self, plan: ModulePlan) -> bool:
         """Return whether module lowering consumes NumPy/runtime helpers."""
         return bool(tuple(self._variables(plan))) or any(
-            function.arguments or function.result is not None for function in self._functions(plan)
+            function.arguments or function.results for function in self._functions(plan)
         )
 
     def _module_needs_allocator(self, plan: ModulePlan) -> bool:
@@ -646,60 +647,79 @@ class CBindingGenerator(ClassVisitor):
         plan: ResultPlan,
         *,
         context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
+        failure_cleanup: tuple[str, ...] = (),
+    ) -> tuple[CExpressionStatement | CDeclaration | CIf, ...]:
         """Lower one result through its completed binding action."""
-        return self._lower_result(plan, context)
+        return self._lower_result(plan, context, failure_cleanup)
 
     def _lower_result(
         self,
         plan: ResultPlan,
         context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
+        failure_cleanup: tuple[str, ...],
+    ) -> tuple[CExpressionStatement | CDeclaration | CIf, ...]:
         """Dispatch one completed binding result action explicitly."""
         action = plan.binding.codegen_action
         match action:
             case CodegenAction.DIRECT_VALUE:
-                return self._lower_result_direct_value(plan, context)
+                return self._lower_result_direct_value(plan, context, failure_cleanup)
             case CodegenAction.HIDDEN_OUTPUT:
-                return self._lower_result_hidden_output(plan, context)
+                return self._lower_result_hidden_output(plan, context, failure_cleanup)
         raise ValueError(f"Unsupported C result action for {plan.owner_path!r}: {action!r}")
 
     def _lower_result_direct_value(
         self,
         plan: ResultPlan,
         context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        return self._lower_result_value(plan, context)
+        failure_cleanup: tuple[str, ...],
+    ) -> tuple[CExpressionStatement | CDeclaration | CIf, ...]:
+        return self._lower_result_value(plan, context, failure_cleanup)
 
     def _lower_result_hidden_output(
         self,
         plan: ResultPlan,
         context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        return self._lower_result_value(plan, context)
+        failure_cleanup: tuple[str, ...],
+    ) -> tuple[CExpressionStatement | CDeclaration | CIf, ...]:
+        return self._lower_result_value(plan, context, failure_cleanup)
 
     def _lower_result_value(
         self,
         plan: ResultPlan,
         context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        """Return Python scalar projection after the completed native envelope."""
+        failure_cleanup: tuple[str, ...],
+    ) -> tuple[CExpressionStatement | CDeclaration | CIf, ...]:
+        """Convert one native result into its binding-owned Python consumer."""
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
-        if (
-            scalar_type.python_result_converter is None
-            or context.result_name is None
-            or context.python_result_name is None
-        ):
+        native_name = self._result_native_name(plan, context)
+        python_name = context.python_results.get(plan.owner_path)
+        if scalar_type.python_result_converter is None or python_name is None:
             raise ValueError(f"Unsupported scalar result type {plan.semantic_type_name!r}")
         return (
             CDeclaration(
-                context.python_result_name,
+                python_name,
                 "PyObject *",
-                CodeExpression(f"{scalar_type.python_result_converter}(&{context.result_name})"),
+                CodeExpression(f"{scalar_type.python_result_converter}(&{native_name})"),
             ),
-            CExpressionStatement(CodeExpression(f"if ({context.python_result_name} == NULL) return NULL")),
-            CReturn(CodeExpression(context.python_result_name)),
+            CIf(
+                CodeExpression(f"{python_name} == NULL"),
+                body=(
+                    *(CExpressionStatement(CodeExpression(f"Py_DECREF({name})")) for name in failure_cleanup),
+                    CReturn(CodeExpression("NULL")),
+                ),
+            ),
         )
+
+    def _result_native_name(self, plan: ResultPlan, context: _CFunctionContext) -> str:
+        """Return the validated C storage consumed by one result conversion."""
+        if plan.source_kind == "direct_return":
+            if context.result_name is None:
+                raise ValueError(f"Direct result {plan.owner_path!r} has no C storage")
+            return context.result_name
+        try:
+            return context.native_outputs[plan.bridge.native_result_role]
+        except KeyError:
+            raise ValueError(f"Hidden result {plan.owner_path!r} has no C output storage") from None
 
     def _output_nodes(
         self,
@@ -711,22 +731,55 @@ class CBindingGenerator(ClassVisitor):
             *self._lower_native_call(plan, self._bridge_call_statement(plan, context)),
             *self._lower_status_error(plan, context),
         ]
-        if plan.result is not None:
-            nodes.extend(self.visit(plan.result, context=context))
+        if plan.results:
+            nodes.extend(self._binding_result_nodes(plan, context))
         elif plan.writeback_actions:
             nodes.extend(self._writeback_nodes(plan, context))
         else:
             nodes.append(CExpressionStatement(CodeExpression("Py_RETURN_NONE")))
         return tuple(nodes)
 
+    def _binding_result_nodes(
+        self,
+        plan: FunctionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CExpressionStatement | CDeclaration | CIf | CReturn, ...]:
+        """Convert ordered results and assemble a tuple only in the binding."""
+        ordered = tuple(sorted(plan.results, key=lambda item: item.result_position))
+        converted = []
+        nodes = []
+        for result in ordered:
+            nodes.extend(self.visit(result, context=context, failure_cleanup=tuple(converted)))
+            converted.append(context.python_results[result.owner_path])
+        if len(converted) == 1:
+            nodes.append(CReturn(CodeExpression(converted[0])))
+            return tuple(nodes)
+        aggregate = context.python_result_name
+        if aggregate is None:
+            raise ValueError(f"{plan.owner_path!r} multiple results have no aggregate binding role")
+        nodes.extend(
+            (
+                CDeclaration(aggregate, "PyObject *", CodeExpression(f"PyTuple_New({len(converted)})")),
+                CIf(
+                    CodeExpression(f"{aggregate} == NULL"),
+                    body=(
+                        *(CExpressionStatement(CodeExpression(f"Py_DECREF({name})")) for name in converted),
+                        CReturn(CodeExpression("NULL")),
+                    ),
+                ),
+                *(
+                    CExpressionStatement(CodeExpression(f"PyTuple_SET_ITEM({aggregate}, {position}, {name})"))
+                    for position, name in enumerate(converted)
+                ),
+                CReturn(CodeExpression(aggregate)),
+            )
+        )
+        return tuple(nodes)
+
     def _bridge_call_statement(self, plan: FunctionPlan, context: _CFunctionContext) -> CExpressionStatement:
         """Return the mechanical bridge call selected by result storage."""
         call = self._bridge_call(plan, context)
-        expression = (
-            f"{context.result_name} = {call}"
-            if plan.result is not None and plan.result.source_kind == "direct_return"
-            else call
-        )
+        expression = f"{context.result_name} = {call}" if self._direct_result(plan) is not None else call
         return CExpressionStatement(CodeExpression(expression))
 
     def _lower_native_call(
@@ -911,15 +964,14 @@ class CBindingGenerator(ClassVisitor):
             for slot in plan.native_call_slots
             if slot.source_kind == "result"
         }
-        if plan.result is None:
-            python_result = "result_obj" if plan.writeback_actions else None
-            return _CFunctionContext(arguments, native_outputs, None, python_result)
-        base = (
-            native_outputs[plan.result.bridge.native_result_role]
-            if plan.result.source_kind == "hidden_output"
-            else "result"
-        )
-        return _CFunctionContext(arguments, native_outputs, base, "result_obj")
+        ordered_results = tuple(sorted(plan.results, key=lambda item: item.result_position))
+        python_results = {
+            result.owner_path: ("result_obj" if len(ordered_results) == 1 else f"result_{result.result_position}_obj")
+            for result in ordered_results
+        }
+        python_result = "result_obj" if ordered_results or plan.writeback_actions else None
+        native_result = "result" if self._direct_result(plan) is not None else None
+        return _CFunctionContext(arguments, native_outputs, native_result, python_result, python_results)
 
     def _keyword_declaration(self, plan: FunctionPlan) -> CDeclaration:
         keywords = ", ".join(
@@ -945,9 +997,10 @@ class CBindingGenerator(ClassVisitor):
         plan: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CDeclaration, ...]:
-        if plan.result is None or plan.result.source_kind != "direct_return" or context.result_name is None:
+        result = self._direct_result(plan)
+        if result is None or context.result_name is None:
             return ()
-        scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.result.semantic_type_name)
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(result.semantic_type_name)
         return (CDeclaration(context.result_name, scalar_type.c_spelling),)
 
     def _native_output_declarations(
@@ -1014,11 +1067,14 @@ class CBindingGenerator(ClassVisitor):
 
     def _bridge_return_type(self, plan: FunctionPlan) -> str:
         """Return the direct bridge result type, or void for subroutines."""
-        if plan.result is None:
+        result = self._direct_result(plan)
+        if result is None:
             return "void"
-        if plan.result.source_kind != "direct_return":
-            return "void"
-        return PrimitiveScalarTypeRegistry.type_for(plan.result.semantic_type_name).c_spelling
+        return PrimitiveScalarTypeRegistry.type_for(result.semantic_type_name).c_spelling
+
+    def _direct_result(self, plan: FunctionPlan) -> ResultPlan | None:
+        """Return the sole direct native function result, when present."""
+        return next((result for result in plan.results if result.source_kind == "direct_return"), None)
 
     def _bridge_argument_parameters(self, argument: ArgumentTransferPlan) -> tuple[CParameter, ...]:
         """Return the bridge ABI parameters for one Python argument."""

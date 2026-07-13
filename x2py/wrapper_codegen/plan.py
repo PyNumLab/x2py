@@ -254,7 +254,7 @@ class FunctionPlan(StageRecord):
     binding: BindingFunctionPlan
     bridge: BridgeFunctionPlan
     arguments: tuple[ArgumentTransferPlan, ...]
-    result: ResultPlan | None
+    results: tuple[ResultPlan, ...]
     native_call_slots: tuple[NativeCallSlotPlan, ...]
     available_roles: tuple[str, ...]
     writeback_actions: tuple[LifecycleActionPlan, ...] = ()

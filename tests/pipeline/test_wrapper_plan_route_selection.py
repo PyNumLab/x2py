@@ -72,6 +72,8 @@ def scale(x: Float64) -> Float64: ...
         "test_scalar_value_storage_raw_address_out_and_inout_match_both_routes",
         "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
         "test_scalar_primitive_kinds_match_both_routes_without_array_blockers",
+        "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+        "test_multiple_scalar_results_match_both_routes_without_array_blockers",
     )
     assert decision.selection_reason == "wrapper-plan route forced for internal migration verification"
 
@@ -218,6 +220,32 @@ def update_raw(value: Addr(Float64)) -> None: ...
         "void-calls",
         "native-call-runtime",
         "scalar-raw-address-inputs",
+    )
+
+
+def test_route_selector_selects_multiple_scalar_results_in_production():
+    module = _completed_module(
+        """
+@native_call([Addr(Arg(0)), Return("status", 1)])
+def with_scalar(n: Int32) -> tuple[Int32, Int32]: ...
+""",
+        module_name="multiple_scalar_results",
+    )
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+    )
+
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.rollout_eligible is True
+    assert decision.covered_lanes == (
+        "scalar-inputs",
+        "scalar-direct-results",
+        "scalar-hidden-outputs",
+        "scalar-multiple-results",
+        "native-call-runtime",
     )
 
 

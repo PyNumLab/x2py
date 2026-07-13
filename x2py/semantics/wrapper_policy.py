@@ -231,7 +231,7 @@ class FunctionWrapperPolicy:
     status_error: NativeStatusErrorPolicy | None
     supported: bool
     arguments: tuple[ArgumentPolicy, ...] = ()
-    result: ResultPolicy | None = None
+    results: tuple[ResultPolicy, ...] = ()
     native_call_slots: tuple[NativeCallSlotPolicy, ...] = ()
     blockers: tuple[str, ...] = ()
     writeback_actions: tuple[LifecyclePolicy, ...] = ()
@@ -321,7 +321,7 @@ def build_function_wrapper_policy(
         argument_native_positions,
         native_call_slots,
     )
-    result, result_blockers = _result_policy(function, owner_path)
+    results, result_blockers = _result_policies(function, owner_path)
     writeback_actions, lifecycle_blockers = _lifecycle_policies(arguments)
     status_error = _completed_native_status_error_policy(function)
     blockers = (
@@ -343,7 +343,7 @@ def build_function_wrapper_policy(
         status_error=status_error,
         supported=not blockers,
         arguments=tuple(arguments),
-        result=result,
+        results=results,
         native_call_slots=tuple(native_call_slots),
         blockers=tuple(blockers),
         writeback_actions=writeback_actions,
@@ -422,45 +422,48 @@ def _argument_policies(
     return policies, tuple(blockers)
 
 
-def _result_policy(
+def _result_policies(
     function: models.SemanticFunction,
     owner_path: str,
-) -> tuple[ResultPolicy | None, tuple[str, ...]]:
-    hidden_results = _hidden_result_policies(function, owner_path)
+) -> tuple[tuple[ResultPolicy, ...], tuple[str, ...]]:
+    """Return every ordered binding result consumer for one function."""
+    hidden_candidates = _hidden_result_policies(function, owner_path)
+    hidden_results = tuple(policy for policy, _blockers in hidden_candidates if policy is not None)
+    hidden_blockers = tuple(reason for _policy, blockers in hidden_candidates for reason in blockers)
     if function.return_type is None:
         projected_arguments = _visible_projected_arguments(function)
-        if len(hidden_results) == 1 and not projected_arguments:
-            return hidden_results[0]
-        if len(projected_arguments) == 1 and not hidden_results:
-            return None, ()
+        if hidden_results and not projected_arguments:
+            return hidden_results, (*hidden_blockers, *_result_position_blockers(hidden_results))
+        if projected_arguments and not hidden_results:
+            return (), hidden_blockers
         if not hidden_results and not projected_arguments:
-            return None, ()
-        return None, ("scalar lane requires one direct, hidden, or writeback result",)
+            return (), hidden_blockers
+        return (), (*hidden_blockers, "scalar lane cannot combine binding results with argument writeback")
 
     decision = function.metadata.get(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA)
     if not isinstance(decision, OwnershipDecision):
-        return None, ("function result is missing completed ownership policy",)
+        return (), (*hidden_blockers, "function result is missing completed ownership policy")
     blockers = list(_result_blockers(function.return_type, decision))
     bridge_data_action, bridge_copy_reason = _result_bridge_data_action(function.return_type)
     if bridge_data_action is BridgeDataAction.BLOCKED and decision.kind is not ObjectKind.SCALAR:
         blockers.append("result has no completed bridge data action")
-    if hidden_results:
-        blockers.append("direct scalar returns cannot share the first Phase 2B lane with hidden scalar outputs")
+    direct_result = ResultPolicy(
+        owner_path=f"{owner_path}.return",
+        semantic_type_name=function.return_type.name,
+        rank=int(function.return_type.rank or 0),
+        ownership=decision,
+        codegen_action=decision.codegen_action,
+        python_barrier_action=decision.python_barrier_action,
+        native_barrier_action=decision.native_barrier_action,
+        storage_mode=decision.storage_mode,
+        boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
+        bridge_data_action=bridge_data_action,
+        bridge_copy_reason=bridge_copy_reason,
+    )
+    results = (direct_result, *hidden_results)
     return (
-        ResultPolicy(
-            owner_path=f"{owner_path}.return",
-            semantic_type_name=function.return_type.name,
-            rank=int(function.return_type.rank or 0),
-            ownership=decision,
-            codegen_action=decision.codegen_action,
-            python_barrier_action=decision.python_barrier_action,
-            native_barrier_action=decision.native_barrier_action,
-            storage_mode=decision.storage_mode,
-            boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
-            bridge_data_action=bridge_data_action,
-            bridge_copy_reason=bridge_copy_reason,
-        ),
-        tuple(blockers),
+        results,
+        (*blockers, *hidden_blockers, *_result_position_blockers(results)),
     )
 
 
@@ -926,9 +929,19 @@ def _hidden_result_blockers(
         blockers.append(f"hidden result {argument.name!r} does not project a Python result")
     if not isinstance(mapping.native_position, int):
         blockers.append(f"hidden result {argument.name!r} is missing a native position")
-    if mapping.result_position != 0:
-        blockers.append(f"hidden result {argument.name!r} has result position {mapping.result_position}, not zero")
+    if not isinstance(mapping.result_position, int) or isinstance(mapping.result_position, bool):
+        blockers.append(f"hidden result {argument.name!r} has no integer result position")
+    elif mapping.result_position < 0:
+        blockers.append(f"hidden result {argument.name!r} has negative result position {mapping.result_position}")
     return tuple(blockers)
+
+
+def _result_position_blockers(results: tuple[ResultPolicy, ...]) -> tuple[str, ...]:
+    """Require completed Python results to cover one contiguous order."""
+    positions = tuple(result.result_position for result in results)
+    if sorted(positions) == list(range(len(positions))) and len(set(positions)) == len(positions):
+        return ()
+    return (f"binding result positions must cover 0..{len(positions) - 1} exactly once; received {positions}",)
 
 
 def _function_shape_blockers(function: models.SemanticFunction) -> tuple[str, ...]:

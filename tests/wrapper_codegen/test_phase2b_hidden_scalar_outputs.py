@@ -20,9 +20,8 @@ def scale(x: Float64) -> Float64: ...
     complete_semantic_policies(module)
     plan = WrapperPlanner().build(module)
     function = plan.namespaces[0].functions[0]
-    result = function.result
+    result = function.results[0]
 
-    assert result is not None
     assert result.native_call_slot is function.native_call_slots[result.bridge.abi_position]
 
     artifacts = WrapperCodeGenerator().generate(plan)

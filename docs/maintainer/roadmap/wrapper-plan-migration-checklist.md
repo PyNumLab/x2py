@@ -491,7 +491,7 @@ summary, the exhaustive matrix, and the test tree disagree.
 
 | Status | Collected nodes |
 | --- | ---: |
-| `wrapper-plan` | 65 |
+| `wrapper-plan` | 66 |
 | `dual-route` | 0 |
 | `legacy` | 134 |
 | `not-applicable` | 95 |
@@ -502,14 +502,17 @@ summary, the exhaustive matrix, and the test tree disagree.
 This history keeps phase movement visible instead of replacing the previous
 snapshot with only the latest totals. Phase 2D moved all 17 dual-route nodes
 and 44 legacy nodes to production plan routing, then added two parametrized
-plan-route nodes. Phase 2E adds two scalar-only parity nodes; the original
-mixed integration nodes retain their real array/string/object blockers.
+plan-route nodes. Phase 2E adds two scalar-only parity nodes, and Phase 2F adds
+one isolated direct-return plus hidden-output scalar aggregation node. The
+original mixed integration nodes retain their real array/string/object
+blockers.
 
 | Proven checkpoint | `wrapper-plan` | `dual-route` | `legacy` | `not-applicable` | `deferred-real-library` | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Before Phase 2D | 0 | 17 | 178 | 95 | 2 | 292 |
 | Phase 2D complete | 63 | 0 | 134 | 95 | 2 | 294 |
 | Phase 2E scalar isolation | 65 | 0 | 134 | 95 | 2 | 296 |
+| Phase 2F scalar result aggregation | 66 | 0 | 134 | 95 | 2 | 297 |
 
 Migration is complete only when `legacy`, `dual-route`, and
 `deferred-real-library` are all zero. At that point every runtime-generating
@@ -618,7 +621,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_allocatable_scalar_descriptor_distinguishes_omitted_none_and_value` | production plan route with deliberate legacy rollback comparison | optional/presence; nullable scalar descriptor; build/artifact integration | `wrapper-plan` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_arguments_drive_fortran_present_behavior[*]` | source/generated-.pyi parity or parametrized route | optional/presence/writeback | `legacy` |
 | `tests/wrapper/fortran/function_calls/test_scalar_writeback_plan.py::test_scalar_copy_in_out_returns_replacement_through_both_routes` | production plan route with deliberate legacy rollback comparison | scalar copy-in/native mutation/copy-out/cleanup; build/artifact integration | `wrapper-plan` |
-| `tests/wrapper/fortran/function_calls/test_output_arguments.py::*` | source/generated-.pyi parity or parametrized route | multiple-result aggregation; ordinary arrays; strings; derived types/snapshots; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/function_calls/test_output_arguments.py::*` | source/generated-.pyi parity or parametrized route | mixed-type multiple-result aggregation; ordinary arrays; strings; derived types/snapshots; native handles/descriptors | `legacy` |
 | `tests/wrapper/fortran/layout_rules/test_wrapper_guide_layout.py::*` | non-generating: wrapper docs/test layout | test/docs layout | `not-applicable` |
 | `tests/wrapper/fortran/module_state/test_allocatable_replacement.py::*` | source/generated-.pyi parity or parametrized route | module variables/state; native handles/descriptors | `legacy` |
 | `tests/wrapper/fortran/module_state/test_allocatable_views.py::*` | source/generated-.pyi parity or parametrized route | module variables/state; native handles/descriptors | `legacy` |
@@ -655,7 +658,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/runtime_behavior/test_runtime_recursion.py::*` | source/generated-.pyi parity or parametrized route | runtime policies/errors/GIL; scalar inputs/results | `wrapper-plan` |
 | `tests/wrapper/fortran/scalars/test_fortran_enums.py::test_fortran_enums_preserve_integer_runtime_surface[*]` | source/generated-.pyi parity or parametrized route | scalar inputs/results; module variables/state | `legacy` |
 | `tests/wrapper/fortran/scalars/test_fortran_enums.py::test_fortran_enums_preserve_values_in_generated_pyi_contract` | direct wrapper/build route | scalar inputs/results; module variables/state | `legacy` |
-| `tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::*` | scalar-only copied native routines with deliberate legacy/direct-plan parity | primitive scalar kinds; value and `Addr(Arg(i))` inputs; hidden output; copy-in/copy-out; rank-zero storage; raw `Addr(T)`; native slot reordering | `wrapper-plan` |
+| `tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::*` | scalar-only copied native routines with deliberate legacy/direct-plan parity | primitive scalar kinds; value and `Addr(Arg(i))` inputs; hidden output; copy-in/copy-out; rank-zero storage; raw `Addr(T)`; native slot reordering; direct-plus-hidden result tuple assembly | `wrapper-plan` |
 | `tests/wrapper/fortran/scalars/test_scalar_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
 | `tests/wrapper/fortran/scalars/test_scalar_kinds.py::*` | source/generated-.pyi parity or parametrized route | scalar inputs/results | `legacy` |
 | `tests/wrapper/fortran/scalars/test_value_and_bind_c.py::*` | source/generated-.pyi parity or parametrized route | scalar inputs/results; native-call projections | `legacy` |
@@ -1137,7 +1140,7 @@ the legacy generator.
   route counts, and leave the original mixed integration nodes on their real
   datatype blockers.
 
-## Phase 2F — Multiple Scalar Result Assembly — Pending
+## Phase 2F — Multiple Scalar Result Assembly — Complete
 
 This is result aggregation, not another scalar boundary representation. The
 first isolated oracle is the `with_scalar` policy from
@@ -1146,13 +1149,36 @@ one hidden primitive scalar output, assembled into a Python tuple in declared
 result order. Keep it separate from arrays, strings, derived types, and native
 handles before widening the plan route.
 
-- [ ] Add a scalar-only copied native routine and contract for a direct return
+The completed representation is an ordered `FunctionWrapperPolicy.results`
+tuple and an ordered `FunctionPlan.results` tuple. Each Python-visible result
+has its own `ResultPolicy` and `ResultPlan`, including its binding consumer and
+`result_position`. A direct native function return has
+`source_kind="direct_return"` and no native-call slot. A hidden output has
+`source_kind="hidden_output"` and references the exact same mutable
+`NativeCallSlotPlan` stored in `FunctionPlan.native_call_slots`. The bridge
+uses the sole direct result, when present, to select its function result and
+passes every hidden result through its completed output-address slot. It does
+not assemble Python results.
+
+After the native call, the binding converts each result from its completed
+source role exactly once. One result is returned directly; two or more are
+assembled into a Python tuple in ascending `result_position`. Tuple allocation,
+reference transfer, and failure cleanup are binding-local emission details,
+not semantic policy. Before either backend emits source, validation requires
+result positions to cover `0..N-1` exactly once, at most one direct result,
+every hidden result to share its function native-call slot, and every
+non-status native output slot to have exactly one binding result consumer.
+Phase 2F does not combine these consumers with projected argument writeback;
+that broader aggregation remains blocked until it receives its own completed
+policy.
+
+- [x] Add a scalar-only copied native routine and contract for a direct return
   plus hidden scalar `Return(...)` slot.
-- [ ] Represent every Python result as an explicit binding consumer while
+- [x] Represent every Python result as an explicit binding consumer while
   preserving the bridge's direct-return and output-address ABI roles.
-- [ ] Validate contiguous result positions and reject unclaimed outputs before
+- [x] Validate contiguous result positions and reject unclaimed outputs before
   either backend emits source.
-- [ ] Prove compiled legacy/direct-plan parity, then update the route counts.
+- [x] Prove compiled legacy/direct-plan parity, then update the route counts.
 
 ## Phase 5 — Strings
 

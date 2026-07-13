@@ -235,6 +235,32 @@ def conj_c128(value: Complex128) -> Complex128: ...
     )
 
 
+def _build_multiple_scalar_result_modules(tmp_path: Path):
+    return _build_contract_routes(
+        tmp_path,
+        module_name="multiple_scalar_results_plan",
+        source_text="""
+module multiple_scalar_results_plan
+  use iso_c_binding, only: c_int32_t
+contains
+  function with_scalar(n, status) result(value)
+    integer(c_int32_t), intent(in) :: n
+    integer(c_int32_t), intent(out) :: status
+    integer(c_int32_t) :: value
+    value = n * 2
+    status = n + 3
+  end function with_scalar
+end module multiple_scalar_results_plan
+""",
+        contract_text="""
+from x2py.contracts import Addr, Arg, Int32, Return, native_call
+
+@native_call([Addr(Arg(0)), Return("status", 1)])
+def with_scalar(n: Int32) -> tuple[Int32, Int32]: ...
+""",
+    )
+
+
 def test_scalar_value_storage_raw_address_out_and_inout_match_both_routes(tmp_path: Path):
     modules = _build_scalar_boundary_modules(tmp_path)
 
@@ -284,6 +310,13 @@ def test_scalar_value_storage_raw_address_out_and_inout_match_both_routes(tmp_pa
             module.bump_storage(read_only)
         with pytest.raises(TypeError):
             module.bump_raw(raw)
+
+
+def test_multiple_scalar_results_match_both_routes_without_array_blockers(tmp_path: Path):
+    modules = _build_multiple_scalar_result_modules(tmp_path)
+
+    for module in modules:
+        assert module.with_scalar(np.int32(4)) == (np.int32(8), np.int32(7))
 
 
 def test_scalar_primitive_kinds_match_both_routes_without_array_blockers(tmp_path: Path):

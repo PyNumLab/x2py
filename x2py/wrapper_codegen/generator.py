@@ -290,8 +290,8 @@ class WrapperCodeGenerator:
             diagnostics.extend(self._native_slot_diagnostics(slot))
         for argument in plan.arguments:
             diagnostics.extend(self._argument_diagnostics(argument, slots))
-        if plan.result is not None:
-            diagnostics.extend(self._result_diagnostics(plan.result, slots, plan.available_roles))
+        for result in plan.results:
+            diagnostics.extend(self._result_diagnostics(result, slots, plan.available_roles))
         for action in (*plan.writeback_actions, *plan.cleanup_actions, *plan.release_actions):
             diagnostics.extend(self._lifecycle_diagnostics(action, plan.available_roles))
         diagnostics.extend(self._writeback_phase_diagnostics(plan))
@@ -363,7 +363,7 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-native-position", plan.native_position))
         if plan.native_call_slot.python_position != plan.python_position:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-python-position", plan.python_position))
-        if function_slots.get(plan.native_position) != plan.native_call_slot:
+        if function_slots.get(plan.native_position) is not plan.native_call_slot:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-function-native-slot", plan.native_position)
             )
@@ -544,7 +544,7 @@ class WrapperCodeGenerator:
             *self._hidden_result_shape_diagnostics(plan, slot),
             *self._hidden_result_policy_consistency_diagnostics(plan, slot),
         ]
-        if function_slots.get(slot.native_position) != slot:
+        if function_slots.get(slot.native_position) is not slot:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-function-result-slot", slot.native_position)
             )
@@ -756,6 +756,7 @@ class WrapperCodeGenerator:
     def _function_output_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return output projection and native callable-kind diagnostics."""
         diagnostics = [*self._mixed_output_diagnostics(plan)]
+        diagnostics.extend(self._binding_result_diagnostics(plan))
         diagnostics.extend(self._writeback_result_diagnostics(plan))
         diagnostics.extend(self._native_callable_kind_diagnostics(plan))
         diagnostics.extend(self._unclaimed_result_diagnostics(plan))
@@ -763,9 +764,24 @@ class WrapperCodeGenerator:
 
     def _mixed_output_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Reject simultaneous public result and writeback projections."""
-        if plan.result is not None and plan.writeback_actions:
+        if plan.results and plan.writeback_actions:
             return (self._diagnostic(plan.owner_path, "mixed-result-and-writeback", plan.owner_path),)
         return ()
+
+    def _binding_result_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate ordered consumers and the sole direct native result."""
+        diagnostics = list(
+            self._sequence_diagnostics(
+                plan.owner_path,
+                "binding-result",
+                tuple(result.result_position for result in plan.results),
+                len(plan.results),
+            )
+        )
+        direct_results = tuple(result for result in plan.results if result.source_kind == "direct_return")
+        if len(direct_results) > 1:
+            diagnostics.append(self._diagnostic(plan.owner_path, "multiple-direct-results", len(direct_results)))
+        return tuple(diagnostics)
 
     def _writeback_result_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate contiguous Python result positions for copy-out actions."""
@@ -783,29 +799,36 @@ class WrapperCodeGenerator:
 
     def _native_callable_kind_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Require callable kind to agree with the public result representation."""
-        requires_subroutine = plan.result is None or plan.result.source_kind == "hidden_output"
+        requires_subroutine = not any(result.source_kind == "direct_return" for result in plan.results)
         if plan.bridge.native_is_subroutine != requires_subroutine:
             return (self._diagnostic(plan.owner_path, "inconsistent-native-callable-kind", requires_subroutine),)
         return ()
 
     def _unclaimed_result_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
-        """Require every native result slot to have an explicit binding consumer."""
+        """Require exactly one binding or status consumer per native output."""
         claimed_roles = self._claimed_result_roles(plan)
-        return tuple(
-            self._diagnostic(plan.owner_path, "unclaimed-native-result", slot.symbolic_role)
-            for slot in plan.native_call_slots
-            if slot.source_kind == "result" and slot.symbolic_role not in claimed_roles
-        )
+        diagnostics = []
+        for slot in plan.native_call_slots:
+            if slot.source_kind != "result":
+                continue
+            claim_count = claimed_roles[slot.symbolic_role]
+            if claim_count == 0:
+                diagnostics.append(self._diagnostic(plan.owner_path, "unclaimed-native-result", slot.symbolic_role))
+            elif claim_count > 1:
+                diagnostics.append(
+                    self._diagnostic(plan.owner_path, "multiple-native-result-consumers", slot.symbolic_role)
+                )
+        return tuple(diagnostics)
 
-    def _claimed_result_roles(self, plan: FunctionPlan) -> set[str]:
+    def _claimed_result_roles(self, plan: FunctionPlan) -> Counter[str]:
         """Return public and status-policy consumers of native result slots."""
-        roles = set()
-        if plan.result is not None and plan.result.source_kind == "hidden_output":
-            roles.add(plan.result.bridge.native_result_role)
+        roles = Counter(
+            result.bridge.native_result_role for result in plan.results if result.source_kind == "hidden_output"
+        )
         if plan.binding.status_error is not None:
-            roles.add(plan.binding.status_error.status_role)
+            roles[plan.binding.status_error.status_role] += 1
             if plan.binding.status_error.message_role is not None:
-                roles.add(plan.binding.status_error.message_role)
+                roles[plan.binding.status_error.message_role] += 1
         return roles
 
     def _status_error_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
@@ -890,8 +913,9 @@ class WrapperCodeGenerator:
         roles = [argument.binding.handoff_role for argument in plan.arguments]
         roles.extend(slot.symbolic_role for slot in plan.native_call_slots if slot.source_kind == "literal")
         roles.extend(slot.symbolic_role for slot in plan.native_call_slots if slot.source_kind == "result")
-        if plan.result is not None and plan.result.source_kind == "direct_return":
-            roles.append(plan.result.bridge.native_result_role)
+        roles.extend(
+            result.bridge.native_result_role for result in plan.results if result.source_kind == "direct_return"
+        )
         return tuple(
             self._diagnostic(plan.owner_path, "duplicate-symbolic-role", role)
             for role, count in Counter(roles).items()
@@ -902,8 +926,9 @@ class WrapperCodeGenerator:
         """Require the advertised roles to match argument and result producers."""
         expected = [argument.binding.handoff_role for argument in plan.arguments]
         expected.extend(slot.symbolic_role for slot in plan.native_call_slots if slot.source_kind == "result")
-        if plan.result is not None and plan.result.source_kind == "direct_return":
-            expected.append(plan.result.bridge.native_result_role)
+        expected.extend(
+            result.bridge.native_result_role for result in plan.results if result.source_kind == "direct_return"
+        )
         if Counter(plan.available_roles) != Counter(expected):
             return (self._diagnostic(plan.owner_path, "inconsistent-available-roles", plan.available_roles),)
         return ()

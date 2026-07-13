@@ -112,12 +112,14 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         lanes = []
         if policy.writeback_actions:
             lanes.append("scalar-writebacks")
-        result_lane = "scalar-direct-results"
-        if policy.result is not None and policy.result.source_kind == "hidden_output":
-            result_lane = "scalar-hidden-outputs"
-        if policy.result is not None:
-            lanes.append(result_lane)
-        if policy.result is None and not policy.writeback_actions:
+        source_kinds = {result.source_kind for result in policy.results}
+        if "direct_return" in source_kinds:
+            lanes.append("scalar-direct-results")
+        if "hidden_output" in source_kinds:
+            lanes.append("scalar-hidden-outputs")
+        if len(policy.results) > 1:
+            lanes.append("scalar-multiple-results")
+        if not policy.results and not policy.writeback_actions:
             lanes.append("void-calls")
         return tuple(lanes)
 
