@@ -756,17 +756,20 @@ class FortranToIRConverter(ClassVisitor):
             for enum in getattr(module, "enums", [])
             for enumerator in enum.enumerators
         ]
+        module_variables = [
+            self.visit(var, as_data_member=True, derived_type_context=context)
+            for var in getattr(module, "variables", [])
+            if var.name.casefold() not in common_variables
+        ]
+        for variable in module_variables:
+            if variable.origin.native_scope is None:
+                variable.origin.native_scope = module.name
         return SemanticModule(
             name=module.name,
             functions=semantic_functions,
             overload_sets=overload_sets,
             classes=semantic_classes,
-            variables=[
-                self.visit(var, as_data_member=True, derived_type_context=context)
-                for var in getattr(module, "variables", [])
-                if var.name.casefold() not in common_variables
-            ]
-            + enum_constants,
+            variables=module_variables + enum_constants,
             imports=self._module_imports(module),
             metadata=metadata,
             origin=SemanticOrigin(

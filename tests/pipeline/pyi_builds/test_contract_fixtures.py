@@ -15,6 +15,7 @@ from tests._shared.fixture_outputs import (
 )
 from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 from x2py.codegen.printers.pyi_printer import emit_module
+from x2py.pipeline import build as build_pipeline
 from x2py.pipeline.build import _discover_pyi_imports, _pyi_contract_bundle
 
 
@@ -213,6 +214,30 @@ class particle:
 
     assert bundle.paths == (entry, dependency)
     assert parsed_filenames == [entry, dependency]
+
+
+def test_pyi_contract_bundle_checks_native_contract_before_returning_modules(monkeypatch, tmp_path: Path):
+    contract = tmp_path / "native_contract.pyi"
+    contract.write_text(
+        """
+from x2py.contracts import Float64
+
+def scale(x: Float64) -> Float64: ...
+""",
+        encoding="utf-8",
+    )
+
+    checked_modules = []
+
+    def fail_native_contract_validation(modules):
+        checked_modules.extend(modules)
+        raise ValueError("native contract was checked during bundle loading")
+
+    monkeypatch.setattr(build_pipeline, "validate_pyi_native_contract", fail_native_contract_validation)
+
+    with pytest.raises(ValueError, match="native contract was checked during bundle loading"):
+        _pyi_contract_bundle(contract)
+    assert [module.name for module in checked_modules] == ["native_contract"]
 
 
 @pytest.mark.parametrize(

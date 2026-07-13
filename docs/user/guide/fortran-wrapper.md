@@ -847,7 +847,8 @@ unallocated or unassociated state. Hidden scalar or derived-type `Return(...)`
 outputs are different: the wrapper requests them with native temporary storage,
 so they are present and returned on every call.
 
-Runtime tests: [`test_optional_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_optional_arguments.py).
+Runtime tests: [`test_optional_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_optional_arguments.py),
+[`test_scalar_writeback_plan.py`](../../../tests/wrapper/fortran/function_calls/test_scalar_writeback_plan.py).
 
 <!-- X2PY_C_DOCS_START
 ## `value` And Existing `bind(C)` Procedures
@@ -1456,6 +1457,8 @@ covered in [Runtime Errors, The GIL, OpenMP, And Concurrency](#runtime-errors-th
 
 Runtime tests: [`test_module_state.py`](../../../tests/wrapper/fortran/module_state/test_module_state.py)
 and [`test_common_blocks.py`](../../../tests/wrapper/fortran/module_state/test_common_blocks.py).
+Scalar module-variable route parity is covered by
+[`test_scalar_module_variable_plan.py`](../../../tests/wrapper/fortran/module_state/test_scalar_module_variable_plan.py).
 
 ## Fortran Enums
 

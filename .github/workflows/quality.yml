@@ -49,6 +49,8 @@ jobs:
         run: python -m ruff check .
       - name: Ruff format
         run: python -m ruff format --check .
+      - name: Wrapper-plan generator contracts
+        run: python tools/check_wrapper_codegen_complexity.py
       - name: Bandit security scan
         run: python -m bandit -c pyproject.toml -r c_parser fortran_parser semantics x2py --severity-level medium --confidence-level medium
       - name: Vulture dead-code scan

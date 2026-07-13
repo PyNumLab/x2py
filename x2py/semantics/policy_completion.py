@@ -30,7 +30,11 @@ from x2py.semantics.metadata import (
 )
 from x2py.semantics import models
 from x2py.semantics.native_array_handles import NativeArrayHandlePolicy, native_array_descriptor_kind
-from x2py.semantics.scalar_wrapper_policy import build_scalar_wrapper_function_policy
+from x2py.semantics.wrapper_policy import (
+    build_module_variable_policy,
+    build_function_wrapper_policy,
+)
+from x2py.semantics.wrapper_exports import complete_python_export_policy
 
 __all__ = ("complete_semantic_policies",)
 
@@ -81,6 +85,7 @@ def complete_semantic_policies(
     modules = list(semantic_ir) if not isinstance(semantic_ir, models.SemanticModule) else [semantic_ir]
     for module in modules:
         _complete_entry_export_policy(module)
+        complete_python_export_policy(module)
         _complete_ownership_policies(module)
     return modules
 
@@ -125,6 +130,9 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
         _complete_accessor_policies(variable, OwnershipContext.module_variable())
         _complete_module_variable_initializer(variable)
         _block_unsupported_snapshot_contract(variable)
+        variable.metadata[models.RESOLVED_MODULE_VARIABLE_POLICY_METADATA] = build_module_variable_policy(
+            variable, module_name=module.name
+        )
     for semantic_class in module.classes:
         _complete_class(semantic_class, f"{module.name}.{semantic_class.name}")
     for function in module.functions:
@@ -195,7 +203,7 @@ def _complete_function(function: models.SemanticFunction, owner_path: str) -> No
     else:
         function.metadata.pop(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA, None)
         function.metadata.pop(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, None)
-    function.metadata[models.RESOLVED_SCALAR_WRAPPER_POLICY_METADATA] = build_scalar_wrapper_function_policy(
+    function.metadata[models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA] = build_function_wrapper_policy(
         function,
         owner_path=owner_path,
     )

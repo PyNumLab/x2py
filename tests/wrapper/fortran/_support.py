@@ -14,7 +14,20 @@ import pytest
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran.fmath_cases import fmath_cases
 from x2py import build_pyi_extension
+from x2py.compiling.basic import CompileObj
+from x2py.fortran_parser.parser import parse_fortran_project
+from x2py.pipeline.build import (
+    _apply_source_python_exports,
+    _build_rendered_wrapper_extension,
+    _fortran_source_for_pipeline,
+    _merge_wrapper_modules,
+)
+from x2py.pipeline.preprocessing import PreprocessingConfig
+from x2py.pipeline.build import build_fortran_extension
 from x2py.runtime.handles import AllocatableArray
+from x2py.semantics.fortran2ir import fortran_project_to_semantic_modules
+from x2py.semantics.policy_completion import complete_semantic_policies
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WRAPPER_TEST_ROOT = Path(__file__).resolve().parent
@@ -182,6 +195,60 @@ def _build_source_or_generated_pyi_and_import(
         source_build_dir.mkdir(parents=True)
         return _build_and_import(source_template, source_build_dir, expected_generated_sources)
     return _build_generated_pyi_and_import(source_template, workdir / "generated_pyi_build", expected_contract_package)
+
+
+def _build_source_legacy_and_import(
+    source_template: Path,
+    workdir: Path,
+    expected_generated_sources: set[str],
+):
+    result = build_fortran_extension(
+        source_template,
+        output_dir=workdir,
+        _force_legacy_wrapper_route=True,
+    )
+
+    assert result.shared_library.exists()
+    assert {path.name for path in result.generated_sources} == expected_generated_sources
+    return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+
+
+def _build_source_wrapper_plan_and_import(
+    source_template: Path,
+    workdir: Path,
+    *,
+    unwrap_namespace: bool = True,
+):
+    source_dir = workdir / "source"
+    source_dir.mkdir(parents=True)
+    source = source_dir / source_template.name
+    shutil.copyfile(source_template, source)
+
+    native_object = _compile_native_object(source, workdir / "native")
+    native_compile_obj = CompileObj(source.name, native_object.parent)
+    parsed = parse_fortran_project(
+        {
+            str(source): _fortran_source_for_pipeline(
+                source,
+                PreprocessingConfig(),
+            )
+        }
+    )
+    modules = fortran_project_to_semantic_modules(parsed)
+    _apply_source_python_exports(modules)
+    module = _merge_wrapper_modules(modules, name=source.stem)
+    complete_semantic_policies(module)
+
+    plan = WrapperPlanner().build(module)
+    rendered = WrapperCodeGenerator().generate(plan)
+    result = _build_rendered_wrapper_extension(
+        rendered,
+        output_dir=workdir / "wrapper_plan_build",
+        sources=(source,),
+        native_dependencies=(native_compile_obj,),
+    )
+    module = _import_from_build_dir(result.module_name, result.output_dir)
+    return (_sole_native_module(module) if unwrap_namespace else module), result
 
 
 def _build_text_and_import(source_text: str, filename: str, workdir: Path, expected_generated_sources: set[str]):

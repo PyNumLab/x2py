@@ -19,7 +19,7 @@ from x2py.codegen.bind_c import (
     BindCNativeArrayHandleProperty,
     BindCNativeArrayHandleVariable,
     BindCPointer,
-    BindCScalarModuleVariable,
+    BindCAccessorModuleVariable,
     native_array_descriptor_argument_type,
 )
 
@@ -290,13 +290,13 @@ __all__ = (
     "ArrayInteropPolicy",
     "ArrayInteropPolicyDispatcher",
     "AssignmentMode",
+    "BindCAccessorModuleVariable",
     "BindCArrayType",
     "BindCFunctionDef",
     "BindCNativeArrayDescriptorType",
     "BindCNativeArrayHandleProperty",
     "BindCNativeArrayHandleVariable",
     "BindCPointer",
-    "BindCScalarModuleVariable",
     "CCodePrinter",
     "CFIDescriptorType",
     "CPythonBindingGenerator",

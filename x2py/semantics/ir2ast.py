@@ -1000,10 +1000,11 @@ def _pyi_native_import(
     node,
     converted,
     *,
-    overload_target_names: frozenset[str] = frozenset(),
     native_name_filter=None,
     preserve_native_alias: bool = False,
 ) -> Import | None:
+    if getattr(node, "visibility", "public") == "private":
+        return None
     if isinstance(node, models.ProcedureOverloadSet):
         if not node.procedures:
             return None
@@ -1014,12 +1015,6 @@ def _pyi_native_import(
     else:
         origin = node.origin
         native_name = getattr(node, "native_name", None) or node.name
-        if (
-            isinstance(node, models.SemanticFunction)
-            and node.visibility == "private"
-            and {str(node.name), str(native_name)} & overload_target_names
-        ):
-            return None
         native_names = (str(native_name),)
     if origin.native_scope is None:
         return None
@@ -1039,26 +1034,6 @@ def _pyi_native_import(
 def _pyi_overload_native_names(node: models.ProcedureOverloadSet) -> tuple[str, ...]:
     names = {str(procedure.metadata.get(FORTRAN_GENERIC_NAME_METADATA, node.name)) for procedure in node.procedures}
     return tuple(sorted(names))
-
-
-def _pyi_overload_target_names(node: models.SemanticModule) -> frozenset[str]:
-    targets: set[str] = set()
-    for overload_set in _iter_semantic_overload_sets(node):
-        for procedure in overload_set.procedures:
-            for value in (
-                procedure.metadata.get(models.OVERLOAD_TARGET_METADATA),
-                procedure.name,
-                procedure.native_name,
-            ):
-                if value:
-                    targets.add(str(value))
-    return frozenset(targets)
-
-
-def _iter_semantic_overload_sets(node: models.SemanticModule | models.SemanticClass):
-    yield from node.overload_sets
-    for semantic_class in node.classes:
-        yield from _iter_semantic_overload_sets(semantic_class)
 
 
 def _pyi_class_overload_native_imports(semantic_class: models.SemanticClass, converted: ClassDef) -> list[Import]:
@@ -1365,10 +1340,9 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
         *,
         python_exports,
         native_imports,
-        overload_target_names=frozenset(),
     ) -> None:
         python_exports[id(converted)] = _semantic_python_exports(item, converted, self.scope)
-        native_import = _pyi_native_import(item, converted, overload_target_names=overload_target_names)
+        native_import = _pyi_native_import(item, converted)
         if native_import is not None:
             native_imports.append(native_import)
 
@@ -1417,7 +1391,6 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
     ):
         funcs = []
         generated_overload_sets = []
-        overload_target_names = _pyi_overload_target_names(node)
         for item in node.functions:
             converted = self._lower_module_child(
                 item,
@@ -1435,7 +1408,6 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
                 converted,
                 python_exports=python_exports,
                 native_imports=native_imports,
-                overload_target_names=overload_target_names,
             )
         return funcs, generated_overload_sets
 
@@ -1482,7 +1454,7 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
 
     @staticmethod
     def _semantic_module_imports(node, native_imports):
-        if node.metadata.get(PYI_LOADED_METADATA):
+        if native_imports:
             return native_imports
         return [Import(module_name, target=()) for module_name in node.metadata.get("wrapper_native_modules", ())]
 

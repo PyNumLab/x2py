@@ -68,6 +68,7 @@ SUBJECT_TEST_MODULES = {
         "test_native_call_examples.py",
         "test_optional_arguments.py",
         "test_output_arguments.py",
+        "test_scalar_writeback_plan.py",
     ),
     "strings": (
         "test_character_arguments.py",
@@ -97,6 +98,7 @@ SUBJECT_TEST_MODULES = {
         "test_common_blocks.py",
         "test_module_state_generated_pyi_contracts.py",
         "test_module_state.py",
+        "test_scalar_module_variable_plan.py",
     ),
     "runtime_behavior": (
         "test_openmp_runtime.py",
@@ -127,6 +129,7 @@ MIGRATION_MATRIX_ROW_RE = re.compile(
     r"^\| `(?P<selector>tests/wrapper/[^`]+)` \| (?P<unit>[^|]+) "
     r"\| (?P<lanes>[^|]+) \| `(?P<status>[^`]+)` \|$"
 )
+MIGRATION_SUMMARY_ROW_RE = re.compile(r"^\| `(?P<status>[^`]+)` \| (?P<count>[0-9]+) \|$")
 
 
 def _is_meaningful(path: Path) -> bool:
@@ -191,6 +194,18 @@ def _wrapper_plan_migration_matrix_rows() -> dict[str, dict[str, str]]:
             "status": match.group("status"),
         }
     return rows
+
+
+def _wrapper_plan_migration_summary_counts() -> dict[str, int]:
+    counts = {}
+    for line in WRAPPER_PLAN_MIGRATION_CHECKLIST.read_text(encoding="utf-8").splitlines():
+        match = MIGRATION_SUMMARY_ROW_RE.match(line)
+        if match is None or match.group("status") not in MIGRATION_MATRIX_STATUS_VALUES:
+            continue
+        status = match.group("status")
+        assert status not in counts, f"duplicate migration summary row: {status}"
+        counts[status] = int(match.group("count"))
+    return counts
 
 
 def _migration_selector_matches(selector: str, nodeid: str) -> bool:
@@ -354,12 +369,15 @@ def test_wrapper_plan_migration_matrix_tracks_collected_wrapper_nodes():
 
     unmatched_nodes = []
     multiply_matched_nodes = []
+    statuses_by_node = {}
     for nodeid in collected_nodes:
         matches = [selector for selector in matrix_rows if _migration_selector_matches(selector, nodeid)]
         if not matches:
             unmatched_nodes.append(nodeid)
         elif len(matches) > 1:
             multiply_matched_nodes.append((nodeid, matches))
+        else:
+            statuses_by_node[nodeid] = matrix_rows[matches[0]]["status"]
 
     stale_selectors = sorted(
         selector
@@ -370,6 +388,10 @@ def test_wrapper_plan_migration_matrix_tracks_collected_wrapper_nodes():
     assert unmatched_nodes == []
     assert multiply_matched_nodes == []
     assert stale_selectors == []
+
+    collected_status_counts = Counter(statuses_by_node.values())
+    expected_summary = {status: collected_status_counts.get(status, 0) for status in MIGRATION_MATRIX_STATUS_VALUES}
+    assert _wrapper_plan_migration_summary_counts() == expected_summary
 
 
 def test_wrapper_language_suite_and_user_guide_link_current_subject_paths():

@@ -1,158 +1,159 @@
-"""Phase 0D tests for route-neutral wrapper-plan core records."""
+"""Shared wrapper-plan projection and structural validation tests."""
 
 from __future__ import annotations
 
 from dataclasses import replace
-from pathlib import Path
 
 import pytest
 
-from x2py.pipeline.pyi import pyi_file_to_semantic_module
+from tests._shared.ownership_policy_support import parse_pyi_text
+from x2py.semantics.models import PYTHON_EXPORTS_METADATA
 from x2py.semantics.ownership import CodegenAction, NativeBarrierAction, PythonBarrierAction
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.wrapper_codegen import (
-    ArgumentTransferPlan,
-    FunctionPlan,
-    LifecycleActionPlan,
-    ModulePlan,
-    WrapperPlanRenderer,
-    WrapperPlanSupportAnalyzer,
-    WrapperPlanValidator,
+    DatatypeFamily,
+    NamespacePlan,
+    WrapperCodeGenerator,
     WrapperPlanner,
+    WrapperPlanSupportAnalyzer,
 )
 
-from tests._shared.ownership_policy_support import parse_pyi_text
 
-
-FMATH_CONTRACT = Path("tests/wrapper/fortran/scalars/contracts/fmath/__init__.pyi")
-
-
-def _fmath_plan() -> ModulePlan:
-    module = pyi_file_to_semantic_module(FMATH_CONTRACT, module_name="fmath")
+def _plan(source: str, *, module_name: str = "fmath"):
+    module = parse_pyi_text(source, module_name=module_name)
     complete_semantic_policies(module)
-    return WrapperPlanner().visit(module)
+    return WrapperPlanner().build(module)
 
 
-def _function(plan: ModulePlan, owner_path: str = "fmath.add_r8") -> FunctionPlan:
-    return next(function for function in plan.functions if function.owner_path == owner_path)
-
-
-def _replace_function(plan: ModulePlan, function: FunctionPlan) -> ModulePlan:
-    functions = tuple(function if item.owner_path == function.owner_path else item for item in plan.functions)
-    return replace(plan, functions=functions)
-
-
-def _replace_argument(function: FunctionPlan, argument: ArgumentTransferPlan) -> FunctionPlan:
-    arguments = tuple(argument if item.owner_path == argument.owner_path else item for item in function.arguments)
-    slots = tuple(item.bridge_abi_slot for item in arguments if item.bridge_abi_slot is not None)
-    return replace(function, arguments=arguments, bridge_abi=replace(function.bridge_abi, slots=slots))
-
-
-def _with_first_argument(plan: ModulePlan, argument: ArgumentTransferPlan) -> ModulePlan:
-    return _replace_function(plan, _replace_argument(_function(plan), argument))
-
-
-def _drop_primary_handlers(plan: ModulePlan) -> ModulePlan:
-    registry = replace(plan.handler_registry, python_action_handlers=())
-    return replace(plan, handler_registry=registry)
-
-
-def _drop_secondary_handlers(plan: ModulePlan) -> ModulePlan:
-    registry = replace(plan.handler_registry, native_action_handlers=())
-    return replace(plan, handler_registry=registry)
-
-
-def _drop_bridge_slot(plan: ModulePlan) -> ModulePlan:
-    argument = replace(_function(plan).arguments[0], bridge_abi_slot=None)
-    return _with_first_argument(plan, argument)
-
-
-def _drop_native_slot(plan: ModulePlan) -> ModulePlan:
-    argument = replace(_function(plan).arguments[0], native_call_slot=None)
-    return _with_first_argument(plan, argument)
-
-
-def _break_handoff_role(plan: ModulePlan) -> ModulePlan:
-    argument = _function(plan).arguments[0]
-    handoff = replace(argument.binding_handoff, consumed_role="fmath.add_r8.X:other")
-    return _with_first_argument(plan, replace(argument, binding_handoff=handoff))
-
-
-def _duplicate_symbolic_role(plan: ModulePlan) -> ModulePlan:
-    function = _function(plan)
-    first, second = function.arguments
-    role = first.binding_handoff.produced_role
-    handoff = replace(second.binding_handoff, produced_role=role, consumed_role=role)
-    bridge = replace(second.bridge_abi_slot, symbolic_role=role)
-    native = replace(second.native_call_slot, symbolic_role=role)
-    updated = replace(second, binding_handoff=handoff, bridge_abi_slot=bridge, native_call_slot=native)
-    return _replace_function(plan, _replace_argument(function, updated))
-
-
-def _remove_result_role(plan: ModulePlan) -> ModulePlan:
-    function = _function(plan)
-    roles = tuple(role for role in function.available_roles if role != function.result.native_result_role)
-    return _replace_function(plan, replace(function, available_roles=roles))
-
-
-def _add_unavailable_writeback(plan: ModulePlan) -> ModulePlan:
-    function = _function(plan)
-    action = LifecycleActionPlan(
-        owner_path="fmath.add_r8.X",
-        phase="writeback",
-        source_role="missing:role",
-        handler_name="_handle_writeback",
+def _scalar_plan():
+    return _plan(
+        """
+@hold_gil
+@bind("SWAP_ARGS")
+@external
+@native_call([Addr(Arg(1)), Addr(Arg(0))])
+def swap_args(x: Float64, y: Float64) -> Float64: ...
+""",
+        module_name="runtime_policy",
     )
-    return _replace_function(plan, replace(function, writeback_actions=(action,)))
 
 
-def test_fmath_policy_projects_to_plan_and_deterministic_rendering():
-    plan = _fmath_plan()
-    add_r8 = _function(plan)
+def _edit_first_function(plan, edit):
+    root = plan.namespaces[0]
+    functions = (edit(root.functions[0]), *root.functions[1:])
+    return replace(plan, namespaces=(replace(root, functions=functions), *plan.namespaces[1:]))
 
-    assert WrapperPlanValidator().visit(plan) == ()
-    assert len(plan.functions) == 85
-    assert add_r8.python_name == "add_r8"
-    assert add_r8.native_name == "ADD_R8"
-    assert add_r8.external is True
-    assert add_r8.bind_target == "ADD_R8"
-    assert [argument.owner_path for argument in add_r8.arguments] == ["fmath.add_r8.X", "fmath.add_r8.Y"]
-    assert [argument.python_action for argument in add_r8.arguments] == [
-        PythonBarrierAction.SCALAR_VALUE,
-        PythonBarrierAction.SCALAR_VALUE,
+
+def test_planner_projects_one_shared_tree_with_explicit_backend_views():
+    plan = _scalar_plan()
+    function = plan.namespaces[0].functions[0]
+
+    assert plan.binding.owner_path == "runtime_policy"
+    assert plan.bridge.owner_path == "runtime_policy"
+    assert function.binding.python_name == "swap_args"
+    assert function.binding.hold_gil is True
+    assert function.bridge.native_name == "SWAP_ARGS"
+    assert function.bridge.external is True
+
+    assert [argument.python_position for argument in function.arguments] == [0, 1]
+    assert [argument.native_position for argument in function.arguments] == [1, 0]
+    assert [argument.datatype_family for argument in function.arguments] == [
+        DatatypeFamily.REAL,
+        DatatypeFamily.REAL,
     ]
-    assert [argument.native_action for argument in add_r8.arguments] == [
-        NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
-        NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
+    first = function.arguments[0]
+    assert first.binding.python_name == "x"
+    assert first.binding.python_action is PythonBarrierAction.SCALAR_VALUE
+    assert first.bridge.native_name == "x"
+    assert first.bridge.native_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    assert first.binding.handoff_role == first.bridge.handoff_role == first.native_call_slot.symbolic_role
+    assert first.native_call_slot.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert function.result.binding.codegen_action is CodegenAction.DIRECT_VALUE
+    assert function.result.bridge.native_result_role in function.available_roles
+
+
+def test_planner_records_hidden_literals_and_hidden_result_slots():
+    plan = _plan(
+        """
+@native_call([Int32(1), Arg(0), Bool(False), Return("result", 0)])
+def scale(x: Float64) -> Float64: ...
+""",
+        module_name="hidden_values",
+    )
+    function = plan.namespaces[0].functions[0]
+
+    assert [(slot.source_kind, slot.literal_type, slot.literal_value) for slot in function.native_call_slots] == [
+        ("literal", "Int32", 1),
+        ("projection", None, None),
+        ("literal", "Bool", False),
+        ("result", None, None),
     ]
-    assert [slot.index for slot in add_r8.bridge_abi.slots] == [0, 1]
-    assert [
-        (argument.native_call_slot.native_position, argument.native_call_slot.value_kind)
-        for argument in add_r8.arguments
-    ] == [
-        (0, "addr"),
-        (1, "addr"),
-    ]
-    assert add_r8.result is not None
-    assert add_r8.result.codegen_action is CodegenAction.DIRECT_VALUE
-
-    first = add_r8.arguments[0]
-    assert first.binding_handoff.produced_role == "fmath.add_r8.X:value"
-    assert first.binding_handoff.consumed_role == "fmath.add_r8.X:value"
-    assert first.bridge_abi_slot.symbolic_role == "fmath.add_r8.X:value"
-    assert first.native_call_slot.symbolic_role == "fmath.add_r8.X:value"
-    assert first.native_call_slot.source_kind == "projection"
-    assert first.native_call_slot.value_kind == "addr"
-
-    rendered = WrapperPlanRenderer().visit(plan)
-    assert "function fmath.add_r8 python=add_r8 native=ADD_R8" in rendered
-    assert "python:scalar_value->_handle_python_scalar_value" in rendered
-    assert "native:pass_call_local_address->_handle_native_call_local_address" in rendered
-    assert "native_slot=0:addr:fmath.add_r8.X:value" in rendered
-    assert "lifecycle=none" in rendered
+    assert function.result.source_kind == "hidden_output"
+    assert function.result.bridge.abi_position == 3
+    assert function.result.native_call_slot == function.native_call_slots[3]
 
 
-def test_support_analyzer_reports_unsupported_generation_units_without_route_selection():
+def test_planner_groups_completed_exports_into_explicit_namespace_nodes():
+    module = parse_pyi_text(
+        """
+def left_value(x: Int32) -> Int32: ...
+def right_value(x: Int32) -> Int32: ...
+""",
+        module_name="namespaced",
+    )
+    module.functions[0].metadata[PYTHON_EXPORTS_METADATA] = [{"namespace": ("left",), "name": "shared_value"}]
+    module.functions[1].metadata[PYTHON_EXPORTS_METADATA] = [{"namespace": ("right",), "name": "shared_value"}]
+    complete_semantic_policies(module)
+
+    plan = WrapperPlanner().build(module)
+
+    assert [namespace.python_path for namespace in plan.namespaces] == [(), ("left",), ("right",)]
+    assert plan.namespaces[0].functions == ()
+    assert [function.binding.python_name for function in plan.namespaces[1].functions] == ["shared_value"]
+    assert [function.binding.python_name for function in plan.namespaces[2].functions] == ["shared_value"]
+    assert plan.namespaces[1].functions[0].symbol_name == "left_shared_value"
+    assert plan.namespaces[2].functions[0].symbol_name == "right_shared_value"
+
+
+def test_post_ir_export_policy_fixes_names_within_each_namespace():
+    module = parse_pyi_text(
+        """
+def first(x: Int32) -> Int32: ...
+def second(x: Int32) -> Int32: ...
+""",
+        module_name="namespaced_fixes",
+    )
+    module.functions[0].name = "lambda"
+    module.functions[0].native_name = "first"
+    module.functions[0].metadata[PYTHON_EXPORTS_METADATA] = [{"namespace": ("child",), "name": None}]
+    module.functions[1].name = "lambda_"
+    module.functions[1].native_name = "second"
+    module.functions[1].metadata[PYTHON_EXPORTS_METADATA] = [{"namespace": ("child",), "name": None}]
+
+    complete_semantic_policies(module)
+    plan = WrapperPlanner().build(module)
+    child = next(namespace for namespace in plan.namespaces if namespace.python_path == ("child",))
+
+    assert [function.binding.python_name for function in child.functions] == ["lambda_", "lambda__2"]
+
+
+def test_planner_omits_private_functions_from_public_namespaces():
+    module = parse_pyi_text(
+        """
+def visible(x: Int32) -> Int32: ...
+def hidden(x: Int32) -> Int32: ...
+""",
+        module_name="visibility",
+    )
+    module.functions[1].visibility = "private"
+    complete_semantic_policies(module)
+
+    plan = WrapperPlanner().build(module)
+
+    assert [function.binding.python_name for function in plan.namespaces[0].functions] == ["visible"]
+
+
+def test_support_analyzer_reports_unsupported_generation_units():
     module = parse_pyi_text(
         """
 def sum_values(values: Float64[:]) -> Float64: ...
@@ -161,16 +162,16 @@ def sum_values(values: Float64[:]) -> Float64: ...
     )
     complete_semantic_policies(module)
 
-    report = WrapperPlanSupportAnalyzer().visit(module)
+    report = WrapperPlanSupportAnalyzer().analyze(module)
 
     assert report.supported is False
     assert report.blockers[0].owner_path == "array_argument.sum_values"
     assert "not a first-lane primitive scalar" in report.blockers[0].reason
     with pytest.raises(ValueError, match="Unsupported wrapper-plan generation unit"):
-        WrapperPlanner().visit(module)
+        WrapperPlanner().build(module)
 
 
-def test_planner_fails_on_missing_policy_before_deriving_defaults():
+def test_planner_fails_when_post_ir_policy_has_not_completed():
     module = parse_pyi_text(
         """
 def add(x: Float64, y: Float64) -> Float64: ...
@@ -178,26 +179,96 @@ def add(x: Float64, y: Float64) -> Float64: ...
         module_name="missing_policy",
     )
 
-    with pytest.raises(ValueError, match="missing completed scalar wrapper policy"):
-        WrapperPlanner().visit(module)
+    with pytest.raises(ValueError, match="missing completed function wrapper policy"):
+        WrapperPlanner().build(module)
+
+
+def test_generator_rejects_duplicate_python_exports_before_lowering():
+    plan = _scalar_plan()
+    root = plan.namespaces[0]
+    function = root.functions[0]
+    duplicate = replace(function, symbol_name="other_symbol")
+    invalid = replace(plan, namespaces=(replace(root, functions=(function, duplicate)),))
+
+    with pytest.raises(ValueError, match="duplicate-python-export"):
+        WrapperCodeGenerator().generate(invalid)
+
+
+def test_generator_rejects_duplicate_generated_symbols_before_lowering():
+    plan = _scalar_plan()
+    root = plan.namespaces[0]
+    function = root.functions[0]
+    duplicate = replace(
+        function,
+        owner_path="runtime_policy.other",
+        binding=replace(function.binding, python_name="other"),
+    )
+    invalid = replace(plan, namespaces=(replace(root, functions=(function, duplicate)),))
+
+    with pytest.raises(ValueError, match="duplicate-generated-symbol"):
+        WrapperCodeGenerator().generate(invalid)
+
+
+def test_generator_rejects_colliding_generated_namespace_symbols():
+    plan = _scalar_plan()
+    invalid = replace(
+        plan,
+        namespaces=(
+            *plan.namespaces,
+            NamespacePlan(owner_path="runtime_policy.root", python_path=("root",)),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="duplicate-generated-namespace-symbol"):
+        WrapperCodeGenerator().generate(invalid)
 
 
 @pytest.mark.parametrize(
     ("mutate", "expected_code"),
     [
-        (_drop_primary_handlers, "unknown-primary-handler"),
-        (_drop_secondary_handlers, "unknown-secondary-handler"),
-        (_drop_bridge_slot, "missing-bridge-abi-slot"),
-        (_drop_native_slot, "missing-native-call-slot"),
-        (_break_handoff_role, "inconsistent-binding-handoff"),
-        (_duplicate_symbolic_role, "duplicate-symbolic-role"),
-        (_remove_result_role, "unavailable-result-role"),
-        (_add_unavailable_writeback, "unavailable-writeback-role"),
+        (
+            lambda plan: replace(
+                plan,
+                binding=replace(plan.binding, owner_path="other"),
+            ),
+            "binding-module-owner",
+        ),
+        (
+            lambda plan: _edit_first_function(
+                plan,
+                lambda function: replace(
+                    function,
+                    arguments=(
+                        replace(function.arguments[0], python_position=99),
+                        function.arguments[1],
+                    ),
+                ),
+            ),
+            "out-of-range-python-position",
+        ),
+        (
+            lambda plan: _edit_first_function(
+                plan,
+                lambda function: replace(
+                    function,
+                    arguments=(
+                        replace(
+                            function.arguments[0],
+                            bridge=replace(
+                                function.arguments[0].bridge,
+                                handoff_role="other:role",
+                            ),
+                        ),
+                        function.arguments[1],
+                    ),
+                ),
+            ),
+            "inconsistent-bridge-handoff",
+        ),
     ],
 )
-def test_validator_reports_invariant_categories_before_backend_emission(mutate, expected_code):
-    invalid = mutate(_fmath_plan())
+def test_generator_revalidates_direct_plan_edits(mutate, expected_code):
+    invalid = mutate(_scalar_plan())
 
-    diagnostics = WrapperPlanValidator().visit(invalid)
-
-    assert expected_code in {diagnostic.code for diagnostic in diagnostics}
+    with pytest.raises(ValueError, match=expected_code):
+        WrapperCodeGenerator().generate(invalid)

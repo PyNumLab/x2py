@@ -28,6 +28,7 @@ from .models.core import Variable
 
 __all__ = (
     "C_NULL_CHAR",
+    "BindCAccessorModuleVariable",
     "BindCArrayType",
     "BindCArrayVariable",
     "BindCClassDef",
@@ -42,7 +43,6 @@ __all__ = (
     "BindCPointer",
     "BindCResultTupleType",
     "BindCScalarDescriptorType",
-    "BindCScalarModuleVariable",
     "BindCSizeOf",
     "BindCVariable",
     "CLocFunc",
@@ -639,9 +639,9 @@ class BindCModuleConstant(Variable):
         super().__init__(*args, **kwargs)
 
 
-class BindCScalarModuleVariable(Variable):
+class BindCAccessorModuleVariable(Variable):
     """
-    Generated getter and setter wrappers for a scalar module variable.
+    A module value exposed through generated getter and setter wrappers.
     """
 
     __slots__ = ("_getter_function", "_setter_function")

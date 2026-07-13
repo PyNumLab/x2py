@@ -16,4 +16,4 @@ contracts.
 
 Tests: `test_allocatable_replacement.py`, `test_allocatable_views.py`,
 `test_common_blocks.py`, `test_module_state_generated_pyi_contracts.py`,
-`test_module_state.py`.
+`test_module_state.py`, `test_scalar_module_variable_plan.py`.

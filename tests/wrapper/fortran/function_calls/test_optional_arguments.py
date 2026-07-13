@@ -8,7 +8,9 @@ import pytest
 from x2py import build_pyi_extension
 from tests.wrapper.fortran._support import (
     _compile_native_object,
+    _build_source_legacy_and_import,
     _build_source_or_generated_pyi_and_import,
+    _build_source_wrapper_plan_and_import,
     _import_from_build_dir,
     _sole_native_module,
     wrapper_source,
@@ -88,20 +90,48 @@ def alloc_state(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
         encoding="utf-8",
     )
 
-    result = build_pyi_extension(
-        entry,
-        native_objects=[native_object],
-        native_include_dirs=[native_object.parent],
-        output_dir=tmp_path / "pyi_build",
-    )
-    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+    results = []
+    modules = []
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        result = build_pyi_extension(
+            entry,
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        results.append(result)
+        modules.append(_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)))
 
-    assert module.alloc_state() == np.int32(0)
-    assert module.alloc_state(None) == np.int32(1)
-    assert module.alloc_state(np.float64(2.5)) == np.int32(2)
-    assert "Omit to make the native optional dummy absent." in module.alloc_state.__doc__
-    assert "Pass None for a present unallocated or unassociated descriptor." in module.alloc_state.__doc__
-    assert "Default is None." not in module.alloc_state.__doc__
+    assert [tuple(path.name for path in result.generated_sources) for result in results] == [
+        (
+            "bind_c_scalar_optional_descriptors_wrapper.f90",
+            "scalar_optional_descriptors_wrapper.c",
+            "scalar_optional_descriptors_wrapper.h",
+        ),
+        (
+            "bind_c_scalar_optional_descriptors_wrapper.f90",
+            "scalar_optional_descriptors_wrapper.c",
+            "scalar_optional_descriptors_wrapper.h",
+        ),
+    ]
+    for module in modules:
+        assert module.alloc_state() == np.int32(0)
+        assert module.alloc_state(None) == np.int32(1)
+        assert module.alloc_state(np.float64(2.5)) == np.int32(2)
+        with pytest.raises(TypeError):
+            module.alloc_state("bad")
+    legacy_header = (tmp_path / "legacy" / "scalar_optional_descriptors_wrapper.h").read_text(encoding="utf-8")
+    plan_c = (tmp_path / "wrapper_plan" / "scalar_optional_descriptors_wrapper.c").read_text(encoding="utf-8")
+    assert "int32_t bind_c_alloc_state(void*, void*);" in legacy_header
+    assert "int32_t bind_c_alloc_state(void * value, void * value_present);" in plan_c
+    legacy = modules[0]
+    assert "Omit to make the native optional dummy absent." in legacy.alloc_state.__doc__
+    assert "Pass None for a present unallocated or unassociated descriptor." in legacy.alloc_state.__doc__
+    assert "Default is None." not in legacy.alloc_state.__doc__
 
 
 def test_optional_arguments_drive_fortran_present_behavior(
@@ -191,3 +221,38 @@ def test_fixed_form_optional_arguments_drive_fortran_present_behavior(
     assert module.optional_scale(np.int32(3), np.int32(4)) == np.int32(7)
     assert module.optional_scale(np.int32(3), None) == np.int32(3)
     assert module.optional_scale(base=np.int32(3), factor=np.int32(6)) == np.int32(9)
+
+
+def test_fixed_optional_scalar_wrapper_plan_route_matches_all_presence_states(tmp_path: Path):
+    legacy = _build_source_legacy_and_import(
+        OPTIONAL_FIXED_SOURCE,
+        tmp_path / "legacy",
+        {
+            "bind_c_foptional_fixed_wrapper.f90",
+            "foptional_fixed_wrapper.c",
+            "foptional_fixed_wrapper.h",
+        },
+    )
+    wrapper_plan, result = _build_source_wrapper_plan_and_import(
+        OPTIONAL_FIXED_SOURCE,
+        tmp_path / "wrapper_plan",
+    )
+
+    assert {path.name for path in result.generated_sources} == {
+        "bind_c_foptional_fixed_wrapper.f90",
+        "foptional_fixed_wrapper.c",
+        "foptional_fixed_wrapper.h",
+    }
+    legacy_header = (tmp_path / "legacy" / "foptional_fixed_wrapper.h").read_text(encoding="utf-8")
+    plan_c = (tmp_path / "wrapper_plan" / "wrapper_plan_build" / "foptional_fixed_wrapper.c").read_text(
+        encoding="utf-8"
+    )
+    assert "int32_t bind_c_optional_scale(int32_t, void*);" in legacy_header
+    assert "int32_t bind_c_optional_scale(int32_t base, void * factor);" in plan_c
+    for module in (legacy, wrapper_plan):
+        assert module.optional_scale(np.int32(3)) == np.int32(3)
+        assert module.optional_scale(np.int32(3), None) == np.int32(3)
+        assert module.optional_scale(np.int32(3), np.int32(4)) == np.int32(7)
+        assert module.optional_scale(base=np.int32(3), factor=np.int32(6)) == np.int32(9)
+        with pytest.raises(TypeError):
+            module.optional_scale(np.int32(3), "bad")

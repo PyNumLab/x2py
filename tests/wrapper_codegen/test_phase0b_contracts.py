@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 from dataclasses import fields
 from pathlib import Path
+import subprocess
+import sys
 
 from tests.wrapper.fortran._support import REPO_ROOT
 from x2py.pipeline.wrapper_artifacts import GeneratedWrapperArtifacts
@@ -73,6 +75,14 @@ def test_wrapper_codegen_and_legacy_codegen_do_not_import_each_other():
     assert legacy_codegen_violations == []
 
 
+def test_backend_generators_do_not_import_each_other():
+    binding_imports = _imported_modules(WRAPPER_CODEGEN_ROOT / "c" / "binding.py")
+    bridge_imports = _imported_modules(WRAPPER_CODEGEN_ROOT / "fortran" / "bridge.py")
+
+    assert not _imports_under(binding_imports, "x2py.wrapper_codegen.fortran")
+    assert not _imports_under(bridge_imports, "x2py.wrapper_codegen.c")
+
+
 def test_only_pipeline_modules_may_import_both_wrapper_routes():
     modules_importing_both = []
     for path in _python_modules(SOURCE_ROOT):
@@ -86,6 +96,18 @@ def test_only_pipeline_modules_may_import_both_wrapper_routes():
 
 def test_wrapper_codegen_package_static_contracts_pass():
     assert check_wrapper_codegen_package(WRAPPER_CODEGEN_ROOT) == ()
+
+
+def test_wrapper_codegen_checker_command_runs_the_package_checker():
+    result = subprocess.run(
+        [sys.executable, "tools/check_wrapper_codegen_complexity.py"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout
 
 
 def test_checker_rejects_legacy_codegen_imports(tmp_path: Path):
@@ -132,6 +154,34 @@ def oversized(value):
     assert {"complexity", "statement-count", "nesting-depth"} <= codes
 
 
+def test_checker_uses_strict_default_limits_for_emitter_handlers(tmp_path: Path):
+    path = _write_module(
+        tmp_path,
+        "strict.py",
+        """
+from x2py.wrapper_codegen import ClassVisitor
+
+class DemoEmitter(ClassVisitor):
+    def _convert_item(self, value):
+        if value == 1:
+            return 1
+        if value == 2:
+            return 2
+        if value == 3:
+            return 3
+        if value == 4:
+            return 4
+        if value == 5:
+            return 5
+        return 6
+""",
+    )
+
+    violations = check_wrapper_codegen_paths([path], package_root=tmp_path)
+
+    assert "complexity" in {violation.code for violation in violations}
+
+
 def test_checker_rejects_missing_primary_and_secondary_registry_handlers(tmp_path: Path):
     codes = _check_source(
         tmp_path,
@@ -139,8 +189,8 @@ def test_checker_rejects_missing_primary_and_secondary_registry_handlers(tmp_pat
 from x2py.wrapper_codegen import ClassVisitor
 
 class DemoEmitter(ClassVisitor):
-    PRIMARY_REGISTRY = {"scalar": "_emit_scalar"}
-    SECONDARY_DISPATCHER = {"scalar": {"value": "_emit_scalar_value"}}
+    PRIMARY_REGISTRY = {"item": "_emit_item"}
+    SECONDARY_DISPATCHER = {"item": {"value": "_emit_item_value"}}
 """,
     )
 
@@ -154,9 +204,9 @@ def test_checker_rejects_printer_calls_from_handlers(tmp_path: Path):
 from x2py.wrapper_codegen import ClassVisitor
 
 class DemoEmitter(ClassVisitor):
-    HANDLER_REGISTRY = {"scalar": "_emit_scalar"}
+    HANDLER_REGISTRY = {"item": "_emit_item"}
 
-    def _emit_scalar(self, node):
+    def _emit_item(self, node):
         return self.printer.doprint(node)
 """,
     )

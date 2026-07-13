@@ -57,7 +57,7 @@ from ..bind_c import (
     BindCPointer,
     BindCResultTupleType,
     BindCScalarDescriptorType,
-    BindCScalarModuleVariable,
+    BindCAccessorModuleVariable,
     BindCSizeOf,
     BindCVariable,
     C_F_Pointer,
@@ -487,7 +487,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             if item.is_private:
                 continue
             variable = self._visit(item)
-            if isinstance(variable, BindCScalarModuleVariable):
+            if isinstance(variable, BindCAccessorModuleVariable):
                 wrapped_accessors = tuple(
                     function
                     for function in (variable.getter_function, variable.setter_function)
@@ -631,9 +631,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             raise ValueError(f"Bound argument {argument.var.name!r} cannot be a hidden output")
         result = self._convert_result(argument.var, function.scope)
         self._additional_exprs.extend(result["body"])
+        keyword = None if self._uses_positional_native_call(function) else argument.var.name
         generated = {
             "c_arg": None,
-            "f_arg": FunctionCallArgument(result["f_result"], keyword=argument.var.name),
+            "f_arg": FunctionCallArgument(result["f_result"], keyword=keyword),
             "body": [],
         }
         return generated, result
@@ -2414,11 +2415,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     @staticmethod
     def _uses_positional_native_call(func) -> bool:
         """Return whether the native call should avoid Fortran keywords."""
-
-        return (
-            getattr(func, "is_external", False)
-            or any(isinstance(argument.var, FunctionAddress) for argument in getattr(func, "arguments", ()))
-        ) and not FortranToCBridgeGenerator._has_optional_arguments(func)
+        if not isinstance(func, FunctionDef):
+            return False
+        return not FortranToCBridgeGenerator._has_optional_arguments(func)
 
     @staticmethod
     def _native_argument_keyword(func, expr):
@@ -3980,6 +3979,10 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 source_expr=local_var,
                 source_storage_mode=decision.boundary_storage_mode,
             )
+        # The copy-in temporary becomes the Bind(C) function result.  It must
+        # therefore be declared by the result signature, not a second time as
+        # an ordinary function local.
+        self.scope.remove_variable(local_var, remove_symbol=False)
         return {
             "c_result": BindCVariable(local_var, orig_var),
             "body": [],
@@ -4399,7 +4402,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         )
         return expr.clone(
             expr.name,
-            new_class=BindCScalarModuleVariable,
+            new_class=BindCAccessorModuleVariable,
             getter_function=getter,
             setter_function=setter,
         )
@@ -4417,7 +4420,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             raise ValueError(f"Derived module constant {expr.name!r} unexpectedly exposes a setter")
         return expr.clone(
             expr.name,
-            new_class=BindCScalarModuleVariable,
+            new_class=BindCAccessorModuleVariable,
             getter_function=self._derived_module_copy_getter(expr),
             setter_function=None,
         )
@@ -4430,7 +4433,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             raise ValueError(f"Derived module variable {expr.name!r} unexpectedly exposes replacement")
         return expr.clone(
             expr.name,
-            new_class=BindCScalarModuleVariable,
+            new_class=BindCAccessorModuleVariable,
             getter_function=self._derived_module_getter(expr),
             setter_function=None,
         )
@@ -4443,7 +4446,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             raise ValueError(f"Derived module snapshot {expr.name!r} unexpectedly exposes replacement")
         return expr.clone(
             expr.name,
-            new_class=BindCScalarModuleVariable,
+            new_class=BindCAccessorModuleVariable,
             getter_function=self._derived_module_copy_getter(expr),
             setter_function=None,
         )

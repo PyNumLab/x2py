@@ -4,7 +4,7 @@ from tests._shared.ownership_policy_support import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     AssignmentMode,
-    BindCScalarModuleVariable,
+    BindCAccessorModuleVariable,
     CPythonBindingGenerator,
     CPythonCodePrinter,
     CodegenAction,
@@ -468,7 +468,7 @@ def test_derived_module_constant_uses_wrapper_owned_copy_without_setter():
     generator = FortranToCBridgeGenerator("", 0)
     generator.scope = lowered.scope
     constant = generator._visit_Variable(lowered.variables[0])
-    assert isinstance(constant, BindCScalarModuleVariable)
+    assert isinstance(constant, BindCAccessorModuleVariable)
     assert constant.setter_function is None
 
 

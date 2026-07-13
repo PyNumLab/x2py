@@ -1,12 +1,14 @@
-"""Isolated backend syntax nodes for scalar wrapper source foundations."""
+"""Backend syntax nodes for direct wrapper-plan source generation."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from x2py.stage_values import StageRecord
 
-@dataclass(frozen=True)
-class BackendScalarType:
+
+@dataclass
+class BackendScalarType(StageRecord):
     """Scalar type spelling consumed by C and Fortran printers."""
 
     semantic_name: str
@@ -14,50 +16,104 @@ class BackendScalarType:
     fortran_spelling: str
     python_parse_unit: str | None = None
     numpy_type_macro: str | None = None
+    python_result_converter: str | None = None
+    python_input_converter: str | None = None
+    python_input_check: str | None = None
+    python_type_name: str | None = None
+    python_module_result_converter: str | None = None
 
 
-@dataclass(frozen=True)
-class CodeExpression:
+@dataclass
+class CodeExpression(StageRecord):
     """Raw expression text owned by a backend emitter or focused test."""
 
     text: str
 
 
-@dataclass(frozen=True)
-class ApiReference:
-    """Named CPython, NumPy, or runtime helper API concept."""
-
-    name: str
-    include: str | None = None
-
-
-@dataclass(frozen=True)
-class CInclude:
+@dataclass
+class CInclude(StageRecord):
     """C include directive."""
 
     header: str
     system: bool = True
 
 
-@dataclass(frozen=True)
-class CParameter:
+@dataclass
+class CMacroDefinition(StageRecord):
+    """C preprocessor macro definition."""
+
+    name: str
+    value: str | None = None
+
+
+@dataclass
+class CParameter(StageRecord):
     """C function parameter."""
 
     name: str
     type_name: str
 
 
-@dataclass(frozen=True)
-class CFunctionPrototype:
+@dataclass
+class CFunctionPrototype(StageRecord):
     """C function prototype for generated headers."""
 
     name: str
     return_type: str
     parameters: tuple[CParameter, ...] = ()
+    storage: str | None = None
 
 
-@dataclass(frozen=True)
-class CDeclaration:
+@dataclass
+class CMethodDefEntry(StageRecord):
+    """One CPython method table entry."""
+
+    python_name: str
+    wrapper_name: str
+    flags: str
+    docstring: str = ""
+
+
+@dataclass
+class CMethodDefTable(StageRecord):
+    """Generated CPython method table declaration."""
+
+    name: str
+    entries: tuple[CMethodDefEntry, ...] = ()
+
+
+@dataclass
+class CModuleDef(StageRecord):
+    """Generated CPython module definition declaration."""
+
+    name: str
+    module_name: str
+    docstring: str
+    methods_name: str
+    state_size: int = 0
+
+
+@dataclass
+class CModulePropertyEntry(StageRecord):
+    """One dynamic module attribute routed through generated helpers."""
+
+    python_name: str
+    getter_name: str
+    setter_name: str | None = None
+    reject_replacement: bool = False
+
+
+@dataclass
+class CModulePropertySupport(StageRecord):
+    """Heap module-type support for dynamic get/set attribute routing."""
+
+    name: str
+    module_name: str
+    entries: tuple[CModulePropertyEntry, ...] = ()
+
+
+@dataclass
+class CDeclaration(StageRecord):
     """C local or global declaration."""
 
     name: str
@@ -65,33 +121,42 @@ class CDeclaration:
     initializer: CodeExpression | None = None
 
 
-@dataclass(frozen=True)
-class CExpressionStatement:
+@dataclass
+class CExpressionStatement(StageRecord):
     """C expression statement."""
 
     expression: CodeExpression
 
 
-@dataclass(frozen=True)
-class CReturn:
+@dataclass
+class CIf(StageRecord):
+    """C conditional with recursively printable statement bodies."""
+
+    condition: CodeExpression
+    body: tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...] = ()
+    else_body: tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...] = ()
+
+
+@dataclass
+class CReturn(StageRecord):
     """C return statement."""
 
     expression: CodeExpression | None = None
 
 
-@dataclass(frozen=True)
-class CFunction:
+@dataclass
+class CFunction(StageRecord):
     """C function definition."""
 
     name: str
     return_type: str
     parameters: tuple[CParameter, ...] = ()
-    body: tuple[CDeclaration | CExpressionStatement | CReturn, ...] = ()
+    body: tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...] = ()
     storage: str | None = None
 
 
-@dataclass(frozen=True)
-class CHeader:
+@dataclass
+class CHeader(StageRecord):
     """Generated C header module."""
 
     guard: str
@@ -99,26 +164,30 @@ class CHeader:
     prototypes: tuple[CFunctionPrototype, ...] = ()
 
 
-@dataclass(frozen=True)
-class CModule:
+@dataclass
+class CModule(StageRecord):
     """Generated C source module."""
 
     name: str
+    defines: tuple[CMacroDefinition, ...] = ()
     includes: tuple[CInclude, ...] = ()
-    declarations: tuple[CDeclaration, ...] = ()
+    declarations: tuple[
+        CDeclaration | CFunctionPrototype | CMethodDefTable | CModuleDef | CModulePropertySupport,
+        ...,
+    ] = ()
     functions: tuple[CFunction, ...] = ()
 
 
-@dataclass(frozen=True)
-class FortranUse:
+@dataclass
+class FortranUse(StageRecord):
     """Fortran use statement."""
 
     module: str
     only: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class FortranParameter:
+@dataclass
+class FortranParameter(StageRecord):
     """Fortran procedure argument declaration."""
 
     name: str
@@ -126,8 +195,8 @@ class FortranParameter:
     attributes: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class FortranDeclaration:
+@dataclass
+class FortranDeclaration(StageRecord):
     """Fortran local or result declaration."""
 
     name: str
@@ -135,25 +204,62 @@ class FortranDeclaration:
     attributes: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
-class FortranAssignment:
+@dataclass
+class FortranAssignment(StageRecord):
     """Fortran assignment statement."""
 
     target: str
     expression: CodeExpression
 
 
-@dataclass(frozen=True)
-class FortranCall:
+@dataclass
+class FortranPointerAssignment(StageRecord):
+    """Fortran pointer association statement."""
+
+    target: str
+    expression: CodeExpression
+
+
+@dataclass
+class FortranCall(StageRecord):
     """Fortran call statement."""
 
     function_name: str
     arguments: tuple[CodeExpression, ...] = ()
 
 
-@dataclass(frozen=True)
-class FortranFunction:
-    """Fortran function or subroutine body used by scalar bridges."""
+@dataclass
+class FortranIf(StageRecord):
+    """Fortran conditional with nested executable statements."""
+
+    condition: CodeExpression
+    body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf, ...] = ()
+    else_body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf, ...] = ()
+
+
+@dataclass
+class FortranInterfaceProcedure(StageRecord):
+    """One native procedure signature inside an explicit interface."""
+
+    name: str
+    imports: tuple[str, ...] = ()
+    parameters: tuple[FortranParameter, ...] = ()
+    result_name: str | None = None
+    result_type: str | None = None
+    is_subroutine: bool = False
+    bind_name: str | None = None
+
+
+@dataclass
+class FortranInterface(StageRecord):
+    """Explicit native procedure interface required for optional dummies."""
+
+    procedures: tuple[FortranInterfaceProcedure, ...] = ()
+
+
+@dataclass
+class FortranFunction(StageRecord):
+    """Fortran function or subroutine body used by bridge generation."""
 
     name: str
     parameters: tuple[FortranParameter, ...] = ()
@@ -161,13 +267,15 @@ class FortranFunction:
     result_type: str | None = None
     bind_name: str | None = None
     declarations: tuple[FortranDeclaration, ...] = ()
-    body: tuple[FortranAssignment | FortranCall, ...] = ()
+    body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf, ...] = ()
+    is_subroutine: bool = False
 
 
-@dataclass(frozen=True)
-class FortranModule:
+@dataclass
+class FortranModule(StageRecord):
     """Generated Fortran module."""
 
     name: str
     uses: tuple[FortranUse, ...] = ()
+    interfaces: tuple[FortranInterface, ...] = ()
     procedures: tuple[FortranFunction, ...] = ()

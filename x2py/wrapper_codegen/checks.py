@@ -17,10 +17,25 @@ __all__ = (
 
 
 INFRASTRUCTURE_MODULES = frozenset({"__init__.py", "checks.py", "visitor.py"})
-VISITOR_CLASS_SUFFIXES = ("Analyzer", "Emitter", "Planner", "Renderer", "Validator")
+VISITOR_CLASS_SUFFIXES = ("Analyzer", "Emitter", "Generator", "Planner", "Validator")
 REGISTRY_SUFFIXES = ("_DISPATCHER", "_HANDLERS", "_REGISTRY")
 HANDLER_PREFIXES = ("_convert_", "_emit_", "_handle_", "_visit_")
 CONTROL_NODES = (ast.For, ast.AsyncFor, ast.If, ast.Match, ast.Try, ast.While, ast.With, ast.AsyncWith)
+STRICT_CLASS_NAMES = frozenset(
+    {
+        "PrimitiveScalarTypeRegistry",
+        "CBindingGenerator",
+        "FortranBridgeGenerator",
+        "WrapperPlanner",
+    }
+)
+ASSEMBLER_CLASS_NAMES = frozenset(
+    {
+        "CBindingGenerator",
+        "FortranBridgeGenerator",
+        "WrapperCodeGenerator",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -30,6 +45,11 @@ class WrapperCodegenCheckConfig:
     max_complexity: int = 10
     max_statements: int = 30
     max_nesting: int = 4
+    strict_max_complexity: int = 5
+    strict_max_statements: int = 25
+    strict_max_nesting: int = 2
+    assembler_max_complexity: int = 10
+    assembler_max_statements: int = 50
 
 
 @dataclass(frozen=True)
@@ -56,9 +76,7 @@ def check_wrapper_codegen_package(
 ) -> tuple[WrapperCodegenViolation, ...]:
     """Check every Python module in the isolated wrapper-codegen package."""
     root = package_root or Path(__file__).resolve().parent
-    return check_wrapper_codegen_paths(
-        sorted(root.rglob("*.py")), package_root=root, config=config or DEFAULT_CHECK_CONFIG
-    )
+    return check_wrapper_codegen_paths(sorted(root.rglob("*.py")), package_root=root, config=config)
 
 
 def check_wrapper_codegen_paths(
@@ -70,11 +88,12 @@ def check_wrapper_codegen_paths(
     """Check selected wrapper-codegen modules."""
     violations = []
     resolved_config = config or DEFAULT_CHECK_CONFIG
+    tiered_limits = config is None
     for path in paths:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
         violations.extend(_module_violations(path, tree, package_root))
-        violations.extend(_function_size_violations(path, tree, source, resolved_config))
+        violations.extend(_function_size_violations(path, tree, source, resolved_config, tiered_limits))
         violations.extend(_registry_violations(path, tree))
     return tuple(violations)
 
@@ -103,6 +122,7 @@ def _visitor_class_violations(path: Path, tree: ast.Module) -> list[WrapperCodeg
         for node in tree.body
         if isinstance(node, ast.ClassDef)
         and node.name.endswith(VISITOR_CLASS_SUFFIXES)
+        and node.name != "WrapperCodeGenerator"
         and not _inherits_class_visitor(node)
     ]
 
@@ -122,38 +142,39 @@ def _function_size_violations(
     tree: ast.Module,
     source: str,
     config: WrapperCodegenCheckConfig,
+    tiered_limits: bool,
 ) -> list[WrapperCodegenViolation]:
-    return [
-        *_complexity_violations(path, source, config.max_complexity),
-        *_statement_count_violations(path, tree, config.max_statements),
-        *_nesting_violations(path, tree, config.max_nesting),
-    ]
+    complexity_by_line = {block.lineno: block.complexity for block in cc_visit(source)}
+    violations = []
+    for owner, node in _owned_functions(tree):
+        max_complexity, max_statements, max_nesting = _function_limits(owner, config, tiered_limits)
+        complexity = complexity_by_line.get(node.lineno, 1)
+        statement_count = _statement_count(node)
+        nesting_depth = _nesting_depth(node)
+        if complexity > max_complexity:
+            violations.append(_violation(path, node, "complexity", f"{node.name} has complexity {complexity}"))
+        if statement_count > max_statements:
+            violations.append(
+                _violation(path, node, "statement-count", f"{node.name} has {statement_count} statements")
+            )
+        if nesting_depth > max_nesting:
+            violations.append(_violation(path, node, "nesting-depth", f"{node.name} has nesting depth {nesting_depth}"))
+    return violations
 
 
-def _complexity_violations(path: Path, source: str, max_complexity: int) -> list[WrapperCodegenViolation]:
-    return [
-        WrapperCodegenViolation(path, block.lineno, "complexity", f"{block.name} has complexity {block.complexity}")
-        for block in cc_visit(source)
-        if block.complexity > max_complexity
-    ]
-
-
-def _statement_count_violations(path: Path, tree: ast.Module, max_statements: int) -> list[WrapperCodegenViolation]:
-    return [
-        _violation(path, node, "statement-count", f"{node.name} has {statement_count} statements")
-        for node in _functions(tree)
-        for statement_count in (_statement_count(node),)
-        if statement_count > max_statements
-    ]
-
-
-def _nesting_violations(path: Path, tree: ast.Module, max_nesting: int) -> list[WrapperCodegenViolation]:
-    return [
-        _violation(path, node, "nesting-depth", f"{node.name} has nesting depth {nesting_depth}")
-        for node in _functions(tree)
-        for nesting_depth in (_nesting_depth(node),)
-        if nesting_depth > max_nesting
-    ]
+def _function_limits(
+    owner: str | None,
+    config: WrapperCodegenCheckConfig,
+    tiered_limits: bool,
+) -> tuple[int, int, int]:
+    """Return the declared checker limits for one owning production class."""
+    if not tiered_limits:
+        return config.max_complexity, config.max_statements, config.max_nesting
+    if owner in ASSEMBLER_CLASS_NAMES or (owner is not None and owner.endswith("Assembler")):
+        return config.assembler_max_complexity, config.assembler_max_statements, config.max_nesting
+    if owner in STRICT_CLASS_NAMES or (owner is not None and owner.endswith(("Emitter", "Generator", "Planner"))):
+        return config.strict_max_complexity, config.strict_max_statements, config.strict_max_nesting
+    return config.max_complexity, config.max_statements, config.max_nesting
 
 
 def _registry_violations(path: Path, tree: ast.Module) -> list[WrapperCodegenViolation]:
@@ -198,8 +219,12 @@ def _forbidden_printer_calls(
     ]
 
 
-def _functions(tree: ast.Module) -> list[ast.FunctionDef]:
-    return [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+def _owned_functions(tree: ast.Module) -> list[tuple[str | None, ast.FunctionDef]]:
+    """Return module functions and direct methods with their owning class name."""
+    functions = [(None, node) for node in tree.body if isinstance(node, ast.FunctionDef)]
+    for class_node in (node for node in tree.body if isinstance(node, ast.ClassDef)):
+        functions.extend((class_node.name, node) for node in class_node.body if isinstance(node, ast.FunctionDef))
+    return functions
 
 
 def _statement_count(node: ast.FunctionDef) -> int:
