@@ -120,7 +120,11 @@ def test_supported_writeback_actions_select_scalar_result_behavior(codegen_actio
     )
     function = plan.namespaces[0].functions[0]
     actions = tuple(
-        replace(action, binding=replace(action.binding, codegen_action=codegen_action))
+        replace(
+            action,
+            codegen_action=codegen_action,
+            binding=replace(action.binding, codegen_action=codegen_action),
+        )
         if action.phase is WritebackPhase.COPY_OUT
         else action
         for action in function.writeback_actions

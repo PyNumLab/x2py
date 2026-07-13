@@ -94,3 +94,64 @@ def test_editable_contract_can_use_native_order_arguments_without_native_call(tm
     assert module.make_point(scale, point) is None
     assert point.total == np.float64(7.5)
     assert point.code == np.int32(107)
+
+
+def test_fixed_string_storage_and_raw_address_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay both fixed address boundaries through one existing native routine."""
+    native_object = _compile_native_object(NATIVE_CALL_EXAMPLES_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_fixed_string_addresses"
+        contract_package.mkdir()
+        (contract_package / "__init__.pyi").write_text(
+            "from .fnative_call_examples_f90 import fixed_inout_raw, fixed_inout_storage\n",
+            encoding="utf-8",
+        )
+        (contract_package / "fnative_call_examples_f90.pyi").write_text(
+            """from x2py.contracts import Addr, String, bind
+
+@bind("fixed_inout")
+def fixed_inout_raw(label: Addr(String[8])) -> None: ...
+
+@bind("fixed_inout")
+def fixed_inout_storage(label: String[8][()]) -> None: ...
+""",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "fixed_inout_raw") else _sole_native_module(module)
+
+    for module in modules.values():
+        raw_label = ctypes.create_string_buffer(8)
+        raw_label.raw = b"abc     "
+        assert module.fixed_inout_raw(ctypes.addressof(raw_label)) is None
+        assert raw_label.raw == b"Xbc    !"
+
+        storage_label = np.array("abc     ", dtype="S8")
+        assert module.fixed_inout_storage(storage_label) is None
+        assert storage_label[()] == b"Xbc    !"
+
+        with pytest.raises(TypeError):
+            module.fixed_inout_raw("abc     ")
+        with pytest.raises(TypeError, match="itemsize 8"):
+            module.fixed_inout_storage(np.array("abc", dtype="S3"))
+        with pytest.raises(TypeError):
+            module.fixed_inout_storage(np.array([b"abc     "], dtype="S8"))
+        with pytest.raises(TypeError):
+            module.fixed_inout_storage(np.array("abc     ", dtype="U8"))
+        with pytest.raises(TypeError):
+            module.fixed_inout_storage(np.array(b"abc     ", dtype=object))
+        read_only = np.array("abc     ", dtype="S8")
+        read_only.flags.writeable = False
+        with pytest.raises(TypeError, match="writeable"):
+            module.fixed_inout_storage(read_only)

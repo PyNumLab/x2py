@@ -31,6 +31,7 @@ from x2py.wrapper_codegen.nodes import (
     FortranModule,
     FortranParameter,
     FortranPointerAssignment,
+    FortranSelectCase,
     FortranUse,
 )
 from x2py.stage_values import StageRecord
@@ -261,6 +262,8 @@ class CSourcePrinter(ClassVisitor):
 class FortranSourcePrinter(ClassVisitor):
     """Print isolated Fortran source nodes."""
 
+    _LINE_LIMIT = 124
+
     def doprint(self, node: object) -> str:
         """Render one isolated Fortran backend node."""
         if isinstance(node, StageRecord):
@@ -321,7 +324,10 @@ class FortranSourcePrinter(ClassVisitor):
 
     def _visit_FortranCall(self, node: FortranCall) -> str:
         """Render one Fortran call statement."""
-        return f"call {node.function_name}({', '.join(argument.text for argument in node.arguments)})"
+        return self._continued_call(
+            f"call {node.function_name}(",
+            tuple(argument.text for argument in node.arguments),
+        )
 
     def _visit_FortranIf(self, node: FortranIf) -> str:
         """Render one Fortran conditional statement."""
@@ -333,6 +339,16 @@ class FortranSourcePrinter(ClassVisitor):
         lines.append("end if")
         return "\n".join(lines)
 
+    def _visit_FortranSelectCase(self, node: FortranSelectCase) -> str:
+        """Render runtime-rank dispatch without hiding branch structure."""
+        lines = [f"select case ({node.expression.text})"]
+        for case in node.cases:
+            selector = "default" if case.value is None else f"({case.value})"
+            lines.append(f"case {selector}")
+            lines.extend(self._indented(self.visit(statement)) for statement in case.body)
+        lines.append("end select")
+        return "\n".join(lines)
+
     def _visit_FortranInterface(self, node: FortranInterface) -> str:
         """Render one explicit interface block."""
         lines = ["interface"]
@@ -342,11 +358,16 @@ class FortranSourcePrinter(ClassVisitor):
 
     def _visit_FortranInterfaceProcedure(self, node: FortranInterfaceProcedure) -> str:
         """Render one native procedure declaration inside an interface."""
-        arguments = ", ".join(parameter.name for parameter in node.parameters)
         kind = "subroutine" if node.is_subroutine else "function"
         suffix = f" result({node.result_name})" if node.result_name is not None else ""
         binding = f' bind(c, name="{node.bind_name}")' if node.bind_name is not None else ""
-        lines = [f"{kind} {node.name}({arguments}){binding}{suffix}"]
+        lines = [
+            self._continued_call(
+                f"{kind} {node.name}(",
+                tuple(parameter.name for parameter in node.parameters),
+                suffix=f"){binding}{suffix}",
+            )
+        ]
         if node.imports:
             lines.append(self._indented(f"import :: {', '.join(node.imports)}"))
         lines.extend(self._indented(self.visit(parameter)) for parameter in node.parameters)
@@ -357,11 +378,109 @@ class FortranSourcePrinter(ClassVisitor):
 
     def _function_signature(self, node: FortranFunction) -> str:
         """Render a Fortran function signature."""
-        args = ", ".join(parameter.name for parameter in node.parameters)
         suffix = f" result({node.result_name})" if node.result_name is not None else ""
         bind = f' bind(c, name="{node.bind_name}")' if node.bind_name is not None else ""
         kind = "subroutine" if node.is_subroutine else "function"
-        return f"{kind} {node.name}({args}){suffix}{bind}"
+        return self._continued_call(
+            f"{kind} {node.name}(",
+            tuple(parameter.name for parameter in node.parameters),
+            suffix=f"){suffix}{bind}",
+        )
+
+    def _continued_call(
+        self,
+        prefix: str,
+        arguments: tuple[str, ...],
+        *,
+        suffix: str = ")",
+    ) -> str:
+        """Wrap one comma-separated Fortran argument list with continuations."""
+        rendered = f"{prefix}{', '.join(arguments)}{suffix}"
+        if len(rendered) <= self._LINE_LIMIT:
+            return rendered
+
+        lines = [f"{prefix}&"]
+        last_argument_index = len(arguments) - 1
+        for argument_index, argument in enumerate(arguments):
+            lines.extend(
+                self._continued_argument_lines(
+                    argument,
+                    last_argument=argument_index == last_argument_index,
+                    suffix=suffix,
+                )
+            )
+        return "\n".join(lines)
+
+    def _continued_argument_lines(
+        self,
+        argument: str,
+        *,
+        last_argument: bool,
+        suffix: str,
+    ) -> tuple[str, ...]:
+        """Wrap one outer-call argument without interpreting semantic policy."""
+        array_items = self._array_constructor_items(argument)
+        if array_items is not None:
+            return self._continued_array_constructor_lines(array_items, last_argument, suffix)
+        parenthesized_items = self._parenthesized_items(argument)
+        if parenthesized_items is not None and len(f"  & {argument}") > self._LINE_LIMIT:
+            return self._continued_parenthesized_lines(parenthesized_items, last_argument, suffix)
+        ending = suffix if last_argument else ", &"
+        return (f"  & {argument}{ending}",)
+
+    def _continued_array_constructor_lines(
+        self,
+        items: tuple[str, ...],
+        last_argument: bool,
+        suffix: str,
+    ) -> tuple[str, ...]:
+        """Wrap one simple Fortran array constructor item by item."""
+        lines = []
+        last_item_index = len(items) - 1
+        for item_index, item in enumerate(items):
+            opening = "[" if item_index == 0 else ""
+            closing = "]" if item_index == last_item_index else ""
+            ending = self._continued_item_ending(item_index == last_item_index, last_argument, suffix)
+            lines.append(f"  & {opening}{item}{closing}{ending}")
+        return tuple(lines)
+
+    def _continued_parenthesized_lines(
+        self,
+        expression: tuple[str, tuple[str, ...]],
+        last_argument: bool,
+        suffix: str,
+    ) -> tuple[str, ...]:
+        """Wrap one nested array section or other simple parenthesized value."""
+        name, items = expression
+        lines = [f"  & {name}(&"]
+        last_item_index = len(items) - 1
+        for item_index, item in enumerate(items):
+            closing = ")" if item_index == last_item_index else ""
+            ending = self._continued_item_ending(item_index == last_item_index, last_argument, suffix)
+            lines.append(f"  &   {item}{closing}{ending}")
+        return tuple(lines)
+
+    def _continued_item_ending(self, last_item: bool, last_argument: bool, suffix: str) -> str:
+        """Return the continuation or outer-call ending for one nested item."""
+        if not last_item:
+            return ", &"
+        return suffix if last_argument else ", &"
+
+    def _array_constructor_items(self, expression: str) -> tuple[str, ...] | None:
+        """Return simple array-constructor items that need their own lines."""
+        if not (expression.startswith("[") and expression.endswith("]") and "," in expression):
+            return None
+        return tuple(item.strip() for item in expression[1:-1].split(","))
+
+    def _parenthesized_items(self, expression: str) -> tuple[str, tuple[str, ...]] | None:
+        """Return simple parenthesized items that need continuation lines."""
+        opening = expression.find("(")
+        if opening < 1 or not expression.endswith(")"):
+            return None
+        items = tuple(item.strip() for item in expression[opening + 1 : -1].split(","))
+        if len(items) < 2:
+            return None
+        return expression[:opening], items
 
     def _declaration(self, type_name: str, name: str, attributes: tuple[str, ...]) -> str:
         """Render a Fortran declaration."""

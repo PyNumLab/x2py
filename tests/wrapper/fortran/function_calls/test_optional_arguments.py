@@ -1,6 +1,7 @@
 """Optional argument runtime wrapper tests."""
 
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pytest
@@ -256,3 +257,61 @@ def test_fixed_optional_scalar_wrapper_plan_route_matches_all_presence_states(tm
         assert module.optional_scale(base=np.int32(3), factor=np.int32(6)) == np.int32(9)
         with pytest.raises(TypeError):
             module.optional_scale(np.int32(3), "bad")
+
+
+def test_optional_array_buffers_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay omitted, explicit-None, and present ordinary array storage."""
+    native_object = _compile_native_object(OPTIONAL_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_optional_arrays"
+        shutil.copytree(CONTRACT_FIXTURES / "foptional_f90", contract_package)
+        (contract_package / "foptional_f90.pyi").write_text(
+            """from x2py.contracts import Addr, Arg, Float64, Int32, Returns, native_call
+
+@native_call([Arg(0), Addr(Arg(1))])
+def mutate_optional(
+    values: Float64[::] = ...,
+    amount: Float64 = ...
+) -> None: ...
+
+@native_call([Addr(Arg(0)), Arg(1)])
+def fill_optional(
+    n: Int32,
+    values: Float64[::] = ...
+) -> Returns["values", Float64[::]] | None: ...
+""",
+            encoding="utf-8",
+        )
+        (contract_package / "__init__.pyi").write_text(
+            "from .foptional_f90 import mutate_optional\nfrom .foptional_f90 import fill_optional\n",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "mutate_optional") else _sole_native_module(module)
+
+    for module in modules.values():
+        assert module.mutate_optional() is None
+        assert module.mutate_optional(None, np.float64(2.0)) is None
+        values = np.array([1.0, 2.0], dtype=np.float64)
+        assert module.mutate_optional(values, np.float64(2.5)) is None
+        np.testing.assert_array_equal(values, np.array([3.5, 4.5]))
+
+        output = np.empty(3, dtype=np.float64)
+        assert module.fill_optional(np.int32(3), output) is output
+        np.testing.assert_array_equal(output, np.array([11.0, 12.0, 13.0]))
+        assert module.fill_optional(np.int32(3)) is None
+        assert module.fill_optional(np.int32(3), None) is None
+
+    with pytest.raises(TypeError):
+        modules["wrapper_plan"].fill_optional(np.int32(3), np.empty(3, dtype=np.float32))

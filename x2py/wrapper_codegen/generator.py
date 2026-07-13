@@ -13,16 +13,27 @@ from x2py.pipeline.wrapper_artifacts import (
 from x2py.semantics.ownership import (
     AssignmentMode,
     CodegenAction,
+    DestructionPolicy,
     NativeBarrierAction,
+    ObjectKind,
+    OwnershipOwner,
     PythonBarrierAction,
     SetterAction,
+    StorageMode,
+    TransferMode,
 )
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
     BridgeDataAction,
+    FIXED_STRING_RESULT_COPY_REASON,
+    ORDINARY_ARRAY_RESULT_COPY_REASON,
     ModuleGetterAction,
     OptionalMode,
     PythonExceptionKind,
+    RAW_STRING_ADDRESS_COPY_REASON,
+    STRING_INPUT_COPY_REASON,
+    STRING_REPLACEMENT_COPY_REASON,
+    STRING_STORAGE_COPY_REASON,
     WritebackPhase,
 )
 from x2py.wrapper_codegen.c.binding import CBindingGenerator
@@ -283,31 +294,34 @@ class WrapperCodeGenerator:
             *self._duplicate_role_diagnostics(plan),
             *self._available_role_diagnostics(plan),
             *self._function_output_diagnostics(plan),
+            *self._string_result_aggregation_diagnostics(plan),
             *self._status_error_diagnostics(plan),
         ]
         slots = {slot.native_position: slot for slot in plan.native_call_slots}
         for slot in plan.native_call_slots:
             diagnostics.extend(self._native_slot_diagnostics(slot))
         for argument in plan.arguments:
-            diagnostics.extend(self._argument_diagnostics(argument, slots))
+            diagnostics.extend(self._argument_diagnostics(argument, slots, plan.available_roles))
         for result in plan.results:
             diagnostics.extend(self._result_diagnostics(result, slots, plan.available_roles))
         for action in (*plan.writeback_actions, *plan.cleanup_actions, *plan.release_actions):
             diagnostics.extend(self._lifecycle_diagnostics(action, plan.available_roles))
         diagnostics.extend(self._writeback_phase_diagnostics(plan))
+        diagnostics.extend(self._string_writeback_diagnostics(plan))
         return tuple(diagnostics)
 
     def _argument_diagnostics(
         self,
         plan: ArgumentTransferPlan,
         function_slots: dict[int, NativeCallSlotPlan],
+        available_roles: tuple[str, ...],
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return binding-to-bridge handoff and slot diagnostics."""
         diagnostics = [
             *self._argument_policy_consistency_diagnostics(plan),
             *self._argument_slot_consistency_diagnostics(plan, function_slots),
             *self._optional_argument_diagnostics(plan),
-            *self._scalar_boundary_diagnostics(plan),
+            *self._argument_family_diagnostics(plan, available_roles),
             *self._argument_data_action_diagnostics(plan),
             *self._bridge_data_diagnostics(
                 plan.owner_path,
@@ -316,6 +330,60 @@ class WrapperCodeGenerator:
             ),
         ]
         return tuple(diagnostics)
+
+    def _argument_family_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+        available_roles: tuple[str, ...],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Dispatch one argument from its completed object-kind decision."""
+        match plan.object_kind:
+            case ObjectKind.SCALAR:
+                diagnostics = list(self._scalar_boundary_diagnostics(plan))
+                if plan.array is not None:
+                    diagnostics.append(self._diagnostic(plan.owner_path, "unexpected-scalar-array-handoff", None))
+                if plan.datatype_family is DatatypeFamily.STRING:
+                    diagnostics.append(
+                        self._diagnostic(
+                            plan.owner_path,
+                            "invalid-scalar-datatype-family",
+                            plan.datatype_family.value,
+                        )
+                    )
+                return tuple(diagnostics)
+            case ObjectKind.STRING:
+                diagnostics = list(self._string_boundary_diagnostics(plan))
+                if plan.array is not None:
+                    diagnostics.append(self._diagnostic(plan.owner_path, "unexpected-string-array-handoff", None))
+                return tuple(diagnostics)
+            case ObjectKind.NUMPY_ARRAY:
+                return (
+                    *self._array_boundary_diagnostics(plan),
+                    *self._array_extent_reference_diagnostics(plan, available_roles),
+                )
+            case _:
+                return (
+                    self._diagnostic(
+                        plan.owner_path,
+                        "unsupported-argument-object-kind",
+                        plan.object_kind.value,
+                    ),
+                )
+
+    def _array_extent_reference_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+        available_roles: tuple[str, ...],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require every planned extent dependency to name a function role."""
+        if plan.array is None:
+            return ()
+        return tuple(
+            self._diagnostic(plan.owner_path, "unavailable-array-extent-reference", role)
+            for axis_roles in plan.array.extent_reference_roles
+            for role in axis_roles
+            if role not in available_roles
+        )
 
     def _argument_policy_consistency_diagnostics(
         self,
@@ -328,6 +396,14 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-bridge-handoff", role))
         if plan.native_call_slot.symbolic_role != role:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-native-handoff", role))
+        if plan.bridge.length_handoff_role != plan.binding.length_handoff_role:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "inconsistent-length-handoff",
+                    plan.binding.length_handoff_role,
+                )
+            )
         if plan.bridge.native_action is not plan.native_call_slot.native_action:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-native-action", plan.bridge.native_action.value)
@@ -340,12 +416,61 @@ class WrapperCodeGenerator:
                     plan.native_call_slot.bridge_data_action.value,
                 )
             )
+        if plan.array is not plan.native_call_slot.array:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-array-handoff", plan.array))
+        diagnostics.extend(self._argument_completed_fact_diagnostics(plan))
         if plan.bridge.copy_reason != plan.native_call_slot.bridge_copy_reason:
             diagnostics.append(
                 self._diagnostic(
                     plan.owner_path,
                     "inconsistent-bridge-copy-reason",
                     plan.native_call_slot.bridge_copy_reason,
+                )
+            )
+        return tuple(diagnostics)
+
+    def _argument_completed_fact_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return projected action, length, mutability, and nullability drift."""
+        diagnostics = []
+        if plan.binding.codegen_action is not plan.bridge.codegen_action:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path, "inconsistent-argument-codegen-action", plan.bridge.codegen_action.value
+                )
+            )
+        if plan.binding.codegen_action is not plan.native_call_slot.codegen_action:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "inconsistent-native-slot-codegen-action",
+                    plan.native_call_slot.codegen_action.value,
+                )
+            )
+        if plan.character_length != plan.native_call_slot.character_length:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "inconsistent-argument-character-length",
+                    plan.native_call_slot.character_length,
+                )
+            )
+        if plan.binding.writable != plan.mutates_native:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "inconsistent-argument-mutability", plan.binding.writable)
+            )
+        if plan.binding.nullable != plan.nullable:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "inconsistent-argument-nullability", plan.binding.nullable)
+            )
+        if plan.native_call_slot.object_kind is not plan.object_kind:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "inconsistent-argument-object-kind",
+                    plan.native_call_slot.object_kind,
                 )
             )
         return tuple(diagnostics)
@@ -378,7 +503,14 @@ class WrapperCodeGenerator:
         plan: ArgumentTransferPlan,
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Require the completed data action to match the selected scalar path."""
-        if plan.bridge.optional_mode is OptionalMode.DESCRIPTOR:
+        if plan.bridge.handoff_mode is ArgumentHandoffMode.ARRAY_BUFFER:
+            expected = BridgeDataAction.ASSOCIATE_VIEW
+        elif plan.bridge.handoff_mode is ArgumentHandoffMode.CHARACTER_BUFFER or (
+            plan.datatype_family is DatatypeFamily.STRING
+            and plan.bridge.handoff_mode is ArgumentHandoffMode.OPAQUE_ADDRESS
+        ):
+            expected = BridgeDataAction.COPY_REPRESENTATION
+        elif plan.bridge.optional_mode is OptionalMode.DESCRIPTOR:
             expected = (
                 BridgeDataAction.COPY_REPRESENTATION
                 if plan.native_call_slot.value_kind == "allocatable"
@@ -401,12 +533,19 @@ class WrapperCodeGenerator:
             ),
         )
 
+    # Scalar argument validation.
     def _scalar_boundary_diagnostics(
         self,
         plan: ArgumentTransferPlan,
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return completed Python/native scalar boundary consistency diagnostics."""
         action = plan.binding.python_action
+        if action not in {
+            PythonBarrierAction.SCALAR_VALUE,
+            PythonBarrierAction.SCALAR_STORAGE,
+            PythonBarrierAction.RAW_ADDRESS,
+        }:
+            return (self._diagnostic(plan.owner_path, "invalid-scalar-python-action", action.value),)
         expected = {
             PythonBarrierAction.SCALAR_STORAGE: NativeBarrierAction.PASS_STORAGE_ADDRESS,
             PythonBarrierAction.RAW_ADDRESS: NativeBarrierAction.PASS_RAW_ADDRESS,
@@ -430,6 +569,492 @@ class WrapperCodeGenerator:
             )
         if plan.binding.optional_mode is not OptionalMode.REQUIRED:
             diagnostics.append(self._diagnostic(plan.owner_path, "optional-scalar-address-boundary", action.value))
+        return tuple(diagnostics)
+
+    # Ordinary-array argument validation.
+    def _array_boundary_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one ordinary-array transfer selected by object kind."""
+        array = plan.array
+        if array is None:
+            return (self._diagnostic(plan.owner_path, "missing-array-handoff", None),)
+        diagnostics = [
+            *self._array_ownership_diagnostics(plan),
+            *self._array_action_diagnostics(plan),
+            *self._array_scope_diagnostics(plan),
+            *self._array_shape_diagnostics(plan),
+        ]
+        return tuple(diagnostics)
+
+    def _array_ownership_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate caller-owned ordinary-array lifetime facts."""
+        diagnostics = []
+        expected = (
+            ("object-kind", plan.object_kind, ObjectKind.NUMPY_ARRAY),
+            ("owner", plan.ownership_owner, OwnershipOwner.CALLER),
+            ("storage", plan.storage_mode, StorageMode.STACK),
+            ("boundary-storage", plan.boundary_storage_mode, StorageMode.STACK),
+        )
+        diagnostics.extend(
+            self._diagnostic(plan.owner_path, f"invalid-array-{name}", actual.value)
+            for name, actual, required in expected
+            if actual is not required
+        )
+        expected_transfer = TransferMode.IN_PLACE if plan.mutates_native else TransferMode.CALL_LOCAL
+        expected_destruction = DestructionPolicy.CALLER if plan.mutates_native else DestructionPolicy.NONE
+        if plan.transfer_mode is not expected_transfer:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-array-transfer", plan.transfer_mode.value))
+        if plan.destruction_policy is not expected_destruction:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-destruction", plan.destruction_policy.value)
+            )
+        return tuple(diagnostics)
+
+    def _array_action_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate completed binding and bridge array actions."""
+        diagnostics = []
+        if plan.binding.python_action is not PythonBarrierAction.ARRAY_STORAGE:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-python-action", plan.binding.python_action.value)
+            )
+        if plan.bridge.native_action is not NativeBarrierAction.PASS_ARRAY_BUFFER:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-native-action", plan.bridge.native_action.value)
+            )
+        if plan.bridge.handoff_mode is not ArgumentHandoffMode.ARRAY_BUFFER:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-handoff-mode", plan.bridge.handoff_mode.value)
+            )
+        if plan.bridge.data_action is not BridgeDataAction.ASSOCIATE_VIEW:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-data-action", plan.bridge.data_action.value)
+            )
+        if plan.binding.codegen_action not in {
+            CodegenAction.CALL_LOCAL_INPUT,
+            CodegenAction.IN_PLACE_ARGUMENT,
+            CodegenAction.IDENTITY_OUTPUT,
+        }:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-codegen-action", plan.binding.codegen_action.value)
+            )
+        return tuple(diagnostics)
+
+    def _array_scope_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Keep ordinary arrays on the non-descriptor storage boundary."""
+        diagnostics = []
+        if plan.binding.optional_mode not in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-optional-mode", plan.binding.optional_mode.value)
+            )
+        if plan.nullable or plan.binding.descriptor_boundary:
+            diagnostics.append(self._diagnostic(plan.owner_path, "descriptor-backed-ordinary-array", plan.nullable))
+        if plan.projects_result and plan.result_position is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-array-result-position", None))
+        return tuple(diagnostics)
+
+    def _array_shape_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate concrete or assumed-rank array layout and ABI roles."""
+        array = plan.array
+        if array is None:
+            return ()
+        diagnostics = []
+        if array.rank is None:
+            diagnostics.extend(self._assumed_rank_array_diagnostics(plan))
+        else:
+            diagnostics.extend(self._concrete_rank_array_diagnostics(plan))
+        diagnostics.extend(self._array_layout_role_diagnostics(plan))
+        diagnostics.extend(self._array_handoff_role_diagnostics(plan))
+        diagnostics.extend(self._array_itemsize_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _array_handoff_role_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate ordinary-array data, extent, and shape-reference roles."""
+        array = plan.array
+        if array is None:
+            return ()
+        diagnostics = []
+        if array.data_role != plan.binding.handoff_role:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-array-data-role", array.data_role))
+        if any(not role for role in array.extent_roles):
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-array-extent-role", array.extent_roles))
+        if len(array.extent_reference_roles) != len(array.shape):
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-extent-reference-count", array.extent_reference_roles)
+            )
+        return tuple(diagnostics)
+
+    def _array_itemsize_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate fixed-width character itemsize fields only on character arrays."""
+        array = plan.array
+        if array is None:
+            return ()
+        if plan.datatype_family is DatatypeFamily.STRING:
+            if array.itemsize is None or array.itemsize <= 0 or array.itemsize_role is None:
+                return (self._diagnostic(plan.owner_path, "invalid-array-itemsize", array.itemsize),)
+            return ()
+        if array.itemsize is not None or array.itemsize_role is not None:
+            return (self._diagnostic(plan.owner_path, "unexpected-array-itemsize", array.itemsize),)
+        return ()
+
+    def _concrete_rank_array_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate fixed-rank shape and layout facts."""
+        array = plan.array
+        if array is None or array.rank is None:
+            return ()
+        diagnostics = []
+        if not 1 <= array.rank <= 15:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-array-rank", array.rank))
+        if len(array.shape) != array.rank or len(array.axes) != array.rank:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-array-rank", array.rank))
+        if len(array.extent_roles) != array.rank or array.runtime_rank_role is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-array-rank-roles", array.extent_roles))
+        return tuple(diagnostics)
+
+    def _assumed_rank_array_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the one-through-fifteen runtime-rank ABI."""
+        array = plan.array
+        if array is None or array.rank is not None:
+            return ()
+        diagnostics = []
+        if array.category != "assumed_rank" or array.shape != ("...",):
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-assumed-rank-array", array.shape))
+        if len(array.extent_roles) != 15 or array.runtime_rank_role is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-assumed-rank-roles", array.extent_roles))
+        return tuple(diagnostics)
+
+    def _array_layout_role_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate dense versus stride-aware ABI fields."""
+        array = plan.array
+        if array is None:
+            return ()
+        return (
+            *self._array_order_diagnostics(plan),
+            *self._array_axis_mode_diagnostics(plan),
+            *self._array_stride_role_diagnostics(plan),
+        )
+
+    def _array_order_diagnostics(self, plan: ArgumentTransferPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the completed ordinary-array order marker."""
+        array = plan.array
+        if array is not None and array.order not in {None, "ORDER_F", "ORDER_C"}:
+            return (self._diagnostic(plan.owner_path, "invalid-array-order", array.order),)
+        return ()
+
+    def _array_axis_mode_diagnostics(self, plan: ArgumentTransferPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate dense versus stride-aware axis markers."""
+        array = plan.array
+        if array is None:
+            return ()
+        if array.order not in {None, "ORDER_F", "ORDER_C"}:
+            return ()
+        if array.contiguous not in {True, False}:
+            return (self._diagnostic(plan.owner_path, "invalid-array-contiguity", array.contiguous),)
+        if array.contiguous is True and any(axis != "dense" for axis in array.axes):
+            return (self._diagnostic(plan.owner_path, "invalid-array-axis-modes", array.axes),)
+        if array.contiguous is False and "strided" not in array.axes:
+            return (self._diagnostic(plan.owner_path, "invalid-array-axis-modes", array.axes),)
+        return ()
+
+    def _array_stride_role_diagnostics(self, plan: ArgumentTransferPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate stride metadata presence or absence from completed contiguity."""
+        array = plan.array
+        if array is None:
+            return ()
+        if array.contiguous is False:
+            return (
+                *self._required_array_stride_role_diagnostics(plan),
+                *self._array_stride_role_count_diagnostics(plan),
+            )
+        if array.upper_bound_roles or array.stride_roles:
+            return (self._diagnostic(plan.owner_path, "unexpected-dense-array-stride-roles", None),)
+        return ()
+
+    def _required_array_stride_role_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require positive-stride metadata and a Fortran-oriented layout."""
+        array = plan.array
+        if array is not None and (array.order == "ORDER_C" or not array.upper_bound_roles or not array.stride_roles):
+            return (self._diagnostic(plan.owner_path, "invalid-strided-array-layout", array.order),)
+        return ()
+
+    def _array_stride_role_count_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one upper bound and element stride per array extent."""
+        array = plan.array
+        if array is None:
+            return ()
+        diagnostics = []
+        if len(array.upper_bound_roles) != len(array.extent_roles):
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-array-upper-bound-roles", None))
+        if len(array.stride_roles) != len(array.extent_roles):
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-array-stride-roles", None))
+        return tuple(diagnostics)
+
+    # String argument validation.
+    def _string_boundary_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Dispatch completed string-value, storage, or raw-address validation."""
+        if plan.datatype_family is not DatatypeFamily.STRING:
+            return (
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-string-datatype-family",
+                    plan.datatype_family.value,
+                ),
+            )
+        action = plan.binding.python_action
+        if action is PythonBarrierAction.STRING_VALUE:
+            return (*self._string_value_action_diagnostics(plan), *self._string_length_diagnostics(plan))
+        if action is PythonBarrierAction.STRING_STORAGE:
+            return self._string_address_diagnostics(
+                plan,
+                native_action=NativeBarrierAction.PASS_STORAGE_ADDRESS,
+                storage_mode=StorageMode.ALIAS,
+                copy_reason=STRING_STORAGE_COPY_REASON,
+                label="storage",
+            )
+        if action is PythonBarrierAction.RAW_ADDRESS:
+            return self._string_address_diagnostics(
+                plan,
+                native_action=NativeBarrierAction.PASS_RAW_ADDRESS,
+                storage_mode=StorageMode.STACK,
+                copy_reason=RAW_STRING_ADDRESS_COPY_REASON,
+                label="raw-address",
+            )
+        return (self._diagnostic(plan.owner_path, "invalid-string-python-action", action.value),)
+
+    def _string_value_action_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return action, handoff, and presence diagnostics for one string input."""
+        diagnostics = []
+        if plan.binding.python_action is not PythonBarrierAction.STRING_VALUE:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-string-python-action", plan.binding.python_action.value)
+            )
+        if plan.bridge.native_action is not NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-string-native-action", plan.bridge.native_action.value)
+            )
+        if plan.bridge.handoff_mode is not ArgumentHandoffMode.CHARACTER_BUFFER:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-string-handoff", plan.bridge.handoff_mode.value)
+            )
+        if plan.bridge.data_action is not BridgeDataAction.COPY_REPRESENTATION:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-string-data-action", plan.bridge.data_action.value)
+            )
+        if plan.binding.optional_mode not in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-string-optional-mode",
+                    plan.binding.optional_mode.value,
+                )
+            )
+        diagnostics.extend(self._string_codegen_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _string_address_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+        *,
+        native_action: NativeBarrierAction,
+        storage_mode: StorageMode,
+        copy_reason: str,
+        label: str,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one fixed string storage/raw address plan."""
+        diagnostics = list(
+            self._string_address_ownership_diagnostics(
+                plan,
+                storage_mode=storage_mode,
+                label=label,
+            )
+        )
+        if plan.bridge.native_action is not native_action:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path, f"invalid-string-{label}-native-action", plan.bridge.native_action.value
+                )
+            )
+        if plan.bridge.handoff_mode is not ArgumentHandoffMode.OPAQUE_ADDRESS:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, f"invalid-string-{label}-handoff", plan.bridge.handoff_mode.value)
+            )
+        if plan.bridge.data_action is not BridgeDataAction.COPY_REPRESENTATION:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, f"invalid-string-{label}-data-action", plan.bridge.data_action.value)
+            )
+        if plan.bridge.copy_reason != copy_reason:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, f"invalid-string-{label}-copy-reason", plan.bridge.copy_reason)
+            )
+        diagnostics.extend(self._string_address_length_diagnostics(plan, label))
+        return tuple(diagnostics)
+
+    def _string_address_ownership_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+        *,
+        storage_mode: StorageMode,
+        label: str,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate completed caller-owned in-place string address facts."""
+        expected = (
+            ("object-kind", plan.object_kind, ObjectKind.STRING),
+            ("owner", plan.ownership_owner, OwnershipOwner.CALLER),
+            ("transfer", plan.transfer_mode, TransferMode.IN_PLACE),
+            ("destruction", plan.destruction_policy, DestructionPolicy.CALLER),
+            ("storage", plan.storage_mode, storage_mode),
+            ("boundary-storage", plan.boundary_storage_mode, storage_mode),
+        )
+        diagnostics = [
+            self._diagnostic(plan.owner_path, f"invalid-string-{label}-{name}", actual.value)
+            for name, actual, required in expected
+            if actual is not required
+        ]
+        if plan.binding.codegen_action is not CodegenAction.IN_PLACE_ARGUMENT:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, f"invalid-string-{label}-action", plan.binding.codegen_action.value)
+            )
+        if not plan.mutates_native:
+            diagnostics.append(self._diagnostic(plan.owner_path, f"string-{label}-without-mutation", False))
+        if plan.projects_result:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, f"string-{label}-projects-result", plan.result_position)
+            )
+        if plan.nullable or plan.binding.optional_mode is not OptionalMode.REQUIRED:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, f"optional-string-{label}", plan.binding.optional_mode.value)
+            )
+        return tuple(diagnostics)
+
+    def _string_address_length_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+        label: str,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one fixed plan length and prohibit a runtime length ABI role."""
+        diagnostics = []
+        if plan.character_length is None or plan.character_length <= 0:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, f"invalid-string-{label}-length", plan.character_length)
+            )
+        if plan.binding.length_handoff_role is not None:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    f"unexpected-string-{label}-length-handoff",
+                    plan.binding.length_handoff_role,
+                )
+            )
+        return tuple(diagnostics)
+
+    def _string_codegen_diagnostics(self, plan: ArgumentTransferPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return string action, copy-reason, and replacement diagnostics."""
+        diagnostics = []
+        action = plan.binding.codegen_action
+        if action not in {CodegenAction.CALL_LOCAL_INPUT, CodegenAction.COPY_IN_OUT}:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-string-codegen-action", action.value))
+        expected_reason = (
+            STRING_REPLACEMENT_COPY_REASON if action is CodegenAction.COPY_IN_OUT else STRING_INPUT_COPY_REASON
+        )
+        if plan.bridge.copy_reason != expected_reason:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-string-copy-reason", plan.bridge.copy_reason))
+        if action is CodegenAction.COPY_IN_OUT:
+            diagnostics.extend(self._string_replacement_diagnostics(plan))
+        elif plan.projects_result:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "call-local-string-projects-result", plan.result_position)
+            )
+        return tuple(diagnostics)
+
+    def _string_replacement_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate completed ownership and projection for one string replacement."""
+        expected = (
+            ("object-kind", plan.object_kind, ObjectKind.STRING),
+            ("owner", plan.ownership_owner, OwnershipOwner.PYTHON),
+            ("transfer", plan.transfer_mode, TransferMode.COPY_RETURN),
+            ("destruction", plan.destruction_policy, DestructionPolicy.PYTHON_REFCOUNT),
+            ("storage", plan.storage_mode, StorageMode.STACK),
+            ("boundary-storage", plan.boundary_storage_mode, StorageMode.STACK),
+        )
+        diagnostics = [
+            self._diagnostic(plan.owner_path, f"invalid-string-replacement-{name}", actual.value)
+            for name, actual, required in expected
+            if actual is not required
+        ]
+        if not plan.mutates_native:
+            diagnostics.append(self._diagnostic(plan.owner_path, "string-replacement-without-mutation", False))
+        if not plan.projects_result or plan.result_position is None:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "string-replacement-without-result", plan.result_position)
+            )
+        if plan.nullable:
+            diagnostics.append(self._diagnostic(plan.owner_path, "nullable-string-replacement", True))
+        return tuple(diagnostics)
+
+    def _string_length_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return payload-length handoff and fixed-length diagnostics."""
+        diagnostics = []
+        length_role = plan.binding.length_handoff_role
+        if length_role is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-string-length-handoff", None))
+        if plan.native_call_slot.character_length is not None and plan.native_call_slot.character_length <= 0:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-string-character-length",
+                    plan.native_call_slot.character_length,
+                )
+            )
+        if plan.character_length is not None and plan.character_length <= 0:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-argument-character-length", plan.character_length)
+            )
         return tuple(diagnostics)
 
     def _optional_argument_diagnostics(
@@ -472,6 +1097,8 @@ class WrapperCodeGenerator:
             NativeBarrierAction.PASS_VALUE,
             NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
             NativeBarrierAction.PASS_STORAGE_ADDRESS,
+            NativeBarrierAction.PASS_ARRAY_BUFFER,
+            NativeBarrierAction.PASS_NATIVE_DESCRIPTOR,
         }:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-optional-native-action", plan.bridge.native_action.value)
@@ -511,6 +1138,154 @@ class WrapperCodeGenerator:
             diagnostics.extend(self._hidden_result_diagnostics(plan, function_slots))
         else:
             diagnostics.append(self._diagnostic(plan.owner_path, "unknown-result-source", plan.source_kind))
+        diagnostics.extend(self._result_family_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _result_family_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Dispatch one result from its completed object-kind decision."""
+        match plan.object_kind:
+            case ObjectKind.SCALAR:
+                diagnostics = list(self._nonstring_result_length_diagnostics(plan))
+                if plan.array is not None:
+                    diagnostics.append(self._diagnostic(plan.owner_path, "unexpected-scalar-result-array", None))
+                if plan.datatype_family is DatatypeFamily.STRING:
+                    diagnostics.append(
+                        self._diagnostic(
+                            plan.owner_path,
+                            "invalid-scalar-result-datatype-family",
+                            plan.datatype_family.value,
+                        )
+                    )
+                return tuple(diagnostics)
+            case ObjectKind.STRING:
+                if plan.array is not None:
+                    return (self._diagnostic(plan.owner_path, "unexpected-string-result-array", None),)
+                return self._string_result_diagnostics(plan)
+            case ObjectKind.NUMPY_ARRAY:
+                return self._array_result_diagnostics(plan)
+            case _:
+                return (
+                    self._diagnostic(
+                        plan.owner_path,
+                        "unsupported-result-object-kind",
+                        plan.object_kind.value,
+                    ),
+                )
+
+    # String result validation.
+    def _string_result_aggregation_diagnostics(
+        self,
+        plan: FunctionPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Keep fixed string allocation cleanup single-result in Phase 5B."""
+        if any(result.object_kind is ObjectKind.STRING for result in plan.results) and len(plan.results) != 1:
+            return (self._diagnostic(plan.owner_path, "mixed-string-result-aggregation", len(plan.results)),)
+        return ()
+
+    def _string_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the fixed string result contract before either backend."""
+        if plan.datatype_family is not DatatypeFamily.STRING:
+            return (
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-string-result-datatype-family",
+                    plan.datatype_family.value,
+                ),
+            )
+        diagnostics = []
+        if plan.character_length is None or plan.character_length <= 0:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-result-character-length", plan.character_length)
+            )
+        diagnostics.extend(self._string_result_ownership_diagnostics(plan))
+        if plan.binding.python_action is not PythonBarrierAction.NONE:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path, "invalid-string-result-python-action", plan.binding.python_action.value
+                )
+            )
+        if plan.bridge.data_action is not BridgeDataAction.COPY_REPRESENTATION:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-string-result-data-action", plan.bridge.data_action.value)
+            )
+        if plan.bridge.copy_reason != FIXED_STRING_RESULT_COPY_REASON:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-string-result-copy-reason", plan.bridge.copy_reason)
+            )
+        if plan.source_kind == "direct_return":
+            diagnostics.extend(self._direct_string_result_diagnostics(plan))
+        elif plan.source_kind == "hidden_output":
+            diagnostics.extend(self._hidden_string_result_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _string_result_ownership_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate completed fixed-string ownership projected into the plan."""
+        expected = (
+            ("object-kind", plan.object_kind, ObjectKind.STRING),
+            ("owner", plan.ownership_owner, OwnershipOwner.PYTHON),
+            ("transfer", plan.transfer_mode, TransferMode.COPY_RETURN),
+            ("destruction", plan.destruction_policy, DestructionPolicy.PYTHON_REFCOUNT),
+            ("storage", plan.storage_mode, StorageMode.STACK),
+            ("boundary-storage", plan.boundary_storage_mode, StorageMode.STACK),
+        )
+        diagnostics = [
+            self._diagnostic(plan.owner_path, f"invalid-string-result-{name}", actual.value)
+            for name, actual, required in expected
+            if actual is not required
+        ]
+        if plan.nullable:
+            diagnostics.append(self._diagnostic(plan.owner_path, "nullable-fixed-string-result", plan.nullable))
+        return tuple(diagnostics)
+
+    def _nonstring_result_length_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        if plan.character_length is None:
+            return ()
+        return (
+            self._diagnostic(
+                plan.owner_path,
+                "nonstring-result-character-length",
+                plan.character_length,
+            ),
+        )
+
+    def _direct_string_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        diagnostics = []
+        if plan.binding.codegen_action is not CodegenAction.COPY_OUT:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-direct-string-result-action",
+                    plan.binding.codegen_action.value,
+                )
+            )
+        if plan.bridge.native_action is not NativeBarrierAction.NONE:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-direct-string-native-action",
+                    plan.bridge.native_action.value,
+                )
+            )
+        return tuple(diagnostics)
+
+    def _hidden_string_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        diagnostics = []
+        if plan.binding.codegen_action is not CodegenAction.COPY_OUT:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-hidden-string-result-action",
+                    plan.binding.codegen_action.value,
+                )
+            )
+        if plan.bridge.native_action is not NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-hidden-string-native-action",
+                    plan.bridge.native_action.value,
+                )
+            )
         return tuple(diagnostics)
 
     def _result_role_diagnostics(
@@ -526,7 +1301,12 @@ class WrapperCodeGenerator:
         diagnostics = []
         if plan.native_call_slot is not None or plan.bridge.abi_position is not None:
             diagnostics.append(self._diagnostic(plan.owner_path, "direct-result-has-native-slot", plan.source_kind))
-        if plan.bridge.data_action is not BridgeDataAction.DIRECT_TRANSFER:
+        expected_data_action = (
+            BridgeDataAction.COPY_REPRESENTATION
+            if plan.object_kind in {ObjectKind.STRING, ObjectKind.NUMPY_ARRAY}
+            else BridgeDataAction.DIRECT_TRANSFER
+        )
+        if plan.bridge.data_action is not expected_data_action:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-direct-result-data-action", plan.bridge.data_action.value)
             )
@@ -592,6 +1372,144 @@ class WrapperCodeGenerator:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-result-copy-reason", slot.bridge_copy_reason)
             )
+        if slot.character_length != plan.character_length:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "inconsistent-result-character-length", slot.character_length)
+            )
+        if slot.array is not plan.array:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-result-array-handoff", slot.array))
+        if slot.object_kind is not plan.object_kind:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "inconsistent-result-object-kind",
+                    slot.object_kind,
+                )
+            )
+        return tuple(diagnostics)
+
+    # Ordinary-array result validation.
+    def _array_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one fixed-shape ordinary array producer and copy consumer."""
+        array = plan.array
+        if array is None:
+            return (self._diagnostic(plan.owner_path, "missing-array-result-handoff", None),)
+        diagnostics = [
+            *self._array_result_ownership_diagnostics(plan),
+            *self._array_result_shape_diagnostics(plan),
+            *self._array_result_itemsize_diagnostics(plan),
+            *self._array_result_copy_diagnostics(plan),
+        ]
+        if plan.nullable:
+            diagnostics.append(self._diagnostic(plan.owner_path, "nullable-ordinary-array-result", plan.nullable))
+        diagnostics.extend(self._array_result_source_diagnostics(plan))
+        return tuple(diagnostics)
+
+    def _array_result_ownership_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate ordinary array result ownership and storage decisions."""
+        expected = (
+            ("object-kind", plan.object_kind, ObjectKind.NUMPY_ARRAY),
+            ("owner", plan.ownership_owner, OwnershipOwner.PYTHON),
+            ("transfer", plan.transfer_mode, TransferMode.COPY_RETURN),
+            ("destruction", plan.destruction_policy, DestructionPolicy.PYTHON_REFCOUNT),
+            ("storage", plan.storage_mode, StorageMode.STACK),
+            ("boundary-storage", plan.boundary_storage_mode, StorageMode.STACK),
+        )
+        return tuple(
+            self._diagnostic(plan.owner_path, f"invalid-array-result-{name}", actual.value)
+            for name, actual, required in expected
+            if actual is not required
+        )
+
+    def _array_result_itemsize_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate fixed-width character itemsize only inside the array family."""
+        array = plan.array
+        if array is None:
+            return ()
+        if plan.datatype_family is DatatypeFamily.STRING:
+            if (
+                array.itemsize is None
+                or array.itemsize <= 0
+                or array.itemsize_role is None
+                or plan.character_length != array.itemsize
+            ):
+                return (self._diagnostic(plan.owner_path, "invalid-array-result-itemsize", array.itemsize),)
+            return ()
+        if array.itemsize is not None or array.itemsize_role is not None or plan.character_length is not None:
+            return (self._diagnostic(plan.owner_path, "unexpected-array-result-itemsize", array.itemsize),)
+        return ()
+
+    def _array_result_shape_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate a fully resolved fixed-rank ordinary array result shape."""
+        return (
+            *self._array_result_rank_diagnostics(plan),
+            *self._array_result_shape_count_diagnostics(plan),
+            *self._array_result_extent_diagnostics(plan),
+            *self._array_result_order_diagnostics(plan),
+        )
+
+    def _array_result_rank_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require a supported concrete ordinary array result rank."""
+        array = plan.array
+        if array is not None and (array.rank is None or not 1 <= array.rank <= 15):
+            return (self._diagnostic(plan.owner_path, "invalid-array-result-rank", array.rank),)
+        return ()
+
+    def _array_result_shape_count_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one shape and extent role per result axis."""
+        array = plan.array
+        if (
+            array is not None
+            and array.rank is not None
+            and (len(array.shape) != array.rank or len(array.extent_roles) != array.rank)
+        ):
+            return (self._diagnostic(plan.owner_path, "inconsistent-array-result-shape", array.shape),)
+        return ()
+
+    def _array_result_extent_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Reject unresolved ordinary array result extent spellings."""
+        array = plan.array
+        if array is not None and any(shape in {":", "::Strided", "...", "Flat"} for shape in array.shape):
+            return (self._diagnostic(plan.owner_path, "unresolved-array-result-shape", array.shape),)
+        return ()
+
+    def _array_result_order_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Reject multidimensional C-oriented native result copies."""
+        array = plan.array
+        if array is not None and array.order == "ORDER_C" and array.rank is not None and array.rank > 1:
+            return (self._diagnostic(plan.owner_path, "invalid-array-result-order", array.order),)
+        return ()
+
+    def _array_result_copy_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the explicit ordinary array representation-copy decision."""
+        diagnostics = []
+        if plan.bridge.data_action is not BridgeDataAction.COPY_REPRESENTATION:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-result-data-action", plan.bridge.data_action.value)
+            )
+        if plan.bridge.copy_reason != ORDINARY_ARRAY_RESULT_COPY_REASON:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-result-copy-reason", plan.bridge.copy_reason)
+            )
+        return tuple(diagnostics)
+
+    def _array_result_source_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate direct versus hidden ordinary array producer actions."""
+        if plan.source_kind == "direct_return":
+            expected_action = CodegenAction.COPY_OUT
+            expected_native = NativeBarrierAction.NONE
+        else:
+            expected_action = CodegenAction.COPY_OUT
+            expected_native = NativeBarrierAction.PASS_ARRAY_BUFFER
+        diagnostics = []
+        if plan.binding.codegen_action is not expected_action:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-result-action", plan.binding.codegen_action.value)
+            )
+        if plan.bridge.native_action is not expected_native:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-array-result-native-action", plan.bridge.native_action.value)
+            )
         return tuple(diagnostics)
 
     def _native_slot_diagnostics(self, plan: NativeCallSlotPlan) -> tuple[WrapperPlanDiagnostic, ...]:
@@ -607,6 +1525,8 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "unknown-native-slot-source", plan.source_kind))
         if plan.source_kind == "literal":
             diagnostics.extend(self._literal_slot_diagnostics(plan))
+        elif plan.object_kind is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-native-slot-object-kind", None))
         if plan.source_kind == "result":
             diagnostics.extend(self._result_slot_diagnostics(plan))
         return tuple(diagnostics)
@@ -637,6 +1557,8 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "missing-literal-value", plan.native_position))
         if plan.python_position is not None:
             diagnostics.append(self._diagnostic(plan.owner_path, "literal-python-position", plan.python_position))
+        if plan.object_kind is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "literal-object-kind", plan.object_kind.value))
         if plan.bridge_data_action is not BridgeDataAction.DIRECT_TRANSFER:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-literal-data-action", plan.bridge_data_action.value)
@@ -652,13 +1574,13 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "result-python-position", plan.python_position))
         if plan.semantic_type_name is None or plan.datatype_family is None:
             diagnostics.append(self._diagnostic(plan.owner_path, "missing-result-datatype", plan.native_position))
-        if plan.datatype_family is DatatypeFamily.STRING and plan.character_length is None:
+        if plan.object_kind is ObjectKind.STRING and plan.character_length is None:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "missing-result-character-length", plan.native_position)
             )
         expected = (
             BridgeDataAction.COPY_REPRESENTATION
-            if plan.datatype_family is DatatypeFamily.STRING
+            if plan.object_kind in {ObjectKind.STRING, ObjectKind.NUMPY_ARRAY}
             else BridgeDataAction.DIRECT_TRANSFER
         )
         if plan.bridge_data_action is not expected:
@@ -724,6 +1646,7 @@ class WrapperCodeGenerator:
         binding = plan.binding
         if binding.source_role != plan.source_role:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-role", phase_name))
+        diagnostics.extend(self._binding_lifecycle_fact_diagnostics(plan, phase_name))
         if binding.codegen_action not in {CodegenAction.COPY_IN_OUT, CodegenAction.IN_PLACE_ARGUMENT}:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-writeback-action", binding.codegen_action.value)
@@ -734,14 +1657,87 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "unexpected-python-writeback-target", phase_name))
         return tuple(diagnostics)
 
+    def _binding_lifecycle_fact_diagnostics(
+        self,
+        plan: LifecycleActionPlan,
+        phase_name: str,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return shared-versus-binding lifecycle fact drift."""
+        diagnostics = []
+        binding = plan.binding
+        if binding.codegen_action is not plan.codegen_action:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-action", phase_name))
+        if binding.semantic_type_name != plan.semantic_type_name:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-type", phase_name))
+        if binding.datatype_family is not plan.datatype_family:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-family", phase_name))
+        if binding.result_position != plan.result_position:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-position", phase_name))
+        return tuple(diagnostics)
+
+    # String lifecycle validation.
+    def _string_writeback_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the complete string replacement lifecycle and exclusions."""
+        replacements = tuple(
+            argument
+            for argument in plan.arguments
+            if argument.object_kind is ObjectKind.STRING
+            and argument.binding.codegen_action is CodegenAction.COPY_IN_OUT
+        )
+        diagnostics = []
+        if replacements and plan.binding.status_error is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "string-writeback-with-status-error", plan.owner_path))
+        for argument in replacements:
+            diagnostics.extend(self._one_string_writeback_diagnostics(plan, argument))
+        return tuple(diagnostics)
+
+    def _one_string_writeback_diagnostics(
+        self,
+        plan: FunctionPlan,
+        argument: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return lifecycle coverage and fact drift for one replacement."""
+        actions = tuple(
+            action for action in plan.writeback_actions if action.source_role == argument.binding.handoff_role
+        )
+        diagnostics = []
+        if {action.phase for action in actions} != set(WritebackPhase):
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "incomplete-string-writeback-lifecycle", argument.owner_path)
+            )
+        for action in actions:
+            diagnostics.extend(self._one_string_writeback_action_diagnostics(plan, argument, action))
+        return tuple(diagnostics)
+
+    def _one_string_writeback_action_diagnostics(
+        self,
+        plan: FunctionPlan,
+        argument: ArgumentTransferPlan,
+        action: LifecycleActionPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Return one lifecycle action's string replacement consistency."""
+        if (
+            action.codegen_action is CodegenAction.COPY_IN_OUT
+            and action.object_kind is ObjectKind.STRING
+            and action.semantic_type_name == "String"
+            and action.datatype_family is DatatypeFamily.STRING
+            and action.result_position == argument.result_position
+        ):
+            return ()
+        return (self._diagnostic(plan.owner_path, "inconsistent-string-writeback-lifecycle", action.phase.value),)
+
     def _writeback_phase_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Require one complete ordered phase set for every writeback handoff."""
         diagnostics = []
         grouped: dict[str, list[LifecycleActionPlan]] = {}
         for action in plan.writeback_actions:
             grouped.setdefault(action.source_role, []).append(action)
-        expected = set(WritebackPhase)
         for source_role, actions in grouped.items():
+            expected = (
+                {WritebackPhase.COPY_OUT}
+                if all(action.object_kind is ObjectKind.NUMPY_ARRAY for action in actions)
+                else set(WritebackPhase)
+            )
             phases = [action.phase for action in actions]
             counts = Counter(phases)
             for phase, occurrences in counts.items():
@@ -852,7 +1848,7 @@ class WrapperCodeGenerator:
         status = result_slots.get(policy.status_role)
         if status is None:
             return (self._diagnostic(plan.owner_path, "missing-status-result-role", policy.status_role),)
-        if status.datatype_family is not DatatypeFamily.INTEGER:
+        if status.object_kind is not ObjectKind.SCALAR or status.datatype_family is not DatatypeFamily.INTEGER:
             return (self._diagnostic(plan.owner_path, "incompatible-status-result-role", policy.status_role),)
         if status.semantic_type_name != "Int32":
             return (self._diagnostic(plan.owner_path, "incompatible-status-result-role", policy.status_role),)
@@ -870,7 +1866,7 @@ class WrapperCodeGenerator:
         message = result_slots.get(policy.message_role)
         if message is None:
             return (self._diagnostic(plan.owner_path, "missing-message-result-role", policy.message_role),)
-        if message.datatype_family is not DatatypeFamily.STRING:
+        if message.object_kind is not ObjectKind.STRING or message.datatype_family is not DatatypeFamily.STRING:
             return (self._diagnostic(plan.owner_path, "incompatible-message-result-role", policy.message_role),)
         if message.character_length is None:
             return (self._diagnostic(plan.owner_path, "incompatible-message-result-role", policy.message_role),)

@@ -152,29 +152,25 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS: "_convert_native_call_local_address_argument",
             NativeBarrierAction.PASS_STORAGE_ADDRESS: "_convert_native_storage_address_argument",
             NativeBarrierAction.PASS_RAW_ADDRESS: "_convert_native_raw_address_argument",
-            NativeBarrierAction.PASS_ARRAY_DESCRIPTOR: "_convert_native_array_descriptor_argument",
+            NativeBarrierAction.PASS_ARRAY_BUFFER: "_convert_native_array_buffer_argument",
             NativeBarrierAction.PASS_WRAPPER_ADDRESS: "_convert_native_wrapper_address_argument",
         }
     )
     _RESULT_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_convert_scalar_result",
-            (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.SNAPSHOT_COPY): "_convert_snapshot_scalar_result",
             (ObjectKind.SCALAR, CodegenAction.BORROWED_VIEW): "_convert_scalar_result",
             (ObjectKind.STRING, CodegenAction.COPY_OUT): "_convert_string_result",
-            (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_convert_string_result",
             (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_string_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_convert_array_result",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_convert_array_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_array_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_convert_array_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_convert_array_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_owned_custom_type_result",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_convert_owned_custom_type_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_convert_owned_custom_type_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_convert_borrowed_custom_type_result",
         }
@@ -186,21 +182,17 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.SCALAR, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
             (ObjectKind.SCALAR, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
             (ObjectKind.SCALAR, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
-            (ObjectKind.SCALAR, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
             (ObjectKind.STRING, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
             (ObjectKind.STRING, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
             (ObjectKind.STRING, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
             (ObjectKind.STRING, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
-            (ObjectKind.STRING, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_convert_replacement_function_argument",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
             (ObjectKind.DERIVED_TYPE, CodegenAction.CALL_LOCAL_INPUT): "_convert_visible_function_argument",
             (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_convert_visible_function_argument",
             (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_convert_visible_function_argument",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.HIDDEN_OUTPUT): "_convert_hidden_function_argument",
         }
     )
     _REPLACEMENT_RESULT_DISPATCHER = PolicyActionDispatcher(
@@ -216,13 +208,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_build_borrowed_array_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_build_copy_return_array_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_build_copy_return_array_result",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_build_copy_return_array_result",
         }
     )
     _ALLOCATABLE_RESULT_HELPER_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_uses_heap_allocatable_result_helper",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_skips_allocatable_result_helper",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.WRAPPER_INSTANCE): "_skips_allocatable_result_helper",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_skips_allocatable_result_helper",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_skips_allocatable_result_helper",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_skips_allocatable_result_helper",
@@ -606,6 +597,9 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """Convert one function argument and its optional projected result."""
         if isinstance(argument.var, FunctionAddress):
             return self._convert_argument(argument, function), None
+        decision = ownership_decision_for_codegen_variable(argument.var)
+        if decision.projects_result and not decision.python_visible:
+            return self._convert_hidden_function_argument(argument.var, decision, argument, function)
         return self._FUNCTION_ARGUMENT_POLICY_DISPATCHER.dispatch(
             self,
             argument.var,
@@ -1361,7 +1355,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             DestructionPolicy.CALLER,
             storage_mode=StorageMode.ALIAS,
             boundary_storage_mode=StorageMode.ALIAS,
-            codegen_action=CodegenAction.HIDDEN_OUTPUT,
+            codegen_action=CodegenAction.IDENTITY_OUTPUT,
             mutates_native=True,
             reason="generated pointer descriptor-view operation writes a caller-established C descriptor",
         )
@@ -3103,8 +3097,8 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         self.scope.insert_variable(f_arg)
         return {"c_arg": BindCVariable(new_var, var), "f_arg": f_arg, "body": body}
 
-    def _convert_native_array_descriptor_argument(self, var, decision, func):
-        """Pass a packed array descriptor through the native call boundary."""
+    def _convert_native_array_buffer_argument(self, var, decision, func):
+        """Pass ordinary array-buffer fields through the native boundary."""
         if decision.codegen_action is CodegenAction.COPY_IN_OUT:
             return self._convert_native_array_replacement_argument(var, decision, func)
         return self._convert_native_array_storage_argument(var, decision, func)

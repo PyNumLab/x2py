@@ -2,12 +2,18 @@
 
 import gc
 from pathlib import Path
+import shutil
 
 import numpy as np
+import pytest
 
+from x2py import build_pyi_extension
 from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
+    _compile_native_object,
+    _import_from_build_dir,
+    _sole_native_module,
     wrapper_source,
 )
 
@@ -93,3 +99,50 @@ def test_array_results_follow_data_buffer_and_descriptor_handle_contracts(
     np.testing.assert_allclose(cube, expected_cube)
     for result, expected in rank_results:
         np.testing.assert_allclose(result, expected)
+
+
+def test_ordinary_array_results_match_legacy_and_wrapper_plan_routes(tmp_path: Path, monkeypatch):
+    """Replay fixed-shape direct results without descriptor-backed neighbors."""
+    native_object = _compile_native_object(ARRAY_RESULTS_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    selected = (
+        "fixed_vector",
+        "automatic_vector",
+        "automatic_matrix",
+        "rank3_cube",
+        "rank15_result",
+        "zero_vector",
+    )
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_ordinary_array_results"
+        shutil.copytree(CONTRACT_FIXTURES / "farray_results_f90", contract_package)
+        (contract_package / "__init__.pyi").write_text(
+            "".join(f"from .farray_results_f90 import {name}\n" for name in selected),
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "fixed_vector") else _sole_native_module(module)
+
+    for module in modules.values():
+        np.testing.assert_array_equal(module.fixed_vector(), np.array([1.0, 2.0, 3.0]))
+        np.testing.assert_array_equal(module.automatic_vector(np.int32(3)), np.array([2.0, 4.0, 6.0]))
+        matrix = module.automatic_matrix(np.int32(2), np.int32(3))
+        np.testing.assert_array_equal(matrix, np.array([[12.0, 13.0, 14.0], [22.0, 23.0, 24.0]]))
+        assert matrix.flags.f_contiguous
+        assert module.rank3_cube(np.int32(0), np.int32(2), np.int32(3)).shape == (0, 2, 3)
+        assert module.rank15_result().shape == (2, *([1] * 14))
+        assert module.zero_vector().shape == (0,)
+
+    monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
+    with pytest.raises(MemoryError, match="Unable to allocate copy-return output array"):
+        modules["wrapper_plan"].fixed_vector()

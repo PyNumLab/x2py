@@ -24,6 +24,7 @@ from x2py.wrapper_codegen import (
     CSourcePrinter,
     CodeExpression,
     FortranAssignment,
+    FortranCall,
     FortranFunction,
     FortranModule,
     FortranParameter,
@@ -110,6 +111,24 @@ def test_source_printers_reject_wrapper_plan_models():
         CSourcePrinter().doprint(plan)
     with pytest.raises(UnsupportedWrapperCodegenNodeError):
         FortranSourcePrinter().doprint(plan)
+
+
+def test_fortran_source_printer_wraps_long_parenthesized_call_arguments():
+    slices = ", ".join(f"1:values_upper_bound_{axis} + 1:values_stride_{axis}" for axis in range(4))
+    source = FortranSourcePrinter().doprint(
+        FortranCall(
+            "native_scale",
+            (
+                CodeExpression(f"values_base({slices})"),
+                CodeExpression(f"out_base({slices})"),
+            ),
+        )
+    )
+
+    assert "& values_base(&" in source
+    assert "&   1:values_upper_bound_3 + 1:values_stride_3), &" in source
+    assert "& out_base(&" in source
+    assert max(map(len, source.splitlines())) <= 124
 
 
 def test_source_printers_do_not_import_wrapper_plan_models():

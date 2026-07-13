@@ -8,7 +8,7 @@ import pytest
 
 from tests._shared.ownership_policy_support import parse_pyi_text
 from x2py.semantics.models import PYTHON_EXPORTS_METADATA
-from x2py.semantics.ownership import CodegenAction, NativeBarrierAction, PythonBarrierAction
+from x2py.semantics.ownership import CodegenAction, NativeBarrierAction, ObjectKind, PythonBarrierAction
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.wrapper_codegen import (
     DatatypeFamily,
@@ -77,6 +77,7 @@ def test_planner_projects_one_shared_tree_with_explicit_backend_views():
     assert first.bridge.native_name == "x"
     assert first.bridge.native_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
     assert first.binding.handoff_role == first.bridge.handoff_role == first.native_call_slot.symbolic_role
+    assert first.object_kind is first.native_call_slot.object_kind is ObjectKind.SCALAR
     assert first.native_call_slot.codegen_action is CodegenAction.CALL_LOCAL_INPUT
     assert function.results[0].binding.codegen_action is CodegenAction.DIRECT_VALUE
     assert function.results[0].bridge.native_result_role in function.available_roles
@@ -95,6 +96,12 @@ def test_planner_records_hidden_literals_and_hidden_result_slots():
     assert function.results[0].source_kind == "hidden_output"
     assert function.results[0].bridge.abi_position == 3
     assert function.results[0].native_call_slot is function.native_call_slots[3]
+    assert [slot.object_kind for slot in function.native_call_slots] == [
+        None,
+        ObjectKind.SCALAR,
+        None,
+        ObjectKind.SCALAR,
+    ]
 
 
 def test_generator_rejects_hidden_result_native_action_disagreement():
@@ -122,7 +129,7 @@ def test_generator_rejects_hidden_result_slot_codegen_action_disagreement():
     plan = _hidden_result_plan()
     function = plan.namespaces[0].functions[0]
     result = function.results[0]
-    edited_slot = replace(result.native_call_slot, codegen_action=CodegenAction.DIRECT_VALUE)
+    edited_slot = replace(result.native_call_slot, codegen_action=CodegenAction.COPY_OUT)
     invalid = _edit_first_function(
         plan,
         lambda item: replace(
@@ -137,6 +144,24 @@ def test_generator_rejects_hidden_result_slot_codegen_action_disagreement():
 
     with pytest.raises(ValueError, match="inconsistent-result-slot-codegen-action"):
         WrapperCodeGenerator().generate(invalid)
+
+
+def test_generator_rejects_argument_native_slot_object_kind_disagreement():
+    plan = _scalar_plan()
+    argument = plan.namespaces[0].functions[0].arguments[0]
+    argument.native_call_slot.object_kind = ObjectKind.STRING
+
+    with pytest.raises(ValueError, match="inconsistent-argument-object-kind"):
+        WrapperCodeGenerator().generate(plan)
+
+
+def test_generator_rejects_result_native_slot_object_kind_disagreement():
+    plan = _hidden_result_plan()
+    result = plan.namespaces[0].functions[0].results[0]
+    result.native_call_slot.object_kind = ObjectKind.STRING
+
+    with pytest.raises(ValueError, match="inconsistent-result-object-kind"):
+        WrapperCodeGenerator().generate(plan)
 
 
 def test_generator_rejects_advertised_role_without_a_plan_producer():
@@ -209,7 +234,7 @@ def hidden(x: Int32) -> Int32: ...
     assert [function.binding.python_name for function in plan.namespaces[0].functions] == ["visible"]
 
 
-def test_support_analyzer_reports_unsupported_generation_units():
+def test_support_analyzer_reports_required_array_buffer_lane():
     module = parse_pyi_text(
         """
 def sum_values(values: Float64[:]) -> Float64: ...
@@ -220,11 +245,14 @@ def sum_values(values: Float64[:]) -> Float64: ...
 
     report = WrapperPlanSupportAnalyzer().analyze(module)
 
-    assert report.supported is False
-    assert report.blockers[0].owner_path == "array_argument.sum_values"
-    assert "not a first-lane primitive scalar" in report.blockers[0].reason
-    with pytest.raises(ValueError, match="Unsupported wrapper-plan generation unit"):
-        WrapperPlanner().build(module)
+    assert report.supported is True
+    assert report.covered_lanes == (
+        "array-buffer-inputs",
+        "scalar-direct-results",
+        "native-call-runtime",
+    )
+    assert report.blockers == ()
+    assert WrapperPlanner().build(module).namespaces[0].functions[0].arguments[0].array is not None
 
 
 def test_planner_fails_when_post_ir_policy_has_not_completed():

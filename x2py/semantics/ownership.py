@@ -90,7 +90,6 @@ class CodegenAction(str, Enum):
     CALL_LOCAL_INPUT = "call_local_input"
     IN_PLACE_ARGUMENT = "in_place_argument"
     IDENTITY_OUTPUT = "identity_output"
-    HIDDEN_OUTPUT = "hidden_output"
     COPY_IN_OUT = "copy_in_out"
     COPY_OUT = "copy_out"
     SNAPSHOT_COPY = "snapshot_copy"
@@ -116,7 +115,8 @@ class NativeBarrierAction(str, Enum):
     PASS_CALL_LOCAL_ADDRESS = "pass_call_local_address"
     PASS_STORAGE_ADDRESS = "pass_storage_address"
     PASS_RAW_ADDRESS = "pass_raw_address"
-    PASS_ARRAY_DESCRIPTOR = "pass_array_descriptor"
+    PASS_ARRAY_BUFFER = "pass_array_buffer"
+    PASS_NATIVE_DESCRIPTOR = "pass_native_descriptor"
     PASS_WRAPPER_ADDRESS = "pass_wrapper_address"
     NONE = "none"
     BLOCKED = "blocked"
@@ -788,6 +788,15 @@ class OwnershipPolicyResolver:
                 mutates_native=True,
                 reason="address-projected scalar value uses mutable native storage and a replacement return",
             )
+        if context.writes_argument and context.projects_result and not context.python_visible:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.BY_VALUE,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
+                reason="address-projected hidden scalar output is returned as a Python value",
+            )
         return OwnershipDecision(
             ObjectKind.SCALAR,
             OwnershipOwner.CALLER,
@@ -903,6 +912,15 @@ class OwnershipPolicyResolver:
         )
 
     def _string_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if facts.address_role == ADDRESS_ROLE_RAW:
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.CALLER,
+                TransferMode.IN_PLACE,
+                DestructionPolicy.CALLER,
+                mutates_native=True,
+                reason="raw string address aliases caller-owned fixed-width storage",
+            )
         if facts.scalar_storage:
             if context.is_result:
                 return OwnershipDecision(
@@ -998,6 +1016,15 @@ class OwnershipPolicyResolver:
                 TransferMode.COPY_RETURN,
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="array result is returned as Python-owned NumPy storage",
+            )
+        if context.writes_argument and context.projects_result and not context.python_visible:
+            return OwnershipDecision(
+                ObjectKind.NUMPY_ARRAY,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
+                reason="hidden array output is copied into Python-owned NumPy storage",
             )
         if context.writes_argument:
             return OwnershipDecision(
@@ -1683,7 +1710,7 @@ class OwnershipPolicyResolver:
                 return CodegenAction.IDENTITY_OUTPUT
             if context.python_visible and decision.transfer is TransferMode.IN_PLACE:
                 return CodegenAction.IDENTITY_OUTPUT
-            return CodegenAction.HIDDEN_OUTPUT
+            return _CODEGEN_ACTION_BY_TRANSFER[decision.transfer]
         if (
             context.is_argument
             and context.writes_argument
@@ -1740,7 +1767,9 @@ class OwnershipPolicyResolver:
         if OwnershipPolicyResolver._passes_scalar_alias_address(decision, facts):
             return NativeBarrierAction.PASS_STORAGE_ADDRESS
         if decision.kind is ObjectKind.NUMPY_ARRAY:
-            return NativeBarrierAction.PASS_ARRAY_DESCRIPTOR
+            if decision.descriptor_boundary:
+                return NativeBarrierAction.PASS_NATIVE_DESCRIPTOR
+            return NativeBarrierAction.PASS_ARRAY_BUFFER
         if decision.kind is ObjectKind.STRING:
             return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
         if decision.kind is ObjectKind.DERIVED_TYPE:

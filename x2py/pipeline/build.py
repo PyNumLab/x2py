@@ -78,6 +78,7 @@ _RENDERED_WRAPPER_RUNTIME_IMPORTS = {
 }
 _WRAPPER_PLAN_COMPLETED_LANES = frozenset(
     {
+        # Scalar rollout lanes.
         "scalar-inputs",
         "scalar-storage-inputs",
         "scalar-raw-address-inputs",
@@ -88,6 +89,19 @@ _WRAPPER_PLAN_COMPLETED_LANES = frozenset(
         "scalar-descriptor-inputs",
         "scalar-writebacks",
         "scalar-module-variables",
+        # String rollout lanes.
+        "string-value-inputs",
+        "string-storage-inputs",
+        "string-raw-address-inputs",
+        "string-optional-inputs",
+        "string-writebacks",
+        "fixed-string-direct-results",
+        "fixed-string-hidden-outputs",
+        # Ordinary-array output-only rollout lanes. Array actual arguments stay
+        # gated until Phase 7 can preserve the native-handle caller contract.
+        "array-direct-results",
+        "array-hidden-outputs",
+        # Cross-cutting rollout lanes.
         "void-calls",
         "python-namespaces",
         "native-call-runtime",
@@ -118,6 +132,32 @@ _WRAPPER_PLAN_EVIDENCE = (
     "test_scalar_primitive_kinds_match_both_routes_without_array_blockers",
     "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
     "test_multiple_scalar_results_match_both_routes_without_array_blockers",
+    "tests/wrapper/fortran/strings/test_character_arguments.py::"
+    "test_required_scalar_string_inputs_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/strings/test_character_arguments.py::"
+    "test_fixed_string_results_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
+    "test_fixed_hidden_string_output_matches_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
+    "test_fixed_string_replacement_and_identity_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
+    "test_assumed_and_optional_string_replacements_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
+    "test_fixed_string_storage_and_raw_address_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/scalars/test_verified_baseline.py::"
+    "test_required_array_buffers_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/arrays/test_multidimensional_arrays.py::"
+    "test_dense_strided_and_projected_arrays_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/arrays/test_array_results.py::"
+    "test_ordinary_array_results_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/arrays/test_assumed_rank_arrays.py::"
+    "test_assumed_rank_arrays_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
+    "test_optional_array_buffers_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/function_calls/test_output_arguments.py::"
+    "test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/strings/test_character_arguments.py::"
+    "test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
 )
 
 

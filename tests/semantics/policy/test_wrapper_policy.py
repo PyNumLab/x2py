@@ -19,14 +19,18 @@ from x2py.semantics.models import (
 from x2py.semantics.ownership import (
     AssignmentMode,
     CodegenAction,
+    DestructionPolicy,
     NativeBarrierAction,
     ObjectKind,
+    OwnershipOwner,
     PythonBarrierAction,
     StorageMode,
     SetterAction,
+    TransferMode,
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import (
+    ArgumentHandoffMode,
     BridgeDataAction,
     FunctionWrapperPolicy,
     ModuleGetterAction,
@@ -34,6 +38,8 @@ from x2py.semantics.wrapper_policy import (
     NativeStatusErrorPolicy,
     OptionalMode,
     PythonExceptionKind,
+    RAW_STRING_ADDRESS_COPY_REASON,
+    STRING_STORAGE_COPY_REASON,
     WritebackPhase,
     completed_function_wrapper_policy,
 )
@@ -518,7 +524,7 @@ def tagged(x: Float64) -> Float64: ...
     assert "native-call literal slot 1 uses unsupported first-lane literal type 'String[1]'" in policy.blockers
 
 
-def test_wrapper_policy_blocks_non_primitive_arguments_before_planning():
+def test_wrapper_policy_completes_required_rank_one_array_buffer_handoff():
     module = parse_pyi_text(
         """
 def sum_values(values: Float64[:]) -> Float64: ...
@@ -530,16 +536,23 @@ def sum_values(values: Float64[:]) -> Float64: ...
     policy = function.metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
 
     assert isinstance(policy, FunctionWrapperPolicy)
-    assert policy.supported is False
-    assert "argument 'values' is not a first-lane primitive scalar" in policy.blockers
-    assert "argument 'values' has no completed bridge data action" in policy.blockers
-    assert policy.arguments[0].bridge_data_action is BridgeDataAction.BLOCKED
+    assert policy.supported is True
+    assert policy.blockers == ()
+    argument = policy.arguments[0]
+    assert argument.ownership.kind is ObjectKind.NUMPY_ARRAY
+    assert argument.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE
+    assert argument.native_barrier_action is NativeBarrierAction.PASS_ARRAY_BUFFER
+    assert argument.bridge_data_action is BridgeDataAction.ASSOCIATE_VIEW
+    assert argument.handoff_mode is ArgumentHandoffMode.ARRAY_BUFFER
+    assert argument.array is not None
+    assert argument.array.rank == 1
+    assert argument.array.shape == (":",)
+    assert argument.array.axes == ("dense",)
+    assert argument.array.contiguous is True
+    assert policy.native_call_slots[0].array == argument.array
 
-    with pytest.raises(ValueError, match="blocked wrapper policy"):
-        completed_function_wrapper_policy(function)
 
-
-def test_wrapper_policy_keeps_string_arguments_blocked_until_bridge_data_action_is_completed():
+def test_wrapper_policy_completes_required_read_only_string_value_handoff():
     module = parse_pyi_text(
         "def consume(value: String) -> None: ...",
         module_name="string_argument",
@@ -547,9 +560,182 @@ def test_wrapper_policy_keeps_string_arguments_blocked_until_bridge_data_action_
     complete_semantic_policies(module)
     policy = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
 
-    assert policy.supported is False
-    assert "argument 'value' has no completed bridge data action" in policy.blockers
-    assert policy.arguments[0].bridge_data_action is BridgeDataAction.BLOCKED
+    assert policy.supported is True
+    assert policy.blockers == ()
+    argument = policy.arguments[0]
+    assert argument.python_barrier_action is PythonBarrierAction.STRING_VALUE
+    assert argument.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    assert argument.codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert argument.handoff_mode is ArgumentHandoffMode.CHARACTER_BUFFER
+    assert argument.bridge_data_action is BridgeDataAction.COPY_REPRESENTATION
+    assert argument.bridge_copy_reason == ("materialize Fortran character storage from the binding UTF-8 byte buffer")
+
+
+def test_wrapper_policy_completes_fixed_string_direct_and_hidden_copy_results():
+    module = parse_pyi_text(
+        """
+def direct_label() -> String[8]: ...
+
+@native_call([Return("label", 0)])
+def hidden_label() -> String[8]: ...
+""",
+        module_name="fixed_string_results",
+    )
+    complete_semantic_policies(module)
+    direct_policy = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    hidden_policy = module.functions[1].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+
+    assert direct_policy.supported is True
+    direct = direct_policy.results[0]
+    assert direct.ownership.kind is ObjectKind.STRING
+    assert direct.codegen_action is CodegenAction.COPY_OUT
+    assert direct.native_barrier_action is NativeBarrierAction.NONE
+    assert direct.bridge_data_action is BridgeDataAction.COPY_REPRESENTATION
+    assert direct.character_length == 8
+
+    assert hidden_policy.supported is True
+    hidden = hidden_policy.results[0]
+    assert hidden.ownership.kind is ObjectKind.STRING
+    assert hidden.codegen_action is CodegenAction.COPY_OUT
+    assert hidden.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    assert hidden.bridge_data_action is BridgeDataAction.COPY_REPRESENTATION
+    assert hidden.character_length == 8
+    assert hidden_policy.native_call_slots[0].character_length == hidden.character_length
+
+
+def test_wrapper_policy_completes_fixed_string_replacement_and_discarded_identity():
+    module = parse_pyi_text(
+        """
+def replace_name(name: String[8]) -> Returns["name", String[8]]: ...
+def discard_name(name: String[8]) -> None: ...
+""",
+        module_name="fixed_string_writeback",
+    )
+    complete_semantic_policies(module)
+    replacement = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    identity = module.functions[1].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+
+    assert replacement.supported is True
+    argument = replacement.arguments[0]
+    assert argument.ownership.kind is ObjectKind.STRING
+    assert argument.ownership.owner is OwnershipOwner.PYTHON
+    assert argument.ownership.transfer is TransferMode.COPY_RETURN
+    assert argument.ownership.destruction is DestructionPolicy.PYTHON_REFCOUNT
+    assert argument.codegen_action is CodegenAction.COPY_IN_OUT
+    assert argument.character_length == 8
+    assert argument.projects_result is True
+    assert argument.writable is True
+    assert tuple(action.phase for action in replacement.writeback_actions) == tuple(WritebackPhase)
+
+    assert identity.supported is True
+    assert identity.arguments[0].codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert identity.arguments[0].projects_result is False
+    assert identity.writeback_actions == ()
+
+
+def test_wrapper_policy_completes_assumed_optional_replacements_and_blocks_unreleased_status_cleanup():
+    module = parse_pyi_text(
+        """
+def assumed(name: String) -> Returns["name", String]: ...
+def optional(label: String = ...) -> Returns["label", String] | None: ...
+def optional_fixed(label: String[8] = ...) -> Returns["label", String[8]] | None: ...
+def optional_identity(label: String = ...) -> None: ...
+
+@raises(status="status", success=0)
+@native_call([Arg(0), Return("status", 1)])
+def with_status(
+    name: String[8]
+) -> tuple[Returns["name", String[8]], Returns["status", Int32]]: ...
+""",
+        module_name="blocked_string_writeback",
+    )
+    complete_semantic_policies(module)
+    assumed = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    optional = module.functions[1].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    optional_fixed = module.functions[2].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    optional_identity = module.functions[3].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    with_status = module.functions[4].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+
+    assert assumed.supported is True
+    assert assumed.arguments[0].character_length is None
+    assert assumed.arguments[0].codegen_action is CodegenAction.COPY_IN_OUT
+    assert optional.supported is True
+    assert optional.arguments[0].optional_mode is OptionalMode.NULLABLE_VALUE
+    assert optional.arguments[0].nullable is False
+    assert optional.arguments[0].character_length is None
+    assert optional_fixed.supported is True
+    assert optional_fixed.arguments[0].character_length == 8
+    assert optional_identity.supported is True
+    assert optional_identity.arguments[0].optional_mode is OptionalMode.NULLABLE_VALUE
+    assert optional_identity.arguments[0].codegen_action is CodegenAction.CALL_LOCAL_INPUT
+    assert optional_identity.writeback_actions == ()
+    assert with_status.supported is False
+    assert "string replacement with native status error requires planned failure-path cleanup" in (with_status.blockers)
+
+
+def test_wrapper_policy_completes_fixed_string_storage_and_raw_address_ownership():
+    module = parse_pyi_text(
+        """
+def storage(label: String[8][()]) -> None: ...
+def raw(label: Addr(String[8])) -> None: ...
+""",
+        module_name="fixed_string_addresses",
+    )
+    complete_semantic_policies(module)
+    storage = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    raw = module.functions[1].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+
+    assert storage.supported is True
+    storage_argument = storage.arguments[0]
+    assert storage_argument.ownership.kind is ObjectKind.STRING
+    assert storage_argument.ownership.owner is OwnershipOwner.CALLER
+    assert storage_argument.ownership.transfer is TransferMode.IN_PLACE
+    assert storage_argument.ownership.destruction is DestructionPolicy.CALLER
+    assert storage_argument.storage_mode is StorageMode.ALIAS
+    assert storage_argument.boundary_storage_mode is StorageMode.ALIAS
+    assert storage_argument.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
+    assert storage_argument.python_barrier_action is PythonBarrierAction.STRING_STORAGE
+    assert storage_argument.native_barrier_action is NativeBarrierAction.PASS_STORAGE_ADDRESS
+    assert storage_argument.bridge_data_action is BridgeDataAction.COPY_REPRESENTATION
+    assert storage_argument.bridge_copy_reason == STRING_STORAGE_COPY_REASON
+    assert storage_argument.character_length == 8
+    assert storage.writeback_actions == ()
+
+    assert raw.supported is True
+    raw_argument = raw.arguments[0]
+    assert raw_argument.ownership.kind is ObjectKind.STRING
+    assert raw_argument.ownership.owner is OwnershipOwner.CALLER
+    assert raw_argument.ownership.transfer is TransferMode.IN_PLACE
+    assert raw_argument.ownership.destruction is DestructionPolicy.CALLER
+    assert raw_argument.storage_mode is StorageMode.STACK
+    assert raw_argument.boundary_storage_mode is StorageMode.STACK
+    assert raw_argument.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
+    assert raw_argument.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+    assert raw_argument.native_barrier_action is NativeBarrierAction.PASS_RAW_ADDRESS
+    assert raw_argument.bridge_data_action is BridgeDataAction.COPY_REPRESENTATION
+    assert raw_argument.bridge_copy_reason == RAW_STRING_ADDRESS_COPY_REASON
+    assert raw_argument.character_length == 8
+    assert raw.writeback_actions == ()
+
+
+def test_wrapper_policy_blocks_optional_or_projected_string_address_forms():
+    module = parse_pyi_text(
+        """
+def optional_storage(label: String[8][()] = ...) -> None: ...
+def optional_raw(label: Addr(String[8]) = ...) -> None: ...
+def projected_storage(label: String[8][()]) -> Returns["label", String[8][()]]: ...
+def projected_raw(label: Addr(String[8])) -> Returns["label", String[8]]: ...
+""",
+        module_name="blocked_string_addresses",
+    )
+    complete_semantic_policies(module)
+    policies = [function.metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA] for function in module.functions]
+
+    assert all(policy.supported is False for policy in policies)
+    assert "optional string storage is unsupported" in "; ".join(policies[0].blockers)
+    assert "optional raw string address is unsupported" in "; ".join(policies[1].blockers)
+    assert "string storage unexpectedly projects a result" in "; ".join(policies[2].blockers)
+    assert "raw string address unexpectedly projects a result" in "; ".join(policies[3].blockers)
 
 
 def test_missing_wrapper_policy_fails_before_planning():

@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 from x2py.semantics import models
-from x2py.semantics.wrapper_policy import (
-    ModuleVariablePolicy,
-    FunctionWrapperPolicy,
-)
-from x2py.semantics.ownership import PythonBarrierAction
+from x2py.semantics.ownership import ObjectKind, PythonBarrierAction
+from x2py.semantics.wrapper_policy import FunctionWrapperPolicy, ModuleVariablePolicy
 from x2py.wrapper_codegen.plan import WrapperPlanSupportBlocker, WrapperPlanSupportReport
 from x2py.wrapper_codegen.visitor import ClassVisitor
 
@@ -60,10 +57,30 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
                 reason="missing completed function wrapper policy",
             )
             return WrapperPlanSupportReport(owner_path=function.name, blockers=(blocker,))
+        capability_blockers = self._function_capability_blockers(function, policy)
+        blockers = (
+            *capability_blockers,
+            *(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers),
+        )
         return WrapperPlanSupportReport(
             owner_path=policy.owner_path,
-            covered_lanes=self._function_lanes(policy),
-            blockers=tuple(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers),
+            covered_lanes=() if blockers else self._function_lanes(policy),
+            blockers=blockers,
+        )
+
+    def _function_capability_blockers(
+        self,
+        function: models.SemanticFunction,
+        policy: FunctionWrapperPolicy,
+    ) -> tuple[WrapperPlanSupportBlocker, ...]:
+        """Keep source ABI optimizations on legacy until direct lowering owns them."""
+        if not function.metadata.get("fortran_bind_c"):
+            return ()
+        return (
+            WrapperPlanSupportBlocker(
+                owner_path=policy.owner_path,
+                reason="existing bind(C) direct-symbol calls are not implemented by wrapper-plan lowering",
+            ),
         )
 
     def _module_blockers(self, module: models.SemanticModule) -> tuple[WrapperPlanSupportBlocker, ...]:
@@ -93,34 +110,138 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
 
     def _argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
         """Return input-related lanes selected by completed arguments."""
-        actions = {argument.python_barrier_action for argument in policy.arguments}
+        return (
+            *self._scalar_argument_lanes(policy),
+            *self._string_argument_lanes(policy),
+            *self._array_argument_lanes(policy),
+        )
+
+    def _output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return result and writeback lanes selected by completed output policy."""
+        lanes = [
+            *self._scalar_output_lanes(policy),
+            *self._string_output_lanes(policy),
+            *self._array_output_lanes(policy),
+        ]
+        if not policy.results and not policy.writeback_actions:
+            lanes.append("void-calls")
+        return tuple(lanes)
+
+    # Scalar lane classification.
+    def _scalar_argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return scalar input, address, optional, and descriptor lanes."""
+        arguments = tuple(argument for argument in policy.arguments if argument.ownership.kind is ObjectKind.SCALAR)
+        actions = {argument.python_barrier_action for argument in arguments}
         lanes = []
         if PythonBarrierAction.SCALAR_VALUE in actions:
             lanes.append("scalar-inputs")
         if PythonBarrierAction.SCALAR_STORAGE in actions:
             lanes.append("scalar-storage-inputs")
-        if PythonBarrierAction.RAW_ADDRESS in actions:
+        if self._has_scalar_raw_address(policy):
             lanes.append("scalar-raw-address-inputs")
-        if any(argument.optional for argument in policy.arguments):
+        if self._has_scalar_optional(policy):
             lanes.append("scalar-optional-inputs")
-        if any(argument.descriptor_boundary for argument in policy.arguments):
+        if any(argument.descriptor_boundary for argument in arguments):
             lanes.append("scalar-descriptor-inputs")
         return tuple(lanes)
 
-    def _output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
-        """Return result and writeback lanes selected by completed output policy."""
+    def _has_scalar_raw_address(self, policy: FunctionWrapperPolicy) -> bool:
+        """Return whether one scalar argument crosses as a raw address."""
+        return any(
+            argument.ownership.kind is ObjectKind.SCALAR
+            and argument.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+            for argument in policy.arguments
+        )
+
+    def _has_scalar_optional(self, policy: FunctionWrapperPolicy) -> bool:
+        """Return whether one non-string scalar argument is optional."""
+        return any(argument.optional and argument.ownership.kind is ObjectKind.SCALAR for argument in policy.arguments)
+
+    def _scalar_output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return scalar writeback and result-source lanes."""
         lanes = []
-        if policy.writeback_actions:
+        if any(action.object_kind is ObjectKind.SCALAR for action in policy.writeback_actions):
             lanes.append("scalar-writebacks")
-        source_kinds = {result.source_kind for result in policy.results}
-        if "direct_return" in source_kinds:
-            lanes.append("scalar-direct-results")
-        if "hidden_output" in source_kinds:
-            lanes.append("scalar-hidden-outputs")
-        if len(policy.results) > 1:
+        results = tuple(result for result in policy.results if result.ownership.kind is ObjectKind.SCALAR)
+        lanes.extend(self._result_source_lanes(results, prefix="scalar"))
+        if len(results) > 1:
             lanes.append("scalar-multiple-results")
-        if not policy.results and not policy.writeback_actions:
-            lanes.append("void-calls")
+        return tuple(lanes)
+
+    # String lane classification.
+    def _string_argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return scalar-string input, address, and optional lanes."""
+        actions = {
+            argument.python_barrier_action
+            for argument in policy.arguments
+            if argument.ownership.kind is ObjectKind.STRING
+        }
+        lanes = []
+        if PythonBarrierAction.STRING_STORAGE in actions:
+            lanes.append("string-storage-inputs")
+        if PythonBarrierAction.STRING_VALUE in actions:
+            lanes.append("string-value-inputs")
+        if self._has_string_raw_address(policy):
+            lanes.append("string-raw-address-inputs")
+        if self._has_string_optional(policy):
+            lanes.append("string-optional-inputs")
+        return tuple(lanes)
+
+    def _has_string_raw_address(self, policy: FunctionWrapperPolicy) -> bool:
+        """Return whether one scalar string crosses as a raw address."""
+        return any(
+            argument.ownership.kind is ObjectKind.STRING
+            and argument.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+            for argument in policy.arguments
+        )
+
+    def _has_string_optional(self, policy: FunctionWrapperPolicy) -> bool:
+        """Return whether one scalar string argument is optional."""
+        return any(argument.optional and argument.ownership.kind is ObjectKind.STRING for argument in policy.arguments)
+
+    def _string_output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return scalar-string writeback and result-source lanes."""
+        lanes = []
+        if any(action.object_kind is ObjectKind.STRING for action in policy.writeback_actions):
+            lanes.append("string-writebacks")
+        results = tuple(result for result in policy.results if result.ownership.kind is ObjectKind.STRING)
+        lanes.extend(self._result_source_lanes(results, prefix="fixed-string"))
+        return tuple(lanes)
+
+    # Ordinary-array lane classification.
+    def _array_argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return ordinary-array buffer, address, and optional lanes."""
+        arguments = tuple(
+            argument for argument in policy.arguments if argument.ownership.kind is ObjectKind.NUMPY_ARRAY
+        )
+        lanes = []
+        if any(argument.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE for argument in arguments):
+            lanes.append("array-buffer-inputs")
+        if any(argument.python_barrier_action is PythonBarrierAction.RAW_ADDRESS for argument in arguments):
+            lanes.append("array-raw-address-inputs")
+        if any(argument.optional for argument in arguments):
+            lanes.append("array-optional-inputs")
+        return tuple(lanes)
+
+    def _array_output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return ordinary-array writeback and result-source lanes."""
+        lanes = []
+        if any(action.object_kind is ObjectKind.NUMPY_ARRAY for action in policy.writeback_actions):
+            lanes.append("array-writebacks")
+        results = tuple(result for result in policy.results if result.ownership.kind is ObjectKind.NUMPY_ARRAY)
+        lanes.extend(self._result_source_lanes(results, prefix="array"))
+        if results and len(policy.results) > 1:
+            lanes.append("array-multiple-results")
+        return tuple(lanes)
+
+    def _result_source_lanes(self, results: tuple, *, prefix: str) -> tuple[str, ...]:
+        """Return direct and hidden lane labels for one result family."""
+        source_kinds = {result.source_kind for result in results}
+        lanes = []
+        if "direct_return" in source_kinds:
+            lanes.append(f"{prefix}-direct-results")
+        if "hidden_output" in source_kinds:
+            lanes.append(f"{prefix}-hidden-outputs")
         return tuple(lanes)
 
     def _module_lanes(

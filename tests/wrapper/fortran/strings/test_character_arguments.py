@@ -1,14 +1,15 @@
 """Legacy and modern scalar character argument/result tests."""
 
 from pathlib import Path
+import shutil
 
 import numpy as np
+import pytest
 
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
     _compile_native_object,
     _import_from_build_dir,
-    _normalized_fortran_source,
     _assert_legacy_string_examples,
     _assert_modern_string_examples,
     _sole_native_module,
@@ -33,16 +34,6 @@ def test_legacy_fortran_character_arguments_and_results(pyi_parity_build_mode: s
         CONTRACT_FIXTURES / "fstrings",
         pyi_parity_build_mode,
     )
-
-    if pyi_parity_build_mode == "source":
-        bind_c_source = _normalized_fortran_source(tmp_path / "source_build" / "bind_c_fstrings_wrapper.f90")
-        assert "C = transfer(C_0001, C)" in bind_c_source
-        assert "C = transfer(C_0001, C) C_fixed = C" not in bind_c_source
-        assert (
-            "CHAR_RESULT_DEFAULT_ptr = transfer("
-            "CHAR_RESULT_DEFAULT_0001, CHAR_RESULT_DEFAULT_ptr, CHAR_RESULT_DEFAULT_len)"
-        ) in bind_c_source
-        assert "do Dummy_" not in bind_c_source
 
     _assert_legacy_string_examples(module)
 
@@ -81,3 +72,138 @@ def test_edited_modern_string_contract_wraps_full_axis_spelling_set(tmp_path: Pa
     label = np.array("abcdefgh", dtype="S8")
     assert module.rewrite_storage(label) is None
     assert label[()] == b"Ybcdefg?"
+
+
+def test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay one ordinary fixed-width NumPy bytes array without descriptors."""
+    native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_character_array"
+        shutil.copytree(CONTRACT_FIXTURES / "fstrings_f90_axes", contract_package)
+        (contract_package / "__init__.pyi").write_text(
+            "from .fstrings_f90 import fixed_array_extent\n",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "fixed_array_extent") else _sole_native_module(module)
+
+    for module in modules.values():
+        labels = np.array([b"first", b"second"], dtype="S8")
+        assert module.fixed_array_extent(labels) == 16
+        assert module.fixed_array_extent(np.empty(0, dtype="S8")) == 0
+
+    direct = modules["wrapper_plan"]
+    with pytest.raises(TypeError):
+        direct.fixed_array_extent(np.array([b"short"], dtype="S7"))
+    with pytest.raises(TypeError):
+        direct.fixed_array_extent(np.array([[b"label"]], dtype="S8"))
+
+
+def test_required_scalar_string_inputs_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Reuse the existing modern string unit through one scalar-input-only entry."""
+    native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
+    modules = []
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_string_inputs"
+        shutil.copytree(CONTRACT_FIXTURES / "fstrings_f90", contract_package)
+        (contract_package / "__init__.pyi").write_text(
+            "\n".join(
+                (
+                    "from .fstrings_f90 import char_code_default",
+                    "from .fstrings_f90 import char_code_len1",
+                    "from .fstrings_f90 import char_code_kind1",
+                    "from .fstrings_f90 import char_code_c_char",
+                    "from .fstrings_f90 import string_len_fixed",
+                    "from .fstrings_f90 import string_len_assumed",
+                    "from .fstrings_f90 import string_len_c_char",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules.append(module if hasattr(module, "char_code_default") else _sole_native_module(module))
+
+    for module in modules:
+        assert module.char_code_default("A") == ord("A")
+        assert module.char_code_len1(np.str_("B")) == ord("B")
+        assert module.char_code_kind1("C") == ord("C")
+        assert module.char_code_c_char("D") == ord("D")
+        assert module.string_len_fixed("short   ") == 5
+        assert module.string_len_assumed("variable length") == 15
+        assert module.string_len_assumed("") == 0
+        assert module.string_len_assumed("café") == 5
+        assert module.string_len_c_char("c-char  ") == 6
+
+        with pytest.raises(TypeError, match="str"):
+            module.string_len_assumed(b"bytes")
+        with pytest.raises(TypeError, match="exactly 8 bytes"):
+            module.string_len_fixed("short")
+        with pytest.raises(TypeError, match="embedded NUL"):
+            module.string_len_assumed("a\0b")
+
+
+def test_fixed_string_results_match_legacy_and_wrapper_plan_routes(tmp_path: Path, monkeypatch):
+    """Replay existing fixed direct results through a result-only contract entry."""
+    native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_string_results"
+        shutil.copytree(CONTRACT_FIXTURES / "fstrings_f90", contract_package)
+        (contract_package / "__init__.pyi").write_text(
+            "\n".join(
+                (
+                    "from .fstrings_f90 import char_result_default",
+                    "from .fstrings_f90 import char_result_c_char",
+                    "from .fstrings_f90 import string_result_fixed",
+                    "from .fstrings_f90 import string_result_padded",
+                    "from .fstrings_f90 import string_result_c_char",
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "char_result_default") else _sole_native_module(module)
+
+    for module in modules.values():
+        assert module.char_result_default() == "M"
+        assert module.char_result_c_char() == "C"
+        assert module.string_result_fixed() == "MODERN!!"
+        assert module.string_result_padded() == "PAD     "
+        assert module.string_result_c_char() == "C-CHAR!!"
+
+    monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
+    with pytest.raises(MemoryError, match="Unable to allocate copy-return output string"):
+        modules["wrapper_plan"].string_result_fixed()

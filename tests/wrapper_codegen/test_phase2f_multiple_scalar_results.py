@@ -7,7 +7,7 @@ from dataclasses import replace
 import pytest
 
 from tests._shared.ownership_policy_support import parse_pyi_text
-from x2py.semantics.ownership import NativeBarrierAction
+from x2py.semantics.ownership import CodegenAction, NativeBarrierAction
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
@@ -36,6 +36,8 @@ def test_multiple_scalar_result_plan_has_ordered_binding_consumers_and_shared_hi
     ]
     assert direct.native_call_slot is None
     assert hidden.native_call_slot is function.native_call_slots[hidden.bridge.abi_position]
+    assert direct.binding.codegen_action is CodegenAction.DIRECT_VALUE
+    assert hidden.binding.codegen_action is CodegenAction.DIRECT_VALUE
     assert hidden.bridge.native_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
     assert direct.bridge.native_result_role in function.available_roles
     assert hidden.bridge.native_result_role in function.available_roles

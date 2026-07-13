@@ -1,13 +1,18 @@
 """Output argument and multiple-result runtime wrapper tests."""
 
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pytest
 
+from x2py import build_pyi_extension
 from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
+    _compile_native_object,
+    _import_from_build_dir,
+    _sole_native_module,
     wrapper_source,
 )
 
@@ -106,3 +111,43 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
         module.fill_vector(np.int32(4), np.empty(3, dtype=np.float64))
     with pytest.raises(TypeError):
         module.fill_matrix(np.int32(2), np.int32(3), np.empty((2, 3), dtype=np.float64, order="C"))
+
+
+def test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes(tmp_path: Path, monkeypatch):
+    """Replay an existing fixed-shape native output as a hidden result."""
+    native_object = _compile_native_object(OUTPUTS_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    contract_text = """\
+from x2py.contracts import Addr, Arg, Float64, Int32, Return, native_call
+
+@native_call([Addr(Arg(0)), Return("values", 0)])
+def fill_vector(n: Int32) -> Float64[n]: ...
+"""
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_hidden_array_output"
+        shutil.copytree(CONTRACT_FIXTURES / "foutputs_f90", contract_package)
+        (contract_package / "foutputs_f90.pyi").write_text(contract_text, encoding="utf-8")
+        (contract_package / "__init__.pyi").write_text(
+            "from .foutputs_f90 import fill_vector\n",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "fill_vector") else _sole_native_module(module)
+
+    for module in modules.values():
+        np.testing.assert_array_equal(module.fill_vector(np.int32(4)), np.array([2.0, 4.0, 6.0, 8.0]))
+        assert module.fill_vector(np.int32(0)).shape == (0,)
+
+    monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
+    with pytest.raises(MemoryError, match="Unable to allocate copy-return output array"):
+        modules["wrapper_plan"].fill_vector(np.int32(2))

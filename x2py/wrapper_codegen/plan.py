@@ -9,9 +9,14 @@ from typing import Any
 from x2py.semantics.ownership import (
     AssignmentMode,
     CodegenAction,
+    DestructionPolicy,
     NativeBarrierAction,
+    ObjectKind,
+    OwnershipOwner,
     PythonBarrierAction,
     SetterAction,
+    StorageMode,
+    TransferMode,
 )
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
@@ -32,6 +37,26 @@ class DatatypeFamily(Enum):
     REAL = "real"
     COMPLEX = "complex"
     STRING = "string"
+
+
+@dataclass
+class ArrayHandoffPlan(StageRecord):
+    """Editable ordinary-array storage, layout, and ABI roles."""
+
+    rank: int | None
+    shape: tuple[str, ...]
+    axes: tuple[str, ...]
+    order: str | None
+    contiguous: bool | None
+    itemsize: int | None
+    category: str | None
+    data_role: str
+    extent_roles: tuple[str, ...]
+    extent_reference_roles: tuple[tuple[str, ...], ...] = ()
+    upper_bound_roles: tuple[str, ...] = ()
+    stride_roles: tuple[str, ...] = ()
+    runtime_rank_role: str | None = None
+    itemsize_role: str | None = None
 
 
 @dataclass
@@ -119,11 +144,13 @@ class BindingArgumentPlan(StageRecord):
 
     python_name: str
     python_action: PythonBarrierAction
+    codegen_action: CodegenAction
     handoff_role: str
     optional_mode: OptionalMode
     nullable: bool
     writable: bool
     descriptor_boundary: bool
+    length_handoff_role: str | None = None
 
 
 @dataclass
@@ -132,6 +159,7 @@ class BridgeArgumentPlan(StageRecord):
 
     native_name: str
     native_action: NativeBarrierAction
+    codegen_action: CodegenAction
     handoff_mode: ArgumentHandoffMode
     data_action: BridgeDataAction
     copy_reason: str | None
@@ -139,6 +167,7 @@ class BridgeArgumentPlan(StageRecord):
     handoff_role: str
     optional_mode: OptionalMode
     presence_role: str | None
+    length_handoff_role: str | None = None
 
 
 @dataclass
@@ -184,7 +213,7 @@ class BridgeLifecyclePlan(StageRecord):
 
 @dataclass
 class NativeCallSlotPlan(StageRecord):
-    """One native-call slot copied from completed policy."""
+    """One ordered ABI slot referenced by its owning transfer when applicable."""
 
     owner_path: str
     native_position: int
@@ -198,23 +227,38 @@ class NativeCallSlotPlan(StageRecord):
     codegen_action: CodegenAction
     bridge_data_action: BridgeDataAction
     bridge_copy_reason: str | None
+    object_kind: ObjectKind | None
     literal_type: str | None = None
     literal_value: Any = None
     result_position: int | None = None
     semantic_type_name: str | None = None
     datatype_family: DatatypeFamily | None = None
     character_length: int | None = None
+    array: ArrayHandoffPlan | None = None
 
 
 @dataclass
 class ArgumentTransferPlan(StageRecord):
-    """One shared Python-to-native transfer with explicit backend views."""
+    """One shared Python-to-native transfer, including its native-call slot."""
 
     owner_path: str
     python_position: int
     native_position: int
     semantic_type_name: str
     datatype_family: DatatypeFamily
+    character_length: int | None
+    object_kind: ObjectKind
+    ownership_owner: OwnershipOwner
+    transfer_mode: TransferMode
+    destruction_policy: DestructionPolicy
+    storage_mode: StorageMode
+    boundary_storage_mode: StorageMode
+    nullable: bool
+    mutates_native: bool
+    projects_result: bool
+    python_visible: bool
+    result_position: int | None
+    array: ArrayHandoffPlan | None
     binding: BindingArgumentPlan
     bridge: BridgeArgumentPlan
     native_call_slot: NativeCallSlotPlan
@@ -222,13 +266,22 @@ class ArgumentTransferPlan(StageRecord):
 
 @dataclass
 class ResultPlan(StageRecord):
-    """One shared native-to-Python result with explicit backend views."""
+    """One native-to-Python transfer and its hidden ABI slot when applicable."""
 
     owner_path: str
     semantic_type_name: str
     datatype_family: DatatypeFamily
     source_kind: str
     result_position: int
+    character_length: int | None
+    object_kind: ObjectKind
+    ownership_owner: OwnershipOwner
+    transfer_mode: TransferMode
+    destruction_policy: DestructionPolicy
+    storage_mode: StorageMode
+    boundary_storage_mode: StorageMode
+    nullable: bool
+    array: ArrayHandoffPlan | None
     binding: BindingResultPlan
     bridge: BridgeResultPlan
     native_call_slot: NativeCallSlotPlan | None = None
@@ -236,18 +289,23 @@ class ResultPlan(StageRecord):
 
 @dataclass
 class LifecycleActionPlan(StageRecord):
-    """One ordered lifecycle action with explicit backend ownership."""
+    """One transfer-owned action kept in function-wide execution order."""
 
     owner_path: str
     phase: WritebackPhase
     source_role: str
+    codegen_action: CodegenAction
+    semantic_type_name: str
+    datatype_family: DatatypeFamily
+    object_kind: ObjectKind
+    result_position: int
     binding: BindingLifecyclePlan | None = None
     bridge: BridgeLifecyclePlan | None = None
 
 
 @dataclass
 class FunctionPlan(StageRecord):
-    """Wrapper plan for one semantic function owner."""
+    """Stable orchestration plus ordered ABI and lifecycle transfer indexes."""
 
     owner_path: str
     symbol_name: str

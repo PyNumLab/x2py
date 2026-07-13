@@ -74,6 +74,32 @@ def scale(x: Float64) -> Float64: ...
         "test_scalar_primitive_kinds_match_both_routes_without_array_blockers",
         "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
         "test_multiple_scalar_results_match_both_routes_without_array_blockers",
+        "tests/wrapper/fortran/strings/test_character_arguments.py::"
+        "test_required_scalar_string_inputs_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/strings/test_character_arguments.py::"
+        "test_fixed_string_results_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
+        "test_fixed_hidden_string_output_matches_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
+        "test_fixed_string_replacement_and_identity_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
+        "test_assumed_and_optional_string_replacements_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
+        "test_fixed_string_storage_and_raw_address_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/scalars/test_verified_baseline.py::"
+        "test_required_array_buffers_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/arrays/test_multidimensional_arrays.py::"
+        "test_dense_strided_and_projected_arrays_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/arrays/test_array_results.py::"
+        "test_ordinary_array_results_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/arrays/test_assumed_rank_arrays.py::"
+        "test_assumed_rank_arrays_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
+        "test_optional_array_buffers_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/function_calls/test_output_arguments.py::"
+        "test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/strings/test_character_arguments.py::"
+        "test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
     )
     assert decision.selection_reason == "wrapper-plan route forced for internal migration verification"
 
@@ -331,7 +357,7 @@ def solve(value: Int32) -> tuple[Int32, String[32]]: ...
     )
 
 
-def test_route_selector_keeps_a_module_with_any_unsupported_member_entirely_legacy():
+def test_route_selector_keeps_array_buffer_lane_legacy_until_native_handle_actuals_are_supported():
     module = _completed_module(
         """
 def scale(x: Float64) -> Float64: ...
@@ -348,8 +374,14 @@ def sum_values(values: Float64[:]) -> Float64: ...
 
     assert decision.selected_route == "legacy"
     assert decision.rollout_eligible is False
-    assert {blocker.owner_path for blocker in decision.blockers} == {"fmath.sum_values"}
-    assert decision.selection_reason == "generation unit has unsupported wrapper-plan owners"
+    assert decision.covered_lanes == (
+        "scalar-inputs",
+        "scalar-direct-results",
+        "native-call-runtime",
+        "array-buffer-inputs",
+    )
+    assert decision.blockers == ()
+    assert decision.selection_reason == "covered lanes exceed the recorded wrapper-plan parity evidence"
 
 
 def test_route_selector_keeps_unimplemented_scalar_kinds_on_legacy_route():
@@ -375,14 +407,16 @@ def test_route_selector_never_silently_falls_back_when_plan_route_is_forced():
     module = _completed_module(
         """
 def scale(x: Float64) -> Float64: ...
-def sum_values(values: Float64[:]) -> Float64: ...
+
+class sample:
+    value: Int32
 """,
         module_name="fmath",
     )
 
     with pytest.raises(
         ValueError,
-        match=r"cannot force wrapper-plan route.*fmath\.sum_values",
+        match=r"cannot force wrapper-plan route.*fmath\.sample",
     ):
         build_pipeline._select_wrapper_plan_route(
             module,
@@ -390,6 +424,97 @@ def sum_values(values: Float64[:]) -> Float64: ...
             strict_wrapper_names=False,
             force_wrapper_plan=True,
         )
+
+
+def test_route_selector_keeps_existing_bind_c_direct_symbol_calls_on_legacy():
+    module = _completed_module("def add_one(value: Int32) -> Int32: ...", module_name="bind_c_value")
+    module.functions[0].metadata["fortran_bind_c"] = True
+    module.functions[0].metadata["fortran_bind_c_name"] = "solver_add_one"
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+    )
+
+    assert decision.selected_route == "legacy"
+    assert [blocker.reason for blocker in decision.blockers] == [
+        "existing bind(C) direct-symbol calls are not implemented by wrapper-plan lowering"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("source", "module_name", "covered_lanes"),
+    (
+        (
+            "def label(value: String[3]) -> String[3]: ...",
+            "fixed_strings",
+            ("string-value-inputs", "fixed-string-direct-results", "native-call-runtime"),
+        ),
+        (
+            "def vector() -> Float64[3]: ...",
+            "array_result",
+            ("array-direct-results", "native-call-runtime"),
+        ),
+        (
+            "@native_call([Return('values', 0)])\ndef hidden() -> Float64[3]: ...",
+            "array_hidden_output",
+            ("array-hidden-outputs", "native-call-runtime"),
+        ),
+    ),
+)
+def test_route_selector_selects_completed_string_and_array_lanes_for_production(
+    source: str,
+    module_name: str,
+    covered_lanes: tuple[str, ...],
+):
+    module = _completed_module(source, module_name=module_name)
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+    )
+
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.rollout_eligible is True
+    assert decision.covered_lanes == covered_lanes
+    assert decision.blockers == ()
+
+
+@pytest.mark.parametrize(
+    ("source", "module_name", "covered_lanes"),
+    (
+        (
+            'def fill(values: Float64[:]) -> Returns["values", Float64[:]]: ...',
+            "array_writeback",
+            ("array-buffer-inputs", "array-writebacks", "native-call-runtime"),
+        ),
+        (
+            "def maybe(values: Float64[:] = ...) -> None: ...",
+            "optional_array",
+            ("array-buffer-inputs", "array-optional-inputs", "void-calls", "native-call-runtime"),
+        ),
+    ),
+)
+def test_route_selector_keeps_array_actual_lanes_legacy_until_phase7(
+    source: str,
+    module_name: str,
+    covered_lanes: tuple[str, ...],
+):
+    module = _completed_module(source, module_name=module_name)
+
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+    )
+
+    assert decision.selected_route == "legacy"
+    assert decision.rollout_eligible is False
+    assert decision.covered_lanes == covered_lanes
+    assert decision.blockers == ()
+    assert decision.selection_reason == "covered lanes exceed the recorded wrapper-plan parity evidence"
 
 
 def test_route_selector_keeps_an_explicitly_forced_legacy_module_entirely_legacy():

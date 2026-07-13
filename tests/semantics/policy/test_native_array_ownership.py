@@ -128,8 +128,8 @@ def make_values() -> Allocatable[Float64[:]]: ...
     assert decision.owner is OwnershipOwner.WRAPPER
     assert decision.transfer is TransferMode.WRAPPER_INSTANCE
     assert decision.destruction is DestructionPolicy.WRAPPER_DEALLOC
-    assert decision.codegen_action is CodegenAction.HIDDEN_OUTPUT
-    assert decision.native_barrier_action is NativeBarrierAction.PASS_ARRAY_DESCRIPTOR
+    assert decision.codegen_action is CodegenAction.WRAPPER_INSTANCE
+    assert decision.native_barrier_action is NativeBarrierAction.PASS_NATIVE_DESCRIPTOR
     assert policy.handle_kind == "owned_result_descriptor"
     assert policy.origin == "projected_result"
     assert policy.owner_retention == "wrapper_owner_storage"

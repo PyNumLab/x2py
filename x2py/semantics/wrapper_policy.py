@@ -12,12 +12,15 @@ from x2py.semantics.wrapper_exports import PythonExportPolicy, completed_python_
 from x2py.semantics.ownership import (
     AssignmentMode,
     CodegenAction,
+    DestructionPolicy,
     NativeBarrierAction,
     ObjectKind,
     OwnershipDecision,
+    OwnershipOwner,
     PythonBarrierAction,
     SetterAction,
     StorageMode,
+    TransferMode,
 )
 
 
@@ -35,6 +38,19 @@ _PLAN_PRIMITIVE_SCALAR_TYPES = frozenset(
     }
 )
 
+FIXED_STRING_RESULT_COPY_REASON = "copy fixed-length Fortran character output into C-owned null-terminated storage"
+ORDINARY_ARRAY_RESULT_COPY_REASON = "copy non-descriptor Fortran array output into C-owned contiguous storage"
+STRING_INPUT_COPY_REASON = "materialize Fortran character storage from the binding UTF-8 byte buffer"
+STRING_REPLACEMENT_COPY_REASON = (
+    "materialize mutable Fortran character storage and copy post-call bytes back to binding storage"
+)
+STRING_STORAGE_COPY_REASON = (
+    "materialize fixed-length Fortran character storage from caller-owned NumPy bytes and copy mutation back"
+)
+RAW_STRING_ADDRESS_COPY_REASON = (
+    "materialize fixed-length Fortran character storage from a caller-supplied raw address and copy mutation back"
+)
+
 
 class OptionalMode(str, Enum):
     """Completed ABI behavior for one argument's presence states."""
@@ -45,11 +61,13 @@ class OptionalMode(str, Enum):
 
 
 class ArgumentHandoffMode(str, Enum):
-    """Completed binding-to-bridge ABI shape for one scalar argument."""
+    """Completed binding-to-bridge ABI shape for one argument."""
 
     VALUE = "value"
     TYPED_REFERENCE = "typed_reference"
     OPAQUE_ADDRESS = "opaque_address"
+    CHARACTER_BUFFER = "character_buffer"
+    ARRAY_BUFFER = "array_buffer"
 
 
 class BridgeDataAction(str, Enum):
@@ -141,6 +159,21 @@ class LifecyclePolicy:
     codegen_action: CodegenAction
     semantic_type_name: str
     result_position: int
+    object_kind: ObjectKind
+
+
+@dataclass(frozen=True)
+class ArrayHandoffPolicy:
+    """Completed ordinary-array storage and layout facts."""
+
+    rank: int | None
+    shape: tuple[str, ...]
+    axes: tuple[str, ...]
+    order: str | None
+    contiguous: bool | None
+    itemsize: int | None = None
+    category: str | None = None
+    extent_references: tuple[tuple[str, ...], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -172,6 +205,8 @@ class ArgumentPolicy:
     projects_result: bool
     python_visible: bool
     result_position: int | None
+    character_length: int | None
+    array: ArrayHandoffPolicy | None = None
 
 
 @dataclass(frozen=True)
@@ -189,6 +224,8 @@ class ResultPolicy:
     boundary_storage_mode: StorageMode
     bridge_data_action: BridgeDataAction
     bridge_copy_reason: str | None
+    character_length: int | None = None
+    array: ArrayHandoffPolicy | None = None
     source_kind: str = "direct_return"
     native_name: str | None = None
     native_position: int | None = None
@@ -197,7 +234,11 @@ class ResultPolicy:
 
 @dataclass(frozen=True)
 class NativeCallSlotPolicy:
-    """Completed native-call slot consumed by wrapper planning."""
+    """Completed native-call slot consumed by wrapper planning.
+
+    ``object_kind`` is copied from the owning transfer decision.  Literal slots
+    have no transfer owner and therefore use ``None``.
+    """
 
     owner_path: str
     native_position: int
@@ -210,11 +251,13 @@ class NativeCallSlotPolicy:
     codegen_action: CodegenAction
     bridge_data_action: BridgeDataAction
     bridge_copy_reason: str | None
+    object_kind: ObjectKind | None
     literal_type: str | None = None
     literal_value: Any = None
     result_position: int | None = None
     semantic_type_name: str | None = None
     character_length: int | None = None
+    array: ArrayHandoffPolicy | None = None
 
 
 @dataclass(frozen=True)
@@ -330,7 +373,10 @@ def build_function_wrapper_policy(
         + result_blockers
         + slot_blockers
         + lifecycle_blockers
+        + _array_extent_reference_blockers(function, arguments, results)
         + _runtime_status_plan_blockers(status_error)
+        + _string_result_status_blockers(results, status_error)
+        + _string_writeback_status_blockers(arguments, status_error)
     )
     return FunctionWrapperPolicy(
         owner_path=owner_path,
@@ -417,6 +463,8 @@ def _argument_policies(
                 projects_result=decision.projects_result,
                 python_visible=decision.python_visible,
                 result_position=_argument_result_position(function, current_python_position),
+                character_length=_character_length(argument.semantic_type),
+                array=_array_handoff_policy(argument.semantic_type),
             )
         )
     return policies, tuple(blockers)
@@ -433,7 +481,11 @@ def _result_policies(
     if function.return_type is None:
         projected_arguments = _visible_projected_arguments(function)
         if hidden_results and not projected_arguments:
-            return hidden_results, (*hidden_blockers, *_result_position_blockers(hidden_results))
+            return hidden_results, (
+                *hidden_blockers,
+                *_result_position_blockers(hidden_results),
+                *_string_result_aggregation_blockers(hidden_results),
+            )
         if projected_arguments and not hidden_results:
             return (), hidden_blockers
         if not hidden_results and not projected_arguments:
@@ -459,11 +511,18 @@ def _result_policies(
         boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
         bridge_data_action=bridge_data_action,
         bridge_copy_reason=bridge_copy_reason,
+        character_length=_character_length(function.return_type),
+        array=_array_handoff_policy(function.return_type),
     )
     results = (direct_result, *hidden_results)
     return (
         results,
-        (*blockers, *hidden_blockers, *_result_position_blockers(results)),
+        (
+            *blockers,
+            *hidden_blockers,
+            *_result_position_blockers(results),
+            *_string_result_aggregation_blockers(results),
+        ),
     )
 
 
@@ -509,6 +568,8 @@ def _hidden_result_policies(
                     boundary_storage_mode=decision.boundary_storage_mode or decision.storage_mode,
                     bridge_data_action=bridge_data_action,
                     bridge_copy_reason=bridge_copy_reason,
+                    character_length=_character_length(argument.semantic_type),
+                    array=_array_handoff_policy(argument.semantic_type),
                     source_kind="hidden_output",
                     native_name=mapping.native_name or argument.name,
                     native_position=mapping.native_position,
@@ -604,9 +665,11 @@ def _projected_native_call_slot_policies(
                 codegen_action=decision.codegen_action,
                 bridge_data_action=bridge_data_action,
                 bridge_copy_reason=bridge_copy_reason,
+                object_kind=decision.kind,
                 result_position=mapping.result_position,
                 semantic_type_name=argument.semantic_type.name,
                 character_length=_character_length(argument.semantic_type),
+                array=_array_handoff_policy(argument.semantic_type),
             )
         )
     blockers.extend(_native_position_blockers(slot.native_position for slot in slots))
@@ -635,6 +698,7 @@ def _hidden_result_native_call_slot_policy(
                 codegen_action=CodegenAction.BLOCKED,
                 bridge_data_action=BridgeDataAction.BLOCKED,
                 bridge_copy_reason=None,
+                object_kind=None,
                 result_position=mapping.result_position,
             ),
             (f"native-call result slot {native_position} has no hidden argument {mapping.python_name!r}",),
@@ -654,9 +718,11 @@ def _hidden_result_native_call_slot_policy(
                 codegen_action=CodegenAction.BLOCKED,
                 bridge_data_action=BridgeDataAction.BLOCKED,
                 bridge_copy_reason=None,
+                object_kind=None,
                 result_position=mapping.result_position,
                 semantic_type_name=argument.semantic_type.name,
                 character_length=_character_length(argument.semantic_type),
+                array=_array_handoff_policy(argument.semantic_type),
             ),
             (f"native-call result slot {native_position} references argument without completed policy",),
         )
@@ -679,9 +745,11 @@ def _hidden_result_native_call_slot_policy(
             codegen_action=decision.codegen_action,
             bridge_data_action=bridge_data_action,
             bridge_copy_reason=bridge_copy_reason,
+            object_kind=decision.kind,
             result_position=mapping.result_position,
             semantic_type_name=argument.semantic_type.name,
             character_length=_character_length(argument.semantic_type),
+            array=_array_handoff_policy(argument.semantic_type),
         ),
         blockers,
     )
@@ -707,6 +775,7 @@ def _literal_native_call_slot_policy(
             codegen_action=CodegenAction.DIRECT_VALUE,
             bridge_data_action=BridgeDataAction.DIRECT_TRANSFER,
             bridge_copy_reason=None,
+            object_kind=None,
             literal_type=literal_type,
             literal_value=literal_value,
             semantic_type_name=literal_type,
@@ -768,7 +837,10 @@ def _implicit_native_call_slot_policies(
                 codegen_action=decision.codegen_action,
                 bridge_data_action=bridge_data_action,
                 bridge_copy_reason=bridge_copy_reason,
+                object_kind=decision.kind,
                 semantic_type_name=argument.semantic_type.name,
+                character_length=_character_length(argument.semantic_type),
+                array=_array_handoff_policy(argument.semantic_type),
             )
         )
     return positions, tuple(slots), tuple(blockers)
@@ -794,17 +866,41 @@ def _argument_shape_blockers(
     decision: OwnershipDecision,
 ) -> tuple[str, ...]:
     """Return ownership, type, and visibility blockers for one argument."""
+    if int(argument.semantic_type.rank or 0) > 0:
+        return _array_argument_shape_blockers(argument, decision)
     blockers: list[str] = []
     if decision.is_blocked:
         blockers.append(
             f"argument {argument.name!r} has blocked ownership policy: {decision.blocker or decision.reason}"
         )
-    if not _is_first_lane_scalar_type(argument.semantic_type):
+    string_value = _is_plan_string_value_type(argument.semantic_type)
+    if not (_is_first_lane_scalar_type(argument.semantic_type) or string_value):
         blockers.append(f"argument {argument.name!r} is not a first-lane primitive scalar")
     if not decision.python_visible:
         blockers.append(f"argument {argument.name!r} is not Python-visible")
-    if decision.kind is not ObjectKind.SCALAR:
-        blockers.append(f"argument {argument.name!r} policy kind is {decision.kind.value}, not scalar")
+    expected_kind = ObjectKind.STRING if string_value else ObjectKind.SCALAR
+    if decision.kind is not expected_kind:
+        blockers.append(f"argument {argument.name!r} policy kind is {decision.kind.value}, not {expected_kind.value}")
+    return tuple(blockers)
+
+
+# Ordinary-array argument policy.
+def _array_argument_shape_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require one supported non-descriptor ordinary array value."""
+    blockers: list[str] = []
+    if decision.is_blocked:
+        blockers.append(
+            f"argument {argument.name!r} has blocked ownership policy: {decision.blocker or decision.reason}"
+        )
+    if not _is_phase6_ordinary_array_type(argument.semantic_type):
+        blockers.append(f"argument {argument.name!r} is outside ordinary array buffer support")
+    if not decision.python_visible:
+        blockers.append(f"argument {argument.name!r} is not Python-visible")
+    if decision.kind is not ObjectKind.NUMPY_ARRAY:
+        blockers.append(f"argument {argument.name!r} policy kind is {decision.kind.value}, not numpy_array")
     return tuple(blockers)
 
 
@@ -814,6 +910,10 @@ def _argument_boundary_blockers(
 ) -> tuple[str, ...]:
     """Return Python/native boundary-action blockers for one argument."""
     blockers: list[str] = []
+    if decision.kind is ObjectKind.STRING:
+        return _string_boundary_blockers(argument, decision)
+    if decision.kind is ObjectKind.NUMPY_ARRAY:
+        return _array_boundary_blockers(argument, decision)
     if decision.python_barrier_action not in {
         PythonBarrierAction.SCALAR_VALUE,
         PythonBarrierAction.SCALAR_STORAGE,
@@ -844,6 +944,207 @@ def _argument_boundary_blockers(
         blockers.append(f"argument {argument.name!r} raw address is not forwarded as a raw address")
     if argument.optional and decision.python_barrier_action is not PythonBarrierAction.SCALAR_VALUE:
         blockers.append(f"argument {argument.name!r} optional storage/address boundaries are not supported")
+    return tuple(blockers)
+
+
+# Ordinary-array boundary policy.
+def _array_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require one caller-owned ordinary NumPy buffer handoff."""
+    blockers = []
+    if decision.owner is not OwnershipOwner.CALLER:
+        blockers.append(f"argument {argument.name!r} array owner is {decision.owner.value}, not caller")
+    expected_transfer = TransferMode.IN_PLACE if decision.mutates_native else TransferMode.CALL_LOCAL
+    if decision.transfer is not expected_transfer:
+        blockers.append(
+            f"argument {argument.name!r} array transfer is {decision.transfer.value}, not {expected_transfer.value}"
+        )
+    expected_destruction = DestructionPolicy.CALLER if decision.mutates_native else DestructionPolicy.NONE
+    if decision.destruction is not expected_destruction:
+        blockers.append(
+            f"argument {argument.name!r} array destruction is {decision.destruction.value}, "
+            f"not {expected_destruction.value}"
+        )
+    if decision.storage_mode is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} array storage is {decision.storage_mode.value}, not stack")
+    if (decision.boundary_storage_mode or decision.storage_mode) is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} array boundary storage is not stack")
+    if decision.python_barrier_action is not PythonBarrierAction.ARRAY_STORAGE:
+        blockers.append(
+            f"argument {argument.name!r} array Python action is "
+            f"{decision.python_barrier_action.value}, not array_storage"
+        )
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_ARRAY_BUFFER:
+        blockers.append(
+            f"argument {argument.name!r} array native action is "
+            f"{decision.native_barrier_action.value}, not pass_array_buffer"
+        )
+    expected_actions = {
+        CodegenAction.CALL_LOCAL_INPUT,
+        CodegenAction.IN_PLACE_ARGUMENT,
+        CodegenAction.IDENTITY_OUTPUT,
+    }
+    if decision.codegen_action not in expected_actions:
+        blockers.append(
+            f"argument {argument.name!r} array action is {decision.codegen_action.value}, not a borrowed buffer action"
+        )
+    if decision.nullable or decision.descriptor_boundary:
+        blockers.append(f"argument {argument.name!r} ordinary array must be non-descriptor storage")
+    array_policy = _array_handoff_policy(argument.semantic_type)
+    if argument.optional and array_policy is not None and array_policy.rank is None:
+        blockers.append(f"argument {argument.name!r} optional assumed-rank combination is not supported")
+    return tuple(blockers)
+
+
+# String argument policy.
+def _string_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Dispatch one completed string boundary without backend inference."""
+    action = decision.python_barrier_action
+    if action is PythonBarrierAction.STRING_VALUE:
+        return _string_value_boundary_blockers(argument, decision)
+    if action is PythonBarrierAction.STRING_STORAGE:
+        return _string_storage_boundary_blockers(argument, decision)
+    if action is PythonBarrierAction.RAW_ADDRESS:
+        return _raw_string_address_boundary_blockers(argument, decision)
+    return (f"argument {argument.name!r} has unsupported string Python action {action.value}",)
+
+
+def _string_value_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Return completed string-value input or replacement blockers."""
+    blockers = []
+    if decision.python_barrier_action is not PythonBarrierAction.STRING_VALUE:
+        blockers.append(
+            f"argument {argument.name!r} has unsupported string Python action {decision.python_barrier_action.value}"
+        )
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS:
+        blockers.append(
+            f"argument {argument.name!r} native action is {decision.native_barrier_action.value}, "
+            "not a string call-local address handoff"
+        )
+    if decision.codegen_action not in {CodegenAction.CALL_LOCAL_INPUT, CodegenAction.COPY_IN_OUT}:
+        blockers.append(
+            f"argument {argument.name!r} string action is {decision.codegen_action.value}, "
+            "not a call-local input or copy-in/out replacement"
+        )
+    if decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT and decision.projects_result:
+        blockers.append(f"argument {argument.name!r} call-local string input unexpectedly projects a result")
+    if decision.codegen_action is CodegenAction.COPY_IN_OUT:
+        blockers.extend(_string_replacement_blockers(argument, decision))
+    return tuple(blockers)
+
+
+def _string_storage_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require caller-owned fixed mutable NumPy bytes storage."""
+    blockers = list(
+        _string_address_ownership_blockers(
+            argument,
+            decision,
+            expected_storage=StorageMode.ALIAS,
+            label="string storage",
+        )
+    )
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_STORAGE_ADDRESS:
+        blockers.append(
+            f"argument {argument.name!r} string storage native action is "
+            f"{decision.native_barrier_action.value}, not pass_storage_address"
+        )
+    return tuple(blockers)
+
+
+def _raw_string_address_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require a caller-owned unsafe fixed string address contract."""
+    blockers = list(
+        _string_address_ownership_blockers(
+            argument,
+            decision,
+            expected_storage=StorageMode.STACK,
+            label="raw string address",
+        )
+    )
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_RAW_ADDRESS:
+        blockers.append(
+            f"argument {argument.name!r} raw string native action is "
+            f"{decision.native_barrier_action.value}, not pass_raw_address"
+        )
+    return tuple(blockers)
+
+
+def _string_address_ownership_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    *,
+    expected_storage: StorageMode,
+    label: str,
+) -> tuple[str, ...]:
+    """Validate ownership shared by fixed storage and raw-address forms."""
+    blockers = []
+    if _character_length(argument.semantic_type) is None:
+        blockers.append(f"argument {argument.name!r} {label} requires a fixed positive character length")
+    if decision.owner is not OwnershipOwner.CALLER:
+        blockers.append(f"argument {argument.name!r} {label} owner is {decision.owner.value}, not caller")
+    if decision.transfer is not TransferMode.IN_PLACE:
+        blockers.append(f"argument {argument.name!r} {label} transfer is {decision.transfer.value}, not in_place")
+    if decision.destruction is not DestructionPolicy.CALLER:
+        blockers.append(f"argument {argument.name!r} {label} destruction is {decision.destruction.value}, not caller")
+    if decision.storage_mode is not expected_storage:
+        blockers.append(
+            f"argument {argument.name!r} {label} storage is {decision.storage_mode.value}, not {expected_storage.value}"
+        )
+    if (decision.boundary_storage_mode or decision.storage_mode) is not expected_storage:
+        blockers.append(f"argument {argument.name!r} {label} boundary storage is not {expected_storage.value}")
+    if decision.codegen_action is not CodegenAction.IN_PLACE_ARGUMENT:
+        blockers.append(
+            f"argument {argument.name!r} {label} action is {decision.codegen_action.value}, not in_place_argument"
+        )
+    if not decision.mutates_native:
+        blockers.append(f"argument {argument.name!r} {label} does not record native mutation")
+    if decision.projects_result:
+        blockers.append(f"argument {argument.name!r} {label} unexpectedly projects a result")
+    if decision.nullable or argument.optional:
+        blockers.append(f"argument {argument.name!r} optional {label} is unsupported")
+    return tuple(blockers)
+
+
+def _string_replacement_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require completed Phase 5C replacement ownership and projection."""
+    blockers = []
+    if decision.owner is not OwnershipOwner.PYTHON:
+        blockers.append(f"argument {argument.name!r} replacement owner is {decision.owner.value}, not python")
+    if decision.transfer is not TransferMode.COPY_RETURN:
+        blockers.append(
+            f"argument {argument.name!r} replacement transfer is {decision.transfer.value}, not copy_return"
+        )
+    if decision.destruction is not DestructionPolicy.PYTHON_REFCOUNT:
+        blockers.append(
+            f"argument {argument.name!r} replacement destruction is {decision.destruction.value}, not python_refcount"
+        )
+    if decision.storage_mode is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} replacement storage is {decision.storage_mode.value}, not stack")
+    if (decision.boundary_storage_mode or decision.storage_mode) is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} replacement boundary storage is not stack")
+    if not decision.mutates_native:
+        blockers.append(f"argument {argument.name!r} replacement does not record native mutation")
+    if not decision.projects_result:
+        blockers.append(f"argument {argument.name!r} replacement does not project a Python result")
+    if decision.nullable:
+        blockers.append(f"argument {argument.name!r} replacement uses semantic nullability for optional presence")
     return tuple(blockers)
 
 
@@ -879,6 +1180,10 @@ def _argument_projection_blockers(
 
 
 def _result_blockers(semantic_type: models.SemanticType, decision: OwnershipDecision) -> tuple[str, ...]:
+    if _is_phase6_ordinary_array_type(semantic_type):
+        return _ordinary_array_result_blockers(semantic_type, decision, "result")
+    if _is_fixed_plan_string_result_type(semantic_type):
+        return _fixed_string_result_blockers(decision)
     blockers: list[str] = []
     if decision.is_blocked:
         blockers.append(f"result has blocked ownership policy: {decision.blocker or decision.reason}")
@@ -900,7 +1205,11 @@ def _hidden_result_blockers(
     decision: OwnershipDecision,
     mapping: models.ProjectionMapping,
 ) -> tuple[str, ...]:
-    """Return blockers for one hidden primitive scalar result projection."""
+    """Return blockers for one hidden result projection."""
+    if _is_phase6_ordinary_array_type(argument.semantic_type):
+        return _ordinary_array_hidden_result_blockers(argument, decision, mapping)
+    if _is_fixed_plan_string_result_type(argument.semantic_type):
+        return _fixed_string_hidden_result_blockers(argument, decision, mapping)
     blockers: list[str] = []
     if decision.is_blocked:
         blockers.append(f"hidden result {argument.name!r} has blocked ownership policy: {decision.blocker}")
@@ -908,9 +1217,9 @@ def _hidden_result_blockers(
         blockers.append(f"hidden result {argument.name!r} is not a primitive scalar")
     if decision.kind is not ObjectKind.SCALAR:
         blockers.append(f"hidden result {argument.name!r} policy kind is {decision.kind.value}, not scalar")
-    if decision.codegen_action is not CodegenAction.HIDDEN_OUTPUT:
+    if decision.codegen_action is not CodegenAction.DIRECT_VALUE:
         blockers.append(
-            f"hidden result {argument.name!r} codegen action is {decision.codegen_action.value}, not hidden_output"
+            f"hidden result {argument.name!r} codegen action is {decision.codegen_action.value}, not direct_value"
         )
     if decision.python_barrier_action is not PythonBarrierAction.NONE:
         blockers.append(
@@ -934,6 +1243,172 @@ def _hidden_result_blockers(
     elif mapping.result_position < 0:
         blockers.append(f"hidden result {argument.name!r} has negative result position {mapping.result_position}")
     return tuple(blockers)
+
+
+# Ordinary-array result policy.
+def _ordinary_array_result_blockers(
+    semantic_type: models.SemanticType,
+    decision: OwnershipDecision,
+    label: str,
+) -> tuple[str, ...]:
+    """Require one Python-owned fixed-shape ordinary array copy result."""
+    blockers = []
+    if decision.is_blocked:
+        blockers.append(f"{label} has blocked ownership policy: {decision.blocker or decision.reason}")
+    if decision.kind is not ObjectKind.NUMPY_ARRAY:
+        blockers.append(f"{label} policy kind is {decision.kind.value}, not numpy_array")
+    if decision.owner is not OwnershipOwner.PYTHON:
+        blockers.append(f"{label} owner is {decision.owner.value}, not python")
+    if decision.transfer is not TransferMode.COPY_RETURN:
+        blockers.append(f"{label} transfer is {decision.transfer.value}, not copy_return")
+    if decision.destruction is not DestructionPolicy.PYTHON_REFCOUNT:
+        blockers.append(f"{label} destruction is {decision.destruction.value}, not python_refcount")
+    if decision.storage_mode is not StorageMode.STACK:
+        blockers.append(f"{label} storage is {decision.storage_mode.value}, not stack")
+    if decision.codegen_action is not CodegenAction.COPY_OUT:
+        blockers.append(f"{label} action is {decision.codegen_action.value}, not copy_out")
+    if decision.python_barrier_action is not PythonBarrierAction.NONE:
+        blockers.append(f"{label} Python action is {decision.python_barrier_action.value}, not none")
+    if decision.native_barrier_action is not NativeBarrierAction.NONE:
+        blockers.append(f"{label} native action is {decision.native_barrier_action.value}, not none")
+    if decision.nullable or decision.descriptor_boundary:
+        blockers.append(f"{label} is descriptor-backed or nullable")
+    array = _array_handoff_policy(semantic_type)
+    if array is None or array.rank is None or any(shape in {":", "::Strided", "...", "Flat"} for shape in array.shape):
+        blockers.append(f"{label} ordinary array shape is not fully expressible")
+    elif array.order == "ORDER_C" and array.rank > 1:
+        blockers.append(f"{label} ordinary array copy requires Fortran element order")
+    return tuple(blockers)
+
+
+def _ordinary_array_hidden_result_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    mapping: models.ProjectionMapping,
+) -> tuple[str, ...]:
+    """Require one hidden fixed-shape array copied through bridge-owned storage."""
+    label = f"hidden result {argument.name!r}"
+    blockers = list(_ordinary_array_result_blockers(argument.semantic_type, decision, label))
+    blockers = [item for item in blockers if " native action is " not in item]
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_ARRAY_BUFFER:
+        blockers.append(f"{label} native action is {decision.native_barrier_action.value}, not array buffer")
+    if decision.python_visible or not decision.projects_result:
+        blockers.append(f"{label} projection visibility is inconsistent")
+    if not isinstance(mapping.native_position, int):
+        blockers.append(f"{label} is missing a native position")
+    if not isinstance(mapping.result_position, int) or isinstance(mapping.result_position, bool):
+        blockers.append(f"{label} has no integer result position")
+    elif mapping.result_position < 0:
+        blockers.append(f"{label} has negative result position {mapping.result_position}")
+    return tuple(blockers)
+
+
+# String result and writeback policy.
+def _fixed_string_result_blockers(decision: OwnershipDecision) -> tuple[str, ...]:
+    """Require the completed copy-return policy for one direct fixed string."""
+    blockers = list(_fixed_string_result_ownership_blockers(decision, "result"))
+    if decision.is_blocked:
+        blockers.append(f"result has blocked ownership policy: {decision.blocker or decision.reason}")
+    if decision.kind is not ObjectKind.STRING:
+        blockers.append(f"result policy kind is {decision.kind.value}, not string")
+    if decision.codegen_action is not CodegenAction.COPY_OUT:
+        blockers.append(f"result codegen action is {decision.codegen_action.value}, not copy_out")
+    if decision.python_barrier_action is not PythonBarrierAction.NONE:
+        blockers.append(f"result Python action is {decision.python_barrier_action.value}, not none")
+    if decision.native_barrier_action is not NativeBarrierAction.NONE:
+        blockers.append(f"result native action is {decision.native_barrier_action.value}, not none")
+    return tuple(blockers)
+
+
+def _fixed_string_hidden_result_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    mapping: models.ProjectionMapping,
+) -> tuple[str, ...]:
+    """Require one fixed string hidden output and its completed projection."""
+    label = f"hidden result {argument.name!r}"
+    blockers = list(_fixed_string_result_ownership_blockers(decision, label))
+    if decision.is_blocked:
+        blockers.append(
+            f"hidden result {argument.name!r} has blocked ownership policy: {decision.blocker or decision.reason}"
+        )
+    if decision.kind is not ObjectKind.STRING:
+        blockers.append(f"hidden result {argument.name!r} policy kind is {decision.kind.value}, not string")
+    if decision.codegen_action is not CodegenAction.COPY_OUT:
+        blockers.append(
+            f"hidden result {argument.name!r} codegen action is {decision.codegen_action.value}, not copy_out"
+        )
+    if decision.python_barrier_action is not PythonBarrierAction.NONE:
+        blockers.append(
+            f"hidden result {argument.name!r} Python action is {decision.python_barrier_action.value}, not none"
+        )
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS:
+        blockers.append(
+            f"hidden result {argument.name!r} native action is "
+            f"{decision.native_barrier_action.value}, not call-local address"
+        )
+    if decision.python_visible:
+        blockers.append(f"hidden result {argument.name!r} is Python-visible")
+    if not decision.projects_result:
+        blockers.append(f"hidden result {argument.name!r} does not project a Python result")
+    if not isinstance(mapping.native_position, int):
+        blockers.append(f"hidden result {argument.name!r} is missing a native position")
+    if not isinstance(mapping.result_position, int) or isinstance(mapping.result_position, bool):
+        blockers.append(f"hidden result {argument.name!r} has no integer result position")
+    elif mapping.result_position < 0:
+        blockers.append(f"hidden result {argument.name!r} has negative result position {mapping.result_position}")
+    return tuple(blockers)
+
+
+def _fixed_string_result_ownership_blockers(
+    decision: OwnershipDecision,
+    label: str,
+) -> tuple[str, ...]:
+    """Require Python-owned stack-to-copy-return fixed string ownership."""
+    blockers = []
+    if decision.owner is not OwnershipOwner.PYTHON:
+        blockers.append(f"{label} owner is {decision.owner.value}, not python")
+    if decision.transfer is not TransferMode.COPY_RETURN:
+        blockers.append(f"{label} transfer is {decision.transfer.value}, not copy_return")
+    if decision.destruction is not DestructionPolicy.PYTHON_REFCOUNT:
+        blockers.append(f"{label} destruction is {decision.destruction.value}, not python_refcount")
+    if decision.storage_mode is not StorageMode.STACK:
+        blockers.append(f"{label} storage is {decision.storage_mode.value}, not stack")
+    if (decision.boundary_storage_mode or decision.storage_mode) is not StorageMode.STACK:
+        blockers.append(f"{label} boundary storage is not stack")
+    if decision.nullable:
+        blockers.append(f"{label} is nullable outside deferred string results")
+    return tuple(blockers)
+
+
+def _string_result_aggregation_blockers(results: tuple[ResultPolicy, ...]) -> tuple[str, ...]:
+    """Keep native string-allocation cleanup single-result in Phase 5B."""
+    if any(result.ownership.kind is ObjectKind.STRING for result in results) and len(results) != 1:
+        return ("fixed string result lane requires exactly one Python-visible result",)
+    return ()
+
+
+def _string_result_status_blockers(
+    results: tuple[ResultPolicy, ...],
+    status_error: NativeStatusErrorPolicy | None,
+) -> tuple[str, ...]:
+    """Block status exits until public string-result release is planned."""
+    if status_error is not None and any(result.ownership.kind is ObjectKind.STRING for result in results):
+        return ("fixed string result with native status error requires planned failure-path release",)
+    return ()
+
+
+def _string_writeback_status_blockers(
+    arguments: list[ArgumentPolicy],
+    status_error: NativeStatusErrorPolicy | None,
+) -> tuple[str, ...]:
+    """Block status exits until mutable string-buffer cleanup is planned there."""
+    if status_error is not None and any(
+        argument.ownership.kind is ObjectKind.STRING and argument.codegen_action is CodegenAction.COPY_IN_OUT
+        for argument in arguments
+    ):
+        return ("string replacement with native status error requires planned failure-path cleanup",)
+    return ()
 
 
 def _result_position_blockers(results: tuple[ResultPolicy, ...]) -> tuple[str, ...]:
@@ -998,7 +1473,7 @@ def _character_length(semantic_type: models.SemanticType) -> int | None:
 def _lifecycle_policies(
     arguments: list[ArgumentPolicy],
 ) -> tuple[tuple[LifecyclePolicy, ...], tuple[str, ...]]:
-    """Return completed scalar writeback actions and structural blockers."""
+    """Return completed replacement/writeback actions and structural blockers."""
     actions = []
     blockers: list[str] = []
     for argument in arguments:
@@ -1007,6 +1482,9 @@ def _lifecycle_policies(
         if argument.result_position is None:
             blockers.append(f"argument {argument.name!r} writeback is missing a result position")
             continue
+        phases = (
+            (WritebackPhase.COPY_OUT,) if argument.ownership.kind is ObjectKind.NUMPY_ARRAY else tuple(WritebackPhase)
+        )
         actions.extend(
             LifecyclePolicy(
                 owner_path=argument.owner_path,
@@ -1015,11 +1493,18 @@ def _lifecycle_policies(
                 codegen_action=argument.codegen_action,
                 semantic_type_name=argument.semantic_type_name,
                 result_position=argument.result_position,
+                object_kind=argument.ownership.kind,
             )
-            for phase in WritebackPhase
+            for phase in phases
         )
-    if len(actions) > len(WritebackPhase):
-        blockers.append("scalar writeback lane currently requires exactly one projected scalar result")
+    non_array_actions = [
+        action
+        for action in actions
+        if next(item for item in arguments if item.owner_path == action.owner_path).ownership.kind
+        is not ObjectKind.NUMPY_ARRAY
+    ]
+    if len(non_array_actions) > len(WritebackPhase):
+        blockers.append("replacement lane currently requires exactly one non-array projected result")
     return tuple(actions), tuple(blockers)
 
 
@@ -1044,11 +1529,23 @@ def _is_first_lane_scalar_type(semantic_type: models.SemanticType) -> bool:
     )
 
 
+def _is_plan_string_value_type(semantic_type: models.SemanticType) -> bool:
+    """Return whether one semantic type is a scalar Python string value."""
+    return bool(int(semantic_type.rank or 0) == 0 and semantic_type.name == "String")
+
+
+def _is_fixed_plan_string_result_type(semantic_type: models.SemanticType) -> bool:
+    """Return whether one result is a fixed positive scalar string."""
+    length = _character_length(semantic_type)
+    return bool(_is_plan_string_value_type(semantic_type) and length is not None and length > 0)
+
+
 def _is_first_lane_literal_type(literal_type: str) -> bool:
     """Return whether a hidden literal type belongs to the scalar input lane."""
     return literal_type in {"Bool", "Int32", "Float32", "Float64", "Complex64", "Complex128"}
 
 
+# Scalar module-variable policy.
 def _scalar_module_variable_blockers(
     variable: models.SemanticVariable,
     getter: OwnershipDecision | None,
@@ -1186,6 +1683,45 @@ def _argument_bridge_data_action(
     value_kind: str | None,
 ) -> tuple[BridgeDataAction, str | None]:
     """Complete whether the bridge reuses, views, or copies one input payload."""
+    if decision.kind is ObjectKind.NUMPY_ARRAY:
+        if (
+            optional_mode in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}
+            and decision.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE
+            and decision.native_barrier_action is NativeBarrierAction.PASS_ARRAY_BUFFER
+            and decision.codegen_action
+            in {
+                CodegenAction.CALL_LOCAL_INPUT,
+                CodegenAction.IN_PLACE_ARGUMENT,
+                CodegenAction.IDENTITY_OUTPUT,
+            }
+        ):
+            return BridgeDataAction.ASSOCIATE_VIEW, None
+        return BridgeDataAction.BLOCKED, None
+    if decision.kind is ObjectKind.STRING:
+        if (
+            optional_mode in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}
+            and decision.python_barrier_action is PythonBarrierAction.STRING_VALUE
+            and decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+        ):
+            if decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT:
+                return BridgeDataAction.COPY_REPRESENTATION, STRING_INPUT_COPY_REASON
+            if decision.codegen_action is CodegenAction.COPY_IN_OUT:
+                return BridgeDataAction.COPY_REPRESENTATION, STRING_REPLACEMENT_COPY_REASON
+        if (
+            optional_mode is OptionalMode.REQUIRED
+            and decision.python_barrier_action is PythonBarrierAction.STRING_STORAGE
+            and decision.native_barrier_action is NativeBarrierAction.PASS_STORAGE_ADDRESS
+            and decision.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
+        ):
+            return BridgeDataAction.COPY_REPRESENTATION, STRING_STORAGE_COPY_REASON
+        if (
+            optional_mode is OptionalMode.REQUIRED
+            and decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+            and decision.native_barrier_action is NativeBarrierAction.PASS_RAW_ADDRESS
+            and decision.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
+        ):
+            return BridgeDataAction.COPY_REPRESENTATION, RAW_STRING_ADDRESS_COPY_REASON
+        return BridgeDataAction.BLOCKED, None
     if optional_mode is OptionalMode.DESCRIPTOR:
         if value_kind == "pointer":
             return BridgeDataAction.ASSOCIATE_VIEW, None
@@ -1217,6 +1753,13 @@ def _result_bridge_data_action(
     """Complete direct result transfer without widening unsupported lanes."""
     if _is_first_lane_scalar_type(semantic_type):
         return BridgeDataAction.DIRECT_TRANSFER, None
+    if _is_phase6_ordinary_array_type(semantic_type):
+        return BridgeDataAction.COPY_REPRESENTATION, ORDINARY_ARRAY_RESULT_COPY_REASON
+    if _is_fixed_plan_string_result_type(semantic_type):
+        return (
+            BridgeDataAction.COPY_REPRESENTATION,
+            FIXED_STRING_RESULT_COPY_REASON,
+        )
     return BridgeDataAction.BLOCKED, None
 
 
@@ -1226,16 +1769,27 @@ def _native_result_bridge_data_action(
     """Complete bridge data movement for one hidden native output slot."""
     if _is_first_lane_scalar_type(semantic_type):
         return BridgeDataAction.DIRECT_TRANSFER, None
+    if _is_phase6_ordinary_array_type(semantic_type):
+        return BridgeDataAction.COPY_REPRESENTATION, ORDINARY_ARRAY_RESULT_COPY_REASON
     if semantic_type.name == "String" and _character_length(semantic_type) is not None:
         return (
             BridgeDataAction.COPY_REPRESENTATION,
-            "copy fixed-length Fortran character output into C-owned null-terminated storage",
+            FIXED_STRING_RESULT_COPY_REASON,
         )
     return BridgeDataAction.BLOCKED, None
 
 
 def _argument_handoff_mode(decision: OwnershipDecision) -> ArgumentHandoffMode:
-    """Return the completed scalar ABI shape consumed by both backends."""
+    """Return the completed ABI shape consumed by both backends."""
+    if decision.kind is ObjectKind.NUMPY_ARRAY:
+        return ArgumentHandoffMode.ARRAY_BUFFER
+    if decision.python_barrier_action in {
+        PythonBarrierAction.STRING_STORAGE,
+        PythonBarrierAction.RAW_ADDRESS,
+    }:
+        return ArgumentHandoffMode.OPAQUE_ADDRESS
+    if decision.kind is ObjectKind.STRING:
+        return ArgumentHandoffMode.CHARACTER_BUFFER
     if decision.python_barrier_action in {
         PythonBarrierAction.SCALAR_STORAGE,
         PythonBarrierAction.RAW_ADDRESS,
@@ -1244,6 +1798,116 @@ def _argument_handoff_mode(decision: OwnershipDecision) -> ArgumentHandoffMode:
     if decision.native_barrier_action is NativeBarrierAction.PASS_VALUE:
         return ArgumentHandoffMode.VALUE
     return ArgumentHandoffMode.TYPED_REFERENCE
+
+
+# Ordinary-array handoff policy.
+def _array_handoff_policy(semantic_type: models.SemanticType) -> ArrayHandoffPolicy | None:
+    """Copy structured ordinary-array facts into completed wrapper policy."""
+    storage = semantic_type.storage
+    array = storage.array if storage is not None else None
+    if array is None:
+        return None
+    assumed_rank = array.category == "assumed_rank"
+    rank = None if assumed_rank else int(array.rank or semantic_type.rank or 0)
+    if rank is not None and rank <= 0:
+        return None
+    shape = tuple(str(item) for item in (array.shape or semantic_type.shape))
+    axes = tuple(str(item) for item in array.axes)
+    return ArrayHandoffPolicy(
+        rank=rank,
+        shape=shape,
+        axes=axes,
+        order="ORDER_F" if assumed_rank and array.order is None else array.order,
+        contiguous=array.contiguous,
+        itemsize=_character_length(semantic_type) if semantic_type.name == "String" else None,
+        category=array.category,
+        extent_references=tuple(_array_extent_references(item) for item in shape),
+    )
+
+
+def _is_phase6_ordinary_array_type(semantic_type: models.SemanticType) -> bool:
+    """Return whether one type is an ordinary non-descriptor array buffer."""
+    array_policy = _array_handoff_policy(semantic_type)
+    if array_policy is None:
+        return False
+    storage = semantic_type.storage
+    array = storage.array if storage is not None else None
+    return bool(
+        array is not None
+        and (
+            semantic_type.name in _PLAN_PRIMITIVE_SCALAR_TYPES
+            or (semantic_type.name == "String" and array_policy.itemsize is not None)
+        )
+        and (array_policy.rank is None or 1 <= array_policy.rank <= 15)
+        and (array_policy.rank is None or len(array_policy.shape) == array_policy.rank)
+        and (array_policy.rank is None or len(array_policy.axes) == array_policy.rank)
+        and not array.allocatable
+        and not array.pointer
+    )
+
+
+def _array_extent_references(expression: str) -> tuple[str, ...]:
+    """Return stable scalar names used by one declared extent expression."""
+    if expression in {":", "::Strided", "...", "Flat"}:
+        return ()
+    try:
+        tree = ast.parse(expression, mode="eval")
+    except SyntaxError:
+        return ("<invalid>",)
+    if not _valid_array_extent_expression(tree):
+        return ("<invalid>",)
+    return tuple(dict.fromkeys(node.id for node in ast.walk(tree) if isinstance(node, ast.Name)))
+
+
+def _valid_array_extent_expression(tree: ast.AST) -> bool:
+    """Return whether an extent uses only integer arithmetic and scalar names."""
+    allowed = (
+        ast.Expression,
+        ast.BinOp,
+        ast.UnaryOp,
+        ast.Name,
+        ast.Load,
+        ast.Constant,
+        ast.Add,
+        ast.Sub,
+        ast.Mult,
+        ast.FloorDiv,
+        ast.Div,
+        ast.Mod,
+        ast.USub,
+        ast.UAdd,
+    )
+    return all(isinstance(node, allowed) and _is_integer_constant(node) for node in ast.walk(tree))
+
+
+def _is_integer_constant(node: ast.AST) -> bool:
+    return not isinstance(node, ast.Constant) or (isinstance(node.value, int) and not isinstance(node.value, bool))
+
+
+def _array_extent_reference_blockers(
+    function: models.SemanticFunction,
+    arguments: list[ArgumentPolicy],
+    results: tuple[ResultPolicy, ...],
+) -> tuple[str, ...]:
+    """Require every declared extent name to come from a visible scalar argument."""
+    scalar_names = {
+        argument.name
+        for argument in function.arguments
+        if int(argument.semantic_type.rank or 0) == 0
+        and (decision := _ownership_decision(argument, models.RESOLVED_OWNERSHIP_POLICY_METADATA)) is not None
+        and decision.python_visible
+    }
+    blockers = []
+    for owner in (*arguments, *results):
+        if owner.array is None:
+            continue
+        for axis, references in enumerate(owner.array.extent_references):
+            missing = tuple(name for name in references if name not in scalar_names)
+            if missing:
+                blockers.append(
+                    f"array owner {owner.owner_path!r} extent axis {axis} has unavailable scalar references {missing}"
+                )
+    return tuple(blockers)
 
 
 def _argument_result_position(function: models.SemanticFunction, python_position: int) -> int | None:

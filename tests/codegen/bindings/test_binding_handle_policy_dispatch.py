@@ -89,7 +89,6 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_build_borrowed_array_result",
         (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_build_copy_return_array_result",
         (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_build_copy_return_array_result",
-        (ObjectKind.NUMPY_ARRAY, CodegenAction.HIDDEN_OUTPUT): "_build_copy_return_array_result",
     }
     assert (
         FortranToCBridgeGenerator._ALLOCATABLE_RESULT_HELPER_DISPATCHER.handlers[
@@ -173,7 +172,7 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS,
         NativeBarrierAction.PASS_STORAGE_ADDRESS,
         NativeBarrierAction.PASS_RAW_ADDRESS,
-        NativeBarrierAction.PASS_ARRAY_DESCRIPTOR,
+        NativeBarrierAction.PASS_ARRAY_BUFFER,
         NativeBarrierAction.PASS_WRAPPER_ADDRESS,
     }
     assert set(CPythonBindingGenerator._PYTHON_BARRIER_DISPATCHER.handlers) == {

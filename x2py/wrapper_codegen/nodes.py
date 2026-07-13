@@ -248,6 +248,22 @@ class FortranIf(StageRecord):
 
 
 @dataclass
+class FortranCase(StageRecord):
+    """One explicit or default branch in a Fortran select-case block."""
+
+    value: int | None
+    body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf | FortranSelectCase, ...] = ()
+
+
+@dataclass
+class FortranSelectCase(StageRecord):
+    """Fortran select-case dispatch used by planned runtime-rank arrays."""
+
+    expression: CodeExpression
+    cases: tuple[FortranCase, ...] = ()
+
+
+@dataclass
 class FortranInterfaceProcedure(StageRecord):
     """One native procedure signature inside an explicit interface."""
 
@@ -277,7 +293,10 @@ class FortranFunction(StageRecord):
     result_type: str | None = None
     bind_name: str | None = None
     declarations: tuple[FortranDeclaration, ...] = ()
-    body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf, ...] = ()
+    body: tuple[
+        FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf | FortranSelectCase,
+        ...,
+    ] = ()
     is_subroutine: bool = False
 
 

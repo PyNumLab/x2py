@@ -76,7 +76,6 @@ _FORTRAN_ACCESS_BY_CODEGEN_ACTION = {
     CodegenAction.CALL_LOCAL_INPUT: "read",
     CodegenAction.IN_PLACE_ARGUMENT: "readwrite",
     CodegenAction.IDENTITY_OUTPUT: "write",
-    CodegenAction.HIDDEN_OUTPUT: "write",
     CodegenAction.COPY_IN_OUT: "readwrite",
     CodegenAction.COPY_OUT: "write",
     CodegenAction.SNAPSHOT_COPY: "read",

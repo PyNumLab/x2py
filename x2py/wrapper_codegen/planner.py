@@ -6,6 +6,8 @@ from collections import Counter, defaultdict
 
 from x2py.semantics import models
 from x2py.semantics.wrapper_policy import (
+    ArgumentHandoffMode,
+    ArrayHandoffPolicy,
     ModuleGetterAction,
     ModuleVariablePolicy,
     ArgumentPolicy,
@@ -21,6 +23,7 @@ from x2py.semantics.wrapper_policy import (
 from x2py.semantics.wrapper_exports import PythonExportPolicy
 from x2py.semantics.ownership import SetterAction
 from x2py.wrapper_codegen.plan import (
+    ArrayHandoffPlan,
     ArgumentTransferPlan,
     BindingArgumentPlan,
     BindingFunctionPlan,
@@ -250,31 +253,51 @@ class WrapperPlanner(ClassVisitor):
     ) -> ArgumentTransferPlan:
         """Return one transfer whose backend views share one handoff role."""
         role = self._value_role(policy.owner_path)
+        length_role = (
+            f"{policy.owner_path}:length" if policy.handoff_mode is ArgumentHandoffMode.CHARACTER_BUFFER else None
+        )
         return ArgumentTransferPlan(
             owner_path=policy.owner_path,
             python_position=policy.python_position,
             native_position=policy.native_position,
             semantic_type_name=policy.semantic_type_name,
             datatype_family=self._datatype_family(policy.semantic_type_name),
+            character_length=policy.character_length,
+            object_kind=policy.ownership.kind,
+            ownership_owner=policy.ownership.owner,
+            transfer_mode=policy.ownership.transfer,
+            destruction_policy=policy.ownership.destruction,
+            storage_mode=policy.storage_mode,
+            boundary_storage_mode=policy.boundary_storage_mode,
+            nullable=policy.nullable,
+            mutates_native=policy.ownership.mutates_native,
+            projects_result=policy.projects_result,
+            python_visible=policy.python_visible,
+            result_position=policy.result_position,
+            array=native_slot.array,
             binding=BindingArgumentPlan(
-                policy.python_name,
-                policy.python_barrier_action,
-                role,
-                policy.optional_mode,
-                policy.nullable,
-                policy.writable,
-                policy.descriptor_boundary,
+                python_name=policy.python_name,
+                python_action=policy.python_barrier_action,
+                codegen_action=policy.codegen_action,
+                handoff_role=role,
+                optional_mode=policy.optional_mode,
+                nullable=policy.nullable,
+                writable=policy.writable,
+                descriptor_boundary=policy.descriptor_boundary,
+                length_handoff_role=length_role,
             ),
             bridge=BridgeArgumentPlan(
-                policy.native_name,
-                policy.native_barrier_action,
-                policy.handoff_mode,
-                policy.bridge_data_action,
-                policy.bridge_copy_reason,
-                native_slot.native_position,
-                role,
-                policy.optional_mode,
-                f"{policy.owner_path}:present" if policy.descriptor_boundary else None,
+                native_name=policy.native_name,
+                native_action=policy.native_barrier_action,
+                codegen_action=policy.codegen_action,
+                handoff_mode=policy.handoff_mode,
+                data_action=policy.bridge_data_action,
+                copy_reason=policy.bridge_copy_reason,
+                abi_position=native_slot.native_position,
+                handoff_role=role,
+                optional_mode=policy.optional_mode,
+                presence_role=f"{policy.owner_path}:present" if policy.descriptor_boundary else None,
+                length_handoff_role=length_role,
             ),
             native_call_slot=native_slot,
         )
@@ -283,7 +306,7 @@ class WrapperPlanner(ClassVisitor):
         self,
         policy: LifecyclePolicy,
     ) -> LifecycleActionPlan:
-        """Return one binding-owned writeback plan."""
+        """Return one transfer-owned action for function-wide ordering."""
         family = self._datatype_family(policy.semantic_type_name)
         binding = None
         bridge = None
@@ -304,6 +327,11 @@ class WrapperPlanner(ClassVisitor):
             owner_path=policy.owner_path,
             phase=policy.phase,
             source_role=policy.source_role,
+            codegen_action=policy.codegen_action,
+            semantic_type_name=policy.semantic_type_name,
+            datatype_family=family,
+            object_kind=policy.object_kind,
+            result_position=policy.result_position,
             binding=binding,
             bridge=bridge,
         )
@@ -324,6 +352,15 @@ class WrapperPlanner(ClassVisitor):
             datatype_family=self._datatype_family(policy.semantic_type_name),
             source_kind=policy.source_kind,
             result_position=policy.result_position,
+            character_length=policy.character_length,
+            object_kind=policy.ownership.kind,
+            ownership_owner=policy.ownership.owner,
+            transfer_mode=policy.ownership.transfer,
+            destruction_policy=policy.ownership.destruction,
+            storage_mode=policy.storage_mode,
+            boundary_storage_mode=policy.boundary_storage_mode,
+            nullable=policy.ownership.nullable,
+            array=(native_slot.array if native_slot is not None else self._array_plan(policy.array, policy.owner_path)),
             binding=BindingResultPlan(
                 policy.codegen_action,
                 policy.python_barrier_action,
@@ -342,7 +379,7 @@ class WrapperPlanner(ClassVisitor):
         )
 
     def _native_slot_plan(self, slot: NativeCallSlotPolicy, role: str) -> NativeCallSlotPlan:
-        """Return one native-call slot without selecting backend behavior."""
+        """Return one shared ABI slot without selecting backend behavior."""
         return NativeCallSlotPlan(
             owner_path=slot.owner_path,
             native_position=slot.native_position,
@@ -356,13 +393,75 @@ class WrapperPlanner(ClassVisitor):
             codegen_action=slot.codegen_action,
             bridge_data_action=slot.bridge_data_action,
             bridge_copy_reason=slot.bridge_copy_reason,
+            object_kind=slot.object_kind,
             literal_type=slot.literal_type,
             literal_value=slot.literal_value,
             result_position=slot.result_position,
             semantic_type_name=slot.semantic_type_name,
             datatype_family=(self._datatype_family(slot.semantic_type_name) if slot.semantic_type_name else None),
             character_length=slot.character_length,
+            array=self._array_plan(slot.array, slot.owner_path),
         )
+
+    # Ordinary-array planning.
+    def _array_plan(
+        self,
+        policy: ArrayHandoffPolicy | None,
+        owner_path: str,
+    ) -> ArrayHandoffPlan | None:
+        """Mechanically add ABI role names to completed array facts."""
+        if policy is None:
+            return None
+        abi_rank = self._array_abi_rank(policy)
+        return ArrayHandoffPlan(
+            rank=policy.rank,
+            shape=policy.shape,
+            axes=policy.axes,
+            order=policy.order,
+            contiguous=policy.contiguous,
+            itemsize=policy.itemsize,
+            category=policy.category,
+            data_role=self._value_role(owner_path),
+            extent_roles=tuple(f"{owner_path}:extent:{axis}" for axis in range(abi_rank)),
+            extent_reference_roles=self._array_extent_reference_roles(owner_path, policy.extent_references),
+            upper_bound_roles=self._array_layout_roles(owner_path, abi_rank, policy.contiguous, "upper-bound"),
+            stride_roles=self._array_layout_roles(owner_path, abi_rank, policy.contiguous, "stride"),
+            runtime_rank_role=self._array_runtime_rank_role(policy, owner_path),
+            itemsize_role=self._array_itemsize_role(policy, owner_path),
+        )
+
+    def _array_abi_rank(self, policy: ArrayHandoffPolicy) -> int:
+        """Return the concrete ABI field count for fixed or assumed rank."""
+        return 15 if policy.rank is None else policy.rank
+
+    def _array_runtime_rank_role(self, policy: ArrayHandoffPolicy, owner_path: str) -> str | None:
+        """Name the runtime-rank role only for assumed-rank arrays."""
+        return f"{owner_path}:rank" if policy.rank is None else None
+
+    def _array_itemsize_role(self, policy: ArrayHandoffPolicy, owner_path: str) -> str | None:
+        """Name the itemsize role only for fixed-width character arrays."""
+        return f"{owner_path}:itemsize" if policy.itemsize is not None else None
+
+    def _array_layout_roles(
+        self,
+        owner_path: str,
+        rank: int,
+        contiguous: bool | None,
+        label: str,
+    ) -> tuple[str, ...]:
+        """Name one ABI role per axis only for stride-aware layouts."""
+        if contiguous is not False:
+            return ()
+        return tuple(f"{owner_path}:{label}:{axis}" for axis in range(rank))
+
+    def _array_extent_reference_roles(
+        self,
+        owner_path: str,
+        references: tuple[tuple[str, ...], ...],
+    ) -> tuple[tuple[str, ...], ...]:
+        """Resolve completed extent names to existing argument handoff roles."""
+        function_path = owner_path.rsplit(".", 1)[0]
+        return tuple(tuple(f"{function_path}.{name}:value" for name in axis) for axis in references)
 
     def _status_error_plan(
         self,

@@ -1,6 +1,7 @@
 """Verified baseline runtime wrapper tests."""
 
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pytest
@@ -12,8 +13,12 @@ from tests.wrapper.fortran._support import (
     _build_source_legacy_and_import,
     _build_source_or_generated_pyi_and_import,
     _build_source_wrapper_plan_and_import,
+    _compile_native_object,
+    _import_from_build_dir,
+    _sole_native_module,
     wrapper_source,
 )
+from x2py import build_pyi_extension
 
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 SCALAR_FIXED_SOURCE = wrapper_source("fmath.f")
@@ -157,3 +162,56 @@ def test_f90_array_wrapper_distinguishes_contiguous_and_strided_contracts(
     _assert_fmath_array_examples(module, suffix="_CONTIGUOUS", strided=False)
     _assert_array_rejects_strided_views(module, "SQUARE_R4_CONTIGUOUS")
     _assert_fmath_array_examples(module, suffix="_STRIDED", strided=True)
+
+
+def test_required_array_buffers_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay one existing dense rank-one routine through a reduced contract."""
+    native_object = _compile_native_object(ARRAY_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_required_array"
+        shutil.copytree(CONTRACT_FIXTURES / "fmath_arrays_f90", contract_package)
+        (contract_package / "__init__.pyi").write_text(
+            "from .fmath_arrays_f90 import square_r8_contiguous\n",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "square_r8_contiguous") else _sole_native_module(module)
+
+    for module in modules.values():
+        values = np.array([2.0, 3.0, -4.0], dtype=np.float64)
+        output = np.zeros_like(values)
+        assert module.square_r8_contiguous(np.int32(values.size), values, output) is None
+        np.testing.assert_array_equal(output, values**2)
+
+        empty = np.empty(0, dtype=np.float64)
+        assert module.square_r8_contiguous(np.int32(0), empty, empty.copy()) is None
+
+    module = modules["wrapper_plan"]
+    valid = np.arange(4, dtype=np.float64)
+    output = np.zeros_like(valid)
+    invalid_cases = (
+        np.arange(4, dtype=np.float32),
+        valid.reshape(2, 2),
+        np.arange(8, dtype=np.float64)[::2],
+        np.arange(4, dtype=">f8"),
+        np.ndarray(4, dtype=np.float64, buffer=bytearray(33), offset=1),
+    )
+    for invalid in invalid_cases:
+        with pytest.raises(TypeError):
+            module.square_r8_contiguous(np.int32(4), invalid, output)
+
+    read_only = valid.copy()
+    read_only.flags.writeable = False
+    with pytest.raises(TypeError, match="writeable"):
+        module.square_r8_contiguous(np.int32(4), read_only, output)

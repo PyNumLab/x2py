@@ -15,6 +15,7 @@ from x2py.semantics.ownership import (
     OwnershipDecision,
     OwnershipContext,
     OwnershipOwner,
+    ObjectKind,
     SetterAction,
     TransferMode,
     default_ownership_policy,
@@ -297,11 +298,11 @@ def _native_status_output(
 
 
 def _is_compatible_status_handoff(decision: OwnershipDecision) -> bool:
-    return bool(
-        decision.projects_result
-        and not decision.python_visible
-        and decision.codegen_action is CodegenAction.HIDDEN_OUTPUT
-    )
+    expected_action = {
+        ObjectKind.SCALAR: CodegenAction.DIRECT_VALUE,
+        ObjectKind.STRING: CodegenAction.COPY_OUT,
+    }.get(decision.kind)
+    return bool(decision.projects_result and not decision.python_visible and decision.codegen_action is expected_action)
 
 
 def _is_scalar_integer_status(semantic_type_name: str) -> bool:

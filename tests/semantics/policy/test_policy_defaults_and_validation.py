@@ -152,7 +152,7 @@ def test_default_policy_decisions_cover_public_object_kinds():
         _hidden_output_context(projects_result=True, python_visible=False),
     )
     assert hidden_derived_output.transfer is TransferMode.WRAPPER_INSTANCE
-    assert hidden_derived_output.codegen_action is CodegenAction.HIDDEN_OUTPUT
+    assert hidden_derived_output.codegen_action is CodegenAction.WRAPPER_INSTANCE
 
     derived_field = resolver.decide_semantic_type(_derived_type(), OwnershipContext.field())
     assert derived_field.owner is OwnershipOwner.WRAPPER
@@ -197,7 +197,7 @@ def test_default_policy_completes_python_and_native_barrier_actions():
             _array_type(),
             _read_only_argument_context(),
             PythonBarrierAction.ARRAY_STORAGE,
-            NativeBarrierAction.PASS_ARRAY_DESCRIPTOR,
+            NativeBarrierAction.PASS_ARRAY_BUFFER,
         ),
         (
             "string_value",
@@ -433,7 +433,7 @@ def test_immutable_derived_output_selects_wrapper_instance_and_replacement_block
     assert output.owner is OwnershipOwner.WRAPPER
     assert output.transfer is TransferMode.WRAPPER_INSTANCE
     assert output.destruction is DestructionPolicy.WRAPPER_DEALLOC
-    assert output.codegen_action is CodegenAction.HIDDEN_OUTPUT
+    assert output.codegen_action is CodegenAction.WRAPPER_INSTANCE
 
     replacement = default_ownership_policy.decide_semantic_type(
         semantic_type,
