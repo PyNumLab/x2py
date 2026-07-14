@@ -110,6 +110,45 @@ def test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes(tmp_p
         direct.fixed_array_extent(np.array([[b"label"]], dtype="S8"))
 
 
+def test_raw_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay one fixed-width character array through its raw address contract."""
+    native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_raw_character_array"
+        contract_package.mkdir()
+        (contract_package / "__init__.pyi").write_text(
+            "from .fstrings_f90 import fixed_array_extent_raw\n",
+            encoding="utf-8",
+        )
+        (contract_package / "fstrings_f90.pyi").write_text(
+            """from x2py.contracts import Addr, Int32, String, bind
+
+@bind("fixed_array_extent")
+def fixed_array_extent_raw(labels: Addr(String[8][2])) -> Int32: ...
+""",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "fixed_array_extent_raw") else _sole_native_module(module)
+
+    for module in modules.values():
+        labels = np.array([b"first", b"second"], dtype="S8")
+        assert module.fixed_array_extent_raw(labels.ctypes.data) == 16
+        with pytest.raises(TypeError):
+            module.fixed_array_extent_raw(labels)
+
+
 def test_required_scalar_string_inputs_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
     """Reuse the existing modern string unit through one scalar-input-only entry."""
     native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
@@ -162,6 +201,136 @@ def test_required_scalar_string_inputs_match_legacy_and_wrapper_plan_routes(tmp_
             module.string_len_fixed("short")
         with pytest.raises(TypeError, match="embedded NUL"):
             module.string_len_assumed("a\0b")
+
+
+def test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes(
+    tmp_path: Path,
+    monkeypatch,
+):
+    """Replay a nullable rank-zero descriptor result as a copied Python string."""
+    native_object = _compile_native_object(STRING_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_deferred_string_result"
+        shutil.copytree(CONTRACT_FIXTURES / "fstrings_f90", contract_package)
+        (contract_package / "__init__.pyi").write_text(
+            "from .fstrings_f90 import string_result_deferred\n",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "string_result_deferred") else _sole_native_module(module)
+
+    for module in modules.values():
+        assert module.string_result_deferred("dynamic") == "dynamic-deferred"
+        assert module.string_result_deferred("café") == "café-deferred"
+
+    monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
+    with pytest.raises(MemoryError):
+        modules["wrapper_plan"].string_result_deferred("failure")
+
+
+def test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Keep runtime element width and projected identity on one shared handle path."""
+    module_name = "deferred_character_handles_plan"
+    source = tmp_path / f"{module_name}.f90"
+    source.write_text(
+        f"""
+module {module_name}
+  use iso_c_binding, only: c_char
+contains
+  subroutine make_names(names)
+    character(kind=c_char, len=:), allocatable, intent(out) :: names(:)
+    allocate(character(kind=c_char, len=3) :: names(2))
+    names = [character(kind=c_char, len=3) :: "red", "sky"]
+  end subroutine make_names
+
+  function make_names_function() result(names)
+    character(kind=c_char, len=:), allocatable :: names(:)
+    allocate(character(kind=c_char, len=4) :: names(2))
+    names = [character(kind=c_char, len=4) :: "gold", "blue"]
+  end function make_names_function
+
+  function maybe_name(flag) result(name)
+    integer(kind=4), intent(in) :: flag
+    character(kind=c_char, len=:), allocatable :: name
+    if (flag /= 0) then
+      allocate(character(kind=c_char, len=4) :: name)
+      name = "blue"
+    end if
+  end function maybe_name
+
+  subroutine replace_names(names)
+    character(kind=c_char, len=:), allocatable, intent(inout) :: names(:)
+    integer :: count
+    count = 2
+    if (allocated(names)) count = size(names)
+    if (allocated(names)) deallocate(names)
+    allocate(character(kind=c_char, len=5) :: names(count))
+    names = "     "
+    if (count >= 1) names(1) = "red"
+    if (count >= 2) names(2) = "blue"
+  end subroutine replace_names
+end module {module_name}
+""",
+        encoding="utf-8",
+    )
+    contract = tmp_path / f"{module_name}.pyi"
+    contract.write_text(
+        """
+from x2py.contracts import Allocatable, Arg, Int32, Return, Returns, String, native_call
+
+@native_call([Return("names", 0)])
+def make_names() -> Allocatable[String[:][:]]: ...
+
+def make_names_function() -> Allocatable[String[:][:]]: ...
+
+@native_call([Arg(0)], result=Allocatable(Return(0)))
+def maybe_name(flag: Int32) -> String | None: ...
+
+def replace_names(
+    names: Allocatable[String[:][:]],
+) -> Returns["names", Allocatable[String[:][:]]]: ...
+""",
+        encoding="utf-8",
+    )
+    native_object = _compile_native_object(source, tmp_path / "native_character_handles")
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        result = build_pyi_extension(
+            contract,
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+        handle = module.make_names()
+        assert handle.allocated is True
+        assert handle.dtype == np.dtype("S3")
+        assert handle.to_numpy().tolist() == [b"red", b"sky"]
+
+        assert module.replace_names(handle) is handle
+        assert handle.dtype == np.dtype("S5")
+        assert handle.to_numpy().tolist() == [b"red  ", b"blue "]
+
+        direct_handle = module.make_names_function()
+        assert direct_handle.allocated is True
+        assert direct_handle.dtype == np.dtype("S4")
+        assert direct_handle.to_numpy().tolist() == [b"gold", b"blue"]
+        assert module.maybe_name(np.int32(0)) is None
+        assert module.maybe_name(np.int32(1)) == "blue"
 
 
 def test_fixed_string_results_match_legacy_and_wrapper_plan_routes(tmp_path: Path, monkeypatch):

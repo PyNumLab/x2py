@@ -87,6 +87,7 @@ Aliased = _ContractExpression()
 Allocatable = _ContractExpression()
 AssumedType = _ContractExpression()
 Contiguous = _ContractExpression()
+COPY_F = _ContractExpression()
 Flat = _ContractExpression()
 FortranAllocatable = _ContractExpression()
 Immutable = _ContractExpression()
@@ -162,6 +163,7 @@ CONTRACT_SYMBOLS = frozenset(
         "Complex128",
         "Complex256",
         "Contiguous",
+        "COPY_F",
         "Destruction",
         "Final",
         "Finite",

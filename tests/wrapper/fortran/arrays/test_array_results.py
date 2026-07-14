@@ -88,11 +88,6 @@ def test_array_results_follow_data_buffer_and_descriptor_handle_contracts(
     allocated = module.maybe_alloc_vector(np.int32(3))
     assert isinstance(allocated, AllocatableArray)
     np.testing.assert_allclose(allocated.to_numpy(), np.array([5.0, 10.0, 15.0], dtype=np.float64))
-    unallocated = module.maybe_alloc_vector(np.int32(0))
-    assert isinstance(unallocated, AllocatableArray)
-    assert unallocated.allocated is False
-    assert unallocated.to_numpy() is None
-
     del module
     gc.collect()
     np.testing.assert_allclose(matrix, np.array([[12.0, 13.0, 14.0], [22.0, 23.0, 24.0]], dtype=np.float64))
@@ -146,3 +141,43 @@ def test_ordinary_array_results_match_legacy_and_wrapper_plan_routes(tmp_path: P
     monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
     with pytest.raises(MemoryError, match="Unable to allocate copy-return output array"):
         modules["wrapper_plan"].fixed_vector()
+
+
+def test_owned_allocatable_results_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay valid allocated and zero-sized allocatable function results."""
+    native_object = _compile_native_object(ARRAY_RESULTS_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_allocatable_results"
+        shutil.copytree(CONTRACT_FIXTURES / "farray_results_f90", contract_package)
+        (contract_package / "__init__.pyi").write_text(
+            "from .farray_results_f90 import maybe_alloc_vector, zero_alloc_vector\n",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "maybe_alloc_vector") else _sole_native_module(module)
+
+    for module in modules.values():
+        allocated = module.maybe_alloc_vector(np.int32(3))
+        assert isinstance(allocated, AllocatableArray)
+        assert allocated.allocated is True
+        np.testing.assert_allclose(allocated.to_numpy(), np.array([5.0, 10.0, 15.0]))
+
+        zero_sized = module.zero_alloc_vector()
+        assert isinstance(zero_sized, AllocatableArray)
+        assert zero_sized.allocated is True
+        assert zero_sized.shape == (0,)
+        assert zero_sized.to_numpy().shape == (0,)
+
+        allocated.close()
+        zero_sized.close()

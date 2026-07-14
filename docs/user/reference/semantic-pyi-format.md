@@ -480,9 +480,13 @@ def DAXPY(
 ```
 
 `Float64[3, Flat]` maps to `real :: a(3, *)`, and
-`Float64[3, 4, Flat]` maps to `real :: a(3, 4, *)`. The Python-visible flat
-dimension remains unconstrained, but the explicit Fortran interface generated
-from the `.pyi` uses `DX(*)`/`DY(*)` instead of assumed-shape descriptors.
+`Float64[3, 4, Flat]` maps to `real :: a(3, 4, *)`. `Flat` is an axis marker,
+not a request to collapse the whole array to rank one: `Float64[:, Flat]`
+remains a rank-two Python and bridge contract. Because `real :: a(:, *)` is not
+a legal Fortran assumed-size declaration, an external interface whose prefix
+extent is known only at runtime uses the sequence-associated `a(*)` spelling;
+the bridge view still has rank two and receives both runtime extents. The
+Python-visible flat dimension remains unconstrained.
 
 <!-- X2PY_C_DOCS_START
 C-order flat storage can be expressed for native routines that consume a raw
@@ -935,7 +939,12 @@ caller. It is valid only for a primitive scalar pointee, a fixed-length
 or visible scalar arguments. It is an advanced unsafe contract: x2py casts the
 address according to the declared pointee type, but it cannot prove the address
 lifetime, true dtype, alignment, length, or ownership. The pointer value itself
-does not carry string length or array shape:
+does not carry string length or array shape. Integer zero becomes a null
+pointer without a conversion error, negative integers are forwarded through
+the platform pointer conversion, and an out-of-range integer raises
+`OverflowError`. x2py likewise resolves raw-array extent expressions without a
+positivity check. Calling native code with an invalid address or pointee shape
+is the caller's responsibility and may crash the process:
 
 ```python
 from x2py.contracts import Addr, Float64, Int32, String
@@ -1029,6 +1038,13 @@ spelled with explicit `ORDER_C` in Fortran-facing contracts:
 view, constructs a rank-preserving bridge view over the same storage, and passes
 that view to the native assumed-size dummy. It does not imply an invalid
 Fortran declaration such as `real :: a(*, 3)`.
+
+Array dimensions are always written in Python logical-axis order. Consequently
+the symmetric multidimensional forms are `Float64[rows, Flat]` for
+Fortran-contiguous storage and
+`Annotated[Float64[Flat, columns], ORDER_C]` for C-contiguous storage. The
+bridge reverses the latter's extents to construct its Fortran storage view.
+Only the bridge orientation changes; neither form loses its logical rank.
 X2PY_C_DOCS_END -->
 
 The Python argument may provide more storage than the declared explicit
@@ -1045,10 +1061,11 @@ Use local constants or generated `Final[...]` names for shape symbols.
 source-language argument direction:
 
 ```python
-from x2py.contracts import Annotated, Float64, ORDER_F
+from x2py.contracts import Annotated, COPY_F, Float64, ORDER_C, ORDER_F
 
 def fill(
     a: Annotated[Float64[:, :], ORDER_F],
+    c_input: Annotated[Float64[:, :], ORDER_C, COPY_F],
     out: Float64[()],
 ) -> None: ...
 ```
@@ -1058,6 +1075,7 @@ Generated canonical metadata:
 | Metadata | Meaning |
 | --- | --- |
 | `ORDER_F` | multidimensional Fortran-oriented storage |
+| `COPY_F` | accept the declared C-contiguous Python layout, create an F-contiguous temporary with the same logical axes, and copy back after visible native mutation |
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `Aliased` | native storage may be exposed across the Python boundary as an alias |
@@ -1084,6 +1102,21 @@ Loaded compatibility metadata:
 <!-- X2PY_C_DOCS_START
 | `ORDER_C` | explicit C-oriented storage; this is also the default for plain multidimensional arrays |
 X2PY_C_DOCS_END -->
+
+Without `COPY_F`, `ORDER_C` is zero-copy and native Fortran observes the
+reversed-axis storage view. With `COPY_F`, the binding performs both copy-in and
+any required copy-out; the bridge receives an ordinary F-order buffer and does
+not know that a representation conversion occurred. `COPY_F` is initially
+limited to required, concrete-rank, dense numeric ndarray arguments. It does
+not apply to `Flat`, assumed-rank or strided arrays, optional arrays, character
+arrays, native descriptor arguments, or handle actuals.
+
+Semantic `.pyi` types do not need to repeat the native procedure's `intent`
+for this transformation. The binding may use a mutable temporary and copy it
+back after the call even when the native dummy is `intent(in)`; the native
+procedure interface still enforces its own direction. When an argument is
+projected with `Returns`, Python receives the original C-order object after
+copy-back.
 
 Persistent native descriptors use wrapper type syntax instead of descriptor
 metadata inside `Annotated[...]`:

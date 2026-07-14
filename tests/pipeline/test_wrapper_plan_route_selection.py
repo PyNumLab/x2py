@@ -100,6 +100,32 @@ def scale(x: Float64) -> Float64: ...
         "test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes",
         "tests/wrapper/fortran/strings/test_character_arguments.py::"
         "test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
+        "test_raw_array_addresses_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
+        "test_copy_f_preserves_logical_axes_through_binding_owned_temporary",
+        "tests/wrapper/fortran/strings/test_character_arguments.py::"
+        "test_raw_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/derived_types/test_pointers.py::"
+        "test_module_native_array_handles_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
+        "test_optional_array_descriptors_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/module_state/test_allocatable_replacement.py::"
+        "test_projected_allocatable_descriptor_matches_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/arrays/test_array_results.py::"
+        "test_owned_allocatable_results_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/arrays/test_array_results.py::"
+        "test_array_results_follow_data_buffer_and_descriptor_handle_contracts",
+        "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+        "test_scalar_descriptor_results_copy_values_or_none_through_wrapper_plan_route",
+        "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
+        "test_scalar_descriptor_module_variables_return_copied_optional_values",
+        "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
+        "test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction",
+        "tests/wrapper/fortran/strings/test_character_arguments.py::"
+        "test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/strings/test_character_arguments.py::"
+        "test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes",
     )
     assert decision.selection_reason == "wrapper-plan route forced for internal migration verification"
 
@@ -357,7 +383,7 @@ def solve(value: Int32) -> tuple[Int32, String[32]]: ...
     )
 
 
-def test_route_selector_keeps_array_buffer_lane_legacy_until_native_handle_actuals_are_supported():
+def test_route_selector_selects_array_buffer_lane_after_native_handle_actuals_are_supported():
     module = _completed_module(
         """
 def scale(x: Float64) -> Float64: ...
@@ -372,16 +398,17 @@ def sum_values(values: Float64[:]) -> Float64: ...
         strict_wrapper_names=False,
     )
 
-    assert decision.selected_route == "legacy"
-    assert decision.rollout_eligible is False
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.rollout_eligible is True
     assert decision.covered_lanes == (
         "scalar-inputs",
         "scalar-direct-results",
         "native-call-runtime",
         "array-buffer-inputs",
+        "array-native-handle-actuals",
     )
     assert decision.blockers == ()
-    assert decision.selection_reason == "covered lanes exceed the recorded wrapper-plan parity evidence"
+    assert decision.selection_reason == "whole generation unit is covered by completed wrapper-plan lanes"
 
 
 def test_route_selector_keeps_unimplemented_scalar_kinds_on_legacy_route():
@@ -488,16 +515,27 @@ def test_route_selector_selects_completed_string_and_array_lanes_for_production(
         (
             'def fill(values: Float64[:]) -> Returns["values", Float64[:]]: ...',
             "array_writeback",
-            ("array-buffer-inputs", "array-writebacks", "native-call-runtime"),
+            (
+                "array-buffer-inputs",
+                "array-native-handle-actuals",
+                "array-writebacks",
+                "native-call-runtime",
+            ),
         ),
         (
             "def maybe(values: Float64[:] = ...) -> None: ...",
             "optional_array",
-            ("array-buffer-inputs", "array-optional-inputs", "void-calls", "native-call-runtime"),
+            (
+                "array-buffer-inputs",
+                "array-handle-actuals-excluded",
+                "array-optional-inputs",
+                "void-calls",
+                "native-call-runtime",
+            ),
         ),
     ),
 )
-def test_route_selector_keeps_array_actual_lanes_legacy_until_phase7(
+def test_route_selector_uses_phase7_handle_parity_or_keeps_explicit_exclusions_legacy(
     source: str,
     module_name: str,
     covered_lanes: tuple[str, ...],
@@ -510,11 +548,15 @@ def test_route_selector_keeps_array_actual_lanes_legacy_until_phase7(
         strict_wrapper_names=False,
     )
 
-    assert decision.selected_route == "legacy"
-    assert decision.rollout_eligible is False
+    expected_route = "legacy" if "array-handle-actuals-excluded" in covered_lanes else "wrapper-plan"
+    assert decision.selected_route == expected_route
+    assert decision.rollout_eligible is (expected_route == "wrapper-plan")
     assert decision.covered_lanes == covered_lanes
     assert decision.blockers == ()
-    assert decision.selection_reason == "covered lanes exceed the recorded wrapper-plan parity evidence"
+    if expected_route == "legacy":
+        assert decision.selection_reason == "covered lanes exceed the recorded wrapper-plan parity evidence"
+    else:
+        assert decision.selection_reason == "whole generation unit is covered by completed wrapper-plan lanes"
 
 
 def test_route_selector_keeps_an_explicitly_forced_legacy_module_entirely_legacy():

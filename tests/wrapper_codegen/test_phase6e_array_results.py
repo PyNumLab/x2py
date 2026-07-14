@@ -51,17 +51,27 @@ def test_array_results_record_producer_shape_copy_ownership_and_shared_hidden_sl
     assert hidden.native_call_slot.object_kind is ObjectKind.NUMPY_ARRAY
 
 
-def test_array_result_lowering_allocates_bridge_copy_then_python_owned_numpy_storage():
+def test_array_result_lowering_transfers_bridge_copy_to_capsule_owned_numpy_storage():
     artifacts = WrapperCodeGenerator().generate(_result_plan())
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
     assert "void * bind_c_direct(int32_t n);" in c_source
-    assert "PyArray_EMPTY(1, result_obj_dims, NPY_FLOAT64, 0)" in c_source
-    assert "memcpy(PyArray_DATA((PyArrayObject *)result_obj), result" in c_source
-    assert "free(result);" in c_source
+    assert (
+        "PyArray_New(&PyArray_Type, 1, result_obj_dims, NPY_FLOAT64, NULL, result, 0, "
+        "NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_WRITEABLE, NULL)" in c_source
+    )
+    assert "PyCapsule_New(result, NULL, capsule_cleanup)" in c_source
+    assert "PyArray_SetBaseObject((PyArrayObject *)result_obj, result_obj_base)" in c_source
+    assert "memcpy(PyArray_DATA((PyArrayObject *)result_obj), result" not in c_source
+    base_failure = c_source.split(
+        "if (PyArray_SetBaseObject((PyArrayObject *)result_obj, result_obj_base) < 0)",
+        maxsplit=1,
+    )[1].split("}", maxsplit=1)[0]
+    assert "Py_DECREF(result_obj_base)" not in base_failure
+    assert "free(result)" not in base_failure
     assert "void bind_c_hidden(void ** out);" in c_source
-    assert "free(out);" in c_source
+    assert "PyCapsule_New(out, NULL, capsule_cleanup)" in c_source
     assert "real(c_double), dimension(n) :: result_value" in bridge_source
     assert "result = c_malloc(max(1_c_size_t, c_sizeof(result_value)))" in bridge_source
     assert "result_copy = reshape(result_value, [size(result_value)])" in bridge_source

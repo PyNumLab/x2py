@@ -84,6 +84,38 @@ def alloc_state(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
     assert "result = native_alloc_state()" in fortran_source
 
 
+def test_required_descriptor_keeps_python_presence_separate_from_native_state_and_copyout():
+    module = parse_pyi_text(
+        """
+@native_call([Allocatable(Arg(0))])
+def update(value: Float64 | None) -> Returns["value", Float64] | None: ...
+""",
+        module_name="scalar_required_descriptors",
+    )
+    complete_semantic_policies(module)
+    plan = WrapperPlanner().build(module)
+    value = plan.namespaces[0].functions[0].arguments[0]
+
+    assert value.binding.optional_mode is OptionalMode.REQUIRED_DESCRIPTOR
+    assert value.bridge.presence_role is None
+    assert value.bridge.descriptor_output_role == f"{value.owner_path}:descriptor-output"
+    assert value.bridge.descriptor_output_presence_role == f"{value.owner_path}:descriptor-output-present"
+
+    artifacts = WrapperCodeGenerator().generate(plan)
+    c_source = _source(artifacts, ".c")
+    fortran_source = _source(artifacts, ".f90")
+
+    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "O"' in c_source
+    assert "bind_c_update(value_nullable, &value, &value_descriptor_output_present)" in c_source
+    assert "void * value_output" in c_source
+    assert "int * value_output_present" in c_source
+    assert "type(c_ptr), value :: bound_value_output" in fortran_source
+    assert "integer(c_int), intent(out) :: bound_value_output_present" in fortran_source
+    assert "call native_update(value_descriptor)" in fortran_source
+    assert "if (allocated(value_descriptor)) then" in fortran_source
+    assert "call c_f_pointer(bound_value_output, value_output)" in fortran_source
+
+
 def test_scalar_writeback_is_an_explicit_binding_lifecycle_result():
     module = parse_pyi_text(
         'def bump(value: Annotated[Int32, Immutable]) -> Returns["value", Int32]: ...',

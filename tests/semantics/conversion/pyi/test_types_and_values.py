@@ -525,6 +525,22 @@ def consume(
     assert all(not arg.semantic_type.constraints for arg in module.functions[0].arguments)
 
 
+def test_convert_pyi_to_ir_records_explicit_c_to_fortran_copy_order():
+    module = parse_pyi_text(
+        """
+def consume(values: Annotated[Float64[:, :], ORDER_C, COPY_F]) -> None: ...
+""",
+        module_name="copy_order",
+    )
+
+    array = module.functions[0].arguments[0].semantic_type.storage.array
+
+    assert array.order == "ORDER_C"
+    assert array.copy_order == "ORDER_F"
+    assert array.rank == 2
+    assert array.contiguous is True
+
+
 def test_convert_pyi_to_ir_accepts_flat_array_dimension():
     module = parse_pyi_text(
         """
@@ -803,6 +819,18 @@ def helper(value: Int32) -> None: ...
         (
             "value: Annotated[Float64[3, Flat], ORDER_C]\n",
             "ORDER_C conflicts with ORDER_F implied by Flat placement",
+        ),
+        (
+            "value: Annotated[Float64[:, :], ORDER_F, COPY_F]\n",
+            "COPY_F requires a C-order Python array and targets Fortran order",
+        ),
+        (
+            "value: Annotated[Float64[:], COPY_F]\n",
+            "COPY_F requires a concrete multidimensional array rank",
+        ),
+        (
+            "value: Annotated[Float64[::, ::], COPY_F]\n",
+            "COPY_F initially supports only dense concrete-shape arrays",
         ),
         (
             "value: Annotated[Int32, Bounded(lower=1)]\n",

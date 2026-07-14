@@ -22,8 +22,24 @@ from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
     BridgeDataAction,
     ModuleGetterAction,
+    NativeArrayDescriptorInterop,
+    NativeArrayDescriptorKind,
+    NativeArrayDescriptorOwnership,
+    NativeArrayDestroyBehavior,
+    NativeArrayExtractionAction,
+    NativeArrayGetterBehavior,
+    NativeArrayHandleKind,
+    NativeArrayHandleOrigin,
+    NativeArrayOperation,
+    NativeArrayOutputProjection,
+    NativeArrayOwnerRetention,
+    NativeArrayRelease,
+    NativeArraySourceKind,
+    NativeDescriptorHandoffABI,
     OptionalMode,
     PythonExceptionKind,
+    TransformationAction,
+    TransformationLayer,
     WritebackPhase,
 )
 from x2py.stage_values import StageRecord
@@ -41,12 +57,13 @@ class DatatypeFamily(Enum):
 
 @dataclass
 class ArrayHandoffPlan(StageRecord):
-    """Editable ordinary-array storage, layout, and ABI roles."""
+    """Editable array storage or raw-pointee layout and ABI roles."""
 
     rank: int | None
     shape: tuple[str, ...]
     axes: tuple[str, ...]
     order: str | None
+    native_order: str | None
     contiguous: bool | None
     itemsize: int | None
     category: str | None
@@ -57,6 +74,91 @@ class ArrayHandoffPlan(StageRecord):
     stride_roles: tuple[str, ...] = ()
     runtime_rank_role: str | None = None
     itemsize_role: str | None = None
+
+
+@dataclass
+class NativeArrayActualPlan(StageRecord):
+    """Editable accepted-source facts for the ordinary array-buffer ABI."""
+
+    accepted_sources: tuple[NativeArraySourceKind, ...]
+    dtype: str
+    rank: int
+    shape: tuple[str, ...]
+    order: str | None
+    writable: bool
+    require_native_byte_order: bool
+    require_aligned: bool
+    require_contiguous: bool
+
+
+@dataclass
+class NativeDescriptorHandoffPlan(StageRecord):
+    """Editable descriptor ABI roles subordinate to one native handle."""
+
+    abi: NativeDescriptorHandoffABI
+    descriptor_pointer_role: str | None
+    base_addr_role: str | None
+    elem_len_role: str | None
+    rank_role: str | None
+    lower_bound_roles: tuple[str, ...]
+    extent_roles: tuple[str, ...]
+    stride_multiplier_roles: tuple[str, ...]
+    presence_role: str | None
+    owner_storage_role: str | None
+    operation_roles: tuple[tuple[NativeArrayOperation, str], ...]
+
+
+@dataclass
+class NativeArrayHandlePlan(StageRecord):
+    """One typed editable native-array handle policy and descriptor handoff."""
+
+    descriptor_kind: NativeArrayDescriptorKind
+    handle_kind: NativeArrayHandleKind
+    origin: NativeArrayHandleOrigin
+    owner: OwnershipOwner
+    owner_retention: NativeArrayOwnerRetention
+    descriptor_ownership: NativeArrayDescriptorOwnership
+    borrowed: bool
+    getter_behavior: NativeArrayGetterBehavior
+    setter_action: SetterAction
+    native_assignment: AssignmentMode
+    output_projection: NativeArrayOutputProjection
+    release: NativeArrayRelease
+    target_lifetime: str
+    destroy_behavior: NativeArrayDestroyBehavior
+    extraction_action: NativeArrayExtractionAction
+    descriptor_interop: NativeArrayDescriptorInterop
+    nullable: bool
+    optional_absent: bool
+    storage_mode: StorageMode
+    operations: tuple[NativeArrayOperation, ...]
+    required_headers: tuple[str, ...]
+    array: ArrayHandoffPlan
+    handoff: NativeDescriptorHandoffPlan
+
+
+@dataclass
+class ScalarDescriptorResultPlan(StageRecord):
+    """Editable nullable rank-zero descriptor result copy facts."""
+
+    descriptor_kind: NativeArrayDescriptorKind
+    runtime_length: bool
+    nullable: bool
+    copy_reason: str
+    release_owner: OwnershipOwner
+    presence_role: str
+
+
+@dataclass
+class TransformationPlan(StageRecord):
+    """One explicitly layer-owned transformation subordinate to a transfer."""
+
+    phase: WritebackPhase
+    layer: TransformationLayer
+    action: TransformationAction
+    source_representation: str
+    target_representation: str
+    reason: str
 
 
 @dataclass
@@ -117,6 +219,7 @@ class ModuleVariablePlan(StageRecord):
     datatype_family: DatatypeFamily
     binding: BindingModuleVariablePlan
     bridge: BridgeModuleVariablePlan
+    native_array_handle: NativeArrayHandlePlan | None
 
 
 @dataclass
@@ -124,6 +227,7 @@ class BindingFunctionPlan(StageRecord):
     """Binding-facing function facts."""
 
     python_name: str
+    docstring: str
     hold_gil: bool
     status_error: BindingStatusErrorPlan | None
 
@@ -168,6 +272,8 @@ class BridgeArgumentPlan(StageRecord):
     optional_mode: OptionalMode
     presence_role: str | None
     length_handoff_role: str | None = None
+    descriptor_output_role: str | None = None
+    descriptor_output_presence_role: str | None = None
 
 
 @dataclass
@@ -235,6 +341,8 @@ class NativeCallSlotPlan(StageRecord):
     datatype_family: DatatypeFamily | None = None
     character_length: int | None = None
     array: ArrayHandoffPlan | None = None
+    native_array_handle: NativeArrayHandlePlan | None = None
+    scalar_descriptor: ScalarDescriptorResultPlan | None = None
 
 
 @dataclass
@@ -259,9 +367,12 @@ class ArgumentTransferPlan(StageRecord):
     python_visible: bool
     result_position: int | None
     array: ArrayHandoffPlan | None
+    native_array_actual: NativeArrayActualPlan | None
+    native_array_handle: NativeArrayHandlePlan | None
     binding: BindingArgumentPlan
     bridge: BridgeArgumentPlan
     native_call_slot: NativeCallSlotPlan
+    transformations: tuple[TransformationPlan, ...] = ()
 
 
 @dataclass
@@ -282,9 +393,12 @@ class ResultPlan(StageRecord):
     boundary_storage_mode: StorageMode
     nullable: bool
     array: ArrayHandoffPlan | None
+    native_array_handle: NativeArrayHandlePlan | None
     binding: BindingResultPlan
     bridge: BridgeResultPlan
     native_call_slot: NativeCallSlotPlan | None = None
+    scalar_descriptor: ScalarDescriptorResultPlan | None = None
+    transformations: tuple[TransformationPlan, ...] = ()
 
 
 @dataclass
@@ -338,6 +452,7 @@ class ModulePlan(StageRecord):
     binding: BindingModulePlan
     bridge: BridgeModulePlan
     namespaces: tuple[NamespacePlan, ...]
+    required_headers: tuple[str, ...] = ()
 
 
 @dataclass

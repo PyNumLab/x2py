@@ -97,10 +97,27 @@ _WRAPPER_PLAN_COMPLETED_LANES = frozenset(
         "string-writebacks",
         "fixed-string-direct-results",
         "fixed-string-hidden-outputs",
-        # Ordinary-array output-only rollout lanes. Array actual arguments stay
-        # gated until Phase 7 can preserve the native-handle caller contract.
+        # Ordinary-array rollout lanes.
+        "array-buffer-inputs",
+        "array-native-handle-actuals",
+        "array-raw-address-inputs",
+        "array-optional-inputs",
+        "array-writebacks",
         "array-direct-results",
         "array-hidden-outputs",
+        "array-multiple-results",
+        "array-copy-to-fortran",
+        # Native-array handle and descriptor rollout lanes.
+        "allocatable-descriptor-inputs",
+        "pointer-descriptor-inputs",
+        "optional-native-array-handles",
+        "projected-native-array-handles",
+        "owned-allocatable-results",
+        "owned-allocatable-hidden-outputs",
+        "allocatable-module-handles",
+        "pointer-module-handles",
+        "scalar-descriptor-results",
+        "deferred-string-descriptor-results",
         # Cross-cutting rollout lanes.
         "void-calls",
         "python-namespaces",
@@ -158,6 +175,32 @@ _WRAPPER_PLAN_EVIDENCE = (
     "test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes",
     "tests/wrapper/fortran/strings/test_character_arguments.py::"
     "test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
+    "test_raw_array_addresses_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
+    "test_copy_f_preserves_logical_axes_through_binding_owned_temporary",
+    "tests/wrapper/fortran/strings/test_character_arguments.py::"
+    "test_raw_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/derived_types/test_pointers.py::"
+    "test_module_native_array_handles_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
+    "test_optional_array_descriptors_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/module_state/test_allocatable_replacement.py::"
+    "test_projected_allocatable_descriptor_matches_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/arrays/test_array_results.py::"
+    "test_owned_allocatable_results_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/arrays/test_array_results.py::"
+    "test_array_results_follow_data_buffer_and_descriptor_handle_contracts",
+    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
+    "test_scalar_descriptor_results_copy_values_or_none_through_wrapper_plan_route",
+    "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
+    "test_scalar_descriptor_module_variables_return_copied_optional_values",
+    "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
+    "test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction",
+    "tests/wrapper/fortran/strings/test_character_arguments.py::"
+    "test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/strings/test_character_arguments.py::"
+    "test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes",
 )
 
 

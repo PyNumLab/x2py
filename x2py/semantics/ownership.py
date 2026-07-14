@@ -568,7 +568,10 @@ class OwnershipPolicyResolver:
         context: OwnershipContext | None = None,
     ) -> OwnershipDecision:
         actual_context = context or self._semantic_variable_context(variable)
-        return self.decide_semantic_type(variable.semantic_type, actual_context)
+        decision = self.decide_semantic_type(variable.semantic_type, actual_context)
+        if bool(getattr(variable, "optional", False)) and actual_context.projects_result:
+            return replace(decision, nullable=True)
+        return decision
 
     def decide_semantic_getter(
         self,
@@ -858,7 +861,9 @@ class OwnershipPolicyResolver:
                 TransferMode.SNAPSHOT_COPY,
                 DestructionPolicy.PYTHON_REFCOUNT,
                 storage_mode=boundary_storage_mode,
+                boundary_storage_mode=boundary_storage_mode,
                 nullable=True,
+                descriptor_boundary=True,
                 reason=reason,
             )
         if context.writes_argument and not context.projects_result:
@@ -912,6 +917,19 @@ class OwnershipPolicyResolver:
         )
 
     def _string_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_result and (facts.allocatable or facts.pointer):
+            storage = StorageMode.HEAP if facts.allocatable else StorageMode.ALIAS
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                storage_mode=storage,
+                boundary_storage_mode=storage,
+                nullable=True,
+                descriptor_boundary=True,
+                reason="scalar string descriptor result is copied before native descriptor release",
+            )
         if facts.address_role == ADDRESS_ROLE_RAW:
             return OwnershipDecision(
                 ObjectKind.STRING,
@@ -1001,10 +1019,13 @@ class OwnershipPolicyResolver:
         )
 
     def _array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
-        if context.is_argument and _is_native_array_handle_facts(facts):
-            if context.projects_result and not context.python_visible:
-                return self._native_array_handle_projected_output_decision(facts)
-            return self._native_array_handle_argument_decision(facts, context)
+        if _is_native_array_handle_facts(facts):
+            if context.is_argument:
+                if context.projects_result and not context.python_visible:
+                    return self._native_array_handle_projected_output_decision(facts)
+                return self._native_array_handle_argument_decision(facts, context)
+            if context.is_result:
+                return self._native_array_handle_result_decision(facts)
         if facts.pointer:
             return self._pointer_array_decision(facts, context)
         if facts.allocatable:
@@ -1117,6 +1138,34 @@ class OwnershipPolicyResolver:
             mutates_native=True,
             descriptor_boundary=True,
             reason="hidden allocatable descriptor output moves into wrapper-owned stable storage",
+        )
+
+    @staticmethod
+    def _native_array_handle_result_decision(facts: _StorageFacts) -> OwnershipDecision:
+        """Materialize a supported direct descriptor result as one runtime handle."""
+        if facts.pointer:
+            return OwnershipDecision(
+                ObjectKind.NUMPY_ARRAY,
+                OwnershipOwner.UNKNOWN,
+                TransferMode.BLOCKED,
+                DestructionPolicy.BLOCKED,
+                storage_mode=StorageMode.ALIAS,
+                boundary_storage_mode=StorageMode.ALIAS,
+                nullable=True,
+                descriptor_boundary=True,
+                blocker="pointer handle results need stable owner storage and target lifetime policy before wrapping",
+                reason="pointer descriptor result has no completed stable target owner",
+            )
+        return OwnershipDecision(
+            ObjectKind.NUMPY_ARRAY,
+            OwnershipOwner.WRAPPER,
+            TransferMode.WRAPPER_INSTANCE,
+            DestructionPolicy.WRAPPER_DEALLOC,
+            storage_mode=StorageMode.HEAP,
+            boundary_storage_mode=StorageMode.ALIAS,
+            nullable=True,
+            descriptor_boundary=True,
+            reason="allocatable descriptor result moves into wrapper-owned stable storage",
         )
 
     def _allocatable_array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
@@ -1732,6 +1781,8 @@ class OwnershipPolicyResolver:
             return PythonBarrierAction.NONE
         if facts.address_role == ADDRESS_ROLE_RAW:
             return PythonBarrierAction.RAW_ADDRESS
+        if _is_native_array_handle_facts(facts) and decision.descriptor_boundary:
+            return PythonBarrierAction.WRAPPER_INSTANCE
         if facts.scalar_storage or (
             decision.kind is ObjectKind.SCALAR and decision.codegen_action is CodegenAction.IDENTITY_OUTPUT
         ):

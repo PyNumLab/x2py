@@ -19,12 +19,31 @@ from tests.wrapper.fortran._support import (
     wrapper_source,
 )
 from x2py import build_pyi_extension
+from x2py.runtime.handles import _NativeArrayHandoff, AllocatableArray, PointerArray
 
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 SCALAR_FIXED_SOURCE = wrapper_source("fmath.f")
 ARRAY_FIXED_SOURCE = wrapper_source("fmath_arrays.f")
 SCALAR_F90_SOURCE = wrapper_source("fmath_f90.f90")
 ARRAY_F90_SOURCE = wrapper_source("fmath_arrays_f90.f90")
+
+
+def _native_array_actual(value: np.ndarray, *, pointer: bool):
+    state_name = "associated" if pointer else "allocated"
+    operations = {
+        "array_actual": lambda _handle: _NativeArrayHandoff(value.ctypes.data),
+        "descriptor": lambda _handle: _NativeArrayHandoff(value.ctypes.data),
+        "shape": lambda _handle: value.shape,
+        "layout": lambda _handle: "F" if value.flags.f_contiguous else "C",
+        "writeable": lambda _handle: value.flags.writeable,
+        "native_byte_order": lambda _handle: value.dtype.isnative,
+        "aligned": lambda _handle: value.flags.aligned,
+        "to_numpy": lambda _handle: value,
+        state_name: lambda _handle: True,
+        "nullify" if pointer else "deallocate": lambda _handle: None,
+    }
+    handle_type = PointerArray if pointer else AllocatableArray
+    return handle_type(dtype=value.dtype, rank=value.ndim, ops=operations)
 
 
 def test_fortran_wrapper_pipeline_builds_importable_extension(
@@ -194,6 +213,17 @@ def test_required_array_buffers_match_legacy_and_wrapper_plan_routes(tmp_path: P
         assert module.square_r8_contiguous(np.int32(values.size), values, output) is None
         np.testing.assert_array_equal(output, values**2)
 
+        handle_output = np.zeros_like(values)
+        assert (
+            module.square_r8_contiguous(
+                np.int32(values.size),
+                _native_array_actual(values, pointer=False),
+                _native_array_actual(handle_output, pointer=True),
+            )
+            is None
+        )
+        np.testing.assert_array_equal(handle_output, values**2)
+
         empty = np.empty(0, dtype=np.float64)
         assert module.square_r8_contiguous(np.int32(0), empty, empty.copy()) is None
 
@@ -208,7 +238,7 @@ def test_required_array_buffers_match_legacy_and_wrapper_plan_routes(tmp_path: P
         np.ndarray(4, dtype=np.float64, buffer=bytearray(33), offset=1),
     )
     for invalid in invalid_cases:
-        with pytest.raises(TypeError):
+        with pytest.raises((TypeError, ValueError)):
             module.square_r8_contiguous(np.int32(4), invalid, output)
 
     read_only = valid.copy()

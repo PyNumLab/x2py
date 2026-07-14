@@ -81,6 +81,7 @@ class SemanticArrayContract:
     source_shape: list[str] = field(default_factory=list)
     category: str | None = None
     order: str | None = None
+    copy_order: str | None = None
     axes: list[str] = field(default_factory=list)
     contiguous: bool | None = None
     allocatable: bool = False
@@ -427,6 +428,7 @@ def _array_contract_key(
         array.rank,
         tuple(_canonical_expression(item, name_map) for item in array.shape),
         array.order,
+        array.copy_order,
         tuple(array.axes),
         array.contiguous,
         array.allocatable,

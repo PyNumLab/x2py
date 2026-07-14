@@ -36,6 +36,14 @@ C_DOCS_END = "X2PY_C_DOCS_END -->"
 C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
 VISIBLE_C_DOCUMENTATION_EXCEPTIONS = {
     "docs/user/guide/enumerations.md": ("bind(C)",),
+    "docs/user/guide/arrays.md": ("ORDER_C", "C-contiguous", "C-order", "C-oriented"),
+    "docs/user/reference/semantic-pyi-format.md": (
+        "ORDER_C",
+        "C-contiguous",
+        "C-order",
+        "C-oriented",
+        "c_input",
+    ),
 }
 VISIBLE_C_DOCUMENTATION = re.compile(
     r"(?:"

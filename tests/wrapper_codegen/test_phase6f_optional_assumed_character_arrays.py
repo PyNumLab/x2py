@@ -51,6 +51,7 @@ def test_optional_assumed_rank_and_character_arrays_have_explicit_distinct_roles
     assert optional.bridge.optional_mode is OptionalMode.NULLABLE_VALUE
     assert assumed is not None
     assert assumed.rank is None
+    assert assumed.contiguous is True
     assert assumed.runtime_rank_role == "later_array_buffers.any_rank.values:rank"
     assert len(assumed.extent_roles) == 15
     assert character is not None
@@ -111,8 +112,16 @@ def test_fixed_width_character_array_results_lower_itemsize_into_both_backends()
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
-    assert "PyArray_New(&PyArray_Type, 1, result_obj_dims, NPY_STRING, NULL, NULL, 5, 0, NULL)" in c_source
-    assert "PyArray_New(&PyArray_Type, 1, result_obj_dims, NPY_STRING, NULL, NULL, 4, 0, NULL)" in c_source
+    assert (
+        "PyArray_New(&PyArray_Type, 1, result_obj_dims, NPY_STRING, NULL, result, 5, "
+        "NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_WRITEABLE, NULL)" in c_source
+    )
+    assert (
+        "PyArray_New(&PyArray_Type, 1, result_obj_dims, NPY_STRING, NULL, labels, 4, "
+        "NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_WRITEABLE, NULL)" in c_source
+    )
+    assert "PyCapsule_New(result, NULL, capsule_cleanup)" in c_source
+    assert "PyCapsule_New(labels, NULL, capsule_cleanup)" in c_source
     assert "character(kind=c_char, len=5), dimension(3) :: result_value" in bridge_source
     assert "character(kind=c_char), pointer, dimension(:) :: result_copy" in bridge_source
     assert "5_c_size_t * size(result_value, kind=c_size_t)" in bridge_source

@@ -104,6 +104,8 @@ def _native_array_handle_from_generated_ops(
             normalized = _generated_handoff_operation(operation, owner=owner, pass_owner=owned)
         elif name == "descriptor" and owned:
             normalized = _generated_owned_descriptor_operation(operation, owner)
+        elif name in {"shape", "to_numpy"} and owned:
+            normalized = _generated_owned_descriptor_record_operation(operation, owner)
         elif name in {"allocate", "resize"}:
             normalized = _generated_shape_operation(operation, owner=owner if owned else None)
         elif owned:
@@ -159,6 +161,27 @@ def _generated_owned_descriptor_operation(operation: HandleOperation, owner: Any
     def call(_handle: NativeArrayHandleBase, *args: Any) -> _NativeArrayDescriptorHandoff:
         value = operation(owner, *args)
         return _native_array_descriptor_handoff_from_generated_result(value, owner=owner)
+
+    return call
+
+
+def _generated_owned_descriptor_record_operation(operation: HandleOperation, owner: Any) -> HandleOperation:
+    """Adapt owned descriptor facts and normalize compiler zero-extent sentinels."""
+
+    def call(_handle: NativeArrayHandleBase, *args: Any) -> Any:
+        value = operation(owner, *args)
+        if not isinstance(value, Mapping):
+            return value
+        dimensions = value.get("dim")
+        if not isinstance(dimensions, Sequence):
+            return value
+        normalized_dimensions = []
+        for dimension in dimensions:
+            if not isinstance(dimension, Mapping) or dimension.get("extent") != -1:
+                normalized_dimensions.append(dimension)
+                continue
+            normalized_dimensions.append({**dimension, "extent": 0})
+        return {**value, "dim": normalized_dimensions}
 
     return call
 
@@ -379,7 +402,26 @@ class NativeArrayHandleBase:
 
     @property
     def dtype(self) -> Any:
-        return self._dtype
+        if self._dtype is not None:
+            return self._dtype
+        return self._deferred_character_dtype()
+
+    def _deferred_character_dtype(self) -> np.dtype:
+        """Resolve one deferred character width from generated native state."""
+        if "element_length" in self._ops:
+            length = operator.index(self._call_op("element_length"))
+            if length < 0:
+                raise ValueError("native character array element length must be non-negative")
+            return np.dtype(f"S{length}")
+        value = self._call_op("to_numpy")
+        if isinstance(value, np.ndarray) and value.dtype.kind == "S":
+            return value.dtype
+        if _is_pointer_descriptor_record(value):
+            length = _required_descriptor_int(value, "elem_len")
+            if length < 0:
+                raise ValueError("native character array element length must be non-negative")
+            return np.dtype(f"S{length}")
+        raise TypeError("deferred character handle cannot resolve its runtime element length")
 
     @property
     def rank(self) -> int:
@@ -457,6 +499,7 @@ class NativeArrayHandleBase:
         require_writeable: bool = False,
         require_native_byte_order: bool = False,
         require_aligned: bool = False,
+        require_contiguous: bool = False,
     ) -> Any:
         """Return the generated native array actual after validating handle state."""
         self._validate_array_actual_state()
@@ -476,6 +519,7 @@ class NativeArrayHandleBase:
         self._validate_writeable(require_writeable)
         self._validate_native_byte_order(require_native_byte_order)
         self._validate_aligned(require_aligned)
+        self._validate_contiguous(require_contiguous)
         return self._required_handoff_result("array_actual", self._call_op("array_actual"))
 
     def _descriptor_for_binding(
@@ -501,6 +545,8 @@ class NativeArrayHandleBase:
         if isinstance(descriptor, _NativeArrayDescriptorHandoff):
             return descriptor
         if _is_pointer_descriptor_record(descriptor):
+            if _pointer_descriptor_base_addr(descriptor) == 0:
+                return self._contiguous_descriptor_record(0, None)
             _validate_pointer_descriptor_itemsize(descriptor, np.dtype(self.dtype))
             descriptor_shape, _ = _pointer_descriptor_shape_and_strides(descriptor)
             if len(descriptor_shape) != self.rank:
@@ -666,6 +712,19 @@ class NativeArrayHandleBase:
             return
         if not bool(self._call_op("writeable")):
             raise TypeError(f"{self.descriptor_kind} handle array actual must be writeable")
+
+    def _validate_contiguous(self, require_contiguous: bool) -> None:
+        """Validate the data-buffer ABI's contiguous-storage requirement."""
+        if not require_contiguous:
+            return
+        if "contiguous" in self._ops:
+            contiguous = bool(self._call_op("contiguous"))
+        elif "layout" in self._ops:
+            contiguous = self._normalize_actual_layout_name(self._call_op("layout")) in {"C", "F"}
+        else:
+            raise ValueError(f"{self.descriptor_kind} handle cannot prove contiguous array storage")
+        if not contiguous:
+            raise ValueError(f"{self.descriptor_kind} handle array actual must be contiguous")
 
     def _validate_native_byte_order(self, require_native_byte_order: bool) -> None:
         """Validate native byte order before native array-actual handoff."""
@@ -870,6 +929,7 @@ def _native_array_actual_for_binding(
     require_writeable: bool = False,
     require_native_byte_order: bool = False,
     require_aligned: bool = False,
+    require_contiguous: bool = False,
 ) -> Any:
     """Return an ndarray or generated native array actual for a normal array argument."""
     if isinstance(value, NativeArrayHandleBase):
@@ -881,6 +941,7 @@ def _native_array_actual_for_binding(
             require_writeable=require_writeable,
             require_native_byte_order=require_native_byte_order,
             require_aligned=require_aligned,
+            require_contiguous=require_contiguous,
         )
     if isinstance(value, np.ndarray):
         _validate_ndarray_array_actual(
@@ -892,6 +953,7 @@ def _native_array_actual_for_binding(
             require_writeable=require_writeable,
             require_native_byte_order=require_native_byte_order,
             require_aligned=require_aligned,
+            require_contiguous=require_contiguous,
         )
         return value
     if value is None:
@@ -911,6 +973,7 @@ def _native_array_actual_argument_for_binding_positional(
     include_rank: bool = False,
     include_itemsize: bool = False,
     include_strides: bool = False,
+    require_contiguous: bool = False,
 ) -> tuple[int, ...]:
     """Pack a normal array actual into generated Bind-C array descriptor fields."""
     actual = _native_array_actual_for_binding(
@@ -922,6 +985,7 @@ def _native_array_actual_argument_for_binding_positional(
         require_writeable=bool(require_writeable),
         require_native_byte_order=bool(require_native_byte_order),
         require_aligned=bool(require_aligned),
+        require_contiguous=bool(require_contiguous),
     )
     address, shape, itemsize = _normal_array_actual_abi_facts(value, actual, expected_dtype)
     fields = [address]
@@ -1101,6 +1165,7 @@ def _validate_ndarray_array_actual(
     require_writeable: bool = False,
     require_native_byte_order: bool = False,
     require_aligned: bool = False,
+    require_contiguous: bool = False,
 ) -> None:
     _validate_ndarray_expected_rank(value, expected_rank)
     _validate_ndarray_expected_dtype(value, expected_dtype)
@@ -1109,11 +1174,12 @@ def _validate_ndarray_array_actual(
     _validate_ndarray_writeable(value, require_writeable)
     _validate_ndarray_native_byte_order(value, require_native_byte_order)
     _validate_ndarray_aligned(value, require_aligned)
+    _validate_ndarray_contiguous(value, require_contiguous)
 
 
 def _validate_ndarray_expected_rank(value: np.ndarray, expected_rank: int | None) -> None:
     if expected_rank is not None and value.ndim != int(expected_rank):
-        raise ValueError(f"NumPy array rank {value.ndim} does not match expected rank {int(expected_rank)}")
+        raise TypeError(f"NumPy array rank {value.ndim} does not match expected rank {int(expected_rank)}")
 
 
 def _validate_ndarray_expected_dtype(value: np.ndarray, expected_dtype: Any) -> None:
@@ -1136,6 +1202,11 @@ def _validate_ndarray_aligned(value: np.ndarray, require_aligned: bool) -> None:
         raise TypeError("NumPy array actual must be aligned")
 
 
+def _validate_ndarray_contiguous(value: np.ndarray, require_contiguous: bool) -> None:
+    if require_contiguous and not (value.flags.c_contiguous or value.flags.f_contiguous):
+        raise TypeError("NumPy array actual must be contiguous")
+
+
 def _validate_ndarray_expected_shape(
     shape: tuple[int, ...],
     expected_shape: Sequence[int | None] | int | None,
@@ -1144,10 +1215,10 @@ def _validate_ndarray_expected_shape(
         return
     expected = NativeArrayHandleBase._normalize_expected_shape(expected_shape)
     if len(expected) != len(shape):
-        raise ValueError(f"NumPy array shape rank {len(shape)} does not match expected shape rank {len(expected)}")
+        raise TypeError(f"NumPy array shape rank {len(shape)} does not match expected shape rank {len(expected)}")
     for axis, (actual, wanted) in enumerate(zip(shape, expected, strict=True)):
         if wanted is not None and actual != wanted:
-            raise ValueError(f"NumPy array shape {shape!r} does not match expected shape {expected!r} at axis {axis}")
+            raise TypeError(f"NumPy array shape {shape!r} does not match expected shape {expected!r} at axis {axis}")
 
 
 def _validate_ndarray_expected_layout(value: np.ndarray, expected_layout: str | None) -> None:
@@ -1156,7 +1227,7 @@ def _validate_ndarray_expected_layout(value: np.ndarray, expected_layout: str | 
     required = NativeArrayHandleBase._normalize_expected_layout_name(expected_layout)
     matches = value.flags.f_contiguous if required == "F" else value.flags.c_contiguous
     if not matches:
-        raise ValueError(f"NumPy array layout does not match expected layout {expected_layout!r}")
+        raise TypeError(f"NumPy array actual has incompatible layout; expected ordering ({required})")
 
 
 __all__ = (

@@ -115,6 +115,48 @@ def alloc_state(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
     assert policy.native_module == "scalar_optional_descriptors"
 
 
+def test_optional_projected_array_keeps_nullable_value_separate_from_descriptor_storage():
+    module = parse_pyi_text(
+        """
+@native_call([Addr(Arg(0)), Arg(1)])
+def fill_optional(
+    n: Int32,
+    values: Float64[::] = ...,
+) -> Returns["values", Float64[::]] | None: ...
+""",
+        module_name="optional_array_storage",
+    )
+    complete_semantic_policies(module)
+
+    policy = completed_function_wrapper_policy(module.functions[0])
+    values = policy.arguments[1]
+
+    assert policy.supported is True
+    assert values.optional_mode is OptionalMode.NULLABLE_VALUE
+    assert values.nullable is True
+    assert values.descriptor_boundary is False
+    assert values.handoff_mode is ArgumentHandoffMode.ARRAY_BUFFER
+
+
+def test_required_descriptor_policy_keeps_required_python_argument_nullable_at_native_boundary():
+    module = parse_pyi_text(
+        """
+@native_call([Allocatable(Arg(0))])
+def alloc_state(value: Float64 | None) -> Int32: ...
+""",
+        module_name="scalar_required_descriptors",
+    )
+    complete_semantic_policies(module)
+
+    value = completed_function_wrapper_policy(module.functions[0]).arguments[0]
+
+    assert value.optional is False
+    assert value.optional_mode is OptionalMode.REQUIRED_DESCRIPTOR
+    assert value.nullable is True
+    assert value.descriptor_boundary is True
+    assert value.bridge_data_action is BridgeDataAction.COPY_REPRESENTATION
+
+
 def test_scalar_copy_in_out_policy_completes_writeback_before_planning():
     module = parse_pyi_text(
         'def bump(value: Annotated[Int32, Immutable]) -> Returns["value", Int32]: ...',
@@ -552,6 +594,73 @@ def sum_values(values: Float64[:]) -> Float64: ...
     assert policy.native_call_slots[0].array == argument.array
 
 
+def test_wrapper_policy_completes_required_raw_array_address_handoff():
+    module = parse_pyi_text(
+        """
+def raw_values(n: Int32[()], values: Addr(Float64[n])) -> None: ...
+def raw_matrix(n: Int32, m: Int32, values: Addr(Float64[n, m])) -> None: ...
+def raw_labels(n: Int32, labels: Addr(String[8][n])) -> None: ...
+""",
+        module_name="raw_array_arguments",
+    )
+    complete_semantic_policies(module)
+    policies = {
+        function.name: function.metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA] for function in module.functions
+    }
+
+    assert all(policy.supported for policy in policies.values())
+    values = policies["raw_values"].arguments[1]
+    assert values.ownership.kind is ObjectKind.NUMPY_ARRAY
+    assert values.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+    assert values.native_barrier_action is NativeBarrierAction.PASS_RAW_ADDRESS
+    assert values.handoff_mode is ArgumentHandoffMode.OPAQUE_ADDRESS
+    assert values.bridge_data_action is BridgeDataAction.ASSOCIATE_VIEW
+    assert values.bridge_copy_reason is None
+    assert values.array is not None
+    assert values.array.rank == 1
+    assert values.array.shape == ("n",)
+    assert values.array.axes == ("dense",)
+    assert values.array.category == "raw_address"
+    assert values.array.contiguous is True
+    assert values.array.extent_references == (("n",),)
+    assert policies["raw_values"].native_call_slots[1].array == values.array
+
+    matrix = policies["raw_matrix"].arguments[2]
+    assert matrix.array is not None
+    assert matrix.array.order == "ORDER_C"
+    assert matrix.array.shape == ("n", "m")
+
+    labels = policies["raw_labels"].arguments[1]
+    assert labels.ownership.kind is ObjectKind.NUMPY_ARRAY
+    assert labels.character_length == 8
+    assert labels.array is not None
+    assert labels.array.itemsize == 8
+
+
+def test_wrapper_policy_keeps_optional_raw_array_addresses_blocked():
+    module = parse_pyi_text(
+        "def optional_raw(n: Int32, values: Addr(Float64[n]) = ...) -> None: ...",
+        module_name="optional_raw_array",
+    )
+    complete_semantic_policies(module)
+    policy = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+
+    assert policy.supported is False
+    assert "argument 'values' optional raw array addresses are not supported" in policy.blockers
+
+
+def test_wrapper_policy_keeps_projected_raw_array_addresses_blocked():
+    module = parse_pyi_text(
+        'def projected_raw(n: Int32, values: Addr(Float64[n])) -> Returns["values", Float64[n]]: ...',
+        module_name="projected_raw_array",
+    )
+    complete_semantic_policies(module)
+    policy = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+
+    assert policy.supported is False
+    assert "argument 'values' raw array address cannot project a Python result" in policy.blockers
+
+
 def test_wrapper_policy_completes_required_read_only_string_value_handoff():
     module = parse_pyi_text(
         "def consume(value: String) -> None: ...",
@@ -661,7 +770,7 @@ def with_status(
     assert assumed.arguments[0].codegen_action is CodegenAction.COPY_IN_OUT
     assert optional.supported is True
     assert optional.arguments[0].optional_mode is OptionalMode.NULLABLE_VALUE
-    assert optional.arguments[0].nullable is False
+    assert optional.arguments[0].nullable is True
     assert optional.arguments[0].character_length is None
     assert optional_fixed.supported is True
     assert optional_fixed.arguments[0].character_length == 8

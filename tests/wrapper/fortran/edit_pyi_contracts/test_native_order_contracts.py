@@ -96,6 +96,163 @@ def test_editable_contract_can_use_native_order_arguments_without_native_call(tm
     assert point.code == np.int32(107)
 
 
+def test_raw_array_addresses_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay one required raw array address through both wrapper routes."""
+    native_object = _compile_native_object(NATIVE_CALL_EXAMPLES_F90_SOURCE, tmp_path / "native")
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        contract_package = tmp_path / f"{route}_raw_array_address"
+        contract_package.mkdir()
+        (contract_package / "__init__.pyi").write_text(
+            (
+                "from .fnative_call_examples_f90 import fill_vector_raw\n"
+                "from .fnative_call_examples_f90 import shift_matrix_raw_c\n"
+                "from .fnative_call_examples_f90 import shift_matrix_raw_f\n"
+            ),
+            encoding="utf-8",
+        )
+        (contract_package / "fnative_call_examples_f90.pyi").write_text(
+            """from x2py.contracts import Addr, Annotated, Float64, Int32, ORDER_F, bind
+
+@bind("fill_vector")
+def fill_vector_raw(n: Int32[()], values: Addr(Float64[n])) -> None: ...
+
+@bind("shift_matrix")
+def shift_matrix_raw_c(
+    n: Int32[()],
+    m: Int32[()],
+    values: Addr(Float64[n, m]),
+    out: Addr(Float64[n, m])
+) -> None: ...
+
+@bind("shift_matrix")
+def shift_matrix_raw_f(
+    n: Int32[()],
+    m: Int32[()],
+    values: Annotated[Addr(Float64[n, m]), ORDER_F],
+    out: Annotated[Addr(Float64[n, m]), ORDER_F]
+) -> None: ...
+""",
+            encoding="utf-8",
+        )
+        result = build_pyi_extension(
+            contract_package / "__init__.pyi",
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / route,
+            **route_kwargs,
+        )
+        module = _import_from_build_dir(result.module_name, result.output_dir)
+        modules[route] = module if hasattr(module, "fill_vector_raw") else _sole_native_module(module)
+
+    for module in modules.values():
+        vector_size = np.array(4, dtype=np.int32)
+        raw_vector = np.empty(4, dtype=np.float64)
+        assert module.fill_vector_raw(vector_size, raw_vector.ctypes.data) is None
+        np.testing.assert_allclose(raw_vector, np.array([1.5, 3.0, 4.5, 6.0], dtype=np.float64))
+
+        with pytest.raises(TypeError):
+            module.fill_vector_raw(vector_size, raw_vector)
+        with pytest.raises(TypeError):
+            module.fill_vector_raw(vector_size, "not an address")
+
+        rows = np.array(2, dtype=np.int32)
+        cols = np.array(3, dtype=np.int32)
+        for order, function_name in (("C", "shift_matrix_raw_c"), ("F", "shift_matrix_raw_f")):
+            matrix = np.array([[1.0, 3.0, 5.0], [2.0, 4.0, 6.0]], dtype=np.float64, order=order)
+            shifted = np.empty((2, 3), dtype=np.float64, order=order)
+            function = getattr(module, function_name)
+            assert function(rows, cols, matrix.ctypes.data, shifted.ctypes.data) is None
+            np.testing.assert_allclose(shifted, matrix + 10.0)
+
+
+def test_copy_f_preserves_logical_axes_through_binding_owned_temporary(tmp_path: Path):
+    """Accept C storage while the bridge receives the ordinary F-order ABI."""
+    native_object = _compile_native_object(NATIVE_CALL_EXAMPLES_F90_SOURCE, tmp_path / "native")
+    contract_package = tmp_path / "copy_f_contract"
+    contract_package.mkdir()
+    (contract_package / "__init__.pyi").write_text(
+        (
+            "from .fnative_call_examples_f90 import shift_matrix_copy_f\n"
+            "from .fnative_call_examples_f90 import shift_matrix_copy_f_native_input\n"
+            "from .fnative_call_examples_f90 import shift_matrix_copy_f_projected\n"
+        ),
+        encoding="utf-8",
+    )
+    (contract_package / "fnative_call_examples_f90.pyi").write_text(
+        """from x2py.contracts import (
+    Annotated,
+    COPY_F,
+    Float64,
+    Int32,
+    ORDER_C,
+    Returns,
+    bind,
+)
+
+@bind("shift_matrix")
+def shift_matrix_copy_f(
+    n: Int32[()],
+    m: Int32[()],
+    values: Annotated[Float64[n, m], ORDER_C, COPY_F],
+    out: Annotated[Float64[n, m], ORDER_C, COPY_F],
+) -> None: ...
+
+@bind("shift_matrix")
+def shift_matrix_copy_f_native_input(
+    n: Int32[()],
+    m: Int32[()],
+    values: Annotated[Float64[n, m], ORDER_C, COPY_F],
+    out: Annotated[Float64[n, m], ORDER_C, COPY_F],
+) -> None: ...
+
+@bind("shift_matrix")
+def shift_matrix_copy_f_projected(
+    n: Int32[()],
+    m: Int32[()],
+    values: Annotated[Float64[n, m], ORDER_C, COPY_F],
+    out: Annotated[Float64[n, m], ORDER_C, COPY_F],
+) -> Returns["out", Float64[n, m]]: ...
+""",
+        encoding="utf-8",
+    )
+    result = build_pyi_extension(
+        contract_package / "__init__.pyi",
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "pyi_build",
+        _force_wrapper_plan_route=True,
+    )
+    module = _import_from_build_dir(result.module_name, result.output_dir)
+    module = module if hasattr(module, "shift_matrix_copy_f") else _sole_native_module(module)
+
+    rows = np.array(2, dtype=np.int32)
+    cols = np.array(3, dtype=np.int32)
+    values = np.array([[1.0, 3.0, 5.0], [2.0, 4.0, 6.0]], dtype=np.float64, order="C")
+    out = np.empty((2, 3), dtype=np.float64, order="C")
+
+    assert module.shift_matrix_copy_f(rows, cols, values, out) is None
+    np.testing.assert_allclose(out, values + 10.0)
+    assert values.flags.c_contiguous
+    assert out.flags.c_contiguous
+
+    input_values = values.copy(order="C")
+    input_out = np.empty_like(out, order="C")
+    assert module.shift_matrix_copy_f_native_input(rows, cols, input_values, input_out) is None
+    np.testing.assert_allclose(input_out, input_values + 10.0)
+
+    projected_out = np.empty_like(out, order="C")
+    projected = module.shift_matrix_copy_f_projected(rows, cols, input_values, projected_out)
+    assert projected is projected_out
+    np.testing.assert_allclose(projected, input_values + 10.0)
+
+    with pytest.raises(TypeError, match=r"expected ordering \(C\)"):
+        module.shift_matrix_copy_f(rows, cols, np.asfortranarray(values), out)
+
+
 def test_fixed_string_storage_and_raw_address_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
     """Replay both fixed address boundaries through one existing native routine."""
     native_object = _compile_native_object(NATIVE_CALL_EXAMPLES_F90_SOURCE, tmp_path / "native")

@@ -5,6 +5,7 @@ from __future__ import annotations
 from x2py.wrapper_codegen.nodes import (
     CAllowThreadsBegin,
     CAllowThreadsEnd,
+    CComment,
     CDeclaration,
     CExpressionStatement,
     CFunction,
@@ -21,8 +22,10 @@ from x2py.wrapper_codegen.nodes import (
     CModulePropertySupport,
     CParameter,
     CReturn,
+    FortranAllocate,
     FortranAssignment,
     FortranCall,
+    FortranDeallocate,
     FortranDeclaration,
     FortranFunction,
     FortranIf,
@@ -74,6 +77,10 @@ class CSourcePrinter(ClassVisitor):
         if node.value is None:
             return f"#define {node.name}"
         return f"#define {node.name} {node.value}"
+
+    def _visit_CComment(self, node: CComment) -> str:
+        """Render one generated C line comment."""
+        return f"// {node.text}"
 
     def _visit_CFunction(self, node: CFunction) -> str:
         """Render one C function definition."""
@@ -308,6 +315,14 @@ class FortranSourcePrinter(ClassVisitor):
 
     def _visit_FortranParameter(self, node: FortranParameter) -> str:
         """Render one Fortran parameter declaration."""
+        assumed_size = next(
+            (attribute for attribute in node.attributes if attribute.startswith("dimension(") and "*" in attribute),
+            None,
+        )
+        if assumed_size is not None:
+            dimensions = assumed_size.removeprefix("dimension(").removesuffix(")")
+            attributes = tuple(attribute for attribute in node.attributes if attribute != assumed_size)
+            return self._declaration(node.type_name, f"{node.name}({dimensions})", attributes)
         return self._declaration(node.type_name, node.name, node.attributes)
 
     def _visit_FortranDeclaration(self, node: FortranDeclaration) -> str:
@@ -321,6 +336,15 @@ class FortranSourcePrinter(ClassVisitor):
     def _visit_FortranPointerAssignment(self, node: FortranPointerAssignment) -> str:
         """Render one Fortran pointer association."""
         return f"{node.target} => {node.expression.text}"
+
+    def _visit_FortranAllocate(self, node: FortranAllocate) -> str:
+        """Render one explicit allocation statement."""
+        shape = f"({', '.join(item.text for item in node.extents)})" if node.extents else ""
+        return f"allocate({node.target}{shape})"
+
+    def _visit_FortranDeallocate(self, node: FortranDeallocate) -> str:
+        """Render one explicit deallocation statement."""
+        return f"deallocate({node.target})"
 
     def _visit_FortranCall(self, node: FortranCall) -> str:
         """Render one Fortran call statement."""

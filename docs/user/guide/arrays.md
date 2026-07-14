@@ -132,6 +132,31 @@ runs.
 Use `numpy.asfortranarray` or `order="F"` for a multidimensional contract that
 requires Fortran orientation, as shown by `matrix` in the complete example.
 
+Layout annotations describe the exact storage accepted by the native contract;
+they do not request an automatic conversion. `ORDER_F` passes a
+Fortran-contiguous array with its logical axes unchanged. `ORDER_C` passes the
+same C-contiguous data address without copying and constructs the Fortran
+bridge view with reversed axes. For example, a C-order Python shape `(2, 3)`
+is a Fortran bridge shape `(3, 2)` over the same six elements. Use `ORDER_C`
+only when the native operation intentionally accepts that transposed storage
+view.
+
+Add `COPY_F` when Python should accept C-contiguous storage but native Fortran
+must observe the same logical axes in Fortran order:
+
+```python
+values: Annotated[Float64[:, :], ORDER_C, COPY_F]
+```
+
+The binding owns this complete representation lifecycle. It creates an
+F-contiguous NumPy temporary before the call, passes that ordinary F-order
+buffer through the unchanged bridge path, copies values back into the original
+C-order array after the call, and releases the temporary. Projected results
+return the original C-order object. Native `intent(in)` remains a property of
+the native procedure call; neither the semantic `.pyi` nor the bridge temporary
+needs a separate direction annotation for `COPY_F`. The bridge performs neither
+half of this argument conversion.
+
 Rank-one contiguous arrays can satisfy their documented contiguous contract
 without a meaningful row/column distinction. Legacy fixed-form array contracts
 are contiguous-only. A modern Fortran dummy is stride-aware only when its

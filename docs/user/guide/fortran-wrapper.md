@@ -1165,6 +1165,13 @@ caller must provide enough storage for the native routine.
 Generated semantic `.pyi` contracts spell this final assumed-size dimension as
 `Flat`, for example `Float64[Flat]` for `real(8) :: values(*)`.
 
+`Flat` marks one storage axis rather than forcing rank one. For example,
+`Float64[:, Flat]` remains a rank-two Fortran-contiguous Python and bridge
+contract. An external interface uses `values(*)` when the preceding extent is
+available only from the Python array, because `values(:, *)` is not a legal
+Fortran assumed-size declaration; the bridge nevertheless associates the
+address with both runtime extents.
+
 <!-- X2PY_C_DOCS_START
 For handwritten contracts over native routines that consume a raw flat buffer,
 `Flat` may also describe a C-contiguous Python view when it appears first and is
@@ -1174,6 +1181,11 @@ not a literal Fortran dummy declaration: the generated wrapper validates a
 C-contiguous `(n, 3)` view, constructs the corresponding rank-2 bridge view over
 the same storage, and passes that view to the native assumed-size dummy. The
 native routine's `values(*)` dummy receives the flattened element sequence.
+Dimensions stay in Python logical order, so the symmetric fixed-prefix forms
+are `Float64[rows, Flat]` for Fortran order and
+`Annotated[Float64[Flat, columns], ORDER_C]` for C order. The latter becomes a
+Fortran bridge view with reversed extents `(columns, rows)` without changing
+the Python contract's rank.
 X2PY_C_DOCS_END -->
 
 Non-default lower bounds are preserved when computing shape constraints; they

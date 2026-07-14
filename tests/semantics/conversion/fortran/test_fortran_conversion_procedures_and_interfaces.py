@@ -432,6 +432,48 @@ end module opt_alloc_out_mod
     ]
 
 
+def test_scalar_descriptors_record_native_projection_kind():
+    source = """
+module scalar_descriptor_mod
+contains
+subroutine update_allocatable(value)
+    real(8), allocatable, intent(inout) :: value
+end subroutine update_allocatable
+
+subroutine create_pointer(value)
+    real(8), pointer, intent(out) :: value
+end subroutine create_pointer
+end module scalar_descriptor_mod
+"""
+
+    smod = fortran_module_to_semantic_module(parse_fortran_source(source))
+    update = get_function(smod, "update_allocatable")
+    create = get_function(smod, "create_pointer")
+
+    assert update.projection == [
+        ProjectionMapping(
+            python_name="value",
+            native_name="value",
+            native_position=0,
+            python_position=0,
+            result_position=0,
+            value_kind="allocatable",
+            value={"kind": "arg", "position": 0},
+        )
+    ]
+    assert create.projection == [
+        ProjectionMapping(
+            python_name="value",
+            native_name="value",
+            native_position=0,
+            python_position=None,
+            result_position=0,
+            value_kind="pointer",
+            value={"kind": "return", "name": "value", "position": 0},
+        )
+    ]
+
+
 def test_function_result():
     source = """
 module func_mod

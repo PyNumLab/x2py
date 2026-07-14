@@ -1178,6 +1178,7 @@ class _PyiAstParser:
                 original_name = parsed_name
                 continue
             self.apply_annotation_metadata(semantic_type, item)
+        self._validate_array_copy_metadata(semantic_type)
         return semantic_type, original_name
 
     def semantic_type(self, node: ast.expr) -> SemanticType:
@@ -1632,6 +1633,9 @@ class _PyiAstParser:
                 raise ValueError(f"{name} conflicts with {expected_order} implied by Flat placement")
             array.order = name
             return True
+        if name == "COPY_F":
+            self._require_array_storage(semantic_type).copy_order = "ORDER_F"
+            return True
         if name == "Allocatable":
             raise ValueError(
                 "Annotated[..., Allocatable] is not an active array descriptor spelling; use Allocatable[T[...]]"
@@ -1657,6 +1661,22 @@ class _PyiAstParser:
             semantic_type.metadata["fortran_polymorphic"] = True
             return True
         return False
+
+    @staticmethod
+    def _validate_array_copy_metadata(semantic_type: SemanticType) -> None:
+        """Fail closed on representation-copy forms outside the first dense lane."""
+        storage = semantic_type.storage
+        array = storage.array if storage is not None else None
+        if array is None or array.copy_order is None:
+            return
+        if array.rank is None or array.rank <= 1:
+            raise ValueError("COPY_F requires a concrete multidimensional array rank")
+        if array.copy_order != "ORDER_F" or array.order != "ORDER_C":
+            raise ValueError("COPY_F requires a C-order Python array and targets Fortran order")
+        if array.category in {"assumed_size", "assumed_rank"} or array.contiguous is not True:
+            raise ValueError("COPY_F initially supports only dense concrete-shape arrays")
+        if semantic_type.name == "String" or native_array_descriptor_kind(semantic_type) is not None:
+            raise ValueError("COPY_F does not apply to character arrays or native descriptor handles")
 
     @staticmethod
     def _append_constraint_metadata(
@@ -1769,6 +1789,7 @@ class _PyiAstParser:
             "Allocatable",
             "Constant",
             "Contiguous",
+            "COPY_F",
             "Aliased",
             "Immutable",
             "Ownership",

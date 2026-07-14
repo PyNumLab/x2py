@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from x2py.semantics import models
 from x2py.semantics.ownership import ObjectKind, PythonBarrierAction
-from x2py.semantics.wrapper_policy import FunctionWrapperPolicy, ModuleVariablePolicy
+from x2py.semantics.wrapper_policy import (
+    FunctionWrapperPolicy,
+    ModuleVariablePolicy,
+    NativeArrayDescriptorKind,
+    NativeArrayHandleKind,
+    NativeDescriptorHandoffABI,
+)
 from x2py.wrapper_codegen.plan import WrapperPlanSupportBlocker, WrapperPlanSupportReport
 from x2py.wrapper_codegen.visitor import ClassVisitor
 
@@ -41,12 +47,27 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
                 reason="missing completed module-variable policy",
             )
             return WrapperPlanSupportReport(owner_path=variable.name, blockers=(blocker,))
-        lanes = ("scalar-module-variables",) if policy.supported else ()
+        return self._module_variable_support_report(policy)
+
+    def _module_variable_support_report(self, policy: ModuleVariablePolicy) -> WrapperPlanSupportReport:
+        """Classify one completed module-variable policy without backend inference."""
+        blockers = list(policy.blockers)
+        if policy.supported and policy.rank > 0 and policy.native_array_handle is None:
+            blockers.append("rank-positive module array snapshots are not implemented by wrapper-plan lowering")
         return WrapperPlanSupportReport(
             owner_path=policy.owner_path,
-            covered_lanes=lanes,
-            blockers=tuple(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers),
+            covered_lanes=self._module_variable_lanes(policy, blockers),
+            blockers=tuple(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in blockers),
         )
+
+    @staticmethod
+    def _module_variable_lanes(policy: ModuleVariablePolicy, blockers: list[str]) -> tuple[str, ...]:
+        """Return the completed scalar or descriptor module-variable lane."""
+        if not policy.supported or blockers:
+            return ()
+        if policy.native_array_handle is None:
+            return ("scalar-module-variables",)
+        return (f"{policy.native_array_handle.descriptor_kind.value}-module-handles",)
 
     def _visit_SemanticFunction(self, function: models.SemanticFunction) -> WrapperPlanSupportReport:
         """Return a stable support report for one semantic function."""
@@ -163,7 +184,10 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         if any(action.object_kind is ObjectKind.SCALAR for action in policy.writeback_actions):
             lanes.append("scalar-writebacks")
         results = tuple(result for result in policy.results if result.ownership.kind is ObjectKind.SCALAR)
-        lanes.extend(self._result_source_lanes(results, prefix="scalar"))
+        ordinary = tuple(result for result in results if result.scalar_descriptor is None)
+        lanes.extend(self._result_source_lanes(ordinary, prefix="scalar"))
+        if any(result.scalar_descriptor is not None for result in results):
+            lanes.append("scalar-descriptor-results")
         if len(results) > 1:
             lanes.append("scalar-multiple-results")
         return tuple(lanes)
@@ -205,7 +229,10 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         if any(action.object_kind is ObjectKind.STRING for action in policy.writeback_actions):
             lanes.append("string-writebacks")
         results = tuple(result for result in policy.results if result.ownership.kind is ObjectKind.STRING)
-        lanes.extend(self._result_source_lanes(results, prefix="fixed-string"))
+        fixed = tuple(result for result in results if result.scalar_descriptor is None)
+        lanes.extend(self._result_source_lanes(fixed, prefix="fixed-string"))
+        if any(result.scalar_descriptor is not None for result in results):
+            lanes.append("deferred-string-descriptor-results")
         return tuple(lanes)
 
     # Ordinary-array lane classification.
@@ -214,25 +241,93 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         arguments = tuple(
             argument for argument in policy.arguments if argument.ownership.kind is ObjectKind.NUMPY_ARRAY
         )
-        lanes = []
-        if any(argument.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE for argument in arguments):
-            lanes.append("array-buffer-inputs")
-        if any(argument.python_barrier_action is PythonBarrierAction.RAW_ADDRESS for argument in arguments):
-            lanes.append("array-raw-address-inputs")
-        if any(argument.optional for argument in arguments):
-            lanes.append("array-optional-inputs")
-        return tuple(lanes)
+        handles = tuple(argument.native_array_handle for argument in arguments if argument.native_array_handle)
+        candidates = (
+            (self._has_array_action(arguments, PythonBarrierAction.ARRAY_STORAGE), "array-buffer-inputs"),
+            (self._has_native_array_actual(arguments), "array-native-handle-actuals"),
+            (self._has_excluded_native_array_actual(arguments), "array-handle-actuals-excluded"),
+            (self._has_array_representation_copy(arguments), "array-copy-to-fortran"),
+            (self._has_array_action(arguments, PythonBarrierAction.RAW_ADDRESS), "array-raw-address-inputs"),
+            (self._has_optional_array(arguments), "array-optional-inputs"),
+            (
+                self._has_descriptor_kind(handles, NativeArrayDescriptorKind.ALLOCATABLE),
+                "allocatable-descriptor-inputs",
+            ),
+            (
+                self._has_descriptor_kind(handles, NativeArrayDescriptorKind.POINTER),
+                "pointer-descriptor-inputs",
+            ),
+            (self._has_optional_native_handle(handles), "optional-native-array-handles"),
+            (self._has_projected_native_handle(handles), "projected-native-array-handles"),
+        )
+        return tuple(lane for covered, lane in candidates if covered)
+
+    def _has_array_action(self, arguments: tuple, action: PythonBarrierAction) -> bool:
+        """Return whether one array argument uses the selected Python action."""
+        return any(argument.python_barrier_action is action for argument in arguments)
+
+    def _has_native_array_actual(self, arguments: tuple) -> bool:
+        """Return whether ordinary arrays accept runtime handle actuals."""
+        return any(argument.native_array_actual is not None for argument in arguments)
+
+    def _has_excluded_native_array_actual(self, arguments: tuple) -> bool:
+        """Keep ordinary arrays with an unimplemented handle source on legacy."""
+        return any(
+            argument.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE
+            and argument.native_array_actual is None
+            and not argument.transformations
+            for argument in arguments
+        )
+
+    @staticmethod
+    def _has_array_representation_copy(arguments: tuple) -> bool:
+        """Return whether binding-owned NumPy representation conversion is planned."""
+        return any(argument.transformations for argument in arguments)
+
+    def _has_optional_array(self, arguments: tuple) -> bool:
+        """Return whether one ordinary or descriptor array is optional."""
+        return any(argument.optional for argument in arguments)
+
+    def _has_descriptor_kind(self, handles: tuple, descriptor_kind: NativeArrayDescriptorKind) -> bool:
+        """Return whether one argument handle has the selected descriptor kind."""
+        return any(handle.descriptor_kind is descriptor_kind for handle in handles)
+
+    def _has_optional_native_handle(self, handles: tuple) -> bool:
+        """Return whether omission is distinct from a present empty descriptor."""
+        return any(handle.optional_absent for handle in handles)
+
+    def _has_projected_native_handle(self, handles: tuple) -> bool:
+        """Return whether mutation stays attached to caller descriptor storage."""
+        return any(handle.handoff.abi is NativeDescriptorHandoffABI.DIRECT_STANDARD_DESCRIPTOR for handle in handles)
 
     def _array_output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
         """Return ordinary-array writeback and result-source lanes."""
-        lanes = []
-        if any(action.object_kind is ObjectKind.NUMPY_ARRAY for action in policy.writeback_actions):
-            lanes.append("array-writebacks")
         results = tuple(result for result in policy.results if result.ownership.kind is ObjectKind.NUMPY_ARRAY)
-        lanes.extend(self._result_source_lanes(results, prefix="array"))
-        if results and len(policy.results) > 1:
-            lanes.append("array-multiple-results")
-        return tuple(lanes)
+        owned_handles = tuple(
+            result.native_array_handle
+            for result in results
+            if result.native_array_handle is not None
+            and result.native_array_handle.handle_kind is NativeArrayHandleKind.OWNED_RESULT_DESCRIPTOR
+        )
+        candidates = (
+            (self._has_array_writeback(policy), "array-writebacks"),
+            *tuple((True, lane) for lane in self._result_source_lanes(results, prefix="array")),
+            (self._has_owned_result_source(results, owned_handles, "direct_return"), "owned-allocatable-results"),
+            (
+                self._has_owned_result_source(results, owned_handles, "hidden_output"),
+                "owned-allocatable-hidden-outputs",
+            ),
+            (bool(results and len(policy.results) > 1), "array-multiple-results"),
+        )
+        return tuple(lane for covered, lane in candidates if covered)
+
+    def _has_array_writeback(self, policy: FunctionWrapperPolicy) -> bool:
+        """Return whether one lifecycle action projects ordinary array identity."""
+        return any(action.object_kind is ObjectKind.NUMPY_ARRAY for action in policy.writeback_actions)
+
+    def _has_owned_result_source(self, results: tuple, handles: tuple, source_kind: str) -> bool:
+        """Return whether wrapper-owned descriptor storage has one result source."""
+        return any(result.source_kind == source_kind and result.native_array_handle in handles for result in results)
 
     def _result_source_lanes(self, results: tuple, *, prefix: str) -> tuple[str, ...]:
         """Return direct and hidden lane labels for one result family."""

@@ -225,10 +225,12 @@ def test_generated_wrapper_artifacts_keep_compile_and_link_ownership_out_of_the_
 
     assert artifacts.source_files == (Path("bind_c_demo.f90"), Path("demo.c"))
     assert artifacts.generated_files == (Path("bind_c_demo.f90"), Path("demo.c"), Path("demo.h"))
+    assert artifacts.required_headers == ()
     assert {field.name for field in fields(GeneratedWrapperArtifacts)} == {
         "module_name",
         "bridge_sources",
         "binding_sources",
         "header_files",
         "runtime_support_keys",
+        "required_headers",
     }

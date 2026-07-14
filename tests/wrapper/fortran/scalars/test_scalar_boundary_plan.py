@@ -261,6 +261,61 @@ def with_scalar(n: Int32) -> tuple[Int32, Int32]: ...
     )
 
 
+def _build_scalar_descriptor_result_modules(tmp_path: Path):
+    module_name = "scalar_descriptor_results_plan"
+    source = tmp_path / f"{module_name}.f90"
+    source.write_text(
+        """
+module scalar_descriptor_results_plan
+  use iso_c_binding, only: c_double, c_int32_t
+  real(c_double), target, save :: pointer_value = 7.5_c_double
+contains
+  subroutine maybe_allocatable(flag, value)
+    integer(c_int32_t), intent(in) :: flag
+    real(c_double), allocatable, intent(out) :: value
+    if (flag > 0) then
+      allocate(value)
+      value = 2.5_c_double
+    end if
+  end subroutine maybe_allocatable
+
+  subroutine maybe_pointer(flag, value)
+    integer(c_int32_t), intent(in) :: flag
+    real(c_double), pointer, intent(out) :: value
+    if (flag > 0) then
+      value => pointer_value
+    else
+      nullify(value)
+    end if
+  end subroutine maybe_pointer
+end module scalar_descriptor_results_plan
+""",
+        encoding="utf-8",
+    )
+    contract = tmp_path / f"{module_name}.pyi"
+    contract.write_text(
+        """
+from x2py.contracts import Allocatable, Arg, Float64, Int32, Pointer, Return, native_call
+
+@native_call([Arg(0), Allocatable(Return("value", 0))])
+def maybe_allocatable(flag: Int32) -> Float64 | None: ...
+
+@native_call([Arg(0), Pointer(Return("value", 0))])
+def maybe_pointer(flag: Int32) -> Float64 | None: ...
+""",
+        encoding="utf-8",
+    )
+    native_object = _compile_native_object(source, tmp_path / "native_scalar_descriptors")
+    result = build_pyi_extension(
+        contract,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "wrapper_plan_scalar_descriptors",
+        _force_wrapper_plan_route=True,
+    )
+    return (_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)),)
+
+
 def test_scalar_value_storage_raw_address_out_and_inout_match_both_routes(tmp_path: Path):
     modules = _build_scalar_boundary_modules(tmp_path)
 
@@ -317,6 +372,16 @@ def test_multiple_scalar_results_match_both_routes_without_array_blockers(tmp_pa
 
     for module in modules:
         assert module.with_scalar(np.int32(4)) == (np.int32(8), np.int32(7))
+
+
+def test_scalar_descriptor_results_copy_values_or_none_through_wrapper_plan_route(tmp_path: Path):
+    modules = _build_scalar_descriptor_result_modules(tmp_path)
+
+    for module in modules:
+        assert module.maybe_allocatable(np.int32(1)) == np.float64(2.5)
+        assert module.maybe_allocatable(np.int32(0)) is None
+        assert module.maybe_pointer(np.int32(1)) == np.float64(7.5)
+        assert module.maybe_pointer(np.int32(0)) is None
 
 
 def test_scalar_primitive_kinds_match_both_routes_without_array_blockers(tmp_path: Path):

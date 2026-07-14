@@ -613,7 +613,9 @@ def _native_array_handle_operations(
         if handle_kind in {"borrowed_module_descriptor", "borrowed_field_descriptor", "owned_result_descriptor"} or (
             context.is_argument and context.writes_argument
         ):
-            operations.update({"deallocate", "resize"})
+            operations.add("deallocate")
+            if not _is_deferred_character_array(semantic_type):
+                operations.add("resize")
         return tuple(sorted(operations))
     operations = {"associated", "nullify", "to_numpy"}
     pointer_policy = _pointer_policy_metadata(semantic_type)
@@ -624,6 +626,11 @@ def _native_array_handle_operations(
     if _pointer_policy_allows_resize(pointer_policy):
         operations.add("resize")
     return tuple(sorted(operations))
+
+
+def _is_deferred_character_array(semantic_type: models.SemanticType) -> bool:
+    """Return whether shape mutation also requires a runtime character length."""
+    return semantic_type.name == "String" and semantic_type.metadata.get("fortran_character_length") == ":"
 
 
 def _native_array_descriptor_interop_requirement(descriptor_kind: str, handle_kind: str) -> str:

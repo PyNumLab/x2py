@@ -54,6 +54,31 @@ def _unassociated_handle_for_rejected_optional_array():
     )
 
 
+def _optional_descriptor_handle(value: np.ndarray | None, *, pointer: bool):
+    descriptor = {
+        "base_addr": 0 if value is None else value.ctypes.data,
+        "elem_len": np.dtype(np.float64).itemsize,
+        "rank": 1,
+        "dim": [
+            {
+                "lower_bound": 0,
+                "extent": 0 if value is None else value.size,
+                "sm": np.dtype(np.float64).itemsize,
+            }
+        ],
+    }
+    operations = {
+        "array_actual": lambda _handle: _NativeArrayHandoff(value.ctypes.data),
+        "descriptor": lambda _handle: descriptor,
+        "shape": lambda _handle: None if value is None else value.shape,
+        "to_numpy": lambda _handle: value,
+        "associated" if pointer else "allocated": lambda _handle: value is not None,
+        "nullify" if pointer else "deallocate": lambda _handle: None,
+    }
+    handle_type = PointerArray if pointer else AllocatableArray
+    return handle_type(dtype=np.dtype(np.float64), rank=1, ops=operations)
+
+
 def test_optional_allocatable_scalar_descriptor_distinguishes_omitted_none_and_value(tmp_path: Path):
     source = tmp_path / "scalar_optional_descriptors.f90"
     source.write_text(
@@ -133,6 +158,80 @@ def alloc_state(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
     assert "Omit to make the native optional dummy absent." in legacy.alloc_state.__doc__
     assert "Pass None for a present unallocated or unassociated descriptor." in legacy.alloc_state.__doc__
     assert "Default is None." not in legacy.alloc_state.__doc__
+
+
+def test_optional_array_descriptors_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Distinguish omitted/None from present absent-state descriptor handles."""
+    source = tmp_path / "optional_array_descriptors.f90"
+    source.write_text(
+        """
+module optional_array_descriptors
+contains
+  integer(4) function alloc_state(values) result(state)
+    real(8), allocatable, optional, intent(in) :: values(:)
+    if (.not. present(values)) then
+      state = 0
+    else if (.not. allocated(values)) then
+      state = 1
+    else
+      state = int(sum(values), kind=4)
+    end if
+  end function alloc_state
+
+  integer(4) function pointer_state(values) result(state)
+    real(8), pointer, optional, intent(in) :: values(:)
+    if (.not. present(values)) then
+      state = 0
+    else if (.not. associated(values)) then
+      state = 1
+    else
+      state = int(sum(values), kind=4)
+    end if
+  end function pointer_state
+end module optional_array_descriptors
+""",
+        encoding="utf-8",
+    )
+    native_object = _compile_native_object(source, tmp_path / "native_array_descriptors")
+    contract = tmp_path / "optional_array_descriptors.pyi"
+    contract.write_text(
+        """from x2py.contracts import Allocatable, Float64, Int32, Pointer
+
+def alloc_state(values: Allocatable[Float64[:]] | None = ...) -> Int32: ...
+def pointer_state(values: Pointer[Float64[:]] | None = ...) -> Int32: ...
+""",
+        encoding="utf-8",
+    )
+
+    modules = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        result = build_pyi_extension(
+            contract,
+            native_objects=[native_object],
+            native_include_dirs=[native_object.parent],
+            output_dir=tmp_path / f"{route}_array_descriptors",
+            **route_kwargs,
+        )
+        modules[route] = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+
+    values = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    for module in modules.values():
+        for function_name in ("alloc_state", "pointer_state"):
+            function = getattr(module, function_name)
+            assert function() == np.int32(0)
+            assert function(None) == np.int32(0)
+
+    direct = modules["wrapper_plan"]
+    for function_name, pointer in (("alloc_state", False), ("pointer_state", True)):
+        function = getattr(direct, function_name)
+        assert function(_optional_descriptor_handle(None, pointer=pointer)) == np.int32(1)
+        assert function(_optional_descriptor_handle(values, pointer=pointer)) == np.int32(6)
+
+    with pytest.raises(TypeError, match=r"numpy\.ndarray"):
+        modules["legacy"].alloc_state(_optional_descriptor_handle(None, pointer=False))
 
 
 def test_optional_arguments_drive_fortran_present_behavior(

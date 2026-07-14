@@ -360,6 +360,10 @@ def scalar_status(
 Removing the explicit `status` parameter and adding the result projection are
 one edit. A projection must map every required native argument exactly once;
 incomplete, duplicate, or out-of-range mappings are contract errors.
+Native `intent` does not override this edited signature: an output dummy may
+remain caller-supplied storage, while a projected output exists only when the
+contract explicitly requests that projection. The bridge may use permissive
+writable local storage; the called native procedure enforces its own direction.
 
 ### Make mutation replacement-only
 

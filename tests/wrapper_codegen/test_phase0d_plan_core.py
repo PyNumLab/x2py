@@ -248,6 +248,7 @@ def sum_values(values: Float64[:]) -> Float64: ...
     assert report.supported is True
     assert report.covered_lanes == (
         "array-buffer-inputs",
+        "array-native-handle-actuals",
         "scalar-direct-results",
         "native-call-runtime",
     )

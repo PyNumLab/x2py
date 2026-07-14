@@ -213,7 +213,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     _ALLOCATABLE_RESULT_HELPER_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT): "_uses_heap_allocatable_result_helper",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.WRAPPER_INSTANCE): "_skips_allocatable_result_helper",
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.WRAPPER_INSTANCE): "_uses_heap_allocatable_result_helper",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_IN_OUT): "_skips_allocatable_result_helper",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_skips_allocatable_result_helper",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_skips_allocatable_result_helper",
@@ -3814,7 +3814,7 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         scope.insert_variable(elem_var)
 
         # Define the additional steps necessary to define and fill ptr_var
-        body = [
+        copy_body = [
             Assign(shape_var, Add(ArraySize(local_var), convert_to_literal(1))),
             Assign(bind_var, c_malloc(Mul(BindCSizeOf(elem_var), shape_var))),
             If(
@@ -3828,6 +3828,15 @@ class FortranToCBridgeGenerator(BridgeGenerator):
                 )
             ),
         ]
+        if decision.nullable and decision.descriptor_boundary:
+            body = [
+                If(
+                    IfSection(self._nullable_scalar_status_func(decision)(local_var), copy_body),
+                    IfSection(convert_to_literal(True), [Assign(bind_var, NIL)]),
+                )
+            ]
+        else:
+            body = copy_body
 
         return {
             "c_result": BindCVariable(bind_var, orig_var),
@@ -4240,14 +4249,16 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         result_decision = ownership_decision_for_codegen_variable(result)
         func_result_decision = ownership_decision_for_codegen_variable(func_result) if func_result is not NIL else None
         if (
-            result_decision.kind is ObjectKind.SCALAR
-            and result_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+            result_decision.kind in {ObjectKind.SCALAR, ObjectKind.STRING}
+            and result_decision.descriptor_boundary
+            and result_decision.nullable
             and result_decision.storage_mode is StorageMode.HEAP
             and func_result_decision is not None
         ):
             return (
-                func_result_decision.kind is ObjectKind.SCALAR
-                and func_result_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+                func_result_decision.kind is result_decision.kind
+                and func_result_decision.descriptor_boundary
+                and func_result_decision.nullable
                 and func_result_decision.storage_mode is StorageMode.HEAP
             )
         return (
@@ -4262,15 +4273,18 @@ class FortranToCBridgeGenerator(BridgeGenerator):
         """Handle allocatable function result helper for the current generation context."""
         helper_name = self.scope.get_new_name(f"x2py_collect_{result.name}")
         helper_scope = self.scope.new_child_scope(helper_name, "function")
+        storage_mode = ownership_decision_for_codegen_variable(result).storage_mode.value
         value = result.clone(
             helper_scope.get_new_name(f"{result.name}_value"),
             new_class=Variable,
+            memory_handling=storage_mode,
             is_argument=False,
             is_optional=False,
         )
         target = result.clone(
             helper_scope.get_new_name(f"{result.name}_target"),
             new_class=Variable,
+            memory_handling=storage_mode,
             is_argument=False,
             is_optional=False,
         )

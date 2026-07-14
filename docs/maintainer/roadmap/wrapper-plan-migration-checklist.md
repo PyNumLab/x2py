@@ -70,10 +70,12 @@ ModulePlan
       binding: BindingArgumentPlan
       bridge: BridgeArgumentPlan
       native_call_slot: NativeCallSlotPlan
+      transformations: TransformationPlan ...
     results: ResultPlan ...
       binding: BindingResultPlan
       bridge: BridgeResultPlan
       native_call_slot: NativeCallSlotPlan | None
+      transformations: TransformationPlan ...
     lifecycle: LifecycleActionPlan ...
       binding: BindingLifecyclePlan | None
       bridge: BridgeLifecyclePlan | None
@@ -118,6 +120,14 @@ ABI whose handoff plan carries data, rank, extents, strides, and itemsize.
 native descriptors and handles introduced in Phase 7. Neither backend may use
 one action as a fallback for the other.
 
+`NativeBarrierAction.PASS_RAW_ADDRESS` is the third, deliberately narrower
+array transport: one caller-supplied opaque address plus separately completed
+pointee rank, shape, element type, and orientation facts. It does not authorize
+NumPy extraction, a packed array-buffer ABI, or a native descriptor. Scalar,
+fixed-string, and array raw addresses reuse this action and
+`ArgumentHandoffMode.OPAQUE_ADDRESS`; their object kind then selects the named
+bridge association method. Do not add datatype-specific raw-address actions.
+
 The binding input and bridge input may have different representations: a C
 binding commonly receives `PyObject *`, produces a C scalar or address, and
 the bridge then consumes a value or pointer according to its ABI slot. The plan
@@ -132,6 +142,54 @@ Neither backend output is an input to the other backend.
 An owner may have only one active backend side when completed policy places the
 behavior entirely in one backend, but that ownership must be explicit in the
 plan rather than inferred during lowering.
+
+### Transformation Layer Ownership
+
+Every representation transformation has one explicit
+`TransformationPlan.layer`: `BINDING` or `BRIDGE`. The record also names its
+phase (`COPY_IN`, `NATIVE_MUTATION`, `COPY_OUT`, or `CLEANUP`), typed action,
+source representation, target representation, and reason. These records are
+subordinate to the `ArgumentTransferPlan` or `ResultPlan` that owns the value;
+they are not a parallel datatype-policy hierarchy.
+
+Use the binding layer for transformations involving Python objects or NumPy
+semantics: dtype/layout conversion, Python encoding/decoding, reference and
+identity handling, copy-back into caller objects, and Python-owned temporary
+cleanup. Use the bridge layer for transformations wholly between the ABI and a
+native-language representation: Fortran character representation, native
+descriptor/result materialization, derived native layout, or native-only
+allocation and copy.
+
+One logical conversion and its inverse/cleanup must stay at one layer. If a
+workflow genuinely needs both layers, policy completion records two distinct
+transformations separated by a named intermediate ABI representation. A
+backend consumes only transformations assigned to it and fails validation if
+asked to lower an action owned by the other backend. Method location, datatype,
+`intent`, and available local storage never select the transformation layer.
+For `COPY_F`, copy-in, conditional copy-out, and cleanup are all binding-owned;
+the bridge has no `COPY_F` transformation and reuses its ordinary ORDER_F
+association path.
+
+### Editable Signature And Native Intent Boundary
+
+The semantic `.pyi` signature is authoritative for the Python-facing call
+shape. The source converter may use native `intent` to propose the initial
+generated signature, but that proposal is not backend policy. A user may
+reorder visible Python arguments, keep a native output dummy as caller-supplied
+storage, project it into a Python result, or introduce hidden bridge storage.
+After the semantic contract is constructed or edited, completed native-call
+slots must account for every required native position exactly once; stored
+source `intent` must not silently override that mapping by hiding, exposing,
+reordering, allocating, or projecting a Python value.
+
+Bridge dummies and backend-local variables use the most permissive declaration
+that is compatible with the selected ABI, normally no `intent` or an internal
+`intent(inout)`-equivalent writable local. The called native procedure enforces
+its actual `intent(in)`, `intent(out)`, or `intent(inout)` contract. Required
+interoperability attributes such as `value`, optional presence fields, standard
+descriptor attributes, and true bridge-output parameters remain explicit ABI
+facts; they are not permission for a backend to reconstruct the user-facing
+signature from native `intent`.
 
 The plan includes every fact required for mechanical lowering:
 
@@ -528,10 +586,10 @@ summary, the exhaustive matrix, and the test tree disagree.
 
 | Status | Collected nodes |
 | --- | ---: |
-| `wrapper-plan` | 78 |
+| `wrapper-plan` | 94 |
 | `dual-route` | 5 |
-| `legacy` | 130 |
-| `not-applicable` | 95 |
+| `legacy` | 123 |
+| `not-applicable` | 96 |
 | `deferred-real-library` | 2 |
 
 #### Recorded Route Progression
@@ -557,6 +615,10 @@ blockers.
 | Phase 5D fixed string storage/raw addresses | 72 | 0 | 134 | 95 | 2 | 303 |
 | Phase 5 production route reconciliation | 76 | 0 | 130 | 95 | 2 | 303 |
 | Phase 6 ordinary arrays | 78 | 5 | 130 | 95 | 2 | 310 |
+| Phase 6G raw array addresses | 80 | 5 | 130 | 95 | 2 | 312 |
+| Phase 6 `COPY_F` representation copy | 81 | 5 | 130 | 95 | 2 | 313 |
+| Phase 7 native handles/descriptors | 88 | 5 | 129 | 96 | 2 | 320 |
+| Phase 7 production route reconciliation | 94 | 5 | 123 | 96 | 2 | 320 |
 
 Migration is complete only when `legacy`, `dual-route`, and
 `deferred-real-library` are all zero. At that point every runtime-generating
@@ -575,8 +637,9 @@ already covered by the new generator.
 | --- | --- | --- | --- |
 | `tests/wrapper/fortran/arrays/test_array_contracts.py::*` | source/generated-.pyi parity or parametrized route | ordinary arrays | `legacy` |
 | `tests/wrapper/fortran/arrays/test_array_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
-| `tests/wrapper/fortran/arrays/test_array_results.py::test_array_results_follow_data_buffer_and_descriptor_handle_contracts[*]` | source/generated-.pyi parity | ordinary arrays; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/arrays/test_array_results.py::test_array_results_follow_data_buffer_and_descriptor_handle_contracts[*]` | production plan route in source/generated-.pyi parity modes | fixed/runtime-shape ordinary array results; owned allocatable descriptor results; namespace preservation | `wrapper-plan` |
 | `tests/wrapper/fortran/arrays/test_array_results.py::test_ordinary_array_results_match_legacy_and_wrapper_plan_routes` | production output-only plan route with deliberate legacy rollback comparison | fixed/runtime-shape ordinary array results; ranks one through fifteen; Fortran order; zero-sized results; allocation/copy/release failure paths | `wrapper-plan` |
+| `tests/wrapper/fortran/arrays/test_array_results.py::test_owned_allocatable_results_match_legacy_and_wrapper_plan_routes` | reduced owned-result contract with deliberate legacy rollback comparison | allocated and zero-sized wrapper-owned `CFI_CDESC_T` function-result handles; extraction and release | `wrapper-plan` |
 | `tests/wrapper/fortran/arrays/test_assumed_rank_arrays.py::test_assumed_rank_arguments_dispatch_to_runtime_rank[*]` | source/generated-.pyi parity | ordinary arrays; native-handle actuals deferred to Phase 7 | `legacy` |
 | `tests/wrapper/fortran/arrays/test_assumed_rank_arrays.py::test_assumed_rank_bridge_dispatches_each_runtime_rank_argument[*]` | source/generated-.pyi parity | ordinary arrays; native-handle actuals deferred to Phase 7 | `legacy` |
 | `tests/wrapper/fortran/arrays/test_assumed_rank_arrays.py::test_assumed_rank_arrays_match_legacy_and_wrapper_plan_routes` | reduced semantic `.pyi` entry over the existing assumed-rank native unit | runtime ranks one through fifteen; mutable storage; rank validation; native-handle actuals deferred to Phase 7 | `dual-route` |
@@ -609,7 +672,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_cli_preserves_explicit_ordered_link_items` | direct wrapper/build route | semantic .pyi generation/parsing; build/compile/link orchestration; scalar inputs/results | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_cli_requires_a_native_link_input` | non-generating: validation/failure-path assertion | semantic .pyi generation/parsing; build/compile/link orchestration | `not-applicable` |
 | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_makefile_manifest_and_replay_workflows` | direct wrapper/build route | semantic .pyi generation/parsing; build/compile/link orchestration; scalar inputs/results | `legacy` |
-| `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_manifest_records_pointer_descriptor_interop_requirements` | direct wrapper/build route | semantic .pyi generation/parsing; build/compile/link orchestration; scalar inputs/results; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_manifest_records_pointer_descriptor_interop_requirements` | non-generating: manifest serialization unit | completed native-array build requirements and local standard-descriptor headers | `not-applicable` |
 | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_python_api_accepts_exactly_one_entry_contract` | direct wrapper/build route | semantic .pyi generation/parsing; build/compile/link orchestration; scalar inputs/results | `legacy` |
 | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_python_api_rejects_a_missing_native_artifact` | non-generating: validation/failure-path assertion | semantic .pyi generation/parsing; build/compile/link orchestration | `not-applicable` |
 | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_python_api_rejects_invalid_address_contracts_before_codegen[*]` | non-generating: validation/failure-path assertion | semantic .pyi generation/parsing; build/compile/link orchestration | `not-applicable` |
@@ -646,9 +709,12 @@ already covered by the new generator.
 | `tests/wrapper/fortran/derived_types/test_derived_type_methods.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots; classes/methods/properties/overloads | `legacy` |
 | `tests/wrapper/fortran/derived_types/test_inheritance.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots; classes/methods/properties/overloads | `legacy` |
 | `tests/wrapper/fortran/derived_types/test_pointers.py::test_module_and_derived_pointer_handles_track_native_association[*]` | source/generated-.pyi parity or parametrized route | derived types/snapshots; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_pointers.py::test_module_native_array_handles_match_legacy_and_wrapper_plan_routes` | reduced module-only contract with deliberate legacy rollback comparison | borrowed pointer/allocatable handles; descriptor calls; strided extraction; ordinary array actuals; operation permissions | `wrapper-plan` |
 | `tests/wrapper/fortran/derived_types/test_pointers.py::test_pointer_array_handles_block_on_unsupported_result_owner_policy[*]` | source/generated-.pyi parity or parametrized route | derived types/snapshots; native handles/descriptors | `legacy` |
 | `tests/wrapper/fortran/derived_types/test_pointers.py::test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifetime` | direct wrapper/build route | derived types/snapshots; native handles/descriptors | `legacy` |
-| `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_editable_contract_can_use_native_order_arguments_without_native_call` | direct wrapper/build route | semantic .pyi generation/parsing; native-call projections; arrays and derived types deferred to later lanes | `legacy` |
+| `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_editable_contract_can_use_native_order_arguments_without_native_call` | direct wrapper/build route | semantic .pyi generation/parsing; raw array addresses completed by Phase 6G; derived result remains Phase 8 | `legacy` |
+| `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_raw_array_addresses_match_legacy_and_wrapper_plan_routes` | reduced edited semantic `.pyi` entries over existing vector/matrix native routines | raw numeric addresses; visible scalar-storage extents; rank one/two; default C and explicit Fortran orientation; mutation; integer-only conversion | `wrapper-plan` |
+| `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_copy_f_preserves_logical_axes_through_binding_owned_temporary` | reduced edited semantic `.pyi` entries over the existing matrix native routine | explicit C-to-Fortran representation copy; native-input and inout calls; projected original identity; binding-owned copyback and cleanup | `wrapper-plan` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_fixed_string_storage_and_raw_address_match_legacy_and_wrapper_plan_routes` | reduced edited semantic `.pyi` entry over the existing `fnative_call_examples_f90` native unit | fixed mutable rank-zero NumPy bytes storage; raw fixed-string addresses; in-place mutation; rank/dtype/itemsize/writability/type validation | `wrapper-plan` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py::*` | direct wrapper/build route | semantic .pyi generation/parsing; native handles/descriptors; derived types/snapshots; optional/presence/writeback | `legacy` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_contradictory_ownership_contract_fails_before_bridge_generation` | non-generating: policy validation before bridge generation | semantic .pyi generation/parsing; native handles/descriptors; derived types/snapshots; optional/presence/writeback | `not-applicable` |
@@ -673,14 +739,19 @@ already covered by the new generator.
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_fixed_form_optional_arguments_drive_fortran_present_behavior[*]` | source/generated-.pyi parity or parametrized route | optional/presence; scalar inputs/results | `wrapper-plan` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_fixed_optional_scalar_wrapper_plan_route_matches_all_presence_states` | production plan route with deliberate legacy rollback comparison | optional/presence; scalar inputs/results; build/artifact integration | `wrapper-plan` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_allocatable_scalar_descriptor_distinguishes_omitted_none_and_value` | production plan route with deliberate legacy rollback comparison | optional/presence; nullable scalar descriptor; build/artifact integration | `wrapper-plan` |
+| `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_array_descriptors_match_legacy_and_wrapper_plan_routes` | reduced optional descriptor contract with deliberate legacy rollback comparison | omitted/`None` absence; present unallocated/unassociated and allocated/associated handle states; kind/dtype validation | `wrapper-plan` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_arguments_drive_fortran_present_behavior[*]` | source/generated-.pyi parity or parametrized route | optional/presence/writeback | `legacy` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_array_buffers_match_legacy_and_wrapper_plan_routes` | reduced semantic `.pyi` entry over the existing optional native unit | omitted/`None`/present ordinary array storage; mutation; projected identity; native-handle actuals deferred to Phase 7 | `dual-route` |
 | `tests/wrapper/fortran/function_calls/test_scalar_writeback_plan.py::test_scalar_copy_in_out_returns_replacement_through_both_routes` | production plan route with deliberate legacy rollback comparison | scalar copy-in/native mutation/copy-out/cleanup; build/artifact integration | `wrapper-plan` |
 | `tests/wrapper/fortran/function_calls/test_output_arguments.py::test_output_arguments_and_multiple_results_follow_python_projection_rules[*]` | source/generated-.pyi parity | mixed-type multiple-result aggregation; ordinary arrays; strings; derived types/snapshots; native handles/descriptors | `legacy` |
 | `tests/wrapper/fortran/function_calls/test_output_arguments.py::test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes` | production output-only plan route with deliberate legacy rollback comparison | fixed/runtime-shape hidden ordinary array output; zero-sized output; allocation/copy failure paths | `wrapper-plan` |
 | `tests/wrapper/fortran/layout_rules/test_wrapper_guide_layout.py::*` | non-generating: wrapper docs/test layout | test/docs layout | `not-applicable` |
-| `tests/wrapper/fortran/module_state/test_allocatable_replacement.py::*` | source/generated-.pyi parity or parametrized route | module variables/state; native handles/descriptors | `legacy` |
-| `tests/wrapper/fortran/module_state/test_allocatable_views.py::*` | source/generated-.pyi parity or parametrized route | module variables/state; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/module_state/test_allocatable_replacement.py::test_allocatable_inout_arrays_mutate_and_return_the_same_handle[*]` | source/generated-.pyi parity route | module variables/state; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/module_state/test_allocatable_replacement.py::test_allocatable_replacement_has_no_native_memory_errors[*]` | source/generated-.pyi parity route | module variables/state; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/module_state/test_allocatable_replacement.py::test_projected_allocatable_descriptor_matches_legacy_and_wrapper_plan_routes` | reduced owned-result plus projected-descriptor contract with deliberate legacy rollback comparison | direct persistent descriptor mutation; allocation/reallocation/deallocation; same-handle result identity | `wrapper-plan` |
+| `tests/wrapper/fortran/module_state/test_allocatable_views.py::test_allocatable_module_fields_and_results_expose_lifetime_safe_handles[*]` | source/generated-.pyi parity with one mixed generation unit | derived class/field handles and parent retention remain Phase 8/9 blockers | `legacy` |
+| `tests/wrapper/fortran/module_state/test_allocatable_views.py::test_scalar_descriptor_module_variables_return_copied_optional_values[*]` | production plan route in source/generated-.pyi parity modes | rank-zero allocatable/pointer arguments, writeback, results, and copied nullable module values | `wrapper-plan` |
+| `tests/wrapper/fortran/module_state/test_allocatable_views.py::test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction[*]` | production plan route in source/generated-.pyi parity modes | detached read-only snapshots of plain allocatable module arrays; capsule-owned lifetime | `wrapper-plan` |
 | `tests/wrapper/fortran/module_state/test_common_blocks.py::*` | source/generated-.pyi parity or parametrized route | scalar calls with internal common-block storage | `wrapper-plan` |
 | `tests/wrapper/fortran/module_state/test_module_state.py::test_aliased_derived_module_object_borrows_native_state[*]` | source/generated-.pyi parity or parametrized route | module variables/state; derived types/snapshots | `legacy` |
 | `tests/wrapper/fortran/module_state/test_module_state.py::test_scalar_module_variables_use_attributes_and_parameters_have_no_native_setter[*]` | source/generated-.pyi parity or parametrized route | module variables/state | `legacy` |
@@ -727,7 +798,10 @@ already covered by the new generator.
 | `tests/wrapper/fortran/strings/test_character_arguments.py::test_edited_modern_string_contract_wraps_full_axis_spelling_set` | edited semantic `.pyi` contract | strings; fixed/assumed inputs; arrays; mutable string storage | `legacy` |
 | `tests/wrapper/fortran/strings/test_character_arguments.py::test_legacy_fortran_character_arguments_and_results[*]` | production plan route from source/generated-.pyi parity | fixed-form strings; fixed/assumed inputs; fixed results | `wrapper-plan` |
 | `tests/wrapper/fortran/strings/test_character_arguments.py::test_modern_fortran_character_arguments_and_results[*]` | source/generated-.pyi parity | strings; fixed/assumed inputs; fixed/deferred results; arrays; writeback | `legacy` |
+| `tests/wrapper/fortran/strings/test_character_arguments.py::test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes` | reduced scalar descriptor result contract with deliberate legacy rollback comparison | runtime length; nullable copy-out; UTF-8 data; allocation failure | `wrapper-plan` |
+| `tests/wrapper/fortran/strings/test_character_arguments.py::test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes` | reduced descriptor-result and projected-descriptor contract with deliberate legacy rollback comparison | hidden/direct owned deferred-character arrays; runtime `S3`/`S4`/`S5` width; projected identity; nullable rank-zero result | `wrapper-plan` |
 | `tests/wrapper/fortran/strings/test_character_arguments.py::test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes` | reduced semantic `.pyi` entry over the existing `fstrings_f90` native unit | fixed-width `NPY_STRING` array itemsize; rank/dtype/zero-size validation; native-handle actuals deferred to Phase 7 | `dual-route` |
+| `tests/wrapper/fortran/strings/test_character_arguments.py::test_raw_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes` | reduced edited semantic `.pyi` entry over the existing `fstrings_f90` native unit | raw fixed-width character array address; literal shape; element length; integer-only conversion | `wrapper-plan` |
 | `tests/wrapper/fortran/strings/test_character_arguments.py::test_required_scalar_string_inputs_match_legacy_and_wrapper_plan_routes` | reduced semantic `.pyi` entry over the existing `fstrings_f90` native unit | required fixed/assumed scalar string inputs; default/kind-1/`c_char`; UTF-8 length and NUL validation; scalar results | `wrapper-plan` |
 | `tests/wrapper/fortran/strings/test_character_arguments.py::test_fixed_string_results_match_legacy_and_wrapper_plan_routes` | reduced semantic `.pyi` entry over the existing `fstrings_f90` native unit | direct fixed string results; trailing blanks; default/`c_char`; allocation failure | `wrapper-plan` |
 | `tests/wrapper/fortran/strings/test_character_edge_cases.py::test_fortran_character_edge_cases_follow_copy_in_copy_out_policy[*]` | production plan route from source/generated-.pyi parity | strings; fixed/assumed input/output; optional presence; Unicode/NUL handling | `wrapper-plan` |
@@ -1603,6 +1677,8 @@ The ordinary-array lane borrows or copies NumPy data buffers; it never creates
 or consumes a persistent native descriptor handle. `Allocatable[T[...]]`,
 `Pointer[T[...]]`, rank-zero allocatable/pointer scalars, and a native handle
 used as the actual value for an ordinary array dummy all remain in Phase 7.
+Caller-supplied `Addr(T[...])` storage is the distinct Phase 6G follow-up and
+must complete before Phase 7.
 Derived-type arrays remain in Phase 8, fields in Phases 8 and 9, and callback
 arrays in Phase 10. The full BLAS/LAPACK generation unit remains deferred until
 final cutover even when individual ordinary-array shapes become supported.
@@ -1689,8 +1765,39 @@ bridge association order follows the completed layout. Any expression that
 cannot be represented by available roles remains blocked rather than being
 recomputed in a backend.
 
+Order is an exact-storage selector, not an implicit conversion selector.
+`ORDER_F` preserves logical axes over Fortran-contiguous storage. `ORDER_C`
+passes the original C-contiguous address and reverses bridge extents, so native
+Fortran observes the transposed storage view. Preserving the same logical axes
+while accepting the opposite layout uses explicit `COPY_F` metadata, never an
+inference from order. The owning `ArgumentTransferPlan` records C source order,
+F native order, copy-in, conditional copy-out, original-object projection, and
+temporary cleanup. The binding performs both copy directions and owns the
+NumPy temporary. The bridge receives the temporary through the unchanged
+ORDER_F association path and performs neither half of this representation
+conversion.
+
+The initial `COPY_F` lane includes required, concrete-rank, dense numeric
+ndarray arguments. It excludes `Flat`, assumed-rank, strided, optional and
+character arrays, native descriptor arguments, and handle actuals until each
+has separate policy and parity evidence.
+
+`Flat` is one axis marker and never collapses a multidimensional plan:
+`T[:, Flat]` remains rank two in Fortran order, while
+`Annotated[T[Flat, :], ORDER_C]` is its C-order orientation. The bridge reverses
+only the C-order association extents. For an external assumed-size interface,
+an explicit prefix such as `T[3, Flat]` may lower to `a(3, *)`; a runtime-only
+prefix uses the standards-valid sequence-associated `a(*)` declaration while
+the bridge retains every runtime extent and the completed logical rank.
+
 - [x] Complete declared-shape evaluation, flat-storage orientation,
   multidimensional dense handoff, validation, parity, and ledger evidence.
+- [x] Complete explicit C-to-Fortran representation copies through `COPY_F`,
+  including native-input and inout calls through the same binding-owned copy
+  lifecycle, projected original identity, temporary cleanup, direct bridge
+  reuse, validation, and compiled parity. Native `intent` remains owned by the
+  called procedure and is not duplicated in the semantic `.pyi` or bridge
+  temporary.
 
 ### Phase 6C — Positive-Strided Ordinary Views
 
@@ -1743,7 +1850,7 @@ NumPy dtype construction and bridge byte-count calculation.
 - [x] Complete optional presence, assumed-rank dispatch, character itemsize,
   validation, parity, and ledger evidence.
 
-### Phase 6 Completion
+### Phase 6A-F Ordinary-Buffer Completion
 
 - [x] Expand the phase under the mandatory expansion gate from live semantic
   array contracts, legacy binding/bridge lowering, public docs, and focused
@@ -1752,36 +1859,1000 @@ NumPy dtype construction and bridge byte-count calculation.
   order, itemsize, writeability, result, and lifecycle role.
 - [x] Validate every completed array policy and handoff role before either
   backend emits source.
-- [x] Finish Phase 6 only when every ordinary-array matrix row is migrated or
-  remains blocked solely by an explicitly later descriptor, derived, field,
-  callback, or deferred-real-library lane.
+- [x] Finish Phases 6A-F only when every ordinary-array buffer matrix row is
+  migrated or remains blocked solely by an explicitly later descriptor,
+  derived, field, callback, or deferred-real-library lane.
+
+### Phase 6G — Raw Array Addresses — Complete
+
+Implementation status: complete. Required raw array addresses now use the
+shared completed policy, `ArgumentTransferPlan`, native slot, centralized
+validation, and named binding/bridge lowering paths. The dependency-closed
+numeric and fixed-character runtime rows have passed compiled legacy/direct
+parity and moved to `wrapper-plan`.
+
+Scope: required Python-visible type-level raw-address array arguments such as
+`Addr(Float64[n])`. The caller supplies one Python integer address, x2py
+forwards it as one opaque C address, and the bridge associates a typed native
+array view using rank, shape, element type, and orientation facts completed
+before `ir2ast.py`. There is no NumPy object, runtime handle, persistent native
+descriptor, data copy, ownership transfer, or automatic release.
+
+This lane follows Phase 6 because its semantic object kind is
+`ObjectKind.NUMPY_ARRAY` and its pointee layout reuses the array shape record.
+It remains a distinct transport from an ordinary array buffer. The fixed
+dispatch algorithm is:
+
+1. match `ObjectKind.NUMPY_ARRAY`;
+2. match the completed Python barrier action;
+3. lower `ARRAY_STORAGE` through the Phase 6A-F buffer path or `RAW_ADDRESS`
+   through Phase 6G;
+4. require the matching native action, handoff mode, bridge data action, and
+   array-shape facts; and
+5. fail validation rather than substituting the other transport.
+
+The same algorithm already separates scalar and string value, storage, and
+raw-address forms. Phase 6G must extend that system; it must not add a parallel
+raw-pointer planner, a datatype-based backend branch, or a special function or
+module plan.
+
+#### Public Contract And Explicit Non-Scope
+
+The maintained public contract is already documented in
+`docs/user/reference/semantic-pyi-format.md` and
+`docs/user/guide/data-types.md`. Preserve it exactly:
+
+- `Addr(T[d1, ..., dr])` is depth one and has positive rank;
+- the pointee dtype is primitive;
+- every extent expression is resolved from literals and visible scalar
+  arguments or visible rank-zero scalar storage;
+- the integer carries no dtype, rank, shape, order, alignment, bounds,
+  ownership, or lifetime metadata;
+- x2py cannot prove that the supplied address actually points to compatible,
+  sufficiently large, live storage; and
+- edited semantic `.pyi` raw-address storage is mutable caller storage unless
+  a completed policy explicitly says otherwise.
+
+The initial compiled oracle is `Addr(Float64[n])`. Before declaring the lane
+complete, audit every public primitive family already accepted by semantic
+policy, including bool, integer, real, complex, and fixed-width character
+array pointees. Add compiled coverage for a family only when an existing native
+routine can prove it without broadening the public contract. A fixed scalar
+`Addr(String[n])` remains the completed Phase 5D string path; a rank-positive
+`Addr(String[k][n, ...])` is an array path and must carry both the fixed element
+length and the resolved array shape.
+
+Explicitly excluded from this lane are:
+
+- scalar `Addr(T)`, already completed in Phase 2E;
+- fixed scalar `Addr(String[n])`, already completed in Phase 5D;
+- NumPy `T[...]` storage, already completed in Phases 6A-F;
+- unresolved or assumed shapes such as `Addr(Float64[:])`, assumed rank,
+  assumed size, and stride-marker shapes;
+- optional, nullable, projected, direct-result, and hidden-output raw addresses
+  unless a separate public-contract audit first proves their intended Python
+  ownership and absence/result behavior;
+- wrapped/derived pointees, pointer graphs deeper than one, and callbacks;
+- `Allocatable[T[...]]`, `Pointer[T[...]]`, runtime native handles, and C
+  descriptors, which belong to Phase 7; and
+- any implicit conversion from an ndarray or runtime handle to its address.
+
+#### One Action Vocabulary, Three Array Transports
+
+| Contract | Object kind | Python action | Native action | Handoff mode | Bridge data action |
+| --- | --- | --- | --- | --- | --- |
+| NumPy `T[...]` | `NUMPY_ARRAY` | `ARRAY_STORAGE` | `PASS_ARRAY_BUFFER` | `ARRAY_BUFFER` | `ASSOCIATE_VIEW` |
+| Raw `Addr(T[...])` | `NUMPY_ARRAY` | `RAW_ADDRESS` | `PASS_RAW_ADDRESS` | `OPAQUE_ADDRESS` | `ASSOCIATE_VIEW` |
+| Native descriptor contract | completed handle kind | completed handle action | `PASS_NATIVE_DESCRIPTOR` | Phase 7 descriptor mode | completed Phase 7 action |
+
+`ASSOCIATE_VIEW` means the bridge creates a typed, non-owning view; it does not
+mean that the Python binding extracted a NumPy buffer. The Python and native
+barrier actions remain the authoritative distinction. Do not introduce names
+such as `PASS_RAW_ARRAY`, `COPY_RAW_ARRAY`, or datatype-specific address
+actions.
+
+The completed ownership/action tuple for the required mutable public form is:
+
+- `OwnershipOwner.CALLER`;
+- `TransferMode.IN_PLACE`;
+- `DestructionPolicy.CALLER`;
+- `StorageMode.STACK` for the call-local pointer carrier, not for the pointee;
+- `CodegenAction.IN_PLACE_ARGUMENT`;
+- `PythonBarrierAction.RAW_ADDRESS`;
+- `NativeBarrierAction.PASS_RAW_ADDRESS`;
+- `ArgumentHandoffMode.OPAQUE_ADDRESS`; and
+- `BridgeDataAction.ASSOCIATE_VIEW` with no copy reason.
+
+If a retained source-derived contract can be read-only, policy may instead
+complete `CALL_LOCAL` / `CALL_LOCAL_INPUT` / `NONE` destruction. Both
+backends must consume that completed tuple; neither may infer mutability from
+the pointee type or raw-address spelling. A raw array never has copy-in,
+copy-out, projected-identity, allocation, destruction, release, or lifecycle
+actions in this lane.
+
+#### Required Policy And Plan Shape
+
+Keep the feature under the existing `ArgumentTransferPlan`:
+
+```text
+ArgumentTransferPlan
+  object_kind = NUMPY_ARRAY
+  binding.python_action = RAW_ADDRESS
+  bridge.native_action = PASS_RAW_ADDRESS
+  bridge.handoff_mode = OPAQUE_ADDRESS
+  bridge.data_action = ASSOCIATE_VIEW
+  array = ArrayHandoffPlan
+  native_call_slot = the same referenced NativeCallSlotPlan
+```
+
+Do not add `RawArrayPlan`, a second native slot, or a raw-address lifecycle
+owner. Generalize the existing completed `ArrayHandoffPolicy` and
+`ArrayHandoffPlan` only enough to carry raw pointee layout:
+
+- concrete rank and one shape expression per axis;
+- one `data_role` equal to the binding/bridge/native-slot address role;
+- `extent_reference_roles` naming the existing visible scalar handoff roles
+  used by each shape expression;
+- the completed orientation used for native pointer association;
+- fixed character element length/itemsize when the pointee family is string;
+  and
+- no binding-extracted runtime rank, extent, upper-bound, stride, or itemsize
+  ABI roles.
+
+For a raw address, the shape record describes the pointee view; it does not
+describe fields packed by the binding. A visible `n` used by
+`Addr(Float64[n])` already has its own `ArgumentTransferPlan` and native-call
+slot. Reference that role rather than passing a duplicate array extent. A
+literal extent requires no extra ABI field. The bridge resolves the shape
+expression from those planned native role names.
+
+Post-IR policy completion must explicitly select multidimensional orientation
+before planning. Preserve the current legacy interpretation, including its
+default orientation, only after capturing a rank-two artifact/runtime oracle.
+Do not leave `ir2ast.py`, a codegen-model `order` default, or the bridge's local
+shape reversal to make that decision.
+
+#### Completed Direct-Plan Seams
+
+The implementation split completed array policy by Python barrier action,
+selected `OPAQUE_ADDRESS` and `ASSOCIATE_VIEW` before lowering, projected raw
+pointee layout into the shared array record, omitted packed NumPy-buffer roles,
+and added named raw-address checks and association methods to both backends.
+Ordinary-array buffer checks remain unchanged and fail closed; neither backend
+substitutes one transport for another.
+
+#### Dependency-Ordered Implementation Slices
+
+##### Phase 6G1 — Complete Raw Array Policy
+
+- [x] Make the `NUMPY_ARRAY` boundary validator dispatch on
+  `PythonBarrierAction` and add a named raw-address branch with the exact
+  ownership/action tuple above.
+- [x] Complete raw pointee rank, shape expressions and their visible-scalar
+  dependencies, primitive family, fixed character element length, and
+  orientation before `ir2ast.py`.
+- [x] Complete `OPAQUE_ADDRESS` and `ASSOCIATE_VIEW` from the action pair; do
+  not infer either in a backend.
+- [x] Keep unresolved dimensions, unsupported pointee families, optionality,
+  projection, nullability, and deeper pointer graphs blocked with owner-path
+  diagnostics.
+- [x] Freeze current behavior for zero/negative extent expressions, zero or
+  negative integer addresses, and integer overflow against the public docs and
+  legacy conversion before changing any rule. If a rule changes, change it in
+  policy and public docs, not in one backend.
+
+Audit result: resolved zero and negative extent expressions remain accepted
+without a positivity check; integer zero becomes a null pointer without a
+conversion error; negative integers follow `PyLong_AsVoidPtr`; and pointer-size
+overflow raises `OverflowError`. Public documentation now states that these are
+unsafe caller responsibilities, and tests prove the conversion guard and
+generated shape without dereferencing an invalid address.
+
+##### Phase 6G2 — Project And Validate The Shared Plan
+
+- [x] Populate the existing `ArgumentTransferPlan.array` and its shared
+  `NativeCallSlotPlan.array` with one identical raw pointee layout record.
+- [x] Reuse the scalar/string address handoff role and
+  `ArgumentHandoffMode.OPAQUE_ADDRESS`; add no raw-array ABI action.
+- [x] Resolve every shape symbol to an existing visible scalar role and reject
+  unavailable, cyclic, hidden, non-scalar, or result-only dependencies before
+  lowering.
+- [x] Split central array diagnostics by the completed Python action so buffer
+  validation still requires packed extent/layout roles while raw validation
+  forbids them.
+- [x] Add editable-plan tests that independently corrupt object kind, Python
+  action, native action, handoff mode, bridge data action, rank, shape,
+  reference roles, element family, character length, orientation, and native
+  slot identity.
+
+##### Phase 6G3 — Reuse Binding Raw-Address Extraction
+
+- [x] Reuse `_lower_argument_required_raw_address()` for the Python integer
+  check and `PyLong_AsVoidPtr` conversion. Scalar, string, and array raw
+  addresses should share this extraction code.
+- [x] Emit one `void *` handoff value and no `PyArray_*`, dtype, rank, shape,
+  layout, writeability, or itemsize checks.
+- [x] Keep object-kind-specific logic out of the conversion method; array
+  shape affects only validation, the bridge view, and native call.
+- [x] Preserve the existing conversion rule under which integer zero produces
+  a null pointer without itself raising a Python conversion error. Prove that
+  rule without dereferencing the null pointer; runtime tests must never call
+  native code with an invalid test address.
+
+##### Phase 6G4 — Add Named Raw Array Bridge Association
+
+- [x] Add directly named raw-array declaration and association methods in the
+  array method group. Dispatch to them only for
+  `NUMPY_ARRAY` / `RAW_ADDRESS` / `PASS_RAW_ADDRESS` /
+  `OPAQUE_ADDRESS` / `ASSOCIATE_VIEW`.
+- [x] Declare one `type(c_ptr), value` bridge parameter and one backend-local
+  typed pointer view. The local view is an emitted-code helper, not a new plan
+  owner.
+- [x] Associate the view with `c_f_pointer` using only the planned shape and
+  orientation, then pass that view in the existing native-call slot position.
+- [x] Preserve fixed character element length when the pointee is a character
+  array. Do not pass a runtime itemsize unless a future public contract
+  explicitly requires one.
+- [x] Emit no copy, writeback, allocation, release, descriptor, or NumPy
+  mechanics.
+
+##### Phase 6G5 — Prove The Route Before Widening It
+
+- [x] Retain semantic conversion coverage in
+  `tests/semantics/conversion/pyi/test_calls_and_projections.py` for round-trip,
+  visible extent sources, primitive pointees, and rejection of unresolved or
+  wrapped forms.
+- [x] Add focused completed-policy tests for every authoritative action and
+  blocker, plus `array-raw-address-inputs` support classification.
+- [x] Add `tests/wrapper_codegen/test_phase6g_raw_array_addresses.py` for plan
+  shape, edits, validation, C nodes, Fortran nodes, native order, and the
+  absence of buffer/descriptor/lifecycle nodes.
+- [x] Extract `fill_vector_raw` from
+  `test_editable_contract_can_use_native_order_arguments_without_native_call`
+  into a reduced legacy/direct-plan parity test. Cover mutation through a valid
+  `raw_vector.ctypes.data`, ndarray rejection, wrong Python types, a visible
+  rank-zero scalar extent, and the established native argument order.
+- [x] Prove raw-array native argument reordering in the direct-plan generated
+  call test. The legacy AST route retains only a projection marker and is not
+  an oracle for reordered projection-slot lowering.
+- [x] Add literal and arithmetic extent-role cases. Add a rank-two runtime
+  parity case before freezing default/explicit orientation. Add a fixed-width
+  character-array case if the public family audit retains that contract.
+- [x] Keep the broad native-order test `legacy` until its derived-type owner is
+  migrated; only the reduced raw-array row may move to `wrapper-plan` here.
+- [x] Run the focused policy/plan/backend tests, the relevant wrapper test,
+  documentation checks, wrapper-codegen complexity checker, and required
+  static-analysis suite before changing route support.
+
+#### Phase 6G Exit Gate
+
+- [x] Expand raw array addresses as the explicit next lane using the public
+  contract, completed semantic policy, legacy binding/bridge primitives, and
+  the existing compiled `Addr(Float64[n])` oracle.
+- [x] Complete Phases 6G1 through 6G5 without changing the public raw-address
+  contract or introducing a parallel action vocabulary.
+- [x] Prove that one maintainer algorithm—object kind, Python action, native
+  action, handoff mode, data action, then typed shape facts—covers ordinary and
+  raw arrays without backend inference.
+- [x] Move only dependency-closed raw-array test rows after generated-artifact
+  comparison and compiled legacy/direct parity pass.
+- [x] Begin Phase 7 only after this exit gate is complete. Phase 7 must consume
+  the established distinction among array buffers, raw addresses, and native
+  descriptors rather than revisiting it.
 
 ## Phase 7 — Native Array Handles And Descriptors
 
-Scope: `Allocatable[T[...]]`, `Pointer[T[...]]`, scalar descriptor-backed
-values including allocatable or pointer `String`, descriptor-backed handoffs,
-and runtime native array handle objects.
+Implementation status: complete, pending the final verification gate recorded
+at the end of this phase. Phase 6G completed first. The direct route now owns
+the dependency-closed Phase 7A-H cases while every field, pointer-result,
+callback, and deferred-real-library exclusion remains on its later blocker.
 
-- [ ] Before implementation, expand this phase under the mandatory expansion
-  gate and reconcile it with the maintained native-array-handle checklist.
-  Split allocatable and pointer behavior only after extracting their shared
-  descriptor, presence, runtime element-length, ownership, release,
-  module/field, argument, and result sub-lanes. Include nullable deferred-
-  length scalar character results in that shared audit rather than creating a
-  string-only descriptor path. Keep rank-zero scalar descriptor results as
-  copied Python scalar values; reserve native-array handles for rank-positive
-  array storage.
+Scope: migrate the existing native descriptor and runtime-handle contract into
+the wrapper-plan path without redefining that public contract. The maintained
+`native-array-handle-checklist.md` remains the feature-level behavioral oracle;
+this section owns only its migration into completed wrapper policy,
+`ArgumentTransferPlan`, `ResultPlan`, `ModuleVariablePlan`, subordinate native
+slots and lifecycle actions, direct C/Fortran lowering, and production route
+selection.
 
-- [ ] Define descriptor handoff specs for CFI descriptors, descriptor ownership,
-  optional-absent handles, owner retention, extraction policy, and required
-  headers.
-- [ ] Move bridge-created `ArrayInteropPolicy` decisions into plan generation or
-  completed policy for source/contract values.
-- [ ] Replace bridge-created semantic `OwnershipDecision` values for generated
-  helper temporaries with explicit bridge-local helper specs.
-- [ ] Validate descriptor/data-buffer mismatches before emission.
-- [ ] Keep generated helper storage local to bridge/binding implementation
-  methods; do not represent helper temporaries as semantic ownership policy.
+The shared descriptor family includes:
+
+- rank-positive `Allocatable[T[...]]` and `Pointer[T[...]]` handle arguments;
+- optional-absent array handles, where omission or `None` means the native
+  optional dummy is absent;
+- projected writable descriptors whose mutation must remain attached to the
+  same caller handle;
+- wrapper-owned allocatable array results and hidden outputs;
+- borrowed module allocatable and pointer handles plus their generated operation
+  tables;
+- native handles passed as actual values to ordinary `T[...]` dummies without
+  an implicit `.to_numpy()` call;
+- build requirements for standard C descriptors; and
+- the remaining rank-zero allocatable/pointer result cases, including nullable
+  deferred-length scalar character values, which return copied Python values
+  rather than native-array handle objects.
+
+Allocatable and Pointer remain separate public contract types but share one
+plan and lowering structure. Descriptor kind selects only the operations that
+genuinely differ: allocation state versus association state, allowed
+shape-changing operations, target lifetime, extraction policy, and release.
+Do not create independent allocatable and pointer planner hierarchies.
+
+### Phase 7 Boundary And Explicit Non-Scope
+
+The following four boundaries must remain distinct:
+
+| Python contract | Planned Python input | Native transport | Owner phase |
+| --- | --- | --- | --- |
+| `T[...]` with a NumPy array | validated NumPy storage | `PASS_ARRAY_BUFFER` | Phase 6 |
+| `T[...]` with an allocated/associated native handle actual | validated handle array-data facet | `PASS_ARRAY_BUFFER` | Phase 7A |
+| `Allocatable[T[...]]` / `Pointer[T[...]]` | matching runtime handle object | `PASS_NATIVE_DESCRIPTOR` | Phase 7B onward |
+| `Addr(T[n, ...])` | caller-supplied integer address | `PASS_RAW_ADDRESS` | Phase 6G prerequisite, not Phase 7 |
+
+`Addr(Float64[n])` is a supported public semantic `.pyi` contract when
+every extent is a literal or an expression over visible scalar arguments or
+rank-zero scalar storage. It accepts an integer such as `array.ctypes.data` and
+forwards that address without ownership, dtype, alignment, lifetime, or bounds
+validation. Parsing, policy completion, printing, and both compiled wrapper
+routes support it through the completed
+`RAW_ADDRESS` / `PASS_RAW_ADDRESS` selector pair. Do not misclassify this raw
+pointer as a NumPy buffer, native handle, or C descriptor while maintaining
+Phase 7.
+
+Other exclusions and dependencies are:
+
+- ordinary NumPy-only buffer extraction, shape, stride, output identity, and
+  copy-result behavior already completed in Phase 6;
+- caller-supplied raw array addresses, completed separately by the Phase 6G
+  entry dependency;
+- derived-type field attachment, class construction, parent-wrapper creation,
+  and property orchestration, which require Phases 8 and 9 even though the
+  shared native-handle plan must already be reusable by those later owners;
+- pointer results without completed stable owner storage and target lifetime;
+- callback descriptor arguments or results, which remain in Phase 10;
+- compiler-private descriptor layout inspection or copying;
+- any implicit `.to_numpy()` conversion when a native handle is passed to an
+  ordinary array dummy; and
+- the deferred BLAS/LAPACK generation unit until final cutover.
+
+### Existing Semantic Authority And Legacy Oracle
+
+Do not redesign the public feature while migrating it. Reuse these completed
+sources of truth:
+
+- `x2py/semantics/native_array_handles.py` defines
+  `NativeArrayHandlePolicy`, `ArrayInteropPolicy`, handle facts, descriptor
+  kinds, and completed build requirements.
+- `x2py/semantics/policy_completion.py` completes handle kind, origin, owner,
+  owner retention, descriptor ownership, getter/setter behavior, output
+  projection, release, target lifetime, destruction, extraction, interop,
+  nullability, storage mode, operations, and blockers before `ir2ast.py`.
+- `x2py/runtime/handles.py` owns the reusable runtime protocol, including
+  `_native_array_actual_argument_for_binding_positional`,
+  `_native_array_descriptor_argument_for_binding_positional`, and
+  `_native_array_descriptor_handoff_for_binding_positional`. Direct lowering
+  must call these helpers rather than duplicate their Python validation.
+- `x2py/codegen/bindings/c_to_python.py` is the legacy binding oracle. Its
+  `_ARRAY_INTEROP_POLICY_DISPATCHER`, `_NATIVE_ARRAY_HANDLE_DISPATCHER`,
+  descriptor-argument handlers, owned-result handlers, operation wrappers, and
+  descriptor reader define the currently passing C behavior.
+- `x2py/codegen/bridges/fortran_to_c.py` is the legacy bridge oracle. Its
+  corresponding dispatchers, descriptor-argument handlers, module/field
+  operation generators, and owned-allocatable result helpers define the
+  currently passing Fortran behavior.
+- `x2py/pipeline/build.py` already derives native-array build requirements from
+  completed semantic policy and records them in manifests. The wrapper plan
+  must carry and emit the matching artifact requirements without rediscovering
+  them from generated source text.
+
+The legacy generators are behavioral oracles, not dependencies of
+`x2py/wrapper_codegen`. Reuse the runtime helpers and completed semantic
+records directly. Rewrite the smallest equivalent node/lowering methods in the
+direct generators; do not import legacy binding/bridge generator methods or
+legacy codegen-model nodes into the wrapper-plan package.
+
+### Completed Direct-Plan Shape
+
+Wrapper policy now carries the completed native-handle and array-actual facts.
+`ArgumentTransferPlan`, `ResultPlan`, and `ModuleVariablePlan` distinguish a
+NumPy data-buffer transfer, a normal array dummy receiving a handle actual, and
+a descriptor-handle transfer. Central validation fails closed when any typed
+handoff, operation, role, ownership fact, or required header is inconsistent;
+neither backend infers policy from datatype or `descriptor_boundary`.
+
+### Required Plan Shape
+
+Keep all descriptor-specific state subordinate to the existing datatype-
+varying owners:
+
+```text
+ArgumentTransferPlan
+  array: ArrayHandoffPlan | None
+  native_array_actual: NativeArrayActualPlan | None
+  native_array_handle: NativeArrayHandlePlan | None
+    handoff: NativeDescriptorHandoffPlan
+  native_call_slot: NativeCallSlotPlan
+
+ResultPlan
+  native_array_handle: NativeArrayHandlePlan | None
+  native_call_slot: NativeCallSlotPlan | None
+
+ModuleVariablePlan
+  native_array_handle: NativeArrayHandlePlan | None
+
+FunctionPlan
+  native_call_slots: shared ordered references
+  lifecycle actions: ordered handle materialization/release references
+```
+
+`NativeCallSlotPlan` and `LifecycleActionPlan` are not competing top-level
+semantic owners. A native slot is the argument/result ABI facet shared by its
+owning transfer plan, while lifecycle records are function-wide ordering
+indexes back to argument/result roles. Descriptor ownership, release, and
+operation policy stay under `ArgumentTransferPlan`, `ResultPlan`, or
+`ModuleVariablePlan`. Backend-local CFI storage, copy buffers, and failure
+cleanup remain inside the named lowerer selected by those plans.
+
+`NativeArrayActualPlan` is used only when an ordinary `T[...]` argument permits
+a runtime native handle as another source for the existing array-buffer ABI. It
+records the explicitly accepted Python source kinds and the shared dtype, rank,
+shape, layout, writeability, native-byte-order, alignment, and ABI-role checks.
+It never carries descriptor ownership or extraction policy.
+
+`NativeArrayHandlePlan` is one editable projection of the completed handle
+policy. It must contain, using typed values rather than free-form backend
+method names:
+
+- descriptor kind and handle kind;
+- origin, owner, owner-retention mode, descriptor ownership, and borrowed state;
+- element datatype family, dtype, rank, declared shape, order, and character
+  element length when applicable;
+- getter behavior, Python setter exposure, and native setter assignment;
+- output projection and same-handle identity requirements;
+- release responsibility, target lifetime, destroy behavior, and storage mode;
+- `.to_numpy()` extraction action and allowed generated operations;
+- descriptor-interop requirement and required headers;
+- nullability and optional-absent-handle behavior; and
+- one `NativeDescriptorHandoffPlan` with its ABI form and symbolic roles.
+
+`NativeDescriptorHandoffPlan` must distinguish these typed ABI forms:
+
+- `FACT_PACKED_CALL_LOCAL`: a non-projected descriptor argument supplies
+  validated standard descriptor facts; the binding passes those fields and the
+  bridge establishes call-local standard C descriptor storage.
+- `DIRECT_STANDARD_DESCRIPTOR`: a projected writable handle passes its
+  persistent standard-descriptor pointer so allocation, deallocation,
+  reassociation, and shape changes remain attached to that handle.
+- `OWNED_RESULT_STORAGE`: an allocatable result is materialized into persistent
+  wrapper-owned CFI storage and later destroyed by the runtime handle.
+
+The handoff records the descriptor-pointer role when present, `base_addr`,
+`elem_len`, runtime rank, per-axis lower-bound/extent/stride-multiplier roles,
+an optional presence role, owner-storage role, and generated-operation roles.
+The `NativeCallSlotPlan` and its owning argument or hidden result must reference
+the same mutable handoff record; do not duplicate descriptor facts that a
+maintainer would need to edit twice.
+
+Convert the current string-valued completed policy selectors into typed plan
+enums or validate and translate them exactly once while building wrapper
+policy. Backends must not match raw strings such as `argument_descriptor`,
+`projected_handle`, or `pointer_c_descriptor` to choose behavior.
+
+### Consistent Action Vocabulary
+
+Reuse the existing orthogonal actions:
+
+| Case | `ObjectKind` | Python action | Native action | `CodegenAction` | Bridge data action |
+| --- | --- | --- | --- | --- | --- |
+| Ordinary array with ndarray or handle actual | `NUMPY_ARRAY` | `ARRAY_STORAGE`, with explicitly planned accepted sources | `PASS_ARRAY_BUFFER` | existing Phase 6 input/in-place action | `ASSOCIATE_VIEW` |
+| Read-only descriptor handle argument | `NUMPY_ARRAY` | `WRAPPER_INSTANCE` | `PASS_NATIVE_DESCRIPTOR` | `CALL_LOCAL_INPUT` | `ASSOCIATE_VIEW` |
+| Writable projected descriptor handle | `NUMPY_ARRAY` | `WRAPPER_INSTANCE` | `PASS_NATIVE_DESCRIPTOR` | `IN_PLACE_ARGUMENT` | `DIRECT_TRANSFER` |
+| Owned allocatable handle result | `NUMPY_ARRAY` | `NONE` | `NONE` or hidden `PASS_NATIVE_DESCRIPTOR` | `WRAPPER_INSTANCE` | `COPY_REPRESENTATION` with an ownership-transfer reason |
+| Borrowed module handle getter | `NUMPY_ARRAY` | module getter action `NATIVE_ARRAY_HANDLE` | operation-specific | `BORROWED_VIEW` | completed per operation |
+
+Using `WRAPPER_INSTANCE` for the Python handle is consistent with the existing
+action axis: the binding validates and consumes a generated runtime wrapper
+object, while `ObjectKind.NUMPY_ARRAY` still identifies its array semantic
+family. Add a new Python action only if a proven backend operation cannot be
+expressed by this existing pair. Add `ArgumentHandoffMode.NATIVE_DESCRIPTOR`
+because descriptor tuples are a genuinely different binding-to-bridge ABI from
+`ARRAY_BUFFER`; do not overload the Phase 6 mode.
+
+Keep rank-zero descriptor values on the scalar or string object-kind route.
+Their result action creates a Python scalar/string or `None`, not
+`WRAPPER_INSTANCE`, and they must not carry `NativeArrayHandlePlan`.
+
+### Cross-Backend Validation Invariants
+
+Before either backend emits source, `_validate_plan()` must reject every one of
+these inconsistencies:
+
+- a descriptor plan whose completed `ObjectKind` is not `NUMPY_ARRAY`;
+- `PASS_ARRAY_BUFFER` carrying descriptor ownership or CFI roles;
+- `PASS_NATIVE_DESCRIPTOR` carrying ordinary data-buffer handoff roles without
+  a descriptor handoff;
+- a disagreement among handle policy, interop ABI, descriptor kind, handle
+  kind, argument/result plan, and native-call slot;
+- a required handle accepting `None`;
+- an optional absent handle without a presence role, or a required handle with
+  one;
+- collapsing optional absence into present-unallocated/present-unassociated
+  state: an absent handle has null fields and a null presence token, whereas a
+  present handle may have null `base_addr` but must have a non-null presence
+  token;
+- fact-packed handoff for a projected writable descriptor, or direct persistent
+  descriptor handoff for a policy that does not permit descriptor mutation;
+- direct descriptor handoff without a typed
+  `_NativeArrayDescriptorHandoff`-compatible runtime operation;
+- descriptor dtype, rank, shape, element length, or per-axis field counts that
+  disagree with the declared handle data facet;
+- pointer reassociation, allocation, deallocation, or resize without completed
+  `PointerPolicy` permission;
+- a pointer result without stable owner storage and target lifetime;
+- an owned result without wrapper ownership, heap/alias boundary storage,
+  destroy behavior, owner retention, or a failure-path release action;
+- a borrowed module/field handle that claims to destroy native owner storage;
+- descriptor-view extraction without its completed C-descriptor build
+  requirement;
+- a C-descriptor header requirement on a generation unit whose completed plans
+  do not need that interop; and
+- any semantic helper temporary represented by a fabricated
+  `OwnershipDecision`. Call-local CFI variables, decoded-dimension locals,
+  pointer views, status locals, and operation tables are backend-local emitted
+  storage inside the already selected method.
+
+### Phase 7A — Ordinary Array Dummies Accepting Native Handle Actuals
+
+Included: concrete-rank numeric `T[...]` arguments already supported by Phase 6
+when the runtime value is either a valid ndarray, an allocated allocatable
+handle, or an associated pointer handle. The handle path validates the same
+dtype, rank, shape, layout, writeability, byte-order, and alignment contract,
+then calls the handle's internal `array_actual` operation and packs the existing
+Phase 6 pointer/extent/stride ABI. It never calls `.to_numpy()` and never passes
+the allocatable/pointer descriptor to the ordinary native dummy.
+
+Initially excluded: optional, assumed-rank, character, and unsupported
+noncontiguous handle actuals. Audit each against live runtime-helper behavior
+before widening this sub-lane; a rejected form must remain an explicit blocker,
+not silently fall back to `.to_numpy()` or a raw address.
+
+Those exclusions remain visible as the uncompleted
+`array-handle-actuals-excluded` rollout lane. Their direct Phase 6 ndarray
+lowerers remain testable with a forced wrapper-plan route, but automatic
+production selection stays on the legacy route until each corresponding handle
+source has parity evidence.
+
+Legacy oracle: `CPythonBindingGenerator._native_array_actual_argument_body`,
+the normal-array runtime helpers in `x2py/runtime/handles.py`, and the existing
+Phase 6 bridge array-buffer lowering. Reuse the runtime helpers and bridge ABI;
+rewrite only the minimal direct binding call and source-kind branch.
+
+Plan and lowering requirements:
+
+- [x] Add `NativeArrayActualPlan` or equivalent accepted-source facts beneath
+  the existing ordinary `ArgumentTransferPlan`; keep
+  `PASS_ARRAY_BUFFER`, `ArgumentHandoffMode.ARRAY_BUFFER`, and
+  `ArrayHandoffPlan` unchanged.
+- [x] Make the C binding's named ordinary-array input method call
+  `_native_array_actual_argument_for_binding_positional` with only planned
+  validation flags and ABI-field selections.
+- [x] Keep the Fortran bridge on the exact Phase 6 array-buffer method; it must
+  not know whether Python supplied an ndarray or a handle.
+- [x] Validate that handle actuals are allocated/associated, have a non-null
+  data address, and satisfy the same declared contract as ndarray inputs;
+  preserve allocated/associated zero-length arrays.
+- [x] Add the `array-native-handle-actuals` support lane and remove the current
+  production gate on ordinary array actuals only after reduced compiled parity
+  proves both runtime source kinds and all rejection paths.
+- [x] Reuse the normal-array calls in
+  `test_module_and_derived_pointer_handles_track_native_association` and
+  allocatable handle fixtures as the legacy baseline, but extract a class-free,
+  dependency-closed parity contract so Phase 8 does not determine this lane's
+  route.
+
+### Phase 7B — Required Read-Only Descriptor Handle Arguments
+
+Included: required, non-projected `Allocatable[T[...]]` and
+`Pointer[T[...]]` arguments. The Python binding accepts only the matching
+runtime handle class. A present unallocated allocatable or unassociated pointer
+is still a present descriptor argument and may carry a null `base_addr`.
+
+The binding uses the existing descriptor runtime helper to obtain validated
+standard descriptor facts. The bridge establishes rank-specific call-local CFI
+storage from `base_addr`, `elem_len`, rank, and dimension records, then passes
+the native allocatable or pointer dummy. This association is an emitted-code
+view, not a semantic data copy.
+
+Legacy oracle:
+
+- binding `_bind_allocatable_descriptor_argument`,
+  `_bind_pointer_descriptor_argument`, and
+  `_bind_fact_packed_native_array_descriptor_argument`;
+- bridge `_bridge_allocatable_descriptor_argument`,
+  `_bridge_pointer_descriptor_argument`, and
+  `_bridge_native_array_descriptor_argument`; and
+- runtime `_native_array_descriptor_argument_for_binding_positional`.
+
+- [x] Carry the completed `NativeArrayHandlePolicy` and descriptor
+  `ArrayInteropPolicy` into `ArgumentPolicy`, `ArgumentTransferPlan`, and its
+  shared native slot.
+- [x] Add `ArgumentHandoffMode.NATIVE_DESCRIPTOR` and a
+  `FACT_PACKED_CALL_LOCAL` descriptor handoff with exact symbolic roles.
+- [x] Add directly named C and Fortran descriptor-input methods grouped under
+  the native-array-handle family; backend-local tuple items and CFI locals may
+  be created only inside those selected methods.
+- [x] Validate matching handle class, descriptor kind, dtype, rank, declared
+  shape, and element length before the call. Reject ndarray inputs.
+- [x] Add separate `allocatable-descriptor-inputs` and
+  `pointer-descriptor-inputs` support lanes after reduced descriptor-argument
+  parity passes.
+- [x] Replay the descriptor calls in
+  `test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifetime`
+  and the allocatable descriptor fixtures through minimal class-free contracts;
+  retain the mixed original nodes as legacy until all their later owners migrate.
+
+### Phase 7C — Optional Absent Descriptor Handles
+
+Included: `Allocatable[T[...]] | None = ...` and
+`Pointer[T[...]] | None = ...` callable arguments. Omission and explicit
+`None` both mean native `present(...)` is false. A present handle remains
+present even when its descriptor has absent allocation/association state.
+
+This is a two-level handle-presence contract, not the Phase 3 scalar descriptor
+three-state value contract. Do not reuse the value pointer as the presence
+token. The runtime helper already produces null fact fields plus null presence
+for absence, and a distinct non-null token for every present handle.
+
+- [x] Project `optional_absent`, `nullable`, presence mode, and the dedicated
+  presence role from completed handle policy without inspecting the Python
+  object in planning or bridge code.
+- [x] Generate both required and optional fact-packed descriptor calls through
+  the Phase 7B methods, adding only the planned presence ABI field and native
+  branch.
+- [x] Validate required-versus-optional annotation, field count, presence role,
+  and the distinction between absent handle and present null `base_addr`.
+- [x] Add `optional-native-array-handles` route coverage only after compiled
+  tests exercise omission, explicit `None`, present allocated/associated,
+  present unallocated/unassociated, wrong handle kind, and wrong dtype/rank.
+- [x] Treat the lack of one isolated compiled optional array-handle fixture as
+  a coverage gap: create a reduced semantic `.pyi` entry over an existing
+  native optional descriptor routine instead of inventing behavior from the
+  runtime-only tests.
+
+### Phase 7D — Writable And Projected Descriptor Handles
+
+Included: descriptor arguments whose allocation, deallocation, resize,
+reassociation, or nullification must remain visible through the same Python
+handle, plus a matching projected result that returns that identical handle.
+Allocatable mutation follows completed ownership. Writable pointer descriptor
+mutation requires explicit `PointerPolicy` permissions and target-lifetime
+facts.
+
+Fact-packed call-local descriptors are forbidden here because native mutation
+would be discarded at return. The binding must request the handle's typed
+persistent standard-descriptor pointer and the bridge must pass it directly.
+Returning the projection increments/transfers the existing Python reference; it
+does not construct a replacement handle or call `.to_numpy()`.
+
+The direct handoff requires generated persistent standard-descriptor storage.
+Wrapper-owned result handles provide it. Borrowed module handles expose current
+descriptor facts for read-only calls, but they are not accepted for projected
+writable mutation because a reconstructed call-local descriptor would lose the
+native descriptor update.
+
+Legacy oracle:
+
+- binding `_bind_direct_native_array_descriptor_argument` and
+  `_bind_projected_native_array_handle_result`;
+- bridge descriptor argument dispatch with completed output projection; and
+- runtime `_native_array_descriptor_handoff_for_binding_positional`.
+
+- [x] Add `DIRECT_STANDARD_DESCRIPTOR` handoff and same-handle result identity
+  to the owning `ArgumentTransferPlan`, shared native slot, `ResultPlan` or
+  lifecycle consumer, and function-wide result order.
+- [x] Reuse `CodegenAction.IN_PLACE_ARGUMENT` and `DIRECT_TRANSFER`; do not add
+  a descriptor-copy action for same-handle mutation.
+- [x] Plan success and failure reference handling so a projected handle is
+  returned exactly once and borrowed caller storage is never destroyed.
+- [x] Validate operation permissions, descriptor ownership, target lifetime,
+  direct handoff type, result identity, and optional presence before emission.
+- [x] Add `projected-native-array-handles` support only after
+  `test_allocatable_inout_arrays_mutate_and_return_the_same_handle` has a
+  reduced legacy/direct-plan parity replay covering allocation, reallocation,
+  deallocation, identity, wrong input types, and native-memory checks.
+- [x] Keep writable pointer reassociation blocked unless the completed policy
+  proves every required permission and lifetime fact; never downgrade it to a
+  read-only fact-packed call.
+
+### Phase 7E — Owned Allocatable Results And Hidden Outputs
+
+Included: rank-positive allocatable direct function results and hidden output
+descriptors whose completed policy selects `owned_result_descriptor`. A valid
+allocatable function result is allocated when returned; an unallocated
+nonpointer function result is a nonconforming native procedure and the wrapper
+does not compensate for it. An allocatable output dummy may validly remain
+unallocated and still returns a present `AllocatableArray` handle whose state
+lives inside that handle. Pointer handle results remain blocked until stable
+owner storage and target lifetime are explicit.
+
+For a numeric direct allocatable function result, the bridge assigns the native
+function expression once into a procedure-local allocatable and then uses
+`move_alloc` to transfer that allocation into the allocatable `intent(out)`
+dummy backed by persistent wrapper-owned `CFI_CDESC_T(rank)` storage. The move
+does not copy the array payload. Do not insert a collector helper, an
+`allocated(...)` guard, or a second intrinsic assignment. The native function
+must return an allocated, defined result; an unallocated result is a
+nonconforming native procedure and remains the user's responsibility rather
+than a wrapper fallback. Other procedure-local storage remains permitted only
+when representation conversion genuinely requires it, such as
+deferred-character byte materialization. The binding constructs the complete
+generated operation table and Python handle only after owner storage is valid.
+Ownership transfers to the handle exactly once; every earlier failure path
+releases the persistent allocation and any genuinely required bridge-local
+allocation.
+
+Character-element handles carry runtime `elem_len` and declared element-length
+policy in the same descriptor record. Because a deferred character width is
+unknown until the native result exists, the bridge first copies the bytes and
+the binding then establishes and allocates persistent CFI storage with that
+runtime width. This is a named lowering method under the same result handle
+plan, not a separate string-result ownership hierarchy.
+
+Legacy oracle:
+
+- binding `_bind_owned_allocatable_result_handle`, owned-result operation
+  builders, `_bind_materialized_native_array_handle_result`, and destroy body;
+- bridge `_bridge_owned_allocatable_result_handle` plus allocatable result
+  helper/copy logic; and
+- the runtime handle factory and exactly-once `close()`/finalizer protocol.
+
+- [x] Attach one `NativeArrayHandlePlan` with `OWNED_RESULT_STORAGE` to direct
+  and hidden `ResultPlan` owners; hidden outputs share their exact descriptor
+  native slot.
+- [x] Use `CodegenAction.WRAPPER_INSTANCE` and an explained
+  `COPY_REPRESENTATION` only for materialization into persistent owner storage;
+  source hiddenness remains `source_kind`, not a codegen action.
+- [x] Record owner storage, materialization, handle construction, ownership
+  transfer, destroy behavior, and release responsibility under the result's
+  typed handle plan. Keep backend-local CFI allocation/copy/free nodes inside
+  the selected result lowerer rather than fabricating lifecycle policy records.
+- [x] Require generated `shape`, `array_actual`, `descriptor`, extraction/state,
+  allowed mutation, and `destroy` operations before publishing the handle.
+- [x] Validate CFI rank, dtype, element length, allocated state, owner
+  retention, release responsibility, destroy behavior, and all success/failure
+  paths before emission.
+- [x] Add `owned-allocatable-results` and
+  `owned-allocatable-hidden-outputs` support lanes after reduced parity from
+  `test_array_results_follow_data_buffer_and_descriptor_handle_contracts`,
+  `test_output_arguments_and_multiple_results_follow_python_projection_rules`,
+  and `test_allocatable_module_fields_and_results_expose_lifetime_safe_handles`.
+- [x] Keep pointer result tests on their explicit policy blocker; do not make
+  their matrix rows `wrapper-plan` merely because allocatable results pass.
+
+### Phase 7F — Borrowed Module Handles And Generated Operations
+
+Included: rank-positive allocatable and pointer module variables exposed as one
+stable borrowed handle object at module initialization. Repeated attribute reads
+return the same handle. Replacement assignment is rejected. The generated
+operation table accesses current native state and includes only operations
+allowed by completed policy.
+
+Allocatable operations include allocation state, shape, array actual,
+descriptor handoff, extraction, deallocation, and resize where allowed. Pointer
+operations include association state, shape, array actual, descriptor handoff,
+nullification, extraction, and policy-gated allocation/deallocation/resize.
+Borrowed module handles retain the Python module and never destroy native-owned
+descriptor storage.
+
+Deferred-character handles also expose runtime `element_length`. Shape-only
+`allocate` and `resize` operations are omitted because they cannot state the
+new character width; native procedures that declare the width remain the
+authoritative mutation path.
+
+Legacy oracle: the bridge's `_native_array_module_handle`,
+`_native_array_module_handle_operations`, and operation-specific module methods;
+the binding's `_bind_borrowed_native_array_module_handle`, operation wrappers,
+and handle creation; and the current runtime handle factory.
+
+- [x] Add a native-handle getter action and one `NativeArrayHandlePlan` beneath
+  `ModuleVariablePlan`; keep Python attribute exposure and native operation
+  generation in its binding and bridge child views.
+- [x] Plan operation roles and export names explicitly while leaving operation
+  call locals backend-local. Do not store generated method names in the plan.
+- [x] Validate stable handle identity, module owner retention, rejected
+  replacement, descriptor kind, operation completeness, and borrowed/no-destroy
+  lifecycle.
+- [x] Add `allocatable-module-handles` and `pointer-module-handles` support
+  lanes only after module-only reduced parity covers state changes, zero-length
+  state, extraction policy, operation permissions, stale-view behavior, and
+  module lifetime.
+- [x] Use `test_allocatable_module_fields_and_results_expose_lifetime_safe_handles`,
+  `test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction`,
+  and the module portion of
+  `test_module_and_derived_pointer_handles_track_native_association` as legacy
+  oracles. Split out field/class assertions, which remain Phase 8/9 work.
+
+### Phase 7G — Pointer Descriptor Extraction And Build Requirements
+
+Included: pointer `descriptor_view`, `contiguous_view`, `copy_only`, and
+explicitly unsupported extraction actions already selected by completed
+policy; standard descriptor decoding; positive and negative strides; and local
+build/header requirements.
+
+Only `descriptor_view` and persistent allocatable owner storage require standard
+C descriptor support. Generated code may read `CFI_cdesc_t` through
+`ISO_Fortran_binding.h` when the completed plan requests it. It must never guess
+or expose a compiler-private descriptor layout. Unsupported toolchains fail
+readiness/build with the completed owner path and requirement.
+
+- [x] Carry typed extraction and descriptor-interop actions plus required
+  headers into handle/module/result plans and rendered artifact metadata.
+- [x] Reuse the runtime descriptor-view helper for shape, stride, buffer-window,
+  dtype, rank, and null-address validation; direct C lowering only decodes the
+  standard descriptor fields into its expected mapping.
+- [x] Add directly named C descriptor-reader and operation-wrapper methods;
+  decoded dimension objects and mapping temporaries remain binding-local.
+- [x] Validate that build requirements equal the union of completed plans,
+  appear in replayable manifests, and do not leak into wrappers that need only
+  ordinary buffers or non-CFI borrowed allocatable handles.
+- [x] Replay
+  `test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifetime`
+  and `test_pyi_manifest_records_pointer_descriptor_interop_requirements`, plus
+  focused `tests/runtime/handles`, before enabling
+  `pointer-descriptor-extraction`.
+- [x] Preserve the explicit readiness failure when required C descriptor
+  support is unavailable; no contiguous-copy fallback may be inferred in the
+  backend.
+
+### Phase 7H — Remaining Rank-Zero Descriptor Results And Strings
+
+Phase 3 already owns ordinary and optional scalar descriptor inputs, including
+omitted/present-null/present-value state. Phase 4 already owns nullable scalar
+descriptor module reads as copied Python snapshots. Do not rebuild those paths
+or turn rank-zero descriptors into runtime handle objects.
+
+Included here: direct scalar descriptor function results, hidden scalar
+descriptor outputs, projected scalar descriptor readback, and allocatable or
+pointer scalar character results with runtime/deferred length. The Python result
+is `T | None` or `String | None`; absent allocation/association returns `None`.
+An allocated/associated value is copied exactly once before the call-local or
+native descriptor is released. Deferred-length strings use runtime element
+length and preserve the existing encoding/byte contract.
+
+- [x] Add a subordinate scalar-descriptor handoff/result record to the existing
+  scalar or string `ArgumentTransferPlan`/`ResultPlan`; do not attach
+  `NativeArrayHandlePlan` or use `ObjectKind.NUMPY_ARRAY` for rank zero.
+- [x] Complete result source, descriptor kind, presence, runtime element length,
+  copy action/reason, release owner, and failure cleanup in wrapper policy before
+  planning.
+- [x] Reuse existing Phase 3 presence records and typed lifecycle ordering;
+  extend named scalar/string result lowering only for the descriptor producer
+  and copy/release steps.
+- [x] Validate direct versus hidden descriptor source, nullable result spelling,
+  result ordering, runtime string length, null state, copy count, and cleanup on
+  conversion/status failure.
+- [x] Add isolated legacy/direct parity for numeric allocatable and pointer
+  results and for `string_result_deferred` from
+  `test_modern_fortran_character_arguments_and_results`, including an absent
+  result and non-ASCII encoded data.
+- [x] Keep pointer array results blocked even after pointer scalar values pass;
+  copied scalar readback does not prove array target lifetime.
+
+### Derived Fields Remain A Recorded Later Dependency
+
+The shared handle plan must be capable of recording
+`borrowed_field_descriptor`, `owner_retention=parent_wrapper`, field operation
+roles, and parent-owned destruction behavior. Do not add field/class traversal
+or route eligibility in Phase 7. `BindCNativeArrayHandleProperty`, field
+operation generation, and the field portions of allocatable/pointer tests remain
+legacy oracles for Phases 8 and 9, where the owning wrapper instance and property
+lifecycle exist in the plan.
+
+This boundary prevents Phase 7 from either duplicating future `FieldPlan`
+ownership or falsely marking mixed module-and-field generation units supported.
+
+### Legacy Primitive Inventory And Rewrite Rule
+
+| Primitive | Legacy source | Direct-plan treatment |
+| --- | --- | --- |
+| Normal array handle actual | binding `_native_array_actual_argument_body`; runtime normal-array helpers | reuse runtime helper and Phase 6 bridge ABI; rewrite minimal binding nodes |
+| Required/optional descriptor argument | binding descriptor argument helpers; bridge descriptor handlers | rewrite named direct methods around shared runtime packer and planned CFI roles |
+| Projected writable descriptor | binding direct descriptor handler; bridge descriptor projection | rewrite direct pointer handoff and identity lifecycle; no fact-packed fallback |
+| Owned allocatable result | binding owned-result/operation helpers; bridge allocatable result helper | rewrite minimal CFI owner-storage and result lifecycle nodes; assign once locally and transfer the allocation into the CFI-backed output dummy with `move_alloc` |
+| Borrowed module handle | binding handle creation/operation wrappers; bridge module operations | rewrite under `ModuleVariablePlan`; reuse runtime factory |
+| Pointer descriptor view | binding descriptor reader; runtime view helper | reuse runtime view helper; rewrite only standard-descriptor decoding nodes |
+| Scalar descriptor result | legacy scalar descriptor/result conversion | extend existing scalar/string plan route; do not create an array handle |
+| Build requirement | semantic `native_array_handle_build_requirements`; build manifest | reuse completed requirements and carry them through rendered artifacts |
+
+For every primitive, first retain generated legacy C/Fortran/header artifacts
+from the cited passing wrapper test. Explain each material direct-plan artifact
+difference before compilation. Copy a small legacy method only when it already
+matches the direct node API and complexity limit; otherwise rewrite the minimal
+equivalent. Do not copy legacy dispatcher classes, scope mutation machinery, or
+datatype/policy inference.
+
+### Route And Test Migration Matrix For Phase 7
+
+Mixed rows retain their later derived/field owners. The dependency-closed
+Phase 7 rows were split, proved through both routes, and then recorded as
+`wrapper-plan` in the complete ledger.
+
+| Existing node or group | Current role/status | Phase 7 owner and target |
+| --- | --- | --- |
+| `arrays/test_array_results.py::test_array_results_follow_data_buffer_and_descriptor_handle_contracts[*]` | ordinary/allocatable result generation unit; `wrapper-plan` | Phase 6 ordinary and Phase 7E allocatable results now share the production plan route |
+| `build_from_pyi/test_pyi_wrapper_builds.py::test_pyi_manifest_records_pointer_descriptor_interop_requirements` | non-generating manifest policy; `not-applicable` | Phase 7G plan/header union is covered by direct generated-artifact tests |
+| `derived_types/test_pointers.py::test_module_and_derived_pointer_handles_track_native_association[*]` | module, normal-array actual, and field mix; `legacy` | split Phase 7A/7F module subsets; field subset remains Phase 8/9 |
+| `derived_types/test_pointers.py::test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifetime` | module/field descriptor views; `legacy` | Phase 7B/7G module subset; field owner remains Phase 8/9 |
+| `derived_types/test_pointers.py::test_pointer_array_handles_block_on_unsupported_result_owner_policy[*]` | explicit supported blocker; `legacy` | remain blocker until owner/lifetime policy changes; never auto-promote |
+| `edit_pyi_contracts/test_ownership_contracts.py::*` | module, field, result lifetime mix; `legacy` | Phase 7E/7F subsets; field/finalizer owners remain Phase 8/9 |
+| `function_calls/test_optional_arguments.py::test_optional_allocatable_scalar_descriptor_distinguishes_omitted_none_and_value` | scalar baseline; `wrapper-plan` | reuse Phase 3 behavior; no status change |
+| `function_calls/test_output_arguments.py::test_output_arguments_and_multiple_results_follow_python_projection_rules[*]` | mixed scalar/array/string/derived/allocatable outputs; `legacy` | Phase 7E reduced allocatable result; retain mixed row |
+| `module_state/test_allocatable_replacement.py::*` | projected same-handle descriptor mutation plus a derived factory generation unit; `legacy` | Phase 7D reduced parity is `wrapper-plan`; the broad factory/class unit remains Phase 8/9 |
+| `module_state/test_allocatable_views.py::test_allocatable_module_fields_and_results_expose_lifetime_safe_handles[*]` | module, result, and derived-field mix; `legacy` | field/class owner retention remains Phase 8/9 |
+| `module_state/test_allocatable_views.py::test_scalar_descriptor_module_variables_return_copied_optional_values[*]` | scalar descriptor arguments/results/module state; `wrapper-plan` | source conversion records descriptor kind and argument/return reference before completed Phase 7H policy |
+| `module_state/test_allocatable_views.py::test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction[*]` | plain allocatable module snapshot; `wrapper-plan` | Phase 7F binding-owned detached read-only snapshot and capsule lifetime |
+| `strings/test_character_arguments.py::test_modern_fortran_character_arguments_and_results[*]` | fixed strings plus deferred allocatable result; `legacy` | Phase 7H reduced deferred-result parity; retain mixed row as needed |
+| `edit_pyi_contracts/test_native_order_contracts.py::test_editable_contract_can_use_native_order_arguments_without_native_call` | includes raw `Addr(Float64[n])` plus a derived result; `legacy` | raw-array subset is the completed Phase 6G prerequisite; derived subset remains Phase 8 |
+
+| Completed sub-lane | Dependency-closed compiled evidence |
+| --- | --- |
+| Phase 7A, 7B, 7F, and 7G | `derived_types/test_pointers.py::test_module_native_array_handles_match_legacy_and_wrapper_plan_routes` |
+| Phase 7C | `function_calls/test_optional_arguments.py::test_optional_array_descriptors_match_legacy_and_wrapper_plan_routes` |
+| Phase 7D | `module_state/test_allocatable_replacement.py::test_projected_allocatable_descriptor_matches_legacy_and_wrapper_plan_routes` |
+| Phase 7E numeric | `arrays/test_array_results.py::test_owned_allocatable_results_match_legacy_and_wrapper_plan_routes` |
+| Phase 7E deferred character | `strings/test_character_arguments.py::test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes` |
+| Phase 7H numeric | `scalars/test_scalar_boundary_plan.py::test_scalar_descriptor_results_copy_values_or_none_through_wrapper_plan_route` |
+| Phase 7H deferred scalar character | `strings/test_character_arguments.py::test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes` and the nullable case in the deferred-character handle test |
+| Phase 7H source/default projection | `module_state/test_allocatable_views.py::test_scalar_descriptor_module_variables_return_copied_optional_values[*]` |
+
+Required focused intermediate coverage includes:
+
+- completed semantic handle/interop policy projection tests;
+- editable plan tests for every descriptor kind, handoff form, operation set,
+  ownership, optional presence state, and lifecycle edit;
+- C and Fortran preflight rejection of mismatched or incomplete descriptor
+  plans;
+- generated artifact assertions for standard descriptor fields, optional
+  presence, operation functions, owner storage, destroy paths, and local header
+  requirements;
+- runtime helper tests under `tests/runtime/handles` without duplicating their
+  validation in wrapper-codegen tests; and
+- compiled legacy/direct parity for each reduced sub-lane before any migration
+  ledger or production-route change.
+
+### Phase 7 Completion
+
+- [x] Expand Phase 7 under the mandatory gate using the live completed policy,
+  runtime handle implementation, legacy backends, build integration, public
+  contract, and focused wrapper tests.
+- [x] Complete the shared typed handle, array-actual, and descriptor-handoff
+  plan records without adding a parallel top-level plan hierarchy.
+- [x] Complete every missing semantic selector before `ir2ast.py`; remove
+  bridge-created `ArrayInteropPolicy` and fabricated semantic ownership choices.
+- [x] Finish Phases 7A through 7H individually with legacy artifact capture,
+  direct lowering, validation, compiled parity, route evidence, and matrix
+  updates.
+- [x] Preserve the completed Phase 6G raw-address boundary while keeping every
+  derived-field, pointer-result, callback, and deferred-real-library exclusion
+  on its explicit later blocker.
+- [x] Run focused policy/plan/backend tests, relevant runtime-handle tests,
+  documentation checks, the wrapper suite excluding LAPACK, the wrapper-codegen
+  complexity checker, and the required static-analysis suite before declaring
+  implementation complete.
+- [x] Close Phase 7 only when every live non-field native-handle/descriptor case
+  is migrated or explicitly removed from the product contract, and no backend
+  infers descriptor policy or silently substitutes a data buffer, raw pointer,
+  `.to_numpy()` extraction, or copy fallback.
+
+Closure evidence: 538 focused semantic/policy/plan/backend/runtime tests, 1,133
+documentation and layout tests, and all 318 wrapper tests outside the deferred
+BLAS/LAPACK file pass. The wrapper-codegen complexity check, Ruff, formatting,
+Bandit, Vulture, whitespace, and explicit-base Radon policy pass; full Radon
+complexity and maintainability reports were also recorded. The source/default
+scalar-descriptor projection now records its descriptor kind and argument or
+return reference before policy completion. Binding and bridge lowering dispatch
+only from the resulting typed plans; the remaining mixed derived-field unit is
+an explicit Phase 8/9 blocker rather than a descriptor fallback.
 
 ## Phase 8 — Derived Types And Snapshots
 

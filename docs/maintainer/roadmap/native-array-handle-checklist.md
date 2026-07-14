@@ -652,11 +652,17 @@ specialize operation bodies by descriptor kind.
 - [x] Generate owned allocatable function-result handles when policy supports
   stable owner storage.
 - [x] Use wrapper-owned standard C descriptor storage for allocatable results:
-  allocate persistent rank-specific `CFI_CDESC_T(rank)` storage, establish it
-  with allocatable attribute, and allocate its payload with `CFI_allocate`.
-- [x] Copy the bridge-local native allocatable result or hidden output into the
-  persistent CFI allocation before releasing the bridge-local storage. Do not
-  return or copy a compiler-private Fortran descriptor record.
+  allocate persistent rank-specific `CFI_CDESC_T(rank)` storage and establish
+  it with allocatable attribute. Numeric function results populate local
+  allocatable storage whose allocation is transferred with `move_alloc`;
+  generated shape-changing operations use `CFI_allocate`.
+- [x] Assign a numeric direct allocatable function result once into a
+  bridge-local allocatable, then `move_alloc` that allocation into the
+  allocatable `intent(out)` dummy backed by persistent CFI storage. Do not
+  generate a collector, an `allocated(...)` guard, or a second intrinsic
+  assignment. The native function must return an allocated, defined result; an
+  unallocated nonpointer result is a nonconforming native procedure and remains
+  the user's responsibility.
 - [x] Return a native pointer to owner storage for owned allocatable handles.
 - [x] Generate destroy routines called by the Python handle finalizer for owned
   allocatable handles.

@@ -2016,6 +2016,13 @@ class FortranToIRConverter(ClassVisitor):
             )
             mapping_python_position = None if is_hidden_output else python_position
             mapping_result_position = result_position if is_returned_output else None
+            descriptor_kind = FortranToIRConverter._scalar_descriptor_kind(arg.semantic_type)
+            descriptor_value = FortranToIRConverter._scalar_descriptor_projection_value(
+                arg.name,
+                descriptor_kind=descriptor_kind,
+                python_position=mapping_python_position,
+                result_position=mapping_result_position,
+            )
             if is_returned_output:
                 arg.metadata[PROJECTED_OUTPUT_METADATA] = True
             projection.append(
@@ -2025,6 +2032,8 @@ class FortranToIRConverter(ClassVisitor):
                     native_position=native_position,
                     python_position=mapping_python_position,
                     result_position=mapping_result_position,
+                    value_kind=descriptor_kind or "",
+                    value=descriptor_value,
                 )
             )
             if is_returned_output:
@@ -2049,6 +2058,38 @@ class FortranToIRConverter(ClassVisitor):
             and semantic_type.rank == 0
             and (semantic_type.metadata.get("fortran_allocatable") or semantic_type.metadata.get("fortran_pointer"))
         )
+
+    @staticmethod
+    def _scalar_descriptor_kind(semantic_type: SemanticType | None) -> str | None:
+        """Return the ABI-relevant descriptor kind for one rank-zero value."""
+        if semantic_type is None or semantic_type.rank != 0:
+            return None
+        allocatable = bool(semantic_type.metadata.get("fortran_allocatable"))
+        pointer = bool(semantic_type.metadata.get("fortran_pointer"))
+        if allocatable and pointer:
+            return None
+        if allocatable:
+            return "allocatable"
+        if pointer:
+            return "pointer"
+        return None
+
+    @staticmethod
+    def _scalar_descriptor_projection_value(
+        name: str,
+        *,
+        descriptor_kind: str | None,
+        python_position: int | None,
+        result_position: int | None,
+    ) -> dict[str, int | str] | None:
+        """Record the explicit argument/return reference wrapped by a descriptor helper."""
+        if descriptor_kind is None:
+            return None
+        if python_position is not None:
+            return {"kind": "arg", "position": python_position}
+        if result_position is not None:
+            return {"kind": "return", "name": name, "position": result_position}
+        raise ValueError(f"Scalar descriptor {name!r} has no Python argument or result projection")
 
     @staticmethod
     def _is_scalar_copy_return(semantic_type: SemanticType | None) -> bool:

@@ -70,15 +70,14 @@ def test_required_array_buffer_dispatches_through_named_binding_and_bridge_metho
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
     assert "double bind_c_sum_values(void * values, int64_t values_extent_0);" in c_source
-    assert "PyArray_TYPE((PyArrayObject *)values_obj) != NPY_FLOAT64" in c_source
-    assert "PyArray_NDIM((PyArrayObject *)values_obj) != 1" in c_source
-    assert "PyArray_ISNOTSWAPPED((PyArrayObject *)values_obj)" in c_source
-    assert "PyArray_ISALIGNED((PyArrayObject *)values_obj)" in c_source
-    assert "PyArray_IS_C_CONTIGUOUS((PyArrayObject *)values_obj)" in c_source
-    assert "PyArray_IS_F_CONTIGUOUS((PyArrayObject *)values_obj)" in c_source
-    assert "PyArray_ISWRITEABLE((PyArrayObject *)values_obj)" in c_source
-    assert "values = PyArray_DATA((PyArrayObject *)values_obj);" in c_source
-    assert "values_extent_0 = (int64_t)PyArray_DIM((PyArrayObject *)values_obj, 0);" in c_source
+    assert '"_native_array_actual_argument_for_binding_positional"' in c_source
+    assert (
+        'PyObject_CallFunction(values_helper, "OsiOOiiiiiii", values_obj, "float64", 1, '
+        "values_shape, values_layout, 1, 1, 1, 0, 0, 0, 1)"
+    ) in c_source
+    assert "values = PyLong_AsVoidPtr(PyTuple_GetItem(values_packed, 0));" in c_source
+    assert "values_extent_0 = (int64_t)PyLong_AsLongLong(PyTuple_GetItem(values_packed, 1));" in c_source
+    assert "PyArray_TYPE((PyArrayObject *)values_obj)" not in c_source
     assert "result = bind_c_sum_values(values, values_extent_0);" in c_source
 
     assert "type(c_ptr), value :: bound_values" in bridge_source

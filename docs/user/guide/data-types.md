@@ -117,7 +117,11 @@ Use `T[()]` when the Python API itself exposes safe caller-provided scalar
 storage as a rank-0 NumPy array. Use `Addr(T)` only when the caller passes a raw
 address such as `array.ctypes.data`. For raw array addresses such as
 `Addr(Float64[n])`, every extent must be a fixed literal or a visible argument;
-the address value itself does not carry shape.
+the address value itself does not carry shape. x2py does not reject zero or
+negative integer addresses or validate that raw-address extents are positive.
+It reports integer-to-pointer overflow, but otherwise the caller is responsible
+for supplying a live address and a valid pointee shape before native code uses
+either value.
 
 Arrays and strings are storage-like at the native boundary. `Float64[n]` already
 passes the NumPy data address, and `String[8]` already passes the address of

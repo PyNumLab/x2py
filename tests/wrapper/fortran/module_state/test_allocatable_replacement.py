@@ -9,10 +9,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from x2py import build_pyi_extension
 from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     WRAPPER_TEST_ROOT,
+    _compile_native_object,
+    _import_from_build_dir,
     _build_source_or_generated_pyi_and_import,
+    _sole_native_module,
     wrapper_source,
 )
 
@@ -88,6 +92,72 @@ def test_allocatable_inout_arrays_mutate_and_return_the_same_handle(
         module.replace_values(np.array([1.0], dtype=np.float32), np.int32(1))
     with pytest.raises(TypeError):
         module.replace_values(np.array([[1.0]], dtype=np.float64), np.int32(1))
+
+
+def test_projected_allocatable_descriptor_matches_legacy_and_wrapper_plan_routes(tmp_path: Path):
+    """Replay direct persistent-descriptor mutation with same-handle identity."""
+    replacement_object = _compile_native_object(ALLOCATABLE_INOUT_F90_SOURCE, tmp_path / "native_replacement")
+    factory_object = _compile_native_object(ALLOCATABLE_FACTORY_F90_SOURCE, tmp_path / "native_factory")
+    modules = {}
+    factories = {}
+    for route, route_kwargs in (
+        ("legacy", {"_force_legacy_wrapper_route": True}),
+        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
+    ):
+        replacement_contract = tmp_path / f"{route}_replacement_contract"
+        shutil.copytree(CONTRACT_FIXTURES / "fallocatable_inout_f90", replacement_contract)
+        replacement_result = build_pyi_extension(
+            replacement_contract / "__init__.pyi",
+            native_objects=[replacement_object],
+            native_include_dirs=[replacement_object.parent],
+            output_dir=tmp_path / f"{route}_replacement",
+            **route_kwargs,
+        )
+        replacement_module = _import_from_build_dir(
+            replacement_result.module_name,
+            replacement_result.output_dir,
+        )
+        modules[route] = (
+            replacement_module
+            if hasattr(replacement_module, "replace_values")
+            else _sole_native_module(replacement_module)
+        )
+
+        factory_contract = tmp_path / f"{route}_factory_contract"
+        factory_contract.mkdir()
+        (factory_contract / "__init__.pyi").write_text(
+            "from .fallocatable_views_f90 import build_values\n",
+            encoding="utf-8",
+        )
+        (factory_contract / "fallocatable_views_f90.pyi").write_text(
+            """from x2py.contracts import Addr, Allocatable, Arg, Float64, Int32, Return, native_call
+
+@native_call([Addr(Arg(0)), Return("values", 0)])
+def build_values(n: Int32) -> Allocatable[Float64[:]]: ...
+""",
+            encoding="utf-8",
+        )
+        factory_result = build_pyi_extension(
+            factory_contract / "__init__.pyi",
+            native_objects=[factory_object],
+            native_include_dirs=[factory_object.parent],
+            output_dir=tmp_path / f"{route}_factory",
+            **route_kwargs,
+        )
+        factory_module = _import_from_build_dir(factory_result.module_name, factory_result.output_dir)
+        factories[route] = (
+            factory_module if hasattr(factory_module, "build_values") else _sole_native_module(factory_module)
+        )
+
+    for route, module in modules.items():
+        values = factories[route].build_values(np.int32(2))
+        assert module.replace_values(values, np.int32(3)) is values
+        np.testing.assert_allclose(values.to_numpy(), np.array([3.0, 6.0, 9.0]))
+        assert module.replace_values(values, np.int32(0)) is values
+        assert values.allocated is False
+        assert module.replace_values(values, np.int32(1)) is values
+        np.testing.assert_allclose(values.to_numpy(), np.array([1.0, 2.0]))
+        values.close()
 
 
 @pytest.mark.skipif(shutil.which("valgrind") is None, reason="Valgrind is required for native ownership checks")

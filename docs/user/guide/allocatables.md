@@ -56,8 +56,11 @@ def maybe_resize(values: Allocatable[Float64[:]] | None = ...) -> None: ...
 
 That spelling is valid only for optional callable arguments. Do not use
 `Allocatable[T[...]] | None` for module variables, derived-type fields, or
-function results; those surfaces return a present handle, and unallocated state
-is represented inside that handle.
+function results; those surfaces return a present handle. Module variables,
+fields, allocatable output dummies, and handles changed by later operations may
+be unallocated. A native allocatable function result must be allocated when the
+function returns; returning it unallocated is nonconforming Fortran and x2py
+does not define a fallback for it.
 
 Passing a handle to `Allocatable[T[...]]` passes the native descriptor. Passing
 the same allocated handle to a normal `T[...]` argument uses ordinary Fortran
@@ -140,9 +143,11 @@ def update_scale(
 Passing `None` creates a present but unallocated call-local descriptor. Omitting
 a defaulted scalar descriptor argument creates native optional absence, so
 `present(scale)` is false. Passing a value creates a present allocated
-call-local descriptor. An unallocated function result or projected output
-becomes `None`. Ordinary scalar projection rules still apply: `intent(out)` uses
-`Allocatable(Return("name", j))`, while `intent(inout)` uses
+call-local descriptor. A projected output becomes `None` when its descriptor is
+unallocated. An allocatable function result must instead be allocated and
+defined when returned; an unallocated result is nonconforming native Fortran,
+not a nullable x2py value. Ordinary scalar projection rules still apply:
+`intent(out)` uses `Allocatable(Return("name", j))`, while `intent(inout)` uses
 `Allocatable(Arg(i))` plus a matching `Returns["name", T] | None` readback. The
 singular `result=Allocatable(Return(j))` mapping describes the native function
 result and places it among any other Python results.
@@ -350,8 +355,14 @@ Allocatable character arrays use fixed-width NumPy bytes storage. Create
 ```fortran
 module character_names
   implicit none
-  character(len=:), allocatable :: stored_names(:)
 contains
+  function make_names() result(names)
+    character(len=:), allocatable :: names(:)
+
+    allocate(character(len=3) :: names(2))
+    names = [character(len=3) :: "red", "sky"]
+  end function make_names
+
   subroutine replace_names(names)
     character(len=:), allocatable, intent(inout) :: names(:)
     integer :: count
@@ -379,7 +390,7 @@ the native allocation at runtime:
 ```python
 from x2py.contracts import Allocatable, Returns, String
 
-stored_names: Allocatable[String[:][:]]
+def make_names() -> Allocatable[String[:][:]]: ...
 
 def replace_names(
     names: Allocatable[String[:][:]]
@@ -403,7 +414,7 @@ sys.path.insert(0, "build/character_allocatables")
 import character_allocatables
 
 api = character_allocatables.character_names
-names = api.stored_names
+names = api.make_names()
 assert api.replace_names(names) is names
 assert names.to_numpy().dtype.itemsize == 5
 assert names.to_numpy().tolist() == [b"red  ", b"blue "]
@@ -414,6 +425,13 @@ Plain NumPy arrays are not allocatable descriptors and are rejected for this
 handle-typed parameter. When extracting character storage, x2py uses NumPy
 bytes dtype `S`; Unicode (`U`) and object (`O`) arrays are not descriptor-handle
 substitutes.
+
+Projected writable descriptor mutation requires a handle with persistent
+wrapper-owned standard-descriptor storage, such as the owned result returned by
+`make_names()`. A borrowed module handle can be passed to a read-only descriptor
+argument through descriptor facts, but it cannot be passed to a projected
+writable descriptor argument: native mutation of a call-local reconstructed
+descriptor would not update the module handle reliably.
 
 ## Module Handles And Views
 
@@ -451,6 +469,9 @@ independent = view.copy()
 - Mutable scalar deferred-length character storage is blocked.
 - Borrowed views require a proved native or wrapper owner and `Aliased`
   storage when the owner is a module variable.
+- Borrowed module handles do not provide the persistent direct descriptor
+  handoff required by projected writable descriptor arguments; use an owned
+  result handle for that operation.
 - An edited `.pyi` cannot relabel a native-owned descriptor as Python-owned.
   Use an implemented owned-result handle or copy an extracted NumPy value when
   Python needs independent storage.

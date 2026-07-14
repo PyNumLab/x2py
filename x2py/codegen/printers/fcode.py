@@ -518,7 +518,7 @@ class FCodePrinter(CodePrinter):
         is_external = expr.external
         is_target = var.is_target and not var.is_alias
         by_value = expr.by_value
-        accepts_assumed_length = var.is_argument and not getattr(var, "projected_output", False)
+        accepts_assumed_length = var.is_argument and on_stack and not getattr(var, "projected_output", False)
         deferred_string = (
             isinstance(dtype, StringType) and not accepts_assumed_length and (not shape or shape[0] is None)
         ) or self._is_deferred_character_array(var)

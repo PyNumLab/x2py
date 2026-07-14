@@ -31,6 +31,7 @@ class GeneratedWrapperArtifacts(StageRecord):
     binding_sources: tuple[Path, ...] = ()
     header_files: tuple[Path, ...] = ()
     runtime_support_keys: tuple[str, ...] = ()
+    required_headers: tuple[str, ...] = ()
 
     @property
     def source_files(self) -> tuple[Path, ...]:

@@ -45,8 +45,7 @@ def test_strided_array_lowering_validates_and_passes_one_explicit_bridge_slice()
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
-    assert "must use positive element strides" in c_source
-    assert "must use a Fortran-oriented non-overlapping view" in c_source
+    assert "expected ordering (F)" in c_source
     assert "values_upper_bound_0" in c_source
     assert "values_stride_1" in c_source
     assert "real(c_double), pointer, dimension(:, :) :: values_base" in bridge_source

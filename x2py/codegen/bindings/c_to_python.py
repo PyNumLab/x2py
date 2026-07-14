@@ -450,7 +450,9 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.NUMPY_ARRAY, CodegenAction.WRAPPER_INSTANCE, True): (
                 "_bind_materialized_native_array_handle_result"
             ),
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.COPY_OUT, False): ("_bind_materialized_native_array_handle_result"),
+            (ObjectKind.NUMPY_ARRAY, CodegenAction.WRAPPER_INSTANCE, False): (
+                "_bind_materialized_native_array_handle_result"
+            ),
         }
     )
     _NATIVE_ARRAY_DESCRIPTOR_ARGUMENT_DISPATCHER = NativeArrayOutputProjectionDispatcher(
@@ -4463,6 +4465,7 @@ class CPythonBindingGenerator(BindingGenerator):
         include_rank = self._new_python_object(f"{orig_var.name}_include_rank")
         include_itemsize = self._new_python_object(f"{orig_var.name}_include_itemsize")
         include_strides = self._new_python_object(f"{orig_var.name}_include_strides")
+        require_contiguous = self._new_python_object(f"{orig_var.name}_require_contiguous")
         helper_args = self._new_python_object(f"{orig_var.name}_array_actual_helper_args")
         packed = self._new_python_object(f"{orig_var.name}_array_actual_fields")
         owned_args = [
@@ -4476,6 +4479,7 @@ class CPythonBindingGenerator(BindingGenerator):
             include_rank,
             include_itemsize,
             include_strides,
+            require_contiguous,
         ]
         body = [
             AliasAssign(runtime_module, PyImport_ImportModule(CStrStr(convert_to_literal("x2py.runtime.handles")))),
@@ -4508,8 +4512,9 @@ class CPythonBindingGenerator(BindingGenerator):
             ),
             AliasAssign(
                 include_strides,
-                PyLong_FromLong(convert_to_literal(1 if descriptor_type.has_strides else 0, dtype=CNativeInt())),
+                PyLong_FromLong(convert_to_literal(1 if ubound_elems or stride_elems else 0, dtype=CNativeInt())),
             ),
+            AliasAssign(require_contiguous, PyLong_FromLong(convert_to_literal(1, dtype=CNativeInt()))),
         ]
         body.extend(self._return_if_any_native_array_helper_arg_failed(runtime_module, helper, owned_args))
         body.extend(
@@ -4528,6 +4533,7 @@ class CPythonBindingGenerator(BindingGenerator):
                         ObjectAddress(include_rank),
                         ObjectAddress(include_itemsize),
                         ObjectAddress(include_strides),
+                        ObjectAddress(require_contiguous),
                     ),
                 ),
                 If(
@@ -5229,7 +5235,7 @@ class CPythonBindingGenerator(BindingGenerator):
             result = [c_res]
 
         if is_bind_c:
-            if getattr(orig_var, "is_optional", False):
+            if decision.nullable:
                 body = [
                     If(
                         IfSection(

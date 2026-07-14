@@ -169,7 +169,7 @@ def optional_identity(label: String = ...) -> None: ...
         assert argument.native_call_slot.character_length is None
     assert functions["assumed"].arguments[0].binding.optional_mode is OptionalMode.REQUIRED
     assert functions["optional"].arguments[0].binding.optional_mode is OptionalMode.NULLABLE_VALUE
-    assert functions["optional"].arguments[0].nullable is False
+    assert functions["optional"].arguments[0].nullable is True
     assert functions["optional_identity"].arguments[0].binding.codegen_action is CodegenAction.CALL_LOCAL_INPUT
 
 

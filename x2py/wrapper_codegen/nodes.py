@@ -21,6 +21,7 @@ class BackendScalarType(StageRecord):
     python_input_check: str | None = None
     python_type_name: str | None = None
     python_module_result_converter: str | None = None
+    cfi_type_spelling: str | None = None
 
 
 @dataclass
@@ -44,6 +45,13 @@ class CMacroDefinition(StageRecord):
 
     name: str
     value: str | None = None
+
+
+@dataclass
+class CComment(StageRecord):
+    """One generated C line comment."""
+
+    text: str
 
 
 @dataclass
@@ -182,7 +190,7 @@ class CModule(StageRecord):
     defines: tuple[CMacroDefinition, ...] = ()
     includes: tuple[CInclude, ...] = ()
     declarations: tuple[
-        CDeclaration | CFunctionPrototype | CMethodDefTable | CModuleDef | CModulePropertySupport,
+        CComment | CDeclaration | CFunctionPrototype | CMethodDefTable | CModuleDef | CModulePropertySupport,
         ...,
     ] = ()
     functions: tuple[CFunction, ...] = ()
@@ -231,6 +239,21 @@ class FortranPointerAssignment(StageRecord):
 
 
 @dataclass
+class FortranAllocate(StageRecord):
+    """One explicit native allocation selected by completed handle policy."""
+
+    target: str
+    extents: tuple[CodeExpression, ...] = ()
+
+
+@dataclass
+class FortranDeallocate(StageRecord):
+    """One explicit native deallocation selected by completed handle policy."""
+
+    target: str
+
+
+@dataclass
 class FortranCall(StageRecord):
     """Fortran call statement."""
 
@@ -243,8 +266,14 @@ class FortranIf(StageRecord):
     """Fortran conditional with nested executable statements."""
 
     condition: CodeExpression
-    body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf, ...] = ()
-    else_body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf, ...] = ()
+    body: tuple[
+        FortranAllocate | FortranAssignment | FortranDeallocate | FortranPointerAssignment | FortranCall | FortranIf,
+        ...,
+    ] = ()
+    else_body: tuple[
+        FortranAllocate | FortranAssignment | FortranDeallocate | FortranPointerAssignment | FortranCall | FortranIf,
+        ...,
+    ] = ()
 
 
 @dataclass
@@ -294,7 +323,13 @@ class FortranFunction(StageRecord):
     bind_name: str | None = None
     declarations: tuple[FortranDeclaration, ...] = ()
     body: tuple[
-        FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf | FortranSelectCase,
+        FortranAllocate
+        | FortranAssignment
+        | FortranDeallocate
+        | FortranPointerAssignment
+        | FortranCall
+        | FortranIf
+        | FortranSelectCase,
         ...,
     ] = ()
     is_subroutine: bool = False

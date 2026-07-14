@@ -438,6 +438,8 @@ class PyiPrinter(ClassVisitor):
             metadata.append(self._contract(array.order))
         if array.order == "ORDER_C" and PyiPrinter._is_c_order_flat_array(array):
             metadata.append(self._contract("ORDER_C"))
+        if array.copy_order == "ORDER_F":
+            metadata.append(self._contract("COPY_F"))
         if array.allocatable:
             metadata.append(self._contract("Allocatable"))
         if array.pointer:

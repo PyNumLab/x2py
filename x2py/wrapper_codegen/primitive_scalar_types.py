@@ -23,6 +23,7 @@ class PrimitiveScalarTypeRegistry:
             "PyIs_Bool({object_name})",
             "bool",
             "Bool_to_PyBool",
+            "CFI_type_Bool",
         ),
         "Int8": BackendScalarType(
             "Int8",
@@ -35,6 +36,7 @@ class PrimitiveScalarTypeRegistry:
             "PyIs_Int8({object_name})",
             "numpy.int8",
             "Int8_to_NumpyLong",
+            "CFI_type_int8_t",
         ),
         "Int16": BackendScalarType(
             "Int16",
@@ -47,6 +49,7 @@ class PrimitiveScalarTypeRegistry:
             "PyIs_Int16({object_name})",
             "numpy.int16",
             "Int16_to_NumpyLong",
+            "CFI_type_int16_t",
         ),
         "Int32": BackendScalarType(
             "Int32",
@@ -59,6 +62,7 @@ class PrimitiveScalarTypeRegistry:
             "PyArray_IsScalar({object_name}, Int)",
             "numpy.int32",
             "Int32_to_NumpyLong",
+            "CFI_type_int32_t",
         ),
         "Int64": BackendScalarType(
             "Int64",
@@ -71,6 +75,7 @@ class PrimitiveScalarTypeRegistry:
             "PyIs_Int64({object_name})",
             "numpy.int64",
             "Int64_to_NumpyLong",
+            "CFI_type_int64_t",
         ),
         "Float32": BackendScalarType(
             "Float32",
@@ -83,6 +88,7 @@ class PrimitiveScalarTypeRegistry:
             "PyArray_IsScalar({object_name}, Float)",
             "numpy.float32",
             "Float_to_NumpyDouble",
+            "CFI_type_float",
         ),
         "Float64": BackendScalarType(
             "Float64",
@@ -95,6 +101,7 @@ class PrimitiveScalarTypeRegistry:
             "PyArray_IsScalar({object_name}, Double)",
             "numpy.float64",
             "Double_to_NumpyDouble",
+            "CFI_type_double",
         ),
         "Complex64": BackendScalarType(
             "Complex64",
@@ -107,6 +114,7 @@ class PrimitiveScalarTypeRegistry:
             "PyArray_IsScalar({object_name}, CFloat)",
             "numpy.complex64",
             "Complex64_to_NumpyComplex",
+            "CFI_type_float_Complex",
         ),
         "Complex128": BackendScalarType(
             "Complex128",
@@ -119,6 +127,7 @@ class PrimitiveScalarTypeRegistry:
             "PyArray_IsScalar({object_name}, CDouble)",
             "numpy.complex128",
             "Complex128_to_NumpyComplex",
+            "CFI_type_double_Complex",
         ),
     }
 

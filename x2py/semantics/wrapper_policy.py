@@ -8,6 +8,12 @@ from enum import Enum
 from typing import Any
 
 from x2py.semantics import models
+from x2py.semantics.metadata import ADDRESS_ROLE_METADATA, ADDRESS_ROLE_RAW
+from x2py.semantics.native_array_handles import (
+    NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER,
+    NativeArrayHandlePolicy as CompletedNativeArrayHandlePolicy,
+    native_array_descriptor_kind,
+)
 from x2py.semantics.wrapper_exports import PythonExportPolicy, completed_python_exports
 from x2py.semantics.ownership import (
     AssignmentMode,
@@ -38,8 +44,26 @@ _PLAN_PRIMITIVE_SCALAR_TYPES = frozenset(
     }
 )
 
+_NUMPY_DTYPE_NAMES = {
+    "Bool": "bool",
+    "Int8": "int8",
+    "Int16": "int16",
+    "Int32": "int32",
+    "Int64": "int64",
+    "Float32": "float32",
+    "Float64": "float64",
+    "Complex64": "complex64",
+    "Complex128": "complex128",
+}
+
 FIXED_STRING_RESULT_COPY_REASON = "copy fixed-length Fortran character output into C-owned null-terminated storage"
 ORDINARY_ARRAY_RESULT_COPY_REASON = "copy non-descriptor Fortran array output into C-owned contiguous storage"
+OWNED_NATIVE_ARRAY_HANDLE_COPY_REASON = (
+    "materialize native allocatable descriptor into persistent wrapper-owned CFI storage"
+)
+SCALAR_DESCRIPTOR_RESULT_COPY_REASON = (
+    "copy a present rank-zero native descriptor value before releasing call-local descriptor storage"
+)
 STRING_INPUT_COPY_REASON = "materialize Fortran character storage from the binding UTF-8 byte buffer"
 STRING_REPLACEMENT_COPY_REASON = (
     "materialize mutable Fortran character storage and copy post-call bytes back to binding storage"
@@ -56,6 +80,7 @@ class OptionalMode(str, Enum):
     """Completed ABI behavior for one argument's presence states."""
 
     REQUIRED = "required"
+    REQUIRED_DESCRIPTOR = "required_descriptor"
     NULLABLE_VALUE = "nullable_value"
     DESCRIPTOR = "descriptor"
 
@@ -68,6 +93,7 @@ class ArgumentHandoffMode(str, Enum):
     OPAQUE_ADDRESS = "opaque_address"
     CHARACTER_BUFFER = "character_buffer"
     ARRAY_BUFFER = "array_buffer"
+    NATIVE_DESCRIPTOR = "native_descriptor"
 
 
 class BridgeDataAction(str, Enum):
@@ -88,12 +114,160 @@ class WritebackPhase(str, Enum):
     CLEANUP = "cleanup"
 
 
+class TransformationLayer(str, Enum):
+    """Backend layer that owns one complete representation transformation."""
+
+    BINDING = "binding"
+    BRIDGE = "bridge"
+
+
+class TransformationAction(str, Enum):
+    """Typed representation or lifecycle operation selected before planning."""
+
+    COPY_ARRAY_REPRESENTATION = "copy_array_representation"
+    RELEASE_TEMPORARY = "release_temporary"
+
+
 class ModuleGetterAction(str, Enum):
     """Completed Python-visible read behavior for a module variable."""
 
     CONSTANT_VALUE = "constant_value"
     DIRECT_VALUE = "direct_value"
     NULLABLE_SNAPSHOT = "nullable_snapshot"
+    NATIVE_ARRAY_HANDLE = "native_array_handle"
+
+
+class NativeArrayDescriptorKind(str, Enum):
+    """Public native descriptor family."""
+
+    ALLOCATABLE = "allocatable"
+    POINTER = "pointer"
+
+
+class NativeArrayHandleKind(str, Enum):
+    """Completed native handle owner/use category."""
+
+    ARGUMENT_DESCRIPTOR = "argument_descriptor"
+    OPTIONAL_ABSENT_HANDLE = "optional_absent_handle"
+    BORROWED_MODULE_DESCRIPTOR = "borrowed_module_descriptor"
+    BORROWED_FIELD_DESCRIPTOR = "borrowed_field_descriptor"
+    OWNED_RESULT_DESCRIPTOR = "owned_result_descriptor"
+
+
+class NativeDescriptorHandoffABI(str, Enum):
+    """Binding-to-bridge descriptor representation."""
+
+    FACT_PACKED_CALL_LOCAL = "fact_packed_call_local"
+    DIRECT_STANDARD_DESCRIPTOR = "direct_standard_descriptor"
+    OWNED_RESULT_STORAGE = "owned_result_storage"
+
+
+class NativeArraySourceKind(str, Enum):
+    """Python runtime sources accepted by an ordinary array argument."""
+
+    NDARRAY = "ndarray"
+    ALLOCATABLE_HANDLE = "allocatable_handle"
+    POINTER_HANDLE = "pointer_handle"
+
+
+class NativeArrayHandleOrigin(str, Enum):
+    """Completed source owner for a native handle."""
+
+    ARGUMENT = "argument"
+    PROJECTED_RESULT = "projected_result"
+    RESULT = "result"
+    MODULE_VARIABLE = "module_variable"
+    DERIVED_FIELD = "derived_field"
+
+
+class NativeArrayOwnerRetention(str, Enum):
+    """Python owner retained by a runtime handle."""
+
+    CALLER_HANDLE = "caller_handle"
+    OPTIONAL_ARGUMENT = "optional_argument"
+    NATIVE_MODULE = "native_module"
+    PARENT_WRAPPER = "parent_wrapper"
+    WRAPPER_OWNER_STORAGE = "wrapper_owner_storage"
+
+
+class NativeArrayDescriptorOwnership(str, Enum):
+    """Ownership of persistent standard-descriptor storage."""
+
+    BORROWED = "borrowed"
+    OWNED = "owned"
+
+
+class NativeArrayGetterBehavior(str, Enum):
+    """Python getter behavior for a handle owner."""
+
+    NONE = "none"
+    HANDLE = "handle"
+    RETURN_HANDLE = "return_handle"
+
+
+class NativeArrayOutputProjection(str, Enum):
+    """Result identity/materialization selected for a handle."""
+
+    NONE = "none"
+    PROJECTED_HANDLE = "projected_handle"
+    HANDLE_RESULT = "handle_result"
+
+
+class NativeArrayRelease(str, Enum):
+    """Completed release owner for descriptor storage."""
+
+    NONE = "none"
+    NATIVE_OWNER = "native_owner"
+    WRAPPER_DEALLOC = "wrapper_dealloc"
+
+
+class NativeArrayDestroyBehavior(str, Enum):
+    """Runtime destruction behavior for a handle."""
+
+    NONE = "none"
+    HANDLE_FINALIZER = "handle_finalizer"
+    PARENT_WRAPPER_FINALIZER = "parent_wrapper_finalizer"
+
+
+class NativeArrayExtractionAction(str, Enum):
+    """Completed `.to_numpy()` behavior."""
+
+    BORROWED_VIEW = "borrowed_view"
+    READ_ONLY_DETACHED_COPY = "read_only_detached_copy"
+    CONTIGUOUS_VIEW = "contiguous_view"
+    DESCRIPTOR_VIEW = "descriptor_view"
+    COPY_ONLY = "copy_only"
+    UNSUPPORTED = "unsupported"
+
+
+class NativeArrayDescriptorInterop(str, Enum):
+    """Standard C descriptor requirement."""
+
+    NONE = "none"
+    POINTER_C_DESCRIPTOR = "pointer_c_descriptor"
+    OWNED_ALLOCATABLE_C_DESCRIPTOR = "owned_allocatable_c_descriptor"
+
+
+class NativeArrayOperation(str, Enum):
+    """Generated runtime operation supported by one handle."""
+
+    ALLOCATED = "allocated"
+    ASSOCIATED = "associated"
+    SHAPE = "shape"
+    ELEMENT_LENGTH = "element_length"
+    ARRAY_ACTUAL = "array_actual"
+    DESCRIPTOR = "descriptor"
+    TO_NUMPY = "to_numpy"
+    NATIVE_BYTE_ORDER = "native_byte_order"
+    ALIGNED = "aligned"
+    WRITEABLE = "writeable"
+    LAYOUT = "layout"
+    CONTIGUOUS = "contiguous"
+    ALLOCATE = "allocate"
+    DEALLOCATE = "deallocate"
+    RESIZE = "resize"
+    NULLIFY = "nullify"
+    DESTROY = "destroy"
 
 
 class PythonExceptionKind(str, Enum):
@@ -147,6 +321,7 @@ class ModuleVariablePolicy:
     constant_value: Any
     supported: bool
     blockers: tuple[str, ...] = ()
+    native_array_handle: NativeArrayHandleWrapperPolicy | None = None
 
 
 @dataclass(frozen=True)
@@ -164,16 +339,93 @@ class LifecyclePolicy:
 
 @dataclass(frozen=True)
 class ArrayHandoffPolicy:
-    """Completed ordinary-array storage and layout facts."""
+    """Completed array storage or raw-pointee layout facts."""
 
     rank: int | None
     shape: tuple[str, ...]
     axes: tuple[str, ...]
     order: str | None
+    native_order: str | None
     contiguous: bool | None
     itemsize: int | None = None
     category: str | None = None
     extent_references: tuple[tuple[str, ...], ...] = ()
+
+
+@dataclass(frozen=True)
+class TransformationPolicy:
+    """One layer-owned transformation subordinate to a transfer policy."""
+
+    phase: WritebackPhase
+    layer: TransformationLayer
+    action: TransformationAction
+    source_representation: str
+    target_representation: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class NativeArrayActualPolicy:
+    """Completed accepted-source and validation facts for an ordinary array."""
+
+    accepted_sources: tuple[NativeArraySourceKind, ...]
+    dtype: str
+    rank: int
+    shape: tuple[str, ...]
+    order: str | None
+    writable: bool
+    require_native_byte_order: bool
+    require_aligned: bool
+    require_contiguous: bool
+
+
+@dataclass(frozen=True)
+class NativeDescriptorHandoffPolicy:
+    """Completed descriptor ABI form subordinate to one handle policy."""
+
+    abi: NativeDescriptorHandoffABI
+    rank: int
+    optional_presence: bool
+
+
+@dataclass(frozen=True)
+class NativeArrayHandleWrapperPolicy:
+    """Typed wrapper-facing projection of completed native handle policy."""
+
+    descriptor_kind: NativeArrayDescriptorKind
+    handle_kind: NativeArrayHandleKind
+    origin: NativeArrayHandleOrigin
+    owner: OwnershipOwner
+    owner_retention: NativeArrayOwnerRetention
+    descriptor_ownership: NativeArrayDescriptorOwnership
+    borrowed: bool
+    getter_behavior: NativeArrayGetterBehavior
+    setter_action: SetterAction
+    native_assignment: AssignmentMode
+    output_projection: NativeArrayOutputProjection
+    release: NativeArrayRelease
+    target_lifetime: str
+    destroy_behavior: NativeArrayDestroyBehavior
+    extraction_action: NativeArrayExtractionAction
+    descriptor_interop: NativeArrayDescriptorInterop
+    nullable: bool
+    optional_absent: bool
+    storage_mode: StorageMode
+    operations: tuple[NativeArrayOperation, ...]
+    required_headers: tuple[str, ...]
+    array: ArrayHandoffPolicy
+    handoff: NativeDescriptorHandoffPolicy
+
+
+@dataclass(frozen=True)
+class ScalarDescriptorResultPolicy:
+    """Completed nullable rank-zero descriptor result copy contract."""
+
+    descriptor_kind: NativeArrayDescriptorKind
+    runtime_length: bool
+    nullable: bool
+    copy_reason: str
+    release_owner: OwnershipOwner
 
 
 @dataclass(frozen=True)
@@ -207,6 +459,9 @@ class ArgumentPolicy:
     result_position: int | None
     character_length: int | None
     array: ArrayHandoffPolicy | None = None
+    native_array_actual: NativeArrayActualPolicy | None = None
+    native_array_handle: NativeArrayHandleWrapperPolicy | None = None
+    transformations: tuple[TransformationPolicy, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -230,6 +485,9 @@ class ResultPolicy:
     native_name: str | None = None
     native_position: int | None = None
     result_position: int = 0
+    native_array_handle: NativeArrayHandleWrapperPolicy | None = None
+    scalar_descriptor: ScalarDescriptorResultPolicy | None = None
+    transformations: tuple[TransformationPolicy, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -258,6 +516,8 @@ class NativeCallSlotPolicy:
     semantic_type_name: str | None = None
     character_length: int | None = None
     array: ArrayHandoffPolicy | None = None
+    native_array_handle: NativeArrayHandleWrapperPolicy | None = None
+    scalar_descriptor: ScalarDescriptorResultPolicy | None = None
 
 
 @dataclass(frozen=True)
@@ -306,6 +566,33 @@ def build_module_variable_policy(
     setter = _ownership_decision(variable, models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA)
     descriptor_kind = _scalar_module_descriptor_kind(variable)
     constant = _is_scalar_module_constant(variable)
+    native_array_handle = _native_array_handle_wrapper_policy(
+        variable.semantic_type,
+        variable.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+        owner_path,
+    )
+    if native_array_handle is not None:
+        blockers = _native_array_module_variable_blockers(variable, getter, setter, native_array_handle)
+        return ModuleVariablePolicy(
+            owner_path=owner_path,
+            name=variable.name,
+            python_exports=completed_python_exports(variable, variable.name),
+            native_name=str(variable.origin.native_name or variable.name),
+            native_module=str(variable.origin.native_scope or module_name),
+            semantic_type_name=variable.semantic_type.name,
+            rank=int(variable.semantic_type.rank or 0),
+            getter_action=ModuleGetterAction.NATIVE_ARRAY_HANDLE,
+            getter=getter,
+            setter_action=native_array_handle.setter_action,
+            native_assignment=native_array_handle.native_assignment,
+            setter=setter,
+            descriptor_kind=native_array_handle.descriptor_kind.value,
+            initializer=None,
+            constant_value=None,
+            supported=not blockers,
+            blockers=tuple(blockers),
+            native_array_handle=native_array_handle,
+        )
     blockers = _scalar_module_variable_blockers(variable, getter, setter, descriptor_kind, constant)
     initializer = variable.metadata.get(models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA)
     return ModuleVariablePolicy(
@@ -423,6 +710,17 @@ def _argument_policies(
             blockers.append(f"argument {argument.name!r} has no completed native-call slot")
             native_position = -1
         optional_mode = _optional_mode(argument, decision)
+        array_policy = _array_handoff_policy(argument.semantic_type)
+        transformations, transformation_blockers = _argument_transformation_policies(
+            argument,
+            decision,
+            array_policy,
+        )
+        native_array_handle = _native_array_handle_wrapper_policy(
+            argument.semantic_type,
+            argument.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+            f"{owner_path}.{argument.name}",
+        )
         bridge_data_action, bridge_copy_reason = _argument_bridge_data_action(
             decision,
             optional_mode,
@@ -436,6 +734,7 @@ def _argument_policies(
                 bridge_copy_reason,
             )
         )
+        blockers.extend(transformation_blockers)
         policies.append(
             ArgumentPolicy(
                 owner_path=f"{owner_path}.{argument.name}",
@@ -464,7 +763,10 @@ def _argument_policies(
                 python_visible=decision.python_visible,
                 result_position=_argument_result_position(function, current_python_position),
                 character_length=_character_length(argument.semantic_type),
-                array=_array_handoff_policy(argument.semantic_type),
+                array=array_policy,
+                native_array_actual=_native_array_actual_policy(argument, decision, array_policy),
+                native_array_handle=native_array_handle,
+                transformations=transformations,
             )
         )
     return policies, tuple(blockers)
@@ -495,6 +797,12 @@ def _result_policies(
     decision = function.metadata.get(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA)
     if not isinstance(decision, OwnershipDecision):
         return (), (*hidden_blockers, "function result is missing completed ownership policy")
+    direct_handle = _native_array_handle_wrapper_policy(
+        function.return_type,
+        function.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+        f"{owner_path}.return",
+    )
+    scalar_descriptor = _scalar_descriptor_result_policy(function.return_type, decision)
     blockers = list(_result_blockers(function.return_type, decision))
     bridge_data_action, bridge_copy_reason = _result_bridge_data_action(function.return_type)
     if bridge_data_action is BridgeDataAction.BLOCKED and decision.kind is not ObjectKind.SCALAR:
@@ -513,6 +821,8 @@ def _result_policies(
         bridge_copy_reason=bridge_copy_reason,
         character_length=_character_length(function.return_type),
         array=_array_handoff_policy(function.return_type),
+        native_array_handle=direct_handle,
+        scalar_descriptor=scalar_descriptor,
     )
     results = (direct_result, *hidden_results)
     return (
@@ -551,7 +861,20 @@ def _hidden_result_policies(
             policies.append((None, (f"hidden result {argument.name!r} has no completed return projection",)))
             continue
         blockers = _hidden_result_blockers(argument, decision, mapping)
-        bridge_data_action, bridge_copy_reason = _result_bridge_data_action(argument.semantic_type)
+        native_array_handle = _native_array_handle_wrapper_policy(
+            argument.semantic_type,
+            argument.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+            f"{owner_path}.{argument.name}",
+        )
+        scalar_descriptor = _scalar_descriptor_result_policy(
+            argument.semantic_type,
+            decision,
+            descriptor_kind=mapping.value_kind,
+        )
+        bridge_data_action, bridge_copy_reason = _result_bridge_data_action(
+            argument.semantic_type,
+            descriptor_kind=mapping.value_kind,
+        )
         if bridge_data_action is BridgeDataAction.BLOCKED and decision.kind is not ObjectKind.SCALAR:
             blockers = (*blockers, f"hidden result {argument.name!r} has no completed bridge data action")
         policies.append(
@@ -574,6 +897,8 @@ def _hidden_result_policies(
                     native_name=mapping.native_name or argument.name,
                     native_position=mapping.native_position,
                     result_position=int(mapping.result_position),
+                    native_array_handle=native_array_handle,
+                    scalar_descriptor=scalar_descriptor,
                 ),
                 tuple(blockers),
             )
@@ -639,7 +964,7 @@ def _projected_native_call_slot_policies(
         if decision is None:
             blockers.append(f"native-call slot {native_position} references argument without completed policy")
             continue
-        value_kind = mapping.value_kind or "arg"
+        value_kind = _native_argument_value_kind(argument, mapping.value_kind or "arg")
         if value_kind not in {"addr", "allocatable", "arg", "pointer"}:
             blockers.append(f"native-call slot {native_position} uses unsupported scalar value kind {value_kind!r}")
         if python_position in positions:
@@ -670,6 +995,11 @@ def _projected_native_call_slot_policies(
                 semantic_type_name=argument.semantic_type.name,
                 character_length=_character_length(argument.semantic_type),
                 array=_array_handoff_policy(argument.semantic_type),
+                native_array_handle=_native_array_handle_wrapper_policy(
+                    argument.semantic_type,
+                    argument.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+                    f"{owner_path}.{argument.name}",
+                ),
             )
         )
     blockers.extend(_native_position_blockers(slot.native_position for slot in slots))
@@ -723,10 +1053,18 @@ def _hidden_result_native_call_slot_policy(
                 semantic_type_name=argument.semantic_type.name,
                 character_length=_character_length(argument.semantic_type),
                 array=_array_handoff_policy(argument.semantic_type),
+                native_array_handle=_native_array_handle_wrapper_policy(
+                    argument.semantic_type,
+                    argument.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+                    f"{owner_path}.{argument.name}",
+                ),
             ),
             (f"native-call result slot {native_position} references argument without completed policy",),
         )
-    bridge_data_action, bridge_copy_reason = _native_result_bridge_data_action(argument.semantic_type)
+    bridge_data_action, bridge_copy_reason = _native_result_bridge_data_action(
+        argument.semantic_type,
+        descriptor_kind=mapping.value_kind,
+    )
     blockers = (
         (f"native-call result slot {native_position} has no completed bridge data action",)
         if bridge_data_action is BridgeDataAction.BLOCKED
@@ -750,6 +1088,16 @@ def _hidden_result_native_call_slot_policy(
             semantic_type_name=argument.semantic_type.name,
             character_length=_character_length(argument.semantic_type),
             array=_array_handoff_policy(argument.semantic_type),
+            native_array_handle=_native_array_handle_wrapper_policy(
+                argument.semantic_type,
+                argument.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+                f"{owner_path}.{argument.name}",
+            ),
+            scalar_descriptor=_scalar_descriptor_result_policy(
+                argument.semantic_type,
+                decision,
+                descriptor_kind=mapping.value_kind,
+            ),
         ),
         blockers,
     )
@@ -816,10 +1164,11 @@ def _implicit_native_call_slot_policies(
         if decision is None:
             blockers.append(f"implicit native-call slot {position} references argument without completed policy")
             continue
+        value_kind = _native_argument_value_kind(argument, "arg")
         bridge_data_action, bridge_copy_reason = _argument_bridge_data_action(
             decision,
             _optional_mode(argument, decision),
-            "arg",
+            value_kind,
         )
         if bridge_data_action is BridgeDataAction.BLOCKED:
             blockers.append(f"implicit native-call slot {position} has no completed bridge data action")
@@ -832,7 +1181,7 @@ def _implicit_native_call_slot_policies(
                 python_position=position,
                 python_name=argument.name,
                 native_name=argument.name,
-                value_kind="arg",
+                value_kind=value_kind,
                 native_barrier_action=decision.native_barrier_action,
                 codegen_action=decision.codegen_action,
                 bridge_data_action=bridge_data_action,
@@ -841,9 +1190,19 @@ def _implicit_native_call_slot_policies(
                 semantic_type_name=argument.semantic_type.name,
                 character_length=_character_length(argument.semantic_type),
                 array=_array_handoff_policy(argument.semantic_type),
+                native_array_handle=_native_array_handle_wrapper_policy(
+                    argument.semantic_type,
+                    argument.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
+                    f"{owner_path}.{argument.name}",
+                ),
             )
         )
     return positions, tuple(slots), tuple(blockers)
+
+
+def _native_argument_value_kind(argument: models.SemanticArgument, default: str) -> str:
+    """Project descriptor kind into the native slot before wrapper lowering."""
+    return native_array_descriptor_kind(argument.semantic_type) or default
 
 
 def _argument_blockers(
@@ -852,7 +1211,7 @@ def _argument_blockers(
     bridge_data_action: BridgeDataAction,
     bridge_copy_reason: str | None,
 ) -> tuple[str, ...]:
-    """Return scalar-lane blockers without reconstructing policy in a backend."""
+    """Return datatype-family blockers without reconstructing policy in a backend."""
     return (
         *_argument_shape_blockers(argument, decision),
         *_argument_boundary_blockers(argument, decision),
@@ -865,9 +1224,18 @@ def _argument_shape_blockers(
     argument: models.SemanticArgument,
     decision: OwnershipDecision,
 ) -> tuple[str, ...]:
-    """Return ownership, type, and visibility blockers for one argument."""
+    """Dispatch one argument to its scalar/string or array policy family."""
     if int(argument.semantic_type.rank or 0) > 0:
         return _array_argument_shape_blockers(argument, decision)
+    return _scalar_or_string_argument_shape_blockers(argument, decision)
+
+
+# Scalar and rank-zero string argument policy.
+def _scalar_or_string_argument_shape_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Return ownership, type, and visibility blockers for one rank-zero argument."""
     blockers: list[str] = []
     if decision.is_blocked:
         blockers.append(
@@ -889,13 +1257,25 @@ def _array_argument_shape_blockers(
     argument: models.SemanticArgument,
     decision: OwnershipDecision,
 ) -> tuple[str, ...]:
-    """Require one supported non-descriptor ordinary array value."""
+    """Require one supported non-descriptor array boundary."""
     blockers: list[str] = []
     if decision.is_blocked:
         blockers.append(
             f"argument {argument.name!r} has blocked ownership policy: {decision.blocker or decision.reason}"
         )
-    if not _is_phase6_ordinary_array_type(argument.semantic_type):
+    descriptor_kind = native_array_descriptor_kind(argument.semantic_type)
+    if descriptor_kind is not None:
+        completed_handle = argument.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA)
+        if not isinstance(completed_handle, CompletedNativeArrayHandlePolicy):
+            blockers.append(f"argument {argument.name!r} is missing completed native array handle policy")
+        elif completed_handle.is_blocked:
+            blockers.append(
+                f"argument {argument.name!r} has blocked native array handle policy: {completed_handle.blocker}"
+            )
+    elif decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS:
+        if not _is_phase6_raw_array_address_type(argument.semantic_type):
+            blockers.append(f"argument {argument.name!r} is outside raw array address support")
+    elif not _is_phase6_ordinary_array_type(argument.semantic_type):
         blockers.append(f"argument {argument.name!r} is outside ordinary array buffer support")
     if not decision.python_visible:
         blockers.append(f"argument {argument.name!r} is not Python-visible")
@@ -909,11 +1289,19 @@ def _argument_boundary_blockers(
     decision: OwnershipDecision,
 ) -> tuple[str, ...]:
     """Return Python/native boundary-action blockers for one argument."""
-    blockers: list[str] = []
     if decision.kind is ObjectKind.STRING:
         return _string_boundary_blockers(argument, decision)
     if decision.kind is ObjectKind.NUMPY_ARRAY:
         return _array_boundary_blockers(argument, decision)
+    return _scalar_boundary_blockers(argument, decision)
+
+
+def _scalar_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Validate one completed scalar value, storage, or address boundary."""
+    blockers: list[str] = []
     if decision.python_barrier_action not in {
         PythonBarrierAction.SCALAR_VALUE,
         PythonBarrierAction.SCALAR_STORAGE,
@@ -949,6 +1337,21 @@ def _argument_boundary_blockers(
 
 # Ordinary-array boundary policy.
 def _array_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Dispatch one completed array boundary without backend inference."""
+    action = decision.python_barrier_action
+    if action is PythonBarrierAction.ARRAY_STORAGE:
+        return _array_storage_boundary_blockers(argument, decision)
+    if action is PythonBarrierAction.RAW_ADDRESS:
+        return _raw_array_address_boundary_blockers(argument, decision)
+    if action is PythonBarrierAction.WRAPPER_INSTANCE:
+        return _native_array_handle_boundary_blockers(argument, decision)
+    return (f"argument {argument.name!r} has unsupported array Python action {action.value}",)
+
+
+def _array_storage_boundary_blockers(
     argument: models.SemanticArgument,
     decision: OwnershipDecision,
 ) -> tuple[str, ...]:
@@ -990,11 +1393,78 @@ def _array_boundary_blockers(
         blockers.append(
             f"argument {argument.name!r} array action is {decision.codegen_action.value}, not a borrowed buffer action"
         )
-    if decision.nullable or decision.descriptor_boundary:
+    if decision.descriptor_boundary:
         blockers.append(f"argument {argument.name!r} ordinary array must be non-descriptor storage")
+    if decision.nullable and not argument.optional:
+        blockers.append(f"argument {argument.name!r} ordinary array is nullable without optional presence")
     array_policy = _array_handoff_policy(argument.semantic_type)
     if argument.optional and array_policy is not None and array_policy.rank is None:
         blockers.append(f"argument {argument.name!r} optional assumed-rank combination is not supported")
+    return tuple(blockers)
+
+
+def _raw_array_address_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require one caller-owned raw array address with completed pointee shape."""
+    blockers = []
+    if decision.owner is not OwnershipOwner.CALLER:
+        blockers.append(f"argument {argument.name!r} raw array owner is {decision.owner.value}, not caller")
+    expected_transfer = TransferMode.IN_PLACE if decision.mutates_native else TransferMode.CALL_LOCAL
+    if decision.transfer is not expected_transfer:
+        blockers.append(
+            f"argument {argument.name!r} raw array transfer is {decision.transfer.value}, not {expected_transfer.value}"
+        )
+    expected_destruction = DestructionPolicy.CALLER if decision.mutates_native else DestructionPolicy.NONE
+    if decision.destruction is not expected_destruction:
+        blockers.append(
+            f"argument {argument.name!r} raw array destruction is {decision.destruction.value}, "
+            f"not {expected_destruction.value}"
+        )
+    if decision.storage_mode is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} raw array storage is {decision.storage_mode.value}, not stack")
+    if (decision.boundary_storage_mode or decision.storage_mode) is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} raw array boundary storage is not stack")
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_RAW_ADDRESS:
+        blockers.append(
+            f"argument {argument.name!r} raw array native action is "
+            f"{decision.native_barrier_action.value}, not pass_raw_address"
+        )
+    if decision.codegen_action not in {CodegenAction.CALL_LOCAL_INPUT, CodegenAction.IN_PLACE_ARGUMENT}:
+        blockers.append(
+            f"argument {argument.name!r} raw array action is {decision.codegen_action.value}, "
+            "not a non-owning address action"
+        )
+    if argument.optional:
+        blockers.append(f"argument {argument.name!r} optional raw array addresses are not supported")
+    if decision.nullable or decision.descriptor_boundary:
+        blockers.append(f"argument {argument.name!r} raw array address must be non-descriptor storage")
+    if decision.projects_result:
+        blockers.append(f"argument {argument.name!r} raw array address cannot project a Python result")
+    return tuple(blockers)
+
+
+def _native_array_handle_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require one caller handle transported through its native descriptor."""
+    blockers = []
+    if native_array_descriptor_kind(argument.semantic_type) not in {"allocatable", "pointer"}:
+        blockers.append(f"argument {argument.name!r} has no native array descriptor kind")
+    if decision.owner is not OwnershipOwner.CALLER:
+        blockers.append(f"argument {argument.name!r} descriptor owner is {decision.owner.value}, not caller")
+    if decision.transfer not in {TransferMode.CALL_LOCAL, TransferMode.IN_PLACE}:
+        blockers.append(f"argument {argument.name!r} descriptor transfer is {decision.transfer.value}")
+    if decision.destruction not in {DestructionPolicy.NONE, DestructionPolicy.CALLER}:
+        blockers.append(f"argument {argument.name!r} descriptor destruction is {decision.destruction.value}")
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_NATIVE_DESCRIPTOR:
+        blockers.append(f"argument {argument.name!r} does not pass a native descriptor")
+    if decision.codegen_action not in {CodegenAction.CALL_LOCAL_INPUT, CodegenAction.IN_PLACE_ARGUMENT}:
+        blockers.append(f"argument {argument.name!r} has unsupported descriptor action {decision.codegen_action.value}")
+    if not decision.descriptor_boundary or not decision.nullable:
+        blockers.append(f"argument {argument.name!r} descriptor boundary is incomplete")
     return tuple(blockers)
 
 
@@ -1143,8 +1613,8 @@ def _string_replacement_blockers(
         blockers.append(f"argument {argument.name!r} replacement does not record native mutation")
     if not decision.projects_result:
         blockers.append(f"argument {argument.name!r} replacement does not project a Python result")
-    if decision.nullable:
-        blockers.append(f"argument {argument.name!r} replacement uses semantic nullability for optional presence")
+    if decision.nullable and not argument.optional:
+        blockers.append(f"argument {argument.name!r} replacement is nullable without optional presence")
     return tuple(blockers)
 
 
@@ -1180,10 +1650,24 @@ def _argument_projection_blockers(
 
 
 def _result_blockers(semantic_type: models.SemanticType, decision: OwnershipDecision) -> tuple[str, ...]:
+    """Dispatch one result to its completed datatype and descriptor family."""
+    if _is_scalar_descriptor_result_type(semantic_type):
+        return _scalar_descriptor_result_blockers(semantic_type, decision, "result")
+    if native_array_descriptor_kind(semantic_type) is not None:
+        return _native_array_handle_result_blockers(decision, "result")
     if _is_phase6_ordinary_array_type(semantic_type):
         return _ordinary_array_result_blockers(semantic_type, decision, "result")
     if _is_fixed_plan_string_result_type(semantic_type):
         return _fixed_string_result_blockers(decision)
+    return _scalar_result_blockers(semantic_type, decision)
+
+
+# Scalar result policy.
+def _scalar_result_blockers(
+    semantic_type: models.SemanticType,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Return completed primitive scalar result blockers."""
     blockers: list[str] = []
     if decision.is_blocked:
         blockers.append(f"result has blocked ownership policy: {decision.blocker or decision.reason}")
@@ -1206,6 +1690,15 @@ def _hidden_result_blockers(
     mapping: models.ProjectionMapping,
 ) -> tuple[str, ...]:
     """Return blockers for one hidden result projection."""
+    if _is_scalar_descriptor_result_type(argument.semantic_type, descriptor_kind=mapping.value_kind):
+        return _scalar_descriptor_result_blockers(
+            argument.semantic_type,
+            decision,
+            f"hidden result {argument.name!r}",
+            mapping,
+        )
+    if native_array_descriptor_kind(argument.semantic_type) is not None:
+        return _native_array_handle_result_blockers(decision, f"hidden result {argument.name!r}")
     if _is_phase6_ordinary_array_type(argument.semantic_type):
         return _ordinary_array_hidden_result_blockers(argument, decision, mapping)
     if _is_fixed_plan_string_result_type(argument.semantic_type):
@@ -1245,6 +1738,63 @@ def _hidden_result_blockers(
     return tuple(blockers)
 
 
+def _scalar_descriptor_result_blockers(
+    semantic_type: models.SemanticType,
+    decision: OwnershipDecision,
+    label: str,
+    mapping: models.ProjectionMapping | None = None,
+) -> tuple[str, ...]:
+    """Require one nullable copied rank-zero allocatable/pointer result."""
+    blockers = []
+    if decision.is_blocked:
+        blockers.append(f"{label} has blocked ownership policy: {decision.blocker or decision.reason}")
+    expected_kind = ObjectKind.STRING if semantic_type.name == "String" else ObjectKind.SCALAR
+    if decision.kind is not expected_kind:
+        blockers.append(f"{label} policy kind is {decision.kind.value}, not {expected_kind.value}")
+    if decision.owner is not OwnershipOwner.PYTHON:
+        blockers.append(f"{label} owner is {decision.owner.value}, not python")
+    if decision.destruction is not DestructionPolicy.PYTHON_REFCOUNT:
+        blockers.append(f"{label} destruction is {decision.destruction.value}, not python_refcount")
+    if not decision.nullable or not decision.descriptor_boundary:
+        blockers.append(f"{label} does not preserve nullable descriptor state")
+    if decision.python_barrier_action is not PythonBarrierAction.NONE:
+        blockers.append(f"{label} Python action is {decision.python_barrier_action.value}, not none")
+    if mapping is not None:
+        if not decision.projects_result or decision.python_visible:
+            blockers.append(f"{label} projection visibility is inconsistent")
+        if mapping.value_kind not in {"allocatable", "pointer"}:
+            blockers.append(f"{label} descriptor kind {mapping.value_kind!r} is unsupported")
+        if not isinstance(mapping.native_position, int) or not isinstance(mapping.result_position, int):
+            blockers.append(f"{label} has incomplete native/result positions")
+    return tuple(blockers)
+
+
+def _native_array_handle_result_blockers(
+    decision: OwnershipDecision,
+    label: str,
+) -> tuple[str, ...]:
+    """Require one wrapper-owned allocatable handle result."""
+    blockers = []
+    if decision.is_blocked:
+        blockers.append(f"{label} has blocked ownership policy: {decision.blocker or decision.reason}")
+        return tuple(blockers)
+    expected = (
+        ("kind", decision.kind, ObjectKind.NUMPY_ARRAY),
+        ("owner", decision.owner, OwnershipOwner.WRAPPER),
+        ("transfer", decision.transfer, TransferMode.WRAPPER_INSTANCE),
+        ("destruction", decision.destruction, DestructionPolicy.WRAPPER_DEALLOC),
+        ("action", decision.codegen_action, CodegenAction.WRAPPER_INSTANCE),
+    )
+    blockers.extend(
+        f"{label} native handle {name} is {actual.value}, not {required.value}"
+        for name, actual, required in expected
+        if actual is not required
+    )
+    if not decision.nullable:
+        blockers.append(f"{label} native handle must preserve unallocated state")
+    return tuple(blockers)
+
+
 # Ordinary-array result policy.
 def _ordinary_array_result_blockers(
     semantic_type: models.SemanticType,
@@ -1276,6 +1826,8 @@ def _ordinary_array_result_blockers(
     array = _array_handoff_policy(semantic_type)
     if array is None or array.rank is None or any(shape in {":", "::Strided", "...", "Flat"} for shape in array.shape):
         blockers.append(f"{label} ordinary array shape is not fully expressible")
+    elif array.native_order != array.order:
+        blockers.append(f"{label} COPY_F applies only to Python-visible array arguments")
     elif array.order == "ORDER_C" and array.rank > 1:
         blockers.append(f"{label} ordinary array copy requires Fortran element order")
     return tuple(blockers)
@@ -1545,6 +2097,349 @@ def _is_first_lane_literal_type(literal_type: str) -> bool:
     return literal_type in {"Bool", "Int32", "Float32", "Float64", "Complex64", "Complex128"}
 
 
+# Native-array-handle policy projection.
+def _is_scalar_descriptor_result_type(
+    semantic_type: models.SemanticType,
+    *,
+    descriptor_kind: str | None = None,
+) -> bool:
+    """Return whether rank-zero result storage is allocatable or pointer-backed."""
+    descriptor = descriptor_kind or _scalar_descriptor_kind(semantic_type)
+    return int(semantic_type.rank or 0) == 0 and descriptor in {"allocatable", "pointer"}
+
+
+def _scalar_descriptor_kind(semantic_type: models.SemanticType) -> str | None:
+    """Return the explicit rank-zero descriptor marker completed by semantics."""
+    if int(semantic_type.rank or 0) != 0:
+        return None
+    allocatable = bool(semantic_type.metadata.get("fortran_allocatable"))
+    pointer = bool(semantic_type.metadata.get("fortran_pointer"))
+    if allocatable and pointer:
+        raise ValueError(f"Scalar type {semantic_type.name!r} cannot be both allocatable and pointer")
+    if allocatable:
+        return "allocatable"
+    if pointer:
+        return "pointer"
+    return None
+
+
+def _scalar_descriptor_result_policy(
+    semantic_type: models.SemanticType,
+    decision: OwnershipDecision,
+    *,
+    descriptor_kind: str | None = None,
+) -> ScalarDescriptorResultPolicy | None:
+    """Project one completed nullable rank-zero descriptor copy policy."""
+    if not _is_scalar_descriptor_result_type(semantic_type, descriptor_kind=descriptor_kind):
+        return None
+    descriptor = descriptor_kind or _scalar_descriptor_kind(semantic_type)
+    if descriptor is None:
+        return None
+    return ScalarDescriptorResultPolicy(
+        descriptor_kind=NativeArrayDescriptorKind(descriptor),
+        runtime_length=semantic_type.name == "String",
+        nullable=decision.nullable,
+        copy_reason=SCALAR_DESCRIPTOR_RESULT_COPY_REASON,
+        release_owner=OwnershipOwner.PYTHON,
+    )
+
+
+def _native_array_handle_wrapper_policy(
+    semantic_type: models.SemanticType,
+    completed: object,
+    owner_path: str,
+) -> NativeArrayHandleWrapperPolicy | None:
+    """Translate completed string selectors once into typed wrapper policy."""
+    descriptor = native_array_descriptor_kind(semantic_type)
+    if descriptor is None:
+        return None
+    if int(semantic_type.rank or 0) == 0:
+        return None
+    if not isinstance(completed, CompletedNativeArrayHandlePolicy):
+        raise ValueError(f"Native array handle {owner_path!r} is missing completed policy")
+    if completed.is_blocked:
+        return None
+    output_projection = _native_array_enum(
+        NativeArrayOutputProjection,
+        completed.output_projection,
+        owner_path,
+        "output projection",
+    )
+    handle_kind = _native_array_enum(NativeArrayHandleKind, completed.handle_kind, owner_path, "handle kind")
+    handoff = NativeDescriptorHandoffPolicy(
+        abi=_native_descriptor_handoff_abi(handle_kind, output_projection),
+        rank=int(semantic_type.rank or 0),
+        optional_presence=completed.optional_absent,
+    )
+    interop = _native_array_enum(
+        NativeArrayDescriptorInterop,
+        completed.descriptor_interop,
+        owner_path,
+        "descriptor interop",
+    )
+    operations = {
+        _native_array_enum(NativeArrayOperation, item, owner_path, "operation") for item in completed.operations
+    }
+    operations.update(
+        {
+            NativeArrayOperation.SHAPE,
+            NativeArrayOperation.ARRAY_ACTUAL,
+            NativeArrayOperation.DESCRIPTOR,
+            NativeArrayOperation.NATIVE_BYTE_ORDER,
+            NativeArrayOperation.ALIGNED,
+            NativeArrayOperation.WRITEABLE,
+            NativeArrayOperation.LAYOUT,
+        }
+    )
+    if semantic_type.name == "String":
+        operations.add(NativeArrayOperation.ELEMENT_LENGTH)
+        if semantic_type.metadata.get("fortran_character_length") == ":":
+            operations.difference_update({NativeArrayOperation.ALLOCATE, NativeArrayOperation.RESIZE})
+    if descriptor == "pointer":
+        operations.add(NativeArrayOperation.CONTIGUOUS)
+    if completed.destroy_behavior == NativeArrayDestroyBehavior.HANDLE_FINALIZER.value:
+        operations.add(NativeArrayOperation.DESTROY)
+    array = _array_handoff_policy(semantic_type)
+    if array is None or array.rank is None:
+        raise ValueError(f"Native array handle {owner_path!r} requires one concrete array handoff")
+    return NativeArrayHandleWrapperPolicy(
+        descriptor_kind=_native_array_enum(
+            NativeArrayDescriptorKind,
+            completed.descriptor_kind,
+            owner_path,
+            "descriptor kind",
+        ),
+        handle_kind=handle_kind,
+        origin=_native_array_enum(NativeArrayHandleOrigin, completed.origin, owner_path, "origin"),
+        owner=_native_array_enum(OwnershipOwner, completed.owner, owner_path, "owner"),
+        owner_retention=_native_array_enum(
+            NativeArrayOwnerRetention,
+            completed.owner_retention,
+            owner_path,
+            "owner retention",
+        ),
+        descriptor_ownership=_native_array_enum(
+            NativeArrayDescriptorOwnership,
+            completed.descriptor_ownership,
+            owner_path,
+            "descriptor ownership",
+        ),
+        borrowed=completed.borrowed,
+        getter_behavior=_native_array_enum(
+            NativeArrayGetterBehavior,
+            completed.getter_behavior,
+            owner_path,
+            "getter behavior",
+        ),
+        setter_action=_native_array_setter_action(completed.python_setter, owner_path),
+        native_assignment=_native_array_assignment(completed.native_setter, owner_path),
+        output_projection=output_projection,
+        release=_native_array_enum(NativeArrayRelease, completed.release, owner_path, "release"),
+        target_lifetime=completed.target_lifetime,
+        destroy_behavior=_native_array_enum(
+            NativeArrayDestroyBehavior,
+            completed.destroy_behavior,
+            owner_path,
+            "destroy behavior",
+        ),
+        extraction_action=_native_array_enum(
+            NativeArrayExtractionAction,
+            completed.to_numpy,
+            owner_path,
+            "extraction action",
+        ),
+        descriptor_interop=interop,
+        nullable=completed.nullable,
+        optional_absent=completed.optional_absent,
+        storage_mode=_native_array_enum(StorageMode, completed.storage_mode, owner_path, "storage mode"),
+        operations=tuple(sorted(operations, key=lambda item: item.value)),
+        required_headers=(
+            (NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER,)
+            if (
+                interop is not NativeArrayDescriptorInterop.NONE
+                or handle_kind
+                in {
+                    NativeArrayHandleKind.ARGUMENT_DESCRIPTOR,
+                    NativeArrayHandleKind.OPTIONAL_ABSENT_HANDLE,
+                    NativeArrayHandleKind.OWNED_RESULT_DESCRIPTOR,
+                }
+            )
+            else ()
+        ),
+        array=array,
+        handoff=handoff,
+    )
+
+
+def _native_descriptor_handoff_abi(
+    handle_kind: NativeArrayHandleKind,
+    output_projection: NativeArrayOutputProjection,
+) -> NativeDescriptorHandoffABI:
+    """Select one descriptor ABI from completed handle/result policy."""
+    if handle_kind is NativeArrayHandleKind.OWNED_RESULT_DESCRIPTOR:
+        return NativeDescriptorHandoffABI.OWNED_RESULT_STORAGE
+    if output_projection is NativeArrayOutputProjection.PROJECTED_HANDLE:
+        return NativeDescriptorHandoffABI.DIRECT_STANDARD_DESCRIPTOR
+    return NativeDescriptorHandoffABI.FACT_PACKED_CALL_LOCAL
+
+
+def _native_array_enum(enum_type, value: object, owner_path: str, label: str):
+    """Translate one completed selector or fail at the policy boundary."""
+    try:
+        return enum_type(value)
+    except ValueError:
+        raise ValueError(f"Native array handle {owner_path!r} has unsupported {label} {value!r}") from None
+
+
+def _native_array_setter_action(value: str, owner_path: str) -> SetterAction:
+    """Translate semantic handle setter spelling into the shared setter enum."""
+    if value == "none":
+        return SetterAction.OMIT
+    return _native_array_enum(SetterAction, value, owner_path, "Python setter")
+
+
+# Layer-owned representation transformations.
+def _argument_transformation_policies(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    array: ArrayHandoffPolicy | None,
+) -> tuple[tuple[TransformationPolicy, ...], tuple[str, ...]]:
+    """Complete explicit COPY_F ownership and lifecycle before planning."""
+    if array is None or array.native_order == array.order:
+        return (), ()
+    blockers = _copy_to_fortran_argument_blockers(argument, decision, array)
+    if blockers:
+        return (), blockers
+    transformations = []
+    reason = "explicit COPY_F converts C-order Python storage while preserving logical Fortran axes"
+    if decision.codegen_action is not CodegenAction.IDENTITY_OUTPUT:
+        transformations.append(
+            TransformationPolicy(
+                phase=WritebackPhase.COPY_IN,
+                layer=TransformationLayer.BINDING,
+                action=TransformationAction.COPY_ARRAY_REPRESENTATION,
+                source_representation="numpy_order_c",
+                target_representation="numpy_order_f",
+                reason=reason,
+            )
+        )
+    if decision.mutates_native:
+        transformations.append(
+            TransformationPolicy(
+                phase=WritebackPhase.COPY_OUT,
+                layer=TransformationLayer.BINDING,
+                action=TransformationAction.COPY_ARRAY_REPRESENTATION,
+                source_representation="numpy_order_f",
+                target_representation="numpy_order_c",
+                reason=reason,
+            )
+        )
+    transformations.append(
+        TransformationPolicy(
+            phase=WritebackPhase.CLEANUP,
+            layer=TransformationLayer.BINDING,
+            action=TransformationAction.RELEASE_TEMPORARY,
+            source_representation="numpy_order_f",
+            target_representation="released",
+            reason="binding owns the complete COPY_F NumPy temporary lifecycle",
+        )
+    )
+    return tuple(transformations), ()
+
+
+def _copy_to_fortran_argument_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    array: ArrayHandoffPolicy,
+) -> tuple[str, ...]:
+    """Keep COPY_F on its initial required dense numeric ndarray lane."""
+    blockers = []
+    if argument.optional:
+        blockers.append(f"argument {argument.name!r} COPY_F optional arrays are not implemented")
+    if (
+        decision.kind is not ObjectKind.NUMPY_ARRAY
+        or decision.python_barrier_action is not PythonBarrierAction.ARRAY_STORAGE
+    ):
+        blockers.append(f"argument {argument.name!r} COPY_F requires ordinary NumPy array storage")
+    if decision.descriptor_boundary or native_array_descriptor_kind(argument.semantic_type) is not None:
+        blockers.append(f"argument {argument.name!r} COPY_F does not support native descriptors")
+    if argument.semantic_type.name == "String":
+        blockers.append(f"argument {argument.name!r} COPY_F character arrays are not implemented")
+    if array.rank is None or array.rank <= 1 or array.contiguous is not True:
+        blockers.append(f"argument {argument.name!r} COPY_F requires a concrete dense multidimensional array")
+    if array.order != "ORDER_C" or array.native_order != "ORDER_F":
+        blockers.append(f"argument {argument.name!r} COPY_F has inconsistent source/native order")
+    return tuple(blockers)
+
+
+def _native_array_assignment(value: str, owner_path: str) -> AssignmentMode:
+    """Translate semantic handle native setter spelling into assignment enum."""
+    return _native_array_enum(AssignmentMode, value, owner_path, "native setter")
+
+
+def _native_array_actual_policy(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    array: ArrayHandoffPolicy | None,
+) -> NativeArrayActualPolicy | None:
+    """Complete handle-as-array-actual acceptance for the Phase 6 buffer ABI."""
+    if native_array_descriptor_kind(argument.semantic_type) is not None:
+        return None
+    if (
+        array is None
+        or array.native_order != array.order
+        or array.rank is None
+        or argument.optional
+        or argument.semantic_type.name == "String"
+        or array.contiguous is not True
+        or decision.python_barrier_action is not PythonBarrierAction.ARRAY_STORAGE
+        or decision.native_barrier_action is not NativeBarrierAction.PASS_ARRAY_BUFFER
+    ):
+        return None
+    try:
+        dtype = _NUMPY_DTYPE_NAMES[argument.semantic_type.name]
+    except KeyError:
+        return None
+    return NativeArrayActualPolicy(
+        accepted_sources=(
+            NativeArraySourceKind.NDARRAY,
+            NativeArraySourceKind.ALLOCATABLE_HANDLE,
+            NativeArraySourceKind.POINTER_HANDLE,
+        ),
+        dtype=dtype,
+        rank=array.rank,
+        shape=array.shape,
+        order=None if array.rank == 1 else ("F" if array.order != "ORDER_C" else "C"),
+        writable=decision.mutates_native,
+        require_native_byte_order=True,
+        require_aligned=True,
+        require_contiguous=True,
+    )
+
+
+def _native_array_module_variable_blockers(
+    variable: models.SemanticVariable,
+    getter: OwnershipDecision | None,
+    setter: OwnershipDecision | None,
+    handle: NativeArrayHandleWrapperPolicy,
+) -> list[str]:
+    """Validate one borrowed module descriptor handle before planning."""
+    blockers = []
+    if variable.visibility != "public":
+        blockers.append("native array module variable is not public")
+    if handle.handle_kind is not NativeArrayHandleKind.BORROWED_MODULE_DESCRIPTOR:
+        blockers.append(f"native array module handle kind {handle.handle_kind.value!r} is unsupported")
+    if getter is None or getter.is_blocked or getter.kind is not ObjectKind.NUMPY_ARRAY:
+        blockers.append("native array module getter is missing a completed array policy")
+    if setter is None or handle.setter_action is not SetterAction.REJECT_REPLACEMENT:
+        blockers.append("native array module handle must reject replacement assignment")
+    if handle.descriptor_ownership is not NativeArrayDescriptorOwnership.BORROWED or not handle.borrowed:
+        blockers.append("native array module handle must borrow native descriptor storage")
+    if handle.destroy_behavior is not NativeArrayDestroyBehavior.NONE:
+        blockers.append("native array module handle cannot destroy native descriptor storage")
+    return blockers
+
+
 # Scalar module-variable policy.
 def _scalar_module_variable_blockers(
     variable: models.SemanticVariable,
@@ -1671,6 +2566,8 @@ def _optional_mode(
 ) -> OptionalMode:
     """Return the completed presence behavior for one scalar argument."""
     if not argument.optional:
+        if decision.kind is ObjectKind.SCALAR and decision.descriptor_boundary:
+            return OptionalMode.REQUIRED_DESCRIPTOR
         return OptionalMode.REQUIRED
     if decision.descriptor_boundary:
         return OptionalMode.DESCRIPTOR
@@ -1684,45 +2581,89 @@ def _argument_bridge_data_action(
 ) -> tuple[BridgeDataAction, str | None]:
     """Complete whether the bridge reuses, views, or copies one input payload."""
     if decision.kind is ObjectKind.NUMPY_ARRAY:
-        if (
-            optional_mode in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}
-            and decision.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE
-            and decision.native_barrier_action is NativeBarrierAction.PASS_ARRAY_BUFFER
-            and decision.codegen_action
-            in {
-                CodegenAction.CALL_LOCAL_INPUT,
-                CodegenAction.IN_PLACE_ARGUMENT,
-                CodegenAction.IDENTITY_OUTPUT,
-            }
-        ):
-            return BridgeDataAction.ASSOCIATE_VIEW, None
-        return BridgeDataAction.BLOCKED, None
+        return _array_argument_bridge_data_action(decision, optional_mode)
     if decision.kind is ObjectKind.STRING:
-        if (
-            optional_mode in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}
-            and decision.python_barrier_action is PythonBarrierAction.STRING_VALUE
-            and decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
-        ):
-            if decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT:
-                return BridgeDataAction.COPY_REPRESENTATION, STRING_INPUT_COPY_REASON
-            if decision.codegen_action is CodegenAction.COPY_IN_OUT:
-                return BridgeDataAction.COPY_REPRESENTATION, STRING_REPLACEMENT_COPY_REASON
-        if (
-            optional_mode is OptionalMode.REQUIRED
-            and decision.python_barrier_action is PythonBarrierAction.STRING_STORAGE
-            and decision.native_barrier_action is NativeBarrierAction.PASS_STORAGE_ADDRESS
-            and decision.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
-        ):
-            return BridgeDataAction.COPY_REPRESENTATION, STRING_STORAGE_COPY_REASON
-        if (
-            optional_mode is OptionalMode.REQUIRED
-            and decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
-            and decision.native_barrier_action is NativeBarrierAction.PASS_RAW_ADDRESS
-            and decision.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
-        ):
-            return BridgeDataAction.COPY_REPRESENTATION, RAW_STRING_ADDRESS_COPY_REASON
-        return BridgeDataAction.BLOCKED, None
-    if optional_mode is OptionalMode.DESCRIPTOR:
+        return _string_argument_bridge_data_action(decision, optional_mode)
+    return _scalar_argument_bridge_data_action(decision, optional_mode, value_kind)
+
+
+# Ordinary-array bridge data policy.
+def _array_argument_bridge_data_action(
+    decision: OwnershipDecision,
+    optional_mode: OptionalMode,
+) -> tuple[BridgeDataAction, str | None]:
+    """Complete one buffer, raw-address, or native-descriptor bridge view."""
+    if (
+        optional_mode in {OptionalMode.REQUIRED, OptionalMode.DESCRIPTOR}
+        and decision.python_barrier_action is PythonBarrierAction.WRAPPER_INSTANCE
+        and decision.native_barrier_action is NativeBarrierAction.PASS_NATIVE_DESCRIPTOR
+    ):
+        if decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT:
+            return BridgeDataAction.ASSOCIATE_VIEW, None
+        if decision.codegen_action is CodegenAction.IN_PLACE_ARGUMENT:
+            return BridgeDataAction.DIRECT_TRANSFER, None
+    if (
+        optional_mode is OptionalMode.REQUIRED
+        and decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+        and decision.native_barrier_action is NativeBarrierAction.PASS_RAW_ADDRESS
+        and decision.codegen_action in {CodegenAction.CALL_LOCAL_INPUT, CodegenAction.IN_PLACE_ARGUMENT}
+    ):
+        return BridgeDataAction.ASSOCIATE_VIEW, None
+    if (
+        optional_mode in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}
+        and decision.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE
+        and decision.native_barrier_action is NativeBarrierAction.PASS_ARRAY_BUFFER
+        and decision.codegen_action
+        in {
+            CodegenAction.CALL_LOCAL_INPUT,
+            CodegenAction.IN_PLACE_ARGUMENT,
+            CodegenAction.IDENTITY_OUTPUT,
+        }
+    ):
+        return BridgeDataAction.ASSOCIATE_VIEW, None
+    return BridgeDataAction.BLOCKED, None
+
+
+# String bridge data policy.
+def _string_argument_bridge_data_action(
+    decision: OwnershipDecision,
+    optional_mode: OptionalMode,
+) -> tuple[BridgeDataAction, str | None]:
+    """Complete one string value, storage, or raw-address representation."""
+    if (
+        optional_mode in {OptionalMode.REQUIRED, OptionalMode.NULLABLE_VALUE}
+        and decision.python_barrier_action is PythonBarrierAction.STRING_VALUE
+        and decision.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    ):
+        if decision.codegen_action is CodegenAction.CALL_LOCAL_INPUT:
+            return BridgeDataAction.COPY_REPRESENTATION, STRING_INPUT_COPY_REASON
+        if decision.codegen_action is CodegenAction.COPY_IN_OUT:
+            return BridgeDataAction.COPY_REPRESENTATION, STRING_REPLACEMENT_COPY_REASON
+    if (
+        optional_mode is OptionalMode.REQUIRED
+        and decision.python_barrier_action is PythonBarrierAction.STRING_STORAGE
+        and decision.native_barrier_action is NativeBarrierAction.PASS_STORAGE_ADDRESS
+        and decision.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
+    ):
+        return BridgeDataAction.COPY_REPRESENTATION, STRING_STORAGE_COPY_REASON
+    if (
+        optional_mode is OptionalMode.REQUIRED
+        and decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS
+        and decision.native_barrier_action is NativeBarrierAction.PASS_RAW_ADDRESS
+        and decision.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
+    ):
+        return BridgeDataAction.COPY_REPRESENTATION, RAW_STRING_ADDRESS_COPY_REASON
+    return BridgeDataAction.BLOCKED, None
+
+
+# Scalar bridge data policy.
+def _scalar_argument_bridge_data_action(
+    decision: OwnershipDecision,
+    optional_mode: OptionalMode,
+    value_kind: str | None,
+) -> tuple[BridgeDataAction, str | None]:
+    """Complete one scalar value, storage, raw-address, or descriptor action."""
+    if optional_mode in {OptionalMode.REQUIRED_DESCRIPTOR, OptionalMode.DESCRIPTOR}:
         if value_kind == "pointer":
             return BridgeDataAction.ASSOCIATE_VIEW, None
         if value_kind == "allocatable":
@@ -1749,8 +2690,14 @@ def _argument_bridge_data_action(
 
 def _result_bridge_data_action(
     semantic_type: models.SemanticType,
+    *,
+    descriptor_kind: str | None = None,
 ) -> tuple[BridgeDataAction, str | None]:
     """Complete direct result transfer without widening unsupported lanes."""
+    if _is_scalar_descriptor_result_type(semantic_type, descriptor_kind=descriptor_kind):
+        return BridgeDataAction.COPY_REPRESENTATION, SCALAR_DESCRIPTOR_RESULT_COPY_REASON
+    if native_array_descriptor_kind(semantic_type) == "allocatable":
+        return BridgeDataAction.COPY_REPRESENTATION, OWNED_NATIVE_ARRAY_HANDLE_COPY_REASON
     if _is_first_lane_scalar_type(semantic_type):
         return BridgeDataAction.DIRECT_TRANSFER, None
     if _is_phase6_ordinary_array_type(semantic_type):
@@ -1765,8 +2712,14 @@ def _result_bridge_data_action(
 
 def _native_result_bridge_data_action(
     semantic_type: models.SemanticType,
+    *,
+    descriptor_kind: str | None = None,
 ) -> tuple[BridgeDataAction, str | None]:
     """Complete bridge data movement for one hidden native output slot."""
+    if _is_scalar_descriptor_result_type(semantic_type, descriptor_kind=descriptor_kind):
+        return BridgeDataAction.COPY_REPRESENTATION, SCALAR_DESCRIPTOR_RESULT_COPY_REASON
+    if native_array_descriptor_kind(semantic_type) == "allocatable":
+        return BridgeDataAction.COPY_REPRESENTATION, OWNED_NATIVE_ARRAY_HANDLE_COPY_REASON
     if _is_first_lane_scalar_type(semantic_type):
         return BridgeDataAction.DIRECT_TRANSFER, None
     if _is_phase6_ordinary_array_type(semantic_type):
@@ -1781,6 +2734,10 @@ def _native_result_bridge_data_action(
 
 def _argument_handoff_mode(decision: OwnershipDecision) -> ArgumentHandoffMode:
     """Return the completed ABI shape consumed by both backends."""
+    if decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS:
+        return ArgumentHandoffMode.OPAQUE_ADDRESS
+    if decision.native_barrier_action is NativeBarrierAction.PASS_NATIVE_DESCRIPTOR:
+        return ArgumentHandoffMode.NATIVE_DESCRIPTOR
     if decision.kind is ObjectKind.NUMPY_ARRAY:
         return ArgumentHandoffMode.ARRAY_BUFFER
     if decision.python_barrier_action in {
@@ -1802,7 +2759,9 @@ def _argument_handoff_mode(decision: OwnershipDecision) -> ArgumentHandoffMode:
 
 # Ordinary-array handoff policy.
 def _array_handoff_policy(semantic_type: models.SemanticType) -> ArrayHandoffPolicy | None:
-    """Copy structured ordinary-array facts into completed wrapper policy."""
+    """Copy structured buffer or raw-pointee facts into completed wrapper policy."""
+    if _is_raw_array_address_type(semantic_type):
+        return _raw_array_handoff_policy(semantic_type)
     storage = semantic_type.storage
     array = storage.array if storage is not None else None
     if array is None:
@@ -1818,7 +2777,12 @@ def _array_handoff_policy(semantic_type: models.SemanticType) -> ArrayHandoffPol
         shape=shape,
         axes=axes,
         order="ORDER_F" if assumed_rank and array.order is None else array.order,
-        contiguous=array.contiguous,
+        native_order=(
+            "ORDER_F"
+            if assumed_rank and array.order is None
+            else (array.copy_order if array.copy_order is not None else array.order)
+        ),
+        contiguous=True if assumed_rank and array.contiguous is None else array.contiguous,
         itemsize=_character_length(semantic_type) if semantic_type.name == "String" else None,
         category=array.category,
         extent_references=tuple(_array_extent_references(item) for item in shape),
@@ -1827,6 +2791,8 @@ def _array_handoff_policy(semantic_type: models.SemanticType) -> ArrayHandoffPol
 
 def _is_phase6_ordinary_array_type(semantic_type: models.SemanticType) -> bool:
     """Return whether one type is an ordinary non-descriptor array buffer."""
+    if _is_raw_array_address_type(semantic_type):
+        return False
     array_policy = _array_handoff_policy(semantic_type)
     if array_policy is None:
         return False
@@ -1843,6 +2809,52 @@ def _is_phase6_ordinary_array_type(semantic_type: models.SemanticType) -> bool:
         and (array_policy.rank is None or len(array_policy.axes) == array_policy.rank)
         and not array.allocatable
         and not array.pointer
+    )
+
+
+def _is_phase6_raw_array_address_type(semantic_type: models.SemanticType) -> bool:
+    """Return whether one type is a supported concrete raw array pointee."""
+    if not _is_raw_array_address_type(semantic_type):
+        return False
+    policy = _array_handoff_policy(semantic_type)
+    if policy is None or policy.rank is None or not 1 <= policy.rank <= 15:
+        return False
+    if len(policy.shape) != policy.rank or len(policy.axes) != policy.rank:
+        return False
+    supported_element = semantic_type.name in _PLAN_PRIMITIVE_SCALAR_TYPES or (
+        semantic_type.name == "String" and policy.itemsize is not None
+    )
+    return supported_element and all(item not in {":", "::Strided", "...", "Flat"} for item in policy.shape)
+
+
+def _is_raw_array_address_type(semantic_type: models.SemanticType) -> bool:
+    """Return whether one positive-rank type carries the public raw-address role."""
+    storage = semantic_type.storage
+    return bool(
+        semantic_type.rank > 0
+        and storage is not None
+        and storage.kind == "address"
+        and storage.metadata.get(ADDRESS_ROLE_METADATA) == ADDRESS_ROLE_RAW
+    )
+
+
+def _raw_array_handoff_policy(semantic_type: models.SemanticType) -> ArrayHandoffPolicy:
+    """Complete dense raw-pointee shape and orientation before lowering."""
+    rank = int(semantic_type.rank or 0)
+    shape = tuple(str(item) for item in semantic_type.shape)
+    storage = semantic_type.storage
+    array = storage.array if storage is not None else None
+    order = array.order if array is not None and array.order is not None else ("ORDER_C" if rank > 1 else None)
+    return ArrayHandoffPolicy(
+        rank=rank,
+        shape=shape,
+        axes=("dense",) * rank,
+        order=order,
+        native_order=order,
+        contiguous=True,
+        itemsize=_character_length(semantic_type) if semantic_type.name == "String" else None,
+        category="raw_address",
+        extent_references=tuple(_array_extent_references(item) for item in shape),
     )
 
 
