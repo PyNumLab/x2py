@@ -128,7 +128,6 @@ end module
     assert "Shape" not in code
     assert "Float64[::]" in code
     assert "ArrayCategory" not in code
-    assert "SourceDims" not in code
 
 
 def test_emit_matrix_shapes():
@@ -174,7 +173,6 @@ end module bound_mod
     assert "default_bound: Float64[n]" in code
     assert "zero_bound: Float64[n - 1 - 0 + 1]" in code
     assert "ArrayCategory" not in code
-    assert "SourceDims" not in code
 
 
 def test_emit_optional_argument():
@@ -513,7 +511,26 @@ def test_printer_emits_flat_dimension_for_assumed_size_arrays():
             ),
         ),
     )
-    assert PyiPrinter().emit(lower_bound_assumed_size) == 'Annotated[Float64[Flat], SourceDims("0:*")]'
+    assert PyiPrinter().emit(lower_bound_assumed_size) == "Float64[Flat]"
+
+    bounded_assumed_size = SemanticType(
+        "Float64",
+        dtype="Float64",
+        rank=2,
+        shape=["LDB", ":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(
+                rank=2,
+                shape=["LDB", ":"],
+                category="assumed_size",
+                source_shape=["0:LDB-1", "0:*"],
+                order="ORDER_F",
+                contiguous=True,
+            ),
+        ),
+    )
+    assert PyiPrinter().emit(bounded_assumed_size) == "Float64[LDB, Flat]"
 
 
 def test_emit_fortran_parameter_defaults_only_when_resolved_to_literals():
@@ -528,6 +545,27 @@ end module
     assert "c: Final[Float32]\n" in code
     assert "c: Final[Float32] = cos(0.0)" not in code
     assert "n: Final[Int32] = 7" in code
+
+
+def test_fortran_derived_value_dummy_emits_value_native_projection():
+    source = """
+module value_contract
+  type :: item
+    real(8) :: x
+  end type item
+contains
+  function score(value) result(total)
+    type(item), value :: value
+    real(8) :: total
+    total = value%x
+  end function score
+end module value_contract
+"""
+
+    code = generate_pyi(source)
+
+    assert "@native_call([Value(Arg(0))])" in code
+    assert "value: item" in code
 
 
 def test_character_array_pyi_spelling_round_trips_fixed_and_deferred_lengths():

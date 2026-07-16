@@ -24,13 +24,14 @@ def _value_module(*, attributes: tuple[str, ...] = ()):
     decorator = f"@native_type(attributes={attributes!r})" if attributes else ""
     module = parse_pyi_text(
         f"""
-from x2py.contracts import Annotated, ByValue, Float64, native_type
+from x2py.contracts import Arg, Float64, Value, native_call, native_type
 
 {decorator}
 class point:
     x: Float64
 
-def score(value: Annotated[point, ByValue]) -> Float64: ...
+@native_call([Value(Arg(0))])
+def score(value: point) -> Float64: ...
 """,
         module_name="phase8_value",
     )

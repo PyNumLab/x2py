@@ -4,11 +4,11 @@ from x2py.contracts import (
     Annotated,
     Arg,
     Bool,
-    ByValue,
     Int32,
     Pointer,
     Return,
     Returns,
+    Value,
     native_call,
 )
 from phase8_left_types import item as left_item
@@ -95,10 +95,12 @@ def read_allocatable_target(value: Annotated[item, Aliased] | None) -> Int32: ..
 def read_pointer_input(value: item | None) -> Int32: ...
 
 
-def read_value(value: Annotated[item, ByValue]) -> Int32: ...
+@native_call([Value(Arg(0))])
+def read_value(value: item) -> Int32: ...
 
 
-def read_sequence_value(value: Annotated[sequence_item, ByValue]) -> Int32: ...
+@native_call([Value(Arg(0))])
+def read_sequence_value(value: sequence_item) -> Int32: ...
 
 
 @native_call([Arg(0), Arg(1)])
@@ -127,7 +129,7 @@ def set_pointer(value: item | None, selector: Int32) -> Returns["value", item] |
         Allocatable(Arg(2)),
         Allocatable(Arg(3)),
         Pointer(Arg(4)),
-        Arg(5),
+        Value(Arg(5)),
     ]
 )
 def read_six_forms(
@@ -136,7 +138,7 @@ def read_six_forms(
     allocatable_value: item | None,
     allocatable_target_value: Annotated[item, Aliased] | None,
     pointer_value: item | None,
-    value_value: Annotated[item, ByValue],
+    value_value: item,
 ) -> Int32: ...
 
 

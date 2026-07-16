@@ -383,7 +383,7 @@ class _PyiAstParser:
             elif mapping.python_position is not None and mapping.python_position >= passed_position:
                 old_position = mapping.python_position
                 mapping.python_position += 1
-                _PyiAstParser._shift_address_argument_value(mapping, old_position, mapping.python_position)
+                _PyiAstParser._shift_argument_value_ref(mapping, old_position, mapping.python_position)
 
     def ann_assign(
         self,
@@ -907,6 +907,8 @@ class _PyiAstParser:
             return self.native_address_projection_entry(node, native_position)
 
         descriptor = self.contract_name(node.func)
+        if descriptor == "Value":
+            return self.native_value_projection_entry(node, native_position)
         if descriptor in {"Allocatable", "Pointer"}:
             return self.native_descriptor_projection_entry(node, native_position, descriptor)
 
@@ -916,6 +918,24 @@ class _PyiAstParser:
 
         helper = self.required_name(node.func)
         return self._native_helper_projection_entry(helper, node, native_position)
+
+    def native_value_projection_entry(
+        self,
+        node: ast.Call,
+        native_position: int,
+    ) -> ProjectionMapping:
+        """Parse an exact typed derived-value projection around ``Arg(i)``."""
+        if len(node.args) != 1:
+            raise ValueError("Value projection expects one Arg(...) reference")
+        value = self.native_value_ref(node.args[0])
+        if value["kind"] != "arg":
+            raise ValueError("Value projection expects Arg(i)")
+        return ProjectionMapping(
+            native_position=native_position,
+            python_position=int(value["position"]),
+            value_kind="value",
+            value=value,
+        )
 
     def native_descriptor_projection_entry(
         self,
@@ -1520,7 +1540,14 @@ class _PyiAstParser:
         helper = self._annotation_metadata_call_helper(semantic_type, node)
         if helper is None:
             return
-        if helper in {"FortranType", "FortranCallback"}:
+        if helper in {
+            "FortranType",
+            "FortranCallback",
+            "LowerBounds",
+            "SourceDims",
+            "SourceShape",
+            "UpperBounds",
+        }:
             raise ValueError(f"{helper} metadata is no longer part of the semantic .pyi contract")
         if helper == "PointerAssociation":
             self._apply_pointer_association_metadata(semantic_type, node)
@@ -1533,25 +1560,6 @@ class _PyiAstParser:
             return
         if helper == "ArrayCategory":
             self._require_array_storage(semantic_type).category = str(ast.literal_eval(node.args[0]))
-            return
-        if helper == "SourceDims":
-            values = [str(ast.literal_eval(arg)) for arg in node.args]
-            array = self._require_array_storage(semantic_type)
-            array.source_shape = values
-            array.lower_bounds, array.upper_bounds = self._bounds_from_source_shape(values)
-            return
-        if helper == "SourceShape":
-            raise ValueError("SourceShape metadata is not supported; use SourceDims")
-        if helper in {"LowerBounds", "UpperBounds"}:
-            bounds = [
-                None if isinstance(arg, ast.Constant) and arg.value is None else str(ast.literal_eval(arg))
-                for arg in node.args
-            ]
-            array = self._require_array_storage(semantic_type)
-            if helper == "LowerBounds":
-                array.lower_bounds = bounds
-            else:
-                array.upper_bounds = bounds
             return
         if node.keywords:
             raise ValueError(f"Constraint metadata expects positional arguments only: {ast.unparse(node)!r}")
@@ -1645,9 +1653,6 @@ class _PyiAstParser:
         if name == "Aliased":
             semantic_type.metadata["aliased"] = True
             semantic_type.metadata["fortran_target"] = True
-            return True
-        if name == "ByValue":
-            semantic_type.metadata[NATIVE_BY_VALUE_METADATA] = True
             return True
         if name == "AssumedType":
             semantic_type.metadata["fortran_assumed_type"] = True
@@ -2162,6 +2167,7 @@ class _PyiAstParser:
         self._validate_callable_header(node)
         semantic_args = self._callable_semantic_arguments(node, projection, drop_untyped_self=drop_untyped_self)
         visible_args = list(semantic_args)
+        self._apply_argument_value_projections(visible_args, projection)
         self._apply_argument_descriptor_projections(visible_args, projection)
         optional_return_positions = self._optional_native_return_positions(projection, native_result)
         return_type, returned_args = self.return_projection(
@@ -2334,6 +2340,30 @@ class _PyiAstParser:
             if not 0 <= mapping.python_position < len(arguments):
                 raise ValueError(f"native_call argument position is out of range: {mapping.python_position}")
             self._apply_scalar_descriptor_kind(arguments[mapping.python_position].semantic_type, mapping.value_kind)
+
+    @staticmethod
+    def _apply_argument_value_projections(
+        arguments: list[SemanticArgument],
+        projection: list[ProjectionMapping],
+    ) -> None:
+        """Record exact typed value transport on the projected argument."""
+        for mapping in projection:
+            if mapping.value_kind != "value" or mapping.python_position is None:
+                continue
+            if not 0 <= mapping.python_position < len(arguments):
+                raise ValueError(f"native_call argument position is out of range: {mapping.python_position}")
+            argument = arguments[mapping.python_position]
+            semantic_type = argument.semantic_type
+            if (
+                semantic_type.rank != 0
+                or semantic_type.name in SEMANTIC_SCALAR_TYPE_NAMES
+                or semantic_type.name == "String"
+            ):
+                raise ValueError(
+                    "Value(Arg(i)) is only valid for exact rank-zero wrapped derived objects; "
+                    "primitive scalars already use Arg(i) value passing"
+                )
+            argument.metadata[NATIVE_BY_VALUE_METADATA] = True
 
     @staticmethod
     def _semantic_scalar_descriptor_kind(semantic_type: SemanticType | None) -> str | None:
@@ -2535,12 +2565,12 @@ class _PyiAstParser:
                 mapping.result_position = return_positions.get(arg.name)
 
     @staticmethod
-    def _shift_address_argument_value(
+    def _shift_argument_value_ref(
         mapping: ProjectionMapping,
         old_position: int,
         new_position: int,
     ) -> None:
-        if mapping.value_kind not in {"addr", "allocatable", "pointer"} or not isinstance(mapping.value, dict):
+        if mapping.value_kind not in {"addr", "allocatable", "pointer", "value"} or not isinstance(mapping.value, dict):
             return
         if mapping.value.get("kind") == "arg" and mapping.value.get("position") == old_position:
             mapping.value["position"] = new_position

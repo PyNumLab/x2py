@@ -7091,10 +7091,15 @@ class CBindingGenerator(ClassVisitor):
         handle = plan.native_array_handle
         if handle is None or handle.array.rank is None:
             return ()
-        condition = CodeExpression(
-            "1" if plan.binding.optional_mode is OptionalMode.REQUIRED else f"{names.present_name} != NULL"
+        if plan.binding.optional_mode is OptionalMode.REQUIRED:
+            return self._native_descriptor_fact_present_nodes(plan, names)
+        return (
+            CIf(
+                CodeExpression(f"{names.present_name} != NULL"),
+                body=self._native_descriptor_fact_present_nodes(plan, names),
+                else_body=self._native_descriptor_fact_absent_nodes(plan, names),
+            ),
         )
-        return (CIf(condition, body=self._native_descriptor_fact_present_nodes(plan, names)),)
 
     def _native_descriptor_fact_present_nodes(
         self,
@@ -7107,14 +7112,6 @@ class CBindingGenerator(ClassVisitor):
             return ()
         prefix = names.value_name
         rank = handle.array.rank
-        cfi_type = self._native_array_cfi_type(plan)
-        if cfi_type is None:
-            raise ValueError(f"Missing CFI type for {plan.owner_path!r}")
-        attribute = (
-            "CFI_attribute_allocatable"
-            if handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
-            else "CFI_attribute_pointer"
-        )
         nodes = [
             *self._native_descriptor_integer_field_nodes(prefix, f"{prefix}_base_addr", 0, pointer=True),
             *self._native_descriptor_integer_field_nodes(prefix, f"{prefix}_elem_len", 1),
@@ -7129,38 +7126,85 @@ class CBindingGenerator(ClassVisitor):
             nodes.extend(
                 self._native_descriptor_integer_field_nodes(prefix, f"{prefix}_stride_multiplier_{axis}", offset + 2)
             )
-        nodes.extend(
-            (
-                CExpressionStatement(
-                    CodeExpression(
-                        f"if ({prefix}_descriptor_rank != {rank}) {{ PyErr_Format(PyExc_ValueError, "
-                        f'"native descriptor rank %lld does not match planned rank {rank} for argument '
-                        f'{plan.binding.python_name}", (long long){prefix}_descriptor_rank); '
-                        f"Py_DECREF({prefix}_packed); return NULL; }}"
-                    )
-                ),
-                *(
-                    CExpressionStatement(
-                        CodeExpression(f"{prefix}_cfi_extents[{axis}] = {prefix}_descriptor_extent_{axis}")
-                    )
-                    for axis in range(rank)
-                ),
-                CExpressionStatement(
-                    CodeExpression(
-                        f"{prefix}_establish_status = CFI_establish((CFI_cdesc_t *)&{prefix}_storage, "
-                        f"{prefix}_base_addr, {attribute}, {cfi_type}, "
-                        f"{prefix}_elem_len, {rank}, {prefix}_cfi_extents)"
-                    )
-                ),
-                CExpressionStatement(
-                    CodeExpression(
-                        f"if ({prefix}_establish_status != CFI_SUCCESS) {{ PyErr_Format(PyExc_RuntimeError, "
-                        f'"Unable to establish native descriptor for argument {plan.binding.python_name}: %d", '
-                        f"{prefix}_establish_status); Py_DECREF({prefix}_packed); return NULL; }}"
-                    )
-                ),
+        nodes.append(
+            CExpressionStatement(
+                CodeExpression(
+                    f"if ({prefix}_descriptor_rank != {rank}) {{ PyErr_Format(PyExc_ValueError, "
+                    f'"native descriptor rank %lld does not match planned rank {rank} for argument '
+                    f'{plan.binding.python_name}", (long long){prefix}_descriptor_rank); '
+                    f"Py_DECREF({prefix}_packed); return NULL; }}"
+                )
             )
         )
+        nodes.extend(self._native_descriptor_establish_nodes(plan, names))
+        return tuple(nodes)
+
+    def _native_descriptor_fact_absent_nodes(
+        self,
+        plan: ArgumentTransferPlan,
+        names: _CArgumentNames,
+    ) -> tuple[CExpressionStatement, ...]:
+        """Establish one valid placeholder descriptor for an omitted argument."""
+        handle = plan.native_array_handle
+        if handle is None or handle.array.rank is None:
+            return ()
+        prefix = names.value_name
+        nodes = [
+            CExpressionStatement(
+                CodeExpression(f"{prefix}_elem_len = {self._native_descriptor_placeholder_elem_len(plan)}")
+            ),
+            CExpressionStatement(CodeExpression(f"{prefix}_descriptor_rank = {handle.array.rank}")),
+        ]
+        for axis in range(handle.array.rank):
+            nodes.append(
+                CExpressionStatement(
+                    CodeExpression(f"{prefix}_stride_multiplier_{axis} = (CFI_index_t){prefix}_elem_len")
+                )
+            )
+        nodes.extend(self._native_descriptor_establish_nodes(plan, names))
+        return tuple(nodes)
+
+    def _native_descriptor_establish_nodes(
+        self,
+        plan: ArgumentTransferPlan,
+        names: _CArgumentNames,
+    ) -> tuple[CExpressionStatement, ...]:
+        """Establish call-local descriptor storage from already completed facts."""
+        handle = plan.native_array_handle
+        if handle is None or handle.array.rank is None:
+            return ()
+        prefix = names.value_name
+        rank = handle.array.rank
+        cfi_type = self._native_array_cfi_type(plan)
+        if cfi_type is None:
+            raise ValueError(f"Missing CFI type for {plan.owner_path!r}")
+        attribute = (
+            "CFI_attribute_allocatable"
+            if handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
+            else "CFI_attribute_pointer"
+        )
+        nodes = [
+            *(
+                CExpressionStatement(
+                    CodeExpression(f"{prefix}_cfi_extents[{axis}] = {prefix}_descriptor_extent_{axis}")
+                )
+                for axis in range(rank)
+            ),
+            CExpressionStatement(
+                CodeExpression(
+                    f"{prefix}_establish_status = CFI_establish((CFI_cdesc_t *)&{prefix}_storage, "
+                    f"{prefix}_base_addr, {attribute}, {cfi_type}, "
+                    f"{prefix}_elem_len, {rank}, {prefix}_cfi_extents)"
+                )
+            ),
+            CExpressionStatement(
+                CodeExpression(
+                    f"if ({prefix}_establish_status != CFI_SUCCESS) {{ PyErr_Format(PyExc_RuntimeError, "
+                    f'"Unable to establish native descriptor for argument {plan.binding.python_name}: %d", '
+                    f"{prefix}_establish_status); Py_DECREF({prefix}_packed); return NULL; }}"
+                )
+            ),
+        ]
         for axis in range(rank):
             nodes.extend(
                 (
@@ -7184,6 +7228,13 @@ class CBindingGenerator(ClassVisitor):
             )
         nodes.append(CExpressionStatement(CodeExpression(f"{names.value_name} = (CFI_cdesc_t *)&{prefix}_storage")))
         return tuple(nodes)
+
+    @staticmethod
+    def _native_descriptor_placeholder_elem_len(plan: ArgumentTransferPlan) -> str:
+        """Return a valid element length for one absent call-local descriptor."""
+        if plan.datatype_family is DatatypeFamily.STRING:
+            return "0"
+        return f"sizeof({PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name).c_spelling})"
 
     def _native_descriptor_integer_field_nodes(
         self,

@@ -1492,16 +1492,8 @@ class OwnershipPolicyResolver:
     ) -> OwnershipDecision:
         if decision.is_blocked or facts.rank != 0 or not (facts.allocatable or facts.pointer):
             return decision
-        metadata = facts.metadata or {}
         blocker = None
-        if (
-            context.is_argument
-            and context.writes_argument
-            and "fortran_intent" in metadata
-            and not metadata.get("fortran_intent")
-        ):
-            blocker = "writable scalar descriptors require explicit intent(out) or intent(inout)"
-        elif context.is_argument and context.writes_argument and facts.is_string:
+        if context.is_argument and context.writes_argument and facts.is_string:
             blocker = "scalar descriptor output projection currently supports primitive numeric values only"
         if blocker is None:
             return decision

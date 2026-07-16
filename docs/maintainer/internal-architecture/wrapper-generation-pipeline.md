@@ -26,6 +26,32 @@ then dispatch only from completed selectors into small named lowering methods;
 they do not reconstruct policy from datatype, `intent`, shape, alias flags, or
 local memory checks.
 
+Native-source `intent` may be consumed while importing a source declaration to
+propose default Python argument/result positions. It is not retained in the
+semantic `.pyi` or post-IR ownership context. The editable Python signature,
+`Returns[...]` projection, and ordered native-call mapping are authoritative.
+Bridge entry dummies omit `intent`, leaving their storage permissive; that
+contract controls wrapper copy-in, copy-back, and returned values, while the
+compiled native procedure's own interface controls native access.
+
+Within that contract, an explicit native-call list is exhaustive for native
+dummy positions. Matching named `Returns[...]` items attach result positions to
+visible `Arg(i)` entries automatically; direct function results remain the first
+ordinary Python return item, while hidden native output dummies require explicit
+`Return(...)` entries. Descriptor reassociation follows the same rule:
+`Pointer(Arg(i))` without a projected return uses a call-local adapter and
+discards reassociation, while a matching projected return requires storage that
+can preserve association writeback.
+
+Native transport overrides also live on that mapping. Primitive `Arg(i)` is a
+value handoff and `Addr(Arg(i))` selects call-local address handoff. Wrapped
+derived `Arg(i)` is a typed reference handoff and `Value(Arg(i))` selects exact
+typed value handoff. `Returns[...]` never selects either ABI; it only assigns a
+Python result position and writeback expectation. A derived `Value(...)` slot
+does not expose aggregate layout at the C boundary: C still supplies an opaque
+address, the bridge reconstructs the exact native type, and the Fortran compiler
+applies the explicit interface's `VALUE` semantics at the typed call.
+
 The public direct-generation boundary is:
 
 ```python
@@ -149,6 +175,14 @@ and ordinary arrays use the same source kind with `CodegenAction.COPY_OUT`.
 data-buffer ABI. Its handoff plan carries data, rank, extents, strides, and
 itemsize. `PASS_NATIVE_DESCRIPTOR` is reserved for Phase 7 persistent native
 descriptors and handles. Neither backend may substitute one for the other.
+Array handoff shapes are completed bridge extents; native source bounds are
+temporary import facts and must not appear in semantic `.pyi` or become extent
+dependencies. A source dimension such as `0:LDB-1` therefore completes to
+extent `LDB`, while the native procedure keeps control of its own indexing
+bounds. When `PASS_NATIVE_DESCRIPTOR` also carries
+optional absence, the completed optional mode lowers a valid call-local
+placeholder descriptor plus a separate presence role. This keeps the bridge
+entry ABI valid while presence dispatch omits the native dummy.
 
 `DatatypeFamily` remains useful after object-kind dispatch for primitive
 element spelling and conversion, such as integer versus real scalar types or

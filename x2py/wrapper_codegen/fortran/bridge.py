@@ -26,7 +26,6 @@ from x2py.semantics.wrapper_policy import (
     DerivedNativeHandoff,
     DerivedDummyCategory,
     DerivedObjectStorage,
-    DerivedPointerIntent,
     DerivedRelease,
     ModuleGetterAction,
     ModuleObjectAccessMechanism,
@@ -684,7 +683,6 @@ class FortranBridgeGenerator(ClassVisitor):
         bridge_name = self._bridge_function_name(plan)
         is_subroutine = plan.bridge.native_is_subroutine or owned_direct_result is not None
         function_body, optional_procedures = self._function_body(plan, result_name)
-        validation_procedures = self._compiler_validated_pointer_procedures(plan)
         callback_procedures = self._callback_adapter_procedures(plan)
         native_body = (
             *self._derived_pointer_call_initializers(plan),
@@ -729,7 +727,6 @@ class FortranBridgeGenerator(ClassVisitor):
             is_subroutine=is_subroutine,
             internal_procedures=(
                 *callback_procedures,
-                *validation_procedures,
                 *optional_procedures,
                 *internal_procedures,
             ),
@@ -3026,72 +3023,6 @@ class FortranBridgeGenerator(ClassVisitor):
     @staticmethod
     def _derived_optional_step_name(index: int) -> str:
         return f"x2py_derived_optional_step_{index}"
-
-    def _compiler_validated_pointer_procedures(self, plan: FunctionPlan) -> tuple[FortranFunction, ...]:
-        """Make the native compiler validate every unknown-intent target adapter."""
-        validated = tuple(
-            argument
-            for argument in plan.arguments
-            if argument.derived_call is not None
-            and argument.derived_call.pointer_intent is DerivedPointerIntent.COMPILER_VALIDATED
-        )
-        return tuple(self._compiler_validated_pointer_procedure(plan, argument) for argument in validated)
-
-    def _compiler_validated_pointer_procedure(
-        self,
-        plan: FunctionPlan,
-        tested: ArgumentTransferPlan,
-    ) -> FortranFunction:
-        parameters = tuple(
-            self._compiler_validation_parameter(plan, argument, tested)
-            for argument in sorted(plan.arguments, key=lambda item: item.native_position)
-        )
-        replacements = {
-            argument.owner_path: self._compiler_validation_parameter_name(argument) for argument in plan.arguments
-        }
-        present = frozenset(
-            argument.owner_path
-            for argument in plan.arguments
-            if argument.bridge.optional_mode in {OptionalMode.NULLABLE_VALUE, OptionalMode.DESCRIPTOR}
-        )
-        result = self._direct_result(plan)
-        is_subroutine = plan.bridge.native_is_subroutine
-        result_name = None if is_subroutine else "validation_result"
-        result_type = None if is_subroutine else self._native_result_type(plan, result)
-        return FortranFunction(
-            name=self._compiler_validation_procedure_name(tested),
-            parameters=parameters,
-            result_name=result_name,
-            result_type=result_type,
-            body=(self._native_invocation(plan, present, result_name, replacements),),
-            is_subroutine=is_subroutine,
-        )
-
-    def _compiler_validation_parameter(
-        self,
-        plan: FunctionPlan,
-        argument: ArgumentTransferPlan,
-        tested: ArgumentTransferPlan,
-    ) -> FortranParameter:
-        name = self._compiler_validation_parameter_name(argument)
-        optional = argument.bridge.optional_mode in {OptionalMode.NULLABLE_VALUE, OptionalMode.DESCRIPTOR}
-        if argument.derived_call is not None:
-            category = DerivedDummyCategory.TARGET if argument is tested else argument.derived_call.dummy_category
-            return self._derived_native_parameter(
-                argument,
-                name,
-                optional=optional,
-                category=category,
-            )
-        return self._external_interface_parameter(plan, argument, name=name)
-
-    @staticmethod
-    def _compiler_validation_parameter_name(argument: ArgumentTransferPlan) -> str:
-        return f"x2py_validate_{argument.bridge.native_name.lower()}"
-
-    @staticmethod
-    def _compiler_validation_procedure_name(argument: ArgumentTransferPlan) -> str:
-        return f"x2py_validate_pointer_{argument.bridge.native_name.lower()}"
 
     def _optional_call_tree(
         self,

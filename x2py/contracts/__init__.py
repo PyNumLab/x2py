@@ -86,7 +86,6 @@ private = _ContractType
 Aliased = _ContractExpression()
 Allocatable = _ContractExpression()
 AssumedType = _ContractExpression()
-ByValue = _ContractExpression()
 Contiguous = _ContractExpression()
 COPY_F = _ContractExpression()
 Flat = _ContractExpression()
@@ -108,7 +107,6 @@ In = _expression
 InOut = _expression
 IsPresent = _expression
 Len = _expression
-LowerBounds = _expression
 Name = _expression
 Out = _expression
 Ownership = _expression
@@ -117,10 +115,9 @@ PassByRef = _expression
 PointerAssociation = _expression
 PointerPolicy = _expression
 Return = _expression
+Value = _expression
 Range = _expression
-SourceDims = _expression
 Transfer = _expression
-UpperBounds = _expression
 Work = _expression
 
 bind = _decorator
@@ -153,7 +150,6 @@ CONTRACT_SYMBOLS = frozenset(
         "Bool",
         "Bounded",
         "Byte",
-        "ByValue",
         "CAnonymous",
         "CAnonymousMember",
         "CEnum",
@@ -185,7 +181,6 @@ CONTRACT_SYMBOLS = frozenset(
         "Int64",
         "IsPresent",
         "Len",
-        "LowerBounds",
         "Matrix",
         "Name",
         "Opaque",
@@ -205,7 +200,6 @@ CONTRACT_SYMBOLS = frozenset(
         "Return",
         "Returns",
         "SizeT",
-        "SourceDims",
         "Strided",
         "String",
         "Transfer",
@@ -214,7 +208,7 @@ CONTRACT_SYMBOLS = frozenset(
         "UInt16",
         "UInt32",
         "UInt64",
-        "UpperBounds",
+        "Value",
         "Vector",
         "Void",
         "Work",

@@ -34,6 +34,12 @@ def c_flat_rank2_runtime(values: Annotated[Float64[Flat, :], ORDER_C]) -> None: 
 
 @external
 def c_flat_rank2_fixed(values: Annotated[Float64[Flat, 3], ORDER_C]) -> None: ...
+
+@external
+def bounded_flat(
+    ldb: Int32,
+    values: Float64[ldb, Flat],
+) -> None: ...
 """,
         module_name="dense_array_shapes",
     )
@@ -94,6 +100,7 @@ def test_dense_array_plan_records_extent_dependencies_flat_storage_and_order():
     flat_rank2_fixed = functions["flat_rank2_fixed"].arguments[-1].array
     c_flat_rank2_runtime = functions["c_flat_rank2_runtime"].arguments[-1].array
     c_flat_rank2_fixed = functions["c_flat_rank2_fixed"].arguments[-1].array
+    bounded_flat = functions["bounded_flat"].arguments[-1].array
 
     assert dense_f is not None
     assert dense_f.rank == 2
@@ -127,6 +134,9 @@ def test_dense_array_plan_records_extent_dependencies_flat_storage_and_order():
     assert c_flat_rank2_fixed.rank == 2
     assert c_flat_rank2_fixed.shape == (":", "3")
     assert c_flat_rank2_fixed.order == "ORDER_C"
+    assert bounded_flat is not None
+    assert bounded_flat.shape == ("ldb", ":")
+    assert bounded_flat.extent_reference_roles == (("dense_array_shapes.bounded_flat.ldb:value",), ())
 
 
 def test_dense_array_lowering_uses_planned_shape_checks_and_bridge_orientation():

@@ -32,6 +32,7 @@ from .models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    NATIVE_BY_VALUE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -384,8 +385,6 @@ class FortranToIRConverter(ClassVisitor):
             )
         else:
             semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
-        if isinstance(arg, FortranArgument) and semantic_type.rank == 0:
-            semantic_type.metadata["fortran_intent"] = getattr(arg, "intent", None)
         access = self._argument_access(arg, semantic_type)
         if semantic_type.name == "Callable":
             pass
@@ -401,11 +400,15 @@ class FortranToIRConverter(ClassVisitor):
             self._apply_pointer_input_policy(semantic_type)
         self._apply_argument_ownership(semantic_type, writes_argument=access[1])
 
+        metadata = {}
+        if getattr(arg, "pass_by_value", False) and str(getattr(arg, "base_type", "")).casefold() == "derived":
+            metadata[NATIVE_BY_VALUE_METADATA] = True
         return SemanticArgument(
             name=arg.name,
             semantic_type=semantic_type,
             optional=getattr(arg, "optional", False),
             visibility=getattr(arg, "visibility", "public"),
+            metadata=metadata,
             origin=self._argument_origin(arg),
         )
 
@@ -2033,8 +2036,12 @@ class FortranToIRConverter(ClassVisitor):
                     native_position=native_position,
                     python_position=mapping_python_position,
                     result_position=mapping_result_position,
-                    value_kind=descriptor_kind or "",
-                    value=descriptor_value,
+                    value_kind=("value" if arg.metadata.get(NATIVE_BY_VALUE_METADATA) else descriptor_kind or ""),
+                    value=(
+                        {"kind": "arg", "position": mapping_python_position}
+                        if arg.metadata.get(NATIVE_BY_VALUE_METADATA)
+                        else descriptor_value
+                    ),
                 )
             )
             if is_returned_output:

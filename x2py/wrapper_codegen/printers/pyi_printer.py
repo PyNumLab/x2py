@@ -384,7 +384,12 @@ class PyiPrinter(ClassVisitor):
     ) -> list[str]:
         """Handle array dimensions for the current generation context."""
         if array is not None and array.category == "assumed_size" and array.source_shape:
-            shape = [PyiPrinter._assumed_size_array_dimension(dim) for dim in array.source_shape]
+            shape = list(array.shape if array.shape else semantic_type.shape)
+            if len(shape) != len(array.source_shape):
+                shape = list(array.source_shape)
+            for axis, source_dimension in enumerate(array.source_shape):
+                if PyiPrinter._assumed_size_array_dimension(source_dimension) == _FLAT_DIMENSION_PRINT_SENTINEL:
+                    shape[axis] = _FLAT_DIMENSION_PRINT_SENTINEL
         else:
             shape = list(array.shape if array is not None and array.shape else semantic_type.shape)
         if not shape and semantic_type.rank > 0:
@@ -440,24 +445,7 @@ class PyiPrinter(ClassVisitor):
             metadata.append(self._contract("Allocatable"))
         if array.pointer:
             metadata.append(self._contract("Pointer"))
-        if PyiPrinter._requires_source_dims_metadata(array):
-            args = ", ".join(json.dumps(str(dim)) for dim in array.source_shape)
-            metadata.append(f"{self._contract('SourceDims')}({args})")
         return metadata
-
-    @staticmethod
-    def _requires_source_dims_metadata(array: SemanticArrayContract) -> bool:
-        """Return whether lower-bound assumed-size details need metadata."""
-        if array.category != "assumed_size" or not array.source_shape:
-            return False
-        for dim in array.source_shape:
-            text = str(dim).strip()
-            if ":" not in text:
-                continue
-            lower, upper = text.split(":", 1)
-            if upper.strip() == "*" and lower.strip() not in {"", "1"}:
-                return True
-        return False
 
     @staticmethod
     def _is_c_order_flat_array(array: SemanticArrayContract) -> bool:
@@ -640,8 +628,6 @@ class PyiPrinter(ClassVisitor):
         semantic_type = self._without_constant_constraint(arg.semantic_type)
         type_text = self._visit(semantic_type)
         annotation_metadata = []
-        if self._is_native_by_value_derived_argument(arg):
-            annotation_metadata.append(self._contract("ByValue"))
         if original_name is not None:
             annotation_metadata.append(f"{self._contract('Name')}({json.dumps(original_name)})")
         if annotation_metadata:
@@ -666,16 +652,6 @@ class PyiPrinter(ClassVisitor):
             if default_value is not None:
                 text += f" = {default_value}"
         return text
-
-    @staticmethod
-    def _is_native_by_value_derived_argument(arg: SemanticVariable) -> bool:
-        """Preserve native aggregate value passing without annotating primitive scalars."""
-        if not isinstance(arg, SemanticArgument):
-            return False
-        passes_by_value = bool(
-            arg.semantic_type.metadata.get(NATIVE_BY_VALUE_METADATA) or getattr(arg.origin, "metadata", {}).get("value")
-        )
-        return passes_by_value and arg.semantic_type.name not in SEMANTIC_SCALAR_TYPE_NAMES | {"String"}
 
     def _emit_call_argument(self, func: SemanticFunction, arg: SemanticArgument) -> str:
         """Emit a callable argument with compact output metadata when possible."""
@@ -1594,6 +1570,7 @@ class PyiPrinter(ClassVisitor):
                     )
                     for index, argument in enumerate(func.arguments)
                 ]
+            projected = PyiPrinter._with_value_projections(func, projected)
             projected = PyiPrinter._with_descriptor_projections(func, projected)
             return PyiPrinter._with_address_projections(func, projected)
         passed_position = func.passed_object_position
@@ -1616,9 +1593,35 @@ class PyiPrinter(ClassVisitor):
             if mapping.python_position is not None and mapping.python_position > passed_position:
                 old_position = mapping.python_position
                 mapping.python_position -= 1
-                PyiPrinter._shift_address_argument_value(mapping, old_position, mapping.python_position)
+                PyiPrinter._shift_argument_value_ref(mapping, old_position, mapping.python_position)
+        projected = PyiPrinter._with_value_projections(func, projected)
         projected = PyiPrinter._with_descriptor_projections(func, projected)
         return PyiPrinter._with_address_projections(func, projected)
+
+    @staticmethod
+    def _with_value_projections(
+        func: SemanticFunction,
+        projection: list[ProjectionMapping],
+    ) -> list[ProjectionMapping]:
+        """Mark exact derived value arguments on their native-call slots."""
+        by_name = {argument.name: argument for argument in func.arguments}
+        for mapping in projection:
+            if mapping.value_kind:
+                continue
+            argument = by_name.get(mapping.python_name or mapping.native_name)
+            if (
+                argument is None
+                and mapping.python_position is not None
+                and 0 <= mapping.python_position < len(func.arguments)
+            ):
+                argument = func.arguments[mapping.python_position]
+            if argument is None or not argument.metadata.get(NATIVE_BY_VALUE_METADATA):
+                continue
+            if mapping.python_position is None:
+                raise ValueError("Value projection requires a visible Python argument")
+            mapping.value_kind = "value"
+            mapping.value = {"kind": "arg", "position": mapping.python_position}
+        return projection
 
     @staticmethod
     def _with_descriptor_projections(
@@ -1666,13 +1669,13 @@ class PyiPrinter(ClassVisitor):
         )
 
     @staticmethod
-    def _shift_address_argument_value(
+    def _shift_argument_value_ref(
         mapping: ProjectionMapping,
         old_position: int,
         new_position: int,
     ) -> None:
-        """Keep `Addr(Arg(...))` value refs aligned with shifted method arguments."""
-        if mapping.value_kind not in {"addr", "allocatable", "pointer"} or not isinstance(mapping.value, dict):
+        """Keep nested native-call argument refs aligned with method arguments."""
+        if mapping.value_kind not in {"addr", "allocatable", "pointer", "value"} or not isinstance(mapping.value, dict):
             return
         if mapping.value.get("kind") == "arg" and mapping.value.get("position") == old_position:
             mapping.value["position"] = new_position
@@ -1748,6 +1751,8 @@ class PyiPrinter(ClassVisitor):
         """Handle native projection value for the current generation context."""
         if mapping.value_kind == "addr":
             return f"{self._contract('Addr')}({self._native_value_ref(mapping.value)})"
+        if mapping.value_kind == "value":
+            return f"{self._contract('Value')}({self._native_value_ref(mapping.value)})"
         if mapping.value_kind in {"allocatable", "pointer"}:
             helper = "Allocatable" if mapping.value_kind == "allocatable" else "Pointer"
             return f"{self._contract(helper)}({self._native_value_ref(mapping.value)})"
@@ -1807,7 +1812,8 @@ class PyiPrinter(ClassVisitor):
             return True
         if isinstance(func, SemanticMethod) and not func.is_static and func.passed_object_position not in {None, 0}:
             return True
-        projection = PyiPrinter._with_address_projections(func, deepcopy(func.projection))
+        projection = PyiPrinter._with_value_projections(func, deepcopy(func.projection))
+        projection = PyiPrinter._with_address_projections(func, projection)
         return any(
             PyiPrinter._requires_explicit_projection_mapping(mapping)
             for mapping in projection

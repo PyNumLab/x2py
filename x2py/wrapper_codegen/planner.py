@@ -1377,7 +1377,6 @@ class WrapperPlanner(ClassVisitor):
                 )
                 for case in policy.cases
             ),
-            pointer_intent=policy.pointer_intent,
             writeback=policy.writeback,
             status_role=policy.status_role,
             origin_identity_role=policy.origin_identity_role,

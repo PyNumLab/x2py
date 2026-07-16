@@ -55,23 +55,25 @@ raw_pointer: Addr(Float64)
     assert raw_pointer.semantic_type.storage.read_only is False
 
 
-def test_by_value_derived_argument_round_trips_as_argument_specific_metadata():
+def test_value_projection_round_trips_as_argument_specific_native_transport():
     module = parse_pyi_text(
         """
-from x2py.contracts import Annotated, ByValue, Float64, native_type
+from x2py.contracts import Arg, Float64, Value, native_call, native_type
 
 @native_type(attributes=("bind(c)",))
 class point:
     x: Float64
 
-def score(value: Annotated[point, ByValue]) -> Float64: ...
+@native_call([Value(Arg(0))])
+def score(value: point) -> Float64: ...
 """,
         module_name="value_contract",
     )
 
     value = module.functions[0].arguments[0]
-    assert value.semantic_type.metadata["native_by_value"] is True
-    assert "value: Annotated[point, ByValue]" in emit_module(module)
+    assert value.metadata["native_by_value"] is True
+    assert "@native_call([Value(Arg(0))])" in emit_module(module)
+    assert "value: point" in emit_module(module)
 
 
 def test_convert_pyi_to_ir_follows_arbitrary_contract_aliases():
@@ -581,7 +583,7 @@ c_tensor: Annotated[Float64[Flat, 3, 4], ORDER_C]
 def test_convert_pyi_to_ir_preserves_extended_array_metadata_and_nested_selector():
     module = parse_pyi_text(
         """
-value: Annotated[Float64, ORDER_F, Contiguous, ArrayCategory("deferred_shape"), SourceDims("1:n", "*", "extent"), LowerBounds(None, "0"), UpperBounds("n", None)]
+value: Annotated[Float64[:, :], ORDER_F, Contiguous, ArrayCategory("deferred_shape")]
 nested: Float64[:, :][rank, kind]
 name: Annotated[String[16], FortranAllocatable]
 
@@ -599,9 +601,9 @@ def fill(x: Float64[:]) -> None: ...
     assert value.pointer is False
     assert value.contiguous is True
     assert value.category == "deferred_shape"
-    assert value.source_shape == ["1:n", "*", "extent"]
-    assert value.lower_bounds == [None, "0"]
-    assert value.upper_bounds == ["n", None]
+    assert value.source_shape == []
+    assert value.lower_bounds == []
+    assert value.upper_bounds == []
     assert value_type.constraints == []
     assert nested.metadata["rank_selector"] == "rank, kind"
     assert nested.storage.array.metadata["rank_selector"] == "rank, kind"

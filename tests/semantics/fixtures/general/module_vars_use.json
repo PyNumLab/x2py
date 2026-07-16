@@ -57,7 +57,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "nmax",
-            "native_scope": null,
+            "native_scope": "constants_mod",
             "source_kind": "variable",
             "source_type": "integer(kind=c_int)",
             "source_location": {},
@@ -111,6 +111,7 @@
                 ],
                 "category": "explicit_shape",
                 "order": null,
+                "copy_order": null,
                 "axes": [
                   "dense"
                 ],
@@ -155,7 +156,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "origin",
-            "native_scope": null,
+            "native_scope": "constants_mod",
             "source_kind": "variable",
             "source_type": "real(kind=c_double)",
             "source_location": {},

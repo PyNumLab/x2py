@@ -44,6 +44,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -150,6 +151,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -256,6 +258,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -362,6 +365,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -468,6 +472,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -576,6 +581,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -682,6 +688,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -788,6 +795,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -894,6 +902,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -1117,7 +1126,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "a",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1187,7 +1196,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "b",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1257,7 +1266,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "c",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1327,7 +1336,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "p_add",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1397,7 +1406,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "p_sub",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1467,7 +1476,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "p_mul",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1537,7 +1546,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "p_div",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1607,7 +1616,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "p_pow",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -1677,7 +1686,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "p_mix",
-            "native_scope": null,
+            "native_scope": "expr_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},

@@ -41,7 +41,6 @@ from x2py.semantics.wrapper_policy import (
     DerivedObjectStorage,
     DerivedFieldAccessMechanism,
     DerivedNativeHandoff,
-    DerivedPointerIntent,
     LifecycleOperation,
     DerivedOwnerRetention,
     DerivedRelease,
@@ -124,7 +123,6 @@ class DerivedCallPlan(StageRecord):
 
     dummy_category: DerivedDummyCategory
     cases: tuple[DerivedCallCasePlan, ...]
-    pointer_intent: DerivedPointerIntent
     writeback: DerivedWriteback
     status_role: str
     origin_identity_role: str

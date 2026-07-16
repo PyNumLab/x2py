@@ -604,9 +604,6 @@ def test_generated_artifacts_keep_matrix_dispatch_linear_and_descriptor_free(sca
     assert "x2py_derived_ready" in bridge
     assert "move_alloc" in bridge
     assert sum(line.lstrip().startswith("result = native_read_six_forms(") for line in bridge.splitlines()) == 1
-    assert (
-        sum(line.lstrip().startswith("validation_result = native_read_six_forms(") for line in bridge.splitlines()) == 1
-    )
     assert bridge.count("native_read_optional(") == 1
     assert bridge.count("native_read_sequence_value(") == 1
     assert "x2py_optional_first" in bridge

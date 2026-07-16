@@ -208,6 +208,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],

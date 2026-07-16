@@ -235,6 +235,19 @@ def test_phase7_generated_artifacts_follow_one_typed_action_vocabulary():
     assert "CFI_CDESC_T(1)" in c_source
     assert "real(c_double), allocatable, dimension(:) :: values" in bridge_source
     assert "real(c_double), pointer, dimension(:) :: values" in bridge_source
+    optional_start = bridge_source.index("function bind_c_optional(")
+    optional_end = bridge_source.index("end function bind_c_optional", optional_start)
+    optional_bridge = bridge_source[optional_start:optional_end]
+    assert "real(c_double), allocatable, dimension(:) :: values" in optional_bridge
+    assert "type(c_ptr), value :: bound_values_present" in optional_bridge
+    assert "real(c_double), allocatable, dimension(:), optional :: values" not in optional_bridge
+    optional_c_start = c_source.index("static PyObject * wrap_optional(")
+    optional_c_end = c_source.index("static PyObject * wrap_replace(", optional_c_start)
+    optional_binding = c_source[optional_c_start:optional_c_end]
+    assert "} else {" in optional_binding
+    assert "values_elem_len = sizeof(double);" in optional_binding
+    assert "values_descriptor_rank = 1;" in optional_binding
+    assert "values = (CFI_cdesc_t *)&values_storage;" in optional_binding
     assert "x2py_collect_make_allocatable_array_result" in bridge_source
     assert "call x2py_collect_make_allocatable_array_result(native_make(n), result_value)" in bridge_source
     assert "call move_alloc(result_value, result)" in bridge_source

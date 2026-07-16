@@ -330,15 +330,6 @@ class DerivedTargetLifetime(str, Enum):
     MODULE = "module"
 
 
-class DerivedPointerIntent(str, Enum):
-    """Authority controlling nonpointer actuals for a pointer dummy."""
-
-    NOT_POINTER = "not_pointer"
-    INPUT_ONLY = "input_only"
-    REASSOCIABLE = "reassociable"
-    COMPILER_VALIDATED = "compiler_validated"
-
-
 class DerivedWriteback(str, Enum):
     """Native state retained after a scalar-derived call."""
 
@@ -440,7 +431,6 @@ class DerivedCallPolicy:
 
     dummy_category: DerivedDummyCategory
     cases: tuple[DerivedCallCasePolicy, ...]
-    pointer_intent: DerivedPointerIntent
     writeback: DerivedWriteback
     status_role: str
     origin_identity_role: str
@@ -2845,7 +2835,7 @@ def _projected_argument_slot(
     )
     native_barrier_action, codegen_action = _native_slot_barrier_actions(decision, callback)
     blockers = []
-    if value_kind not in {"addr", "allocatable", "arg", "pointer"}:
+    if value_kind not in {"addr", "allocatable", "arg", "pointer", "value"}:
         blockers.append(f"native-call slot {native_position} uses unsupported scalar value kind {value_kind!r}")
     if bridge_data_action is BridgeDataAction.BLOCKED:
         blockers.append(f"native-call slot {native_position} has no completed bridge data action")
@@ -3154,10 +3144,8 @@ def _native_argument_value_kind(argument: models.SemanticArgument, default: str)
 
 
 def _native_by_value_argument(argument: models.SemanticArgument) -> bool:
-    """Return the source- or contract-preserved native aggregate value fact."""
-    return bool(
-        argument.origin.metadata.get("value") or argument.semantic_type.metadata.get(models.NATIVE_BY_VALUE_METADATA)
-    )
+    """Return the completed per-call native aggregate value fact."""
+    return bool(argument.metadata.get(models.NATIVE_BY_VALUE_METADATA))
 
 
 def _derived_argument_bridge_data_action(
@@ -3305,8 +3293,10 @@ def _derived_call_policy(
         argument.semantic_type,
         native_value=_native_by_value_argument(argument),
     )
-    pointer_intent = _derived_pointer_intent(argument, decision, category)
-    cases = tuple(_derived_call_case(category, storage, pointer_intent) for storage in DerivedObjectStorage)
+    cases = tuple(
+        _derived_call_case(category, storage, projects_result=decision.projects_result)
+        for storage in DerivedObjectStorage
+    )
     writeback = {
         DerivedDummyCategory.VALUE: DerivedWriteback.NONE,
         DerivedDummyCategory.ALLOCATABLE: DerivedWriteback.ALLOCATION_STATE,
@@ -3319,7 +3309,6 @@ def _derived_call_policy(
     return DerivedCallPolicy(
         dummy_category=category,
         cases=cases,
-        pointer_intent=pointer_intent,
         writeback=writeback,
         status_role=f"{argument.name}:derived-call-status",
         origin_identity_role=f"{argument.name}:derived-origin-identity",
@@ -3334,7 +3323,7 @@ def _derived_dummy_category(
     native_value: bool = False,
 ) -> DerivedDummyCategory:
     """Return the declared native dummy category from semantic metadata."""
-    if native_value or semantic_type.metadata.get(models.NATIVE_BY_VALUE_METADATA):
+    if native_value:
         return DerivedDummyCategory.VALUE
     if semantic_type.metadata.get("fortran_allocatable"):
         if semantic_type.metadata.get("fortran_target") or semantic_type.metadata.get("aliased"):
@@ -3358,32 +3347,17 @@ _DERIVED_ACCESS_ABI = {
 }
 
 
-def _derived_pointer_intent(
-    argument: models.SemanticArgument,
-    decision: OwnershipDecision,
-    category: DerivedDummyCategory,
-) -> DerivedPointerIntent:
-    """Complete the nonpointer-actual exception for one pointer dummy."""
-    if category is not DerivedDummyCategory.POINTER:
-        return DerivedPointerIntent.NOT_POINTER
-    intent = argument.semantic_type.metadata.get("fortran_intent", "compiler")
-    if intent == "in":
-        return DerivedPointerIntent.INPUT_ONLY
-    if intent in {None, "out", "inout"} or decision.projects_result:
-        return DerivedPointerIntent.REASSOCIABLE
-    return DerivedPointerIntent.COMPILER_VALIDATED
-
-
 def _derived_call_case(
     category: DerivedDummyCategory,
     storage: DerivedObjectStorage,
-    pointer_intent: DerivedPointerIntent,
+    *,
+    projects_result: bool,
 ) -> DerivedCallCasePolicy:
     """Return one exhaustive compatibility cell from the documented matrix."""
     if category in {DerivedDummyCategory.ALLOCATABLE, DerivedDummyCategory.ALLOCATABLE_TARGET}:
         return _derived_allocatable_dummy_case(storage)
     if category is DerivedDummyCategory.POINTER:
-        return _derived_pointer_dummy_case(storage, pointer_intent)
+        return _derived_pointer_dummy_case(storage, projects_result=projects_result)
     return _derived_payload_dummy_case(category, storage)
 
 
@@ -3486,7 +3460,8 @@ def _derived_allocatable_dummy_case(storage: DerivedObjectStorage) -> DerivedCal
 
 def _derived_pointer_dummy_case(
     storage: DerivedObjectStorage,
-    pointer_intent: DerivedPointerIntent,
+    *,
+    projects_result: bool,
 ) -> DerivedCallCasePolicy:
     if storage is DerivedObjectStorage.POINTER_HOLDER:
         access = DerivedActualAccess.POINTER_HOLDER
@@ -3508,11 +3483,11 @@ def _derived_pointer_dummy_case(
             False,
             DerivedTargetLifetime.MODULE,
         )
-    if pointer_intent is DerivedPointerIntent.REASSOCIABLE:
+    if projects_result:
         return _derived_incompatible_case(
             storage,
             "pointer-derived-actual-required",
-            "a pointer dummy that may change association requires pointer storage",
+            "projected pointer association writeback requires pointer storage",
         )
     payload = _derived_payload_dummy_case(DerivedDummyCategory.OBJECT, storage)
     return DerivedCallCasePolicy(

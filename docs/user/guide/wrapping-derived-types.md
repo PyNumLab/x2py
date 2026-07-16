@@ -99,7 +99,8 @@ same mutation in place and returns only the other declared results (or `None`).
 The complete example shows inout mutation and a wrapper-owned function result.
 
 A native by-value argument is preserved in generated semantic contracts as
-`Annotated[point, ByValue]`. Python still passes an existing `point` wrapper.
+`@native_call([Value(Arg(0)), ...])`. Python still passes an existing `point`
+wrapper.
 The generated Fortran bridge imports the exact native type and performs the
 typed by-value call. The foreign boundary never lays out or byte-copies the
 aggregate,

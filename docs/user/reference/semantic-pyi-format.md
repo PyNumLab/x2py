@@ -917,6 +917,14 @@ is an array whose element length is not fixed in the public contract. The native
 boundary is always the array data address; `@native_call([Addr(Arg(i))])` is
 redundant for these arguments.
 
+Array dimensions in the public type are bridge extents, not native lower and
+upper bounds. For example, a native dimension `0:LDB-1` has public extent
+`LDB`, so an assumed-size contract is written `T[LDB, Flat]`. The bridge may
+construct its local view with any lower bound while passing the same base
+address and extent; the compiled native procedure applies its own declared
+bounds. Native lower bounds, upper bounds, and source-dimension spellings are
+not part of the semantic `.pyi` format.
+
 `String[n]` represents a Python `str` at the Python boundary. Its encoded byte
 length must be exactly `n`; x2py does not pad or truncate the public value. x2py
 converts it to call-local fixed-width character storage and passes that storage
@@ -1065,12 +1073,12 @@ Use local constants or generated `Final[...]` names for shape symbols.
 ## Metadata With `Annotated`
 
 `Annotated[...]` carries storage metadata and semantic constraints. It does
-not normally carry source-language argument direction. The one native-call
-exception is `ByValue` on a wrapped derived-type argument: it records that the
-exact native dummy receives the derived object by value rather than by
-reference. The Python API still accepts the same opaque wrapper object; the
-generated Fortran bridge performs the typed call, and the binding never
-exposes or guesses aggregate layout.
+not carry source-language argument direction or per-call value/reference
+selection. Native call transport belongs to `@native_call`: a wrapped derived
+object uses its normal reference handoff with `Arg(i)` and exact typed value
+handoff with `Value(Arg(i))`. The Python API accepts the same opaque wrapper
+object in both cases; the generated Fortran bridge performs the typed call, and
+the binding never exposes or guesses aggregate layout.
 
 ```python
 from x2py.contracts import Annotated, COPY_F, Float64, ORDER_C, ORDER_F
@@ -1091,7 +1099,6 @@ Generated canonical metadata:
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `Aliased` | native storage may be exposed across the Python boundary as an alias |
-| `ByValue` | a wrapped exact rank-zero monomorphic derived-type argument is passed to a native value dummy by the typed Fortran bridge; the binding never lays out the aggregate, so ordinary, `sequence`, and `bind(C)` types share this path |
 | `Immutable` | Python-visible value must not be mutated in place; writable native calls require a completed copy-in/copy-out replacement policy or an explicit call-local discarded-mutation policy |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
 | `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
@@ -1108,8 +1115,6 @@ Loaded compatibility metadata:
 | --- | --- |
 | `Contiguous` | source provenance says the array is contiguous |
 | `ArrayCategory("...")` | source array category provenance |
-| `SourceDims(...)` | source declaration dimensions |
-| `LowerBounds(...)`, `UpperBounds(...)` | source bound provenance |
 | `FortranAllocatable` | older scalar character allocatable metadata; generated contracts use `Allocatable[String]` |
 
 <!-- X2PY_C_DOCS_START
@@ -1124,12 +1129,20 @@ limited to required, concrete-rank, dense numeric ndarray arguments. It does
 not apply to `Flat`, assumed-rank or strided arrays, optional arrays, character
 arrays, native descriptor arguments, or handle actuals.
 
-Semantic `.pyi` types do not need to repeat the native procedure's `intent`
-for this transformation. The binding may use a mutable temporary and copy it
-back after the call even when the native dummy is `intent(in)`; the native
-procedure interface still enforces its own direction. When an argument is
-projected with `Returns`, Python receives the original C-order object after
-copy-back.
+Semantic `.pyi` types never repeat the native procedure's `intent`. Native
+source conversion may use the source declaration once to propose default
+Python argument/result positions. The emitted Python signature, `Returns[...]`
+items, and ordered `@native_call` mapping are the editable, authoritative
+contract; users may retain the native positions or choose a different Python
+projection. Wrapper policy is completed from that contract and does not retain
+or re-infer native `intent`.
+
+Bridge entry dummies use the permissive omitted-`intent` default. The binding
+may therefore use mutable call-local storage and perform completed copy-back
+even when the native procedure has a more restrictive dummy. The compiled
+native procedure's own explicit interface remains authoritative when the
+bridge calls it. When an argument is projected with `Returns`, Python receives
+the original C-order object after copy-back.
 
 Persistent native descriptors use wrapper type syntax instead of descriptor
 metadata inside `Annotated[...]`:
@@ -1158,6 +1171,12 @@ optional callable arguments, where `None` or omission maps to native
 `present(...)` false. Module variables, derived-type fields, and function results
 use the handle type without `| None`; unallocated or unassociated state lives
 inside the present handle.
+
+For this optional-descriptor ABI, the binding always supplies the bridge with a
+valid standard descriptor. For an omitted Python value it establishes a local
+unallocated or unassociated placeholder descriptor, while a separate completed
+presence action selects a native call that omits the native dummy. The bridge
+never forwards or inspects placeholder storage as a present native argument.
 
 Procedure boundaries keep the Python value type in the annotation and put the
 native descriptor conversion in `@native_call`. Both scalar descriptor kinds
@@ -1536,6 +1555,15 @@ When the name matches an existing Python-visible argument, the argument remains
 an input and the return item represents replacement-style writable-reference
 behavior for immutable public values such as Python `str`.
 
+With an explicit `@native_call`, a matching `Returns["name", T]` item
+automatically assigns that visible `Arg(i)` its Python result position; it does
+not require a duplicate `Return(...)` entry. The first ordinary return item is
+the native function result. A native output dummy with no visible Python
+argument must instead appear explicitly as `Return("name", position)` in the
+native argument list. The list itself is exhaustive: once `@native_call` is
+present, every native dummy position must have exactly one entry in native
+order; native arguments are never inferred from leftovers.
+
 For bare numeric scalar values, `Addr(Arg(i))` means x2py first converts the
 Python argument to its native scalar representation and then passes the address
 of that native slot. It does not mean the user passed a reference.
@@ -1576,6 +1604,16 @@ default `Arg(i)` representation is already the native storage, handle, or raw
 address representation. Address projections of `Return(...)` and `Work(...)`
 are also rejected; native outputs and workspaces already name their storage.
 
+`Value(Arg(i))` is the inverse override for an exact rank-zero monomorphic
+wrapped derived object. Plain `Arg(i)` passes that object by reference;
+`Value(Arg(i))` asks the typed bridge to pass the exact native object by value.
+Primitive scalars already use value passing with plain `Arg(i)`, while arrays,
+strings, raw addresses, and descriptor handles keep their normal storage ABI and
+do not accept `Value(...)`. The foreign binding boundary still carries an opaque object
+address: `Value(...)` records the native Fortran dummy contract, and the Fortran
+compiler performs any required copy when the typed bridge makes the call. It
+never asks the binding to pass aggregate bytes through the foreign ABI.
+
 ```python
 from x2py.contracts import Returns, String
 
@@ -1606,6 +1644,13 @@ native argument order. Each `Return(...)` entry is hidden writable storage passe
 to the native procedure by address. The optional `result=` keyword records a
 native scalar descriptor function result, for example
 `result=Allocatable(Return(0))` or `result=Pointer(Return(0))`.
+
+For descriptor projections, `Pointer(Arg(i))` without a matching
+`Returns["name", T]` creates a permissive call-local pointer adapter and
+discards any native reassociation after the call. Adding the matching projected
+return requests association writeback instead; scalar-derived values then
+require persistent pointer storage. This choice belongs to the Python contract,
+not native `intent`.
 
 The same native routine can be edited into an identity call without projection:
 
@@ -2176,6 +2221,7 @@ Loaded projection entries:
 | --- | --- |
 | `Arg(i)` | native argument is Python argument `i`'s default native representation |
 | `Addr(Arg(i))` | native argument is the address of Python argument `i`'s call-local native scalar representation |
+| `Value(Arg(i))` | exact rank-zero monomorphic wrapped derived object is passed to the native value dummy by the typed bridge |
 | `Allocatable(Arg(i))`, `Pointer(Arg(i))` | native argument is a nullable call-local scalar descriptor initialized from Python argument `i`; `None` means present but unallocated or unassociated |
 | `Return(i)` | native argument is supplied by projected return slot `i` as hidden writable storage passed by address |
 | `Return("name", i)` | named native argument is supplied by projected return slot `i` as hidden writable storage passed by address |

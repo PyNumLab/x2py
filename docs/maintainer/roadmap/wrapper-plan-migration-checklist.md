@@ -3475,8 +3475,9 @@ itself; Phase 8F/H add the public field surface on this substrate.
 ### Phase 8G — Exact Native `value` Copies And Opaque Layout
 
 - [x] Preserve `bind(C)`/`sequence`/ordinary derived-type facts and native
-  `value` metadata through generated `Annotated[T, ByValue]`, post-IR policy,
-  and the derived handoff plan.
+  `value` transport through generated `Value(Arg(i))`, post-IR policy, and the
+  derived handoff plan. Do not store this per-call ABI choice on the annotated
+  Python type.
 - [x] For every supported exact rank-zero monomorphic native `value` argument,
   keep Python on the opaque wrapper contract. The Fortran bridge imports the
   exact native type, reads the typed pointee, and performs the typed call. The
@@ -3558,13 +3559,13 @@ forms are:
 | `P` | `type(item), pointer :: arg` |
 | `V` | `type(item), value :: arg` |
 
-`OPTIONAL`, rank, qualified type identity, and `INTENT` remain separate facts.
-For the `P` column, a nonpointer actual is legal only for an explicitly
-`INTENT(IN)` pointer dummy. An absent `INTENT` is reassociable, not read-only.
-If x2py lacks the intent but the compiler has the authoritative imported module
-interface, select a compiler-validated target adapter; if neither has an
-authoritative interface, report an interface error rather than fabricating a
-pointer actual.
+`OPTIONAL`, rank, and qualified type identity remain separate facts. Source
+`INTENT` may propose the initial Python projection, but it is not a completed
+matrix selector. For the `P` column, `Pointer(Arg(i))` without a matching
+projected return selects a call-local pointer input adapter and discards native
+reassociation. A matching `Returns[...]` selects association writeback and
+therefore requires persistent pointer storage. x2py never selects between these
+paths from native `INTENT`.
 
 Use these completed action names. Parenthesized state requirements are runtime
 preconditions, not alternative fallback actions:
@@ -3580,7 +3581,7 @@ preconditions, not alternative fallback actions:
 | `POINTEE_REFERENCE` | pass the current target of a pointer holder or module pointer to a nonpointer dummy |
 | `POINTER_HOLDER` | pass a persistent wrapper-owned pointer holder component directly so association writeback updates the same holder |
 | `MODULE_POINTER_TRANSACTION` | initialize one bridge-local typed pointer holder from the current target and restore its final association through an interoperable holder-address operation |
-| `POINTER_INPUT_ADAPTER` | expose a nonpointer actual as a target only for a pointer dummy proved or compiler-validated as `INTENT(IN)` |
+| `POINTER_INPUT_ADAPTER` | expose a payload through a call-local pointer carrier because the Python contract does not project pointer association writeback |
 | `TYPED_VALUE_COPY` | the exact Fortran bridge passes the typed object into the native `VALUE` slot; C never copies aggregate bytes |
 | `INCOMPATIBLE` | language-level storage mismatch; raise the specified `TypeError` and never enter native code |
 
@@ -3598,7 +3599,7 @@ those preconditions.
 | `type(item), allocatable :: var` | non-module holder | `HOLDER_REFERENCE [allocated]` | `HOLDER_REFERENCE [allocated]` with holder target lifetime | `ALLOCATABLE_HOLDER` | `ALLOCATABLE_HOLDER` | holder `POINTER_INPUT_ADAPTER [allocated]` | holder `TYPED_VALUE_COPY [allocated]` |
 | `type(item), allocatable :: var` | module | `SCOPED_REFERENCE [allocated]` | `SCOPED_REFERENCE [allocated]` with call-scoped target | `MODULE_ALLOCATABLE_TRANSACTION` | `MODULE_ALLOCATABLE_TRANSACTION` with call target | scoped `POINTER_INPUT_ADAPTER [allocated]` | scoped `TYPED_VALUE_COPY [allocated]` |
 | `type(item), allocatable, target :: var` | non-module holder | `HOLDER_REFERENCE [allocated]` | `HOLDER_REFERENCE [allocated]` with holder target lifetime | `ALLOCATABLE_HOLDER` | `ALLOCATABLE_HOLDER` | holder `POINTER_INPUT_ADAPTER [allocated]` | holder `TYPED_VALUE_COPY [allocated]` |
-| `type(item), allocatable, target :: var` | module | `MODULE_ADDRESS [allocated]` | `MODULE_ADDRESS [allocated]` with module target lifetime | `MODULE_ALLOCATABLE_TRANSACTION` preserving target | `MODULE_ALLOCATABLE_TRANSACTION` preserving target | `POINTER_INPUT_ADAPTER [allocated]` | module-address `TYPED_VALUE_COPY [allocated]` |
+| `type(item), allocatable, target :: var` | module | `MODULE_ADDRESS [allocated]` | `MODULE_ADDRESS` with module target lifetime | `MODULE_ALLOCATABLE_TRANSACTION` preserving target | `MODULE_ALLOCATABLE_TRANSACTION` preserving target | `POINTER_INPUT_ADAPTER [allocated]` | module-address `TYPED_VALUE_COPY [allocated]` |
 | `type(item), pointer :: var` | non-module holder | `POINTEE_REFERENCE [associated]` | `POINTEE_REFERENCE [associated]` with retained target owner | `INCOMPATIBLE` | `INCOMPATIBLE` | `POINTER_HOLDER` | pointee `TYPED_VALUE_COPY [associated]` |
 | `type(item), pointer :: var` | module | module `POINTEE_REFERENCE [associated]` | module `POINTEE_REFERENCE [associated]` with native target owner | `INCOMPATIBLE` | `INCOMPATIBLE` | `MODULE_POINTER_TRANSACTION` | module-pointee `TYPED_VALUE_COPY [associated]` |
 
@@ -3611,6 +3612,11 @@ The matrix is exhaustive for this Phase 8 scope. Every cell becomes either one
 completed action or one deliberate language-level error before lowering. No
 backend may infer a different action from datatype, `intent`, module shape,
 address presence, or local memory checks.
+
+The table's `P` entries show the non-projecting input-adapter form. When the
+Python contract projects pointer association writeback, replace every
+nonpointer `P` cell with `INCOMPATIBLE`; the two pointer-storage rows retain
+`POINTER_HOLDER` and `MODULE_POINTER_TRANSACTION`.
 
 ##### Shared Holder And Callback ABI
 

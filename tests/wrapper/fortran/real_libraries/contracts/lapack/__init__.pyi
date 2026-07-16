@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Annotated, Arg, Bool, Complex128, Complex64, Flat, Float32, Float64, Int32, ORDER_F, Return, Returns, SourceDims, String, bind, external, native_call
+from x2py.contracts import Addr, Annotated, Arg, Bool, Complex128, Complex64, Flat, Float32, Float64, Int32, ORDER_F, Return, Returns, String, bind, external, native_call
 from . import LA_CONSTANTS
 from . import LA_XISNAN
 
@@ -4721,8 +4721,8 @@ def clanhf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex64[Flat], SourceDims("0:*")],
-    WORK: Annotated[Float32[Flat], SourceDims("0:*")]
+    A: Complex64[Flat],
+    WORK: Float32[Flat]
 ) -> Float32: ...
 
 @bind("CLANHP")
@@ -6177,7 +6177,7 @@ def cpftrf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex64[Flat], SourceDims("0:*")],
+    A: Complex64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -6188,7 +6188,7 @@ def cpftri(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex64[Flat], SourceDims("0:*")],
+    A: Complex64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -6200,7 +6200,7 @@ def cpftrs(
     UPLO: String[1],
     N: Int32,
     NRHS: Int32,
-    A: Annotated[Complex64[Flat], SourceDims("0:*")],
+    A: Complex64[Flat],
     B: Complex64[LDB, Flat],
     LDB: Int32,
     INFO: Int32
@@ -7675,8 +7675,8 @@ def ctfsm(
     M: Int32,
     N: Int32,
     ALPHA: Complex64,
-    A: Annotated[Complex64[Flat], SourceDims("0:*")],
-    B: Annotated[Complex64[0:LDB-1, Flat], SourceDims("0:LDB-1", "0:*")],
+    A: Complex64[Flat],
+    B: Complex64[LDB, Flat],
     LDB: Int32
 ) -> None: ...
 
@@ -7688,7 +7688,7 @@ def ctftri(
     UPLO: String[1],
     DIAG: String[1],
     N: Int32,
-    A: Annotated[Complex64[Flat], SourceDims("0:*")],
+    A: Complex64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -7699,8 +7699,8 @@ def ctfttp(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Complex64[Flat], SourceDims("0:*")],
-    AP: Annotated[Complex64[Flat], SourceDims("0:*")],
+    ARF: Complex64[Flat],
+    AP: Complex64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -7711,8 +7711,8 @@ def ctfttr(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Complex64[Flat], SourceDims("0:*")],
-    A: Annotated[Complex64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    ARF: Complex64[Flat],
+    A: Complex64[LDA, Flat],
     LDA: Int32,
     INFO: Int32
 ) -> None: ...
@@ -8127,8 +8127,8 @@ def ctpttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    AP: Annotated[Complex64[Flat], SourceDims("0:*")],
-    ARF: Annotated[Complex64[Flat], SourceDims("0:*")],
+    AP: Complex64[Flat],
+    ARF: Complex64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -8373,9 +8373,9 @@ def ctrttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    A: Complex64[LDA, Flat],
     LDA: Int32,
-    ARF: Annotated[Complex64[Flat], SourceDims("0:*")],
+    ARF: Complex64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -12442,8 +12442,8 @@ def dlansf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float64[Flat], SourceDims("0:*")],
-    WORK: Annotated[Float64[Flat], SourceDims("0:*")]
+    A: Float64[Flat],
+    WORK: Float64[Flat]
 ) -> Float64: ...
 
 @bind("DLANSP")
@@ -15272,7 +15272,7 @@ def dpftrf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float64[Flat], SourceDims("0:*")],
+    A: Float64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -15283,7 +15283,7 @@ def dpftri(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float64[Flat], SourceDims("0:*")],
+    A: Float64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -15295,7 +15295,7 @@ def dpftrs(
     UPLO: String[1],
     N: Int32,
     NRHS: Int32,
-    A: Annotated[Float64[Flat], SourceDims("0:*")],
+    A: Float64[Flat],
     B: Float64[LDB, Flat],
     LDB: Int32,
     INFO: Int32
@@ -17635,8 +17635,8 @@ def dtfsm(
     M: Int32,
     N: Int32,
     ALPHA: Float64,
-    A: Annotated[Float64[Flat], SourceDims("0:*")],
-    B: Annotated[Float64[0:LDB-1, Flat], SourceDims("0:LDB-1", "0:*")],
+    A: Float64[Flat],
+    B: Float64[LDB, Flat],
     LDB: Int32
 ) -> None: ...
 
@@ -17648,7 +17648,7 @@ def dtftri(
     UPLO: String[1],
     DIAG: String[1],
     N: Int32,
-    A: Annotated[Float64[Flat], SourceDims("0:*")],
+    A: Float64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -17659,8 +17659,8 @@ def dtfttp(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Float64[Flat], SourceDims("0:*")],
-    AP: Annotated[Float64[Flat], SourceDims("0:*")],
+    ARF: Float64[Flat],
+    AP: Float64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -17671,8 +17671,8 @@ def dtfttr(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Float64[Flat], SourceDims("0:*")],
-    A: Annotated[Float64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    ARF: Float64[Flat],
+    A: Float64[LDA, Flat],
     LDA: Int32,
     INFO: Int32
 ) -> None: ...
@@ -18095,8 +18095,8 @@ def dtpttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    AP: Annotated[Float64[Flat], SourceDims("0:*")],
-    ARF: Annotated[Float64[Flat], SourceDims("0:*")],
+    AP: Float64[Flat],
+    ARF: Float64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -18344,9 +18344,9 @@ def dtrttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float64[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    A: Float64[LDA, Flat],
     LDA: Int32,
-    ARF: Annotated[Float64[Flat], SourceDims("0:*")],
+    ARF: Float64[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -21897,8 +21897,8 @@ def slansf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float32[Flat], SourceDims("0:*")],
-    WORK: Annotated[Float32[Flat], SourceDims("0:*")]
+    A: Float32[Flat],
+    WORK: Float32[Flat]
 ) -> Float32: ...
 
 @bind("SLANSP")
@@ -24714,7 +24714,7 @@ def spftrf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float32[Flat], SourceDims("0:*")],
+    A: Float32[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -24725,7 +24725,7 @@ def spftri(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float32[Flat], SourceDims("0:*")],
+    A: Float32[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -24737,7 +24737,7 @@ def spftrs(
     UPLO: String[1],
     N: Int32,
     NRHS: Int32,
-    A: Annotated[Float32[Flat], SourceDims("0:*")],
+    A: Float32[Flat],
     B: Float32[LDB, Flat],
     LDB: Int32,
     INFO: Int32
@@ -27039,8 +27039,8 @@ def stfsm(
     M: Int32,
     N: Int32,
     ALPHA: Float32,
-    A: Annotated[Float32[Flat], SourceDims("0:*")],
-    B: Annotated[Float32[0:LDB-1, Flat], SourceDims("0:LDB-1", "0:*")],
+    A: Float32[Flat],
+    B: Float32[LDB, Flat],
     LDB: Int32
 ) -> None: ...
 
@@ -27052,7 +27052,7 @@ def stftri(
     UPLO: String[1],
     DIAG: String[1],
     N: Int32,
-    A: Annotated[Float32[Flat], SourceDims("0:*")],
+    A: Float32[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -27063,8 +27063,8 @@ def stfttp(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Float32[Flat], SourceDims("0:*")],
-    AP: Annotated[Float32[Flat], SourceDims("0:*")],
+    ARF: Float32[Flat],
+    AP: Float32[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -27075,8 +27075,8 @@ def stfttr(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Float32[Flat], SourceDims("0:*")],
-    A: Annotated[Float32[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    ARF: Float32[Flat],
+    A: Float32[LDA, Flat],
     LDA: Int32,
     INFO: Int32
 ) -> None: ...
@@ -27499,8 +27499,8 @@ def stpttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    AP: Annotated[Float32[Flat], SourceDims("0:*")],
-    ARF: Annotated[Float32[Flat], SourceDims("0:*")],
+    AP: Float32[Flat],
+    ARF: Float32[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -27748,9 +27748,9 @@ def strttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Float32[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    A: Float32[LDA, Flat],
     LDA: Int32,
-    ARF: Annotated[Float32[Flat], SourceDims("0:*")],
+    ARF: Float32[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -32559,8 +32559,8 @@ def zlanhf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex128[Flat], SourceDims("0:*")],
-    WORK: Annotated[Float64[Flat], SourceDims("0:*")]
+    A: Complex128[Flat],
+    WORK: Float64[Flat]
 ) -> Float64: ...
 
 @bind("ZLANHP")
@@ -34028,7 +34028,7 @@ def zpftrf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex128[Flat], SourceDims("0:*")],
+    A: Complex128[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -34039,7 +34039,7 @@ def zpftri(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex128[Flat], SourceDims("0:*")],
+    A: Complex128[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -34051,7 +34051,7 @@ def zpftrs(
     UPLO: String[1],
     N: Int32,
     NRHS: Int32,
-    A: Annotated[Complex128[Flat], SourceDims("0:*")],
+    A: Complex128[Flat],
     B: Complex128[LDB, Flat],
     LDB: Int32,
     INFO: Int32
@@ -35516,8 +35516,8 @@ def ztfsm(
     M: Int32,
     N: Int32,
     ALPHA: Complex128,
-    A: Annotated[Complex128[Flat], SourceDims("0:*")],
-    B: Annotated[Complex128[0:LDB-1, Flat], SourceDims("0:LDB-1", "0:*")],
+    A: Complex128[Flat],
+    B: Complex128[LDB, Flat],
     LDB: Int32
 ) -> None: ...
 
@@ -35529,7 +35529,7 @@ def ztftri(
     UPLO: String[1],
     DIAG: String[1],
     N: Int32,
-    A: Annotated[Complex128[Flat], SourceDims("0:*")],
+    A: Complex128[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -35540,8 +35540,8 @@ def ztfttp(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Complex128[Flat], SourceDims("0:*")],
-    AP: Annotated[Complex128[Flat], SourceDims("0:*")],
+    ARF: Complex128[Flat],
+    AP: Complex128[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -35552,8 +35552,8 @@ def ztfttr(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    ARF: Annotated[Complex128[Flat], SourceDims("0:*")],
-    A: Annotated[Complex128[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    ARF: Complex128[Flat],
+    A: Complex128[LDA, Flat],
     LDA: Int32,
     INFO: Int32
 ) -> None: ...
@@ -35968,8 +35968,8 @@ def ztpttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    AP: Annotated[Complex128[Flat], SourceDims("0:*")],
-    ARF: Annotated[Complex128[Flat], SourceDims("0:*")],
+    AP: Complex128[Flat],
+    ARF: Complex128[Flat],
     INFO: Int32
 ) -> None: ...
 
@@ -36214,9 +36214,9 @@ def ztrttf(
     TRANSR: String[1],
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex128[0:LDA-1, Flat], SourceDims("0:LDA-1", "0:*")],
+    A: Complex128[LDA, Flat],
     LDA: Int32,
-    ARF: Annotated[Complex128[Flat], SourceDims("0:*")],
+    ARF: Complex128[Flat],
     INFO: Int32
 ) -> None: ...
 

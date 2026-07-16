@@ -14,14 +14,13 @@ from x2py.semantics.wrapper_policy import (
     DerivedDummyCategory,
     DerivedObjectStorage,
     DerivedOwnerRetention,
-    DerivedPointerIntent,
     DerivedRelease,
 )
 from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner, WrapperPlanSupportAnalyzer
 
 
 CONTRACT = """
-from x2py.contracts import Aliased, Allocatable, Annotated, Arg, ByValue, Int32, Pointer, Return, Returns, native_call
+from x2py.contracts import Aliased, Allocatable, Annotated, Arg, Int32, Pointer, Return, Returns, Value, native_call
 
 class item:
     value: Int32
@@ -46,7 +45,11 @@ def allocatable_target_dummy(
 @native_call([Pointer(Arg(0))])
 def pointer_dummy(value: item | None) -> Int32: ...
 
-def value_dummy(value: Annotated[item, ByValue]) -> Int32: ...
+@native_call([Pointer(Arg(0))])
+def projected_pointer_dummy(value: item | None) -> Returns["value", item] | None: ...
+
+@native_call([Value(Arg(0))])
+def value_dummy(value: item) -> Int32: ...
 
 @native_call([], result=Pointer(Return(0)))
 def make_pointer() -> item | None: ...
@@ -56,17 +59,14 @@ def make_pointer() -> item | None: ...
 STORAGES = tuple(DerivedObjectStorage)
 
 
-def _module(*, pointer_intent: str | None | object = "compiler"):
+def _module():
     module = parse_pyi_text(CONTRACT, module_name="phase8_scalar_matrix")
-    pointer = next(function for function in module.functions if function.name == "pointer_dummy")
-    if pointer_intent != "compiler":
-        pointer.arguments[0].semantic_type.metadata["fortran_intent"] = pointer_intent
     complete_semantic_policies(module)
     return module
 
 
-def _plans(*, pointer_intent: str | None | object = "compiler"):
-    plan = WrapperPlanner().build(_module(pointer_intent=pointer_intent))
+def _plans():
+    plan = WrapperPlanner().build(_module())
     return {
         function.symbol_name: function.arguments[0].derived_call
         for function in plan.namespaces[0].functions
@@ -147,11 +147,10 @@ def test_allocatable_dummies_accept_only_holders_and_module_transactions(functio
     assert all(not case.requires_present for case in call.cases if case.action is not DerivedCallAction.INCOMPATIBLE)
 
 
-def test_pointer_intent_in_accepts_every_payload_adapter_and_both_pointer_carriers():
-    call = _plans(pointer_intent="in")["pointer_dummy"]
+def test_nonprojecting_pointer_dummy_uses_call_local_adapters_for_nonpointer_storage():
+    call = _plans()["pointer_dummy"]
     actions = _actions(call)
 
-    assert call.pointer_intent is DerivedPointerIntent.INPUT_ONLY
     assert actions[DerivedObjectStorage.POINTER_HOLDER] is DerivedCallAction.POINTER_HOLDER
     assert actions[DerivedObjectStorage.MODULE_POINTER] is DerivedCallAction.MODULE_POINTER_TRANSACTION
     assert all(
@@ -161,12 +160,10 @@ def test_pointer_intent_in_accepts_every_payload_adapter_and_both_pointer_carrie
     )
 
 
-@pytest.mark.parametrize("intent", [None, "out", "inout"])
-def test_reassociable_pointer_dummy_rejects_nonpointer_storage_before_native(intent):
-    call = _plans(pointer_intent=intent)["pointer_dummy"]
+def test_projected_pointer_writeback_requires_persistent_pointer_storage():
+    call = _plans()["projected_pointer_dummy"]
     actions = _actions(call)
 
-    assert call.pointer_intent is DerivedPointerIntent.REASSOCIABLE
     assert actions[DerivedObjectStorage.POINTER_HOLDER] is DerivedCallAction.POINTER_HOLDER
     assert actions[DerivedObjectStorage.MODULE_POINTER] is DerivedCallAction.MODULE_POINTER_TRANSACTION
     assert all(
@@ -174,11 +171,6 @@ def test_reassociable_pointer_dummy_rejects_nonpointer_storage_before_native(int
         for storage in STORAGES
         if storage not in {DerivedObjectStorage.POINTER_HOLDER, DerivedObjectStorage.MODULE_POINTER}
     )
-
-
-def test_missing_contract_intent_uses_the_compiler_validated_pointer_adapter():
-    call = _plans()["pointer_dummy"]
-    assert call.pointer_intent is DerivedPointerIntent.COMPILER_VALIDATED
 
 
 def test_exact_typed_value_is_not_restricted_to_bind_c_layout():
@@ -243,7 +235,7 @@ def test_validation_rejects_a_backend_invented_matrix_gap():
 
 
 def test_artifacts_emit_shared_holders_typed_origin_operations_and_one_native_call():
-    artifacts = WrapperCodeGenerator().generate(WrapperPlanner().build(_module(pointer_intent="in")))
+    artifacts = WrapperCodeGenerator().generate(WrapperPlanner().build(_module()))
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
