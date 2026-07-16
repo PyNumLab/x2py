@@ -124,40 +124,32 @@ def test_assumed_rank_bridge_dispatches_each_runtime_rank_argument(
         assert module.rank_pair_score(left, right) == 100 * left_rank + right_rank + 4
 
 
-def test_assumed_rank_arrays_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+def test_assumed_rank_arrays_use_explicit_plan_branches(tmp_path: Path):
     """Replay runtime ranks one through fifteen through explicit bridge branches."""
     native_object = _compile_native_object(ASSUMED_RANK_F90_SOURCE, tmp_path / "native")
-    modules = {}
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract_package = tmp_path / f"{route}_assumed_rank"
-        shutil.copytree(CONTRACT_FIXTURES / "fassumed_rank_f90", contract_package)
-        (contract_package / "__init__.pyi").write_text(
-            "from .fassumed_rank_f90 import rank_weighted_sum\nfrom .fassumed_rank_f90 import bump_assumed_rank\n",
-            encoding="utf-8",
-        )
-        result = build_pyi_extension(
-            contract_package / "__init__.pyi",
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / route,
-            **route_kwargs,
-        )
-        module = _import_from_build_dir(result.module_name, result.output_dir)
-        modules[route] = module if hasattr(module, "rank_weighted_sum") else _sole_native_module(module)
+    contract_package = tmp_path / "assumed_rank_contract"
+    shutil.copytree(CONTRACT_FIXTURES / "fassumed_rank_f90", contract_package)
+    (contract_package / "__init__.pyi").write_text(
+        "from .fassumed_rank_f90 import rank_weighted_sum\nfrom .fassumed_rank_f90 import bump_assumed_rank\n",
+        encoding="utf-8",
+    )
+    result = build_pyi_extension(
+        contract_package / "__init__.pyi",
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    imported = _import_from_build_dir(result.module_name, result.output_dir)
+    module = imported if hasattr(imported, "rank_weighted_sum") else _sole_native_module(imported)
 
-    for module in modules.values():
-        for rank in (1, 2, 15):
-            shape = (2, *([1] * (rank - 1)))
-            values = np.ones(shape, dtype=np.float64, order="F")
-            assert module.rank_weighted_sum(values) == np.float64(rank + 2)
-            assert module.bump_assumed_rank(values) is None
-            np.testing.assert_array_equal(values, np.full(shape, rank + 1.0, order="F"))
+    for rank in (1, 2, 15):
+        shape = (2, *([1] * (rank - 1)))
+        values = np.ones(shape, dtype=np.float64, order="F")
+        assert module.rank_weighted_sum(values) == np.float64(rank + 2)
+        assert module.bump_assumed_rank(values) is None
+        np.testing.assert_array_equal(values, np.full(shape, rank + 1.0, order="F"))
 
-    direct = modules["wrapper_plan"]
     with pytest.raises(TypeError):
-        direct.rank_weighted_sum(np.float64(1.0))
+        module.rank_weighted_sum(np.float64(1.0))
     with pytest.raises(TypeError):
-        direct.rank_weighted_sum(np.empty((1,) * 16, dtype=np.float64, order="F"))
+        module.rank_weighted_sum(np.empty((1,) * 16, dtype=np.float64, order="F"))

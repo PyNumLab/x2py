@@ -166,7 +166,7 @@ def test_fixed_string_result_plan_edits_fail_before_backend_lowering(edit: str, 
         WrapperCodeGenerator().generate(plan)
 
 
-def test_fixed_string_result_policy_blocks_mixed_result_aggregation_until_cleanup_is_planned():
+def test_fixed_string_result_policy_uses_ordered_mixed_result_cleanup():
     module = parse_pyi_text(
         """
 @native_call([Return("status", 1)])
@@ -177,9 +177,19 @@ def mixed() -> tuple[String[8], Int32]: ...
     complete_semantic_policies(module)
     policy = module.functions[0].metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
 
-    assert policy.supported is False
-    assert "fixed string result lane requires exactly one Python-visible result" in policy.blockers
+    assert policy.supported is True
+    assert policy.blockers == ()
     assert policy.results[0].ownership.kind is ObjectKind.STRING
+    plan = WrapperPlanner().build(module)
+    function = plan.namespaces[0].functions[0]
+    assert tuple(result.result_position for result in function.results) == (0, 1)
+
+    c_source = next(
+        source.text for source in WrapperCodeGenerator().generate(plan).sources if source.path.suffix == ".c"
+    )
+    assert "free(result);" in c_source
+    assert "PyTuple_New(2)" in c_source
+    assert "Py_DECREF(result_0_obj);" in c_source
 
 
 def test_fixed_string_result_policy_blocks_status_error_until_failure_release_is_planned():

@@ -1,4 +1,4 @@
-"""Compiled legacy-oracle parity for dependency-closed Phase 8 object lanes."""
+"""Compiled canonical wrapper-plan coverage for Phase 8 object lanes."""
 
 from __future__ import annotations
 
@@ -9,14 +9,13 @@ import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import (
-    _build_source_legacy_and_import,
+    _build_source_and_import,
     _compile_native_object,
     _import_from_build_dir,
     _sole_native_module,
     wrapper_source,
 )
 from x2py import build_pyi_extension
-from x2py.pipeline import build as build_pipeline
 from x2py.runtime.handles import AllocatableArray, PointerArray
 
 DERIVED_BOUNDARY_F90_SOURCE = wrapper_source("fderived_boundary_f90.f90")
@@ -234,24 +233,16 @@ def reset_final_count() -> None: ...
 """
 
 
-def _build_routes(tmp_path: Path):
+def _build_point_boundary(tmp_path: Path):
     native_object = _compile_native_object(DERIVED_BOUNDARY_F90_SOURCE, tmp_path / "native")
-    modules = []
-    results = []
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        result = build_pyi_extension(
-            CONTRACT,
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / route,
-            **route_kwargs,
-        )
-        modules.append(_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)))
-        results.append(result)
-    return tuple(modules), tuple(results)
+    result = build_pyi_extension(
+        CONTRACT,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+    return module, result
 
 
 def _exercise_point_boundary(module):
@@ -280,20 +271,14 @@ def _exercise_point_boundary(module):
         point.x = 12.0
 
 
-def test_scalar_derived_objects_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
-    modules, results = _build_routes(tmp_path)
+def test_scalar_derived_objects_use_canonical_plan(tmp_path: Path):
+    module, result = _build_point_boundary(tmp_path)
+    _exercise_point_boundary(module)
+    with pytest.raises(TypeError):
+        module.point()
 
-    for module in modules:
-        _exercise_point_boundary(module)
-        with pytest.raises(TypeError):
-            module.point()
-
-    foreign_point = modules[0].make_point(np.float64(3.0), np.float64(4.0))
-    with pytest.raises(TypeError, match="Expected exact wrapper type point"):
-        modules[1].point_sum(foreign_point)
-
-    generated_c = (results[1].output_dir / "fderived_boundary_phase8_opaque_wrapper.c").read_text(encoding="utf-8")
-    generated_fortran = (results[1].output_dir / "bind_c_fderived_boundary_phase8_opaque_wrapper.f90").read_text(
+    generated_c = (result.output_dir / "fderived_boundary_phase8_opaque_wrapper.c").read_text(encoding="utf-8")
+    generated_fortran = (result.output_dir / "bind_c_fderived_boundary_phase8_opaque_wrapper.f90").read_text(
         encoding="utf-8"
     )
     assert "static PyObject * wrap_point_sum" in generated_c
@@ -306,28 +291,6 @@ def test_scalar_derived_objects_match_legacy_and_wrapper_plan_routes(tmp_path: P
     assert "allocate(result_value, stat=x2py_allocation_status)" in generated_fortran
 
 
-def test_eligible_derived_contract_selects_production_plan_without_legacy_lowering(
-    tmp_path: Path,
-    monkeypatch,
-):
-    native_object = _compile_native_object(DERIVED_BOUNDARY_F90_SOURCE, tmp_path / "native")
-
-    def fail_legacy_lowering(*_args, **_kwargs):
-        raise AssertionError("eligible Phase 8 contract must not invoke semantic_ir_to_codegen_ast")
-
-    monkeypatch.setattr(build_pipeline, "semantic_ir_to_codegen_ast", fail_legacy_lowering)
-    result = build_pyi_extension(
-        CONTRACT,
-        native_objects=[native_object],
-        native_include_dirs=[native_object.parent],
-        output_dir=tmp_path / "production",
-    )
-    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
-
-    _exercise_point_boundary(module)
-    assert (result.output_dir / "fderived_boundary_phase8_opaque_wrapper.c").is_file()
-
-
 def test_plain_module_derived_proxy_reads_and_writes_live_members(tmp_path: Path):
     native_object = _compile_native_object(PLAIN_MODULE_SOURCE, tmp_path / "native")
     result = build_pyi_extension(
@@ -335,7 +298,6 @@ def test_plain_module_derived_proxy_reads_and_writes_live_members(tmp_path: Path
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
         output_dir=tmp_path / "wrapper_plan",
-        _force_wrapper_plan_route=True,
     )
     module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
@@ -409,7 +371,6 @@ def test_aliased_module_derived_object_uses_direct_live_field_handles(tmp_path: 
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
         output_dir=tmp_path / "wrapper_plan",
-        _force_wrapper_plan_route=True,
     )
     module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
@@ -445,127 +406,104 @@ def test_aliased_module_derived_object_uses_direct_live_field_handles(tmp_path: 
 
 def test_derived_module_constant_returns_independent_owned_values(tmp_path: Path):
     native_object = _compile_native_object(DERIVED_CONSTANT_SOURCE, tmp_path / "native")
-    modules = []
-    results = []
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract = tmp_path / route / "fmodule_vars_f90.pyi"
-        contract.parent.mkdir()
-        contract.write_text(DERIVED_CONSTANT_CONTRACT, encoding="utf-8")
-        result = build_pyi_extension(
-            contract,
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / f"{route}_build",
-            **route_kwargs,
-        )
-        modules.append(_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)))
-        results.append(result)
+    contract = tmp_path / "contract" / "fmodule_vars_f90.pyi"
+    contract.parent.mkdir()
+    contract.write_text(DERIVED_CONSTANT_CONTRACT, encoding="utf-8")
+    result = build_pyi_extension(
+        contract,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
-    for module in modules:
-        first = module.black
-        second = module.black
-        assert first is not second
-        first.r = np.int32(17)
-        assert first.r == np.int32(17)
-        assert second.r == np.int32(0)
-        assert module.black.r == np.int32(0)
-        assert module.black_sum() == np.int32(0)
+    first = module.black
+    second = module.black
+    assert first is not second
+    first.r = np.int32(17)
+    assert first.r == np.int32(17)
+    assert second.r == np.int32(0)
+    assert module.black.r == np.int32(0)
+    assert module.black_sum() == np.int32(0)
 
-    bridge = (results[1].output_dir / "bind_c_fmodule_vars_f90_wrapper.f90").read_text(encoding="utf-8")
+    bridge = (result.output_dir / "bind_c_fmodule_vars_f90_wrapper.f90").read_text(encoding="utf-8")
     assert "result = c_null_ptr" in bridge
     assert "allocate(value, stat=x2py_allocation_status)" in bridge
     assert "value = native_black" in bridge
     assert "result = c_loc(value)" in bridge
 
 
-def test_fixed_string_fields_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+def test_fixed_string_fields_use_canonical_plan(tmp_path: Path):
     source = tmp_path / "native" / "fderived_string_phase8.f90"
     source.parent.mkdir()
     source.write_text(STRING_FIELD_SOURCE, encoding="utf-8")
     native_object = _compile_native_object(source, tmp_path / "native_build")
 
-    modules = []
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract = tmp_path / route / "fderived_string_phase8.pyi"
-        contract.parent.mkdir()
-        contract.write_text(STRING_FIELD_CONTRACT, encoding="utf-8")
-        result = build_pyi_extension(
-            contract,
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / f"{route}_build",
-            **route_kwargs,
-        )
-        modules.append(_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)))
+    contract = tmp_path / "contract" / "fderived_string_phase8.pyi"
+    contract.parent.mkdir()
+    contract.write_text(STRING_FIELD_CONTRACT, encoding="utf-8")
+    result = build_pyi_extension(
+        contract,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
-    for module in modules:
-        current = module.current
-        assert current.label == "start   "
-        current.label = "edited  "
-        assert module.current_label() == "edited  "
-        module.reset_label()
-        assert current.label == "native  "
-        with pytest.raises(TypeError, match="exactly 8 bytes"):
-            current.label = "short"
+    current = module.current
+    assert current.label == "start   "
+    current.label = "edited  "
+    assert module.current_label() == "edited  "
+    module.reset_label()
+    assert current.label == "native  "
+    with pytest.raises(TypeError, match="exactly 8 bytes"):
+        current.label = "short"
 
 
-def test_pointer_field_descriptor_views_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+def test_pointer_field_descriptor_views_use_canonical_plan(tmp_path: Path):
     source = tmp_path / "native" / "fderived_pointer_phase8.f90"
     source.parent.mkdir()
     source.write_text(POINTER_FIELD_SOURCE, encoding="utf-8")
     native_object = _compile_native_object(source, tmp_path / "native_build")
 
-    modules = []
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract = tmp_path / route / "fderived_pointer_phase8.pyi"
-        contract.parent.mkdir()
-        contract.write_text(POINTER_FIELD_CONTRACT, encoding="utf-8")
-        result = build_pyi_extension(
-            contract,
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / f"{route}_build",
-            **route_kwargs,
-        )
-        modules.append(_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)))
+    contract = tmp_path / "contract" / "fderived_pointer_phase8.pyi"
+    contract.parent.mkdir()
+    contract.write_text(POINTER_FIELD_CONTRACT, encoding="utf-8")
+    result = build_pyi_extension(
+        contract,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
-    for module in modules:
-        owner = module.current
-        handle = owner.values
-        assert isinstance(handle, PointerArray)
-        assert handle.owner is owner
-        assert handle.to_numpy() is None
+    owner = module.current
+    handle = owner.values
+    assert isinstance(handle, PointerArray)
+    assert handle.owner is owner
+    assert handle.to_numpy() is None
 
-        module.associate_strided()
-        view = handle.to_numpy()
-        np.testing.assert_allclose(view, np.array([6.0, 8.0], dtype=np.float64))
-        assert view.shape == (2,)
-        assert view.strides == (16,)
-        view[1] = np.float64(12.0)
-        assert module.current_sum() == np.float64(18.0)
+    module.associate_strided()
+    view = handle.to_numpy()
+    np.testing.assert_allclose(view, np.array([6.0, 8.0], dtype=np.float64))
+    assert view.shape == (2,)
+    assert view.strides == (16,)
+    view[1] = np.float64(12.0)
+    assert module.current_sum() == np.float64(18.0)
 
-        independent = view.copy()
-        with pytest.raises(AttributeError):
-            owner.values = handle
-        handle.nullify()
-        assert handle.to_numpy() is None
-        np.testing.assert_allclose(independent, np.array([6.0, 12.0], dtype=np.float64))
+    independent = view.copy()
+    with pytest.raises(AttributeError):
+        owner.values = handle
+    handle.nullify()
+    assert handle.to_numpy() is None
+    np.testing.assert_allclose(independent, np.array([6.0, 12.0], dtype=np.float64))
 
 
 def test_value_copy_and_optional_derived_inputs_match_source_oracle(tmp_path: Path):
     source = tmp_path / "source" / "fderived_value_phase8.f90"
     source.parent.mkdir()
     source.write_text(VALUE_AND_OPTIONAL_SOURCE, encoding="utf-8")
-    source_module = _build_source_legacy_and_import(
+    source_module = _build_source_and_import(
         source,
         tmp_path / "source_build",
         {
@@ -583,8 +521,7 @@ def test_value_copy_and_optional_derived_inputs_match_source_oracle(tmp_path: Pa
         contract,
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
-        output_dir=tmp_path / "wrapper_plan",
-        _force_wrapper_plan_route=True,
+        output_dir=tmp_path / "contract_build",
     )
     direct_module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
@@ -626,34 +563,26 @@ def test_borrowed_child_retains_owner_and_finalizes_exactly_once(tmp_path: Path)
     source.parent.mkdir()
     source.write_text(BORROWED_FINALIZER_SOURCE, encoding="utf-8")
     native_object = _compile_native_object(source, tmp_path / "native")
-    modules = []
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract = tmp_path / route / "fderived_finalizer_phase8.pyi"
-        contract.parent.mkdir()
-        contract.write_text(BORROWED_FINALIZER_CONTRACT, encoding="utf-8")
-        result = build_pyi_extension(
-            contract,
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / f"{route}_build",
-            **route_kwargs,
-        )
-        modules.append(_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)))
+    contract = tmp_path / "contract" / "fderived_finalizer_phase8.pyi"
+    contract.parent.mkdir()
+    contract.write_text(BORROWED_FINALIZER_CONTRACT, encoding="utf-8")
+    result = build_pyi_extension(
+        contract,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
-    for module in modules:
-        owner = module.make_parent()
-        module.reset_final_count()
-        borrowed = owner.value
-        if module is modules[1]:
-            assert borrowed._x2py_owner is owner
-        del owner
-        gc.collect()
-        assert module.get_final_count() == np.int32(0)
+    owner = module.make_parent()
+    module.reset_final_count()
+    borrowed = owner.value
+    assert borrowed._x2py_owner is owner
+    del owner
+    gc.collect()
+    assert module.get_final_count() == np.int32(0)
 
-        del borrowed
-        gc.collect()
-        gc.collect()
-        assert module.get_final_count() == np.int32(1)
+    del borrowed
+    gc.collect()
+    gc.collect()
+    assert module.get_final_count() == np.int32(1)

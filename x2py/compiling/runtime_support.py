@@ -4,15 +4,26 @@ from pathlib import Path
 import shutil
 
 from filelock import FileLock
+import numpy as np
 
 import x2py.stdlib as stdlib_folder
-from x2py.codegen.bindings.numpy_cpython_api import get_numpy_max_acceptable_version_file
 
 from .basic import CompileObj
 
 
 _RUNTIME_IMPORT = "x2py_runtime"
 _RUNTIME_SOURCE = Path(stdlib_folder.__file__).parent / _RUNTIME_IMPORT
+
+
+def _numpy_version_header() -> str:
+    """Return NumPy API version guards for the bundled native runtime."""
+    maximum_supported = [1, 19]
+    current = [int(value) for value in np.version.version.split(".")[:2]]
+    major, minor = min(maximum_supported, current)
+    header = f"#ifndef NPY_NO_DEPRECATED_API\n# define NPY_NO_DEPRECATED_API NPY_{major}_{minor}_API_VERSION\n#endif\n"
+    if current[0] >= 2:
+        header += "#ifndef NPY_TARGET_VERSION\n# define NPY_TARGET_VERSION NPY_2_0_API_VERSION\n#endif\n"
+    return header
 
 
 def install_runtime_support(imports, *, x2py_dirpath, compiler, wrapper_obj, language, verbose):
@@ -28,7 +39,7 @@ def install_runtime_support(imports, *, x2py_dirpath, compiler, wrapper_obj, lan
         shutil.copytree(_RUNTIME_SOURCE, destination)
 
     (destination / "numpy_version.h").write_text(
-        get_numpy_max_acceptable_version_file(),
+        _numpy_version_header(),
         encoding="utf-8",
     )
     runtime_obj = CompileObj(

@@ -22,7 +22,8 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | `x2py/runtime/` | Python runtime objects used by generated extension modules. |
 | `x2py/types/` | Cross-layer mappings from resolved semantic types to Python ecosystem types. |
 | `x2py/fortran_parser/` | Fortran parser frontend and Fortran parse report helpers. |
-| `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, readiness, and codegen lowering. |
+| `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, policy completion, and readiness. |
+| `x2py/wrapper_codegen/` | Typed wrapper plans, direct native bridge/binding lowering, and source and semantic `.pyi` printers. |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, runtime support installation, and linking. |
 | `x2py/stdlib/` | Native runtime support copied into generated wrapper builds. |
 | `x2py/naming/` | Unified public-name and generated-symbol policy. |
@@ -30,7 +31,6 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 
 <!-- X2PY_C_DOCS_START
 | `x2py/c_parser/` | C parser frontend and C parser CLI helpers. |
-| `x2py/codegen/` | Codegen AST models, Fortran bridge generation, CPython binding generation, and printers. |
 X2PY_C_DOCS_END -->
 
 The major source packages have local README files under `x2py/` for
@@ -48,11 +48,13 @@ contract syntax.
 
 | Path | Purpose |
 | --- | --- |
-| `tests/parser/` | Parser, preprocessing, CLI, and parser fixture tests. |
-| `tests/semantics/` | Semantic IR, readiness, type mapping, and lowering tests. |
-| `tests/pyi/` | Semantic `.pyi` parser and fixture tests. |
+| `tests/parsing/` | Parser and parser fixture tests grouped by source language. |
+| `tests/pipeline/` | Preprocessing and semantic `.pyi` build-orchestration tests. |
+| `tests/semantics/` | Semantic conversion, completed policy, and readiness tests. |
+| `tests/wrapper_codegen/` | Typed planning, direct bridge/binding generation, and source-printer tests. |
 | `tests/wrapper/fortran/` | Runtime wrapper tests that compile, import, call, and check failure paths. |
-| `tests/tools/` | Tooling tests, including documentation example and structure checks. |
+| `tests/docs/` | Documentation example and structure checks. |
+| `tests/tools/` | Repository tooling tests. |
 
 <!-- X2PY_C_DOCS_START
 | `tests/parser/c/` | C parser-specific tests and fixture maintenance. |

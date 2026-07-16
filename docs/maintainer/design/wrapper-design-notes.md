@@ -89,23 +89,31 @@ Generated CPython extensions should expose useful NumPy-style docstrings on the
 Python-visible API. The CPython wrapper layer owns this generation because it has
 the final callable signatures, hidden projection decisions, class/property
 layout, and return conversion policy. These docstrings are for Python users and
-should stay compact. Use NumPy-style sections with short type headers such as
+should stay compact. One plan-side docstring builder must consume completed
+wrapper-plan records; binding and bridge lowering must not reconstruct
+documentation from native declarations or generated source. Use NumPy-style
+sections with short type headers such as
 `x : ndarray[float64]` and `result : ndarray[float64] or None`. Put only the
 facts that are known and useful: rank for arrays, shape only when constrained or
 known, layout for rank greater than one as `F-contiguous` or `C-contiguous`,
-intent for arguments, mutation for `intent(out)`/`intent(inout)`, ownership
+native mutation for writable arguments, ownership
 when it matters using `Ownership: Python-owned` or `Ownership: Native-owned`,
 and when `None` can be returned. Do not emit placeholder unknowns such as
 runtime-determined shape or scalar rank. Avoid long
-wrapper-internal explanations. Class docstrings should
-summarize fields and methods. Get/set descriptor docstrings should describe
-class attributes, including borrowed view lifetimes for allocatable arrays.
-Pointer-array fields and module variables must document handle availability
-as conservative descriptor handles, and must call out that generated accessors
-are still a readiness blocker until descriptor-handle code generation is
-implemented. Module variables exposed through getter functions should document
-the getter, since CPython modules do not provide a portable per-variable
-descriptor docstring for plain module attributes.
+wrapper-internal explanations.
+
+Every public surface must participate. Namespace docstrings list functions,
+module attributes, and classes without empty headings. Function and method
+docstrings show the public signature, parameters, ordered returns, optional
+omission versus present-`None` behavior, and planned exceptions. Overload
+docstrings list their accepted public signatures without exposing private
+candidate names. Class docstrings summarize the public constructor, fields,
+methods, and overloads. Constructor and method descriptors carry their own
+docstrings so `help(Type.method)` is useful. Property docstrings describe the
+public type, whether replacement assignment is supported, and relevant borrowed
+or descriptor-handle lifetime. Because CPython modules do not provide portable
+per-variable descriptors, module-variable documentation belongs in the
+namespace docstring.
 X2PY_C_DOCS_END -->
 
 Verbose wrapper builds should print the exact compiler command lines they run,

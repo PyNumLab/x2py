@@ -7,7 +7,6 @@ from tests._shared.pyi_conversion_support import (
     CONTRACT_SYMBOLS,
     PROJECTED_OUTPUT_METADATA,
     ProjectionMapping,
-    Scope,
     SemanticArgument,
     SemanticConstraint,
     SemanticFunction,
@@ -23,7 +22,6 @@ from tests._shared.pyi_conversion_support import (
     parse_pyi_text,
     pytest,
     re,
-    semantic_ir_to_codegen_ast,
 )
 
 
@@ -410,12 +408,6 @@ def fill(
 
     assert func.arguments[1].metadata[PROJECTED_OUTPUT_METADATA] is True
     assert func.projection[1].result_position == 0
-
-    codegen_module = semantic_ir_to_codegen_ast(
-        from_pyi,
-        Scope(name=from_pyi.name, scope_type="module"),
-    )
-    assert codegen_module.funcs[0].arguments[1].var.projected_output is True
 
 
 def test_native_order_outputs_do_not_get_projected_without_native_call():

@@ -151,24 +151,15 @@ def _assert_general_source_surface(source: Path, module) -> None:
 
 
 @pytest.mark.parametrize(
-    ("route", "route_options"),
-    [
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ],
-)
-@pytest.mark.parametrize(
     "source",
     [SOURCE_NAMESPACE, TRANSITIVE_NATIVE, MULTI_MODULE, STANDALONE_ONLY, SAME_NAME_MIXED],
     ids=lambda path: path.stem,
 )
-def test_complete_general_source_preserves_namespaces_through_both_routes(
+def test_complete_general_source_preserves_namespaces_through_canonical_plan(
     tmp_path: Path,
     source: Path,
-    route: str,
-    route_options: dict[str, bool],
 ):
-    result = build_fortran_extension(source, output_dir=tmp_path / route, **route_options)
+    result = build_fortran_extension(source, output_dir=tmp_path / "build")
     module = _import_extension(result.module_name, result.output_dir)
 
     _assert_general_source_surface(source, module)
@@ -275,7 +266,6 @@ def test_recursive_graph_preserves_module_and_symbol_aliases_and_ignores_support
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
         output_dir=tmp_path / "plan_build",
-        _force_wrapper_plan_route=True,
     )
     plan_module = _import_extension(plan_result.module_name, plan_result.output_dir)
     assert not hasattr(plan_module, "facade")

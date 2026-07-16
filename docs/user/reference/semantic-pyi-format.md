@@ -33,7 +33,8 @@ reference and summarized later in Language Support.
 
 Status terms used below:
 
-- **Generated**: emitted today by `--pyi` or `codegen.printers.pyi_printer`.
+- **Generated**: emitted today by `--pyi` or
+  `wrapper_codegen.printers.pyi_printer`.
 - **Loaded**: accepted today by `x2py.pyi_parser` and converted back to
   semantic IR.
 - **Readiness**: understood by the semantic readiness checker.

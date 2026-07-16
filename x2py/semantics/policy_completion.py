@@ -32,8 +32,9 @@ from x2py.semantics import models
 from x2py.semantics.native_array_handles import NativeArrayHandlePolicy, native_array_descriptor_kind
 from x2py.semantics.wrapper_policy import (
     ArgumentPolicy,
-    ClassOverloadArgumentPolicy,
-    ClassOverloadMatchKind,
+    OverloadArgumentPolicy,
+    OverloadMatchKind,
+    OverloadPolicy,
     ClassInvocationKind,
     ClassMethodKind,
     ClassMethodPolicy,
@@ -50,8 +51,10 @@ from x2py.semantics.wrapper_policy import (
     build_derived_field_policy,
     build_derived_type_policy,
     build_module_variable_policy,
+    build_module_overload_policy,
     build_function_wrapper_policy,
     derived_member_path_policies,
+    overload_builtin_scalar_family,
 )
 from x2py.semantics.wrapper_exports import complete_python_export_policy
 
@@ -87,6 +90,8 @@ _POINTER_RESIZE_PERMISSION_VALUES = frozenset(
 
 def complete_semantic_policies(
     semantic_ir: models.SemanticModule | Iterable[models.SemanticModule],
+    *,
+    strict_wrapper_names: bool = False,
 ) -> list[models.SemanticModule]:
     """Complete policy decisions for semantic modules after parser-to-IR conversion.
 
@@ -101,8 +106,8 @@ def complete_semantic_policies(
     modules = list(semantic_ir) if not isinstance(semantic_ir, models.SemanticModule) else [semantic_ir]
     for module in modules:
         _complete_entry_export_policy(module)
-        complete_python_export_policy(module)
-        _complete_ownership_policies(module)
+        complete_python_export_policy(module, strict_wrapper_names=strict_wrapper_names)
+        _complete_ownership_policies(module, strict_wrapper_names=strict_wrapper_names)
     return modules
 
 
@@ -133,7 +138,11 @@ def _entry_exports(declaration: object) -> object:
     raise TypeError(f"Unsupported semantic declaration: {type(declaration).__name__}")
 
 
-def _complete_ownership_policies(module: models.SemanticModule) -> models.SemanticModule:
+def _complete_ownership_policies(
+    module: models.SemanticModule,
+    *,
+    strict_wrapper_names: bool,
+) -> models.SemanticModule:
     """Attach resolved ownership decisions to a full semantic module.
 
     Raw semantic types such as ``Float64[:]`` do not carry enough context to
@@ -150,7 +159,11 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
         class_scope = str(semantic_class.origin.native_scope or module.name)
         _complete_class(semantic_class, f"{class_scope}.{semantic_class.name}")
     derived_types = _complete_derived_type_graph_policies(module.classes)
-    _complete_class_surface_policies(module.classes, derived_types)
+    _complete_class_surface_policies(
+        module.classes,
+        derived_types,
+        strict_wrapper_names=strict_wrapper_names,
+    )
     class_targets = _class_root_target_names(module.classes)
     polymorphic_variants = _polymorphic_variant_map(module.classes)
     _complete_class_method_policies(
@@ -178,13 +191,35 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
             polymorphic_variants=polymorphic_variants,
         )
     for overload_set in module.overload_sets:
+        native_dispatch_name = next(
+            (
+                str(procedure.metadata[models.FORTRAN_GENERIC_NAME_METADATA])
+                for procedure in overload_set.procedures
+                if procedure.metadata.get(models.FORTRAN_GENERIC_NAME_METADATA)
+            ),
+            overload_set.name,
+        )
         for procedure in overload_set.procedures:
             procedure_scope = str(procedure.origin.native_scope or module.name)
             _complete_function(
                 procedure,
                 f"{procedure_scope}.{overload_set.name}.{procedure.name}",
                 derived_types=derived_types,
+                native_dispatch_name=native_dispatch_name,
             )
+    overload_functions = {
+        f"{(procedure.origin.native_scope or module.name)!s}.{overload_set.name}.{procedure.name}": procedure
+        for overload_set in module.overload_sets
+        for procedure in overload_set.procedures
+    }
+    module.metadata[models.RESOLVED_MODULE_OVERLOAD_POLICIES_METADATA] = tuple(
+        _complete_overload_policy(
+            build_module_overload_policy(module, overload_set),
+            overload_functions,
+            require_uniform_receiver=False,
+        )
+        for overload_set in module.overload_sets
+    )
     module.metadata[models.POLICY_COMPLETION_PREPARED_METADATA] = True
     return module
 
@@ -312,6 +347,8 @@ def _complete_derived_type_graph_policies(
 def _complete_class_surface_policies(
     classes: list[models.SemanticClass],
     derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    *,
+    strict_wrapper_names: bool,
 ) -> None:
     """Complete class orchestration after every derived identity is known."""
     identities = {
@@ -329,6 +366,7 @@ def _complete_class_surface_policies(
             owner_path=derived.owner_path,
             derived=derived,
             class_identities=identities,
+            strict_wrapper_names=strict_wrapper_names,
         )
         completed_derived = replace(derived, fields=surface.effective_fields)
         semantic_class.metadata[models.RESOLVED_DERIVED_TYPE_POLICY_METADATA] = completed_derived
@@ -378,82 +416,187 @@ def _complete_class_method_policies(
     polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
 ) -> None:
     """Complete methods once from class policy, type graphs, and dispatch sets."""
-    type_bound_targets = {
+    type_bound_targets = _type_bound_target_names(module_functions)
+    module_targets = {str(function.native_name or function.name) for function in module_functions}
+    for semantic_class in _iter_semantic_classes(classes):
+        _complete_one_class_method_policy(
+            semantic_class,
+            type_bound_targets,
+            module_targets,
+            derived_types,
+            polymorphic_variants,
+        )
+
+
+def _type_bound_target_names(module_functions: list[models.SemanticFunction]) -> set[str]:
+    """Return native names explicitly marked as type-bound root targets."""
+    return {
         str(function.native_name or function.name)
         for function in module_functions
         if function.metadata.get("fortran_type_bound_target")
     }
-    module_targets = {str(function.native_name or function.name) for function in module_functions}
-    for semantic_class in _iter_semantic_classes(classes):
-        derived = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
-        surface = semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA)
-        if not isinstance(derived, DerivedTypePolicy) or not isinstance(surface, ClassSurfacePolicy):
-            continue
-        native_bindings = {
-            str(method.native_name or method.name): _native_type_bound_binding_name(method)
-            for method in semantic_class.methods
-            if method.name != "__init__"
-        }
-        generic_bindings = {
-            str(procedure.native_name or procedure.name): overload.name
-            for overload in semantic_class.overload_sets
-            if overload.name != "__init__"
-            for procedure in overload.procedures
-        }
-        completed_methods = tuple(
-            replace(
-                method,
-                invocation=ClassInvocationKind.TYPE_BOUND,
-                type_bound_name=native_bindings[method.native_name],
-            )
-            if _uses_type_bound_invocation(method, type_bound_targets, module_targets)
-            else method
-            for method in surface.methods
+
+
+def _complete_one_class_method_policy(
+    semantic_class: models.SemanticClass,
+    type_bound_targets: set[str],
+    module_targets: set[str],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Complete ordinary and overloaded calls for one prepared class surface."""
+    derived = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+    surface = semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA)
+    if not isinstance(derived, DerivedTypePolicy) or not isinstance(surface, ClassSurfacePolicy):
+        return
+    native_bindings = {
+        str(method.native_name or method.name): _native_type_bound_binding_name(method)
+        for method in semantic_class.methods
+        if method.name != "__init__"
+    }
+    completed_methods = _completed_class_method_invocations(
+        surface,
+        native_bindings,
+        type_bound_targets,
+        module_targets,
+    )
+    semantic_class.metadata[models.RESOLVED_CLASS_SURFACE_POLICY_METADATA] = replace(
+        surface,
+        methods=completed_methods,
+    )
+    _complete_concrete_class_methods(
+        semantic_class,
+        derived,
+        completed_methods,
+        derived_types,
+        polymorphic_variants,
+    )
+    _complete_class_overload_methods(
+        semantic_class,
+        derived,
+        type_bound_targets,
+        module_targets,
+        derived_types,
+        polymorphic_variants,
+    )
+
+
+def _completed_class_method_invocations(
+    surface: ClassSurfacePolicy,
+    native_bindings: dict[str, str],
+    type_bound_targets: set[str],
+    module_targets: set[str],
+) -> tuple[ClassMethodPolicy, ...]:
+    """Select direct or type-bound invocation for every ordinary method."""
+    return tuple(
+        replace(
+            method,
+            invocation=ClassInvocationKind.TYPE_BOUND,
+            type_bound_name=native_bindings[method.native_name],
         )
-        surface = replace(surface, methods=completed_methods)
-        semantic_class.metadata[models.RESOLVED_CLASS_SURFACE_POLICY_METADATA] = surface
-        calls = {method.owner_path: method for method in completed_methods}
-        for method in semantic_class.methods:
-            if method.name == "__init__":
-                if method.metadata.get("bind_target"):
-                    _complete_function(
-                        method,
-                        f"{derived.owner_path}.__init__",
-                        derived_types=derived_types,
-                        module_export=False,
-                        polymorphic_variants=polymorphic_variants,
-                    )
-                continue
-            call = calls.get(f"{derived.owner_path}.{method.name}")
-            _complete_function(
-                method,
-                f"{derived.owner_path}.{method.name}",
-                derived_types=derived_types,
-                class_call=call,
-                polymorphic_variants=polymorphic_variants,
-            )
-        for overload in semantic_class.overload_sets:
-            for procedure in overload.procedures:
-                owner_path = f"{derived.owner_path}.{overload.name}.{procedure.name}"
-                native_name = str(procedure.native_name or procedure.name)
-                passed_position = _class_overload_passed_object_position(procedure)
-                type_bound = native_name in type_bound_targets or (
-                    passed_position is not None and native_name not in module_targets
-                )
-                call = _class_overload_call_policy(
-                    overload,
-                    procedure,
-                    owner_path,
-                    type_bound=type_bound,
-                    type_bound_name=generic_bindings.get(native_name) if type_bound else None,
-                )
+        if _uses_type_bound_invocation(method, type_bound_targets, module_targets)
+        else method
+        for method in surface.methods
+    )
+
+
+def _complete_concrete_class_methods(
+    semantic_class: models.SemanticClass,
+    derived: DerivedTypePolicy,
+    completed_methods: tuple[ClassMethodPolicy, ...],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Attach completed function policy to constructors and ordinary methods."""
+    calls = {method.owner_path: method for method in completed_methods}
+    for method in semantic_class.methods:
+        owner_path = f"{derived.owner_path}.{method.name}"
+        if method.name == "__init__":
+            if method.metadata.get("bind_target"):
                 _complete_function(
-                    procedure,
+                    method,
                     owner_path,
                     derived_types=derived_types,
-                    class_call=call,
+                    module_export=False,
                     polymorphic_variants=polymorphic_variants,
                 )
+            continue
+        _complete_function(
+            method,
+            owner_path,
+            derived_types=derived_types,
+            class_call=calls.get(owner_path),
+            polymorphic_variants=polymorphic_variants,
+        )
+
+
+def _complete_class_overload_methods(
+    semantic_class: models.SemanticClass,
+    derived: DerivedTypePolicy,
+    type_bound_targets: set[str],
+    module_targets: set[str],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Complete every concrete overload through one typed call leaf."""
+    generic_bindings = {
+        str(procedure.native_name or procedure.name): overload.name
+        for overload in semantic_class.overload_sets
+        if overload.name != "__init__"
+        for procedure in overload.procedures
+    }
+    for overload in semantic_class.overload_sets:
+        for procedure in overload.procedures:
+            _complete_one_class_overload_method(
+                overload,
+                procedure,
+                derived,
+                generic_bindings,
+                type_bound_targets,
+                module_targets,
+                derived_types,
+                polymorphic_variants,
+            )
+
+
+def _complete_one_class_overload_method(
+    overload: models.ProcedureOverloadSet,
+    procedure: models.SemanticFunction,
+    derived: DerivedTypePolicy,
+    generic_bindings: dict[str, str],
+    type_bound_targets: set[str],
+    module_targets: set[str],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Complete one overload candidate and its native dispatch spelling."""
+    owner_path = f"{derived.owner_path}.{overload.name}.{procedure.name}"
+    native_name = str(procedure.native_name or procedure.name)
+    passed_position = _class_overload_passed_object_position(procedure)
+    type_bound = native_name in type_bound_targets or (
+        passed_position is not None and native_name not in module_targets
+    )
+    call = _class_overload_call_policy(
+        overload,
+        procedure,
+        owner_path,
+        type_bound=type_bound,
+        type_bound_name=generic_bindings.get(native_name) if type_bound else None,
+    )
+    overload_kind = str(procedure.metadata.get(models.OVERLOAD_KIND_METADATA, "generic"))
+    native_dispatch_name = (
+        str(procedure.metadata.get(models.FORTRAN_GENERIC_NAME_METADATA, overload.name))
+        if overload_kind != "generic"
+        else None
+    )
+    _complete_function(
+        procedure,
+        owner_path,
+        derived_types=derived_types,
+        class_call=call,
+        polymorphic_variants=polymorphic_variants,
+        native_dispatch_name=native_dispatch_name,
+    )
 
 
 def _uses_type_bound_invocation(
@@ -462,9 +605,9 @@ def _uses_type_bound_invocation(
     module_targets: set[str],
 ) -> bool:
     """Restore generated-.pyi type-bound calls when their private root target is absent."""
-    return method.native_name in explicit_targets or (
-        method.kind is ClassMethodKind.INSTANCE and method.native_name not in module_targets
-    )
+    if method.kind is ClassMethodKind.STATIC:
+        return False
+    return method.native_name in explicit_targets or method.native_name not in module_targets
 
 
 def _native_type_bound_binding_name(method: models.SemanticMethod) -> str:
@@ -491,50 +634,9 @@ def _complete_class_overload_policies(classes: list[models.SemanticClass]) -> No
         blockers = list(surface.blockers)
         overloads = []
         for overload in surface.overloads:
-            candidates = []
-            for candidate in overload.candidates:
-                function = functions[candidate.owner_path]
-                function_policy = function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
-                if not isinstance(function_policy, FunctionWrapperPolicy):
-                    blockers.append(f"overload candidate {candidate.owner_path!r} has no completed call policy")
-                    candidates.append(candidate)
-                    continue
-                if (
-                    function_policy.class_call is not None
-                    and function_policy.class_call.invocation is ClassInvocationKind.TYPE_BOUND
-                    and function_policy.class_call.type_bound_name is None
-                ):
-                    blockers.append(f"overload candidate {candidate.owner_path!r} has no accessible type-bound binding")
-                matches, match_blockers = _class_overload_matches(function_policy)
-                blockers.extend(f"overload candidate {candidate.owner_path!r}: {reason}" for reason in match_blockers)
-                candidates.append(
-                    replace(
-                        candidate,
-                        arguments=matches,
-                        passed_object=(
-                            function_policy.class_call is not None
-                            and function_policy.class_call.passed_object_position is not None
-                        ),
-                    )
-                )
-            if len({candidate.passed_object for candidate in candidates}) > 1:
-                blockers.append(f"overload {overload.owner_path!r} mixes instance and static candidates")
-            signatures = [
-                tuple(
-                    (
-                        argument.kind,
-                        argument.optional,
-                        argument.semantic_type_name,
-                        argument.rank,
-                        argument.derived_type_identity,
-                    )
-                    for argument in candidate.arguments
-                )
-                for candidate in candidates
-            ]
-            if len(set(signatures)) != len(signatures):
-                blockers.append(f"overload {overload.owner_path!r} has indistinguishable Python signatures")
-            overloads.append(replace(overload, candidates=tuple(candidates)))
+            completed = _complete_overload_policy(overload, functions, require_uniform_receiver=True)
+            overloads.append(completed)
+            blockers.extend(completed.blockers)
         semantic_class.metadata[models.RESOLVED_CLASS_SURFACE_POLICY_METADATA] = replace(
             surface,
             overloads=tuple(overloads),
@@ -543,17 +645,95 @@ def _complete_class_overload_policies(classes: list[models.SemanticClass]) -> No
         )
 
 
-def _class_overload_matches(
+def _complete_overload_policy(
+    overload: OverloadPolicy,
+    functions: dict[str, models.SemanticFunction],
+    *,
+    require_uniform_receiver: bool,
+) -> OverloadPolicy:
+    """Attach exact candidate predicates after all concrete calls are complete."""
+    blockers = list(overload.blockers)
+    candidates = []
+    for candidate in overload.candidates:
+        function = functions[candidate.owner_path]
+        function_policy = function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+        if not isinstance(function_policy, FunctionWrapperPolicy):
+            blockers.append(f"overload candidate {candidate.owner_path!r} has no completed call policy")
+            candidates.append(candidate)
+            continue
+        if (
+            function_policy.class_call is not None
+            and function_policy.class_call.invocation is ClassInvocationKind.TYPE_BOUND
+            and function_policy.class_call.type_bound_name is None
+        ):
+            blockers.append(f"overload candidate {candidate.owner_path!r} has no accessible type-bound binding")
+        matches, match_blockers = _overload_matches(function_policy)
+        blockers.extend(f"overload candidate {candidate.owner_path!r}: {reason}" for reason in match_blockers)
+        candidates.append(
+            replace(
+                candidate,
+                arguments=matches,
+                passed_object=(
+                    function_policy.class_call is not None
+                    and function_policy.class_call.passed_object_position is not None
+                ),
+            )
+        )
+    if require_uniform_receiver and len({candidate.passed_object for candidate in candidates}) > 1:
+        blockers.append(f"overload {overload.owner_path!r} mixes instance and static candidates")
+    signatures = tuple(_overload_candidate_signature(candidate.arguments) for candidate in candidates)
+    if len(set(signatures)) != len(signatures):
+        blockers.append(f"overload {overload.owner_path!r} has indistinguishable Python signatures")
+    builtin_signatures = tuple(_overload_candidate_builtin_signature(candidate.arguments) for candidate in candidates)
+    if len(set(builtin_signatures)) != len(builtin_signatures):
+        blockers.append(f"overload {overload.owner_path!r} has overlapping reflected scalar signatures")
+    return replace(overload, candidates=tuple(candidates), blockers=tuple(dict.fromkeys(blockers)))
+
+
+def _overload_candidate_signature(arguments: tuple[OverloadArgumentPolicy, ...]) -> tuple:
+    """Return only runtime-relevant facts for ambiguity detection."""
+    return tuple(
+        (
+            argument.kind,
+            argument.optional,
+            argument.semantic_type_name,
+            argument.rank,
+            argument.derived_type_identity,
+        )
+        for argument in arguments
+    )
+
+
+def _overload_candidate_builtin_signature(arguments: tuple[OverloadArgumentPolicy, ...]) -> tuple:
+    """Normalize reflected Python scalar domains for overlap detection."""
+    return tuple(
+        (
+            argument.kind,
+            argument.optional,
+            (
+                overload_builtin_scalar_family(argument.semantic_type_name)
+                if argument.accept_builtin_scalar
+                else argument.semantic_type_name
+            ),
+            argument.rank,
+            argument.derived_type_identity,
+        )
+        for argument in arguments
+    )
+
+
+def _overload_matches(
     function: FunctionWrapperPolicy,
-) -> tuple[tuple[ClassOverloadArgumentPolicy, ...], tuple[str, ...]]:
+) -> tuple[tuple[OverloadArgumentPolicy, ...], tuple[str, ...]]:
     """Translate one completed call signature into exact Python predicates."""
     passed_position = function.class_call.passed_object_position if function.class_call is not None else None
+    reflected = bool(function.class_call is not None and function.class_call.passed_object_position not in {None, 0})
     matches = []
     blockers = []
     for argument in function.arguments:
         if not argument.python_visible or argument.native_position == passed_position:
             continue
-        match = _class_overload_argument_match(argument)
+        match = _overload_argument_match(argument, accept_builtin_scalar=reflected)
         if match is None:
             blockers.append(
                 f"argument {argument.python_name!r} has no exact overload predicate for {argument.ownership.kind.value}"
@@ -563,29 +743,34 @@ def _class_overload_matches(
     return tuple(matches), tuple(blockers)
 
 
-def _class_overload_argument_match(argument: ArgumentPolicy) -> ClassOverloadArgumentPolicy | None:
+def _overload_argument_match(
+    argument: ArgumentPolicy,
+    *,
+    accept_builtin_scalar: bool,
+) -> OverloadArgumentPolicy | None:
     """Return one typed match record without embedding generated source text."""
     kind = argument.ownership.kind
     match_kind = None
     derived_identity = None
     if kind is ObjectKind.SCALAR and argument.semantic_type_name in SEMANTIC_SCALAR_TYPE_NAMES:
-        match_kind = ClassOverloadMatchKind.NUMPY_SCALAR
+        match_kind = OverloadMatchKind.NUMPY_SCALAR
     elif kind is ObjectKind.STRING:
-        match_kind = ClassOverloadMatchKind.STRING
+        match_kind = OverloadMatchKind.STRING
     elif kind is ObjectKind.NUMPY_ARRAY and argument.array is not None:
-        match_kind = ClassOverloadMatchKind.NUMPY_ARRAY
+        match_kind = OverloadMatchKind.NUMPY_ARRAY
     elif kind is ObjectKind.DERIVED_TYPE and argument.derived is not None:
-        match_kind = ClassOverloadMatchKind.DERIVED
+        match_kind = OverloadMatchKind.DERIVED
         derived_identity = argument.derived.type_identity
     if match_kind is None:
         return None
-    return ClassOverloadArgumentPolicy(
+    return OverloadArgumentPolicy(
         python_name=argument.python_name,
         kind=match_kind,
         optional=argument.optional_mode not in {OptionalMode.REQUIRED, OptionalMode.REQUIRED_DESCRIPTOR},
         semantic_type_name=argument.semantic_type_name,
         rank=argument.rank,
         derived_type_identity=derived_identity,
+        accept_builtin_scalar=accept_builtin_scalar and match_kind is OverloadMatchKind.NUMPY_SCALAR,
     )
 
 
@@ -640,7 +825,7 @@ def _class_overload_call_policy(
     passed = _class_overload_passed_object_position(procedure)
     return ClassMethodPolicy(
         owner_path=owner_path,
-        python_name=overload.name,
+        python_name=str(procedure.metadata.get(models.PYTHON_METHOD_NAME_METADATA, overload.name)),
         native_name=str(procedure.native_name or procedure.name),
         kind=ClassMethodKind.INSTANCE if passed is not None else ClassMethodKind.STATIC,
         passed_object_position=passed,
@@ -664,6 +849,7 @@ def _complete_function(
     class_call: ClassMethodPolicy | None = None,
     module_export: bool | None = None,
     polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]] | None = None,
+    native_dispatch_name: str | None = None,
 ) -> None:
     _complete_callable_address_policy(function)
     for argument in function.arguments:
@@ -687,6 +873,7 @@ def _complete_function(
         class_call=class_call,
         module_export=module_export,
         polymorphic_variants=polymorphic_variants,
+        native_dispatch_name=native_dispatch_name,
     )
 
 

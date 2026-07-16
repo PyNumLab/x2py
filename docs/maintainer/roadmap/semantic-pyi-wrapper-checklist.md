@@ -81,7 +81,7 @@ projection language.
 
 Python-extension extraction and native handoff are separate completed policy actions.
 Policy completion records a Python barrier action and a native barrier action
-on each `OwnershipDecision` before `ir2ast.py`. Python binding generation
+on each `OwnershipDecision` before wrapper planning. Python binding generation
 dispatches from the Python barrier action; the native bridge dispatches
 argument handoff from the native barrier action.
 
@@ -99,7 +99,7 @@ argument handoff from the native barrier action.
   `x2py.utilities.visitor.ClassVisitor` and configured `<prefix>_<ClassName>` handlers
   instead of parallel visitor implementations or local `isinstance` dispatch
   ladders.
-- [x] Structural evidence lives in `tests/lowering/test_visitor_protocol.py`
+- [x] Structural evidence lives in `tests/architecture/test_visitor_protocol.py`
   and `tests/semantics/policy/`; runtime evidence covers scalar
   value/address projection, rank-0 scalar storage, arrays, strings, raw
   addresses, and wrapper instances through focused `tests/wrapper/fortran/`
@@ -404,13 +404,13 @@ X2PY_C_DOCS_END -->
   dummies update the supplied wrapper object. Runtime evidence lives in
   `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py`.
 - [x] Ownership, transfer, and destruction policy is completed after full
-  signatures are known and before readiness or `ir2ast.py`. The shared post-IR
+  signatures are known and before readiness or wrapper planning. The shared post-IR
   entrypoint is `complete_semantic_policies(...)` in
   `x2py/semantics/policy_completion.py`; direct ownership subpasses stay behind
   that entrypoint. Readiness and lowering consume completed policy metadata
   instead of recomputing policy from raw datatypes. Evidence:
   `tests/semantics/policy/`,
-  `tests/lowering/test_semantic_ir.py`,
+  `tests/wrapper_codegen/`,
   `tests/semantics/readiness/`,
   and `x2py/semantics/README.md`.
 - [x] `.pyi` parsing and `.pyi` semantic conversion are separate stages:
@@ -519,36 +519,13 @@ X2PY_C_DOCS_END -->
   `tests/wrapper/CHECKLIST_COVERAGE.md`.
 
 <!-- X2PY_C_DOCS_START
-- [x] Bridge-side function-argument conversion now dispatches projected hidden
-  outputs and copy-in/copy-out replacements through completed object-kind/action
-  policy. Numeric scalar, string replacement, scalar detached-copy result, and
-  custom-result paths use named handlers instead of selecting behavior from raw
-  action checks inside the shared implementation block. Allocatable array
-  result-helper eligibility also dispatches from completed result policy instead
-  of checking `COPY_OUT` locally. Evidence:
-  `x2py/codegen/bridges/fortran_to_c.py` and
-  `tests/codegen/bindings/test_binding_handle_policy_dispatch.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
-- [x] Binding-side projected argument returns now dispatch through completed
-  object-kind/action/projection policy. Native replacement outputs, hidden
-  outputs, Python-visible in-place returns, and non-projected arguments each use
-  named handlers instead of local action/projection branches in the result
-  packing loop. Array/scalar writable-access validation also dispatches from the
-  selected policy action instead of checking the action inside the shared
-  validator, and scalar detached-copy results have a dedicated binding result
-  handler. Scalar argument conversion now dispatches direct, call-local, and
-  identity-output cases into named methods before reaching shared casting code;
-  string call-local, identity, and replacement arguments likewise select their
-  cleanup/return behavior before reaching shared conversion code. Function
-  argument cast guards now dispatch replacement-nullability setup, scalar
-  identity-output validation, and ordinary checked casts through named handlers.
-  Bridge field setter emission also dispatches from completed `SetterAction`
-  policy, so rejected or omitted property setters no longer infer native setter
-  generation from assignment/storage details. Binding-side NumPy release flags
-  dispatch from completed destruction policy instead of comparing release
-  ownership at each result-wrapping site.
-  Evidence:
-  `x2py/codegen/bindings/c_to_python.py` and
-  `tests/codegen/bindings/test_binding_handle_policy_dispatch.py::test_bridge_and_binding_generators_expose_ownership_action_maps`.
+- [x] Direct bridge and binding lowering dispatches projected outputs,
+  copy-in/copy-out, native-array handles, field access, and cleanup from typed
+  wrapper-plan actions completed before backend entry. The generators do not
+  select semantic behavior from raw datatype, `intent`, alias, or local-memory
+  checks. Evidence: `x2py/wrapper_codegen/fortran/bridge.py`,
+  `x2py/wrapper_codegen/c/binding.py`, `tests/wrapper_codegen/`, and compiled
+  feature evidence under `tests/wrapper/fortran/`.
 - [x] The remaining Stage 8 bridge and binding policy dispatch audit is closed
   for the current supported surface. Bridge field getters and setters dispatch
   from completed getter/setter policy, derived value-copy setters are selected
@@ -559,9 +536,10 @@ X2PY_C_DOCS_END -->
   bridge and binding code are local emitted-code, ABI, documentation, or
   object-model mechanics rather than semantic policy selection. Evidence:
   `x2py/semantics/ownership.py`,
-  `x2py/codegen/bridges/fortran_to_c.py`,
-  `x2py/codegen/bindings/c_to_python.py`,
+  `x2py/wrapper_codegen/fortran/bridge.py`,
+  `x2py/wrapper_codegen/c/binding.py`,
   `tests/semantics/policy/`,
+  `tests/wrapper_codegen/`,
   `tests/wrapper/fortran/derived_types/test_derived_layout.py`, and
   `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py`.
 X2PY_C_DOCS_END -->

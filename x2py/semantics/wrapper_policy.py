@@ -140,6 +140,7 @@ class TransformationAction(str, Enum):
     """Typed representation or lifecycle operation selected before planning."""
 
     COPY_ARRAY_REPRESENTATION = "copy_array_representation"
+    PUBLISH_ARRAY_REPLACEMENT = "publish_array_replacement"
     RELEASE_TEMPORARY = "release_temporary"
 
 
@@ -209,6 +210,7 @@ class ModuleGetterAction(str, Enum):
     CONSTANT_VALUE = "constant_value"
     DIRECT_VALUE = "direct_value"
     NULLABLE_SNAPSHOT = "nullable_snapshot"
+    BORROWED_ARRAY_VIEW = "borrowed_array_view"
     NATIVE_ARRAY_HANDLE = "native_array_handle"
     DERIVED_OBJECT = "derived_object"
 
@@ -369,6 +371,27 @@ class ClassInvocationKind(str, Enum):
     TYPE_BOUND = "type_bound"
 
 
+class NativeInvocationKind(str, Enum):
+    """Completed native syntax for one concrete wrapper call."""
+
+    PROCEDURE = "procedure"
+    DEFINED_OPERATOR = "defined_operator"
+    DEFINED_ASSIGNMENT = "defined_assignment"
+
+
+def overload_builtin_scalar_family(semantic_type_name: str) -> str:
+    """Return the Python scalar family admitted by reflected dispatch."""
+    if semantic_type_name == "Bool":
+        return "bool"
+    if semantic_type_name.startswith("Int"):
+        return "int"
+    if semantic_type_name.startswith("Float"):
+        return "float"
+    if semantic_type_name.startswith("Complex"):
+        return "complex"
+    raise ValueError(f"Unsupported reflected overload scalar {semantic_type_name!r}")
+
+
 class ClassRegistrationAction(str, Enum):
     """Dependency-ordered Python class registration actions."""
 
@@ -388,8 +411,8 @@ class ConstructionLifecycleAction(str, Enum):
     DESTROY_OWNED = "destroy_owned"
 
 
-class ClassOverloadMatchKind(str, Enum):
-    """Exact Python runtime category used by class overload selection."""
+class OverloadMatchKind(str, Enum):
+    """Exact Python runtime category used by overload selection."""
 
     NUMPY_SCALAR = "numpy_scalar"
     NUMPY_ARRAY = "numpy_array"
@@ -547,34 +570,39 @@ class ClassMethodPolicy:
 
 
 @dataclass(frozen=True)
-class ClassOverloadArgumentPolicy:
-    """One completed exact-type predicate in a class overload signature."""
+class OverloadArgumentPolicy:
+    """One completed exact-type predicate in an overload signature."""
 
     python_name: str
-    kind: ClassOverloadMatchKind
+    kind: OverloadMatchKind
     optional: bool
     semantic_type_name: str
     rank: int
     derived_type_identity: tuple[str, str] | None
+    accept_builtin_scalar: bool = False
 
 
 @dataclass(frozen=True)
-class ClassOverloadCandidatePolicy:
+class OverloadCandidatePolicy:
     """One concrete overload target and its ordered runtime predicates."""
 
     owner_path: str
-    arguments: tuple[ClassOverloadArgumentPolicy, ...]
+    arguments: tuple[OverloadArgumentPolicy, ...]
     passed_object: bool
 
 
 @dataclass(frozen=True)
-class ClassOverloadPolicy:
-    """One class-owned overload set with explicit concrete candidates."""
+class OverloadPolicy:
+    """One overload set with explicit concrete candidates and exports."""
 
     owner_path: str
     python_name: str
     kind: str
-    candidates: tuple[ClassOverloadCandidatePolicy, ...]
+    candidates: tuple[OverloadCandidatePolicy, ...]
+    python_exports: tuple[PythonExportPolicy, ...] = ()
+    blockers: tuple[str, ...] = ()
+    unsupported_extra_argument_message: str | None = None
+    identity_receiver_shortcut: bool = False
 
 
 @dataclass(frozen=True)
@@ -588,7 +616,7 @@ class ClassSurfacePolicy:
     effective_fields: tuple[DerivedFieldPolicy, ...]
     constructor: ConstructorPolicy
     methods: tuple[ClassMethodPolicy, ...]
-    overloads: tuple[ClassOverloadPolicy, ...]
+    overloads: tuple[OverloadPolicy, ...]
     registration: tuple[ClassRegistrationAction, ...]
     supported: bool
     blockers: tuple[str, ...] = ()
@@ -777,6 +805,7 @@ class ModuleVariablePolicy:
     constant_value: Any
     supported: bool
     blockers: tuple[str, ...] = ()
+    array: ArrayHandoffPolicy | None = None
     native_array_handle: NativeArrayHandleWrapperPolicy | None = None
     derived: DerivedModuleObjectPolicy | None = None
 
@@ -1059,6 +1088,8 @@ class FunctionWrapperPolicy:
     owner_path: str
     python_exports: tuple[PythonExportPolicy, ...]
     native_name: str
+    native_invocation: NativeInvocationKind
+    native_operator: str | None
     external: bool
     native_module: str | None
     native_is_subroutine: bool
@@ -1219,9 +1250,10 @@ def build_class_surface_policy(
     owner_path: str,
     derived: DerivedTypePolicy,
     class_identities: dict[str, tuple[str, str]],
+    strict_wrapper_names: bool = False,
 ) -> ClassSurfacePolicy:
     """Complete constructor, method, inheritance, and registration decisions."""
-    naming = NamingPolicy()
+    naming = NamingPolicy(strict_public_names=strict_wrapper_names)
     fields = _python_named_class_fields(derived.fields, naming, owner_path)
     named_derived = replace(derived, fields=fields)
     methods = _python_named_class_methods(semantic_class, naming, owner_path)
@@ -1312,22 +1344,36 @@ def _python_named_class_overloads(
     semantic_class: models.SemanticClass,
     naming: NamingPolicy,
     owner_path: str,
-) -> tuple[ClassOverloadPolicy, ...]:
-    """Reserve each generic name after concrete methods in declaration order."""
+) -> tuple[OverloadPolicy, ...]:
+    """Split reflected operators, then reserve every public overload name."""
     namespace = (owner_path,)
-    return tuple(
-        replace(
-            policy,
-            python_name=naming.reserve_public_name(
-                namespace,
-                policy.python_name,
-                category="function",
-                owner=policy.owner_path,
-            ),
+    policies = []
+    for overload in semantic_class.overload_sets:
+        names = tuple(
+            dict.fromkeys(
+                str(procedure.metadata.get(models.PYTHON_METHOD_NAME_METADATA, overload.name))
+                for procedure in overload.procedures
+            )
         )
-        for overload in semantic_class.overload_sets
-        for policy in (_class_overload_policy(owner_path, overload),)
-    )
+        for python_name in names:
+            procedures = tuple(
+                procedure
+                for procedure in overload.procedures
+                if str(procedure.metadata.get(models.PYTHON_METHOD_NAME_METADATA, overload.name)) == python_name
+            )
+            policy = _overload_policy(owner_path, overload, python_name=python_name, procedures=procedures)
+            policies.append(
+                replace(
+                    policy,
+                    python_name=naming.reserve_public_name(
+                        namespace,
+                        policy.python_name,
+                        category="function",
+                        owner=policy.owner_path,
+                    ),
+                )
+            )
+    return tuple(policies)
 
 
 def _class_constructor_policy(
@@ -1442,24 +1488,50 @@ def _class_method_blockers(method: ClassMethodPolicy) -> str | None:
     return None
 
 
-def _class_overload_policy(owner_path: str, overload: models.ProcedureOverloadSet) -> ClassOverloadPolicy:
-    """Complete one class-owned overload set from its explicit links."""
+def _overload_policy(
+    owner_path: str,
+    overload: models.ProcedureOverloadSet,
+    *,
+    python_name: str | None = None,
+    procedures: tuple[models.SemanticFunction, ...] | None = None,
+    python_exports: tuple[PythonExportPolicy, ...] = (),
+) -> OverloadPolicy:
+    """Complete one overload set from explicit concrete-procedure links."""
+    selected = tuple(overload.procedures) if procedures is None else procedures
+    public_name = python_name or overload.name
     candidates = tuple(
-        ClassOverloadCandidatePolicy(
+        OverloadCandidatePolicy(
             owner_path=f"{owner_path}.{overload.name}.{procedure.name}",
             arguments=(),
             passed_object=False,
         )
-        for procedure in overload.procedures
+        for procedure in selected
     )
-    kind = (
-        str(overload.procedures[0].metadata.get(models.OVERLOAD_KIND_METADATA, "generic")) if candidates else "generic"
-    )
-    return ClassOverloadPolicy(
-        owner_path=f"{owner_path}.{overload.name}",
-        python_name=overload.name,
+    kind = str(selected[0].metadata.get(models.OVERLOAD_KIND_METADATA, "generic")) if candidates else "generic"
+    return OverloadPolicy(
+        owner_path=f"{owner_path}.{public_name}",
+        python_name=public_name,
         kind=kind,
         candidates=candidates,
+        python_exports=python_exports,
+        unsupported_extra_argument_message=("modulus is not supported" if public_name == "__pow__" else None),
+        identity_receiver_shortcut=kind == "assignment",
+    )
+
+
+def build_module_overload_policy(
+    module: models.SemanticModule,
+    overload: models.ProcedureOverloadSet,
+) -> OverloadPolicy:
+    """Complete the stable owner and Python exports for one module generic."""
+    if not overload.procedures:
+        return _overload_policy(module.name, overload)
+    first = overload.procedures[0]
+    native_scope = str(first.origin.native_scope or module.name)
+    return _overload_policy(
+        native_scope,
+        overload,
+        python_exports=completed_python_exports(first, overload.name),
     )
 
 
@@ -1625,76 +1697,158 @@ def build_module_variable_policy(
         owner_path,
     )
     if native_array_handle is not None:
-        blockers = _native_array_module_variable_blockers(variable, getter, setter, native_array_handle)
-        return ModuleVariablePolicy(
-            owner_path=owner_path,
-            name=variable.name,
-            python_exports=completed_python_exports(variable, variable.name),
-            native_name=str(variable.origin.native_name or variable.name),
-            native_module=str(variable.origin.native_scope or module_name),
-            semantic_type_name=variable.semantic_type.name,
-            rank=int(variable.semantic_type.rank or 0),
-            getter_action=ModuleGetterAction.NATIVE_ARRAY_HANDLE,
-            getter=getter,
-            setter_action=native_array_handle.setter_action,
-            native_assignment=native_array_handle.native_assignment,
-            setter=setter,
-            descriptor_kind=native_array_handle.descriptor_kind.value,
-            initializer=None,
-            constant_value=None,
-            supported=not blockers,
-            blockers=tuple(blockers),
-            native_array_handle=native_array_handle,
+        return _native_array_module_variable_policy(
+            variable,
+            module_name,
+            owner_path,
+            getter,
+            setter,
+            native_array_handle,
         )
     if getter is not None and getter.kind is ObjectKind.DERIVED_TYPE:
-        if constant:
-            derived = _derived_module_constant_policy(
-                variable,
-                getter,
-                setter,
-                owner_path=owner_path,
-                derived_types=derived_types or {},
-            )
-            blockers = _derived_module_constant_blockers(variable, getter, setter, derived)
-        else:
-            derived = _derived_module_object_policy(
-                variable,
-                getter,
-                setter,
-                owner_path=owner_path,
-                derived_types=derived_types or {},
-            )
-            blockers = _derived_module_variable_blockers(variable, getter, setter, derived)
-        return ModuleVariablePolicy(
-            owner_path=owner_path,
-            name=variable.name,
-            python_exports=completed_python_exports(variable, variable.name),
-            native_name=str(variable.origin.native_name or variable.name),
-            native_module=str(variable.origin.native_scope or module_name),
-            semantic_type_name=variable.semantic_type.name,
-            rank=int(variable.semantic_type.rank or 0),
-            getter_action=ModuleGetterAction.DERIVED_OBJECT,
-            getter=getter,
-            setter_action=derived.replacement,
-            native_assignment=AssignmentMode.NONE,
-            setter=setter,
-            descriptor_kind=None,
-            initializer=None,
-            constant_value=None,
-            supported=not blockers,
-            blockers=tuple(blockers),
-            derived=derived,
+        return _derived_module_variable_policy(
+            variable,
+            module_name,
+            owner_path,
+            getter,
+            setter,
+            constant,
+            derived_types or {},
         )
+    array = _array_handoff_policy(variable.semantic_type)
+    if getter is not None and getter.kind is ObjectKind.NUMPY_ARRAY and array is not None:
+        return _ordinary_array_module_variable_policy(
+            variable,
+            module_name,
+            owner_path,
+            getter,
+            setter,
+            array,
+        )
+    return _scalar_module_variable_policy(
+        variable,
+        module_name,
+        owner_path,
+        getter,
+        setter,
+        descriptor_kind,
+        constant,
+    )
+
+
+def _module_variable_policy_base(
+    variable: models.SemanticVariable,
+    module_name: str,
+    owner_path: str,
+) -> dict[str, object]:
+    """Return identity fields shared by every module-variable policy family."""
+    return {
+        "owner_path": owner_path,
+        "name": variable.name,
+        "python_exports": completed_python_exports(variable, variable.name),
+        "native_name": str(variable.origin.native_name or variable.name),
+        "native_module": str(variable.origin.native_scope or module_name),
+        "semantic_type_name": variable.semantic_type.name,
+        "rank": int(variable.semantic_type.rank or 0),
+    }
+
+
+def _native_array_module_variable_policy(
+    variable: models.SemanticVariable,
+    module_name: str,
+    owner_path: str,
+    getter: OwnershipDecision | None,
+    setter: OwnershipDecision | None,
+    handle: NativeArrayHandleWrapperPolicy,
+) -> ModuleVariablePolicy:
+    """Build one persistent native-array handle module policy."""
+    blockers = _native_array_module_variable_blockers(variable, getter, setter, handle)
+    return ModuleVariablePolicy(
+        **_module_variable_policy_base(variable, module_name, owner_path),
+        getter_action=ModuleGetterAction.NATIVE_ARRAY_HANDLE,
+        getter=getter,
+        setter_action=handle.setter_action,
+        native_assignment=handle.native_assignment,
+        setter=setter,
+        descriptor_kind=handle.descriptor_kind.value,
+        initializer=None,
+        constant_value=None,
+        supported=not blockers,
+        blockers=tuple(blockers),
+        native_array_handle=handle,
+    )
+
+
+def _derived_module_variable_policy(
+    variable: models.SemanticVariable,
+    module_name: str,
+    owner_path: str,
+    getter: OwnershipDecision,
+    setter: OwnershipDecision | None,
+    constant: bool,
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+) -> ModuleVariablePolicy:
+    """Build one constant-copy or live derived module-object policy."""
+    builder = _derived_module_constant_policy if constant else _derived_module_object_policy
+    derived = builder(variable, getter, setter, owner_path=owner_path, derived_types=derived_types)
+    blocker_builder = _derived_module_constant_blockers if constant else _derived_module_variable_blockers
+    blockers = blocker_builder(variable, getter, setter, derived)
+    return ModuleVariablePolicy(
+        **_module_variable_policy_base(variable, module_name, owner_path),
+        getter_action=ModuleGetterAction.DERIVED_OBJECT,
+        getter=getter,
+        setter_action=derived.replacement,
+        native_assignment=AssignmentMode.NONE,
+        setter=setter,
+        descriptor_kind=None,
+        initializer=None,
+        constant_value=None,
+        supported=not blockers,
+        blockers=tuple(blockers),
+        derived=derived,
+    )
+
+
+def _ordinary_array_module_variable_policy(
+    variable: models.SemanticVariable,
+    module_name: str,
+    owner_path: str,
+    getter: OwnershipDecision,
+    setter: OwnershipDecision | None,
+    array: ArrayHandoffPolicy,
+) -> ModuleVariablePolicy:
+    """Build one borrowed ordinary module-array view policy."""
+    blockers = _ordinary_array_module_variable_blockers(variable, getter, setter, array)
+    return ModuleVariablePolicy(
+        **_module_variable_policy_base(variable, module_name, owner_path),
+        getter_action=ModuleGetterAction.BORROWED_ARRAY_VIEW,
+        getter=getter,
+        setter_action=setter.setter_action if setter is not None else SetterAction.OMIT,
+        native_assignment=AssignmentMode.NONE,
+        setter=setter,
+        descriptor_kind=None,
+        initializer=None,
+        constant_value=None,
+        supported=not blockers,
+        blockers=tuple(blockers),
+        array=array,
+    )
+
+
+def _scalar_module_variable_policy(
+    variable: models.SemanticVariable,
+    module_name: str,
+    owner_path: str,
+    getter: OwnershipDecision | None,
+    setter: OwnershipDecision | None,
+    descriptor_kind: str | None,
+    constant: bool,
+) -> ModuleVariablePolicy:
+    """Build one scalar value, snapshot, or constant module policy."""
     blockers = _scalar_module_variable_blockers(variable, getter, setter, descriptor_kind, constant)
     initializer = variable.metadata.get(models.RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA)
     return ModuleVariablePolicy(
-        owner_path=owner_path,
-        name=variable.name,
-        python_exports=completed_python_exports(variable, variable.name),
-        native_name=str(variable.origin.native_name or variable.name),
-        native_module=str(variable.origin.native_scope or module_name),
-        semantic_type_name=variable.semantic_type.name,
-        rank=int(variable.semantic_type.rank or 0),
+        **_module_variable_policy_base(variable, module_name, owner_path),
         getter_action=_scalar_module_getter_action(getter, constant),
         getter=getter,
         setter_action=setter.setter_action if setter is not None else SetterAction.OMIT,
@@ -1712,6 +1866,36 @@ def build_module_variable_policy(
         supported=not blockers,
         blockers=tuple(blockers),
     )
+
+
+def _ordinary_array_module_variable_blockers(
+    variable: models.SemanticVariable,
+    getter: OwnershipDecision,
+    setter: OwnershipDecision | None,
+    array: ArrayHandoffPolicy,
+) -> tuple[str, ...]:
+    """Validate one fixed addressable module array borrowed as a live view."""
+    blockers = []
+    if array.rank is None or array.rank <= 0 or len(array.shape) != array.rank:
+        blockers.append("ordinary module array requires one concrete fixed rank")
+    if variable.semantic_type.name not in _PLAN_PRIMITIVE_SCALAR_TYPES:
+        blockers.append("ordinary module array requires a primitive numeric element type")
+    if not variable.semantic_type.metadata.get("aliased"):
+        blockers.append("ordinary module array requires addressable Aliased target storage")
+    expected_getter = (
+        ("owner", getter.owner, OwnershipOwner.NATIVE),
+        ("transfer", getter.transfer, TransferMode.BORROWED_VIEW),
+        ("destruction", getter.destruction, DestructionPolicy.NATIVE_OWNER),
+        ("storage", getter.storage_mode, StorageMode.ALIAS),
+    )
+    blockers.extend(
+        f"ordinary module array getter {name} is {actual.value}, not {required.value}"
+        for name, actual, required in expected_getter
+        if actual is not required
+    )
+    if setter is None or setter.setter_action is not SetterAction.REJECT_REPLACEMENT:
+        blockers.append("ordinary module array must reject whole-array replacement")
+    return tuple(blockers)
 
 
 def completed_function_wrapper_policy(function: models.SemanticFunction) -> FunctionWrapperPolicy:
@@ -1834,7 +2018,7 @@ def _callback_abi_kind(
         return CallbackABIKind.DATA_AND_LENGTH
     if int(semantic_type.rank or 0) > 0:
         return CallbackABIKind.DATA_AND_SHAPE
-    if bool(argument.origin.metadata.get("value")) or access == "read":
+    if bool(argument.origin.metadata.get("value")):
         return CallbackABIKind.VALUE
     return CallbackABIKind.REFERENCE
 
@@ -1844,7 +2028,7 @@ def _callback_adapter_action(
     access: str,
 ) -> CallbackTransferAction:
     """Select adapter copy direction once from the callable declaration."""
-    if bool(argument.origin.metadata.get("value")):
+    if bool(argument.origin.metadata.get("value")) or access == "read":
         return CallbackTransferAction.COPY_IN
     if access == "write":
         return CallbackTransferAction.COPY_OUT
@@ -1961,6 +2145,7 @@ def build_function_wrapper_policy(
     class_call: ClassMethodPolicy | None = None,
     module_export: bool | None = None,
     polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]] | None = None,
+    native_dispatch_name: str | None = None,
 ) -> FunctionWrapperPolicy:
     """Build typed function policy from completed post-IR decisions."""
 
@@ -1989,16 +2174,20 @@ def build_function_wrapper_policy(
         + result_blockers
         + slot_blockers
         + lifecycle_blockers
-        + _mixed_result_writeback_blockers(results, arguments)
+        + _result_position_blockers(results, arguments)
         + _array_extent_reference_blockers(function, arguments, results)
         + _runtime_status_plan_blockers(status_error)
         + _string_result_status_blockers(results, status_error)
         + _string_writeback_status_blockers(arguments, status_error)
     )
+    native_name = native_dispatch_name or _native_name(function)
+    native_invocation, native_operator = _native_invocation_policy(native_name)
     return FunctionWrapperPolicy(
         owner_path=owner_path,
         python_exports=completed_python_exports(function, function.name),
-        native_name=_native_name(function),
+        native_name=native_name,
+        native_invocation=native_invocation,
+        native_operator=native_operator,
         external=_is_external(function),
         native_module=_native_module(function, owner_path),
         native_is_subroutine=_native_is_subroutine(function),
@@ -2020,27 +2209,14 @@ def build_function_wrapper_policy(
     )
 
 
-def _mixed_result_writeback_blockers(
-    results: tuple[ResultPolicy, ...],
-    arguments: list[ArgumentPolicy],
-) -> tuple[str, ...]:
-    """Block the unsupported mixed result plus visible-writeback envelope."""
-    projected = tuple(argument for argument in arguments if argument.projects_result)
-    if not results or not projected:
-        return ()
-    if all(
-        result.source_kind == "hidden_output" and result.ownership.kind is ObjectKind.STRING for result in results
-    ) and all(argument.ownership.kind is ObjectKind.STRING for argument in projected):
-        positions = tuple(result.result_position for result in results) + tuple(
-            argument.result_position for argument in projected
-        )
-        if all(isinstance(position, int) for position in positions) and sorted(positions) == list(
-            range(len(positions))
-        ):
-            return ()
-        return ("hidden results and visible writebacks must cover each result position exactly once",)
-    names = ", ".join(repr(argument.name) for argument in projected)
-    return (f"cannot combine native results with visible argument writeback for {names}",)
+def _native_invocation_policy(native_name: str) -> tuple[NativeInvocationKind, str | None]:
+    """Classify procedure, defined-operator, and defined-assignment syntax once."""
+    compact = "".join(native_name.split()).casefold()
+    if compact == "assignment(=)":
+        return NativeInvocationKind.DEFINED_ASSIGNMENT, "="
+    if compact.startswith("operator(") and compact.endswith(")"):
+        return NativeInvocationKind.DEFINED_OPERATOR, compact[len("operator(") : -1]
+    return NativeInvocationKind.PROCEDURE, None
 
 
 def _argument_policies(
@@ -2283,7 +2459,9 @@ def _argument_boundary_policy(
         optional_mode=_optional_mode(argument, decision),
         handoff_mode=_argument_handoff_mode(decision),
         nullable=decision.nullable,
-        writable=decision.mutates_native,
+        # COPY_RETURN mutates a binding-owned replacement rather than the
+        # immutable Python input whose payload is copied.
+        writable=decision.mutates_native and decision.transfer is not TransferMode.COPY_RETURN,
         descriptor_boundary=decision.descriptor_boundary,
         codegen_action=decision.codegen_action,
         python_barrier_action=decision.python_barrier_action,
@@ -2369,11 +2547,7 @@ def _result_policies(
     if function.return_type is None:
         projected_arguments = _visible_projected_arguments(function)
         if hidden_results and not projected_arguments:
-            return hidden_results, (
-                *hidden_blockers,
-                *_result_position_blockers(hidden_results),
-                *_string_result_aggregation_blockers(hidden_results),
-            )
+            return hidden_results, hidden_blockers
         if projected_arguments and not hidden_results:
             return (), hidden_blockers
         if not hidden_results and not projected_arguments:
@@ -2433,8 +2607,6 @@ def _result_policies(
         (
             *blockers,
             *hidden_blockers,
-            *_result_position_blockers(results),
-            *_string_result_aggregation_blockers(results),
         ),
     )
 
@@ -3614,8 +3786,8 @@ def _scalar_boundary_blockers(
         and decision.native_barrier_action is not NativeBarrierAction.PASS_RAW_ADDRESS
     ):
         blockers.append(f"argument {argument.name!r} raw address is not forwarded as a raw address")
-    if argument.optional and decision.python_barrier_action is not PythonBarrierAction.SCALAR_VALUE:
-        blockers.append(f"argument {argument.name!r} optional storage/address boundaries are not supported")
+    if argument.optional and decision.python_barrier_action is PythonBarrierAction.RAW_ADDRESS:
+        blockers.append(f"argument {argument.name!r} optional raw-address boundaries are not supported")
     return tuple(blockers)
 
 
@@ -3640,6 +3812,8 @@ def _array_storage_boundary_blockers(
     decision: OwnershipDecision,
 ) -> tuple[str, ...]:
     """Require one caller-owned ordinary NumPy buffer handoff."""
+    if decision.transfer is TransferMode.COPY_RETURN:
+        return _array_replacement_boundary_blockers(argument, decision)
     blockers = []
     if decision.owner is not OwnershipOwner.CALLER:
         blockers.append(f"argument {argument.name!r} array owner is {decision.owner.value}, not caller")
@@ -3684,6 +3858,37 @@ def _array_storage_boundary_blockers(
     array_policy = _array_handoff_policy(argument.semantic_type)
     if argument.optional and array_policy is not None and array_policy.rank is None:
         blockers.append(f"argument {argument.name!r} optional assumed-rank combination is not supported")
+    return tuple(blockers)
+
+
+def _array_replacement_boundary_blockers(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+) -> tuple[str, ...]:
+    """Require an immutable input copied into one Python-owned replacement."""
+    blockers = []
+    if decision.owner is not OwnershipOwner.PYTHON:
+        blockers.append(f"argument {argument.name!r} replacement owner is {decision.owner.value}, not python")
+    if decision.destruction is not DestructionPolicy.PYTHON_REFCOUNT:
+        blockers.append(
+            f"argument {argument.name!r} replacement destruction is {decision.destruction.value}, not python_refcount"
+        )
+    if decision.codegen_action is not CodegenAction.COPY_IN_OUT:
+        blockers.append(
+            f"argument {argument.name!r} replacement action is {decision.codegen_action.value}, not copy_in_out"
+        )
+    if decision.storage_mode is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} replacement storage is {decision.storage_mode.value}, not stack")
+    if (decision.boundary_storage_mode or decision.storage_mode) is not StorageMode.STACK:
+        blockers.append(f"argument {argument.name!r} replacement boundary storage is not stack")
+    if decision.python_barrier_action is not PythonBarrierAction.ARRAY_STORAGE:
+        blockers.append(f"argument {argument.name!r} replacement is not sourced from array storage")
+    if decision.native_barrier_action is not NativeBarrierAction.PASS_ARRAY_BUFFER:
+        blockers.append(f"argument {argument.name!r} replacement does not pass an array buffer")
+    if not decision.projects_result:
+        blockers.append(f"argument {argument.name!r} replacement does not project a Python result")
+    if argument.optional or decision.nullable or decision.descriptor_boundary:
+        blockers.append(f"argument {argument.name!r} replacement requires nonoptional ordinary array storage")
     return tuple(blockers)
 
 
@@ -3941,7 +4146,10 @@ def _result_blockers(semantic_type: models.SemanticType, decision: OwnershipDeci
         return _derived_result_blockers(semantic_type, decision, "result")
     if _is_scalar_descriptor_result_type(semantic_type):
         return _scalar_descriptor_result_blockers(semantic_type, decision, "result")
-    if native_array_descriptor_kind(semantic_type) is not None:
+    descriptor_kind = native_array_descriptor_kind(semantic_type)
+    if descriptor_kind == "pointer":
+        return ("pointer handle results need stable owner storage and target lifetime policy before wrapping",)
+    if descriptor_kind is not None:
         return _native_array_handle_result_blockers(decision, "result")
     if _is_phase6_ordinary_array_type(semantic_type):
         return _ordinary_array_result_blockers(semantic_type, decision, "result")
@@ -4015,7 +4223,10 @@ def _hidden_result_blockers(
             f"hidden result {argument.name!r}",
             mapping,
         )
-    if native_array_descriptor_kind(argument.semantic_type) is not None:
+    descriptor_kind = native_array_descriptor_kind(argument.semantic_type)
+    if descriptor_kind == "pointer":
+        return ("pointer handle results need stable owner storage and target lifetime policy before wrapping",)
+    if descriptor_kind is not None:
         return _native_array_handle_result_blockers(decision, f"hidden result {argument.name!r}")
     if _is_phase6_ordinary_array_type(argument.semantic_type):
         return _ordinary_array_hidden_result_blockers(argument, decision, mapping)
@@ -4282,13 +4493,6 @@ def _fixed_string_result_ownership_blockers(
     return tuple(blockers)
 
 
-def _string_result_aggregation_blockers(results: tuple[ResultPolicy, ...]) -> tuple[str, ...]:
-    """Keep native string-allocation cleanup single-result in Phase 5B."""
-    if any(result.ownership.kind is ObjectKind.STRING for result in results) and len(results) != 1:
-        return ("fixed string result lane requires exactly one Python-visible result",)
-    return ()
-
-
 def _string_result_status_blockers(
     results: tuple[ResultPolicy, ...],
     status_error: NativeStatusErrorPolicy | None,
@@ -4312,9 +4516,16 @@ def _string_writeback_status_blockers(
     return ()
 
 
-def _result_position_blockers(results: tuple[ResultPolicy, ...]) -> tuple[str, ...]:
-    """Require completed Python results to cover one contiguous order."""
-    positions = tuple(result.result_position for result in results)
+def _result_position_blockers(
+    results: tuple[ResultPolicy, ...],
+    arguments: list[ArgumentPolicy] | tuple[ArgumentPolicy, ...] = (),
+) -> tuple[str, ...]:
+    """Require native results and visible writebacks to cover one public order."""
+    positions = tuple(result.result_position for result in results) + tuple(
+        argument.result_position for argument in arguments if argument.projects_result
+    )
+    if not positions:
+        return ()
     if sorted(positions) == list(range(len(positions))) and len(set(positions)) == len(positions):
         return ()
     return (f"binding result positions must cover 0..{len(positions) - 1} exactly once; received {positions}",)
@@ -4679,8 +4890,12 @@ def _argument_transformation_policies(
     decision: OwnershipDecision,
     array: ArrayHandoffPolicy | None,
 ) -> tuple[tuple[TransformationPolicy, ...], tuple[str, ...]]:
-    """Complete explicit COPY_F ownership and lifecycle before planning."""
-    if array is None or array.native_order == array.order:
+    """Complete binding-owned array copies and their lifecycle before planning."""
+    if array is None:
+        return (), ()
+    if decision.transfer is TransferMode.COPY_RETURN:
+        return _array_replacement_transformations(argument, decision, array)
+    if array.native_order == array.order:
         return (), ()
     blockers = _copy_to_fortran_argument_blockers(argument, decision, array)
     if blockers:
@@ -4720,6 +4935,51 @@ def _argument_transformation_policies(
         )
     )
     return tuple(transformations), ()
+
+
+def _array_replacement_transformations(
+    argument: models.SemanticArgument,
+    decision: OwnershipDecision,
+    array: ArrayHandoffPolicy,
+) -> tuple[tuple[TransformationPolicy, ...], tuple[str, ...]]:
+    """Copy immutable storage once and publish the mutated temporary as output."""
+    blockers = []
+    if argument.optional or array.rank is None or argument.semantic_type.name == "String":
+        blockers.append(f"argument {argument.name!r} array replacement requires a required numeric fixed rank")
+    if decision.codegen_action is not CodegenAction.COPY_IN_OUT or not decision.projects_result:
+        blockers.append(f"argument {argument.name!r} array replacement has incomplete copy-out policy")
+    if blockers:
+        return (), tuple(blockers)
+    reason = "immutable array input uses one binding-owned mutable replacement"
+    return (
+        (
+            TransformationPolicy(
+                phase=WritebackPhase.COPY_IN,
+                layer=TransformationLayer.BINDING,
+                action=TransformationAction.COPY_ARRAY_REPRESENTATION,
+                source_representation="numpy_input",
+                target_representation="numpy_native_order",
+                reason=reason,
+            ),
+            TransformationPolicy(
+                phase=WritebackPhase.COPY_OUT,
+                layer=TransformationLayer.BINDING,
+                action=TransformationAction.PUBLISH_ARRAY_REPLACEMENT,
+                source_representation="numpy_native_order",
+                target_representation="python_result",
+                reason=reason,
+            ),
+            TransformationPolicy(
+                phase=WritebackPhase.CLEANUP,
+                layer=TransformationLayer.BINDING,
+                action=TransformationAction.RELEASE_TEMPORARY,
+                source_representation="numpy_native_order",
+                target_representation="released",
+                reason="binding releases the unpublished replacement on failure",
+            ),
+        ),
+        (),
+    )
 
 
 def _copy_to_fortran_argument_blockers(
@@ -4766,7 +5026,7 @@ def _native_array_actual_policy(
         or array.rank is None
         or argument.optional
         or argument.semantic_type.name == "String"
-        or array.contiguous is not True
+        or decision.transfer is TransferMode.COPY_RETURN
         or decision.python_barrier_action is not PythonBarrierAction.ARRAY_STORAGE
         or decision.native_barrier_action is not NativeBarrierAction.PASS_ARRAY_BUFFER
     ):
@@ -4788,7 +5048,7 @@ def _native_array_actual_policy(
         writable=decision.mutates_native,
         require_native_byte_order=True,
         require_aligned=True,
-        require_contiguous=True,
+        require_contiguous=array.contiguous is True,
     )
 
 
@@ -4947,17 +5207,9 @@ def _derived_module_variable_blockers(
         blockers.append("derived module object must retain its native module owner")
     if policy.handoff.release is not DerivedRelease.NATIVE_OWNER:
         blockers.append("derived module object cannot claim native destruction")
-    expected_storage = (
-        DerivedObjectStorage.MODULE_ALLOCATABLE_TARGET
-        if variable.semantic_type.metadata.get("fortran_allocatable")
-        and (variable.semantic_type.metadata.get("fortran_target") or variable.semantic_type.metadata.get("aliased"))
-        else DerivedObjectStorage.MODULE_ALLOCATABLE
-        if variable.semantic_type.metadata.get("fortran_allocatable")
-        else DerivedObjectStorage.MODULE_POINTER
-        if variable.semantic_type.metadata.get("fortran_pointer")
-        else DerivedObjectStorage.MODULE_TARGET
-        if variable.semantic_type.metadata.get("fortran_target") or variable.semantic_type.metadata.get("aliased")
-        else DerivedObjectStorage.MODULE_PROXY
+    expected_storage = _derived_object_storage(
+        variable.semantic_type,
+        DerivedObjectOrigin.NATIVE_MODULE,
     )
     if policy.handoff.storage is not expected_storage:
         blockers.append(
@@ -5129,6 +5381,14 @@ def _array_argument_bridge_data_action(
     optional_mode: OptionalMode,
 ) -> tuple[BridgeDataAction, str | None]:
     """Complete one buffer, raw-address, or native-descriptor bridge view."""
+    if (
+        optional_mode is OptionalMode.REQUIRED
+        and decision.python_barrier_action is PythonBarrierAction.ARRAY_STORAGE
+        and decision.native_barrier_action is NativeBarrierAction.PASS_ARRAY_BUFFER
+        and decision.codegen_action is CodegenAction.COPY_IN_OUT
+        and decision.transfer is TransferMode.COPY_RETURN
+    ):
+        return BridgeDataAction.ASSOCIATE_VIEW, None
     if (
         optional_mode in {OptionalMode.REQUIRED, OptionalMode.DESCRIPTOR}
         and decision.python_barrier_action is PythonBarrierAction.WRAPPER_INSTANCE
@@ -5339,7 +5599,7 @@ def _array_handoff_policy(semantic_type: models.SemanticType) -> ArrayHandoffPol
     if array is None:
         return None
     assumed_rank = array.category == "assumed_rank"
-    rank = None if assumed_rank else int(array.rank or semantic_type.rank or 0)
+    rank = _array_handoff_rank(semantic_type, array.rank, assumed_rank)
     if rank is not None and rank <= 0:
         return None
     shape = tuple(str(item) for item in (array.shape or semantic_type.shape))
@@ -5348,17 +5608,56 @@ def _array_handoff_policy(semantic_type: models.SemanticType) -> ArrayHandoffPol
         rank=rank,
         shape=shape,
         axes=axes,
-        order="ORDER_F" if assumed_rank and array.order is None else array.order,
-        native_order=(
-            "ORDER_F"
-            if assumed_rank and array.order is None
-            else (array.copy_order if array.copy_order is not None else array.order)
-        ),
-        contiguous=True if assumed_rank and array.contiguous is None else array.contiguous,
-        itemsize=_character_length(semantic_type) if semantic_type.name == "String" else None,
+        order=_array_handoff_order(array.order, assumed_rank),
+        native_order=_array_handoff_native_order(array.order, array.copy_order, assumed_rank),
+        contiguous=_array_handoff_contiguous(array.contiguous, assumed_rank),
+        itemsize=_array_handoff_itemsize(semantic_type),
         category=array.category,
         extent_references=tuple(_array_extent_references(item) for item in shape),
     )
+
+
+def _array_handoff_rank(
+    semantic_type: models.SemanticType,
+    storage_rank: int | None,
+    assumed_rank: bool,
+) -> int | None:
+    """Return the concrete rank, leaving assumed-rank selection explicit."""
+    if assumed_rank:
+        return None
+    return int(storage_rank or semantic_type.rank or 0)
+
+
+def _array_handoff_order(order: str | None, assumed_rank: bool) -> str | None:
+    """Default assumed-rank buffers to native Fortran layout."""
+    if assumed_rank and order is None:
+        return "ORDER_F"
+    return order
+
+
+def _array_handoff_native_order(
+    order: str | None,
+    copy_order: str | None,
+    assumed_rank: bool,
+) -> str | None:
+    """Return the completed native-copy layout independently of input layout."""
+    if assumed_rank and order is None:
+        return "ORDER_F"
+    return copy_order if copy_order is not None else order
+
+
+def _array_handoff_contiguous(contiguous: bool | None, assumed_rank: bool) -> bool | None:
+    """Default assumed-rank handoff to one contiguous native buffer."""
+    if assumed_rank and contiguous is None:
+        return True
+    return contiguous
+
+
+def _array_handoff_itemsize(semantic_type: models.SemanticType) -> int | None:
+    """Carry fixed character width only for string array elements."""
+    if semantic_type.name == "String":
+        return _character_length(semantic_type)
+    return None
 
 
 def _is_phase6_ordinary_array_type(semantic_type: models.SemanticType) -> bool:

@@ -138,7 +138,12 @@ def test_supported_writeback_actions_select_scalar_result_behavior(codegen_actio
     c_source = _rendered_source(WrapperCodeGenerator().generate(edited), ".c")
 
     assert "bind_c_bump(&value);" in c_source
-    assert "PyObject * result_obj = Int32_to_PyLong(&value);" in c_source
+    if codegen_action is CodegenAction.COPY_IN_OUT:
+        assert "PyObject * result_obj = NULL;" in c_source
+        assert "result_obj = Int32_to_PyLong(&value);" in c_source
+    else:
+        assert "PyObject * result_obj = value_obj;" in c_source
+        assert "Py_INCREF(result_obj);" in c_source
 
 
 def test_direct_plan_edits_change_binding_and_bridge_generation_then_freeze_plan():

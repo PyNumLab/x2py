@@ -21,10 +21,7 @@ user-visible feature that a contributor is changing.
 | `.pyi` AST-to-semantic conversion | `tests/semantics/conversion/pyi/` | `python3 -m pytest -q tests/semantics/conversion/pyi` |
 | Completed semantic policy | `tests/semantics/policy/` | `python3 -m pytest -q tests/semantics/policy` |
 | Wrap readiness and blockers | `tests/semantics/readiness/` | `python3 -m pytest -q tests/semantics/readiness` |
-| Semantic IR-to-codegen lowering | `tests/lowering/` | `python3 -m pytest -q tests/lowering` |
-| Bridge generation | `tests/codegen/bridges/` | `python3 -m pytest -q tests/codegen/bridges` |
-| Python binding generation | `tests/codegen/bindings/` | `python3 -m pytest -q tests/codegen/bindings` |
-| Source and `.pyi` printers | `tests/codegen/printers/` | `python3 -m pytest -q tests/codegen/printers` |
+| Wrapper planning, bridge/binding generation, and source/`.pyi` printing | `tests/wrapper_codegen/` | `python3 -m pytest -q tests/wrapper_codegen` |
 | Naming policy | `tests/naming/` | `python3 -m pytest -q tests/naming` |
 | NumPy and semantic type mapping | `tests/types/` | `python3 -m pytest -q tests/types` |
 | Runtime handles | `tests/runtime/handles/` | `python3 -m pytest -q tests/runtime/handles` |
@@ -48,10 +45,7 @@ empty directory merely to mirror this table.
 | `x2py.semantics.c2ir`, `fortran2ir`, `pyi2ir` | matching language under `tests/semantics/conversion/` |
 | semantic ownership and policy completion | `tests/semantics/policy/` |
 | `x2py.semantics.readiness` | `tests/semantics/readiness/` |
-| `x2py.semantics.ir2ast` | `tests/lowering/` |
-| `x2py.codegen.bridges` | `tests/codegen/bridges/` |
-| `x2py.codegen.bindings` | `tests/codegen/bindings/` |
-| `x2py.codegen.printers` | `tests/codegen/printers/` |
+| `x2py.wrapper_codegen` | `tests/wrapper_codegen/` plus compiled behavior under `tests/wrapper/` |
 | `x2py.compiling` | compiled build and runtime feature evidence under `tests/wrapper/fortran/` |
 | `x2py.naming` | `tests/naming/` |
 | `x2py.types` | `tests/types/` |
@@ -72,6 +66,12 @@ feature; where is its runtime evidence?” They remain feature-oriented under
 know roadmap wording but not the feature module. Source-build,
 generated-`.pyi`, and modified-`.pyi` scenarios for one feature stay together;
 identical source/generated behavior uses one shared assertion body.
+
+The legacy lowering AST and `x2py.codegen` implementation are removed. Their
+handler maps and emitted-source details have no compatibility tests. Behavior
+still required by users belongs either in `tests/wrapper_codegen/` against the
+canonical plan/generator or in compiled `tests/wrapper/` coverage against the
+public build APIs.
 
 During the wrapper-plan migration, do not run the full BLAS or LAPACK
 real-library wrapper tests locally or in GitHub Actions. Exclude

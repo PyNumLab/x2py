@@ -39,6 +39,10 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
     assert "scalar_status(n) -> int32" in module.scalar_status.__doc__
     assert "status : int32" in module.scalar_status.__doc__
     assert "fill_vector(n, values) -> ndarray[float64]" in module.fill_vector.__doc__
+    assert "Parameters\n----------" in module.fill_vector.__doc__
+    assert "Returns\n-------" in module.fill_vector.__doc__
+    assert "Raises\n------" in module.fill_vector.__doc__
+    assert "Native code may update this value; the updated value is returned." in module.fill_vector.__doc__
     assert "Direction:" not in module.fill_vector.__doc__
     assert "Initial contents are ignored." not in module.fill_vector.__doc__
     assert "Ownership: Caller-owned" in module.fill_vector.__doc__
@@ -113,41 +117,34 @@ def test_output_arguments_and_multiple_results_follow_python_projection_rules(
         module.fill_matrix(np.int32(2), np.int32(3), np.empty((2, 3), dtype=np.float64, order="C"))
 
 
-def test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes(tmp_path: Path, monkeypatch):
+def test_hidden_ordinary_array_output_uses_canonical_plan(tmp_path: Path, monkeypatch):
     """Replay an existing fixed-shape native output as a hidden result."""
     native_object = _compile_native_object(OUTPUTS_F90_SOURCE, tmp_path / "native")
-    modules = {}
     contract_text = """\
 from x2py.contracts import Addr, Arg, Float64, Int32, Return, native_call
 
 @native_call([Addr(Arg(0)), Return("values", 0)])
 def fill_vector(n: Int32) -> Float64[n]: ...
 """
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract_package = tmp_path / f"{route}_hidden_array_output"
-        shutil.copytree(CONTRACT_FIXTURES / "foutputs_f90", contract_package)
-        (contract_package / "foutputs_f90.pyi").write_text(contract_text, encoding="utf-8")
-        (contract_package / "__init__.pyi").write_text(
-            "from .foutputs_f90 import fill_vector\n",
-            encoding="utf-8",
-        )
-        result = build_pyi_extension(
-            contract_package / "__init__.pyi",
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / route,
-            **route_kwargs,
-        )
-        module = _import_from_build_dir(result.module_name, result.output_dir)
-        modules[route] = module if hasattr(module, "fill_vector") else _sole_native_module(module)
+    contract_package = tmp_path / "hidden_array_output"
+    shutil.copytree(CONTRACT_FIXTURES / "foutputs_f90", contract_package)
+    (contract_package / "foutputs_f90.pyi").write_text(contract_text, encoding="utf-8")
+    (contract_package / "__init__.pyi").write_text(
+        "from .foutputs_f90 import fill_vector\n",
+        encoding="utf-8",
+    )
+    result = build_pyi_extension(
+        contract_package / "__init__.pyi",
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    package = _import_from_build_dir(result.module_name, result.output_dir)
+    module = package if hasattr(package, "fill_vector") else _sole_native_module(package)
 
-    for module in modules.values():
-        np.testing.assert_array_equal(module.fill_vector(np.int32(4)), np.array([2.0, 4.0, 6.0, 8.0]))
-        assert module.fill_vector(np.int32(0)).shape == (0,)
+    np.testing.assert_array_equal(module.fill_vector(np.int32(4)), np.array([2.0, 4.0, 6.0, 8.0]))
+    assert module.fill_vector(np.int32(0)).shape == (0,)
 
     monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
     with pytest.raises(MemoryError, match="Unable to allocate copy-return output array"):
-        modules["wrapper_plan"].fill_vector(np.int32(2))
+        module.fill_vector(np.int32(2))

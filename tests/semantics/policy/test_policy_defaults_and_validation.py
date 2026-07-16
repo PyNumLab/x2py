@@ -5,14 +5,10 @@ from tests._shared.ownership_policy_support import (
     ADDRESS_ROLE_RAW,
     ArrayInteropPolicy,
     ArrayInteropPolicyDispatcher,
-    AssignmentMode,
-    CPythonBindingGenerator,
     CodegenAction,
     DestructionPolicy,
     NativeBarrierAction,
     NativeBarrierDispatcher,
-    NumpyFloat64Type,
-    NumpyNDArrayType,
     ObjectKind,
     OwnershipContext,
     OwnershipDecision,
@@ -28,7 +24,6 @@ from tests._shared.ownership_policy_support import (
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
-    Scope,
     SemanticArgument,
     SemanticClass,
     SemanticField,
@@ -38,7 +33,6 @@ from tests._shared.ownership_policy_support import (
     SetterAction,
     StorageMode,
     TransferMode,
-    Variable,
     _address_type,
     _array_type,
     _derived_type,
@@ -49,12 +43,10 @@ from tests._shared.ownership_policy_support import (
     _string_storage_type,
     _string_type,
     _writable_argument_context,
-    codegen_action_for_variable,
     complete_semantic_policies,
     default_ownership_policy,
     parse_pyi_text,
     pytest,
-    semantic_ir_to_codegen_ast,
 )
 
 
@@ -387,18 +379,6 @@ def test_array_interop_dispatcher_routes_completed_abi_selector_to_named_method(
     ) == ("seen", "values", "descriptor", "allocatable")
 
 
-def test_optional_normal_array_bind_c_argument_does_not_use_native_handle_fallback():
-    argument = Variable(
-        NumpyNDArrayType.get_new(NumpyFloat64Type(), 1, "F"),
-        "values",
-        is_optional=True,
-    )
-    binding = CPythonBindingGenerator("", 0)
-
-    assert argument.is_optional is True
-    assert binding._bind_c_array_argument_uses_native_handle_fallback(argument) is False
-
-
 def test_immutable_replacement_policy_is_complete_before_ir_lowering():
     module = parse_pyi_text(
         """
@@ -539,23 +519,3 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
         module.functions[0].arguments[0].metadata[RESOLVED_OWNERSHIP_POLICY_METADATA].transfer is TransferMode.IN_PLACE
     )
     assert RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA not in module.functions[0].metadata
-
-    codegen_module = semantic_ir_to_codegen_ast(
-        module,
-        Scope(name=module.name, scope_type="module"),
-    )
-
-    module_var = codegen_module.variables[0]
-    field_var = codegen_module.classes[0].attributes[0]
-    arg_var = codegen_module.funcs[0].arguments[0].var
-
-    assert module_var.ownership_decision.owner is OwnershipOwner.NATIVE
-    assert module_var.getter_ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
-    assert module_var.setter_ownership_decision.assignment_mode is AssignmentMode.VALUE_COPY
-    assert module_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
-    assert field_var.ownership_decision.owner is OwnershipOwner.WRAPPER
-    assert field_var.getter_ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
-    assert field_var.setter_ownership_decision.assignment_mode is AssignmentMode.VALUE_COPY
-    assert field_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
-    assert arg_var.ownership_decision.owner is OwnershipOwner.CALLER
-    assert codegen_action_for_variable(arg_var) is CodegenAction.IN_PLACE_ARGUMENT

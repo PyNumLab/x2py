@@ -197,17 +197,13 @@ def _build_source_or_generated_pyi_and_import(
     return _build_generated_pyi_and_import(source_template, workdir / "generated_pyi_build", expected_contract_package)
 
 
-def _build_source_legacy_and_import(
+def _build_source_and_import(
     source_template: Path,
     workdir: Path,
     expected_generated_sources: set[str],
 ):
-    result = build_fortran_extension(
-        source_template,
-        output_dir=workdir,
-        _force_legacy_wrapper_route=True,
-    )
-
+    """Build one source entry through the canonical production generator."""
+    result = build_fortran_extension(source_template, output_dir=workdir)
     assert result.shared_library.exists()
     assert {path.name for path in result.generated_sources} == expected_generated_sources
     return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))

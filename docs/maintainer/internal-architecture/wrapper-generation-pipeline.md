@@ -8,15 +8,14 @@ status: maintained
 
 # Wrapper Generation Pipeline
 
-This page describes the direct wrapper-plan route through Phase 6. It covers
-primitive scalars, scalar strings, ordinary arrays, and the supported
-module-variable surface. Native allocatable and pointer handles belong to Phase
-7 and are intentionally outside this contract.
+This page describes the canonical wrapper-plan generation route. It covers the
+completed scalar, string, array, native-handle, derived-type, class, callback,
+module-state, generic, and build surfaces.
 
 ## Architectural Boundary
 
-All semantic policy must be complete before wrapper planning or
-`x2py/semantics/ir2ast.py` lowering begins. Post-IR policy completion owns
+All semantic policy must be complete before wrapper planning begins. Post-IR
+policy completion owns
 object kind, ownership, transfer, destruction, mutability, writeback,
 nullability, output projection, release responsibility, storage mode, getter
 behavior, native setter assignment, and Python setter exposure.
@@ -39,11 +38,12 @@ artifacts = WrapperCodeGenerator().generate(plan)
 runs both backend preflight checks, lowers recursively to C and Fortran syntax
 nodes, and asks the source printers to render those nodes. Build integration
 compiles the rendered sources; it does not own datatype transfer policy.
+Wrapper C/Fortran source printers and the semantic `.pyi` printer share
+`x2py/wrapper_codegen/printers/`; no compatibility printer remains under the
+legacy codegen package.
 
-During the migration, route selection may still choose the legacy generators
-for unsupported functions. The legacy mappings in `x2py/codegen/` consume the
-same completed semantic action enums, but they are not dependencies of
-`x2py/wrapper_codegen/`. They remain only until the final route cutover.
+Wrapper builds have no legacy route or fallback. An unsupported completed plan
+fails with its exact owner path before either backend emits source.
 
 ## Stable Tree and Datatype-Varying Records
 
@@ -79,6 +79,13 @@ value.
 `FunctionPlan`, `NamespacePlan`, and `ModulePlan` remain orchestration records.
 They own export names, call order, result order, runtime/GIL envelopes, and
 aggregation, but not datatype policy.
+
+Python-facing documentation is also a plan projection. The shared docstring
+builder consumes completed namespace, module-variable, class, overload,
+argument, result, and lifecycle records and stores the rendered text on the
+owning plan nodes. C method-table emission and generated Python class assembly
+only attach that text; neither backend infers signatures, ownership, mutation,
+nullability, or exception behavior while rendering source.
 
 `NativeCallSlotPlan` and `LifecycleActionPlan` are subordinate transfer
 details. Native slots stay indexed on `FunctionPlan` because native ABI order
@@ -153,11 +160,12 @@ whether the transfer itself is a scalar, string, or array.
 Inspect the real records directly with normal Python prints. The primary path
 is `complete_semantic_policies()` -> `WrapperPlanner.build()` ->
 `WrapperCodeGenerator.generate()`. Generated artifacts from real passing
-`tests/wrapper` cases are the behavioral oracle; plan unit tests cover selector
-and graph invariants, while dual-route runtime tests prove legacy/direct-plan
-parity.
+`tests/wrapper` cases are the behavioral oracle; plan unit tests cover action
+and graph invariants. Production source and semantic-`.pyi` builds both use
+this one path; unsupported completed policy is an error before lowering, not a
+request to retry a legacy generator.
 
-A Phase 5 or Phase 6 change is acceptable when:
+A wrapper-generation change is acceptable when:
 
 - semantic decisions are complete before planning;
 - datatype variation is confined to transfer, result, lifecycle, or

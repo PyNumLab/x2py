@@ -2,7 +2,6 @@
 
 import pytest
 
-from x2py.codegen.scope import Scope
 from x2py.naming import NamingPolicy
 from x2py.naming import normalize_public_name
 
@@ -58,17 +57,3 @@ def test_generated_symbols_apply_target_language_rules():
         )
         == "value_0001"
     )
-
-
-def test_scope_uses_injected_generated_symbol_language():
-    python_scope = Scope(name="owner", scope_type="module")
-
-    assert str(python_scope.get_new_name("__add__", object_type="function")) == "__add__"
-
-    scope = Scope(name="owner", scope_type="module", symbol_language="fortran")
-
-    assert str(scope.get_new_name("module", object_type="function")) == "module_0001"
-    child = scope.new_child_scope("child", "function")
-
-    assert child.symbol_language == "fortran"
-    assert str(child.get_new_name("value", object_type="variable")) == "value_0001"

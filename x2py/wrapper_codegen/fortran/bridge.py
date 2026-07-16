@@ -34,6 +34,7 @@ from x2py.semantics.wrapper_policy import (
     NativeArrayDescriptorInterop,
     NativeArrayOperation,
     NativeDescriptorHandoffABI,
+    NativeInvocationKind,
     OptionalMode,
     TransformationLayer,
 )
@@ -478,17 +479,39 @@ class FortranBridgeGenerator(ClassVisitor):
 
     def _require_variable_supported(self, variable: ModuleVariablePlan) -> None:
         """Reject unsupported actions in one planned module variable."""
-        if variable.binding.getter_action is ModuleGetterAction.NATIVE_ARRAY_HANDLE:
-            handle = variable.native_array_handle
-            if handle is None or handle.array.rank is None:
-                raise ValueError(f"Unsupported Fortran module handle for {variable.owner_path!r}")
-            if variable.datatype_family is not DatatypeFamily.STRING:
-                PrimitiveScalarTypeRegistry.type_for(variable.semantic_type_name)
+        validator = {
+            ModuleGetterAction.NATIVE_ARRAY_HANDLE: self._require_module_handle_supported,
+            ModuleGetterAction.BORROWED_ARRAY_VIEW: self._require_module_array_view_supported,
+            ModuleGetterAction.DERIVED_OBJECT: self._require_module_derived_supported,
+        }.get(variable.binding.getter_action)
+        if validator is not None:
+            validator(variable)
             return
-        if variable.binding.getter_action is ModuleGetterAction.DERIVED_OBJECT:
-            if variable.derived is None:
-                raise ValueError(f"Unsupported Fortran derived module object for {variable.owner_path!r}")
-            return
+        self._require_module_scalar_supported(variable)
+
+    def _require_module_handle_supported(self, variable: ModuleVariablePlan) -> None:
+        """Require one completed allocatable or pointer array handle."""
+        handle = variable.native_array_handle
+        if handle is None or handle.array.rank is None:
+            raise ValueError(f"Unsupported Fortran module handle for {variable.owner_path!r}")
+        if variable.datatype_family is not DatatypeFamily.STRING:
+            PrimitiveScalarTypeRegistry.type_for(variable.semantic_type_name)
+
+    def _require_module_array_view_supported(self, variable: ModuleVariablePlan) -> None:
+        """Require one ranked borrowed module-array view."""
+        if variable.array is None or variable.array.rank is None:
+            raise ValueError(f"Unsupported Fortran module array view for {variable.owner_path!r}")
+        PrimitiveScalarTypeRegistry.type_for(variable.semantic_type_name)
+
+    @staticmethod
+    def _require_module_derived_supported(variable: ModuleVariablePlan) -> None:
+        """Require the completed derived-object module handoff."""
+        if variable.derived is None:
+            raise ValueError(f"Unsupported Fortran derived module object for {variable.owner_path!r}")
+
+    @staticmethod
+    def _require_module_scalar_supported(variable: ModuleVariablePlan) -> None:
+        """Require ordinary scalar assignment and nullable snapshot actions."""
         if variable.bridge.native_assignment not in {
             AssignmentMode.NONE,
             AssignmentMode.VALUE_COPY,
@@ -762,8 +785,10 @@ class FortranBridgeGenerator(ClassVisitor):
     def _callback_native_parameter(self, transfer: CallbackTransferPlan) -> FortranParameter:
         """Declare the exact native callback dummy represented by one transfer."""
         attributes = list(self._callback_intent_attributes(transfer))
-        if transfer.abi is CallbackABIKind.VALUE and transfer.access == "unspecified":
-            attributes.extend(("intent(in)", "value"))
+        if transfer.abi is CallbackABIKind.VALUE:
+            if transfer.access == "unspecified":
+                attributes.append("intent(in)")
+            attributes.append("value")
         if transfer.abi is not CallbackABIKind.VALUE and transfer.adapter_action in {
             CallbackTransferAction.BORROW_READ_ONLY,
             CallbackTransferAction.BORROW_WRITABLE,
@@ -1741,6 +1766,8 @@ class FortranBridgeGenerator(ClassVisitor):
                 return self._lower_module_getter_direct_value(plan)
             case ModuleGetterAction.NULLABLE_SNAPSHOT:
                 return self._lower_module_getter_nullable_snapshot(plan)
+            case ModuleGetterAction.BORROWED_ARRAY_VIEW:
+                return self._lower_module_getter_borrowed_array_view(plan)
             case ModuleGetterAction.DERIVED_OBJECT:
                 return self._lower_module_getter_derived_object(plan)
         raise ValueError(f"Unsupported Fortran module getter action for {plan.owner_path!r}: {action!r}")
@@ -2418,6 +2445,39 @@ class FortranBridgeGenerator(ClassVisitor):
             ),
         )
 
+    def _lower_module_getter_borrowed_array_view(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[FortranFunction, ...]:
+        """Expose one addressable fixed module array through pointer and extents."""
+        array = plan.array
+        if array is None or array.rank is None:
+            raise ValueError(f"Module array view {plan.owner_path!r} has no fixed rank")
+        name = self._module_bridge_getter_name(plan)
+        native = self._native_variable_name(plan)
+        return (
+            FortranFunction(
+                name=name,
+                parameters=tuple(
+                    FortranParameter(f"extent_{axis}", "integer(c_int64_t)", ("intent(out)",))
+                    for axis in range(array.rank)
+                ),
+                result_name="result",
+                result_type="type(c_ptr)",
+                bind_name=name,
+                body=(
+                    *(
+                        FortranAssignment(
+                            f"extent_{axis}",
+                            CodeExpression(f"int(size({native}, {axis + 1}), c_int64_t)"),
+                        )
+                        for axis in range(array.rank)
+                    ),
+                    FortranAssignment("result", CodeExpression(f"c_loc({native})")),
+                ),
+            ),
+        )
+
     def _lower_module_getter_nullable_snapshot(
         self,
         plan: ModuleVariablePlan,
@@ -3062,7 +3122,11 @@ class FortranBridgeGenerator(ClassVisitor):
         present: frozenset[str],
         result_name: str | None,
         replacements: dict[str, str],
-    ) -> FortranAssignment | FortranCall:
+    ) -> FortranAssignment | FortranCall | FortranPointerAssignment:
+        if plan.bridge.native_invocation is NativeInvocationKind.DEFINED_OPERATOR:
+            return self._defined_operator_invocation(plan, present, result_name, replacements)
+        if plan.bridge.native_invocation is NativeInvocationKind.DEFINED_ASSIGNMENT:
+            return self._defined_assignment_invocation(plan, present, replacements)
         native_name, receiver_position = self._native_invocation_target(plan, replacements)
         arguments = self._native_arguments(
             plan,
@@ -3073,6 +3137,34 @@ class FortranBridgeGenerator(ClassVisitor):
         if plan.bridge.native_is_subroutine:
             return FortranCall(native_name, arguments)
         return self._native_function_result_invocation(plan, result_name, native_name, arguments)
+
+    def _defined_operator_invocation(
+        self,
+        plan: FunctionPlan,
+        present: frozenset[str],
+        result_name: str | None,
+        replacements: dict[str, str],
+    ) -> FortranAssignment | FortranCall | FortranPointerAssignment:
+        """Lower one completed public defined operator without private specifics."""
+        token = plan.bridge.native_operator
+        arguments = self._native_arguments(plan, present, replacements)
+        if token is None or len(arguments) not in {1, 2}:
+            raise ValueError(f"Defined operator {plan.owner_path!r} has an incomplete invocation plan")
+        values = tuple(argument.text for argument in arguments)
+        expression = f"{token} {values[0]}" if len(values) == 1 else f"{values[0]} {token} {values[1]}"
+        return self._native_result_expression_invocation(plan, result_name, expression)
+
+    def _defined_assignment_invocation(
+        self,
+        plan: FunctionPlan,
+        present: frozenset[str],
+        replacements: dict[str, str],
+    ) -> FortranAssignment:
+        """Lower one completed defined assignment in native argument order."""
+        arguments = self._native_arguments(plan, present, replacements)
+        if len(arguments) != 2:
+            raise ValueError(f"Defined assignment {plan.owner_path!r} must have two native arguments")
+        return FortranAssignment(arguments[0].text, arguments[1])
 
     def _native_function_result_invocation(
         self,
@@ -3085,6 +3177,15 @@ class FortranBridgeGenerator(ClassVisitor):
         if result_name is None:
             raise ValueError(f"{plan.owner_path!r} native function is missing a bridge result")
         expression = f"{native_name}({', '.join(item.text for item in arguments)})"
+        return self._native_result_expression_invocation(plan, result_name, expression)
+
+    def _native_result_expression_invocation(
+        self,
+        plan: FunctionPlan,
+        result_name: str | None,
+        expression: str,
+    ) -> FortranAssignment | FortranCall | FortranPointerAssignment:
+        """Store one completed native result expression through its handoff leaf."""
         direct_result = self._direct_result(plan)
         collector = self._native_result_collector_name(plan, direct_result)
         if collector is not None:
@@ -4907,6 +5008,12 @@ class FortranBridgeGenerator(ClassVisitor):
     def _add_function_module_uses(self, plan: ModulePlan, modules: dict[str, list[str]]) -> None:
         """Import module procedures, excluding direct type-bound invocation."""
         for function in self._functions(plan):
+            if (
+                function.bridge.native_module is not None
+                and function.bridge.native_invocation is not NativeInvocationKind.PROCEDURE
+            ):
+                modules.setdefault(function.bridge.native_module, []).append(function.bridge.native_name)
+                continue
             if function.bridge.native_module is not None and (
                 function.class_call is None or function.class_call.invocation is ClassInvocationKind.MODULE_PROCEDURE
             ):
@@ -6561,10 +6668,8 @@ class FortranBridgeGenerator(ClassVisitor):
         )
 
     def _external_interface_procedure(self, plan: FunctionPlan) -> FortranInterfaceProcedure:
-        parameters = tuple(
-            self._external_interface_parameter(plan, argument)
-            for argument in sorted(plan.arguments, key=lambda item: item.native_position)
-        )
+        arguments = tuple(sorted(plan.arguments, key=lambda item: item.native_position))
+        parameters = tuple(self._external_interface_parameter(plan, argument) for argument in arguments)
         imports = tuple(dict.fromkeys(self._iso_symbol(argument.semantic_type_name) for argument in plan.arguments))
         result_name = None if plan.bridge.native_is_subroutine else "native_result"
         direct_result = self._direct_result(plan)
@@ -6575,10 +6680,39 @@ class FortranBridgeGenerator(ClassVisitor):
             name=plan.bridge.native_name,
             imports=imports,
             parameters=parameters,
+            parameter_declarations=self._external_interface_parameter_declarations(arguments, parameters),
             result_name=result_name,
             result_type=result_type,
             is_subroutine=plan.bridge.native_is_subroutine,
         )
+
+    @staticmethod
+    def _external_interface_parameter_declarations(
+        arguments: tuple[ArgumentTransferPlan, ...],
+        parameters: tuple[FortranParameter, ...],
+    ) -> tuple[FortranParameter, ...]:
+        """Declare extent providers first without changing native ABI order."""
+        pending = list(zip(arguments, parameters, strict=True))
+        declarations = []
+        emitted_roles = set()
+        while pending:
+            for index, (argument, parameter) in enumerate(pending):
+                dependencies = (
+                    {role for axis_roles in argument.array.extent_reference_roles for role in axis_roles}
+                    if argument.array is not None
+                    else set()
+                )
+                if dependencies <= emitted_roles:
+                    declarations.append(parameter)
+                    emitted_roles.add(argument.binding.handoff_role)
+                    pending.pop(index)
+                    break
+            else:
+                # Central plan validation owns missing or cyclic extent roles.
+                # Preserve native order here so emission remains deterministic.
+                declarations.extend(parameter for _, parameter in pending)
+                break
+        return tuple(declarations)
 
     def _native_result_type(self, plan: FunctionPlan, result: ResultPlan | None) -> str:
         """Return the native procedure result type inside an external interface."""

@@ -232,21 +232,16 @@ def test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifeti
     np.testing.assert_allclose(field_view, np.array([6.0, 8.0], dtype=np.float64))
 
 
-def test_module_native_array_handles_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+def test_module_native_array_handles_use_canonical_plan(tmp_path: Path):
     """Replay module pointer/allocatable handles without derived-field owners."""
     source = tmp_path / "native" / "fpointer_handles_f90.f90"
     source.parent.mkdir()
     source.write_text(POINTER_HANDLE_SOURCE, encoding="utf-8")
     native_object = _compile_native_object(source, tmp_path / "native_build")
-    modules = {}
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract = tmp_path / f"{route}_pointer_handles" / "fpointer_handles_f90.pyi"
-        contract.parent.mkdir()
-        contract.write_text(
-            """from x2py.contracts import Aliased, Allocatable, Annotated, Float64, Pointer, PointerAssociation, PointerPolicy
+    contract = tmp_path / "pointer_handles" / "fpointer_handles_f90.pyi"
+    contract.parent.mkdir()
+    contract.write_text(
+        """from x2py.contracts import Aliased, Allocatable, Annotated, Float64, Pointer, PointerAssociation, PointerPolicy
 
 module_values: Annotated[
     Pointer[Float64[:]],
@@ -273,45 +268,43 @@ def sum_values(values: Float64[:]) -> Float64: ...
 def sum_pointer_descriptor(values: Pointer[Float64[:]]) -> Float64: ...
 def sum_allocatable_descriptor(values: Allocatable[Float64[:]]) -> Float64: ...
 """,
-            encoding="utf-8",
-        )
-        result = build_pyi_extension(
-            contract,
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / route,
-            **route_kwargs,
-        )
-        modules[route] = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+        encoding="utf-8",
+    )
+    result = build_pyi_extension(
+        contract,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
-    for module in modules.values():
-        pointer_handle = module.module_values
-        allocatable_handle = module.module_allocatable
-        assert isinstance(pointer_handle, PointerArray)
-        assert isinstance(allocatable_handle, AllocatableArray)
-        assert module.module_values is pointer_handle
-        assert module.module_allocatable is allocatable_handle
-        assert module.sum_pointer_descriptor(pointer_handle) == np.float64(-1.0)
-        assert module.sum_allocatable_descriptor(allocatable_handle) == np.float64(-1.0)
+    pointer_handle = module.module_values
+    allocatable_handle = module.module_allocatable
+    assert isinstance(pointer_handle, PointerArray)
+    assert isinstance(allocatable_handle, AllocatableArray)
+    assert module.module_values is pointer_handle
+    assert module.module_allocatable is allocatable_handle
+    assert module.sum_pointer_descriptor(pointer_handle) == np.float64(-1.0)
+    assert module.sum_allocatable_descriptor(allocatable_handle) == np.float64(-1.0)
 
-        module.associate_module_slice()
-        assert pointer_handle.associated is True
-        np.testing.assert_allclose(pointer_handle.to_numpy(), np.array([2.0, 4.0]))
-        assert module.sum_pointer_descriptor(pointer_handle) == np.float64(6.0)
-        with pytest.raises(ValueError, match="noncontiguous"):
-            module.sum_values(pointer_handle)
+    module.associate_module_slice()
+    assert pointer_handle.associated is True
+    np.testing.assert_allclose(pointer_handle.to_numpy(), np.array([2.0, 4.0]))
+    assert module.sum_pointer_descriptor(pointer_handle) == np.float64(6.0)
+    with pytest.raises(ValueError, match="noncontiguous"):
+        module.sum_values(pointer_handle)
 
-        module.associate_module_contiguous()
-        assert module.sum_values(pointer_handle) == np.float64(9.0)
-        pointer_handle.nullify()
-        assert pointer_handle.associated is False
+    module.associate_module_contiguous()
+    assert module.sum_values(pointer_handle) == np.float64(9.0)
+    pointer_handle.nullify()
+    assert pointer_handle.associated is False
 
-        module.allocate_module_values()
-        assert allocatable_handle.allocated is True
-        np.testing.assert_allclose(allocatable_handle.to_numpy(), np.array([10.0, 20.0, 30.0]))
-        assert module.sum_allocatable_descriptor(allocatable_handle) == np.float64(60.0)
-        allocatable_handle.deallocate()
-        assert allocatable_handle.allocated is False
+    module.allocate_module_values()
+    assert allocatable_handle.allocated is True
+    np.testing.assert_allclose(allocatable_handle.to_numpy(), np.array([10.0, 20.0, 30.0]))
+    assert module.sum_allocatable_descriptor(allocatable_handle) == np.float64(60.0)
+    allocatable_handle.deallocate()
+    assert allocatable_handle.allocated is False
 
 
 def test_pointer_array_handles_block_on_unsupported_result_owner_policy(

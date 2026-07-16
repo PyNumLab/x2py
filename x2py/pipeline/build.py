@@ -12,15 +12,11 @@ import time
 
 from filelock import FileLock
 
-from x2py.codegen.codegen import Codegen
-from x2py.codegen.scope import Scope
 from x2py.compiling.basic import CompileObj
 from x2py.compiling.compilers import Compiler, get_condaless_search_path
-from x2py.compiling.python_wrapper import _print_verbose_timing, create_shared_library
 from x2py.compiling.runtime_support import install_runtime_support
 from x2py.fortran_parser.parser import parse_fortran_project
 from x2py.probes.fortran_types import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
-from x2py.naming import NamingPolicy
 from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 from x2py.pipeline.wrapper_artifacts import GeneratedSourceFile, RenderedGeneratedWrapperArtifacts
 from x2py.semantics.fortran2ir import (
@@ -28,7 +24,6 @@ from x2py.semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_project_to_semantic_modules,
 )
-from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast
 from x2py.semantics.models import (
     PYTHON_EXPORTS_METADATA,
     PYTHON_EXPORTS_PREPARED_METADATA,
@@ -51,7 +46,6 @@ from x2py.wrapper_codegen import (
     WrapperCodeGenerator,
     WrapperPlanner,
     WrapperPlanSupportAnalyzer,
-    WrapperPlanSupportReport,
 )
 
 
@@ -76,224 +70,12 @@ _RENDERED_WRAPPER_SOURCE_LANGUAGES = {
 _RENDERED_WRAPPER_RUNTIME_IMPORTS = {
     "python_runtime": ("x2py_runtime/python_runtime",),
 }
-_WRAPPER_PLAN_COMPLETED_LANES = frozenset(
-    {
-        # Scalar rollout lanes.
-        "scalar-inputs",
-        "scalar-storage-inputs",
-        "scalar-raw-address-inputs",
-        "scalar-direct-results",
-        "scalar-hidden-outputs",
-        "scalar-multiple-results",
-        "scalar-optional-inputs",
-        "scalar-descriptor-inputs",
-        "scalar-writebacks",
-        "scalar-module-variables",
-        # String rollout lanes.
-        "string-value-inputs",
-        "string-storage-inputs",
-        "string-raw-address-inputs",
-        "string-optional-inputs",
-        "string-writebacks",
-        "fixed-string-direct-results",
-        "fixed-string-hidden-outputs",
-        # Ordinary-array rollout lanes.
-        "array-buffer-inputs",
-        "array-native-handle-actuals",
-        "array-raw-address-inputs",
-        "array-optional-inputs",
-        "array-writebacks",
-        "array-direct-results",
-        "array-hidden-outputs",
-        "array-multiple-results",
-        "array-copy-to-fortran",
-        # Native-array handle and descriptor rollout lanes.
-        "allocatable-descriptor-inputs",
-        "pointer-descriptor-inputs",
-        "optional-native-array-handles",
-        "projected-native-array-handles",
-        "owned-allocatable-results",
-        "owned-allocatable-hidden-outputs",
-        "allocatable-module-handles",
-        "pointer-module-handles",
-        "scalar-descriptor-results",
-        "deferred-string-descriptor-results",
-        # Derived-object rollout lanes.
-        "derived-wrapper-inputs",
-        "optional-derived-inputs",
-        "in-place-derived-inputs",
-        "typed-derived-value-inputs",
-        "derived-direct-results",
-        "derived-hidden-outputs",
-        "plain-derived-module-proxies",
-        "aliased-derived-module-objects",
-        "derived-module-constant-values",
-        "derived-scalar-fields",
-        "derived-string-fields",
-        "derived-array-fields",
-        "derived-native-handle-fields",
-        "derived-borrowed-field-owners",
-        # Generated class orchestration lanes.
-        "class-registration",
-        "default-class-constructors",
-        "bound-class-constructors",
-        "overloaded-class-constructors",
-        "instance-methods",
-        "static-methods",
-        "class-overloads",
-        "class-finalizers",
-        "class-inheritance",
-        "scalar-polymorphic-inputs",
-        # Immediate callback rollout lane.
-        "immediate-callbacks",
-        "callback-context-runtime",
-        "callback-same-thread-reentry",
-        "callback-fatal-errors",
-        "callback-scalar-values",
-        "callback-scalar-storage",
-        "callback-fixed-strings",
-        "callback-arrays",
-        "callback-derived-values",
-        "callback-results",
-        # Cross-cutting rollout lanes.
-        "void-calls",
-        "python-namespaces",
-        "native-call-runtime",
-        "native-status-errors",
-    }
-)
-_WRAPPER_PLAN_EVIDENCE = (
-    "tests/wrapper/fortran/scalars/test_verified_baseline.py::"
-    "test_fmath_scalar_sources_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
-    "test_fixed_optional_scalar_wrapper_plan_route_matches_all_presence_states",
-    "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
-    "test_optional_allocatable_scalar_descriptor_distinguishes_omitted_none_and_value",
-    "tests/wrapper/fortran/function_calls/test_scalar_writeback_plan.py::"
-    "test_scalar_copy_in_out_returns_replacement_through_both_routes",
-    "tests/wrapper/fortran/module_state/test_scalar_module_variable_plan.py::"
-    "test_whole_scalar_module_variable_behavior_matches_legacy_route",
-    "tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py::"
-    "test_complete_general_source_preserves_namespaces_through_both_routes",
-    "tests/wrapper/fortran/runtime_behavior/test_runtime_policies.py::"
-    "test_compiled_runtime_policies_release_gil_and_project_native_errors",
-    "tests/wrapper/fortran/runtime_behavior/test_runtime_policies.py::"
-    "test_pyi_runtime_policies_release_gil_and_project_native_errors",
-    "tests/wrapper/fortran/runtime_behavior/test_runtime_recursion.py::test_recursive_native_runtime_calls",
-    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
-    "test_scalar_value_storage_raw_address_out_and_inout_match_both_routes",
-    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
-    "test_scalar_primitive_kinds_match_both_routes_without_array_blockers",
-    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
-    "test_multiple_scalar_results_match_both_routes_without_array_blockers",
-    "tests/wrapper/fortran/strings/test_character_arguments.py::"
-    "test_required_scalar_string_inputs_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/strings/test_character_arguments.py::"
-    "test_fixed_string_results_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
-    "test_fixed_hidden_string_output_matches_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
-    "test_fixed_string_replacement_and_identity_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/strings/test_character_edge_cases.py::"
-    "test_assumed_and_optional_string_replacements_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
-    "test_fixed_string_storage_and_raw_address_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/scalars/test_verified_baseline.py::"
-    "test_required_array_buffers_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/arrays/test_multidimensional_arrays.py::"
-    "test_dense_strided_and_projected_arrays_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/arrays/test_array_results.py::"
-    "test_ordinary_array_results_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/arrays/test_assumed_rank_arrays.py::"
-    "test_assumed_rank_arrays_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
-    "test_optional_array_buffers_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/function_calls/test_output_arguments.py::"
-    "test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/strings/test_character_arguments.py::"
-    "test_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
-    "test_raw_array_addresses_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::"
-    "test_copy_f_preserves_logical_axes_through_binding_owned_temporary",
-    "tests/wrapper/fortran/strings/test_character_arguments.py::"
-    "test_raw_fixed_width_character_arrays_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/derived_types/test_pointers.py::"
-    "test_module_native_array_handles_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/function_calls/test_optional_arguments.py::"
-    "test_optional_array_descriptors_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/module_state/test_allocatable_replacement.py::"
-    "test_projected_allocatable_descriptor_matches_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/arrays/test_array_results.py::"
-    "test_owned_allocatable_results_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/arrays/test_array_results.py::"
-    "test_array_results_follow_data_buffer_and_descriptor_handle_contracts",
-    "tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py::"
-    "test_scalar_descriptor_results_copy_values_or_none_through_wrapper_plan_route",
-    "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
-    "test_scalar_descriptor_module_variables_return_copied_optional_values",
-    "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
-    "test_plain_allocatable_module_array_exposes_current_live_view",
-    "tests/wrapper/fortran/strings/test_character_arguments.py::"
-    "test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/strings/test_character_arguments.py::"
-    "test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_scalar_derived_objects_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_value_copy_and_optional_derived_inputs_match_source_oracle",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_plain_module_derived_proxy_reads_and_writes_live_members",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_aliased_module_derived_object_uses_direct_live_field_handles",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_derived_module_constant_returns_independent_owned_values",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_fixed_string_fields_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_pointer_field_descriptor_views_match_legacy_and_wrapper_plan_routes",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_borrowed_child_retains_owner_and_finalizes_exactly_once",
-    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
-    "test_eligible_derived_contract_selects_production_plan_without_legacy_lowering",
-    "tests/wrapper/fortran/derived_types/test_phase9_bound_constructors.py::"
-    "test_bound_constructor_replaces_field_initialization_and_reuses_method_plan",
-    "tests/wrapper/fortran/naming/test_phase9_class_overloads.py::"
-    "test_exact_method_overloads_match_without_trial_calls",
-    "tests/wrapper/fortran/naming/test_phase9_class_overloads.py::"
-    "test_constructor_overloads_share_owned_allocation_and_exact_matching",
-    "tests/wrapper/fortran/callbacks/test_all_callback_shapes.py::"
-    "test_immediate_callbacks_cover_all_supported_argument_shapes",
-    "tests/wrapper/fortran/callbacks/test_scalar_callbacks.py::"
-    "test_callback_exception_prints_traceback_and_aborts_host_process",
-)
 
 
-@dataclass(frozen=True)
-class WrapperPlanRouteDecision:
-    """One inspectable route decision for a policy-completed generation unit."""
-
-    owner_path: str
-    selected_route: str
-    support_report: WrapperPlanSupportReport
-    rollout_eligible: bool
-    rollout_evidence: tuple[str, ...]
-    selection_reason: str
-
-    @property
-    def covered_lanes(self) -> tuple[str, ...]:
-        """Return the completed lanes reported for this generation unit."""
-        return self.support_report.covered_lanes
-
-    @property
-    def blockers(self):
-        """Return stable owner-path blockers from support analysis."""
-        return self.support_report.blockers
-
-    @property
-    def uses_wrapper_plan(self) -> bool:
-        """Return whether this decision selects wrapper-plan generation."""
-        return self.selected_route == "wrapper-plan"
+def _print_verbose_timing(verbose: bool | int, label: str, elapsed: float) -> None:
+    """Print one elapsed build-stage timing when verbose output is enabled."""
+    if verbose:
+        print(f">> Timing :: {label}: {elapsed:.3f}s")
 
 
 @dataclass(frozen=True)
@@ -710,109 +492,59 @@ def _build_rendered_wrapper_extension(
     )
 
 
-def _select_wrapper_plan_route(
-    module: SemanticModule,
+def _attach_build_makefile(
+    result: WrapperBuildResult,
     *,
-    makefile: bool,
-    strict_wrapper_names: bool,
-    force_legacy: bool = False,
-    force_wrapper_plan: bool = False,
-) -> WrapperPlanRouteDecision:
-    """Select one complete wrapper route from completed support and rollout data."""
-    if force_legacy and force_wrapper_plan:
-        raise ValueError("cannot force both legacy and wrapper-plan routes")
-
-    support_report = WrapperPlanSupportAnalyzer().analyze(module)
-    support_report.freeze()
-    if force_legacy:
-        return WrapperPlanRouteDecision(
-            owner_path=module.name,
-            selected_route="legacy",
-            support_report=support_report,
-            rollout_eligible=False,
-            rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-            selection_reason="legacy route forced for migration rollback or comparison",
-        )
-    if not support_report.supported:
-        if force_wrapper_plan:
-            details = "; ".join(f"{item.owner_path}: {item.reason}" for item in support_report.blockers)
-            raise ValueError(
-                f"cannot force wrapper-plan route for unsupported generation unit {module.name!r}: {details}"
-            )
-        return WrapperPlanRouteDecision(
-            owner_path=module.name,
-            selected_route="legacy",
-            support_report=support_report,
-            rollout_eligible=False,
-            rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-            selection_reason="generation unit has unsupported wrapper-plan owners",
-        )
-    if makefile or strict_wrapper_names:
-        mode = "makefile" if makefile else "strict-wrapper-name"
-        return WrapperPlanRouteDecision(
-            owner_path=module.name,
-            selected_route="legacy",
-            support_report=support_report,
-            rollout_eligible=False,
-            rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-            selection_reason=f"{mode} mode remains on the legacy route",
-        )
-    if force_wrapper_plan:
-        return WrapperPlanRouteDecision(
-            owner_path=module.name,
-            selected_route="wrapper-plan",
-            support_report=support_report,
-            rollout_eligible=False,
-            rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-            selection_reason="wrapper-plan route forced for internal migration verification",
-        )
-    if not frozenset(support_report.covered_lanes) <= _WRAPPER_PLAN_COMPLETED_LANES:
-        return WrapperPlanRouteDecision(
-            owner_path=module.name,
-            selected_route="legacy",
-            support_report=support_report,
-            rollout_eligible=False,
-            rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-            selection_reason="covered lanes exceed the recorded wrapper-plan parity evidence",
-        )
-    return WrapperPlanRouteDecision(
-        owner_path=module.name,
-        selected_route="wrapper-plan",
-        support_report=support_report,
-        rollout_eligible=True,
-        rollout_evidence=_WRAPPER_PLAN_EVIDENCE,
-        selection_reason="whole generation unit is covered by completed wrapper-plan lanes",
+    compiler: Compiler,
+    source_objects: tuple[CompileObj, ...],
+    extra_dependencies: tuple[Path, ...] = (),
+    build_manifest: Path | None = None,
+) -> WrapperBuildResult:
+    """Attach one replayable Makefile to an unexecuted canonical build."""
+    build_makefile = _write_build_makefile(
+        path=result.output_dir / "Makefile.x2py",
+        commands=compiler.command_log,
+        source_objects=source_objects,
+        working_directory=Path.cwd(),
+        extra_dependencies=extra_dependencies,
+    )
+    additions = tuple(path for path in (build_manifest, build_makefile) if path is not None)
+    return replace(
+        result,
+        build_makefile=build_makefile,
+        compiled=False,
+        generated_files=(*result.generated_files, *additions),
+        build_manifest=build_manifest,
     )
 
 
-def _render_selected_wrapper_plan(module: SemanticModule) -> RenderedGeneratedWrapperArtifacts:
-    """Render one selected complete module through the wrapper-plan route."""
+def _render_wrapper_plan(module: SemanticModule) -> RenderedGeneratedWrapperArtifacts:
+    """Render one policy-completed module through the canonical generator."""
     plan = WrapperPlanner().build(module)
     return WrapperCodeGenerator().generate(plan)
+
+
+def _require_wrapper_plan_support(module: SemanticModule) -> None:
+    """Reject unsupported completed owners without retrying another generator."""
+    report = WrapperPlanSupportAnalyzer().analyze(module)
+    report.freeze()
+    if report.supported:
+        return
+    details = "; ".join(f"{item.owner_path}: {item.reason}" for item in report.blockers)
+    raise ValueError(f"Unsupported wrapper generation unit {module.name!r}: {details}")
 
 
 def _generated_wrapper_plan_artifacts(
     module: SemanticModule,
     *,
-    makefile: bool,
     strict_wrapper_names: bool,
-    force_legacy: bool,
-    force_wrapper_plan: bool,
     verbose: bool | int = False,
-) -> RenderedGeneratedWrapperArtifacts | None:
-    """Complete policy and generate selected wrapper-plan artifacts, if chosen."""
+) -> RenderedGeneratedWrapperArtifacts:
+    """Complete policy and generate the one production wrapper representation."""
     creation_started = time.perf_counter()
-    complete_semantic_policies(module)
-    decision = _select_wrapper_plan_route(
-        module,
-        makefile=makefile,
-        strict_wrapper_names=strict_wrapper_names,
-        force_legacy=force_legacy,
-        force_wrapper_plan=force_wrapper_plan,
-    )
-    if not decision.uses_wrapper_plan:
-        return None
-    rendered = _render_selected_wrapper_plan(module)
+    complete_semantic_policies(module, strict_wrapper_names=strict_wrapper_names)
+    _require_wrapper_plan_support(module)
+    rendered = _render_wrapper_plan(module)
     _print_verbose_timing(verbose, "Wrapper creation", time.perf_counter() - creation_started)
     return rendered
 
@@ -1708,22 +1440,6 @@ def _merge_wrapper_modules(modules: list[SemanticModule], *, name: str | None = 
     )
 
 
-def _wrapper_codegen_module_name(codegen_ast, requested_name: str, *, explicit_output_name: bool) -> str:
-    if explicit_output_name:
-        module_name = requested_name
-    else:
-        module_name = codegen_ast.scope.naming_policy.reserve_public_name(
-            (),
-            requested_name,
-            category="module",
-            owner=requested_name,
-        )
-
-    codegen_ast._name = module_name
-    codegen_ast.scope._original_symbol[module_name] = module_name
-    return str(module_name)
-
-
 def _wrapper_module_metadata(modules: list[SemanticModule]) -> dict[str, object]:
     metadata: dict[str, object] = {"wrapper_native_modules": _wrapper_native_modules(modules)}
     if any(module.metadata.get(PYTHON_EXPORTS_PREPARED_METADATA) for module in modules):
@@ -1956,8 +1672,6 @@ def build_fortran_extension(
     wrapper_compiler_debug: bool = False,
     wrapper_fortran_flags: Iterable[str] | None = None,
     wrapper_c_flags: Iterable[str] | None = None,
-    _force_legacy_wrapper_route: bool = False,
-    _force_wrapper_plan_route: bool = False,
 ) -> WrapperBuildResult:
     """Build one extension, or generate its Makefile, from ordered sources."""
 
@@ -2005,10 +1719,7 @@ def build_fortran_extension(
     module = _merge_wrapper_modules(modules, name=requested_name)
     rendered_wrapper_plan = _generated_wrapper_plan_artifacts(
         module,
-        makefile=makefile,
         strict_wrapper_names=strict_wrapper_names,
-        force_legacy=_force_legacy_wrapper_route,
-        force_wrapper_plan=_force_wrapper_plan_route,
         verbose=verbose,
     )
 
@@ -2032,93 +1743,26 @@ def build_fortran_extension(
             verbose=verbose,
         )
 
-    if rendered_wrapper_plan is not None:
-        return _build_rendered_wrapper_extension(
-            rendered_wrapper_plan,
-            output_dir=output_path,
-            shared_library_output_dir=shared_library_output_path,
-            sources=source_paths,
-            native_build_plan=native_build_plan,
-            native_dependencies=source_objects,
-            native_link_args=_rendered_wrapper_native_link_args(native_build_plan),
-            wrapper_fortran_flags=wrapper_fortran_flags,
-            wrapper_c_flags=wrapper_c_flags,
-            compiler=compiler,
-            verbose=verbose,
-        )
-
-    scope = Scope(
-        name=module.name,
-        scope_type="module",
-        naming_policy=NamingPolicy(strict_public_names=strict_wrapper_names),
-        public_namespace=(module.name.casefold(),),
-    )
-    codegen_ast = semantic_ir_to_codegen_ast(module, scope)
-    module_name = _wrapper_codegen_module_name(
-        codegen_ast,
-        requested_name,
-        explicit_output_name=output_name is not None,
-    )
-
-    codegen = Codegen(module_name, codegen_ast, codegen_ast.scope)
-    module_obj = CompileObj(
-        file_name=module_name,
-        folder=str(output_path),
-        flags=wrapper_fortran_flags,
-        has_target_file=False,
-    )
-    shared_library, _timings = create_shared_library(
-        codegen,
-        module_obj,
-        language="fortran",
-        wrapper_flags=wrapper_c_flags,
-        x2py_dirpath=str(output_path),
-        output_dirpath=str(shared_library_output_path),
+    result = _build_rendered_wrapper_extension(
+        rendered_wrapper_plan,
+        output_dir=output_path,
+        shared_library_output_dir=shared_library_output_path,
+        sources=source_paths,
+        native_build_plan=native_build_plan,
+        native_dependencies=source_objects,
+        native_link_args=_rendered_wrapper_native_link_args(native_build_plan),
+        wrapper_fortran_flags=wrapper_fortran_flags,
+        wrapper_c_flags=wrapper_c_flags,
         compiler=compiler,
-        sharedlib_modname=module_name,
-        dependencies=source_objects,
         verbose=verbose,
     )
-
-    shared_library_path = Path(shared_library)
-    build_makefile = (
-        _write_build_makefile(
-            path=output_path / "Makefile.x2py",
-            commands=compiler.command_log,
+    if makefile:
+        result = _attach_build_makefile(
+            result,
+            compiler=compiler,
             source_objects=source_objects,
-            working_directory=Path.cwd(),
         )
-        if makefile
-        else None
-    )
-    generated_sources = tuple(
-        path
-        for path in (
-            output_path / f"bind_c_{module_name}_wrapper.f90",
-            output_path / f"{module_name}_wrapper.c",
-            output_path / f"{module_name}_wrapper.h",
-        )
-        if path.exists()
-    )
-    generated_files = _expected_generated_files(
-        source_objects=source_objects,
-        output_dir=output_path,
-        module_name=module_name,
-        shared_library=shared_library_path,
-    )
-    if build_makefile is not None:
-        generated_files = (*generated_files, build_makefile)
-    return WrapperBuildResult(
-        sources=source_paths,
-        module_name=module_name,
-        output_dir=output_path,
-        shared_library=shared_library_path,
-        build_makefile=build_makefile,
-        compiled=not makefile,
-        generated_sources=generated_sources,
-        generated_files=generated_files,
-        native_build_plan=native_build_plan,
-    )
+    return result
 
 
 def build_pyi_extension(
@@ -2140,8 +1784,6 @@ def build_pyi_extension(
     wrapper_compiler_debug: bool = False,
     wrapper_fortran_flags: Iterable[str] | None = None,
     wrapper_c_flags: Iterable[str] | None = None,
-    _force_legacy_wrapper_route: bool = False,
-    _force_wrapper_plan_route: bool = False,
 ) -> WrapperBuildResult:
     """Build one extension from one entry `.pyi` and native link inputs."""
 
@@ -2175,10 +1817,7 @@ def build_pyi_extension(
     module = _merge_wrapper_modules(modules, name=requested_name)
     rendered_wrapper_plan = _generated_wrapper_plan_artifacts(
         module,
-        makefile=makefile,
         strict_wrapper_names=strict_wrapper_names,
-        force_legacy=_force_legacy_wrapper_route,
-        force_wrapper_plan=_force_wrapper_plan_route,
         verbose=verbose,
     )
 
@@ -2211,132 +1850,45 @@ def build_pyi_extension(
         )
 
     native_array_build_requirements = native_array_handle_build_requirements(module)
-    if rendered_wrapper_plan is not None:
-        result = _build_rendered_wrapper_extension(
-            rendered_wrapper_plan,
-            output_dir=output_path,
-            shared_library_output_dir=shared_library_output_path,
-            sources=bundle.paths,
-            native_build_plan=native_build_plan,
-            native_dependencies=native_source_objects,
-            native_link_args=_rendered_wrapper_native_link_args(native_build_plan),
-            wrapper_fortran_flags=wrapper_fortran_flags,
-            wrapper_c_flags=wrapper_c_flags,
-            compiler=compiler,
-            verbose=verbose,
-        )
-        return _with_pyi_manifest(
-            result,
-            bundle=bundle,
-            strict_wrapper_names=strict_wrapper_names,
-            requested_output_name=output_name,
-            native_fortran_flags=native_inputs.source_flags,
-            wrapper_compiler_debug=wrapper_compiler_debug,
-            wrapper_fortran_flags=wrapper_fortran_flags,
-            wrapper_c_flags=wrapper_c_flags,
-            native_array_build_requirements=native_array_build_requirements,
-        )
-
-    scope = Scope(
-        name=module.name,
-        scope_type="module",
-        naming_policy=NamingPolicy(strict_public_names=strict_wrapper_names),
-        public_namespace=(module.name.casefold(),),
-    )
-    codegen_ast = semantic_ir_to_codegen_ast(module, scope)
-    module_name = _wrapper_codegen_module_name(
-        codegen_ast,
-        requested_name,
-        explicit_output_name=output_name is not None,
-    )
-    codegen = Codegen(module_name, codegen_ast, codegen_ast.scope)
-    module_obj = CompileObj(
-        file_name=module_name,
-        folder=str(output_path),
-        flags=wrapper_fortran_flags,
-        has_target_file=False,
-        include=include_dirs,
-        libdir=native_inputs.library_dirs,
-        link_args=_native_link_args(native_build_plan.link_items),
-    )
-    shared_library, _timings = create_shared_library(
-        codegen,
-        module_obj,
-        language="fortran",
-        wrapper_flags=wrapper_c_flags,
-        x2py_dirpath=str(output_path),
-        output_dirpath=str(shared_library_output_path),
+    result = _build_rendered_wrapper_extension(
+        rendered_wrapper_plan,
+        output_dir=output_path,
+        shared_library_output_dir=shared_library_output_path,
+        sources=bundle.paths,
+        native_build_plan=native_build_plan,
+        native_dependencies=native_source_objects,
+        native_link_args=_rendered_wrapper_native_link_args(native_build_plan),
+        wrapper_fortran_flags=wrapper_fortran_flags,
+        wrapper_c_flags=wrapper_c_flags,
         compiler=compiler,
-        sharedlib_modname=module_name,
-        dependencies=(),
         verbose=verbose,
     )
-
-    shared_library_path = Path(shared_library)
-    manifest = _pyi_build_manifest(
+    result = _with_pyi_manifest(
+        result,
         bundle=bundle,
-        module_name=module_name,
-        output_dir=output_path,
-        shared_library=shared_library_path,
         strict_wrapper_names=strict_wrapper_names,
         requested_output_name=output_name,
         native_fortran_flags=native_inputs.source_flags,
         wrapper_compiler_debug=wrapper_compiler_debug,
         wrapper_fortran_flags=wrapper_fortran_flags,
         wrapper_c_flags=wrapper_c_flags,
-        native_build_plan=native_build_plan,
         native_array_build_requirements=native_array_build_requirements,
-        manifest_dir=output_path,
     )
-    build_manifest = _write_build_manifest(output_path / _BUILD_MANIFEST_NAME, manifest) if makefile else None
-    makefile_dependencies = (
-        *bundle.paths,
-        *_link_item_paths(native_build_plan.link_items),
-        *((build_manifest,) if build_manifest is not None else ()),
-    )
-    build_makefile = (
-        _write_build_makefile(
-            path=output_path / "Makefile.x2py",
-            commands=compiler.command_log,
+    if makefile:
+        build_manifest = _write_build_manifest(output_path / _BUILD_MANIFEST_NAME, result.manifest)
+        dependencies = (
+            *bundle.paths,
+            *_link_item_paths(native_build_plan.link_items),
+            build_manifest,
+        )
+        result = _attach_build_makefile(
+            result,
+            compiler=compiler,
             source_objects=native_source_objects,
-            working_directory=Path.cwd(),
-            extra_dependencies=makefile_dependencies,
+            extra_dependencies=dependencies,
+            build_manifest=build_manifest,
         )
-        if makefile
-        else None
-    )
-    generated_sources = tuple(
-        path
-        for path in (
-            output_path / f"bind_c_{module_name}_wrapper.f90",
-            output_path / f"{module_name}_wrapper.c",
-            output_path / f"{module_name}_wrapper.h",
-        )
-        if path.exists()
-    )
-    generated_files = _expected_generated_files(
-        source_objects=native_source_objects,
-        output_dir=output_path,
-        module_name=module_name,
-        shared_library=shared_library_path,
-    )
-    if build_manifest is not None:
-        generated_files = (*generated_files, build_manifest)
-    if build_makefile is not None:
-        generated_files = (*generated_files, build_makefile)
-    return WrapperBuildResult(
-        sources=bundle.paths,
-        module_name=module_name,
-        output_dir=output_path,
-        shared_library=shared_library_path,
-        build_makefile=build_makefile,
-        compiled=not makefile,
-        generated_sources=generated_sources,
-        generated_files=generated_files,
-        native_build_plan=native_build_plan,
-        build_manifest=build_manifest,
-        manifest=manifest,
-    )
+    return result
 
 
 def build_pyi_extension_from_manifest(

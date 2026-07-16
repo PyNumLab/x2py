@@ -283,6 +283,10 @@ def test_allocatable_module_fields_and_results_expose_lifetime_safe_handles(
     )
 
     assert "Functions" in module.__doc__
+    assert "Module Attributes" in module.__doc__
+    assert "module_values : AllocatableArray[float64]" in module.__doc__
+    assert "Persistent allocatable descriptor handle." in module.__doc__
+    assert "Replacement assignment is not supported." in module.__doc__
     assert "build_values" in module.__doc__
     assert "buffer" in module.__doc__
     assert "build_values(n) -> AllocatableArray[float64]" in module.build_values.__doc__

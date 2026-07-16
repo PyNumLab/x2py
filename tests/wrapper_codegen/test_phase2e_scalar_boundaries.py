@@ -121,7 +121,8 @@ def test_scalar_copy_in_out_reuses_one_binding_local_without_bridge_copy():
     assert c_source.count("int32_t value;") == 1
     assert "value = PyInt32_to_Int32(value_obj);" in c_source
     assert "bind_c_bump(&value);" in c_source
-    assert "PyObject * result_obj = Int32_to_PyLong(&value);" in c_source
+    assert "PyObject * result_obj = NULL;" in c_source
+    assert "result_obj = Int32_to_PyLong(&value);" in c_source
     assert "integer(c_int32_t) :: value" in bridge_source
     assert "call native_bump(value)" in bridge_source
     assert "value =" not in bridge_source

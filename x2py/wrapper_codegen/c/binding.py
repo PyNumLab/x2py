@@ -19,7 +19,7 @@ from x2py.semantics.wrapper_policy import (
     CallbackTransferAction,
     ClassConstructorKind,
     ClassMethodKind,
-    ClassOverloadMatchKind,
+    OverloadMatchKind,
     DerivedActualAccess,
     DerivedCallAction,
     DerivedDummyCategory,
@@ -40,6 +40,7 @@ from x2py.semantics.wrapper_policy import (
     TransformationAction,
     TransformationLayer,
     WritebackPhase,
+    overload_builtin_scalar_family,
 )
 from x2py.wrapper_codegen.nodes import (
     CAllowThreadsBegin,
@@ -73,8 +74,8 @@ from x2py.wrapper_codegen.plan import (
     CallbackHandoffPlan,
     CallbackTransferPlan,
     ClassMethodPlan,
-    ClassOverloadArgumentMatchPlan,
-    ClassOverloadPlan,
+    OverloadArgumentMatchPlan,
+    OverloadPlan,
     ClassSurfacePlan,
     DatatypeFamily,
     DerivedFieldPlan,
@@ -138,6 +139,11 @@ class CBindingGenerator(ClassVisitor):
                 raise ValueError(f"Unsupported C module handle for {variable.owner_path!r}")
             if variable.datatype_family is not DatatypeFamily.STRING:
                 PrimitiveScalarTypeRegistry.type_for(variable.semantic_type_name)
+            return
+        if variable.binding.getter_action is ModuleGetterAction.BORROWED_ARRAY_VIEW:
+            if variable.array is None or variable.array.rank is None:
+                raise ValueError(f"Unsupported C module array view for {variable.owner_path!r}")
+            PrimitiveScalarTypeRegistry.type_for(variable.semantic_type_name)
             return
         if variable.binding.getter_action is ModuleGetterAction.DERIVED_OBJECT:
             if variable.derived is None:
@@ -291,6 +297,7 @@ class CBindingGenerator(ClassVisitor):
                 )
             if transformation.action not in {
                 TransformationAction.COPY_ARRAY_REPRESENTATION,
+                TransformationAction.PUBLISH_ARRAY_REPLACEMENT,
                 TransformationAction.RELEASE_TEMPORARY,
             }:
                 raise ValueError(
@@ -570,7 +577,10 @@ class CBindingGenerator(ClassVisitor):
         if action.binding is None:
             return
         if action.object_kind is ObjectKind.NUMPY_ARRAY:
-            if action.binding.codegen_action is not CodegenAction.IN_PLACE_ARGUMENT:
+            if action.binding.codegen_action not in {
+                CodegenAction.COPY_IN_OUT,
+                CodegenAction.IN_PLACE_ARGUMENT,
+            }:
                 raise ValueError(f"Unsupported C array writeback for {action.owner_path!r}")
             return
         if action.object_kind is ObjectKind.DERIVED_TYPE:
@@ -599,6 +609,12 @@ class CBindingGenerator(ClassVisitor):
 
     def _visit_ModulePlan(self, plan: ModulePlan) -> tuple[CModule, CHeader]:
         """Return a complete C module and header from one shared plan."""
+        self._class_python_names = {
+            surface.type_identity: surface.python_names[0]
+            for namespace in plan.namespaces
+            for surface in namespace.classes
+            if surface.python_names
+        }
         functions = tuple(function for namespace in plan.namespaces for function in self.visit(namespace))
         needs_runtime = self.requires_runtime_support(plan)
         needs_free = self._module_needs_allocator(plan)
@@ -924,7 +940,7 @@ class CBindingGenerator(ClassVisitor):
             case CallbackABIKind.VALUE:
                 nodes = self._callback_scalar_value_nodes(transfer, target)
             case CallbackABIKind.REFERENCE:
-                nodes = self._callback_scalar_storage_nodes(transfer, target)
+                nodes = self._callback_scalar_reference_nodes(transfer, target)
             case CallbackABIKind.DATA_AND_SHAPE:
                 nodes = self._callback_array_nodes(transfer, position, target)
             case CallbackABIKind.DATA_AND_LENGTH:
@@ -950,6 +966,24 @@ class CBindingGenerator(ClassVisitor):
                 target,
                 "PyObject *",
                 CodeExpression(f"{scalar.python_result_converter}(&{parameter})"),
+            ),
+        )
+
+    def _callback_scalar_reference_nodes(
+        self,
+        transfer: CallbackTransferPlan,
+        target: str,
+    ) -> tuple[CDeclaration, ...]:
+        """Convert read-only reference input by value; preserve writable storage."""
+        if transfer.access != "read":
+            return self._callback_scalar_storage_nodes(transfer, target)
+        scalar = PrimitiveScalarTypeRegistry.type_for(transfer.semantic_type_name)
+        parameter = self._callback_parameter_base_name(transfer)
+        return (
+            CDeclaration(
+                target,
+                "PyObject *",
+                CodeExpression(f"{scalar.python_result_converter}(({scalar.c_spelling} *){parameter}_data)"),
             ),
         )
 
@@ -1146,7 +1180,8 @@ class CBindingGenerator(ClassVisitor):
             "!PyArray_IS_F_CONTIGUOUS((PyArrayObject *)callback_result)",
         ]
         invalid.extend(
-            f"PyArray_DIM((PyArrayObject *)callback_result, {axis}) != (npy_intp)({extent})"
+            "PyArray_DIM((PyArrayObject *)callback_result, "
+            f"{axis}) != (npy_intp)({self._callback_extent_value_expression(callback, extent)})"
             for axis, extent in enumerate(shape)
         )
         return (
@@ -1169,6 +1204,23 @@ class CBindingGenerator(ClassVisitor):
             CExpressionStatement(CodeExpression(f"PyGILState_Release({gil})")),
             CReturn(CodeExpression("callback_value")),
         )
+
+    def _callback_extent_value_expression(
+        self,
+        callback: CallbackHandoffPlan,
+        extent: str,
+    ) -> str:
+        """Spell one completed callback extent source in the flattened C ABI."""
+        source = next((item for item in callback.arguments if item.name == extent), None)
+        if source is None:
+            return extent
+        base = self._callback_parameter_base_name(source)
+        if source.abi is CallbackABIKind.VALUE:
+            return base
+        if source.abi is CallbackABIKind.REFERENCE:
+            scalar = PrimitiveScalarTypeRegistry.type_for(source.semantic_type_name)
+            return f"*(({scalar.c_spelling} *){base}_data)"
+        raise ValueError(f"Callback extent {extent!r} in {callback.owner_path!r} is not a scalar value or reference")
 
     def _callback_derived_result_nodes(
         self,
@@ -4217,19 +4269,20 @@ class CBindingGenerator(ClassVisitor):
     ) -> tuple[CFunctionPrototype | CDeclaration, ...]:
         """Declare private operation wrappers and their callable definitions."""
         declarations = []
-        for variable in self._module_native_array_variables(plan):
-            declarations.extend(
-                (
+        for variable in self._module_array_owner_variables(plan):
+            if variable.binding.getter_action is ModuleGetterAction.NATIVE_ARRAY_HANDLE:
+                declarations.append(
                     CDeclaration(
                         self._module_native_array_cache_name(variable),
                         "static PyObject *",
                         CodeExpression("NULL"),
-                    ),
-                    CDeclaration(
-                        self._module_native_array_owner_name(variable),
-                        "static PyObject *",
-                        CodeExpression("NULL"),
-                    ),
+                    )
+                )
+            declarations.append(
+                CDeclaration(
+                    self._module_native_array_owner_name(variable),
+                    "static PyObject *",
+                    CodeExpression("NULL"),
                 )
             )
             if variable.native_array_handle is None:
@@ -4298,6 +4351,15 @@ class CBindingGenerator(ClassVisitor):
             variable
             for variable in self._variables(plan)
             if variable.binding.getter_action is ModuleGetterAction.NATIVE_ARRAY_HANDLE
+        )
+
+    def _module_array_owner_variables(self, plan: ModulePlan) -> tuple[ModuleVariablePlan, ...]:
+        """Return module arrays whose Python values retain the native module."""
+        return tuple(
+            variable
+            for variable in self._variables(plan)
+            if variable.binding.getter_action
+            in {ModuleGetterAction.BORROWED_ARRAY_VIEW, ModuleGetterAction.NATIVE_ARRAY_HANDLE}
         )
 
     # Borrowed module native-array-handle operations.
@@ -5041,6 +5103,8 @@ class CBindingGenerator(ClassVisitor):
                 return self._lower_module_getter_direct_value(plan)
             case ModuleGetterAction.NULLABLE_SNAPSHOT:
                 return self._lower_module_getter_nullable_snapshot(plan)
+            case ModuleGetterAction.BORROWED_ARRAY_VIEW:
+                return self._lower_module_getter_borrowed_array_view(plan)
             case ModuleGetterAction.NATIVE_ARRAY_HANDLE:
                 return self._lower_module_getter_native_array_handle(plan)
             case ModuleGetterAction.DERIVED_OBJECT:
@@ -5105,6 +5169,56 @@ class CBindingGenerator(ClassVisitor):
                     ),
                     CExpressionStatement(CodeExpression("free(data)")),
                     CReturn(CodeExpression("result")),
+                ),
+            ),
+        )
+
+    def _lower_module_getter_borrowed_array_view(self, plan: ModuleVariablePlan) -> tuple[CFunction, ...]:
+        """Create one live Fortran-ordered NumPy alias over fixed module storage."""
+        array = plan.array
+        if array is None or array.rank is None:
+            raise ValueError(f"Module array view {plan.owner_path!r} has no fixed rank")
+        scalar = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
+        owner = self._module_native_array_owner_name(plan)
+        extents = tuple(f"extent_{axis}" for axis in range(array.rank))
+        strides = "strides"
+        return (
+            CFunction(
+                self._module_getter_name(plan),
+                "PyObject *",
+                storage="static",
+                body=(
+                    *(CDeclaration(name, "int64_t", CodeExpression("0")) for name in extents),
+                    CDeclaration(
+                        "data",
+                        "void *",
+                        CodeExpression(
+                            f"{self._module_bridge_getter_name(plan)}({', '.join(f'&{name}' for name in extents)})"
+                        ),
+                    ),
+                    CDeclaration(
+                        f"dimensions[{array.rank}]",
+                        "npy_intp",
+                        CodeExpression("{" + ", ".join(extents) + "}"),
+                    ),
+                    CDeclaration(f"{strides}[{array.rank}]", "npy_intp"),
+                    CExpressionStatement(CodeExpression(f"{strides}[0] = (npy_intp)sizeof({scalar.c_spelling})")),
+                    *(
+                        CExpressionStatement(
+                            CodeExpression(f"{strides}[{axis}] = {strides}[{axis - 1}] * dimensions[{axis - 1}]")
+                        )
+                        for axis in range(1, array.rank)
+                    ),
+                    CDeclaration(
+                        "result",
+                        "PyObject *",
+                        CodeExpression(
+                            f"PyArray_New(&PyArray_Type, {array.rank}, dimensions, {scalar.numpy_type_macro}, "
+                            f"{strides}, data, 0, NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_ALIGNED | "
+                            "NPY_ARRAY_WRITEABLE, NULL)"
+                        ),
+                    ),
+                    *self._ordinary_array_field_owner_nodes("result", owner),
                 ),
             ),
         )
@@ -6093,8 +6207,8 @@ class CBindingGenerator(ClassVisitor):
         nodes = [
             *self._ordinary_array_argument_declarations(plan, names),
             self._array_type_and_rank_check(plan, names, array),
-            *self._array_access_checks(plan, array),
             *self._array_layout_checks(plan, array),
+            *self._array_access_checks(plan, array),
             *self._array_shape_checks(plan, context, array),
         ]
         nodes.extend(self._array_extraction_nodes(plan, names, array))
@@ -6149,6 +6263,24 @@ class CBindingGenerator(ClassVisitor):
             CDeclaration(names.object_name, "PyObject *"),
             CDeclaration(names.value_name, "void *", CodeExpression("NULL")),
             *(CDeclaration(name, "int64_t", CodeExpression("0")) for name in names.extent_names),
+            *(
+                CDeclaration(name, "int64_t", CodeExpression("0"))
+                for name in names.upper_bound_names[: len(array.upper_bound_roles)]
+            ),
+            *(
+                CDeclaration(name, "int64_t", CodeExpression("1"))
+                for name in names.stride_names[: len(array.stride_roles)]
+            ),
+            *(
+                (CDeclaration(names.runtime_rank_name, "int64_t", CodeExpression("0")),)
+                if array.runtime_rank_role is not None
+                else ()
+            ),
+            *(
+                (CDeclaration(names.itemsize_name, "int64_t", CodeExpression("0")),)
+                if array.itemsize_role is not None
+                else ()
+            ),
             CDeclaration(f"{prefix}_runtime", "PyObject *", CodeExpression("NULL")),
             CDeclaration(f"{prefix}_helper", "PyObject *", CodeExpression("NULL")),
             CDeclaration(f"{prefix}_shape", "PyObject *", CodeExpression("NULL")),
@@ -6192,7 +6324,9 @@ class CBindingGenerator(ClassVisitor):
                     f'{prefix}_packed = PyObject_CallFunction({prefix}_helper, "OsiOOiiiiiii", '
                     f'{names.object_name}, "{actual.dtype}", {actual.rank}, {prefix}_shape, {prefix}_layout, '
                     f"{int(actual.writable)}, {int(actual.require_native_byte_order)}, {int(actual.require_aligned)}, "
-                    f"0, 0, 0, {int(actual.require_contiguous)})"
+                    f"{int(plan.array.runtime_rank_role is not None)}, "
+                    f"{int(plan.array.itemsize_role is not None)}, {int(bool(plan.array.stride_roles))}, "
+                    f"{int(actual.require_contiguous)})"
                 )
             ),
             CExpressionStatement(CodeExpression(f"Py_DECREF({prefix}_helper)")),
@@ -6263,7 +6397,7 @@ class CBindingGenerator(ClassVisitor):
         plan: ArgumentTransferPlan,
         names: _CArgumentNames,
     ) -> tuple[CExpressionStatement, ...]:
-        """Unpack exactly the existing Phase 6 pointer/extent fields."""
+        """Unpack the completed pointer, rank, itemsize, and axis fact roles."""
         prefix = names.value_name
         nodes = [
             CExpressionStatement(
@@ -6276,12 +6410,20 @@ class CBindingGenerator(ClassVisitor):
                 )
             ),
         ]
-        for axis, extent_name in enumerate(names.extent_names):
+        position = 1
+        array = plan.array
+        if array is None:
+            raise ValueError(f"Array actual {plan.owner_path!r} is missing its handoff")
+        scalar_fields = (
+            *((names.runtime_rank_name,) if array.runtime_rank_role is not None else ()),
+            *((names.itemsize_name,) if array.itemsize_role is not None else ()),
+        )
+        for field_name in scalar_fields:
             nodes.extend(
                 (
                     CExpressionStatement(
                         CodeExpression(
-                            f"{extent_name} = (int64_t)PyLong_AsLongLong(PyTuple_GetItem({prefix}_packed, {axis + 1}))"
+                            f"{field_name} = (int64_t)PyLong_AsLongLong(PyTuple_GetItem({prefix}_packed, {position}))"
                         )
                     ),
                     CExpressionStatement(
@@ -6289,6 +6431,26 @@ class CBindingGenerator(ClassVisitor):
                     ),
                 )
             )
+            position += 1
+        axis_fields = (
+            *names.extent_names,
+            *names.upper_bound_names[: len(array.upper_bound_roles)],
+            *names.stride_names[: len(array.stride_roles)],
+        )
+        for field_name in axis_fields:
+            nodes.extend(
+                (
+                    CExpressionStatement(
+                        CodeExpression(
+                            f"{field_name} = (int64_t)PyLong_AsLongLong(PyTuple_GetItem({prefix}_packed, {position}))"
+                        )
+                    ),
+                    CExpressionStatement(
+                        CodeExpression(f"if (PyErr_Occurred()) {{ Py_DECREF({prefix}_packed); return NULL; }}")
+                    ),
+                )
+            )
+            position += 1
         nodes.append(CExpressionStatement(CodeExpression(f"Py_DECREF({prefix}_packed)")))
         return tuple(nodes)
 
@@ -7133,6 +7295,8 @@ class CBindingGenerator(ClassVisitor):
             raise ValueError(
                 f"Unsupported optional C argument object kind for {plan.owner_path!r}: {plan.object_kind!r}"
             )
+        if plan.binding.python_action is PythonBarrierAction.SCALAR_STORAGE:
+            return self._lower_argument_nullable_scalar_storage(plan, context)
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
         names = context.arguments[plan.owner_path]
         return (
@@ -7147,6 +7311,26 @@ class CBindingGenerator(ClassVisitor):
                     CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
                     CExpressionStatement(CodeExpression(f"{names.nullable_name} = &{names.value_name}")),
                 ),
+            ),
+        )
+
+    def _lower_argument_nullable_scalar_storage(
+        self,
+        plan: ArgumentTransferPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CIf, ...]:
+        """Preserve absent rank-zero storage or borrow one present NumPy cell."""
+        names = context.arguments[plan.owner_path]
+        required = self._lower_argument_required_scalar_storage(plan, context)
+        declarations = tuple(node for node in required if isinstance(node, CDeclaration))
+        body = tuple(node for node in required if not isinstance(node, CDeclaration))
+        return (
+            CDeclaration(names.object_name, "PyObject *", CodeExpression("Py_None")),
+            *(node for node in declarations if node.name != names.object_name),
+            CDeclaration(names.nullable_name, "void *", CodeExpression("NULL")),
+            CIf(
+                CodeExpression(f"{names.object_name} != Py_None"),
+                body=(*body, CExpressionStatement(CodeExpression(f"{names.nullable_name} = {names.value_name}"))),
             ),
         )
 
@@ -7955,44 +8139,61 @@ class CBindingGenerator(ClassVisitor):
             *self._binding_transformation_post_call_nodes(plan, context),
             *self._lower_status_error(plan, context),
         ]
-        if plan.results and plan.writeback_actions:
-            nodes.extend(self._mixed_string_output_nodes(plan, context))
-        elif plan.results:
-            nodes.extend(self._binding_result_nodes(plan, context))
-        elif plan.writeback_actions:
-            nodes.extend(self._writeback_nodes(plan, context))
+        if plan.results or plan.writeback_actions:
+            nodes.extend(self._combined_output_nodes(plan, context))
         else:
             nodes.append(CExpressionStatement(CodeExpression("Py_RETURN_NONE")))
         return tuple(nodes)
 
-    def _mixed_string_output_nodes(
+    def _combined_output_nodes(
         self,
         plan: FunctionPlan,
         context: _CFunctionContext,
-    ) -> tuple:
-        """Convert the legacy-observed hidden/output string pair in one order."""
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...]:
+        """Convert every public output once, then aggregate by completed position."""
+        published, ordinary_writebacks, derived_results, scalar_results = self._output_conversion_groups(plan)
+        converted: list[str] = []
         nodes = []
-        converted = []
-        for result in sorted(plan.results, key=lambda item: item.result_position):
+
+        # Published temporaries are converted first so every later failure owns
+        # an ordinary Python reference that can be released uniformly.
+        for action in published:
+            nodes.extend(self._writeback_value_nodes(plan, action, context, tuple(converted)))
+            converted.append(context.python_results[action.owner_path])
+
+        for position, result in enumerate(derived_results):
+            pending = self._derived_native_storage_cleanup_nodes(derived_results[position + 1 :], context)
+            nodes.extend(self._lower_result_derived(result, context, tuple(converted), pending))
+            converted.append(context.python_results[result.owner_path])
+
+        for result in scalar_results:
             nodes.extend(self.visit(result, context=context, failure_cleanup=tuple(converted)))
             converted.append(context.python_results[result.owner_path])
-        for action in self._ordered_output_writebacks(plan):
-            nodes.extend(self._mixed_string_writeback_nodes(plan, action, context, tuple(converted)))
+
+        for action in ordinary_writebacks:
+            nodes.extend(self._writeback_value_nodes(plan, action, context, tuple(converted)))
             converted.append(context.python_results[action.owner_path])
-        ordered = tuple(
-            name
-            for _position, name in sorted(
-                (
-                    *((result.result_position, context.python_results[result.owner_path]) for result in plan.results),
-                    *(
-                        (action.binding.result_position, context.python_results[action.owner_path])
-                        for action in self._ordered_output_writebacks(plan)
-                    ),
-                )
-            )
-        )
+
+        ordered = tuple(context.python_results[owner] for owner, _position in self._output_owners(plan))
         nodes.extend(self._python_result_aggregation_nodes(ordered, context))
         return tuple(nodes)
+
+    def _output_conversion_groups(
+        self,
+        plan: FunctionPlan,
+    ) -> tuple[
+        tuple[LifecycleActionPlan, ...],
+        tuple[LifecycleActionPlan, ...],
+        tuple[ResultPlan, ...],
+        tuple[ResultPlan, ...],
+    ]:
+        """Partition completed outputs into their ordered conversion leaves."""
+        writebacks = self._ordered_output_writebacks(plan)
+        published = tuple(action for action in writebacks if self._publishes_array_replacement(plan, action))
+        ordinary = tuple(action for action in writebacks if action not in published)
+        derived = tuple(result for result in plan.results if result.object_kind is ObjectKind.DERIVED_TYPE)
+        scalar = tuple(result for result in plan.results if result.object_kind is not ObjectKind.DERIVED_TYPE)
+        return published, ordinary, derived, scalar
 
     def _mixed_string_writeback_nodes(
         self,
@@ -8222,45 +8423,6 @@ class CBindingGenerator(ClassVisitor):
             ),
         )
 
-    def _binding_result_nodes(
-        self,
-        plan: FunctionPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CIf | CReturn, ...]:
-        """Convert ordered results and assemble a tuple only in the binding."""
-        ordered = tuple(sorted(plan.results, key=lambda item: item.result_position))
-        conversion_order = (
-            *(result for result in ordered if result.object_kind is ObjectKind.DERIVED_TYPE),
-            *(result for result in ordered if result.object_kind is not ObjectKind.DERIVED_TYPE),
-        )
-        converted = []
-        nodes = []
-        for position, result in enumerate(conversion_order):
-            if result.object_kind is ObjectKind.DERIVED_TYPE:
-                pending = tuple(
-                    candidate
-                    for candidate in conversion_order[position + 1 :]
-                    if candidate.object_kind is ObjectKind.DERIVED_TYPE
-                )
-                nodes.extend(
-                    self._lower_result_derived(
-                        result,
-                        context,
-                        tuple(converted),
-                        self._derived_native_storage_cleanup_nodes(pending, context),
-                    )
-                )
-            else:
-                nodes.extend(self.visit(result, context=context, failure_cleanup=tuple(converted)))
-            converted.append(context.python_results[result.owner_path])
-        nodes.extend(
-            self._python_result_aggregation_nodes(
-                tuple(context.python_results[result.owner_path] for result in ordered),
-                context,
-            )
-        )
-        return tuple(nodes)
-
     def _derived_result_allocation_failure_nodes(
         self,
         plan: FunctionPlan,
@@ -8416,6 +8578,7 @@ class CBindingGenerator(ClassVisitor):
             tuple(result for result in plan.results if result.object_kind is ObjectKind.DERIVED_TYPE),
             context,
         )
+        transformation_cleanup = self._binding_transformation_cleanup_nodes(plan, context)
         if policy.message_role is None:
             return (
                 CIf(
@@ -8427,6 +8590,7 @@ class CBindingGenerator(ClassVisitor):
                                 f"(int){status_name})"
                             )
                         ),
+                        *transformation_cleanup,
                         *derived_cleanup,
                         CReturn(CodeExpression("NULL")),
                     ),
@@ -8439,6 +8603,7 @@ class CBindingGenerator(ClassVisitor):
                 CodeExpression(f"{message_name} == NULL"),
                 body=(
                     CExpressionStatement(CodeExpression("PyErr_NoMemory()")),
+                    *transformation_cleanup,
                     *derived_cleanup,
                     CReturn(CodeExpression("NULL")),
                 ),
@@ -8451,13 +8616,14 @@ class CBindingGenerator(ClassVisitor):
             CExpressionStatement(CodeExpression(f"free({message_name})")),
             CIf(
                 CodeExpression(f"{message_object} == NULL"),
-                body=(*derived_cleanup, CReturn(CodeExpression("NULL"))),
+                body=(*transformation_cleanup, *derived_cleanup, CReturn(CodeExpression("NULL"))),
             ),
             CIf(
                 condition,
                 body=(
                     CExpressionStatement(CodeExpression(f"PyErr_SetObject(PyExc_RuntimeError, {message_object})")),
                     CExpressionStatement(CodeExpression(f"Py_DECREF({message_object})")),
+                    *transformation_cleanup,
                     *derived_cleanup,
                     CReturn(CodeExpression("NULL")),
                 ),
@@ -8465,67 +8631,104 @@ class CBindingGenerator(ClassVisitor):
             CExpressionStatement(CodeExpression(f"Py_DECREF({message_object})")),
         )
 
-    def _writeback_nodes(
+    def _writeback_value_nodes(
         self,
         plan: FunctionPlan,
+        action: LifecycleActionPlan,
         context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        """Return the sole replacement conversion after the native call."""
-        ordered = sorted(
-            (
-                action
-                for action in plan.writeback_actions
-                if action.phase is WritebackPhase.COPY_OUT and action.binding is not None
-            ),
-            key=lambda item: item.binding.result_position,
-        )
-        if ordered and all(
-            action.object_kind in {ObjectKind.NUMPY_ARRAY, ObjectKind.DERIVED_TYPE}
-            and action.binding.codegen_action is CodegenAction.IN_PLACE_ARGUMENT
-            for action in ordered
-        ):
-            return self._in_place_argument_writeback_nodes(plan, tuple(ordered), context)
-        if len(ordered) != 1:
-            raise ValueError(f"{plan.owner_path!r} requires exactly one writeback result")
-        action = ordered[0]
-        return self._lower_writeback(plan, action, context)
+        converted: tuple[str, ...],
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf, ...]:
+        """Convert one planned writeback without terminating output aggregation."""
+        if action.binding is None:
+            raise ValueError(f"Writeback {action.owner_path!r} has no binding policy")
+        source = self._argument_for_role(plan, action.source_role)
+        if self._publishes_array_replacement(plan, action):
+            return self._array_replacement_writeback_nodes(source, action, context)
+        if action.binding.codegen_action is CodegenAction.IN_PLACE_ARGUMENT:
+            return self._identity_writeback_value_nodes(source, action, context, converted)
+        if action.binding.codegen_action is CodegenAction.COPY_IN_OUT:
+            if action.binding.datatype_family is DatatypeFamily.STRING:
+                return self._mixed_string_writeback_nodes(plan, action, context, converted)
+            return self._scalar_writeback_value_nodes(source, action, context, converted)
+        raise ValueError(f"Unsupported C writeback action for {action.owner_path!r}: {action.binding.codegen_action!r}")
 
-    # Array and derived-object identity writeback lowering.
-    def _in_place_argument_writeback_nodes(
+    def _identity_writeback_value_nodes(
+        self,
+        source: ArgumentTransferPlan,
+        action: LifecycleActionPlan,
+        context: _CFunctionContext,
+        converted: tuple[str, ...],
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf, ...]:
+        """Retain the exact mutable Python object selected by completed policy."""
+        target = context.python_results[action.owner_path]
+        if source.derived_call is not None and source.derived_call.writeback in {
+            DerivedWriteback.ALLOCATION_STATE,
+            DerivedWriteback.POINTER_ASSOCIATION,
+        }:
+            return self._holder_writeback_value_nodes(source, target, converted, context)
+        source_object = context.arguments[source.owner_path].object_name
+        return (
+            CDeclaration(target, "PyObject *", CodeExpression(source_object)),
+            CExpressionStatement(CodeExpression(f"Py_INCREF({target})")),
+        )
+
+    def _array_replacement_writeback_nodes(
+        self,
+        source: ArgumentTransferPlan,
+        action: LifecycleActionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CDeclaration | CExpressionStatement, ...]:
+        """Transfer one binding-owned mutable NumPy replacement to Python."""
+        names = context.arguments[source.owner_path]
+        temporary = self._array_transformation_temp_name(names)
+        target = context.python_results[action.owner_path]
+        return (
+            CDeclaration(target, "PyObject *", CodeExpression(temporary)),
+            CExpressionStatement(CodeExpression(f"{temporary} = NULL")),
+        )
+
+    def _scalar_writeback_value_nodes(
+        self,
+        source: ArgumentTransferPlan,
+        action: LifecycleActionPlan,
+        context: _CFunctionContext,
+        converted: tuple[str, ...],
+    ) -> tuple[CDeclaration | CExpressionStatement | CIf, ...]:
+        """Convert one mutated scalar storage value for combined aggregation."""
+        names = context.arguments[source.owner_path]
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(action.binding.semantic_type_name)
+        target = context.python_results[action.owner_path]
+        cleanup = tuple(CExpressionStatement(CodeExpression(f"Py_DECREF({name})")) for name in converted)
+        conversion = CExpressionStatement(
+            CodeExpression(f"{target} = {scalar_type.python_result_converter}(&{names.value_name})")
+        )
+        failure = CIf(CodeExpression(f"{target} == NULL"), body=(*cleanup, CReturn(CodeExpression("NULL"))))
+        if source.bridge.descriptor_output_presence_role is None:
+            return (CDeclaration(target, "PyObject *", CodeExpression("NULL")), conversion, failure)
+        return (
+            CDeclaration(target, "PyObject *", CodeExpression("NULL")),
+            CIf(
+                CodeExpression(f"!{self._descriptor_output_present_name(names)}"),
+                body=(
+                    CExpressionStatement(CodeExpression("Py_INCREF(Py_None)")),
+                    CExpressionStatement(CodeExpression(f"{target} = Py_None")),
+                ),
+                else_body=(conversion, failure),
+            ),
+        )
+
+    def _publishes_array_replacement(
         self,
         plan: FunctionPlan,
-        actions: tuple[LifecycleActionPlan, ...],
-        context: _CFunctionContext,
-    ) -> tuple[CDeclaration | CExpressionStatement | CIf | CReturn, ...]:
-        """Convert every in-place result once, then aggregate in result order."""
-        nodes = []
-        converted = []
-        for action in actions:
-            source = self._argument_for_role(plan, action.source_role)
-            names = context.arguments[source.owner_path]
-            python_name = context.python_results[action.owner_path]
-            if source.derived_call is not None and source.derived_call.writeback in {
-                DerivedWriteback.ALLOCATION_STATE,
-                DerivedWriteback.POINTER_ASSOCIATION,
-            }:
-                nodes.extend(
-                    self._holder_writeback_value_nodes(
-                        source,
-                        python_name,
-                        tuple(converted),
-                        context,
-                    )
-                )
-            else:
-                nodes.extend(
-                    (
-                        CDeclaration(python_name, "PyObject *", CodeExpression(names.object_name)),
-                        CExpressionStatement(CodeExpression(f"Py_INCREF({python_name})")),
-                    )
-                )
-            converted.append(python_name)
-        nodes.extend(self._python_result_aggregation_nodes(tuple(converted), context))
-        return tuple(nodes)
+        action: LifecycleActionPlan,
+    ) -> bool:
+        """Return whether completed COPY_OUT policy transfers a NumPy temporary."""
+        source = self._argument_for_role(plan, action.source_role)
+        return any(
+            transformation.phase is WritebackPhase.COPY_OUT
+            and transformation.action is TransformationAction.PUBLISH_ARRAY_REPLACEMENT
+            for transformation in source.transformations
+        )
 
     def _holder_writeback_value_nodes(
         self,
@@ -8576,179 +8779,6 @@ class CBindingGenerator(ClassVisitor):
                     ),
                 ),
             ),
-        )
-
-    def _lower_writeback(
-        self,
-        plan: FunctionPlan,
-        action: LifecycleActionPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        """Dispatch one completed binding writeback action explicitly."""
-        codegen_action = action.binding.codegen_action
-        match codegen_action:
-            case CodegenAction.COPY_IN_OUT:
-                return self._lower_writeback_copy_in_out(plan, action, context)
-            case CodegenAction.IN_PLACE_ARGUMENT:
-                return self._lower_writeback_in_place_argument(plan, action, context)
-        raise ValueError(f"Unsupported C writeback action for {action.owner_path!r}: {codegen_action!r}")
-
-    def _lower_writeback_copy_in_out(
-        self,
-        plan: FunctionPlan,
-        action: LifecycleActionPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        if action.binding.datatype_family is DatatypeFamily.STRING:
-            return self._lower_writeback_string(plan, action, context)
-        return self._lower_writeback_value(plan, action, context)
-
-    # String writeback lowering.
-    def _lower_writeback_string(
-        self,
-        plan: FunctionPlan,
-        action: LifecycleActionPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CIf | CReturn, ...]:
-        """Dispatch string replacement conversion from completed presence mode."""
-        source = self._argument_for_role(plan, action.source_role)
-        if source.binding.optional_mode is OptionalMode.REQUIRED:
-            return self._lower_writeback_required_string(source, context)
-        if source.binding.optional_mode is OptionalMode.NULLABLE_VALUE:
-            return self._lower_writeback_optional_string(source, context)
-        raise ValueError(f"Unsupported string writeback presence mode for {source.owner_path!r}")
-
-    def _lower_writeback_required_string(
-        self,
-        source: ArgumentTransferPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CIf | CReturn, ...]:
-        """Convert one required mutable buffer and release it exactly once."""
-        names = context.arguments[source.owner_path]
-        python_result_name = context.python_result_name or "result_obj"
-        return (
-            CDeclaration(
-                python_result_name,
-                "PyObject *",
-                CodeExpression(f'Py_BuildValue("s", (const char *){names.value_name})'),
-            ),
-            CExpressionStatement(CodeExpression(f"free({names.value_name})")),
-            CIf(
-                CodeExpression(f"{python_result_name} == NULL"),
-                body=(CReturn(CodeExpression("NULL")),),
-            ),
-            CReturn(CodeExpression(python_result_name)),
-        )
-
-    def _lower_writeback_optional_string(
-        self,
-        source: ArgumentTransferPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CDeclaration | CIf | CReturn, ...]:
-        """Return None for absence or convert and release one concrete replacement."""
-        names = context.arguments[source.owner_path]
-        python_result_name = context.python_result_name or "result_obj"
-        return (
-            CDeclaration(python_result_name, "PyObject *", CodeExpression("NULL")),
-            CIf(
-                CodeExpression(f"{names.value_name} == NULL"),
-                body=(
-                    CExpressionStatement(CodeExpression("Py_INCREF(Py_None)")),
-                    CExpressionStatement(CodeExpression(f"{python_result_name} = Py_None")),
-                ),
-                else_body=(
-                    CExpressionStatement(
-                        CodeExpression(f'{python_result_name} = Py_BuildValue("s", (const char *){names.value_name})')
-                    ),
-                    CExpressionStatement(CodeExpression(f"free({names.value_name})")),
-                    CIf(
-                        CodeExpression(f"{python_result_name} == NULL"),
-                        body=(CReturn(CodeExpression("NULL")),),
-                    ),
-                ),
-            ),
-            CReturn(CodeExpression(python_result_name)),
-        )
-
-    def _lower_writeback_in_place_argument(
-        self,
-        plan: FunctionPlan,
-        action: LifecycleActionPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        if action.object_kind is ObjectKind.DERIVED_TYPE:
-            return self._lower_writeback_derived_identity(plan, action, context)
-        return self._lower_writeback_value(plan, action, context)
-
-    # Derived-object writeback lowering.
-    def _lower_writeback_derived_identity(
-        self,
-        plan: FunctionPlan,
-        action: LifecycleActionPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CDeclaration | CExpressionStatement | CReturn, ...]:
-        """Return the caller's exact wrapper after native in-place mutation."""
-        source = self._argument_for_role(plan, action.source_role)
-        names = context.arguments[source.owner_path]
-        python_result_name = context.python_results[action.owner_path]
-        return (
-            CDeclaration(python_result_name, "PyObject *", CodeExpression(names.object_name)),
-            CExpressionStatement(CodeExpression(f"Py_INCREF({python_result_name})")),
-            CReturn(CodeExpression(python_result_name)),
-        )
-
-    # Scalar writeback lowering.
-    def _lower_writeback_value(
-        self,
-        plan: FunctionPlan,
-        action: LifecycleActionPlan,
-        context: _CFunctionContext,
-    ) -> tuple[CExpressionStatement | CDeclaration | CReturn, ...]:
-        """Return one Python scalar replacement from mutated bridge storage."""
-        source = self._argument_for_role(plan, action.source_role)
-        names = context.arguments[source.owner_path]
-        scalar_type = PrimitiveScalarTypeRegistry.type_for(action.binding.semantic_type_name)
-        python_result_name = context.python_result_name or "result_obj"
-        if source.bridge.descriptor_output_presence_role is not None:
-            return self._lower_descriptor_writeback_value(names, scalar_type, python_result_name)
-        return (
-            CDeclaration(
-                python_result_name,
-                "PyObject *",
-                CodeExpression(f"{scalar_type.python_result_converter}(&{names.value_name})"),
-            ),
-            CExpressionStatement(CodeExpression(f"if ({python_result_name} == NULL) return NULL")),
-            CReturn(CodeExpression(python_result_name)),
-        )
-
-    def _lower_descriptor_writeback_value(
-        self,
-        names: _CArgumentNames,
-        scalar_type,
-        python_result_name: str,
-    ) -> tuple[CDeclaration | CIf | CReturn, ...]:
-        """Return None or one copied scalar from a mutated required descriptor."""
-        return (
-            CDeclaration(python_result_name, "PyObject *", CodeExpression("NULL")),
-            CIf(
-                CodeExpression(f"!{self._descriptor_output_present_name(names)}"),
-                body=(
-                    CExpressionStatement(CodeExpression("Py_INCREF(Py_None)")),
-                    CExpressionStatement(CodeExpression(f"{python_result_name} = Py_None")),
-                ),
-                else_body=(
-                    CExpressionStatement(
-                        CodeExpression(
-                            f"{python_result_name} = {scalar_type.python_result_converter}(&{names.value_name})"
-                        )
-                    ),
-                    CIf(
-                        CodeExpression(f"{python_result_name} == NULL"),
-                        body=(CReturn(CodeExpression("NULL")),),
-                    ),
-                ),
-            ),
-            CReturn(CodeExpression(python_result_name)),
         )
 
     @staticmethod
@@ -9114,11 +9144,12 @@ class CBindingGenerator(ClassVisitor):
         plan: FunctionPlan,
         context: _CFunctionContext,
     ) -> tuple[CExpressionStatement | CIf, ...]:
-        """Perform planned copy-out actions, then release every binding temporary."""
+        """Copy back ordinary temporaries and retain published replacements."""
         nodes = []
         cleanup = self._binding_transformation_cleanup_nodes(plan, context)
         for argument in plan.arguments:
-            if not self._has_transformation_phase(argument, WritebackPhase.COPY_OUT):
+            action = self._transformation_action(argument, WritebackPhase.COPY_OUT)
+            if action is not TransformationAction.COPY_ARRAY_REPRESENTATION:
                 continue
             names = context.arguments[argument.owner_path]
             temporary = self._array_transformation_temp_name(names)
@@ -9130,8 +9161,26 @@ class CBindingGenerator(ClassVisitor):
                     body=(*cleanup, CReturn(CodeExpression("NULL"))),
                 )
             )
-        nodes.extend(cleanup)
+        nodes.extend(self._binding_transformation_success_cleanup_nodes(plan, context))
         return tuple(nodes)
+
+    def _binding_transformation_success_cleanup_nodes(
+        self,
+        plan: FunctionPlan,
+        context: _CFunctionContext,
+    ) -> tuple[CExpressionStatement, ...]:
+        """Release temporaries whose successful path does not publish ownership."""
+        return tuple(
+            CExpressionStatement(
+                CodeExpression(
+                    f"Py_XDECREF({self._array_transformation_temp_name(context.arguments[item.owner_path])})"
+                )
+            )
+            for item in reversed(plan.arguments)
+            if self._has_transformation_phase(item, WritebackPhase.CLEANUP)
+            and self._transformation_action(item, WritebackPhase.COPY_OUT)
+            is not TransformationAction.PUBLISH_ARRAY_REPLACEMENT
+        )
 
     def _binding_transformation_cleanup_nodes(
         self,
@@ -9153,6 +9202,19 @@ class CBindingGenerator(ClassVisitor):
     def _has_transformation_phase(argument: ArgumentTransferPlan, phase: WritebackPhase) -> bool:
         """Return whether one completed transfer owns an action in a lifecycle phase."""
         return any(transformation.phase is phase for transformation in argument.transformations)
+
+    @staticmethod
+    def _transformation_action(
+        argument: ArgumentTransferPlan,
+        phase: WritebackPhase,
+    ) -> TransformationAction | None:
+        """Return the sole completed transformation action for one lifecycle phase."""
+        actions = tuple(
+            transformation.action for transformation in argument.transformations if transformation.phase is phase
+        )
+        if len(actions) > 1:
+            raise ValueError(f"Argument {argument.owner_path!r} has repeated {phase.value} transformations")
+        return actions[0] if actions else None
 
     @staticmethod
     def _array_transformation_temp_name(names: _CArgumentNames) -> str:
@@ -9568,17 +9630,48 @@ class CBindingGenerator(ClassVisitor):
         plan: ModuleVariablePlan,
     ) -> tuple[CFunctionPrototype, ...]:
         """Return getter/setter ABI declarations selected by the variable plan."""
-        if plan.binding.getter_action is ModuleGetterAction.NATIVE_ARRAY_HANDLE:
-            return self._module_native_array_bridge_prototypes(plan)
-        if plan.binding.getter_action is ModuleGetterAction.DERIVED_OBJECT:
-            if plan.derived is None:
-                return ()
-            if plan.derived.access is ModuleObjectAccessMechanism.MEMBER_PROXY:
-                prototypes = []
-                if self._nullable_derived_module_proxy(plan):
-                    prototypes.append(CFunctionPrototype(self._module_derived_presence_bridge_name(plan), "bool"))
-                return tuple(prototypes)
+        handler = {
+            ModuleGetterAction.NATIVE_ARRAY_HANDLE: self._module_native_array_bridge_prototypes,
+            ModuleGetterAction.BORROWED_ARRAY_VIEW: self._module_borrowed_array_bridge_prototypes,
+            ModuleGetterAction.DERIVED_OBJECT: self._module_derived_bridge_prototypes,
+        }.get(plan.binding.getter_action)
+        if handler is not None:
+            return handler(plan)
+        return self._module_scalar_bridge_prototypes(plan)
+
+    def _module_borrowed_array_bridge_prototypes(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[CFunctionPrototype, ...]:
+        """Declare one borrowed array getter with explicit extent outputs."""
+        if plan.array is None or plan.array.rank is None:
+            return ()
+        return (
+            CFunctionPrototype(
+                self._module_bridge_getter_name(plan),
+                "void *",
+                tuple(CParameter(f"extent_{axis}", "int64_t *") for axis in range(plan.array.rank)),
+            ),
+        )
+
+    def _module_derived_bridge_prototypes(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[CFunctionPrototype, ...]:
+        """Declare the selected direct or member-proxy derived getter ABI."""
+        if plan.derived is None:
+            return ()
+        if plan.derived.access is not ModuleObjectAccessMechanism.MEMBER_PROXY:
             return (CFunctionPrototype(self._module_bridge_getter_name(plan), "void *"),)
+        if self._nullable_derived_module_proxy(plan):
+            return (CFunctionPrototype(self._module_derived_presence_bridge_name(plan), "bool"),)
+        return ()
+
+    def _module_scalar_bridge_prototypes(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[CFunctionPrototype, ...]:
+        """Declare ordinary scalar getter and setter bridge functions."""
         prototypes = []
         if plan.bridge.getter_role is not None:
             return_type = (
@@ -10244,26 +10337,26 @@ class CBindingGenerator(ClassVisitor):
         )
         return (
             *property_nodes,
-            *self._derived_type_initializer_nodes(namespace, object_name),
+            *self._namespace_python_initializer_nodes(namespace, object_name),
             *self._module_native_array_owner_nodes(namespace, object_name),
             *self._derived_module_owner_nodes(namespace, object_name),
             *self._module_initializer_nodes(namespace),
             *self._module_constant_nodes(namespace, object_name),
         )
 
-    def _derived_type_initializer_nodes(
+    def _namespace_python_initializer_nodes(
         self,
         namespace: NamespacePlan,
         module_object: str,
     ) -> tuple[CDeclaration | CExpressionStatement | CIf, ...]:
-        """Install minimal non-constructible opaque Python wrapper types."""
+        """Install exact overload dispatch plus generated opaque wrapper types."""
         has_proxy = any(variable.derived is not None for variable in namespace.variables)
-        if not namespace.derived_types and not has_proxy:
+        if not namespace.derived_types and not has_proxy and not namespace.overloads:
             return ()
-        source = self._derived_namespace_python_source(namespace)
+        source = self._namespace_python_source(namespace)
         literal = self._c_string_literal(source)
-        result_name = f"{self._namespace_symbol(namespace)}_derived_setup"
-        dictionary = f"{self._namespace_symbol(namespace)}_derived_dict"
+        result_name = f"{self._namespace_symbol(namespace)}_python_setup"
+        dictionary = f"{self._namespace_symbol(namespace)}_python_dict"
         return (
             CDeclaration(dictionary, "PyObject *", CodeExpression(f"PyModule_GetDict({module_object})")),
             CIf(CodeExpression(f"{dictionary} == NULL"), body=(CReturn(CodeExpression("NULL")),)),
@@ -10276,8 +10369,8 @@ class CBindingGenerator(ClassVisitor):
             CExpressionStatement(CodeExpression(f"Py_DECREF({result_name})")),
         )
 
-    def _derived_namespace_python_source(self, namespace: NamespacePlan) -> str:
-        """Return opaque classes plus typed direct/module member operation maps."""
+    def _namespace_python_source(self, namespace: NamespacePlan) -> str:
+        """Return overloads, opaque classes, and typed member operation maps."""
         surfaces = {surface.type_identity: surface for surface in namespace.classes}
         class_names = {
             surface.type_identity: surface.python_names[0] for surface in namespace.classes if surface.python_names
@@ -10286,6 +10379,7 @@ class CBindingGenerator(ClassVisitor):
         sections = [
             "_x2py_unset = object()",
             "import numpy as _x2py_numpy",
+            *(self._module_overload_python_source(overload) for overload in namespace.overloads),
             *(
                 self._derived_type_python_source(
                     derived,
@@ -10373,7 +10467,7 @@ class CBindingGenerator(ClassVisitor):
         """Flatten public method descriptors while preserving plan order."""
         return tuple(line for method in methods for line in self._class_method_python_lines(method))
 
-    def _class_overload_python_source_lines(self, overloads: tuple[ClassOverloadPlan, ...]) -> tuple[str, ...]:
+    def _class_overload_python_source_lines(self, overloads: tuple[OverloadPlan, ...]) -> tuple[str, ...]:
         """Flatten overload descriptors while preserving plan order."""
         return tuple(line for overload in overloads for line in self._class_overload_python_lines(overload))
 
@@ -10418,6 +10512,7 @@ class CBindingGenerator(ClassVisitor):
         )
         return (
             "    def __new__(cls, *args, **kwargs):",
+            f"        {surface.constructor.docstring!r}" if surface is not None else "        'Construction disabled.'",
             f"        raise TypeError({message!r})",
         )
 
@@ -10430,6 +10525,7 @@ class CBindingGenerator(ClassVisitor):
             "    def __new__(cls, *args, **kwargs):",
             f"        return {self._class_create_method_name(surface)}()",
             f"    def __init__(self{signature}):",
+            f"        {surface.constructor.docstring!r}",
         ]
         if not fields:
             lines.append("        pass")
@@ -10452,6 +10548,7 @@ class CBindingGenerator(ClassVisitor):
             "    def __new__(cls, *args, **kwargs):",
             f"        return {self._class_create_method_name(surface)}()",
             f"    def __init__(self{self._python_parameter_suffix(parameters)}):",
+            f"        {surface.constructor.docstring!r}",
             "        _x2py_arguments = {'self': self}",
         ]
         lines.extend(self._optional_keyword_collection_lines(parameters, indent="        "))
@@ -10466,7 +10563,11 @@ class CBindingGenerator(ClassVisitor):
         return (
             "    def __new__(cls, *args, **kwargs):",
             f"        return {self._class_create_method_name(surface)}()",
-            *self._class_overload_python_lines(overload, constructor=True),
+            *self._class_overload_python_lines(
+                overload,
+                constructor=True,
+                docstring=surface.constructor.docstring,
+            ),
         )
 
     def _class_method_python_lines(self, method: ClassMethodPlan) -> tuple[str, ...]:
@@ -10488,6 +10589,7 @@ class CBindingGenerator(ClassVisitor):
         lines.extend(
             (
                 f"    def {method.python_name}({signature}):",
+                f"        {method.docstring!r}",
                 f"        return {method.function.binding.python_name}({', '.join(call_names)})",
             )
         )
@@ -10495,57 +10597,171 @@ class CBindingGenerator(ClassVisitor):
 
     def _class_overload_python_lines(
         self,
-        overload: ClassOverloadPlan,
+        overload: OverloadPlan,
         *,
         constructor: bool = False,
+        docstring: str | None = None,
     ) -> tuple[str, ...]:
         """Render deterministic exact-type selection without trial candidate calls."""
-        self._require_class_overload_complete(overload)
         passed_object = True if constructor else overload.candidate_passed_objects[0]
         method_name = "__init__" if constructor else overload.python_name
         signature = "self, *args, **kwargs" if passed_object else "*args, **kwargs"
-        lines = [*(("    @staticmethod",) if not passed_object else ()), f"    def {method_name}({signature}):"]
+        return self._overload_python_lines(
+            overload,
+            method_name=method_name,
+            signature=signature,
+            indent="    ",
+            receiver_object="self" if passed_object or constructor else None,
+            static=not passed_object,
+            docstring=docstring or overload.docstring,
+        )
+
+    def _module_overload_python_source(self, overload: OverloadPlan) -> str:
+        """Render one namespace generic through the shared exact-match path."""
+        return "\n".join(
+            self._overload_python_lines(
+                overload,
+                method_name=overload.python_name,
+                signature="*args, **kwargs",
+                indent="",
+                receiver_object=None,
+                static=False,
+                docstring=overload.docstring,
+            )
+        )
+
+    def _overload_python_lines(
+        self,
+        overload: OverloadPlan,
+        *,
+        method_name: str,
+        signature: str,
+        indent: str,
+        receiver_object: str | None,
+        static: bool,
+        docstring: str,
+    ) -> tuple[str, ...]:
+        """Render one deterministic overload dispatcher at any namespace depth."""
+        self._require_overload_complete(overload)
+        body_indent = f"{indent}    "
+        lines = [
+            *((f"{indent}@staticmethod",) if static else ()),
+            f"{indent}def {method_name}({signature}):",
+            f"{body_indent}{docstring!r}",
+        ]
+        if overload.unsupported_extra_argument_message is not None:
+            lines.extend(
+                (
+                    f"{body_indent}if len(args) > 1:",
+                    f"{body_indent}    raise TypeError({overload.unsupported_extra_argument_message!r})",
+                )
+            )
+        if overload.identity_receiver_shortcut and receiver_object is not None:
+            lines.extend(
+                (
+                    f"{body_indent}if len(args) == 1 and not kwargs and args[0] is {receiver_object}:",
+                    f"{body_indent}    return {receiver_object}",
+                )
+            )
         for candidate, matches, candidate_passed in zip(
             overload.candidates,
             overload.candidate_matches,
             overload.candidate_passed_objects,
             strict=True,
         ):
-            lines.extend(self._class_overload_candidate_python_lines(candidate, matches, candidate_passed, constructor))
-        lines.append(f"        raise TypeError('no matching overload for {overload.python_name}')")
+            candidate_receiver = (
+                self._overload_receiver_name(candidate) if candidate_passed or receiver_object is not None else None
+            )
+            lines.extend(
+                self._overload_candidate_python_lines(
+                    candidate,
+                    matches,
+                    receiver_name=candidate_receiver,
+                    receiver_object=receiver_object,
+                    indent=body_indent,
+                )
+            )
+        lines.append(f"{body_indent}raise TypeError('no matching overload for {overload.python_name}')")
         return tuple(lines)
 
     @staticmethod
-    def _require_class_overload_complete(overload: ClassOverloadPlan) -> None:
+    def _require_overload_complete(overload: OverloadPlan) -> None:
         """Reject incomplete editable overload plans before Python source assembly."""
         if not overload.candidates:
-            raise ValueError(f"Class overload {overload.owner_path!r} has no candidates")
+            raise ValueError(f"Overload {overload.owner_path!r} has no candidates")
         if not (len(overload.candidates) == len(overload.candidate_matches) == len(overload.candidate_passed_objects)):
-            raise ValueError(f"Class overload {overload.owner_path!r} has incomplete candidate metadata")
+            raise ValueError(f"Overload {overload.owner_path!r} has incomplete candidate metadata")
 
-    def _class_overload_candidate_python_lines(
+    def _overload_candidate_python_lines(
         self,
         candidate: FunctionPlan,
         matches: tuple,
-        candidate_passed: bool,
-        constructor: bool,
+        *,
+        receiver_name: str | None,
+        receiver_object: str | None,
+        indent: str,
     ) -> tuple[str, ...]:
         """Render one exact predicate and its single non-speculative call leaf."""
         names = tuple(match.python_name for match in matches)
         condition = " and ".join(self._overload_dictionary_argument_predicate(item) for item in matches) or "True"
-        receiver = "self, " if candidate_passed or constructor else ""
-        return (
-            f"        _x2py_names = {names!r}",
-            "        if (",
-            "            len(args) <= len(_x2py_names)",
-            "            and all(_x2py_name in _x2py_names for _x2py_name in kwargs)",
-            "            and not any(_x2py_name in kwargs for _x2py_name in _x2py_names[:len(args)])",
-            "        ):",
-            "            _x2py_arguments = dict(zip(_x2py_names, args))",
-            "            _x2py_arguments.update(kwargs)",
-            f"            if {condition}:",
-            f"                return {candidate.binding.python_name}({receiver}**_x2py_arguments)",
+        receiver_line = (
+            (f"{indent}        _x2py_arguments[{receiver_name!r}] = {receiver_object}",)
+            if receiver_name is not None and receiver_object is not None
+            else ()
         )
+        coercion_lines = tuple(
+            line
+            for match in matches
+            if match.accept_builtin_scalar
+            for line in self._overload_builtin_coercion_lines(match, f"{indent}        ")
+        )
+        return (
+            f"{indent}_x2py_names = {names!r}",
+            f"{indent}if (",
+            f"{indent}    len(args) <= len(_x2py_names)",
+            f"{indent}    and all(_x2py_name in _x2py_names for _x2py_name in kwargs)",
+            f"{indent}    and not any(_x2py_name in kwargs for _x2py_name in _x2py_names[:len(args)])",
+            f"{indent}):",
+            f"{indent}    _x2py_arguments = dict(zip(_x2py_names, args))",
+            f"{indent}    _x2py_arguments.update(kwargs)",
+            f"{indent}    if {condition}:",
+            *coercion_lines,
+            *receiver_line,
+            f"{indent}        return {candidate.binding.python_name}(**_x2py_arguments)",
+        )
+
+    def _overload_builtin_coercion_lines(
+        self,
+        match: OverloadArgumentMatchPlan,
+        indent: str,
+    ) -> tuple[str, ...]:
+        """Restore the NumPy scalar type lost before reflected dispatch."""
+        name = match.python_name
+        assignment = (
+            f"_x2py_arguments[{name!r}] = _x2py_numpy.{self._numpy_scalar_type_name(match.semantic_type_name)}("
+            f"_x2py_arguments[{name!r}])"
+        )
+        if match.optional:
+            return (f"{indent}if {name!r} in _x2py_arguments:", f"{indent}    {assignment}")
+        return (f"{indent}{assignment}",)
+
+    @staticmethod
+    def _overload_receiver_name(candidate: FunctionPlan) -> str:
+        """Return the completed Python argument that receives the class instance."""
+        call = candidate.class_call
+        if call is None or call.passed_object_position is None:
+            raise ValueError(f"Overload candidate {candidate.owner_path!r} has no completed receiver position")
+        receiver = next(
+            (
+                argument
+                for argument in candidate.arguments
+                if argument.native_position == call.passed_object_position and argument.python_visible
+            ),
+            None,
+        )
+        if receiver is None:
+            raise ValueError(f"Overload candidate {candidate.owner_path!r} has no visible receiver argument")
+        return receiver.binding.python_name
 
     @staticmethod
     def _callable_public_arguments(function: FunctionPlan) -> tuple[ArgumentTransferPlan, ...]:
@@ -10593,7 +10809,7 @@ class CBindingGenerator(ClassVisitor):
 
     def _overload_dictionary_argument_predicate(
         self,
-        argument: ClassOverloadArgumentMatchPlan,
+        argument: OverloadArgumentMatchPlan,
     ) -> str:
         """Match one normalized candidate argument without invoking its target."""
         name = argument.python_name
@@ -10607,25 +10823,30 @@ class CBindingGenerator(ClassVisitor):
 
     def _required_overload_argument_predicate(
         self,
-        argument: ClassOverloadArgumentMatchPlan,
+        argument: OverloadArgumentMatchPlan,
         name: str,
     ) -> str:
         """Dispatch one typed match record into a small source leaf."""
-        if argument.kind is ClassOverloadMatchKind.DERIVED:
+        if argument.kind is OverloadMatchKind.DERIVED:
             if argument.derived_type_identity is None:
                 raise ValueError(f"Derived overload argument {name!r} has no type identity")
             return f"type({name}) is {self._class_python_names[argument.derived_type_identity]}"
-        if argument.kind is ClassOverloadMatchKind.NUMPY_ARRAY:
+        if argument.kind is OverloadMatchKind.NUMPY_ARRAY:
             return self._numpy_array_overload_predicate(argument, name)
-        if argument.kind is ClassOverloadMatchKind.STRING:
+        if argument.kind is OverloadMatchKind.STRING:
             return f"isinstance({name}, str)"
-        if argument.kind is ClassOverloadMatchKind.NUMPY_SCALAR:
-            return f"type({name}) is _x2py_numpy.{self._numpy_scalar_type_name(argument.semantic_type_name)}"
+        if argument.kind is OverloadMatchKind.NUMPY_SCALAR:
+            numpy_type = self._numpy_scalar_type_name(argument.semantic_type_name)
+            predicate = f"type({name}) is _x2py_numpy.{numpy_type}"
+            if argument.accept_builtin_scalar:
+                builtin = self._builtin_scalar_type_name(argument.semantic_type_name)
+                predicate = f"({predicate} or type({name}) is {builtin})"
+            return predicate
         raise ValueError(f"Unsupported class overload match kind: {argument.kind.value}")
 
     def _numpy_array_overload_predicate(
         self,
-        argument: ClassOverloadArgumentMatchPlan,
+        argument: OverloadArgumentMatchPlan,
         name: str,
     ) -> str:
         """Render one exact NumPy array rank and dtype predicate."""
@@ -10653,6 +10874,11 @@ class CBindingGenerator(ClassVisitor):
             return numpy_types[semantic_type_name]
         except KeyError as exc:
             raise ValueError(f"Unsupported NumPy overload scalar {semantic_type_name!r}") from exc
+
+    @staticmethod
+    def _builtin_scalar_type_name(semantic_type_name: str) -> str:
+        """Return the Python scalar produced before reflected NumPy dispatch."""
+        return overload_builtin_scalar_family(semantic_type_name)
 
     @staticmethod
     def _class_base_name(
@@ -10788,18 +11014,21 @@ class CBindingGenerator(ClassVisitor):
     def _module_native_array_owner_nodes(
         self,
         namespace: NamespacePlan,
-        module_object: str,
+        _module_object: str,
     ) -> tuple[CExpressionStatement, ...]:
-        """Retain the owning Python module for every borrowed native handle."""
+        """Retain the root extension package for every borrowed native array."""
         nodes = []
         for variable in namespace.variables:
-            if variable.binding.getter_action is not ModuleGetterAction.NATIVE_ARRAY_HANDLE:
+            if variable.binding.getter_action not in {
+                ModuleGetterAction.BORROWED_ARRAY_VIEW,
+                ModuleGetterAction.NATIVE_ARRAY_HANDLE,
+            }:
                 continue
             owner = self._module_native_array_owner_name(variable)
             nodes.extend(
                 (
-                    CExpressionStatement(CodeExpression(f"Py_INCREF({module_object})")),
-                    CExpressionStatement(CodeExpression(f"{owner} = {module_object}")),
+                    CExpressionStatement(CodeExpression("Py_INCREF(mod)")),
+                    CExpressionStatement(CodeExpression(f"{owner} = mod")),
                 )
             )
         return tuple(nodes)

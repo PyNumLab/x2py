@@ -16,9 +16,13 @@ class PythonExportPolicy:
     name: str
 
 
-def complete_python_export_policy(module: models.SemanticModule) -> None:
+def complete_python_export_policy(
+    module: models.SemanticModule,
+    *,
+    strict_wrapper_names: bool = False,
+) -> None:
     """Resolve every public export name within its owning Python namespace."""
-    naming = NamingPolicy()
+    naming = NamingPolicy(strict_public_names=strict_wrapper_names)
     for owner in _module_export_owners(module):
         if getattr(owner, "visibility", "public") == "private":
             continue

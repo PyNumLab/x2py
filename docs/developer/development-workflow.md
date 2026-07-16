@@ -208,12 +208,12 @@ implementation files.
 | Fortran target type probing and cache | `x2py/probes/fortran_types.py` | `tests/probes/test_fortran_types.py` |
 | Generated target datatype mapping examples | `x2py/probes/report.py` | `tests/types/test_mapping_report.py`, `tests/docs/test_examples.py` |
 | Fortran to semantic IR | `x2py/semantics/fortran2ir.py`, `x2py/semantics/models.py` | `tests/semantics/conversion/fortran/` |
-| `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/codegen/printers/`, `tests/codegen/printers/test_modern_example.py` |
+| `.pyi` printing | `x2py/wrapper_codegen/printers/pyi_printer.py` | `tests/wrapper_codegen/printers/`, `tests/wrapper_codegen/printers/test_modern_example.py` |
 | `.pyi` parsing/loading/editing | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py` | `tests/parsing/pyi/`, `tests/pipeline/pyi_builds/test_contract_fixtures.py` |
-| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | `tests/semantics/policy/`, `tests/lowering/test_semantic_ir.py` |
+| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | `tests/semantics/policy/` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/readiness/`, `tests/semantics/readiness/test_wrap_readiness_fixture_suite.py` |
 | Fortran wrapper orchestration | `x2py/pipeline/build.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
-| Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/lowering/test_semantic_ir.py`, `tests/wrapper/` |
+| Wrapper planning and direct lowering | `x2py/wrapper_codegen/plan.py`, `x2py/wrapper_codegen/planner.py`, `x2py/wrapper_codegen/generator.py` | `tests/wrapper_codegen/`, `tests/wrapper/` |
 | Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/docs/test_examples.py` |
 
@@ -222,17 +222,17 @@ implementation files.
 | Compiler preprocessing | `x2py/pipeline/preprocessing.py` | `tests/pipeline/preprocessing/`, `tests/pipeline/preprocessing/test_parser_boundaries.py`, `tests/parsing/c/test_c_lexer_preprocessor.py` |
 | C target ABI probing and cache | `x2py/probes/c_types.py` | `tests/probes/test_c_types.py` |
 | C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/conversion/c/`, `tests/semantics/readiness/test_c_readiness.py` |
-| Fortran-to-C bridge and CPython binding | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | `tests/wrapper/` subject suites |
+| Fortran-to-C bridge and CPython binding | `x2py/wrapper_codegen/fortran/bridge.py`, `x2py/wrapper_codegen/c/binding.py` | `tests/wrapper_codegen/`, `tests/wrapper/` subject suites |
 | Public API exports | `x2py/__init__.py` | `tests/parsing/fortran/test_public_entrypoints.py`, `tests/parsing/c/test_c_public_api_skeleton.py` |
 X2PY_C_DOCS_END -->
 
-### Codegen Class Organization
+### Wrapper Generator Class Organization
 
 <!-- X2PY_C_DOCS_START
 Current runtime wrapper codegen is intentionally narrow: Fortran sources lower
 through the generated Fortran bridge, generated C, and the CPython extension
 binding. Semantic `.pyi` emission is the editable contract printer. Do not keep
-placeholder C++, pybind11, or Python source printers in `x2py/codegen` until
+placeholder C++, pybind11, or Python source printers until
 those backends have a documented runtime contract and tests.
 X2PY_C_DOCS_END -->
 
@@ -281,7 +281,7 @@ User-visible `.pyi` syntax is first parsed to Python AST by
 `x2py/pyi_parser/parser.py`, loaded from text/files by
 `x2py/pipeline/pyi.py`, converted to semantic IR by
 `x2py/semantics/pyi2ir.py`, and printed by
-`x2py/codegen/printers/pyi_printer.py`. The converter and printer operate on
+`x2py/wrapper_codegen/printers/pyi_printer.py`. The converter and printer operate on
 `x2py/semantics/models.py`.
 
 Important implementation rules:
@@ -304,7 +304,7 @@ Important implementation rules:
 When changing `.pyi` syntax:
 
 1. Add or update parser tests in `tests/parsing/pyi/`.
-2. Add or update printer tests in `tests/codegen/printers/`.
+2. Add or update printer tests in `tests/wrapper_codegen/printers/`.
 3. Update fixture tests only if the public generated contract changes.
 4. Update [Basic wrapper tutorial](../user/tutorials/basic-wrapper.md) or [Verified examples cookbook](../user/examples/verified-cookbook.md) if users
    need to write or read the new syntax.
@@ -828,8 +828,8 @@ ordered source paths
   -> compile-time expression and storage probes
   -> fortran_project_to_semantic_modules(...)
   -> merge public semantic modules
-  -> semantic_ir_to_codegen_ast(...)
-  -> Codegen and create_shared_library(...)
+  -> WrapperPlanner and WrapperCodeGenerator
+  -> create_shared_library(...)
   -> WrapperBuildResult
 ```
 
@@ -838,16 +838,18 @@ The main ownership boundaries are:
 - `x2py/pipeline/build.py`: source order, preprocessing/probing, semantic merge,
   `.pyi` entry-contract loading, native build plan assembly, output placement,
   direct-versus-Makefile mode, and artifact reporting;
-- `x2py/semantics/ir2ast.py`: semantic contract validation and conversion to
-  codegen models;
+- `x2py/wrapper_codegen/planner.py`: projection from completed semantic policy
+  into validated typed plans;
+- `x2py/wrapper_codegen/generator.py`: direct bridge, binding, and source
+  artifact generation;
 - `x2py/compiling/`: compiler commands and shared-library linking; and
 - `x2py/stdlib/x2py_runtime/`: native runtime support copied into each build.
 
 <!-- X2PY_C_DOCS_START
-- `x2py/codegen/bridges/fortran_to_c.py`: Fortran-to-C ABI adaptation;
-- `x2py/codegen/bindings/c_to_python.py`: Python argument/result conversion,
+- `x2py/wrapper_codegen/fortran/bridge.py`: Fortran-to-C ABI adaptation;
+- `x2py/wrapper_codegen/c/binding.py`: Python argument/result conversion,
   reference handling, and CPython wrapper construction;
-- `x2py/codegen/printers/{fcode,ccode,cpythoncode}.py`: source rendering only;
+- `x2py/wrapper_codegen/printers/source_printers.py`: source rendering only;
 X2PY_C_DOCS_END -->
 
 Do not move semantic ownership or projection policy into printers. Do not infer
@@ -926,7 +928,7 @@ X2PY_C_DOCS_END -->
 - `x2py/semantics/fortran2ir.py` maps Fortran procedures, derived types, module
   variables, kinds, shapes, storage contracts, visibility, imported references,
   and compile-time values.
-- `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
+- `x2py/wrapper_codegen/printers/pyi_printer.py` emits editable user contracts.
 - `x2py/pyi_parser/parser.py` parses edited contracts to Python AST.
 - `x2py/pipeline/pyi.py` converts edited contract text, files, and path sets.
 - `x2py/semantics/pyi2ir.py` converts parsed `.pyi` AST back into semantic IR.
@@ -979,7 +981,7 @@ status-return policy, ownership conversion, or coercion execution.
 The test ownership is:
 
 - loader syntax and error behavior: `tests/parsing/pyi/`;
-- printer round-trip shape: `tests/codegen/printers/`;
+- printer round-trip shape: `tests/wrapper_codegen/printers/`;
 - readiness interpretation: `tests/semantics/readiness/`.
 
 <!-- X2PY_C_DOCS_START
@@ -1004,7 +1006,7 @@ coverage only when the public contract changes.
 | Parser fixture goldens | Serialized Fortran parser contracts | `tests/parsing/fortran/test_fortran_fixture_suite.py` |
 | Semantic tests | Fortran parser facts converted to wrapper-neutral IR | `tests/semantics/conversion/fortran/` |
 | Readiness tests | User-facing blocker and wrappability decisions | `tests/semantics/readiness/` |
-| `.pyi` tests | Editable contract loader/printer behavior | `tests/parsing/pyi/`, `tests/codegen/printers/` |
+| `.pyi` tests | Editable contract loader/printer behavior | `tests/parsing/pyi/`, `tests/wrapper_codegen/printers/` |
 | CLI tests | User commands, output routing, diagnostics | `tests/cli/`, `tests/pipeline/preprocessing/` |
 | Wrapper build tests | Artifact placement, direct/Makefile modes, multi-source ordering | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/` |
 | Wrapper runtime tests | Imported extension behavior, ownership, lifetime, and failures | `tests/wrapper/` subject suites indexed by `tests/wrapper/fortran/README.md` |
@@ -1110,7 +1112,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 6. If the new parser fact affects semantic conversion, update
    `x2py/semantics/c2ir.py` and add coverage in `tests/semantics/conversion/c/`.
-7. If the generated `.pyi` changes, update `tests/codegen/printers/`
+7. If the generated `.pyi` changes, update `tests/wrapper_codegen/printers/`
    or `tests/pipeline/pyi_builds/test_contract_fixtures.py`.
 8. Update [C parser reference](c-parser-reference.md), [Basic wrapper tutorial](../user/tutorials/basic-wrapper.md),
    [Verified examples cookbook](../user/examples/verified-cookbook.md), or [Semantic IR reference](../user/reference/semantic-ir.md) if users or
@@ -1155,7 +1157,7 @@ metadata item.
 
 6. If the new fact affects semantic output, update `x2py/semantics/fortran2ir.py`
    and `tests/semantics/conversion/fortran/`.
-7. If generated `.pyi` changes, update `tests/codegen/printers/`
+7. If generated `.pyi` changes, update `tests/wrapper_codegen/printers/`
    and the relevant fixture tests.
 8. Update [Fortran parser reference](fortran-parser-reference.md), [Basic wrapper tutorial](../user/tutorials/basic-wrapper.md),
    [Verified examples cookbook](../user/examples/verified-cookbook.md), or [Semantic IR reference](../user/reference/semantic-ir.md) as needed.
@@ -1181,7 +1183,7 @@ X2PY_C_DOCS_END -->
 3. Keep the public semantic dtype names in `x2py/semantics/models.py` stable unless
    there is a deliberate schema decision.
 4. If the emitted `.pyi` annotation changes, update
-   `tests/codegen/printers/` and `tests/parsing/pyi/`.
+   `tests/wrapper_codegen/printers/` and `tests/parsing/pyi/`.
 5. Update the datatype tables in [Semantic IR reference](../user/reference/semantic-ir.md), and update
    [Basic wrapper tutorial](../user/tutorials/basic-wrapper.md) or [Verified examples cookbook](../user/examples/verified-cookbook.md) when a visible
    example changes.
@@ -1199,13 +1201,13 @@ Focused verification:
 
 ```bash
 PYTHONPATH=. pytest -q tests/semantics/conversion/fortran/
-PYTHONPATH=. pytest -q tests/codegen/printers/ tests/parsing/pyi/
+PYTHONPATH=. pytest -q tests/wrapper_codegen/printers/ tests/parsing/pyi/
 ```
 
 <!-- X2PY_C_DOCS_START
 ```bash
 PYTHONPATH=. pytest -q tests/semantics/conversion/fortran/ tests/semantics/conversion/c/
-PYTHONPATH=. pytest -q tests/codegen/printers/ tests/parsing/pyi/
+PYTHONPATH=. pytest -q tests/wrapper_codegen/printers/ tests/parsing/pyi/
 ```
 X2PY_C_DOCS_END -->
 
@@ -1218,8 +1220,8 @@ Example target: add a new `Annotated[...]` metadata item or projection helper.
    when loading or cross-file reconciliation changes. Update
    `x2py/pyi_parser/parser.py` only when the raw Python AST parsing boundary
    changes.
-3. Add printer tests in `tests/codegen/printers/`.
-4. Update `x2py/codegen/printers/pyi_printer.py`.
+3. Add printer tests in `tests/wrapper_codegen/printers/`.
+4. Update `x2py/wrapper_codegen/printers/pyi_printer.py`.
 5. Update semantic models in `x2py/semantics/models.py` only if the IR needs a new
    field or constraint.
 6. Update readiness behavior if the new syntax resolves a blocker.
@@ -1230,7 +1232,7 @@ Focused verification:
 
 ```bash
 PYTHONPATH=. pytest -q tests/parsing/pyi/
-PYTHONPATH=. pytest -q tests/codegen/printers/
+PYTHONPATH=. pytest -q tests/wrapper_codegen/printers/
 PYTHONPATH=. pytest -q tests/semantics/readiness/
 ```
 
@@ -1506,7 +1508,7 @@ Focused tests by concern:
 - Semantic readiness:
   `PYTHONPATH=. pytest -q tests/semantics/readiness/`
 - `.pyi` printer:
-  `PYTHONPATH=. pytest -q tests/codegen/printers/`
+  `PYTHONPATH=. pytest -q tests/wrapper_codegen/printers/`
 - `.pyi` loader and edited stub behavior:
   `PYTHONPATH=. pytest -q tests/parsing/pyi/`
 - Semantic and `.pyi` fixtures:
@@ -1528,7 +1530,7 @@ python tests/pyi/generate_pyi_fixtures.py
 ```
 
 Executable examples: `tests/semantics/readiness/`,
-`tests/codegen/printers/`, and `tests/parsing/pyi/`.
+`tests/wrapper_codegen/printers/`, and `tests/parsing/pyi/`.
 
 ### CLI
 

@@ -53,7 +53,6 @@ SUBJECT_TEST_MODULES = {
         "test_array_results.py",
         "test_assumed_rank_arrays.py",
         "test_array_generated_pyi_contracts.py",
-        "test_bind_c_array_type.py",
         "test_multidimensional_arrays.py",
     ),
     "scalars": (
@@ -406,15 +405,7 @@ def test_wrapper_language_suite_and_user_guide_link_current_subject_paths():
     assert "fortran/README.md" in (WRAPPER_SUITE_ROOT / "README.md").read_text(encoding="utf-8")
 
     guide = (DOCS_ROOT / "user/guide/fortran-wrapper.md").read_text(encoding="utf-8")
-    runtime_paths = [
-        test_path
-        for test_path in SUBJECT_TEST_PATHS
-        if not test_path.startswith("layout_rules/")
-        and test_path
-        not in {
-            "arrays/test_bind_c_array_type.py",
-        }
-    ]
+    runtime_paths = [test_path for test_path in SUBJECT_TEST_PATHS if not test_path.startswith("layout_rules/")]
     missing = [test_path for test_path in runtime_paths if test_path not in guide]
     assert missing == []
     assert "- [x]" not in guide

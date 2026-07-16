@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 
 from tests.wrapper.fortran._support import _build_source_or_generated_pyi_and_import, wrapper_source
-from x2py.pipeline import build as build_pipeline
 
 CALLBACK_ALL_F90_SOURCE = wrapper_source("fcallback_all_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
@@ -14,12 +13,7 @@ CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 def test_immediate_callbacks_cover_all_supported_argument_shapes(
     pyi_parity_build_mode: str,
     tmp_path: Path,
-    monkeypatch,
 ):
-    def fail_legacy_lowering(*_args, **_kwargs):
-        raise AssertionError("eligible callback units must not enter legacy lowering")
-
-    monkeypatch.setattr(build_pipeline, "semantic_ir_to_codegen_ast", fail_legacy_lowering)
     module = _build_source_or_generated_pyi_and_import(
         CALLBACK_ALL_F90_SOURCE,
         tmp_path,

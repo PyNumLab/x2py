@@ -45,7 +45,8 @@ def test_strided_array_lowering_validates_and_passes_one_explicit_bridge_slice()
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
-    assert "expected ordering (F)" in c_source
+    assert '_native_array_actual_argument_for_binding_positional"' in c_source
+    assert 'PyUnicode_FromString("F")' in c_source
     assert "values_upper_bound_0" in c_source
     assert "values_stride_1" in c_source
     assert "real(c_double), pointer, dimension(:, :) :: values_base" in bridge_source

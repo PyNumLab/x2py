@@ -260,17 +260,6 @@ def consume(value: point) -> None: ...
         ),
         (
             """
-from x2py.contracts import Float64, Returns
-
-class point:
-    x: Float64
-
-def update(value: point) -> tuple[Float64, Returns["value", point]]: ...
-""",
-            "cannot combine native results with visible argument writeback for 'value'",
-        ),
-        (
-            """
 class node:
     next: node
 """,
@@ -291,6 +280,34 @@ def test_unsupported_derived_shapes_fail_on_exact_completed_policy_blockers(
     assert any(diagnostic in blocker.reason for blocker in report.blockers)
     with pytest.raises(ValueError, match=diagnostic.replace("(", r"\(").replace(")", r"\)")):
         WrapperPlanner().build(module)
+
+
+def test_native_result_and_derived_writeback_share_ordered_output_aggregation():
+    module = parse_pyi_text(
+        """
+from x2py.contracts import Float64, Returns
+
+class point:
+    x: Float64
+
+def update(value: point) -> tuple[Float64, Returns["value", point]]: ...
+""",
+        module_name="phase8_mixed_writeback",
+    )
+    complete_semantic_policies(module)
+
+    report = WrapperPlanSupportAnalyzer().analyze(module)
+    assert report.supported is True
+    plan = WrapperPlanner().build(module)
+    function = plan.namespaces[0].functions[0]
+    assert function.results[0].result_position == 0
+    assert function.writeback_actions[2].result_position == 1
+
+    c_source = next(
+        source.text for source in WrapperCodeGenerator().generate(plan).sources if source.path.suffix == ".c"
+    )
+    assert "PyTuple_New(2)" in c_source
+    assert "Py_DECREF(result_0_obj);" in c_source
 
 
 def test_mixed_derived_results_check_allocation_and_own_every_failure_path_before_scalar_conversion():

@@ -82,7 +82,7 @@ from .plan import (
 )
 from .planner import WrapperPlanner
 from .primitive_scalar_types import PrimitiveScalarTypeRegistry
-from .source_printers import CSourcePrinter, FortranSourcePrinter
+from .printers import CSourcePrinter, FortranSourcePrinter
 from .support import WrapperPlanSupportAnalyzer
 from .visitor import ClassVisitor, UnsupportedWrapperCodegenNodeError
 

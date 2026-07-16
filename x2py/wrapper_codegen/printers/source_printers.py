@@ -456,24 +456,42 @@ class FortranSourcePrinter(ClassVisitor):
     def _visit_FortranInterfaceProcedure(self, node: FortranInterfaceProcedure) -> str:
         """Render one native procedure declaration inside an interface."""
         kind = "subroutine" if node.is_subroutine else "function"
-        suffix = f" result({node.result_name})" if node.result_name is not None else ""
-        binding = (
-            f' bind(c, name="{node.bind_name}")' if node.bind_name is not None else " bind(c)" if node.bind_c else ""
-        )
-        lines = [
-            self._continued_call(
-                f"{kind} {node.name}(",
-                tuple(parameter.name for parameter in node.parameters),
-                suffix=f"){binding}{suffix}",
-            )
-        ]
-        if node.imports:
-            lines.append(self._indented(f"import :: {', '.join(node.imports)}"))
-        lines.extend(self._indented(self.visit(parameter)) for parameter in node.parameters)
-        if node.result_name is not None and node.result_type is not None:
-            lines.append(self._indented(f"{node.result_type} :: {node.result_name}"))
+        lines = [self._interface_procedure_signature(node, kind)]
+        lines.extend(self._interface_import_lines(node))
+        declarations = node.parameter_declarations or node.parameters
+        lines.extend(self._indented(self.visit(parameter)) for parameter in declarations)
+        lines.extend(self._interface_result_lines(node))
         lines.append(f"end {kind} {node.name}")
         return "\n".join(lines)
+
+    def _interface_procedure_signature(self, node: FortranInterfaceProcedure, kind: str) -> str:
+        """Render the ordered parameter list and optional native binding."""
+        suffix = f" result({node.result_name})" if node.result_name is not None else ""
+        binding = self._interface_binding_suffix(node)
+        return self._continued_call(
+            f"{kind} {node.name}(",
+            tuple(parameter.name for parameter in node.parameters),
+            suffix=f"){binding}{suffix}",
+        )
+
+    @staticmethod
+    def _interface_binding_suffix(node: FortranInterfaceProcedure) -> str:
+        """Spell one named, unnamed, or absent C binding clause."""
+        if node.bind_name is not None:
+            return f' bind(c, name="{node.bind_name}")'
+        return " bind(c)" if node.bind_c else ""
+
+    def _interface_import_lines(self, node: FortranInterfaceProcedure) -> tuple[str, ...]:
+        """Render the optional interface import declaration."""
+        if not node.imports:
+            return ()
+        return (self._indented(f"import :: {', '.join(node.imports)}"),)
+
+    def _interface_result_lines(self, node: FortranInterfaceProcedure) -> tuple[str, ...]:
+        """Render a complete function result declaration when present."""
+        if node.result_name is None or node.result_type is None:
+            return ()
+        return (self._indented(f"{node.result_type} :: {node.result_name}"),)
 
     def _function_signature(self, node: FortranFunction) -> str:
         """Render a Fortran function signature."""

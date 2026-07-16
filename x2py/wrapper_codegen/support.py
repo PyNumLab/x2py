@@ -15,9 +15,11 @@ from x2py.semantics.wrapper_policy import (
     FunctionWrapperPolicy,
     ModuleObjectAccessMechanism,
     ModuleVariablePolicy,
+    ModuleGetterAction,
     NativeArrayDescriptorKind,
     NativeArrayHandleKind,
     NativeDescriptorHandoffABI,
+    OverloadPolicy,
 )
 from x2py.wrapper_codegen.plan import WrapperPlanSupportBlocker, WrapperPlanSupportReport
 from x2py.wrapper_codegen.visitor import ClassVisitor
@@ -70,7 +72,12 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
     def _module_variable_support_report(self, policy: ModuleVariablePolicy) -> WrapperPlanSupportReport:
         """Classify one completed module-variable policy without backend inference."""
         blockers = list(policy.blockers)
-        if policy.supported and policy.rank > 0 and policy.native_array_handle is None:
+        if (
+            policy.supported
+            and policy.rank > 0
+            and policy.native_array_handle is None
+            and policy.getter_action is not ModuleGetterAction.BORROWED_ARRAY_VIEW
+        ):
             blockers.append("rank-positive module array snapshots are not implemented by wrapper-plan lowering")
         return WrapperPlanSupportReport(
             owner_path=policy.owner_path,
@@ -90,6 +97,8 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
                 ModuleObjectAccessMechanism.VALUE_COPY: "derived-module-constant-values",
             }[policy.derived.access]
             return (lane,)
+        if policy.getter_action is ModuleGetterAction.BORROWED_ARRAY_VIEW:
+            return ("borrowed-module-array-views",)
         if policy.native_array_handle is None:
             return ("scalar-module-variables",)
         return (f"{policy.native_array_handle.descriptor_kind.value}-module-handles",)
@@ -111,11 +120,60 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         )
 
     def _module_blockers(self, module: models.SemanticModule) -> tuple[WrapperPlanSupportBlocker, ...]:
-        """Return blockers for module-level owners outside completed lanes."""
+        """Return blockers for completed class and module-overload orchestration."""
         blockers = []
         blockers.extend(self._class_orchestration_blockers(module))
-        blockers.extend(self._owner_blockers(module.name, "overload sets", module.overload_sets))
+        blockers.extend(self._module_overload_blockers(module))
         return tuple(blockers)
+
+    def _module_overload_blockers(self, module: models.SemanticModule) -> tuple[WrapperPlanSupportBlocker, ...]:
+        """Validate every module generic and its ordinary concrete call policy."""
+        policies = module.metadata.get(models.RESOLVED_MODULE_OVERLOAD_POLICIES_METADATA)
+        if module.overload_sets and not isinstance(policies, tuple):
+            return (WrapperPlanSupportBlocker(module.name, "missing completed module-overload policies"),)
+        return (
+            *self._completed_overload_policy_blockers(module, policies or ()),
+            *self._overload_candidate_blockers(module),
+        )
+
+    @staticmethod
+    def _completed_overload_policy_blockers(
+        module: models.SemanticModule,
+        policies: tuple,
+    ) -> tuple[WrapperPlanSupportBlocker, ...]:
+        """Return blockers already completed on module-overload policies."""
+        blockers = []
+        for policy in policies:
+            if not isinstance(policy, OverloadPolicy):
+                blockers.append(WrapperPlanSupportBlocker(module.name, "incomplete module-overload policy"))
+                continue
+            blockers.extend(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers)
+        return tuple(blockers)
+
+    def _overload_candidate_blockers(
+        self,
+        module: models.SemanticModule,
+    ) -> tuple[WrapperPlanSupportBlocker, ...]:
+        """Collect completed call-policy blockers from concrete candidates."""
+        return tuple(
+            blocker
+            for overload in module.overload_sets
+            for procedure in overload.procedures
+            for blocker in self._one_overload_candidate_blockers(module, overload.name, procedure)
+        )
+
+    @staticmethod
+    def _one_overload_candidate_blockers(
+        module: models.SemanticModule,
+        overload_name: str,
+        procedure: models.SemanticFunction,
+    ) -> tuple[WrapperPlanSupportBlocker, ...]:
+        """Require and project one concrete overload candidate call policy."""
+        policy = procedure.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+        if not isinstance(policy, FunctionWrapperPolicy):
+            owner = f"{module.name}.{overload_name}.{procedure.name}"
+            return (WrapperPlanSupportBlocker(owner, "missing completed overload-candidate call policy"),)
+        return tuple(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers)
 
     def _class_orchestration_blockers(
         self,
@@ -494,6 +552,7 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         lanes.extend(self._derived_type_lanes(module))
         lanes.extend(self._class_surface_lanes(module))
         lanes.extend(self._class_function_lanes(module))
+        lanes.extend(self._module_overload_lanes(module))
         policies = (
             *(
                 function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
@@ -512,6 +571,21 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
             if isinstance(policy, (FunctionWrapperPolicy, ModuleVariablePolicy))
         ):
             lanes.append("python-namespaces")
+        return tuple(lanes)
+
+    def _module_overload_lanes(self, module: models.SemanticModule) -> tuple[str, ...]:
+        """Reuse ordinary transfer lanes and add one orchestration lane for generics."""
+        if not module.overload_sets:
+            return ()
+        lanes = ["module-overloads"]
+        for overload in module.overload_sets:
+            for procedure in overload.procedures:
+                policy = procedure.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+                if not isinstance(policy, FunctionWrapperPolicy):
+                    continue
+                for lane in self._function_lanes(policy):
+                    if lane not in lanes:
+                        lanes.append(lane)
         return tuple(lanes)
 
     def _class_surface_lanes(self, module: models.SemanticModule) -> tuple[str, ...]:

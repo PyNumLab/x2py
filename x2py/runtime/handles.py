@@ -959,12 +959,17 @@ def _native_array_actual_argument_for_binding_positional(
     require_contiguous: bool = False,
 ) -> tuple[int, ...]:
     """Pack a normal array actual into generated Bind-C array descriptor fields."""
+    strided_ndarray = include_strides and isinstance(value, np.ndarray)
+    if strided_ndarray:
+        _validate_ndarray_positive_strides(value)
     actual = _native_array_actual_for_binding(
         value,
         expected_dtype=expected_dtype,
         expected_rank=expected_rank,
         expected_shape=expected_shape,
-        expected_layout=expected_layout,
+        # Positive-stride validation below is the exact Fortran-order contract
+        # for a strided ndarray; NumPy's contiguous flag is intentionally false.
+        expected_layout=None if strided_ndarray else expected_layout,
         require_writeable=bool(require_writeable),
         require_native_byte_order=bool(require_native_byte_order),
         require_aligned=bool(require_aligned),
@@ -978,9 +983,58 @@ def _native_array_actual_argument_for_binding_positional(
         fields.append(itemsize)
     fields.extend(shape)
     if include_strides:
-        fields.extend(shape)
-        fields.extend(1 for _axis in shape)
+        extents, upper_bounds, strides = _normal_array_actual_stride_facts(actual, shape, itemsize)
+        fields[-len(shape) :] = extents
+        fields.extend(upper_bounds)
+        fields.extend(strides)
     return tuple(fields)
+
+
+def _normal_array_actual_stride_facts(
+    actual: Any,
+    shape: tuple[int, ...],
+    itemsize: int,
+) -> tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]]:
+    """Pack the positive-stride base extent and slice facts used by the bridge."""
+    if isinstance(actual, _NativeArrayHandoff):
+        return shape, tuple(max(extent - 1, -1) for extent in shape), (1,) * len(shape)
+    if not isinstance(actual, np.ndarray):
+        raise TypeError(f"normal array actual operation returned unsupported value {type(actual).__name__}")
+    if actual.size == 0:
+        # NumPy may report zero strides for empty dimensions.  No element can
+        # be addressed, so use the bridge's canonical empty-array facts.
+        return shape, tuple(max(extent - 1, -1) for extent in shape), (1,) * len(shape)
+    if any(stride <= 0 for stride in actual.strides):
+        raise ValueError("array actual strides must be positive")
+
+    extents = []
+    upper_bounds = []
+    relative_strides = []
+    base_product = 1
+    element_strides = tuple(stride // itemsize for stride in actual.strides)
+    for axis, (logical_extent, element_stride) in enumerate(zip(shape, element_strides, strict=True)):
+        relative_stride = element_stride // base_product
+        relative_strides.append(relative_stride)
+        upper_bound = -1 if logical_extent == 0 else (logical_extent - 1) * relative_stride
+        upper_bounds.append(upper_bound)
+        base_extent = max(element_strides[axis + 1] // base_product, 1) if axis + 1 < len(shape) else upper_bound + 1
+        extents.append(base_extent)
+        base_product *= base_extent
+    return tuple(extents), tuple(upper_bounds), tuple(relative_strides)
+
+
+def _validate_ndarray_positive_strides(value: np.ndarray) -> None:
+    """Match the bridge's positive non-overlapping Fortran slice contract."""
+    for axis, stride in enumerate(value.strides):
+        invalid = stride % value.itemsize != 0 or (value.size > 0 and value.shape[axis] > 1 and stride <= 0)
+        if axis:
+            invalid |= (
+                value.size > 0
+                and value.shape[axis - 1] > 0
+                and (stride < value.strides[axis - 1] * value.shape[axis - 1])
+            )
+        if invalid:
+            raise TypeError("NumPy array actual has incompatible layout; expected ordering (F)")
 
 
 def _normal_array_actual_abi_facts(
@@ -1151,11 +1205,11 @@ def _validate_ndarray_array_actual(
     require_contiguous: bool = False,
 ) -> None:
     _validate_ndarray_expected_rank(value, expected_rank)
+    _validate_ndarray_native_byte_order(value, require_native_byte_order)
     _validate_ndarray_expected_dtype(value, expected_dtype)
     _validate_ndarray_expected_shape(tuple(int(dimension) for dimension in value.shape), expected_shape)
     _validate_ndarray_expected_layout(value, expected_layout)
     _validate_ndarray_writeable(value, require_writeable)
-    _validate_ndarray_native_byte_order(value, require_native_byte_order)
     _validate_ndarray_aligned(value, require_aligned)
     _validate_ndarray_contiguous(value, require_contiguous)
 
@@ -1201,7 +1255,9 @@ def _validate_ndarray_expected_shape(
         raise TypeError(f"NumPy array shape rank {len(shape)} does not match expected shape rank {len(expected)}")
     for axis, (actual, wanted) in enumerate(zip(shape, expected, strict=True)):
         if wanted is not None and actual != wanted:
-            raise TypeError(f"NumPy array shape {shape!r} does not match expected shape {expected!r} at axis {axis}")
+            raise TypeError(
+                f"NumPy array has incompatible shape at axis {axis}: received {shape!r}, expected {expected!r}"
+            )
 
 
 def _validate_ndarray_expected_layout(value: np.ndarray, expected_layout: str | None) -> None:

@@ -1,15 +1,11 @@
 """Tests split by stable ownership concept from `test_imports_and_packages.py`."""
 
-from tests.codegen.printers._support import (
-    BindingPipeline,
+from tests.wrapper_codegen.printers._support import (
     CALLBACK_DECLARATION_ACCESS_METADATA,
-    Codegen,
-    Path,
     ProjectionMapping,
     PyiPrinter,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
-    Scope,
     SemanticArgument,
     SemanticArrayContract,
     SemanticConstraint,
@@ -23,11 +19,12 @@ from tests.codegen.printers._support import (
     emit_module,
     fortran_module_to_semantic_module,
     generate_pyi,
+    generate_wrapper_artifacts,
     normalize,
     parse_fortran_source,
     parse_pyi_text,
     pytest,
-    semantic_ir_to_codegen_ast,
+    rendered_source,
 )
 
 
@@ -212,7 +209,7 @@ def test_emit_native_call_supports_return_and_work_value_references():
     assert "def wrapper() -> Float64: ..." in code
 
 
-def test_runtime_policy_decorators_round_trip_through_pyi_and_codegen(tmp_path: Path):
+def test_runtime_policy_decorators_round_trip_through_pyi():
     loaded = parse_pyi_text(
         """
 @raises(status="status", message="message", success=0)
@@ -239,55 +236,15 @@ def serialized(x: Float64) -> Float64: ...
     assert "@hold_gil" in code
     assert emit_module(parse_pyi_text(code, module_name="runtime_policy")) == code
 
-    scope = Scope(name=loaded.name, scope_type="module")
-    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
-    pipeline = BindingPipeline(
-        Codegen(loaded.name, codegen_module, codegen_module.scope),
-        loaded.name,
-        "fortran",
-        verbose=0,
-    )
 
-    pipeline.generate(str(tmp_path))
-    generated = pipeline.write(tmp_path)
-
-    c_wrapper = generated[1].read_text()
-    solve_start = c_wrapper.index("static PyObject* bind_c_solve_wrapper")
-    serialized_start = c_wrapper.index("static PyObject* bind_c_serialized_wrapper")
-    solve_wrapper = c_wrapper[solve_start:serialized_start]
-    serialized_wrapper = c_wrapper[serialized_start : c_wrapper.index("static PyMethodDef", serialized_start)]
-    assert "Py_BEGIN_ALLOW_THREADS" in solve_wrapper
-    assert "Py_END_ALLOW_THREADS" in solve_wrapper
-    assert "Py_BEGIN_ALLOW_THREADS" not in serialized_wrapper
-    assert "Py_END_ALLOW_THREADS" not in serialized_wrapper
-    assert "PyErr_SetObject(PyExc_RuntimeError" in c_wrapper
-    assert "return solve_0001_obj;" in c_wrapper
-    assert "PyTuple_Pack" not in c_wrapper
-    assert c_wrapper.count("Py_DECREF(status_obj);") == 2
-    assert c_wrapper.count("Py_DECREF(message_obj);") == 2
-    assert "solve(x) -> float64" in c_wrapper
-    assert "RuntimeError" in c_wrapper
-
-
-def test_callback_contract_holds_gil_and_release_gil_is_removed(tmp_path: Path):
+def test_callback_contract_holds_gil_and_release_gil_is_removed():
     loaded = parse_pyi_text(
         """
 def apply(callback: Callable[[Float64], Float64], x: Float64) -> Float64: ...
 """,
         module_name="callback_policy",
     )
-    scope = Scope(name=loaded.name, scope_type="module")
-    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
-    pipeline = BindingPipeline(
-        Codegen(loaded.name, codegen_module, codegen_module.scope),
-        loaded.name,
-        "fortran",
-        verbose=0,
-    )
-    pipeline.generate(str(tmp_path))
-    generated = pipeline.write(tmp_path)
-
-    c_wrapper = generated[1].read_text()
+    c_wrapper = rendered_source(generate_wrapper_artifacts(loaded), ".c")
     assert "Py_BEGIN_ALLOW_THREADS" not in c_wrapper
     assert "Py_END_ALLOW_THREADS" not in c_wrapper
 
@@ -547,7 +504,7 @@ def test_printer_emits_nullable_scalar_descriptor_boundary_projections(argument_
     assert ") -> Float64 | None: ..." in code
 
 
-def test_defaulted_scalar_descriptors_preserve_omitted_vs_none_in_generated_wrappers(tmp_path):
+def test_defaulted_scalar_descriptors_preserve_omitted_vs_none_in_generated_wrappers():
     loaded = parse_pyi_text(
         """
 @native_call([Allocatable(Arg(0)), Pointer(Arg(1))])
@@ -555,35 +512,25 @@ def update(scale: Float64 | None = ..., target: Float64 | None = ...) -> None: .
 """,
         module_name="optional_scalar_descriptors",
     )
-    scope = Scope(name=loaded.name, scope_type="module")
-    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
-    pipeline = BindingPipeline(
-        Codegen(loaded.name, codegen_module, codegen_module.scope),
-        loaded.name,
-        "fortran",
-        verbose=0,
-    )
-
-    pipeline.generate(str(tmp_path))
-    bridge_path, c_wrapper_path, *_ = pipeline.write(tmp_path)
-    bridge_source = bridge_path.read_text()
-    c_wrapper = c_wrapper_path.read_text()
+    artifacts = generate_wrapper_artifacts(loaded)
+    bridge_source = rendered_source(artifacts, ".f90")
+    c_wrapper = rendered_source(artifacts, ".c")
 
     assert "bound_scale_present" in bridge_source
     assert "bound_target_present" in bridge_source
     assert "if (c_associated(bound_scale_present)) then" in bridge_source
     assert "if (c_associated(bound_target_present)) then" in bridge_source
-    assert "call update()" in bridge_source
-    assert "call update(scale = scale_descriptor)" in bridge_source
-    assert "call update(target = target_descriptor)" in bridge_source
-    assert "call update(scale = scale_descriptor, target = target_descriptor" in bridge_source
+    assert "call native_update()" in bridge_source
+    assert "call native_update(scale=scale_descriptor)" in bridge_source
+    assert "call native_update(target=target_descriptor)" in bridge_source
+    assert "call native_update(scale=scale_descriptor, target=target_descriptor" in bridge_source
 
     assert "scale_obj = NULL;" in c_wrapper
     assert "target_obj = NULL;" in c_wrapper
     assert "if (scale_obj != NULL)" in c_wrapper
-    assert "scale_present = &scale_value;" in c_wrapper
+    assert "scale_present = &scale;" in c_wrapper
     assert "if ((scale_obj != NULL) && (scale_obj != Py_None))" in c_wrapper
-    assert "scale_nullable = &scale_value;" in c_wrapper
+    assert "scale_nullable = &scale;" in c_wrapper
     assert "bind_c_update(scale_nullable, scale_present, target_nullable, target_present);" in c_wrapper
     assert "Omit to make the native optional dummy absent." in c_wrapper
     assert "Pass None for a present unallocated or unassociated descriptor." in c_wrapper

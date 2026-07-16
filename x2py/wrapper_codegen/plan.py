@@ -31,7 +31,7 @@ from x2py.semantics.wrapper_policy import (
     ClassConstructorKind,
     ClassInvocationKind,
     ClassMethodKind,
-    ClassOverloadMatchKind,
+    OverloadMatchKind,
     ClassRegistrationAction,
     ConstructionLifecycleAction,
     DerivedActualAccess,
@@ -63,6 +63,7 @@ from x2py.semantics.wrapper_policy import (
     NativeArrayRelease,
     NativeArraySourceKind,
     NativeDescriptorHandoffABI,
+    NativeInvocationKind,
     OptionalMode,
     PythonExceptionKind,
     TransformationAction,
@@ -205,7 +206,8 @@ class ConstructorPlan(StageRecord):
     lifecycle: tuple[ConstructionLifecycleAction, ...]
     rejection_message: str | None = None
     target: FunctionPlan | None = None
-    overload: ClassOverloadPlan | None = None
+    overload: OverloadPlan | None = None
+    docstring: str = ""
 
 
 @dataclass
@@ -218,30 +220,35 @@ class ClassMethodPlan(StageRecord):
     passed_object_position: int | None
     public: bool
     function: FunctionPlan
+    docstring: str = ""
 
 
 @dataclass
-class ClassOverloadArgumentMatchPlan(StageRecord):
+class OverloadArgumentMatchPlan(StageRecord):
     """One editable exact-type predicate for overload dispatch."""
 
     python_name: str
-    kind: ClassOverloadMatchKind
+    kind: OverloadMatchKind
     optional: bool
     semantic_type_name: str
     rank: int
     derived_type_identity: tuple[str, str] | None
+    accept_builtin_scalar: bool = False
 
 
 @dataclass
-class ClassOverloadPlan(StageRecord):
-    """One class-owned overload and its concrete editable candidates."""
+class OverloadPlan(StageRecord):
+    """One exact-match overload and its concrete editable candidates."""
 
     owner_path: str
     python_name: str
     kind: str
     candidates: tuple[FunctionPlan, ...]
-    candidate_matches: tuple[tuple[ClassOverloadArgumentMatchPlan, ...], ...]
+    candidate_matches: tuple[tuple[OverloadArgumentMatchPlan, ...], ...]
     candidate_passed_objects: tuple[bool, ...]
+    unsupported_extra_argument_message: str | None = None
+    identity_receiver_shortcut: bool = False
+    docstring: str = ""
 
 
 @dataclass
@@ -254,7 +261,7 @@ class ClassSurfacePlan(StageRecord):
     base_identities: tuple[tuple[str, str], ...]
     constructor: ConstructorPlan
     methods: tuple[ClassMethodPlan, ...]
-    overloads: tuple[ClassOverloadPlan, ...]
+    overloads: tuple[OverloadPlan, ...]
     registration: tuple[ClassRegistrationAction, ...]
     docstring: str = ""
 
@@ -433,8 +440,10 @@ class ModuleVariablePlan(StageRecord):
     datatype_family: DatatypeFamily
     binding: BindingModuleVariablePlan
     bridge: BridgeModuleVariablePlan
+    array: ArrayHandoffPlan | None
     native_array_handle: NativeArrayHandlePlan | None
     derived: DerivedModuleObjectPlan | None = None
+    docstring: str = ""
 
 
 @dataclass
@@ -445,6 +454,7 @@ class BindingFunctionPlan(StageRecord):
     docstring: str
     hold_gil: bool
     status_error: BindingStatusErrorPlan | None
+    public: bool = True
 
 
 @dataclass
@@ -452,6 +462,8 @@ class BridgeFunctionPlan(StageRecord):
     """Bridge-facing function facts."""
 
     native_name: str
+    native_invocation: NativeInvocationKind
+    native_operator: str | None
     external: bool
     native_module: str | None
     native_is_subroutine: bool
@@ -744,6 +756,7 @@ class NamespacePlan(StageRecord):
     variables: tuple[ModuleVariablePlan, ...] = ()
     derived_types: tuple[DerivedTypePlan, ...] = ()
     classes: tuple[ClassSurfacePlan, ...] = ()
+    overloads: tuple[OverloadPlan, ...] = ()
     docstring: str = ""
 
 

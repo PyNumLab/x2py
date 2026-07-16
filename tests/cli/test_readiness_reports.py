@@ -319,7 +319,7 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
     monkeypatch.setattr(x2py_cli, "_parse_c_project", parse_project)
     monkeypatch.setattr(x2py_cli, "c_project_to_semantic_modules", convert)
     monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
-    monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.wrapper_codegen.printers.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(
@@ -437,7 +437,7 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
     monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
     monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
     monkeypatch.setattr(x2py_cli, "fortran_file_to_semantic_modules", convert)
-    monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.wrapper_codegen.printers.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(["api"], config) == {

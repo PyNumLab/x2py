@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from dataclasses import replace
 
 from x2py.semantics import models
 from x2py.semantics.native_array_handles import NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
     ArrayHandoffPolicy,
-    CallbackABIKind,
     CallbackHandoffPolicy,
     CallbackResultPolicy,
     CallbackTransferPolicy,
@@ -22,12 +22,12 @@ from x2py.semantics.wrapper_policy import (
     ModuleGetterAction,
     ModuleObjectAccessMechanism,
     ModuleVariablePolicy,
+    OverloadPolicy,
     OptionalMode,
     ArgumentPolicy,
     FunctionWrapperPolicy,
     LifecycleOperation,
     LifecyclePolicy,
-    NativeArrayDescriptorKind,
     NativeCallSlotPolicy,
     NativeArrayActualPolicy,
     NativeArrayHandleWrapperPolicy,
@@ -46,6 +46,7 @@ from x2py.semantics.wrapper_policy import (
 )
 from x2py.semantics.wrapper_exports import PythonExportPolicy
 from x2py.semantics.ownership import NativeBarrierAction, SetterAction
+from x2py.wrapper_codegen.docstrings import WrapperDocstringBuilder
 from x2py.wrapper_codegen.plan import (
     ArrayHandoffPlan,
     ArgumentTransferPlan,
@@ -67,8 +68,8 @@ from x2py.wrapper_codegen.plan import (
     CallbackTransferPlan,
     ClassMethodPlan,
     ClassCallPlan,
-    ClassOverloadArgumentMatchPlan,
-    ClassOverloadPlan,
+    OverloadArgumentMatchPlan,
+    OverloadPlan,
     ClassSurfacePlan,
     ConstructorFieldPlan,
     ConstructorPlan,
@@ -113,19 +114,6 @@ _DATATYPE_FAMILIES = {
     "String": DatatypeFamily.STRING,
 }
 
-_DOCUMENTATION_SCALAR_TYPES = {
-    "Bool": "bool",
-    "Int8": "int8",
-    "Int16": "int16",
-    "Int32": "int32",
-    "Int64": "int64",
-    "Float32": "float32",
-    "Float64": "float64",
-    "Complex64": "complex64",
-    "Complex128": "complex128",
-    "String": "str",
-}
-
 
 class WrapperPlanner(ClassVisitor):
     """Project completed semantic policies into one editable shared plan."""
@@ -134,6 +122,7 @@ class WrapperPlanner(ClassVisitor):
         """Create a planner with an optional support analyzer."""
         super().__init__()
         self.support_analyzer = support_analyzer or WrapperPlanSupportAnalyzer()
+        self.docstrings = WrapperDocstringBuilder()
 
     def build(self, module: models.SemanticModule) -> ModulePlan:
         """Mechanically project one editable wrapper plan."""
@@ -147,9 +136,10 @@ class WrapperPlanner(ClassVisitor):
         if not report.supported:
             raise ValueError(self._support_error(module.name, report.blockers))
         self._complete_derived_backend_symbols(module)
-        functions, variables, derived_types, classes = self._namespace_member_plans(module)
+        functions, variables, derived_types, classes, overloads = self._namespace_member_plans(module)
         self._attach_class_functions(functions, classes)
-        namespaces = self._namespace_plans(module.name, functions, variables, derived_types, classes)
+        self._attach_overload_functions(functions, overloads)
+        namespaces = self._namespace_plans(module.name, functions, variables, derived_types, classes, overloads)
         return ModulePlan(
             owner_path=module.name,
             binding=BindingModulePlan(module.name),
@@ -158,13 +148,14 @@ class WrapperPlanner(ClassVisitor):
             required_headers=self._required_headers(namespaces),
         )
 
-    def _namespace_member_plans(self, module: models.SemanticModule) -> tuple[dict, dict, dict, dict]:
-        """Build the four namespace-owned plan maps before linking classes."""
+    def _namespace_member_plans(self, module: models.SemanticModule) -> tuple[dict, dict, dict, dict, dict]:
+        """Build namespace-owned plan maps before linking private callables."""
         return (
             self._functions_by_namespace(module),
             self._variables_by_namespace(module),
             self._derived_types_by_namespace(module),
             self._classes_by_namespace(module),
+            self._module_overloads_by_namespace(module),
         )
 
     def _attach_class_functions(self, functions: dict, classes: dict) -> None:
@@ -174,6 +165,12 @@ class WrapperPlanner(ClassVisitor):
                 function for surface in surfaces for function in self._class_function_plans(surface)
             )
 
+    @staticmethod
+    def _attach_overload_functions(functions: dict, overloads: dict) -> None:
+        """Expose private module-overload candidates to the shared C method table."""
+        for namespace, plans in overloads.items():
+            functions[namespace].extend(candidate for overload in plans for candidate in overload.candidates)
+
     def _namespace_plans(
         self,
         module_name: str,
@@ -181,10 +178,11 @@ class WrapperPlanner(ClassVisitor):
         variables: dict,
         derived_types: dict,
         classes: dict,
+        overloads: dict,
     ) -> tuple[NamespacePlan, ...]:
         """Freeze linked namespace members in dependency-safe path order."""
         self._complete_generated_symbols(functions, variables)
-        namespace_paths = self._namespace_paths((*functions, *variables, *derived_types, *classes))
+        namespace_paths = self._namespace_paths((*functions, *variables, *derived_types, *classes, *overloads))
         return tuple(
             self._namespace_plan(
                 module_name,
@@ -193,6 +191,7 @@ class WrapperPlanner(ClassVisitor):
                 tuple(variables[path]),
                 tuple(derived_types[path]),
                 tuple(classes[path]),
+                tuple(overloads[path]),
             )
             for path in namespace_paths
         )
@@ -205,6 +204,7 @@ class WrapperPlanner(ClassVisitor):
         variables: tuple[ModuleVariablePlan, ...],
         derived_types: tuple[DerivedTypePlan, ...],
         classes: tuple[ClassSurfacePlan, ...],
+        overloads: tuple[OverloadPlan, ...],
     ) -> NamespacePlan:
         """Freeze one namespace with stable public documentation."""
         return NamespacePlan(
@@ -214,30 +214,15 @@ class WrapperPlanner(ClassVisitor):
             variables=variables,
             derived_types=derived_types,
             classes=classes,
-            docstring=self._namespace_docstring(module_name, path, functions, classes),
-        )
-
-    @staticmethod
-    def _namespace_docstring(
-        module_name: str,
-        path: tuple[str, ...],
-        functions: tuple[FunctionPlan, ...],
-        classes: tuple[ClassSurfacePlan, ...],
-    ) -> str:
-        """List the completed callable and class exports in one namespace."""
-        qualified_name = ".".join((module_name, *path))
-        return "\n".join(
-            (
-                qualified_name,
-                "",
-                "Functions",
-                "---------",
-                *(function.binding.python_name for function in functions),
-                "",
-                "Classes",
-                "-------",
-                *(name for surface in classes for name in surface.python_names),
-            )
+            overloads=overloads,
+            docstring=self.docstrings.namespace(
+                module_name,
+                path,
+                functions,
+                variables,
+                classes,
+                overloads,
+            ),
         )
 
     def _complete_derived_backend_symbols(self, module: models.SemanticModule) -> None:
@@ -364,7 +349,7 @@ class WrapperPlanner(ClassVisitor):
     ) -> ClassSurfacePlan:
         """Compose one class plan from completed method and constructor facts."""
         methods = self._class_method_plans(module_name, namespace, semantic_class, policy)
-        overloads_by_name = {overload.owner_path.rsplit(".", 1)[-1]: overload for overload in policy.overloads}
+        overloads_by_name = {overload.python_name: overload for overload in policy.overloads}
         overloads = self._class_overload_plans(
             module_name,
             namespace,
@@ -372,59 +357,35 @@ class WrapperPlanner(ClassVisitor):
             policy.type_identity,
             overloads_by_name,
         )
+        fields = tuple(self._derived_field_plan(field) for field in policy.effective_fields)
+        constructor = self._constructor_plan(
+            module_name,
+            namespace,
+            semantic_class,
+            policy,
+            methods,
+            overloads_by_name,
+            python_name=python_names[0],
+            fields=fields,
+        )
         return ClassSurfacePlan(
             owner_path=policy.owner_path,
             type_identity=policy.type_identity,
             python_names=python_names,
             base_identities=policy.base_identities,
-            constructor=self._constructor_plan(
-                module_name,
-                namespace,
-                semantic_class,
-                policy,
-                methods,
-                overloads_by_name,
-            ),
+            constructor=constructor,
             methods=methods,
             overloads=overloads,
             registration=policy.registration,
-            docstring=self._class_docstring(policy, python_names),
-        )
-
-    def _class_docstring(
-        self,
-        policy: ClassSurfacePolicy,
-        python_names: tuple[str, ...],
-    ) -> str:
-        """Describe fields and methods from the completed class surface."""
-        fields = self._class_documented_fields(policy)
-        methods = self._class_documented_methods(policy)
-        return "\n".join(
-            (
+            docstring=self.docstrings.class_surface(
                 python_names[0],
-                "",
-                "Fields",
-                "------",
-                *(fields or ("None",)),
-                "",
-                "Methods",
-                "-------",
-                *(methods or ("None",)),
-            )
+                policy.type_identity[1],
+                constructor,
+                fields,
+                methods,
+                overloads,
+            ),
         )
-
-    def _class_documented_fields(self, policy: ClassSurfacePolicy) -> tuple[str, ...]:
-        """Return concise public field signatures in declaration order."""
-        return tuple(
-            f"{field.name} : {self._derived_field_documentation_type(field)}" for field in policy.effective_fields
-        )
-
-    @staticmethod
-    def _class_documented_methods(policy: ClassSurfacePolicy) -> tuple[str, ...]:
-        """Return concrete and overloaded public descriptors in plan order."""
-        concrete = tuple(method.python_name for method in policy.methods if method.public)
-        overloaded = tuple(overload.python_name for overload in policy.overloads)
-        return (*concrete, *overloaded)
 
     def _class_method_plans(
         self,
@@ -470,13 +431,20 @@ class WrapperPlanner(ClassVisitor):
         namespace: tuple[str, ...],
         semantic_class: models.SemanticClass,
         type_identity: tuple[str, str],
-        policies: dict,
-    ) -> tuple[ClassOverloadPlan, ...]:
+        policies: dict[str, OverloadPolicy],
+    ) -> tuple[OverloadPlan, ...]:
         """Link every non-constructor overload set to ordinary function plans."""
+        functions = self._class_overload_functions(semantic_class, policies.values())
         return tuple(
-            self._class_overload_plan(module_name, namespace, type_identity, overload, policies[overload.name])
-            for overload in semantic_class.overload_sets
-            if overload.name != "__init__"
+            self._overload_plan(
+                module_name,
+                namespace,
+                policy,
+                functions,
+                private_name=lambda name, index: self._class_callable_name(type_identity, f"{name}_{index}"),
+            )
+            for policy in policies.values()
+            if policy.python_name != "__init__"
         )
 
     def _constructor_plan(
@@ -487,6 +455,9 @@ class WrapperPlanner(ClassVisitor):
         policy: ClassSurfacePolicy,
         methods: tuple[ClassMethodPlan, ...],
         overloads_by_name: dict,
+        *,
+        python_name: str,
+        fields: tuple[DerivedFieldPlan, ...],
     ) -> ConstructorPlan:
         """Link one completed constructor to its target and lifecycle records."""
         constructor = policy.constructor
@@ -498,7 +469,7 @@ class WrapperPlanner(ClassVisitor):
             policy.type_identity,
             overloads_by_name,
         )
-        return ConstructorPlan(
+        plan = ConstructorPlan(
             kind=constructor.kind,
             fields=tuple(self._constructor_field_plan(field) for field in constructor.fields),
             target_owner_path=constructor.target_owner_path,
@@ -508,6 +479,8 @@ class WrapperPlanner(ClassVisitor):
             target=target,
             overload=overload,
         )
+        plan.docstring = self.docstrings.constructor(python_name, plan, fields)
+        return plan
 
     def _constructor_overload_plan(
         self,
@@ -515,18 +488,19 @@ class WrapperPlanner(ClassVisitor):
         namespace: tuple[str, ...],
         semantic_class: models.SemanticClass,
         type_identity: tuple[str, str],
-        policies: dict,
-    ) -> ClassOverloadPlan | None:
+        policies: dict[str, OverloadPolicy],
+    ) -> OverloadPlan | None:
         """Return the constructor-owned overload set, when one was completed."""
-        for overload in semantic_class.overload_sets:
-            if overload.name == "__init__":
-                return self._class_overload_plan(
-                    module_name,
-                    namespace,
-                    type_identity,
-                    overload,
-                    policies[overload.name],
-                )
+        policy = policies.get("__init__")
+        if policy is not None:
+            functions = self._class_overload_functions(semantic_class, (policy,))
+            return self._overload_plan(
+                module_name,
+                namespace,
+                policy,
+                functions,
+                private_name=lambda name, index: self._class_callable_name(type_identity, f"{name}_{index}"),
+            )
         return None
 
     @staticmethod
@@ -554,8 +528,9 @@ class WrapperPlanner(ClassVisitor):
             function_policy,
             PythonExportPolicy(namespace, private_name),
             module_name,
+            public=False,
         )
-        return ClassMethodPlan(
+        plan = ClassMethodPlan(
             owner_path=policy.owner_path,
             python_name=policy.python_name,
             kind=policy.kind,
@@ -563,47 +538,87 @@ class WrapperPlanner(ClassVisitor):
             public=policy.public,
             function=function,
         )
+        plan.docstring = self.docstrings.method(plan)
+        return plan
 
-    def _class_overload_plan(
+    def _overload_plan(
         self,
         module_name: str,
         namespace: tuple[str, ...],
-        type_identity: tuple[str, str],
-        overload: models.ProcedureOverloadSet,
-        policy,
-    ) -> ClassOverloadPlan:
+        policy: OverloadPolicy,
+        functions: dict[str, models.SemanticFunction],
+        *,
+        private_name,
+    ) -> OverloadPlan:
         """Link one overload plan to its explicit concrete candidates."""
         candidates = tuple(
             self._function_plan(
-                completed_function_wrapper_policy(procedure),
+                completed_function_wrapper_policy(functions[candidate.owner_path]),
                 PythonExportPolicy(
                     namespace,
-                    self._class_callable_name(type_identity, f"{overload.name}_{index}"),
+                    private_name(policy.python_name, index),
                 ),
                 module_name,
+                public=False,
             )
-            for index, procedure in enumerate(overload.procedures)
+            for index, candidate in enumerate(policy.candidates)
         )
-        return ClassOverloadPlan(
+        plan = OverloadPlan(
             owner_path=policy.owner_path,
             python_name=policy.python_name,
             kind=policy.kind,
             candidates=candidates,
             candidate_matches=tuple(
                 tuple(
-                    ClassOverloadArgumentMatchPlan(
+                    OverloadArgumentMatchPlan(
                         python_name=argument.python_name,
                         kind=argument.kind,
                         optional=argument.optional,
                         semantic_type_name=argument.semantic_type_name,
                         rank=argument.rank,
                         derived_type_identity=argument.derived_type_identity,
+                        accept_builtin_scalar=argument.accept_builtin_scalar,
                     )
                     for argument in candidate.arguments
                 )
                 for candidate in policy.candidates
             ),
             candidate_passed_objects=tuple(candidate.passed_object for candidate in policy.candidates),
+            unsupported_extra_argument_message=policy.unsupported_extra_argument_message,
+            identity_receiver_shortcut=policy.identity_receiver_shortcut,
+        )
+        plan.docstring = self.docstrings.overload(plan)
+        return plan
+
+    @staticmethod
+    def _class_overload_functions(
+        semantic_class: models.SemanticClass,
+        policies,
+    ) -> dict[str, models.SemanticFunction]:
+        """Index only concrete class procedures selected by completed overload policy."""
+        selected = WrapperPlanner._selected_overload_owner_paths(policies)
+        owner_path = completed_class_surface_policy(semantic_class).owner_path
+        return {
+            path: procedure
+            for path, procedure in WrapperPlanner._class_overload_entries(semantic_class, owner_path)
+            if path in selected
+        }
+
+    @staticmethod
+    def _selected_overload_owner_paths(policies) -> set[str]:
+        """Return concrete owner paths referenced by completed overloads."""
+        return {candidate.owner_path for policy in policies for candidate in policy.candidates}
+
+    @staticmethod
+    def _class_overload_entries(
+        semantic_class: models.SemanticClass,
+        owner_path: str,
+    ) -> tuple[tuple[str, models.SemanticFunction], ...]:
+        """Pair every concrete class procedure with its completed owner path."""
+        return tuple(
+            (f"{owner_path}.{overload.name}.{procedure.name}", procedure)
+            for overload in semantic_class.overload_sets
+            for procedure in overload.procedures
         )
 
     def _class_callable_name(self, type_identity: tuple[str, str], name: str) -> str:
@@ -648,34 +663,11 @@ class WrapperPlanner(ClassVisitor):
                 array=array,
             ),
             derived=self._derived_handoff_plan(policy.derived),
-            docstring=self._derived_field_docstring(policy),
+            docstring="",
         )
+        plan.docstring = self.docstrings.field(plan)
         self._derived_field_plans[policy.owner_path] = plan
         return plan
-
-    def _derived_field_docstring(self, policy: DerivedFieldPolicy) -> str:
-        """Describe one generated property from its completed field policy."""
-        lines = [f"{policy.name} : {self._derived_field_documentation_type(policy)}"]
-        if policy.native_array_handle is not None:
-            descriptor = policy.native_array_handle.descriptor_kind.value
-            lines.append(f"    Provides a live {descriptor} array descriptor handle.")
-        return "\n".join(lines)
-
-    @staticmethod
-    def _derived_field_documentation_type(policy: DerivedFieldPolicy) -> str:
-        """Spell the public field type without backend inspection."""
-        scalar = _DOCUMENTATION_SCALAR_TYPES.get(policy.semantic_type_name, policy.semantic_type_name)
-        if policy.native_array_handle is not None:
-            prefix = (
-                "AllocatableArray"
-                if policy.native_array_handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
-                else "PointerArray"
-            )
-            return f"{prefix}[{scalar}]"
-        if policy.array is not None:
-            element = "bytes" if policy.semantic_type_name == "String" else scalar
-            return f"ndarray[{element}]"
-        return scalar
 
     def _functions_by_namespace(self, module: models.SemanticModule) -> dict[tuple[str, ...], list[FunctionPlan]]:
         """Group exported function plans by completed Python namespace."""
@@ -689,6 +681,65 @@ class WrapperPlanner(ClassVisitor):
             for export in policy.python_exports:
                 functions[export.namespace].append(self._function_plan(policy, export, module.name))
         return functions
+
+    def _module_overloads_by_namespace(
+        self,
+        module: models.SemanticModule,
+    ) -> dict[tuple[str, ...], list[OverloadPlan]]:
+        """Group completed module generics and their private concrete calls."""
+        grouped = defaultdict(list)
+        policies = module.metadata.get(models.RESOLVED_MODULE_OVERLOAD_POLICIES_METADATA, ())
+        functions = self._module_overload_function_index(module)
+        for item in policies:
+            policy = self._completed_module_overload_policy(module, item)
+            for export in policy.python_exports:
+                grouped[export.namespace].append(self._exported_module_overload_plan(module, policy, export, functions))
+        return grouped
+
+    @staticmethod
+    def _module_overload_function_index(
+        module: models.SemanticModule,
+    ) -> dict[str, models.SemanticFunction]:
+        """Index concrete module-generic procedures by completed owner path."""
+        return {
+            f"{(procedure.origin.native_scope or module.name)!s}.{overload.name}.{procedure.name}": procedure
+            for overload in module.overload_sets
+            for procedure in overload.procedures
+        }
+
+    @staticmethod
+    def _completed_module_overload_policy(module: models.SemanticModule, policy) -> OverloadPolicy:
+        """Require one completed module-overload policy before plan projection."""
+        if not isinstance(policy, OverloadPolicy):
+            raise ValueError(f"Module {module.name!r} has an incomplete overload policy")
+        return policy
+
+    def _exported_module_overload_plan(
+        self,
+        module: models.SemanticModule,
+        policy: OverloadPolicy,
+        export: PythonExportPolicy,
+        functions: dict[str, models.SemanticFunction],
+    ) -> OverloadPlan:
+        """Project one namespace export onto the shared concrete candidates."""
+        exported = replace(
+            policy,
+            owner_path=self._export_owner_path(module.name, export.namespace, export.name),
+            python_name=export.name,
+        )
+        return self._overload_plan(
+            module.name,
+            export.namespace,
+            exported,
+            functions,
+            private_name=self._module_overload_callable_name,
+        )
+
+    @staticmethod
+    def _module_overload_callable_name(name: str, index: int) -> str:
+        """Return one private Python export for a module-overload candidate."""
+        stem = name.strip("_").casefold() or "call"
+        return f"_x2py_overload_{stem}_{index}"
 
     @staticmethod
     def _module_function_policy(function: models.SemanticFunction) -> FunctionWrapperPolicy | None:
@@ -765,7 +816,7 @@ class WrapperPlanner(ClassVisitor):
     ) -> ModuleVariablePlan:
         getter_role = self._module_getter_role(policy)
         setter_role = f"{policy.owner_path}:setter" if policy.setter_action is SetterAction.WRITE_THROUGH else None
-        return ModuleVariablePlan(
+        plan = ModuleVariablePlan(
             owner_path=self._export_owner_path(module_name, namespace, python_names[0]),
             symbol_name=policy.native_name.casefold(),
             semantic_type_name=policy.semantic_type_name,
@@ -789,6 +840,7 @@ class WrapperPlanner(ClassVisitor):
                 getter_role=getter_role,
                 setter_role=setter_role,
             ),
+            array=self._array_plan(policy.array, policy.owner_path),
             native_array_handle=self._native_array_handle_plan(policy.native_array_handle, policy.owner_path),
             derived=(
                 DerivedModuleObjectPlan(
@@ -809,7 +861,10 @@ class WrapperPlanner(ClassVisitor):
                 if policy.derived is not None
                 else None
             ),
+            docstring="",
         )
+        plan.docstring = self.docstrings.module_variable(plan)
+        return plan
 
     @staticmethod
     def _module_getter_role(policy: ModuleVariablePolicy) -> str | None:
@@ -825,22 +880,33 @@ class WrapperPlanner(ClassVisitor):
         policy: FunctionWrapperPolicy,
         export: PythonExportPolicy,
         module_name: str,
+        *,
+        public: bool = True,
     ) -> FunctionPlan:
         """Return one exported function plan from completed policy."""
         native_call_slots = self._native_slot_plans(policy)
         arguments = self._argument_plans(policy, native_call_slots)
         results = self._result_plans(policy, native_call_slots)
+        status_error = self._status_error_plan(policy.status_error, native_call_slots)
         return FunctionPlan(
             owner_path=self._export_owner_path(module_name, export.namespace, export.name),
             symbol_name=export.name.casefold(),
             binding=BindingFunctionPlan(
                 python_name=export.name,
-                docstring=self._function_docstring(export.name, arguments, results),
+                docstring=self.docstrings.function(
+                    export.name,
+                    arguments,
+                    results,
+                    status_error=status_error,
+                ),
                 hold_gil=policy.hold_gil,
-                status_error=self._status_error_plan(policy.status_error, native_call_slots),
+                status_error=status_error,
+                public=public,
             ),
             bridge=BridgeFunctionPlan(
                 policy.native_name,
+                policy.native_invocation,
+                policy.native_operator,
                 policy.external,
                 policy.native_module,
                 policy.native_is_subroutine,
@@ -873,257 +939,6 @@ class WrapperPlanner(ClassVisitor):
             invocation=policy.class_call.invocation,
             type_bound_name=policy.class_call.type_bound_name,
         )
-
-    # Stable Python function documentation from completed transfer plans.
-    def _function_docstring(
-        self,
-        python_name: str,
-        arguments: tuple[ArgumentTransferPlan, ...],
-        results: tuple[ResultPlan, ...],
-    ) -> str:
-        """Describe the Python boundary without asking a backend to infer policy."""
-        visible_arguments = tuple(argument for argument in arguments if argument.python_visible)
-        documented_outputs = self._documented_outputs(arguments, results)
-        parameter_names = ", ".join(argument.binding.python_name for argument in visible_arguments)
-        result_summary = self._result_documentation_summary(documented_outputs)
-        lines = (
-            f"{python_name}({parameter_names}) -> {result_summary}",
-            *self._parameter_documentation_section(visible_arguments),
-            *self._return_documentation_section(documented_outputs, arguments),
-            "",
-            "Raises",
-            "------",
-            "TypeError",
-            "    If an argument violates its completed dtype, rank, shape, layout, or handle contract.",
-        )
-        return "\n".join(lines)
-
-    def _parameter_documentation_section(
-        self,
-        arguments: tuple[ArgumentTransferPlan, ...],
-    ) -> tuple[str, ...]:
-        """Return the parameter section for visible completed transfers."""
-        if not arguments:
-            return ()
-        body = tuple(line for argument in arguments for line in self._argument_documentation_lines(argument))
-        return ("", "Parameters", "----------", *body)
-
-    def _return_documentation_section(
-        self,
-        outputs: tuple[ArgumentTransferPlan | ResultPlan, ...],
-        arguments: tuple[ArgumentTransferPlan, ...],
-    ) -> tuple[str, ...]:
-        """Return the result section for ordered result transfers."""
-        body = tuple(
-            line
-            for output in outputs
-            for line in (
-                self._projected_argument_documentation_lines(output)
-                if isinstance(output, ArgumentTransferPlan)
-                else self._result_documentation_lines(output, arguments)
-            )
-        )
-        return ("", "Returns", "-------", *(body or ("None",)))
-
-    def _argument_documentation_lines(self, argument: ArgumentTransferPlan) -> tuple[str, ...]:
-        """Render one argument solely from its completed transfer facts."""
-        optional = argument.binding.optional_mode is not OptionalMode.REQUIRED or (
-            argument.nullable and argument.native_array_handle is None
-        )
-        type_name = self._transfer_documentation_type(argument, nullable=optional, signature=False)
-        lines = [f"{argument.binding.python_name} : {type_name}"]
-        lines.extend(self._array_documentation_lines(argument.array))
-        lines.extend(self._argument_handle_documentation_lines(argument))
-        lines.extend(self._argument_optional_documentation_lines(argument, optional=optional))
-        lines.extend(("    Mutates: yes",) if argument.mutates_native else ())
-        return tuple(lines)
-
-    def _projected_argument_documentation_lines(
-        self,
-        argument: ArgumentTransferPlan,
-    ) -> tuple[str, ...]:
-        """Render one identity/replacement output owned by an argument transfer."""
-        nullable = argument.binding.optional_mode is not OptionalMode.REQUIRED
-        type_name = self._transfer_documentation_type(argument, nullable=nullable, signature=False)
-        lines = [f"{argument.binding.python_name} : {type_name}"]
-        lines.extend(self._array_documentation_lines(argument.array))
-        lines.extend(self._argument_handle_documentation_lines(argument))
-        return tuple(lines)
-
-    @staticmethod
-    def _argument_handle_documentation_lines(argument: ArgumentTransferPlan) -> tuple[str, ...]:
-        """Describe persistent descriptor ownership when one is planned."""
-        if argument.native_array_handle is None:
-            return ()
-        return (f"    Descriptor ownership: {argument.native_array_handle.descriptor_ownership.value}",)
-
-    @staticmethod
-    def _argument_optional_documentation_lines(
-        argument: ArgumentTransferPlan,
-        *,
-        optional: bool,
-    ) -> tuple[str, ...]:
-        """Describe omission and present-null semantics selected by policy."""
-        if argument.binding.optional_mode is OptionalMode.DESCRIPTOR:
-            return (
-                "    Omit to make the native optional dummy absent.",
-                "    Pass None for a present unallocated or unassociated descriptor.",
-            )
-        if argument.binding.optional_mode is OptionalMode.REQUIRED_DESCRIPTOR:
-            return ("    Pass None for an unallocated or unassociated required descriptor.",)
-        if optional:
-            return ("    May be omitted or passed as None.",)
-        return ()
-
-    def _result_documentation_lines(
-        self,
-        result: ResultPlan,
-        arguments: tuple[ArgumentTransferPlan, ...],
-    ) -> tuple[str, ...]:
-        """Render one result from its owning result plan and projection index."""
-        name = self._result_documentation_name(result, arguments)
-        type_name = self._transfer_documentation_type(result, nullable=result.nullable, signature=False)
-        lines = [f"{name} : {type_name}"]
-        lines.extend(self._array_documentation_lines(result.array))
-        if result.native_array_handle is not None:
-            handle = result.native_array_handle
-            lines.append(f"    Descriptor ownership: {handle.descriptor_ownership.value}")
-            state = "Unallocated" if handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE else "Unassociated"
-            lines.append(f"    {state} state remains inside the returned handle.")
-        return tuple(lines)
-
-    def _result_documentation_summary(
-        self,
-        outputs: tuple[ArgumentTransferPlan | ResultPlan, ...],
-    ) -> str:
-        """Return the stable signature spelling for ordered Python results."""
-        types = tuple(
-            self._transfer_documentation_type(
-                output,
-                nullable=(
-                    output.binding.optional_mode is not OptionalMode.REQUIRED
-                    if isinstance(output, ArgumentTransferPlan)
-                    else output.nullable
-                ),
-                signature=True,
-            )
-            for output in outputs
-        )
-        if not types:
-            return "None"
-        if len(types) == 1:
-            return types[0]
-        return f"tuple[{', '.join(types)}]"
-
-    @staticmethod
-    def _documented_outputs(
-        arguments: tuple[ArgumentTransferPlan, ...],
-        results: tuple[ResultPlan, ...],
-    ) -> tuple[ArgumentTransferPlan | ResultPlan, ...]:
-        """Merge result transfers with argument-owned projected outputs by position."""
-        by_position = dict(WrapperPlanner._projected_documented_outputs(arguments))
-        by_position.update((result.result_position, result) for result in results)
-        return tuple(by_position[position] for position in sorted(by_position))
-
-    @staticmethod
-    def _projected_documented_outputs(
-        arguments: tuple[ArgumentTransferPlan, ...],
-    ) -> tuple[tuple[int, ArgumentTransferPlan], ...]:
-        """Return projected argument outputs with concrete result positions."""
-        return tuple(
-            (argument.result_position, argument)
-            for argument in arguments
-            if argument.projects_result and argument.result_position is not None
-        )
-
-    def _transfer_documentation_type(self, transfer, *, nullable: bool, signature: bool) -> str:
-        """Map one completed transfer representation to its Python documentation type."""
-        type_name = self._transfer_base_documentation_type(transfer)
-        return self._nullable_documentation_type(type_name, nullable=nullable, signature=signature)
-
-    def _transfer_base_documentation_type(self, transfer) -> str:
-        """Map a completed representation to its non-null Python type."""
-        if transfer.datatype_family is DatatypeFamily.CALLBACK:
-            return self._callback_documentation_type(transfer.callback)
-        if transfer.datatype_family is DatatypeFamily.DERIVED:
-            return transfer.semantic_type_name
-        return self._non_derived_documentation_type(transfer)
-
-    def _non_derived_documentation_type(self, transfer) -> str:
-        """Spell scalar, handle, and array Python types from completed plans."""
-        scalar_type = _DOCUMENTATION_SCALAR_TYPES[transfer.semantic_type_name]
-        if transfer.native_array_handle is not None:
-            return self._native_handle_documentation_type(transfer, scalar_type)
-        if transfer.array is not None:
-            element_type = "bytes" if transfer.datatype_family is DatatypeFamily.STRING else scalar_type
-            return f"ndarray[{element_type}]"
-        return scalar_type
-
-    def _callback_documentation_type(self, callback: CallbackHandoffPlan | None) -> str:
-        """Render one callable signature directly from its typed transfer plan."""
-        if callback is None:
-            raise ValueError("Callback documentation requires a completed handoff plan")
-        arguments = ", ".join(self._callback_transfer_documentation_type(item) for item in callback.arguments)
-        result = (
-            "None"
-            if callback.result.transfer is None
-            else self._callback_transfer_documentation_type(callback.result.transfer)
-        )
-        return f"Callable[[{arguments}], {result}]"
-
-    @staticmethod
-    def _callback_transfer_documentation_type(transfer: CallbackTransferPlan) -> str:
-        """Spell one callback-side Python value from completed ABI facts."""
-        if transfer.derived_type_identity is not None:
-            return transfer.semantic_type_name
-        scalar = _DOCUMENTATION_SCALAR_TYPES.get(transfer.semantic_type_name, transfer.semantic_type_name)
-        if transfer.array is not None or transfer.abi is CallbackABIKind.REFERENCE:
-            return f"ndarray[{scalar}]"
-        return scalar
-
-    @staticmethod
-    def _native_handle_documentation_type(transfer, scalar_type: str) -> str:
-        """Spell one allocatable or pointer array handle type."""
-        prefix = (
-            "AllocatableArray"
-            if transfer.native_array_handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
-            else "PointerArray"
-        )
-        return f"{prefix}[{scalar_type}]"
-
-    @staticmethod
-    def _nullable_documentation_type(type_name: str, *, nullable: bool, signature: bool) -> str:
-        """Add signature or section nullability spelling when selected."""
-        if not nullable:
-            return type_name
-        return f"{type_name} | None" if signature else f"{type_name} or None"
-
-    @staticmethod
-    def _array_documentation_lines(array: ArrayHandoffPlan | None) -> tuple[str, ...]:
-        """Describe rank and layout already selected in one array handoff plan."""
-        if array is None:
-            return ()
-        if array.rank is None:
-            return ("    Rank: 1..15", "    Layout: F-contiguous")
-        lines = [f"    Rank: {array.rank}"]
-        if array.rank > 1:
-            layout = "C-contiguous" if array.order == "ORDER_C" else "F-contiguous"
-            lines.append(f"    Layout: {layout}")
-        return tuple(lines)
-
-    @staticmethod
-    def _result_documentation_name(
-        result: ResultPlan,
-        arguments: tuple[ArgumentTransferPlan, ...],
-    ) -> str:
-        """Name a projected result through its owning argument when available."""
-        projected = next(
-            (argument for argument in arguments if argument.result_position == result.result_position),
-            None,
-        )
-        if projected is not None:
-            return projected.binding.python_name
-        return result.bridge.native_name or "result"
 
     def _argument_plans(
         self,

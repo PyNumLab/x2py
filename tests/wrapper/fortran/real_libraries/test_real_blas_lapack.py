@@ -404,7 +404,6 @@ def test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_li
         assert "use full_blas_interfaces" not in bridge
         assert "subroutine daxpy(" in bridge
         assert "private\n" not in bridge
-        assert "private :: c_malloc" in bridge
         assert "public :: bind_c_daxpy" not in bridge
         _assert_blas_runtime_smoke(module)
     else:

@@ -834,6 +834,24 @@ use ordinary return annotations; hidden allocatable array outputs use
 `Allocatable[T[...]]` handles whose unallocated state remains inside the
 handle.
 
+### Generated Docstrings
+
+Generated modules, functions, classes, constructors, methods, overloads, and
+properties expose compact NumPy-style docstrings derived from the same completed
+wrapper plan as the executable code. `help(module.function)` therefore reports
+the Python-visible signature rather than the native dummy list, including
+hidden outputs, ordered tuple results, optional omission versus a present
+`None`, constrained array shape and layout, handle ownership, and native-status
+exceptions.
+
+Module docstrings index their public functions, module attributes, and classes.
+Class docstrings index the public constructor, fields, methods, and overloads;
+the individual constructor, method, overload, and property descriptors also
+carry focused docstrings. Private wrapper helper names and internal bridge roles
+are never shown. Module attributes are documented in the module docstring
+because Python extension modules do not provide portable per-attribute
+descriptor docstrings.
+
 Runtime tests: [`test_output_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_output_arguments.py),
 [`test_native_call_examples.py`](../../../tests/wrapper/fortran/function_calls/test_native_call_examples.py).
 

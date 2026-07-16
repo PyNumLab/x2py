@@ -32,6 +32,8 @@ from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
     BridgeDataAction,
+    CallbackABIKind,
+    CallbackTransferAction,
     FunctionWrapperPolicy,
     ModuleGetterAction,
     ModuleVariablePolicy,
@@ -217,6 +219,35 @@ def with_scalar(n: Int32) -> tuple[Int32, Int32]: ...
     assert policy.native_call_slots[1].owner_path == hidden.owner_path
     assert policy.native_call_slots[1].result_position == hidden.result_position
     assert policy.native_call_slots[1].native_barrier_action is hidden.native_barrier_action
+
+
+def test_source_hidden_scalar_output_completes_call_local_address_before_planning():
+    module = _source_semantic_module("foutputs_f90.f90", module_name="foutputs_f90")
+    function = next(function for function in module.functions if function.name == "scalar_status")
+    policy = completed_function_wrapper_policy(function)
+
+    hidden = policy.results[0]
+    assert hidden.source_kind == "hidden_output"
+    assert hidden.native_barrier_action is NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
+    assert policy.native_call_slots[1].native_barrier_action is hidden.native_barrier_action
+
+
+def test_source_callback_value_and_read_access_are_completed_as_independent_facts():
+    module = _source_semantic_module("fcallback_all_f90.f90", module_name="fcallback_all_f90")
+    function = next(item for item in module.functions if item.name == "apply_value_callback")
+    policy = completed_function_wrapper_policy(function)
+    transfer = policy.arguments[0].callback.arguments[0]
+
+    assert transfer.abi is CallbackABIKind.VALUE
+    assert transfer.access == "read"
+    assert transfer.adapter_action is CallbackTransferAction.COPY_IN
+
+    array_function = next(item for item in module.functions if item.name == "apply_array_storage_callback")
+    array_policy = completed_function_wrapper_policy(array_function)
+    extent = array_policy.arguments[0].callback.arguments[0]
+    assert extent.abi is CallbackABIKind.REFERENCE
+    assert extent.access == "read"
+    assert extent.adapter_action is CallbackTransferAction.COPY_IN
 
 
 def test_hidden_scalar_descriptor_result_keeps_descriptor_policy_instead_of_plain_address_storage():
@@ -733,7 +764,9 @@ def discard_name(name: String[8]) -> None: ...
     assert argument.codegen_action is CodegenAction.COPY_IN_OUT
     assert argument.character_length == 8
     assert argument.projects_result is True
-    assert argument.writable is True
+    # The native call mutates a binding-owned replacement, not the immutable
+    # Python string supplied at the public boundary.
+    assert argument.writable is False
     assert tuple(action.phase for action in replacement.writeback_actions) == tuple(WritebackPhase)
 
     assert identity.supported is True

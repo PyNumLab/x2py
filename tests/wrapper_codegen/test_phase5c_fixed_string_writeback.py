@@ -72,7 +72,7 @@ def test_fixed_replacement_projects_completed_argument_and_lifecycle_facts():
     assert argument.storage_mode is StorageMode.STACK
     assert argument.boundary_storage_mode is StorageMode.STACK
     assert argument.nullable is False
-    assert argument.mutates_native is True
+    assert argument.mutates_native is False
     assert argument.projects_result is True
     assert argument.result_position == 0
     assert argument.binding.codegen_action is CodegenAction.COPY_IN_OUT

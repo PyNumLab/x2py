@@ -1,6 +1,6 @@
 """Tests split by stable ownership concept from `test_imports_and_packages.py`."""
 
-from tests.codegen.printers._support import (
+from tests.wrapper_codegen.printers._support import (
     ProjectionMapping,
     PyiPrinter,
     SemanticArgument,

@@ -98,7 +98,7 @@ all original cases are accounted for in its destination modules.
 | `tests/semantics/test_ownership_policy.py` | completed decisions in `tests/semantics/policy/`; generator dispatch cases in `tests/codegen/bridges/` and `tests/codegen/bindings/` |
 | `tests/semantics/test_c_semantic_readiness.py`, `test_semantic_wrap_readiness.py`, `test_wrap_readiness_fixture_suite.py` | `tests/semantics/readiness/`, with the oversized module split by readiness boundary |
 | `tests/semantics/test_ir2ast.py`, `test_visitor_protocol.py` | `tests/lowering/` |
-| `tests/semantics/test_pyi_printer*.py` | `tests/codegen/printers/`, with the oversized printer module split by emitted concept |
+| `tests/semantics/test_pyi_printer*.py` | `tests/wrapper_codegen/printers/`, with the oversized printer module split by emitted concept |
 | `tests/test_runtime_handles.py` | split under `tests/runtime/handles/` |
 | `tests/test_naming_policy.py` | `tests/naming/test_policy.py` |
 | `tests/tools/test_documentation_examples.py`, `test_documentation_structure.py` | `tests/docs/` |
@@ -122,7 +122,7 @@ trees are not part of this map and must not move.
 | `tests/semantics/test_ownership_policy.py` | `tests/semantics/policy/test_accessor_and_storage_policy.py`, `test_native_array_ownership.py`, `test_policy_defaults_and_validation.py`; `tests/lowering/test_array_interop_policy.py`; `tests/codegen/bridges/test_bridge_handle_policy_dispatch.py`; `tests/codegen/bindings/test_binding_handle_policy_dispatch.py` |
 | `tests/semantics/test_fortran2ir.py` | `tests/semantics/conversion/fortran/test_compile_time_values.py`, `test_fortran_conversion_procedures_and_interfaces.py`, `test_modules_and_imports.py`, `test_types_and_storage.py` |
 | `tests/parser/test_preprocessing_cli.py` | `tests/pipeline/preprocessing/test_cli.py`, `test_configuration_and_adapters.py`, `test_dependencies_and_includes.py`, `test_execution.py` |
-| `tests/semantics/test_pyi_printer.py` | `tests/codegen/printers/test_calls_and_policy_metadata.py`, `test_classes_and_methods.py`, `test_pyi_printer_imports_and_packages.py`, `test_types_and_declarations.py` |
+| `tests/semantics/test_pyi_printer.py` | `tests/wrapper_codegen/printers/test_calls_and_policy_metadata.py`, `test_classes_and_methods.py`, `test_pyi_printer_imports_and_packages.py`, `test_types_and_declarations.py` |
 | `tests/test_runtime_handles.py` | `tests/runtime/handles/test_array_actual_abi.py`, `test_descriptor_abi.py`, `test_factories_and_lifecycle.py`, `test_handle_protocols.py` |
 | `tests/semantics/test_c2ir.py` | `tests/semantics/conversion/c/test_functions_and_callbacks.py`, `test_projects_and_diagnostics.py`, `test_records_and_enums.py`, `test_types_and_constants.py` |
 | `tests/semantics/test_semantic_wrap_readiness.py` | `tests/cli/test_wrap_readiness.py`; `tests/semantics/readiness/test_policy_blockers.py`, `test_pyi_readiness.py`, `test_reports.py` |
@@ -259,8 +259,8 @@ row therefore accounts for two of the 34 normalized-ID differences.
 | `tests/semantics/test_c_semantic_readiness.py` | `tests/semantics/readiness/test_c_readiness.py` |
 | `tests/semantics/test_fortran2ir.py` | `tests/semantics/conversion/fortran/` |
 | `tests/semantics/test_ir2ast.py` | `tests/lowering/test_semantic_ir.py` |
-| `tests/semantics/test_pyi_printer.py` | `tests/codegen/printers/` |
-| `tests/semantics/test_pyi_printer_modern_example.py` | `tests/codegen/printers/test_modern_example.py` |
+| `tests/semantics/test_pyi_printer.py` | `tests/wrapper_codegen/printers/` |
+| `tests/semantics/test_pyi_printer_modern_example.py` | `tests/wrapper_codegen/printers/test_modern_example.py` |
 | `tests/semantics/test_semantic_wrap_readiness.py` | `tests/semantics/readiness/` |
 | `tests/tools/test_documentation_examples.py` | `tests/docs/test_examples.py` |
 | `tests/tools/test_documentation_structure.py` | `tests/docs/test_structure.py` |
@@ -304,3 +304,13 @@ only fixture/generator trees remain under `tests/parser/`, `tests/pyi/`, and
 - [x] Final tree, mapping, split rationale, helper moves, collection evidence,
   focused results, wrapper verification, static checks, retained locations, and
   any product failures are recorded here and in the handoff.
+
+## Post-Cutover Supersession
+
+The earlier inventory and execution record above documents the historical test
+move and intentionally retains its old paths as evidence. After the canonical
+wrapper-plan cutover, `tests/codegen/`, `tests/lowering/`, `x2py.codegen`, and
+the adjacent legacy lowering/build entrypoints are removed. Still-required
+contracts belong to completed semantic-policy tests, `tests/wrapper_codegen/`
+plan and direct-generation tests, or compiled public behavior under
+`tests/wrapper/fortran/`.

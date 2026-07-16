@@ -2,17 +2,14 @@
 
 from tests._shared.pyi_conversion_support import (
     BIND_TARGET_METADATA,
-    CPythonBindingGenerator,
     PROJECTED_OUTPUT_METADATA,
     SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA,
-    Scope,
     USER_PRIVATE_METADATA,
     asdict,
     emit_module,
     parse_pyi_text,
     pytest,
     re,
-    semantic_ir_to_codegen_ast,
 )
 
 
@@ -135,12 +132,6 @@ class state:
     assert '    @overload("init_state")\n    @native_call' not in emitted
     assert parse_pyi_text(emitted, module_name="edited") == linked
 
-    with pytest.raises(ValueError, match="Constructor overload dispatch is not mapped"):
-        semantic_ir_to_codegen_ast(
-            linked,
-            Scope(name=linked.name, scope_type="module"),
-        )
-
 
 def test_convert_pyi_to_ir_removed_constructor_suppresses_keyword_initializer():
     module = parse_pyi_text(
@@ -156,14 +147,6 @@ class state:
     assert cls.origin.source_language is None
     assert cls.origin.metadata[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
     assert "def __init__" not in emit_module(module)
-
-    codegen_module = semantic_ir_to_codegen_ast(
-        module,
-        Scope(name=module.name, scope_type="module"),
-    )
-    codegen_cls = codegen_module.classes[0]
-    assert codegen_cls.decorators[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
-    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
 
 
 def test_convert_pyi_to_ir_self_only_generated_constructor_keeps_default_initializer():
@@ -182,13 +165,6 @@ class state:
     assert SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA not in cls.origin.metadata
     assert cls.methods == []
     assert "    def __init__(self) -> None: ..." in emit_module(module)
-
-    codegen_module = semantic_ir_to_codegen_ast(
-        module,
-        Scope(name=module.name, scope_type="module"),
-    )
-    codegen_cls = codegen_module.classes[0]
-    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is False
 
 
 def test_convert_pyi_to_ir_bound_constructor_replaces_generated_keyword_initializer():
@@ -230,21 +206,6 @@ class state:
     assert '    @bind("init_state")\n    def __init__(' in emitted
     assert "def __init__(\n        self,\n        *," not in emitted
     assert parse_pyi_text(emitted, module_name="edited") == module
-
-    codegen_module = semantic_ir_to_codegen_ast(
-        module,
-        Scope(name=module.name, scope_type="module"),
-    )
-    codegen_cls = codegen_module.classes[0]
-    assert codegen_cls.decorators[SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA] is True
-    assert CPythonBindingGenerator._suppresses_default_class_initialiser(codegen_cls) is True
-    codegen_init = next(
-        method for method in codegen_cls.methods if codegen_cls.scope.get_python_name(method.name) == "__init__"
-    )
-    assert codegen_cls.scope.get_python_name(codegen_init.name) == "__init__"
-    assert codegen_init.arguments[0].bound_argument is True
-    assert codegen_init.arguments[0].bound_argument_position == 0
-    assert [str(arg.name) for arg in codegen_init.arguments[1:]] == ["seed", "scale"]
 
 
 def test_convert_pyi_to_ir_bound_constructor_allows_public_target_method():
@@ -486,13 +447,6 @@ def assign_vector_real(
     assert func.projection[0].result_position == 0
     assert from_pyi.classes[0].overload_sets[0].procedures[0].metadata["overload_kind"] == "assignment"
 
-    codegen_module = semantic_ir_to_codegen_ast(
-        from_pyi,
-        Scope(name=from_pyi.name, scope_type="module"),
-    )
-    assign = next(item for item in codegen_module.classes[0].overload_sets if item.name == "assign")
-    assert assign.functions[0].arguments[0].var.projected_output is True
-
 
 def test_type_bound_method_declarations_restore_root_target_metadata():
     from_pyi = parse_pyi_text(
@@ -534,7 +488,7 @@ def shift_vector(
     assert functions["shift_vector"].metadata["fortran_passed_object_position"] == 1
 
 
-def test_pyi_codegen_keyword_normalized_type_bound_method_uses_native_binding_name():
+def test_pyi_keyword_normalized_type_bound_method_keeps_native_binding_name():
     module = parse_pyi_text(
         """
 class visible_t:
@@ -544,11 +498,10 @@ class visible_t:
         module_name="fnaming_f90",
     )
 
-    codegen_module = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
-    method = codegen_module.classes[0].methods_as_dict["from_"]
+    method = module.classes[0].methods[0]
 
-    assert method.name == "visible_from"
-    assert method.type_bound_name == "from"
+    assert method.name == "from_"
+    assert method.native_name == "visible_from"
 
 
 def test_method_equality_treats_argument_names_as_placeholders():

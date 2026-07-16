@@ -15,7 +15,7 @@ from tests.wrapper.fortran._support import (
 from x2py import build_pyi_extension
 
 
-def _build_contract_routes(
+def _build_contract_module(
     tmp_path: Path,
     *,
     module_name: str,
@@ -28,30 +28,23 @@ def _build_contract_routes(
     contract.write_text(contract_text, encoding="utf-8")
     native_object = _compile_native_object(source, tmp_path / "native")
 
-    modules = []
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {}),
-    ):
-        result = build_pyi_extension(
-            contract,
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / route,
-            **route_kwargs,
-        )
-        generated_c = (result.output_dir / f"{module_name}_wrapper.c").read_text(encoding="utf-8")
-        if route == "wrapper_plan":
-            assert "static PyObject * wrap_" in generated_c
-        modules.append(_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)))
-    return tuple(modules)
+    result = build_pyi_extension(
+        contract,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    generated_c = (result.output_dir / f"{module_name}_wrapper.c").read_text(encoding="utf-8")
+    assert "static PyObject * wrap_" in generated_c
+    return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
 
 
 def _build_scalar_boundary_modules(tmp_path: Path):
-    return _build_contract_routes(
-        tmp_path,
-        module_name="scalar_boundary_plan",
-        source_text="""
+    return (
+        _build_contract_module(
+            tmp_path,
+            module_name="scalar_boundary_plan",
+            source_text="""
 module scalar_boundary_plan
   use iso_c_binding, only: c_double, c_int32_t
 contains
@@ -108,7 +101,7 @@ contains
   end subroutine mapped_status
 end module scalar_boundary_plan
 """,
-        contract_text="""
+            contract_text="""
 from x2py.contracts import Addr, Annotated, Arg, Float64, Immutable, Int32, Return, Returns, native_call
 
 def value_input(value: Int32) -> Int32: ...
@@ -135,14 +128,16 @@ def make_raw(value: Addr(Int32)) -> None: ...
 @native_call([Return("status", 0), Addr(Arg(0))])
 def mapped_status(base: Int32) -> Int32: ...
 """,
+        ),
     )
 
 
 def _build_scalar_kind_modules(tmp_path: Path):
-    return _build_contract_routes(
-        tmp_path,
-        module_name="scalar_kind_plan",
-        source_text="""
+    return (
+        _build_contract_module(
+            tmp_path,
+            module_name="scalar_kind_plan",
+            source_text="""
 module scalar_kind_plan
   use iso_c_binding, only: c_bool, c_double, c_double_complex, c_float, &
     c_float_complex, c_int8_t, c_int16_t, c_int32_t, c_int64_t
@@ -202,7 +197,7 @@ contains
   end function conj_c128
 end module scalar_kind_plan
 """,
-        contract_text="""
+            contract_text="""
 from x2py.contracts import Addr, Arg, Bool, Complex128, Complex64, Float32, Float64, Int16, Int32, Int64, Int8, native_call
 
 @native_call([Addr(Arg(0))])
@@ -232,14 +227,16 @@ def conj_c64(value: Complex64) -> Complex64: ...
 @native_call([Addr(Arg(0))])
 def conj_c128(value: Complex128) -> Complex128: ...
 """,
+        ),
     )
 
 
 def _build_multiple_scalar_result_modules(tmp_path: Path):
-    return _build_contract_routes(
-        tmp_path,
-        module_name="multiple_scalar_results_plan",
-        source_text="""
+    return (
+        _build_contract_module(
+            tmp_path,
+            module_name="multiple_scalar_results_plan",
+            source_text="""
 module multiple_scalar_results_plan
   use iso_c_binding, only: c_int32_t
 contains
@@ -252,12 +249,13 @@ contains
   end function with_scalar
 end module multiple_scalar_results_plan
 """,
-        contract_text="""
+            contract_text="""
 from x2py.contracts import Addr, Arg, Int32, Return, native_call
 
 @native_call([Addr(Arg(0)), Return("status", 1)])
 def with_scalar(n: Int32) -> tuple[Int32, Int32]: ...
 """,
+        ),
     )
 
 
@@ -311,12 +309,11 @@ def maybe_pointer(flag: Int32) -> Float64 | None: ...
         native_objects=[native_object],
         native_include_dirs=[native_object.parent],
         output_dir=tmp_path / "wrapper_plan_scalar_descriptors",
-        _force_wrapper_plan_route=True,
     )
     return (_sole_native_module(_import_from_build_dir(result.module_name, result.output_dir)),)
 
 
-def test_scalar_value_storage_raw_address_out_and_inout_match_both_routes(tmp_path: Path):
+def test_scalar_value_storage_raw_address_out_and_inout_use_canonical_plan(tmp_path: Path):
     modules = _build_scalar_boundary_modules(tmp_path)
 
     for module in modules:
@@ -367,7 +364,7 @@ def test_scalar_value_storage_raw_address_out_and_inout_match_both_routes(tmp_pa
             module.bump_raw(raw)
 
 
-def test_multiple_scalar_results_match_both_routes_without_array_blockers(tmp_path: Path):
+def test_multiple_scalar_results_use_canonical_plan_without_array_blockers(tmp_path: Path):
     modules = _build_multiple_scalar_result_modules(tmp_path)
 
     for module in modules:
@@ -384,7 +381,7 @@ def test_scalar_descriptor_results_copy_values_or_none_through_wrapper_plan_rout
         assert module.maybe_pointer(np.int32(0)) is None
 
 
-def test_scalar_primitive_kinds_match_both_routes_without_array_blockers(tmp_path: Path):
+def test_scalar_primitive_kinds_use_canonical_plan_without_array_blockers(tmp_path: Path):
     modules = _build_scalar_kind_modules(tmp_path)
 
     for module in modules:

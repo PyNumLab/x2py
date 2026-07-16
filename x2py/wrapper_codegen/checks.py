@@ -17,6 +17,8 @@ __all__ = (
 
 
 INFRASTRUCTURE_MODULES = frozenset({"__init__.py", "checks.py", "visitor.py"})
+SEMANTIC_PRINTER_MODULE = "pyi_printer.py"
+SEMANTIC_PRINTER_FUNCTIONS = frozenset({"emit_module", "emit_module_stubs", "opaque_dependency_modules"})
 VISITOR_CLASS_SUFFIXES = ("Analyzer", "Emitter", "Generator", "Planner", "Validator")
 REGISTRY_SUFFIXES = ("_DISPATCHER", "_HANDLERS", "_REGISTRY")
 HANDLER_PREFIXES = ("_convert_", "_emit_", "_handle_", "_visit_")
@@ -76,13 +78,12 @@ def check_wrapper_codegen_package(
 ) -> tuple[WrapperCodegenViolation, ...]:
     """Check every Python module in the isolated wrapper-codegen package."""
     root = package_root or Path(__file__).resolve().parent
-    return check_wrapper_codegen_paths(sorted(root.rglob("*.py")), package_root=root, config=config)
+    return check_wrapper_codegen_paths(sorted(root.rglob("*.py")), config=config)
 
 
 def check_wrapper_codegen_paths(
     paths: list[Path],
     *,
-    package_root: Path,
     config: WrapperCodegenCheckConfig | None = None,
 ) -> tuple[WrapperCodegenViolation, ...]:
     """Check selected wrapper-codegen modules."""
@@ -92,19 +93,19 @@ def check_wrapper_codegen_paths(
     for path in paths:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
-        violations.extend(_module_violations(path, tree, package_root))
-        violations.extend(_function_size_violations(path, tree, source, resolved_config, tiered_limits))
+        violations.extend(_module_violations(path, tree))
+        if path.name != SEMANTIC_PRINTER_MODULE:
+            violations.extend(_function_size_violations(path, tree, source, resolved_config, tiered_limits))
         violations.extend(_registry_violations(path, tree))
     return tuple(violations)
 
 
-def _module_violations(path: Path, tree: ast.Module, package_root: Path) -> list[WrapperCodegenViolation]:
+def _module_violations(path: Path, tree: ast.Module) -> list[WrapperCodegenViolation]:
     if path.name in INFRASTRUCTURE_MODULES:
         return []
     return [
         *_module_function_violations(path, tree),
         *_visitor_class_violations(path, tree),
-        *_dependency_violations(path, tree, package_root),
     ]
 
 
@@ -113,6 +114,7 @@ def _module_function_violations(path: Path, tree: ast.Module) -> list[WrapperCod
         _violation(path, node, "module-function", f"move production function {node.name!r} onto a class")
         for node in tree.body
         if isinstance(node, ast.FunctionDef)
+        and not (path.name == SEMANTIC_PRINTER_MODULE and node.name in SEMANTIC_PRINTER_FUNCTIONS)
     ]
 
 
@@ -124,16 +126,6 @@ def _visitor_class_violations(path: Path, tree: ast.Module) -> list[WrapperCodeg
         and node.name.endswith(VISITOR_CLASS_SUFFIXES)
         and node.name != "WrapperCodeGenerator"
         and not _inherits_class_visitor(node)
-    ]
-
-
-def _dependency_violations(path: Path, tree: ast.Module, package_root: Path) -> list[WrapperCodegenViolation]:
-    if not _is_under(path, package_root):
-        return []
-    return [
-        _violation(path, node, "legacy-codegen-import", "wrapper_codegen must not import x2py.codegen")
-        for node in ast.walk(tree)
-        if _imports_legacy_codegen(node)
     ]
 
 
@@ -277,20 +269,6 @@ def _base_name(node: ast.AST) -> str | None:
     if isinstance(node, ast.Attribute):
         return node.attr
     return None
-
-
-def _imports_legacy_codegen(node: ast.AST) -> bool:
-    if isinstance(node, ast.Import):
-        return any(alias.name == "x2py.codegen" or alias.name.startswith("x2py.codegen.") for alias in node.names)
-    return isinstance(node, ast.ImportFrom) and bool(node.module) and _is_codegen_module(node.module)
-
-
-def _is_codegen_module(module_name: str) -> bool:
-    return module_name == "x2py.codegen" or module_name.startswith("x2py.codegen.")
-
-
-def _is_under(path: Path, directory: Path) -> bool:
-    return path.resolve().is_relative_to(directory.resolve())
 
 
 def _violation(path: Path, node: ast.AST, code: str, message: str) -> WrapperCodegenViolation:

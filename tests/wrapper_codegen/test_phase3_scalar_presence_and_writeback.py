@@ -137,7 +137,8 @@ def test_scalar_writeback_is_an_explicit_binding_lifecycle_result():
 
     assert "void bind_c_bump(int32_t * value);" in c_source
     assert "bind_c_bump(&value);" in c_source
-    assert "PyObject * result_obj = Int32_to_PyLong(&value);" in c_source
+    assert "PyObject * result_obj = NULL;" in c_source
+    assert "result_obj = Int32_to_PyLong(&value);" in c_source
     assert "subroutine bind_c_bump(value)" in fortran_source
     assert "call native_bump(value)" in fortran_source
 

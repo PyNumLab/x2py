@@ -373,6 +373,7 @@ class FortranInterfaceProcedure(StageRecord):
     name: str
     imports: tuple[str, ...] = ()
     parameters: tuple[FortranParameter, ...] = ()
+    parameter_declarations: tuple[FortranParameter, ...] = ()
     result_name: str | None = None
     result_type: str | None = None
     is_subroutine: bool = False

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parents[2]
@@ -15,9 +15,7 @@ STAGE_DIRECTORIES = {
     "architecture",
     "benchmarks",
     "cli",
-    "codegen",
     "docs",
-    "lowering",
     "naming",
     "parsing",
     "pipeline",
@@ -26,6 +24,7 @@ STAGE_DIRECTORIES = {
     "semantics",
     "tools",
     "types",
+    "wrapper_codegen",
 }
 NON_STAGE_DIRECTORIES = {"wrapper"}
 DOCUMENTED_SOURCE_OWNERS = {
@@ -34,10 +33,7 @@ DOCUMENTED_SOURCE_OWNERS = {
     "x2py.pyi_parser": "tests/parsing/pyi/",
     "x2py.probes": "tests/probes/",
     "x2py.pipeline": "tests/pipeline/",
-    "x2py.semantics.ir2ast": "tests/lowering/",
-    "x2py.codegen.bridges": "tests/codegen/bridges/",
-    "x2py.codegen.bindings": "tests/codegen/bindings/",
-    "x2py.codegen.printers": "tests/codegen/printers/",
+    "x2py.wrapper_codegen": "tests/wrapper_codegen/",
     "x2py.naming": "tests/naming/",
     "x2py.types": "tests/types/",
     "x2py.runtime.handles": "tests/runtime/handles/",
@@ -55,6 +51,7 @@ ARCHITECTURE_TEST_MODULES = {
     "test_dependency_boundaries.py",
     "test_package_structure.py",
     "test_test_suite_layout.py",
+    "test_visitor_protocol.py",
 }
 DEPRECATED_PYTEST_ROOTS = {
     TEST_ROOT / "parser",

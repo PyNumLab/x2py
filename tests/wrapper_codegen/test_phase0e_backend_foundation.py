@@ -132,7 +132,7 @@ def test_fortran_source_printer_wraps_long_parenthesized_call_arguments():
 
 
 def test_source_printers_do_not_import_wrapper_plan_models():
-    path = REPO_ROOT / "x2py" / "wrapper_codegen" / "source_printers.py"
+    path = REPO_ROOT / "x2py" / "wrapper_codegen" / "printers" / "source_printers.py"
     imports = {
         node.module
         for node in ast.walk(ast.parse(Path(path).read_text(encoding="utf-8")))

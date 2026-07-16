@@ -1809,7 +1809,12 @@ class OwnershipPolicyResolver:
         if decision.kind is ObjectKind.DERIVED_TYPE:
             return NativeBarrierAction.PASS_WRAPPER_ADDRESS
         if decision.kind is ObjectKind.SCALAR:
-            if facts.address_role == ADDRESS_ROLE_PROJECTION or decision.codegen_action is CodegenAction.COPY_IN_OUT:
+            hidden_output = context.projects_result and not context.python_visible and not decision.descriptor_boundary
+            if (
+                facts.address_role == ADDRESS_ROLE_PROJECTION
+                or hidden_output
+                or decision.codegen_action is CodegenAction.COPY_IN_OUT
+            ):
                 return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
             return NativeBarrierAction.PASS_VALUE
         return NativeBarrierAction.BLOCKED

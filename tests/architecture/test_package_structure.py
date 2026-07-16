@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 PACKAGE_ROOT = Path(__file__).parents[2] / "x2py"
-ROOT_PYTHON_MODULES = {"__init__.py", "__main__.py", "cli.py"}
+ROOT_PYTHON_MODULES = {"__init__.py", "__main__.py", "cli.py", "stage_values.py"}
 
 
 def test_x2py_root_contains_only_public_entrypoint_modules():

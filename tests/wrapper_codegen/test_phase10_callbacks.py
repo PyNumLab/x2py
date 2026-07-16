@@ -75,6 +75,8 @@ def test_callback_policy_completes_every_legacy_observed_transfer_before_plannin
     )
 
     array = policies["apply_array_storage_callback"].arguments[0].callback
+    assert array.arguments[0].abi is CallbackABIKind.REFERENCE
+    assert array.arguments[0].adapter_action is CallbackTransferAction.COPY_IN
     assert array.arguments[1].abi is CallbackABIKind.DATA_AND_SHAPE
     assert array.arguments[1].array.shape == ("count",)
 
@@ -164,9 +166,12 @@ def test_callback_artifacts_use_linear_context_adapter_and_trampoline_paths():
     assert "Py_END_ALLOW_THREADS" not in c_source
 
     assert "abstract interface" in bridge
+    assert "integer(c_int32_t), intent(in), value :: arg_0" in bridge
+    assert "integer(c_int32_t), intent(in) :: count" in bridge
     assert "procedure(x2py_callback_trampoline" in bridge
     assert "size(arg_1_callback_storage, dim=1, kind=c_int64_t)" in bridge
     assert "int(len(arg_0_callback_storage), kind=c_int64_t)" in bridge
+    assert "Int32_to_PyLong((int32_t *)count_data)" in c_source
     assert bridge.count("call native_apply_array_storage_callback(") == 1
     assert bridge.count("call callback(") == 3
     assert max(map(len, bridge.splitlines())) <= 132

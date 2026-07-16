@@ -80,7 +80,7 @@ from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
-from x2py.codegen.printers.pyi_printer import emit_module, emit_module_stubs
+from x2py.wrapper_codegen.printers import emit_module, emit_module_stubs
 
 
 def _function(module, name):

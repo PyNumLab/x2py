@@ -9,26 +9,19 @@ from x2py.contracts import CONTRACT_SYMBOLS
 from x2py import parse_fortran_file as parse_fortran_source
 
 
-from x2py.codegen.binding_pipeline import BindingPipeline
-
-from x2py.codegen.codegen import Codegen
-
-from x2py.codegen.scope import Scope
-
 from x2py.semantics.fortran2ir import (
     fortran_module_to_semantic_module,
 )
 
 from x2py.pipeline.pyi import pyi_text_to_semantic_module as _parse_pyi_text
 
-from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
-
-from x2py.codegen.printers.pyi_printer import (
+from x2py.wrapper_codegen.printers import (
     emit_module,
     emit_module_stubs,
     opaque_dependency_modules,
     PyiPrinter,
 )
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 from x2py.semantics.models import (
     CALLBACK_DECLARATION_ACCESS_METADATA,
@@ -65,18 +58,25 @@ def parse_pyi_text(source: str, *args, **kwargs):
     return _parse_pyi_text(f"{CONTRACT_IMPORT}{source}", *args, **kwargs)
 
 
-def semantic_ir_to_codegen_ast(node, *args, **kwargs):
-    if isinstance(node, SemanticModule):
-        complete_semantic_policies(node)
-    return _semantic_ir_to_codegen_ast(node, *args, **kwargs)
-
-
 def generate_pyi(source: str) -> str:
     fmod = parse_fortran_source(source)
 
     smod = fortran_module_to_semantic_module(fmod)
 
     return emit_module(smod)
+
+
+def generate_wrapper_artifacts(module: SemanticModule):
+    """Generate wrapper sources through the canonical plan implementation."""
+    complete_semantic_policies(module)
+    return WrapperCodeGenerator().generate(WrapperPlanner().build(module))
+
+
+def rendered_source(artifacts, suffix: str) -> str:
+    """Return the sole rendered source with ``suffix``."""
+    matches = [source.text for source in artifacts.sources if source.path.suffix == suffix]
+    assert len(matches) == 1
+    return matches[0]
 
 
 def normalize(text: str) -> str:
@@ -88,12 +88,9 @@ __all__ = (
     "OPERATOR_F90_SOURCE",
     "RUNTIME_HOLD_GIL_METADATA",
     "RUNTIME_STATUS_ERROR_METADATA",
-    "BindingPipeline",
-    "Codegen",
     "Path",
     "ProjectionMapping",
     "PyiPrinter",
-    "Scope",
     "SemanticArgument",
     "SemanticArrayContract",
     "SemanticClass",
@@ -113,11 +110,12 @@ __all__ = (
     "emit_module_stubs",
     "fortran_module_to_semantic_module",
     "generate_pyi",
+    "generate_wrapper_artifacts",
     "normalize",
     "opaque_dependency_modules",
     "parse_fortran_source",
     "parse_pyi_text",
     "pytest",
-    "semantic_ir_to_codegen_ast",
+    "rendered_source",
     "x2py",
 )

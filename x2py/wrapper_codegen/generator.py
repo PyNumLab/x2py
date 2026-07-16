@@ -51,6 +51,7 @@ from x2py.semantics.wrapper_policy import (
     ORDINARY_ARRAY_RESULT_COPY_REASON,
     ModuleGetterAction,
     ModuleObjectAccessMechanism,
+    NativeInvocationKind,
     NativeArrayDescriptorInterop,
     NativeArrayDescriptorKind,
     NativeArrayDescriptorOwnership,
@@ -74,6 +75,7 @@ from x2py.semantics.wrapper_policy import (
     TransformationAction,
     TransformationLayer,
     WritebackPhase,
+    overload_builtin_scalar_family,
 )
 from x2py.wrapper_codegen.c.binding import CBindingGenerator
 from x2py.wrapper_codegen.fortran.bridge import FortranBridgeGenerator
@@ -81,7 +83,7 @@ from x2py.wrapper_codegen.plan import (
     ArgumentTransferPlan,
     CallbackHandoffPlan,
     CallbackTransferPlan,
-    ClassOverloadPlan,
+    OverloadPlan,
     ClassSurfacePlan,
     DatatypeFamily,
     FunctionPlan,
@@ -94,7 +96,7 @@ from x2py.wrapper_codegen.plan import (
     ResultPlan,
     WrapperPlanDiagnostic,
 )
-from x2py.wrapper_codegen.source_printers import CSourcePrinter, FortranSourcePrinter
+from x2py.wrapper_codegen.printers import CSourcePrinter, FortranSourcePrinter
 
 
 class WrapperCodeGenerator:
@@ -152,6 +154,9 @@ class WrapperCodeGenerator:
                 diagnostics.extend(self._module_variable_diagnostics(variable))
             for class_surface in namespace.classes:
                 diagnostics.extend(self._class_surface_diagnostics(namespace, class_surface))
+            functions = {id(function) for function in namespace.functions}
+            for overload in namespace.overloads:
+                diagnostics.extend(self._overload_diagnostics(overload, functions))
         diagnostics.extend(self._class_graph_diagnostics(plan))
         diagnostics.extend(self._generated_symbol_diagnostics(plan))
         diagnostics.extend(self._required_header_diagnostics(plan))
@@ -259,7 +264,7 @@ class WrapperCodeGenerator:
             *(
                 diagnostic
                 for overload in surface.overloads
-                for diagnostic in self._class_overload_diagnostics(overload, functions)
+                for diagnostic in self._overload_diagnostics(overload, functions)
             ),
             *self._constructor_diagnostics(surface),
             *self._constructor_reference_diagnostics(surface, functions),
@@ -305,56 +310,87 @@ class WrapperCodeGenerator:
                 self._diagnostic(surface.owner_path, "missing-constructor-target", constructor.target.owner_path)
             )
         if constructor.overload is not None:
-            diagnostics.extend(self._class_overload_diagnostics(constructor.overload, functions))
+            diagnostics.extend(self._overload_diagnostics(constructor.overload, functions))
         return tuple(diagnostics)
 
-    def _class_overload_diagnostics(
+    def _overload_diagnostics(
         self,
-        overload: ClassOverloadPlan,
+        overload: OverloadPlan,
         functions: set[int],
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate candidate references and exact runtime signatures once."""
-        diagnostics = []
-        if not overload.candidates:
-            diagnostics.append(self._diagnostic(overload.owner_path, "empty-class-overload", overload.python_name))
-        if len(overload.candidates) != len(overload.candidate_matches):
-            diagnostics.append(
-                self._diagnostic(
-                    overload.owner_path,
-                    "incomplete-class-overload-match-plan",
-                    (len(overload.candidates), len(overload.candidate_matches)),
-                )
-            )
-        if len(overload.candidates) != len(overload.candidate_passed_objects):
-            diagnostics.append(
-                self._diagnostic(
-                    overload.owner_path,
-                    "incomplete-class-overload-call-plan",
-                    (len(overload.candidates), len(overload.candidate_passed_objects)),
-                )
-            )
-        diagnostics.extend(
-            self._diagnostic(overload.owner_path, "missing-class-overload-candidate", candidate.owner_path)
+        missing = tuple(
+            self._diagnostic(overload.owner_path, "missing-overload-candidate", candidate.owner_path)
             for candidate in overload.candidates
             if id(candidate) not in functions
         )
-        signatures = tuple(self._class_overload_signature(matches) for matches in overload.candidate_matches)
+        return (
+            *self._overload_cardinality_diagnostics(overload),
+            *missing,
+            *self._overload_signature_diagnostics(overload),
+        )
+
+    def _overload_cardinality_diagnostics(
+        self,
+        overload: OverloadPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one match and passed-object record per overload candidate."""
+        diagnostics = []
+        if not overload.candidates:
+            diagnostics.append(self._diagnostic(overload.owner_path, "empty-overload", overload.python_name))
+        expected = len(overload.candidates)
+        for actual, code in (
+            (len(overload.candidate_matches), "incomplete-overload-match-plan"),
+            (len(overload.candidate_passed_objects), "incomplete-overload-call-plan"),
+        ):
+            if actual != expected:
+                diagnostics.append(self._diagnostic(overload.owner_path, code, (expected, actual)))
+        return tuple(diagnostics)
+
+    def _overload_signature_diagnostics(
+        self,
+        overload: OverloadPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Reject ambiguous predicates and inconsistent receiver selection."""
+        diagnostics = []
+        signatures = tuple(self._overload_signature(matches) for matches in overload.candidate_matches)
         if len(set(signatures)) != len(signatures):
-            diagnostics.append(self._diagnostic(overload.owner_path, "ambiguous-class-overload", overload.python_name))
-        if len(set(overload.candidate_passed_objects)) > 1:
+            diagnostics.append(self._diagnostic(overload.owner_path, "ambiguous-overload", overload.python_name))
+        builtin_signatures = tuple(self._overload_builtin_signature(matches) for matches in overload.candidate_matches)
+        if len(set(builtin_signatures)) != len(builtin_signatures):
             diagnostics.append(
-                self._diagnostic(overload.owner_path, "mixed-class-overload-receivers", overload.python_name)
+                self._diagnostic(overload.owner_path, "overlapping-reflected-overload", overload.python_name)
             )
+        if len(set(overload.candidate_passed_objects)) > 1:
+            diagnostics.append(self._diagnostic(overload.owner_path, "mixed-overload-receivers", overload.python_name))
         return tuple(diagnostics)
 
     @staticmethod
-    def _class_overload_signature(matches: tuple) -> tuple:
+    def _overload_signature(matches: tuple) -> tuple:
         """Return the runtime-relevant signature of one overload candidate."""
         return tuple(
             (
                 match.kind,
                 match.optional,
                 match.semantic_type_name,
+                match.rank,
+                match.derived_type_identity,
+            )
+            for match in matches
+        )
+
+    @staticmethod
+    def _overload_builtin_signature(matches: tuple) -> tuple:
+        """Normalize reflected Python scalar domains for overlap validation."""
+        return tuple(
+            (
+                match.kind,
+                match.optional,
+                (
+                    overload_builtin_scalar_family(match.semantic_type_name)
+                    if match.accept_builtin_scalar
+                    else match.semantic_type_name
+                ),
                 match.rank,
                 match.derived_type_identity,
             )
@@ -570,6 +606,7 @@ class WrapperCodeGenerator:
         names = [function.binding.python_name for function in plan.functions]
         names.extend(name for variable in plan.variables for name in variable.binding.python_names)
         names.extend(name for derived in plan.derived_types for name in derived.python_names)
+        names.extend(overload.python_name for overload in plan.overloads)
         return tuple(
             self._diagnostic(plan.owner_path, "duplicate-python-export", name)
             for name, count in Counter(names).items()
@@ -592,6 +629,12 @@ class WrapperCodeGenerator:
             if variable.owner_path != expected_owner:
                 diagnostics.append(
                     self._diagnostic(variable.owner_path, "inconsistent-variable-export-owner", expected_owner)
+                )
+        for overload in plan.overloads:
+            expected_owner = f"{plan.owner_path}.{overload.python_name}"
+            if overload.owner_path != expected_owner:
+                diagnostics.append(
+                    self._diagnostic(overload.owner_path, "inconsistent-overload-export-owner", expected_owner)
                 )
         return tuple(diagnostics)
 
@@ -737,6 +780,8 @@ class WrapperCodeGenerator:
         action = plan.binding.getter_action
         if action is ModuleGetterAction.NATIVE_ARRAY_HANDLE:
             return self._module_native_array_handle_diagnostics(plan)
+        if action is ModuleGetterAction.BORROWED_ARRAY_VIEW:
+            return self._module_borrowed_array_view_diagnostics(plan)
         if action is ModuleGetterAction.CONSTANT_VALUE:
             diagnostics = []
             if plan.bridge.getter_role is not None:
@@ -756,6 +801,27 @@ class WrapperCodeGenerator:
         }:
             return (self._diagnostic(plan.owner_path, "missing-module-descriptor-kind", action.value),)
         return ()
+
+    def _module_borrowed_array_view_diagnostics(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one native-owned fixed array view and its pointer/shape ABI."""
+        diagnostics = []
+        array = plan.array
+        if array is None or array.rank is None or array.rank <= 0:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-module-array-view", array))
+        if plan.native_array_handle is not None or plan.derived is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "module-array-view-has-unrelated-facet", None))
+        if plan.bridge.getter_role is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-module-array-getter-role", None))
+        if plan.bridge.native_assignment is not AssignmentMode.NONE:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path, "module-array-view-has-native-assignment", plan.bridge.native_assignment
+                )
+            )
+        return tuple(diagnostics)
 
     def _derived_module_getter_role_diagnostics(
         self,
@@ -883,7 +949,9 @@ class WrapperCodeGenerator:
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate descriptor rejection and constant omission choices."""
         action = plan.binding.setter_action
-        if action is SetterAction.REJECT_REPLACEMENT and plan.derived is not None:
+        if action is SetterAction.REJECT_REPLACEMENT and (
+            plan.derived is not None or plan.binding.getter_action is ModuleGetterAction.BORROWED_ARRAY_VIEW
+        ):
             return ()
         if action is SetterAction.REJECT_REPLACEMENT and plan.bridge.descriptor_kind not in {
             "allocatable",
@@ -915,6 +983,7 @@ class WrapperCodeGenerator:
             *self._string_result_aggregation_diagnostics(plan),
             *self._status_error_diagnostics(plan),
             *self._class_call_diagnostics(plan),
+            *self._native_invocation_diagnostics(plan),
         ]
         slots = {slot.native_position: slot for slot in plan.native_call_slots}
         for slot in plan.native_call_slots:
@@ -928,6 +997,44 @@ class WrapperCodeGenerator:
         diagnostics.extend(self._writeback_phase_diagnostics(plan))
         diagnostics.extend(self._string_writeback_diagnostics(plan))
         return tuple(diagnostics)
+
+    def _native_invocation_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one internally consistent completed native call syntax."""
+        invocation = plan.bridge.native_invocation
+        validator = {
+            NativeInvocationKind.PROCEDURE: self._procedure_invocation_diagnostics,
+            NativeInvocationKind.DEFINED_OPERATOR: self._defined_operator_diagnostics,
+            NativeInvocationKind.DEFINED_ASSIGNMENT: self._defined_assignment_diagnostics,
+        }.get(invocation)
+        if validator is None:
+            return (self._diagnostic(plan.owner_path, "unknown-native-invocation", invocation),)
+        return validator(plan)
+
+    def _procedure_invocation_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Reject an operator token on an ordinary procedure call."""
+        operator = plan.bridge.native_operator
+        if operator is None:
+            return ()
+        return (self._diagnostic(plan.owner_path, "unexpected-native-operator", operator),)
+
+    def _defined_operator_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require the canonical native spelling for a defined operator."""
+        operator = plan.bridge.native_operator
+        expected = f"operator({operator})" if operator else None
+        compact_name = "".join(plan.bridge.native_name.split()).casefold()
+        if expected is not None and compact_name == expected:
+            return ()
+        return (self._diagnostic(plan.owner_path, "invalid-defined-operator", plan.bridge),)
+
+    def _defined_assignment_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require subroutine form and canonical spelling for defined assignment."""
+        compact_name = "".join(plan.bridge.native_name.split()).casefold()
+        valid = (
+            compact_name == "assignment(=)" and plan.bridge.native_operator == "=" and plan.bridge.native_is_subroutine
+        )
+        if valid:
+            return ()
+        return (self._diagnostic(plan.owner_path, "invalid-defined-assignment", plan.bridge),)
 
     def _class_call_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate receiver selection before either backend sees a class call."""
@@ -978,15 +1085,17 @@ class WrapperCodeGenerator:
         plan: ArgumentTransferPlan,
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate layer ownership and lifecycle for explicit representation copies."""
-        if plan.array is None or plan.array.native_order == plan.array.order:
+        replacement = self._publishes_array_replacement(plan)
+        if plan.array is None or (plan.array.native_order == plan.array.order and not replacement):
             return (
                 (self._diagnostic(plan.owner_path, "unexpected-transformations", plan.transformations),)
                 if plan.transformations
                 else ()
             )
-        representation = self._array_representation_transformation_diagnostics(plan)
-        if representation:
-            return representation
+        if not replacement:
+            representation = self._array_representation_transformation_diagnostics(plan)
+            if representation:
+                return representation
         return (
             *self._transformation_phase_diagnostics(plan),
             *(
@@ -1022,7 +1131,7 @@ class WrapperCodeGenerator:
         expected_phases = []
         if plan.binding.codegen_action is not CodegenAction.IDENTITY_OUTPUT:
             expected_phases.append(WritebackPhase.COPY_IN)
-        if plan.mutates_native:
+        if plan.mutates_native or self._publishes_array_replacement(plan):
             expected_phases.append(WritebackPhase.COPY_OUT)
         expected_phases.append(WritebackPhase.CLEANUP)
         if tuple(item.phase for item in plan.transformations) == tuple(expected_phases):
@@ -1046,11 +1155,15 @@ class WrapperCodeGenerator:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-transformation-layer", transformation.layer.value)
             )
-        expected_action = (
-            TransformationAction.RELEASE_TEMPORARY
-            if transformation.phase is WritebackPhase.CLEANUP
-            else TransformationAction.COPY_ARRAY_REPRESENTATION
-        )
+        expected_action = {
+            WritebackPhase.COPY_IN: TransformationAction.COPY_ARRAY_REPRESENTATION,
+            WritebackPhase.COPY_OUT: (
+                TransformationAction.PUBLISH_ARRAY_REPLACEMENT
+                if self._publishes_array_replacement(plan)
+                else TransformationAction.COPY_ARRAY_REPRESENTATION
+            ),
+            WritebackPhase.CLEANUP: TransformationAction.RELEASE_TEMPORARY,
+        }[transformation.phase]
         if transformation.action is not expected_action:
             diagnostics.append(
                 self._diagnostic(
@@ -1060,6 +1173,15 @@ class WrapperCodeGenerator:
                 )
             )
         return tuple(diagnostics)
+
+    @staticmethod
+    def _publishes_array_replacement(plan: ArgumentTransferPlan) -> bool:
+        """Return whether COPY_OUT transfers a mutable NumPy replacement."""
+        return any(
+            transformation.phase is WritebackPhase.COPY_OUT
+            and transformation.action is TransformationAction.PUBLISH_ARRAY_REPLACEMENT
+            for transformation in plan.transformations
+        )
 
     def _argument_family_diagnostics(
         self,
@@ -1659,7 +1781,7 @@ class WrapperCodeGenerator:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-scalar-address-data-action", plan.bridge.data_action.value)
             )
-        if plan.binding.optional_mode is not OptionalMode.REQUIRED:
+        if plan.binding.optional_mode is not OptionalMode.REQUIRED and action is PythonBarrierAction.RAW_ADDRESS:
             diagnostics.append(self._diagnostic(plan.owner_path, "optional-scalar-address-boundary", action.value))
         return tuple(diagnostics)
 
@@ -1764,9 +1886,10 @@ class WrapperCodeGenerator:
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate caller-owned ordinary-array lifetime facts."""
         diagnostics = []
+        replacement = plan.transfer_mode is TransferMode.COPY_RETURN
         expected = (
             ("object-kind", plan.object_kind, ObjectKind.NUMPY_ARRAY),
-            ("owner", plan.ownership_owner, OwnershipOwner.CALLER),
+            ("owner", plan.ownership_owner, OwnershipOwner.PYTHON if replacement else OwnershipOwner.CALLER),
             ("storage", plan.storage_mode, StorageMode.STACK),
             ("boundary-storage", plan.boundary_storage_mode, StorageMode.STACK),
         )
@@ -1775,8 +1898,16 @@ class WrapperCodeGenerator:
             for name, actual, required in expected
             if actual is not required
         )
-        expected_transfer = TransferMode.IN_PLACE if plan.mutates_native else TransferMode.CALL_LOCAL
-        expected_destruction = DestructionPolicy.CALLER if plan.mutates_native else DestructionPolicy.NONE
+        expected_transfer = (
+            TransferMode.COPY_RETURN
+            if replacement
+            else (TransferMode.IN_PLACE if plan.mutates_native else TransferMode.CALL_LOCAL)
+        )
+        expected_destruction = (
+            DestructionPolicy.PYTHON_REFCOUNT
+            if replacement
+            else (DestructionPolicy.CALLER if plan.mutates_native else DestructionPolicy.NONE)
+        )
         if plan.transfer_mode is not expected_transfer:
             diagnostics.append(self._diagnostic(plan.owner_path, "invalid-array-transfer", plan.transfer_mode.value))
         if plan.destruction_policy is not expected_destruction:
@@ -1842,11 +1973,18 @@ class WrapperCodeGenerator:
         if actual is None:
             return ()
         diagnostics = []
-        if actual.writable != plan.binding.writable:
+        expected_writable = plan.mutates_native or self._publishes_array_replacement(plan)
+        if actual.writable != expected_writable:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "inconsistent-array-actual-writeability", actual.writable)
             )
-        if not actual.require_native_byte_order or not actual.require_aligned or not actual.require_contiguous:
+        array = plan.array
+        expected_contiguous = bool(array is not None and array.contiguous is True)
+        if (
+            not actual.require_native_byte_order
+            or not actual.require_aligned
+            or actual.require_contiguous != expected_contiguous
+        ):
             diagnostics.append(self._diagnostic(plan.owner_path, "incomplete-array-actual-validation", None))
         return tuple(diagnostics)
 
@@ -2114,6 +2252,7 @@ class WrapperCodeGenerator:
             )
         if plan.binding.codegen_action not in {
             CodegenAction.CALL_LOCAL_INPUT,
+            CodegenAction.COPY_IN_OUT,
             CodegenAction.IN_PLACE_ARGUMENT,
             CodegenAction.IDENTITY_OUTPUT,
         }:
@@ -2629,8 +2768,6 @@ class WrapperCodeGenerator:
             for name, actual, required in expected
             if actual is not required
         ]
-        if not plan.mutates_native:
-            diagnostics.append(self._diagnostic(plan.owner_path, "string-replacement-without-mutation", False))
         if not plan.projects_result or plan.result_position is None:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "string-replacement-without-result", plan.result_position)
@@ -2935,9 +3072,7 @@ class WrapperCodeGenerator:
         self,
         plan: FunctionPlan,
     ) -> tuple[WrapperPlanDiagnostic, ...]:
-        """Keep fixed string allocation cleanup single-result in Phase 5B."""
-        if any(result.object_kind is ObjectKind.STRING for result in plan.results) and len(plan.results) != 1:
-            return (self._diagnostic(plan.owner_path, "mixed-string-result-aggregation", len(plan.results)),)
+        """Mixed fixed strings use the same ordered output aggregation path."""
         return ()
 
     def _string_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
@@ -3708,12 +3843,10 @@ class WrapperCodeGenerator:
         return sum(action.source_role == source_role and action.operation is operation for action in actions)
 
     def _mixed_output_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
-        """Allow hidden outputs plus writebacks only with one contiguous order."""
+        """Require one contiguous public order across results and writebacks."""
         if not plan.results or not plan.writeback_actions:
             return ()
         writebacks = self._projected_writebacks(plan)
-        if not self._supports_mixed_string_outputs(plan.results, writebacks):
-            return (self._diagnostic(plan.owner_path, "mixed-result-and-writeback", plan.owner_path),)
         positions = tuple(result.result_position for result in plan.results) + tuple(
             action.binding.result_position for action in writebacks
         )
@@ -3727,14 +3860,6 @@ class WrapperCodeGenerator:
             for action in plan.writeback_actions
             if action.phase is WritebackPhase.COPY_OUT and action.binding is not None
         )
-
-    @staticmethod
-    def _supports_mixed_string_outputs(results: tuple, writebacks: tuple) -> bool:
-        """Recognize the one legacy-observed hidden-string/writeback envelope."""
-        hidden_strings = all(
-            result.source_kind == "hidden_output" and result.object_kind is ObjectKind.STRING for result in results
-        )
-        return hidden_strings and all(action.object_kind is ObjectKind.STRING for action in writebacks)
 
     def _binding_result_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate ordered consumers and the sole direct native result."""

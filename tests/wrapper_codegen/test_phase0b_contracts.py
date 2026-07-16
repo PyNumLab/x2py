@@ -18,11 +18,6 @@ from x2py.wrapper_codegen.checks import (
 
 SOURCE_ROOT = REPO_ROOT / "x2py"
 WRAPPER_CODEGEN_ROOT = SOURCE_ROOT / "wrapper_codegen"
-LEGACY_CODEGEN_ROOT = SOURCE_ROOT / "codegen"
-
-
-def _python_modules(root: Path) -> list[Path]:
-    return sorted(path for path in root.rglob("*.py") if "__pycache__" not in path.parts)
 
 
 def _imported_modules(path: Path) -> set[str]:
@@ -51,28 +46,16 @@ def _check_source(tmp_path: Path, source: str, *, filename: str = "bad.py") -> s
     path = _write_module(tmp_path, filename, source)
     violations = check_wrapper_codegen_paths(
         [path],
-        package_root=tmp_path,
         config=WrapperCodegenCheckConfig(max_complexity=3, max_statements=4, max_nesting=2),
     )
     return {violation.code for violation in violations}
 
 
-def test_wrapper_codegen_and_legacy_codegen_do_not_import_each_other():
-    wrapper_codegen_imports = {path: _imported_modules(path) for path in _python_modules(WRAPPER_CODEGEN_ROOT)}
-    wrapper_codegen_violations = sorted(
-        path.relative_to(REPO_ROOT).as_posix()
-        for path, imports in wrapper_codegen_imports.items()
-        if _imports_under(imports, "x2py.codegen")
-    )
-    assert wrapper_codegen_violations == []
+def test_canonical_printers_share_one_package():
+    printers = WRAPPER_CODEGEN_ROOT / "printers"
 
-    legacy_codegen_imports = {path: _imported_modules(path) for path in _python_modules(LEGACY_CODEGEN_ROOT)}
-    legacy_codegen_violations = sorted(
-        path.relative_to(REPO_ROOT).as_posix()
-        for path, imports in legacy_codegen_imports.items()
-        if _imports_under(imports, "x2py.wrapper_codegen")
-    )
-    assert legacy_codegen_violations == []
+    assert (printers / "pyi_printer.py").is_file()
+    assert (printers / "source_printers.py").is_file()
 
 
 def test_backend_generators_do_not_import_each_other():
@@ -83,15 +66,10 @@ def test_backend_generators_do_not_import_each_other():
     assert not _imports_under(bridge_imports, "x2py.wrapper_codegen.c")
 
 
-def test_only_pipeline_modules_may_import_both_wrapper_routes():
-    modules_importing_both = []
-    for path in _python_modules(SOURCE_ROOT):
-        imports = _imported_modules(path)
-        if _imports_under(imports, "x2py.codegen") and _imports_under(imports, "x2py.wrapper_codegen"):
-            modules_importing_both.append(path.relative_to(SOURCE_ROOT).as_posix())
+def test_wrapper_build_pipeline_imports_canonical_generator():
+    imports = _imported_modules(SOURCE_ROOT / "pipeline" / "build.py")
 
-    outside_pipeline = sorted(path for path in modules_importing_both if not path.startswith("pipeline/"))
-    assert outside_pipeline == []
+    assert _imports_under(imports, "x2py.wrapper_codegen")
 
 
 def test_wrapper_codegen_package_static_contracts_pass():
@@ -108,12 +86,6 @@ def test_wrapper_codegen_checker_command_runs_the_package_checker():
     )
 
     assert result.returncode == 0, result.stdout
-
-
-def test_checker_rejects_legacy_codegen_imports(tmp_path: Path):
-    codes = _check_source(tmp_path, "import x2py.codegen\n")
-
-    assert "legacy-codegen-import" in codes
 
 
 def test_checker_rejects_module_level_production_functions(tmp_path: Path):
@@ -177,7 +149,7 @@ class DemoEmitter(ClassVisitor):
 """,
     )
 
-    violations = check_wrapper_codegen_paths([path], package_root=tmp_path)
+    violations = check_wrapper_codegen_paths([path])
 
     assert "complexity" in {violation.code for violation in violations}
 

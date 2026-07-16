@@ -14,7 +14,7 @@ from tests._shared.fixture_outputs import (
     pyi_files_for_fixture,
 )
 from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
-from x2py.codegen.printers.pyi_printer import emit_module
+from x2py.wrapper_codegen.printers import emit_module
 from x2py.pipeline import build as build_pipeline
 from x2py.pipeline.build import _discover_pyi_imports, _pyi_contract_bundle
 

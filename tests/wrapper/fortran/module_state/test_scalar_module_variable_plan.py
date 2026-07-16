@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import (
-    _build_source_legacy_and_import,
     _build_source_wrapper_plan_and_import,
     _sole_native_module,
 )
@@ -87,9 +86,7 @@ def _reload_native_module(build_dir: Path):
         sys.path.remove(str(build_dir))
 
 
-@pytest.mark.parametrize("route", ("legacy", "wrapper_plan"))
-def test_whole_scalar_module_variable_behavior_matches_legacy_route(
-    route: str,
+def test_whole_scalar_module_variable_behavior_uses_canonical_plan(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ):
@@ -99,13 +96,9 @@ def test_whole_scalar_module_variable_behavior_matches_legacy_route(
         "fscalar_module_state_f90_wrapper.c",
         "fscalar_module_state_f90_wrapper.h",
     }
-    if route == "legacy":
-        build_dir = tmp_path / "legacy_build"
-        module = _build_source_legacy_and_import(source, build_dir, expected_sources)
-    else:
-        module, result = _build_source_wrapper_plan_and_import(source, tmp_path / "plan_build")
-        build_dir = result.output_dir
-        assert {path.name for path in result.generated_sources} == expected_sources
+    module, result = _build_source_wrapper_plan_and_import(source, tmp_path / "build")
+    build_dir = result.output_dir
+    assert {path.name for path in result.generated_sources} == expected_sources
 
     assert module.nmax == np.int32(12)
     assert module.counter == np.int32(3)

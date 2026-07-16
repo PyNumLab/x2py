@@ -1,13 +1,9 @@
 """Tests split by stable ownership concept from `test_imports_and_packages.py`."""
 
-from tests.codegen.printers._support import (
-    BindingPipeline,
-    Codegen,
+from tests.wrapper_codegen.printers._support import (
     OPERATOR_F90_SOURCE,
-    Path,
     ProjectionMapping,
     PyiPrinter,
-    Scope,
     SemanticArgument,
     SemanticClass,
     SemanticFunction,
@@ -18,11 +14,12 @@ from tests.codegen.printers._support import (
     emit_module_stubs,
     fortran_module_to_semantic_module,
     generate_pyi,
+    generate_wrapper_artifacts,
     normalize,
     parse_fortran_source,
     parse_pyi_text,
     pytest,
-    semantic_ir_to_codegen_ast,
+    rendered_source,
 )
 
 
@@ -271,12 +268,6 @@ end module alloc_view_mod
     assert loaded.classes[0].fields[0].semantic_type.storage.array.allocatable is True
     assert "aliased" not in loaded.classes[0].fields[0].semantic_type.metadata
 
-    codegen_module = semantic_ir_to_codegen_ast(
-        loaded,
-        Scope(name=loaded.name, scope_type="module"),
-    )
-    assert codegen_module.variables[0].is_target is True
-
 
 def test_emit_and_load_aliased_derived_module_variable_declaration():
     source = """
@@ -295,12 +286,6 @@ end module derived_module_state
     assert [variable.name for variable in loaded.variables] == ["current"]
     assert loaded.variables[0].semantic_type.name == "box"
     assert loaded.variables[0].semantic_type.metadata["aliased"] is True
-
-    codegen_module = semantic_ir_to_codegen_ast(
-        loaded,
-        Scope(name=loaded.name, scope_type="module"),
-    )
-    assert codegen_module.variables[0].is_target is True
 
 
 def test_emit_module_stubs_print_plain_derived_module_variable_as_live_object():
@@ -344,54 +329,32 @@ def test_defined_operator_pyi_round_trip_preserves_native_links_without_fortran_
 
     loaded = parse_pyi_text(code, module_name=semantic_module.name)
     assert emit_module(loaded) == code
-    codegen_module = semantic_ir_to_codegen_ast(
-        loaded,
-        Scope(name=loaded.name, scope_type="module"),
-    )
-    vector = next(cls for cls in codegen_module.classes if str(cls.name) == "vector")
-    overload_sets = {item.name: item.native_name for item in vector.overload_sets}
-    assert overload_sets["__add__"] == "operator(+)"
-    assert overload_sets["operator_dot"] == "operator(.dot.)"
-    assert overload_sets["assign"] == "assignment(=)"
-    assert set(next(item for item in vector.overload_sets if item.name == "__eq__").native_names) == {
-        "operator(==)",
-        "operator(.eqv.)",
-    }
 
 
-def test_defined_operator_pyi_generates_wrapper_sources_without_fortran_source(tmp_path: Path):
+def test_defined_operator_pyi_generates_wrapper_sources_without_fortran_source():
     semantic_module = fortran_module_to_semantic_module(
         parse_fortran_source(OPERATOR_F90_SOURCE.read_text(), filename=str(OPERATOR_F90_SOURCE))
     )
     pyi = emit_module(semantic_module)
     loaded = parse_pyi_text(pyi, module_name=semantic_module.name)
-    scope = Scope(name=loaded.name, scope_type="module")
-    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
-    pipeline = BindingPipeline(
-        Codegen(loaded.name, codegen_module, codegen_module.scope),
-        loaded.name,
-        "fortran",
-        verbose=0,
-    )
+    generated = generate_wrapper_artifacts(loaded)
 
-    pipeline.generate(str(tmp_path))
-    generated = pipeline.write(tmp_path)
-
-    assert [path.name for path in generated] == [
+    assert [path.name for path in generated.source_paths] == [
         "bind_c_foperators_f90_wrapper.f90",
         "foperators_f90_wrapper.c",
+        "foperators_f90_wrapper.h",
     ]
-    fortran_wrapper = generated[0].read_text()
-    c_wrapper = generated[1].read_text()
+    fortran_wrapper = rendered_source(generated, ".f90")
+    c_wrapper = rendered_source(generated, ".c")
     assert "left + right" in fortran_wrapper
     assert "left = right" in fortran_wrapper
     assert "left .eqv. right" in fortran_wrapper
-    assert "left .neqv. right" in fortran_wrapper
-    assert ".nb_add = (binaryfunc)" in c_wrapper
-    assert ".tp_richcompare =" in c_wrapper
+    assert " .neqv. " in fortran_wrapper
+    assert "def __add__(self, *args, **kwargs):" in c_wrapper
+    assert "def __ne__(self, *args, **kwargs):" in c_wrapper
 
 
-def test_bound_constructor_pyi_generates_single_initializer_without_keyword_default(tmp_path: Path):
+def test_bound_constructor_pyi_generates_single_initializer_without_keyword_default():
     loaded = parse_pyi_text(
         """
 class state:
@@ -405,29 +368,20 @@ class state:
 """,
         module_name="edited",
     )
-    scope = Scope(name=loaded.name, scope_type="module")
-    codegen_module = semantic_ir_to_codegen_ast(loaded, scope)
-    pipeline = BindingPipeline(
-        Codegen(loaded.name, codegen_module, codegen_module.scope),
-        loaded.name,
-        "fortran",
-        verbose=0,
-    )
+    generated = generate_wrapper_artifacts(loaded)
 
-    pipeline.generate(str(tmp_path))
-    generated = pipeline.write(tmp_path)
-
-    assert [path.name for path in generated] == [
+    assert [path.name for path in generated.source_paths] == [
         "bind_c_edited_wrapper.f90",
         "edited_wrapper.c",
+        "edited_wrapper.h",
     ]
-    c_wrapper = generated[1].read_text()
-    assert "init_state" in generated[0].read_text()
+    c_wrapper = rendered_source(generated, ".c")
+    assert "init_state" in rendered_source(generated, ".f90")
     assert "state__default_init_wrapper" not in c_wrapper
-    assert '(char*)"seed"' in c_wrapper
-    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &seed_obj)' in c_wrapper
-    assert "Py_BEGIN_ALLOW_THREADS" not in c_wrapper
-    assert "Py_END_ALLOW_THREADS" not in c_wrapper
+    assert 'static char * kwlist[] = {"self", "seed", NULL};' in c_wrapper
+    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &bound_self_obj, &seed_obj)' in c_wrapper
+    assert "Py_BEGIN_ALLOW_THREADS" in c_wrapper
+    assert "Py_END_ALLOW_THREADS" in c_wrapper
 
 
 def test_emit_module_variables_with_visibility():

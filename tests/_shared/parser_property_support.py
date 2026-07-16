@@ -30,7 +30,7 @@ from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 
 from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 
-from x2py.codegen.printers.pyi_printer import emit_module_stubs
+from x2py.wrapper_codegen.printers import emit_module_stubs
 
 from x2py import FortranParseError, parse_fortran_file
 

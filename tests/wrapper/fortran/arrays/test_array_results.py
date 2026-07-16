@@ -96,10 +96,9 @@ def test_array_results_follow_data_buffer_and_descriptor_handle_contracts(
         np.testing.assert_allclose(result, expected)
 
 
-def test_ordinary_array_results_match_legacy_and_wrapper_plan_routes(tmp_path: Path, monkeypatch):
+def test_ordinary_array_results_use_canonical_plan(tmp_path: Path, monkeypatch):
     """Replay fixed-shape direct results without descriptor-backed neighbors."""
     native_object = _compile_native_object(ARRAY_RESULTS_F90_SOURCE, tmp_path / "native")
-    modules = {}
     selected = (
         "fixed_vector",
         "automatic_vector",
@@ -108,76 +107,63 @@ def test_ordinary_array_results_match_legacy_and_wrapper_plan_routes(tmp_path: P
         "rank15_result",
         "zero_vector",
     )
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract_package = tmp_path / f"{route}_ordinary_array_results"
-        shutil.copytree(CONTRACT_FIXTURES / "farray_results_f90", contract_package)
-        (contract_package / "__init__.pyi").write_text(
-            "".join(f"from .farray_results_f90 import {name}\n" for name in selected),
-            encoding="utf-8",
-        )
-        result = build_pyi_extension(
-            contract_package / "__init__.pyi",
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / route,
-            **route_kwargs,
-        )
-        module = _import_from_build_dir(result.module_name, result.output_dir)
-        modules[route] = module if hasattr(module, "fixed_vector") else _sole_native_module(module)
+    contract_package = tmp_path / "ordinary_array_results"
+    shutil.copytree(CONTRACT_FIXTURES / "farray_results_f90", contract_package)
+    (contract_package / "__init__.pyi").write_text(
+        "".join(f"from .farray_results_f90 import {name}\n" for name in selected),
+        encoding="utf-8",
+    )
+    result = build_pyi_extension(
+        contract_package / "__init__.pyi",
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    imported = _import_from_build_dir(result.module_name, result.output_dir)
+    module = imported if hasattr(imported, "fixed_vector") else _sole_native_module(imported)
 
-    for module in modules.values():
-        np.testing.assert_array_equal(module.fixed_vector(), np.array([1.0, 2.0, 3.0]))
-        np.testing.assert_array_equal(module.automatic_vector(np.int32(3)), np.array([2.0, 4.0, 6.0]))
-        matrix = module.automatic_matrix(np.int32(2), np.int32(3))
-        np.testing.assert_array_equal(matrix, np.array([[12.0, 13.0, 14.0], [22.0, 23.0, 24.0]]))
-        assert matrix.flags.f_contiguous
-        assert module.rank3_cube(np.int32(0), np.int32(2), np.int32(3)).shape == (0, 2, 3)
-        assert module.rank15_result().shape == (2, *([1] * 14))
-        assert module.zero_vector().shape == (0,)
+    np.testing.assert_array_equal(module.fixed_vector(), np.array([1.0, 2.0, 3.0]))
+    np.testing.assert_array_equal(module.automatic_vector(np.int32(3)), np.array([2.0, 4.0, 6.0]))
+    matrix = module.automatic_matrix(np.int32(2), np.int32(3))
+    np.testing.assert_array_equal(matrix, np.array([[12.0, 13.0, 14.0], [22.0, 23.0, 24.0]]))
+    assert matrix.flags.f_contiguous
+    assert module.rank3_cube(np.int32(0), np.int32(2), np.int32(3)).shape == (0, 2, 3)
+    assert module.rank15_result().shape == (2, *([1] * 14))
+    assert module.zero_vector().shape == (0,)
 
     monkeypatch.setenv("X2PY_WRAPPER_FAIL_ALLOC", "1")
     with pytest.raises(MemoryError, match="Unable to allocate copy-return output array"):
-        modules["wrapper_plan"].fixed_vector()
+        module.fixed_vector()
 
 
-def test_owned_allocatable_results_match_legacy_and_wrapper_plan_routes(tmp_path: Path):
+def test_owned_allocatable_results_preserve_handle_state(tmp_path: Path):
     """Replay valid allocated and zero-sized allocatable function results."""
     native_object = _compile_native_object(ARRAY_RESULTS_F90_SOURCE, tmp_path / "native")
-    modules = {}
-    for route, route_kwargs in (
-        ("legacy", {"_force_legacy_wrapper_route": True}),
-        ("wrapper_plan", {"_force_wrapper_plan_route": True}),
-    ):
-        contract_package = tmp_path / f"{route}_allocatable_results"
-        shutil.copytree(CONTRACT_FIXTURES / "farray_results_f90", contract_package)
-        (contract_package / "__init__.pyi").write_text(
-            "from .farray_results_f90 import maybe_alloc_vector, zero_alloc_vector\n",
-            encoding="utf-8",
-        )
-        result = build_pyi_extension(
-            contract_package / "__init__.pyi",
-            native_objects=[native_object],
-            native_include_dirs=[native_object.parent],
-            output_dir=tmp_path / route,
-            **route_kwargs,
-        )
-        module = _import_from_build_dir(result.module_name, result.output_dir)
-        modules[route] = module if hasattr(module, "maybe_alloc_vector") else _sole_native_module(module)
+    contract_package = tmp_path / "allocatable_results"
+    shutil.copytree(CONTRACT_FIXTURES / "farray_results_f90", contract_package)
+    (contract_package / "__init__.pyi").write_text(
+        "from .farray_results_f90 import maybe_alloc_vector, zero_alloc_vector\n",
+        encoding="utf-8",
+    )
+    result = build_pyi_extension(
+        contract_package / "__init__.pyi",
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    imported = _import_from_build_dir(result.module_name, result.output_dir)
+    module = imported if hasattr(imported, "maybe_alloc_vector") else _sole_native_module(imported)
 
-    for module in modules.values():
-        allocated = module.maybe_alloc_vector(np.int32(3))
-        assert isinstance(allocated, AllocatableArray)
-        assert allocated.allocated is True
-        np.testing.assert_allclose(allocated.to_numpy(), np.array([5.0, 10.0, 15.0]))
+    allocated = module.maybe_alloc_vector(np.int32(3))
+    assert isinstance(allocated, AllocatableArray)
+    assert allocated.allocated is True
+    np.testing.assert_allclose(allocated.to_numpy(), np.array([5.0, 10.0, 15.0]))
 
-        zero_sized = module.zero_alloc_vector()
-        assert isinstance(zero_sized, AllocatableArray)
-        assert zero_sized.allocated is True
-        assert zero_sized.shape == (0,)
-        assert zero_sized.to_numpy().shape == (0,)
+    zero_sized = module.zero_alloc_vector()
+    assert isinstance(zero_sized, AllocatableArray)
+    assert zero_sized.allocated is True
+    assert zero_sized.shape == (0,)
+    assert zero_sized.to_numpy().shape == (0,)
 
-        allocated.close()
-        zero_sized.close()
+    allocated.close()
+    zero_sized.close()

@@ -22,9 +22,8 @@ Stage and unit tests mirror the implementation pipeline:
   workflow;
 - semantic conversion, completed policy, and readiness have separate owners
   under `tests/semantics/`;
-- semantic-to-codegen conversion lives under `tests/lowering/`;
-- bridge, binding, and printer generation live under matching
-  `tests/codegen/` subjects;
+- wrapper planning, bridge/binding generation, and source/`.pyi` printing live
+  under `tests/wrapper_codegen/`;
 - runtime handles, naming, and type mapping live under `tests/runtime/`,
   `tests/naming/`, and `tests/types/`;
 - documentation, repository-tool, and architecture checks live under
@@ -37,13 +36,17 @@ crosses subjects. For example:
 python3 -m pytest -q tests/parsing/fortran
 python3 -m pytest -q tests/semantics/conversion/fortran
 python3 -m pytest -q tests/semantics/policy
-python3 -m pytest -q tests/lowering
-python3 -m pytest -q tests/codegen/bridges
+python3 -m pytest -q tests/wrapper_codegen
 ```
 
 CLI behavior has its own `tests/cli/` owner. Property and regression tests live
 with their owning stage and retain their markers, so a stage-directory command
 does not omit them.
+
+The legacy lowering AST and `x2py.codegen` package are removed. Their bridge,
+binding, and printer implementation tests are not carried through cutover. Any
+still-relevant contract is expressed against completed semantic policy,
+`WrapperPlan`/`WrapperCodeGenerator`, or public compiled wrapper behavior.
 
 ## Wrapper runtime features
 

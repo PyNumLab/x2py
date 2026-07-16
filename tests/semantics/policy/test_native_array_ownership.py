@@ -1,12 +1,8 @@
 """Tests split by stable ownership concept from `test_handle_policy_dispatch.py`."""
 
 from tests._shared.ownership_policy_support import (
-    BindCNativeArrayDescriptorType,
-    CPythonBindingGenerator,
-    CPythonCodePrinter,
     CodegenAction,
     DestructionPolicy,
-    FortranToCBridgeGenerator,
     NativeArrayBuildRequirement,
     NativeArrayHandlePolicyDispatcher,
     NativeBarrierAction,
@@ -15,7 +11,6 @@ from tests._shared.ownership_policy_support import (
     PyiPrinter,
     RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA,
     RESOLVED_OWNERSHIP_POLICY_METADATA,
-    Scope,
     StorageMode,
     TransferMode,
     _array_type,
@@ -24,12 +19,10 @@ from tests._shared.ownership_policy_support import (
     _native_array_policy,
     _read_only_argument_context,
     _scalar_type,
-    _semantic_ir_to_codegen_ast,
     _string_type,
     _writable_argument_context,
     complete_semantic_policies,
     default_ownership_policy,
-    native_array_descriptor_argument_type,
     native_array_handle_build_requirements,
     parse_pyi_text,
     pytest,
@@ -81,36 +74,6 @@ def test_native_array_handle_dispatcher_rejects_missing_completed_policy_pair():
         )
 
 
-def test_native_array_descriptor_argument_codegen_selects_bind_c_tuple_abi():
-    class Subject:
-        name = "values"
-
-    required_policy = _native_array_policy(handle_kind="argument_descriptor")
-    optional_policy = _native_array_policy(
-        handle_kind="optional_absent_handle",
-        nullable=True,
-        optional_absent=True,
-    )
-
-    for generator in (FortranToCBridgeGenerator, CPythonBindingGenerator):
-        required_type = generator._native_array_descriptor_argument_type(required_policy)
-        optional_type = generator._native_array_descriptor_argument_type(optional_policy)
-
-        assert required_type is native_array_descriptor_argument_type(required_policy)
-        assert optional_type is native_array_descriptor_argument_type(optional_policy)
-        assert required_type is BindCNativeArrayDescriptorType.get_new(has_presence=False)
-        assert optional_type is BindCNativeArrayDescriptorType.get_new(has_presence=True)
-        assert len(required_type) == 1
-        assert len(optional_type) == 2
-
-    bridge = FortranToCBridgeGenerator("", 0)
-    binding = CPythonBindingGenerator("", 0)
-    assert bridge._native_array_descriptor_argument_type(required_policy) is required_type
-    assert bridge._native_array_descriptor_argument_type(optional_policy) is optional_type
-    assert binding._native_array_descriptor_argument_type(required_policy) is required_type
-    assert binding._native_array_descriptor_argument_type(optional_policy) is optional_type
-
-
 def test_hidden_allocatable_handle_output_completes_as_owned_result_before_lowering():
     module = parse_pyi_text(
         """
@@ -135,14 +98,6 @@ def make_values() -> Allocatable[Float64[:]]: ...
     assert policy.owner_retention == "wrapper_owner_storage"
     assert policy.descriptor_ownership == "owned"
     assert policy.output_projection == "projected_handle"
-
-    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
-    bridged = FortranToCBridgeGenerator("", 0)._visit_Module(lowered)
-    cpython_module = CPythonBindingGenerator("", 0)._visit_Module(bridged)
-    c_code = CPythonCodePrinter("hidden_owned_result.c", verbose=0)._visit(cpython_module)
-    assert "CFI_attribute_allocatable" in c_code
-    assert "CFI_allocate(" in c_code
-    assert "private__x2py_owned_values_destroy" in c_code
 
 
 @pytest.mark.parametrize(

@@ -71,6 +71,20 @@ def projected(
     return WrapperPlanner().build(module)
 
 
+def _late_extent_external_plan():
+    module = parse_pyi_text(
+        """
+from x2py.contracts import Float64, Int32, external
+
+@external
+def late_extent(values: Float64[n], n: Int32) -> None: ...
+""",
+        module_name="late_extent_external",
+    )
+    complete_semantic_policies(module)
+    return WrapperPlanner().build(module)
+
+
 def test_dense_array_plan_records_extent_dependencies_flat_storage_and_order():
     functions = {function.binding.python_name: function for function in _dense_plan().namespaces[0].functions}
     dense_f = functions["dense_f"].arguments[-1].array
@@ -132,6 +146,15 @@ def test_dense_array_lowering_uses_planned_shape_checks_and_bridge_orientation()
     assert "subroutine bind_c_c_flat_rank2_runtime(" in bridge_source
     assert "real(c_double) :: values(*)" in bridge_source
     assert "real(c_double) :: values(3, *)" in bridge_source
+
+
+def test_external_interface_declares_late_extent_before_dependent_array():
+    artifacts = WrapperCodeGenerator().generate(_late_extent_external_plan())
+    bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
+
+    signature = "subroutine late_extent(values, n)"
+    interface = bridge_source.split(signature, maxsplit=1)[1].split("end subroutine late_extent", maxsplit=1)[0]
+    assert interface.index("integer(c_int32_t) :: n") < interface.index("real(c_double), dimension(n) :: values")
 
 
 def test_unavailable_dense_extent_role_fails_before_backend_lowering():

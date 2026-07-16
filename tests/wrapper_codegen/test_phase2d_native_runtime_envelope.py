@@ -61,6 +61,9 @@ def test_planner_records_editable_native_runtime_and_status_error_facts():
     assert solve.binding.status_error.exception_kind is PythonExceptionKind.RUNTIME_ERROR
     assert solve.binding.status_error.status_role == solve.native_call_slots[1].symbolic_role
     assert solve.binding.status_error.message_role == solve.native_call_slots[2].symbolic_role
+    assert "Raises\n------" in solve.binding.docstring
+    assert solve.binding.docstring.count("RuntimeError\n") == 1
+    assert "If native status differs from the success value 0." in solve.binding.docstring
     assert solve.native_call_slots[1].semantic_type_name == "Int32"
     assert solve.native_call_slots[1].datatype_family is DatatypeFamily.INTEGER
     assert solve.native_call_slots[1].bridge_data_action is BridgeDataAction.DIRECT_TRANSFER

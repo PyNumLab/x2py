@@ -26,7 +26,7 @@ CLI request
   -> semantic policy completion
        -> ownership/transfer/destruction policy completion
   -> readiness blockers
-  -> codegen AST
+  -> typed wrapper plan
   -> generated Fortran bind(C) bridge
   -> generated C/CPython binding
   -> native compile, runtime support install, and link
@@ -43,15 +43,14 @@ X2PY_C_DOCS_END -->
 | Parser project model | `x2py/fortran_parser/parser.py` | preprocessed Fortran source | parser project with modules, procedures, types, visibility | Fortran parser fixture tests |
 | Target probes | `x2py/probes/fortran_types.py` | semantic type requirements and compiler flags | resolved kind/storage facts | Fortran type probe tests |
 | Semantic IR | `x2py/semantics/fortran2ir.py` | parser project and target facts | `SemanticModule` objects | semantic Fortran tests |
-| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | full semantic modules with signatures and `.pyi` overrides | semantic modules annotated with completed ownership, transfer, and destruction decisions | ownership-policy, readiness, and lowering tests |
+| Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | full semantic modules with signatures and `.pyi` overrides | semantic modules annotated with every ownership, transfer, destruction, mutability, storage, accessor, and projection decision needed by wrapper generation | ownership-policy and readiness tests |
 | Readiness | `x2py/semantics/readiness.py` | prepared semantic modules | blockers and support status | readiness tests and fixtures |
-| Codegen lowering | `x2py/semantics/ir2ast.py` | policy-completed semantic modules | codegen AST consuming completed policy decisions | `tests/lowering/test_semantic_ir.py`, wrapper tests |
-| Printing | `x2py/codegen/printers/` | generated ASTs | wrapper source files | generated build artifacts and wrapper tests |
+| Wrapper planning | `x2py/wrapper_codegen/planner.py`, `x2py/wrapper_codegen/plan.py` | policy-completed semantic modules | typed wrapper plans consuming completed decisions without re-inferring policy | `tests/wrapper_codegen/`, wrapper tests |
+| Direct bridge and binding lowering | `x2py/wrapper_codegen/fortran/bridge.py`, `x2py/wrapper_codegen/c/binding.py`, `x2py/wrapper_codegen/generator.py` | validated typed wrapper plans | Fortran, C, and header syntax nodes | `tests/wrapper_codegen/`, wrapper tests |
+| Wrapper and semantic-contract printing | `x2py/wrapper_codegen/printers/` | wrapper syntax nodes or semantic IR | wrapper source files or semantic `.pyi` text | printer, generated-contract, and wrapper artifact tests |
 | Compile and link | `x2py/compiling/` | user objects, wrapper sources, runtime support | shared library | wrapper runtime tests |
 
 <!-- X2PY_C_DOCS_START
-| Bridge generation | `x2py/codegen/bridges/fortran_to_c.py` | codegen AST | Fortran bind(C) bridge AST | wrapper runtime tests |
-| Binding generation | `x2py/codegen/bindings/c_to_python.py` | bridge-facing AST | C/CPython extension AST | wrapper runtime tests |
 X2PY_C_DOCS_END -->
 
 ## Concept Ownership Rules
@@ -79,12 +78,12 @@ cross-cutting infrastructure.
 | --- | --- | --- | --- |
 | Parser facts | parser packages | Source syntax, native declaration structure, source locations, and parser diagnostics | Wrapper policy, Python API projection, generated names, and compile/link decisions |
 | Readiness and ownership policy | `x2py/semantics/readiness.py`, `x2py/semantics/policy_completion.py`, and `x2py/semantics/ownership.py` | Semantic policy completion, support blockers, and policy choices for ownership, lifetime, output projection, replacement, and ABI safety | Raw parser syntax, backend-specific statement trees, and hidden lowering-time policy decisions |
-| Core codegen AST | `x2py/codegen/models/` and `x2py/semantics/ir2ast.py` outputs | The implementation plan after a semantic contract is accepted: generated functions, variables as storage locations, statements, expressions, control flow, temporaries, scopes, and imports/includes | Source-contract authority, `.pyi` persistence, and readiness-only facts |
-| Printers and compilation | `x2py/codegen/printers/`, `x2py/compiling/`, and wrapper orchestration | Text emission, generated artifact layout, compiler commands, native objects, libraries, include directories, and link inputs | Semantic support decisions and generated-AST rewriting policy |
+| Typed wrapper plan | `x2py/wrapper_codegen/plan.py` and `x2py/wrapper_codegen/planner.py` | A validated, backend-neutral implementation plan projected from completed semantic decisions | Source-contract authority, policy inference, and target-language statement details |
+| Printers and compilation | `x2py/wrapper_codegen/printers/`, `x2py/compiling/`, and wrapper orchestration | Text emission, generated artifact layout, compiler commands, native objects, libraries, include directories, and link inputs | Semantic support decisions and plan rewriting policy |
 
 <!-- X2PY_C_DOCS_START
 | Semantic IR | `x2py/semantics/models.py`, `x2py/semantics/metadata.py`, and source-to-IR converters | Language-neutral contract facts: public names, native identities, source origins, visibility, type/storage/access facts, module/class/function/variable structure, and metadata that must survive parser, policy, printer, and lowering boundaries | Generated bodies, temporaries, target-language scopes, include/import mechanics, CPython calls, and printer-only syntax |
-| Backend codegen AST | `x2py/codegen/bridges/`, `x2py/codegen/bindings/`, and backend API helpers | Fortran bridge nodes, C/CPython binding nodes, target ABI/API calls, and backend-specific adapter structure | Language-neutral semantic meaning |
+| Backend syntax nodes | `x2py/wrapper_codegen/nodes.py`, `x2py/wrapper_codegen/fortran/bridge.py`, and `x2py/wrapper_codegen/c/binding.py` | Fortran bridge nodes, C/CPython binding nodes, target ABI/API calls, and backend-specific adapter structure | Language-neutral semantic meaning and policy decisions |
 | Naming policy | `x2py/naming/` | Shared public-name and generated-symbol decisions for Python, C, and Fortran targets | Semantic IR ownership or codegen tree ownership |
 X2PY_C_DOCS_END -->
 
@@ -97,14 +96,14 @@ Use these rules when adding a new notion:
   than a source fact: for example borrowed versus copied data, visible versus
   hidden native outputs, replacement rules, destructor ownership, or unsupported
   ABI combinations. If the decision depends on full signature context, complete
-  it in `policy_completion.py` before readiness or `ir2ast.py`.
+  it in `policy_completion.py` before readiness or wrapper planning.
 - Put it in compiling or wrapping when it describes build inputs or build
   execution: sources, objects, libraries, library directories, include
   directories, compiler flags, link items, runtime support files, and generated
   artifact paths.
 
 <!-- X2PY_C_DOCS_START
-- Put it in codegen when it exists because emitted wrapper code needs it:
+- Put it in wrapper generation when it exists because emitted wrapper code needs it:
   generated bodies, temporaries, low-level storage variables, scopes, imports,
   includes, bridge calls, CPython API calls, cleanup paths, and target-language
   expressions.
@@ -123,7 +122,7 @@ Merge or move concepts only when their invariants match:
 - Move a codegen concept into semantics only when it can be represented without
   a generated body, temporary, scope, include, or target-language expression and
   the fact is needed for `.pyi`, readiness, or source-free replay.
-- Move a semantic concept into codegen only when it does not change the public
+- Move a semantic concept into a wrapper plan only when it does not change the public
   contract, native contract, readiness, or `.pyi` representation and exists only
   to print or compile wrapper code.
 
@@ -143,8 +142,8 @@ Examples:
 - Python keyword avoidance for a public name, such as a native `def` routine,
   belongs to naming policy. The chosen public spelling is stored where the
   contract needs it, while target-specific helper symbols stay generated.
-- Codegen `Scope`, `FunctionDef`, body statements, temporaries, decorators,
-  includes, and backend datatypes stay out of `x2py/semantics/models.py`.
+- Wrapper syntax nodes, body statements, temporaries, includes, and backend
+  datatypes stay out of `x2py/semantics/models.py`.
 
 <!-- X2PY_C_DOCS_START
 - `@raises`, `@hold_gil`, output projection, and ownership metadata belong to
@@ -158,15 +157,15 @@ X2PY_C_DOCS_END -->
 | --- | --- | --- |
 | CLI and output routing | `x2py/cli.py`, parser CLI helpers | `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md` |
 | Source loading and preprocessing | `x2py/pipeline/preprocessing.py` | `docs/developer/source-map.md`, parser references |
-| Editable semantic contracts | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md` |
+| Editable semantic contracts | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/wrapper_codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md` |
 | Readiness | `x2py/semantics/readiness.py` | `docs/user/reference/diagnostic-codes.md` |
-| Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/semantics/ir2ast.py` | `docs/user/guide/fortran-wrapper.md`, ownership docs |
-| Native build | `x2py/compiling/python_wrapper.py`, `x2py/compiling/runtime_support.py` | compiling package README and build-system docs |
+| Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/wrapper_codegen/planner.py`, `x2py/wrapper_codegen/generator.py` | `docs/user/guide/fortran-wrapper.md`, ownership docs |
+| Native build | `x2py/pipeline/build.py`, `x2py/compiling/compilers.py`, `x2py/compiling/runtime_support.py` | compiling package README and build-system docs |
 
 <!-- X2PY_C_DOCS_START
 | Parser facts | `x2py/c_parser/parser.py`, `x2py/fortran_parser/parser.py` | parser package README files and parser references |
 | Semantic conversion | `x2py/semantics/fortran2ir.py`, `x2py/semantics/c2ir.py`, `x2py/semantics/pyi2ir.py`, `x2py/semantics/models.py` | `docs/user/reference/semantic-ir.md` |
-| Bridge and binding generation | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | codegen package README and wrapper generation docs |
+| Bridge and binding generation | `x2py/wrapper_codegen/fortran/bridge.py`, `x2py/wrapper_codegen/c/binding.py` | wrapper generation docs |
 X2PY_C_DOCS_END -->
 
 ## Semantic `.pyi` Wrapper Pipeline
@@ -183,15 +182,16 @@ the Python API.
   -> x2py/semantics/native_contract.py
   -> x2py/semantics/policy_completion.py
   -> x2py/semantics/readiness.py
-  -> x2py/semantics/ir2ast.py
-  -> bridge, binding, compile, and link pipeline
+  -> x2py/wrapper_codegen/planner.py
+  -> x2py/wrapper_codegen/generator.py
+  -> compile and link pipeline
 ```
 
 The `.pyi` path must preserve native ABI facts in the semantic contract. Missing
 native build inputs or contradictory contract facts fail before bridge emission
 or native compilation. Ownership, transfer, and destruction policy is completed
-from the full `.pyi` signature before lowering; `ir2ast.py` consumes that
-completed policy and must not invent a different one.
+from the full `.pyi` signature before planning; the wrapper planner and backend
+generators consume that completed policy and must not invent a different one.
 
 ## Shared Semantic Policy Boundary
 

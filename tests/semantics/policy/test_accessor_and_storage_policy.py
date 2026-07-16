@@ -4,13 +4,8 @@ from tests._shared.ownership_policy_support import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     AssignmentMode,
-    BindCAccessorModuleVariable,
-    CPythonBindingGenerator,
-    CPythonCodePrinter,
     CodegenAction,
     DestructionPolicy,
-    FCodePrinter,
-    FortranToCBridgeGenerator,
     MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
     NativeArrayBuildRequirement,
     NativeBarrierAction,
@@ -25,7 +20,6 @@ from tests._shared.ownership_policy_support import (
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
-    Scope,
     SemanticClass,
     SemanticConstraint,
     SemanticField,
@@ -39,59 +33,16 @@ from tests._shared.ownership_policy_support import (
     _array_type,
     _derived_type,
     _scalar_type,
-    _semantic_ir_to_codegen_ast,
     complete_semantic_policies,
     native_array_descriptor_kind,
     native_array_handle_build_requirements,
     parse_pyi_text,
     pytest,
-    replace,
-    semantic_ir_to_codegen_ast,
     set_ownership_metadata,
 )
 
 from x2py.semantics.models import RESOLVED_MODULE_VARIABLE_POLICY_METADATA
 from x2py.semantics.wrapper_policy import ModuleObjectAccessMechanism
-
-
-def test_native_array_handle_module_shape_changing_operations_use_scalar_extents():
-    module = parse_pyi_text(
-        """
-values: Allocatable[Float64[:, :]]
-target: Pointer[Float64[:]]
-""",
-        module_name="native_handle_module_shape_ops",
-    )
-    complete_semantic_policies(module)
-    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
-    bridged = FortranToCBridgeGenerator("", 0)._visit_Module(lowered)
-    handles = {str(variable.name): variable for variable in bridged.variable_wrappers}
-
-    assert {"resize"} <= set(handles["values"].operation_functions)
-    assert {"allocate", "deallocate", "resize"}.isdisjoint(handles["target"].operation_functions)
-
-    fortran_code = FCodePrinter("native_handle_module_shape_ops.f90", verbose=0)._visit(bridged)
-    assert "subroutine bind_c_private__x2py_values_resize(extent_1, extent_2) bind(c)" in fortran_code
-    assert "integer(i64), value :: extent_1" in fortran_code
-    assert "allocate(values(0:extent_2 - 1_i64, 0:extent_1 - 1_i64))" in fortran_code
-
-    cpython_module = CPythonBindingGenerator("", 0)._visit_Module(bridged)
-    c_code = CPythonCodePrinter("native_handle_module_shape_ops.c", verbose=0)._visit(cpython_module)
-    assert "private__x2py_values_resize" in c_code
-
-    generator = FortranToCBridgeGenerator("", 0)
-    generator.scope = lowered.scope
-    pointer_policy = replace(
-        lowered.variables[1].native_array_handle_policy,
-        operations=("allocate", "associated", "deallocate", "nullify", "resize", "to_numpy"),
-    )
-    pointer_handle = generator._native_array_module_handle(lowered.variables[1], pointer_policy)
-
-    assert {"allocate", "deallocate", "resize"} <= set(pointer_handle.operation_functions)
-    assert pointer_handle.native_array_handle_policy is pointer_policy
-    assert pointer_handle.operation_functions["allocate"].arguments[0].var.name == "extent_1"
-    assert pointer_handle.operation_functions["resize"].arguments[0].var.name == "extent_1"
-    assert "private__x2py_target_allocate" not in c_code
 
 
 def test_native_array_handle_build_requirements_include_default_pointer_descriptor_accessors():
@@ -397,15 +348,6 @@ def test_aliased_derived_module_object_is_borrowed_and_rejects_replacement():
     assert getter.codegen_action is CodegenAction.BORROWED_VIEW
     assert setter.setter_action is SetterAction.REJECT_REPLACEMENT
 
-    codegen_module = semantic_ir_to_codegen_ast(
-        module,
-        Scope(name=module.name, scope_type="module"),
-    )
-    codegen_variable = codegen_module.variables[0]
-    assert codegen_variable.is_target is True
-    assert codegen_variable.ownership_decision.owner is OwnershipOwner.NATIVE
-    assert codegen_variable.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
-
 
 def test_plain_derived_module_object_completes_live_member_proxy_policy():
     module = SemanticModule(
@@ -470,13 +412,6 @@ def test_derived_module_constant_uses_wrapper_owned_copy_without_setter():
     assert storage.destruction is DestructionPolicy.WRAPPER_DEALLOC
     assert getter.transfer is TransferMode.WRAPPER_INSTANCE
     assert setter.setter_action is SetterAction.OMIT
-
-    lowered = _semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
-    generator = FortranToCBridgeGenerator("", 0)
-    generator.scope = lowered.scope
-    constant = generator._visit_Variable(lowered.variables[0])
-    assert isinstance(constant, BindCAccessorModuleVariable)
-    assert constant.setter_function is None
 
 
 def test_explicit_borrowed_derived_field_setter_rejects_replacement():

@@ -11,8 +11,11 @@ linking.
 | `basic.py` | Compile object model and dependency relationships. |
 | `compilers.py` | Compiler command execution and tool lookup helpers. |
 | `default_compilers.py` | Default compiler selection helpers. |
-| `python_wrapper.py` | Generated bridge/binding compilation and shared-library creation. |
 | `runtime_support.py` | Copying and compiling x2py runtime support used by generated wrappers. |
+
+Generated-wrapper compile-object assembly and shared-library orchestration live
+in `x2py/pipeline/build.py`, where the canonical rendered wrapper artifacts are
+available. The compiling package does not import or regenerate wrapper plans.
 
 ## Pipeline Position
 
