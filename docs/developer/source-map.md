@@ -70,7 +70,7 @@ X2PY_C_DOCS_END -->
 | `x2py/runtime/` | Python runtime objects consumed by generated extensions | `handles.py` | runtime handle and wrapper runtime tests |
 | `x2py/types/` | Semantic-to-Python ecosystem type mappings | `numpy.py` | `tests/types/test_numpy.py` |
 | `x2py/fortran_parser/` | Fortran lexer, recursive parser, models, type resolver, and parser CLI helpers | `parser.py`, `lexer.py`, `models.py`, `type_resolver.py`, `cli.py` | `tests/parser/`, `tests/parser/fortran/`, `docs/developer/fortran-parser-reference.md` |
-| `x2py/compiling/` | Native compile objects, compiler command orchestration, shared-library linking, and runtime support installation | `basic.py`, `compilers.py`, `python_wrapper.py`, `runtime_support.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/build_from_source/test_runtime_abi.py` |
+| `x2py/compiling/` | Native compile objects, compiler command execution, shared-library linking, and runtime support installation; wrapper build orchestration lives in `x2py/pipeline/build.py` | `basic.py`, `compilers.py`, `runtime_support.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/build_from_source/test_runtime_abi.py` |
 | `x2py/stdlib/` | Native runtime support files copied into generated wrapper builds | `x2py_runtime/` | wrapper runtime tests |
 | `x2py/utilities/` | Small shared Python utilities | `metaclasses.py`, `strings.py` | tests that exercise callers |
 
