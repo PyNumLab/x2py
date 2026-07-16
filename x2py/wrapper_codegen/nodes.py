@@ -60,6 +60,7 @@ class CParameter(StageRecord):
 
     name: str
     type_name: str
+    function_parameters: tuple[str, ...] | None = None
 
 
 @dataclass
@@ -70,6 +71,23 @@ class CFunctionPrototype(StageRecord):
     return_type: str
     parameters: tuple[CParameter, ...] = ()
     storage: str | None = None
+
+
+@dataclass
+class CFunctionPointerType(StageRecord):
+    """Named C function-pointer type used by typed runtime operation tables."""
+
+    name: str
+    return_type: str
+    parameter_types: tuple[str, ...] = ()
+
+
+@dataclass
+class CStructDefinition(StageRecord):
+    """Named C struct with ordinary or function-pointer fields."""
+
+    name: str
+    fields: tuple[CParameter, ...] = ()
 
 
 @dataclass
@@ -156,6 +174,21 @@ class CIf(StageRecord):
 
 
 @dataclass
+class CFor(StageRecord):
+    """C for-loop used by compact table-driven runtime dispatch."""
+
+    initializer: str
+    condition: CodeExpression
+    increment: CodeExpression
+    body: tuple[CDeclaration | CExpressionStatement | CIf | CFor | CBreak | CReturn, ...] = ()
+
+
+@dataclass
+class CBreak(StageRecord):
+    """C break statement."""
+
+
+@dataclass
 class CReturn(StageRecord):
     """C return statement."""
 
@@ -169,7 +202,10 @@ class CFunction(StageRecord):
     name: str
     return_type: str
     parameters: tuple[CParameter, ...] = ()
-    body: tuple[CDeclaration | CExpressionStatement | CAllowThreadsBegin | CAllowThreadsEnd | CIf | CReturn, ...] = ()
+    body: tuple[
+        CDeclaration | CExpressionStatement | CAllowThreadsBegin | CAllowThreadsEnd | CIf | CFor | CBreak | CReturn,
+        ...,
+    ] = ()
     storage: str | None = None
 
 
@@ -190,7 +226,14 @@ class CModule(StageRecord):
     defines: tuple[CMacroDefinition, ...] = ()
     includes: tuple[CInclude, ...] = ()
     declarations: tuple[
-        CComment | CDeclaration | CFunctionPrototype | CMethodDefTable | CModuleDef | CModulePropertySupport,
+        CComment
+        | CDeclaration
+        | CFunctionPointerType
+        | CFunctionPrototype
+        | CStructDefinition
+        | CMethodDefTable
+        | CModuleDef
+        | CModulePropertySupport,
         ...,
     ] = ()
     functions: tuple[CFunction, ...] = ()
@@ -223,6 +266,14 @@ class FortranDeclaration(StageRecord):
 
 
 @dataclass
+class FortranTypeDefinition(StageRecord):
+    """One generated native support type with explicit typed components."""
+
+    name: str
+    components: tuple[FortranDeclaration, ...] = ()
+
+
+@dataclass
 class FortranAssignment(StageRecord):
     """Fortran assignment statement."""
 
@@ -239,11 +290,19 @@ class FortranPointerAssignment(StageRecord):
 
 
 @dataclass
+class FortranNullify(StageRecord):
+    """Nullify one generated pointer variable or component."""
+
+    target: str
+
+
+@dataclass
 class FortranAllocate(StageRecord):
     """One explicit native allocation selected by completed handle policy."""
 
     target: str
     extents: tuple[CodeExpression, ...] = ()
+    status: str | None = None
 
 
 @dataclass
@@ -267,11 +326,23 @@ class FortranIf(StageRecord):
 
     condition: CodeExpression
     body: tuple[
-        FortranAllocate | FortranAssignment | FortranDeallocate | FortranPointerAssignment | FortranCall | FortranIf,
+        FortranAllocate
+        | FortranAssignment
+        | FortranDeallocate
+        | FortranPointerAssignment
+        | FortranNullify
+        | FortranCall
+        | FortranIf,
         ...,
     ] = ()
     else_body: tuple[
-        FortranAllocate | FortranAssignment | FortranDeallocate | FortranPointerAssignment | FortranCall | FortranIf,
+        FortranAllocate
+        | FortranAssignment
+        | FortranDeallocate
+        | FortranPointerAssignment
+        | FortranNullify
+        | FortranCall
+        | FortranIf,
         ...,
     ] = ()
 
@@ -281,7 +352,10 @@ class FortranCase(StageRecord):
     """One explicit or default branch in a Fortran select-case block."""
 
     value: int | None
-    body: tuple[FortranAssignment | FortranPointerAssignment | FortranCall | FortranIf | FortranSelectCase, ...] = ()
+    body: tuple[
+        FortranAssignment | FortranPointerAssignment | FortranNullify | FortranCall | FortranIf | FortranSelectCase,
+        ...,
+    ] = ()
 
 
 @dataclass
@@ -303,6 +377,7 @@ class FortranInterfaceProcedure(StageRecord):
     result_type: str | None = None
     is_subroutine: bool = False
     bind_name: str | None = None
+    bind_c: bool = False
 
 
 @dataclass
@@ -310,6 +385,7 @@ class FortranInterface(StageRecord):
     """Explicit native procedure interface required for optional dummies."""
 
     procedures: tuple[FortranInterfaceProcedure, ...] = ()
+    abstract: bool = False
 
 
 @dataclass
@@ -321,18 +397,21 @@ class FortranFunction(StageRecord):
     result_name: str | None = None
     result_type: str | None = None
     bind_name: str | None = None
+    bind_c: bool = False
     declarations: tuple[FortranDeclaration, ...] = ()
     body: tuple[
         FortranAllocate
         | FortranAssignment
         | FortranDeallocate
         | FortranPointerAssignment
+        | FortranNullify
         | FortranCall
         | FortranIf
         | FortranSelectCase,
         ...,
     ] = ()
     is_subroutine: bool = False
+    internal_procedures: tuple[FortranFunction, ...] = ()
 
 
 @dataclass
@@ -341,5 +420,6 @@ class FortranModule(StageRecord):
 
     name: str
     uses: tuple[FortranUse, ...] = ()
+    type_definitions: tuple[FortranTypeDefinition, ...] = ()
     interfaces: tuple[FortranInterface, ...] = ()
     procedures: tuple[FortranFunction, ...] = ()

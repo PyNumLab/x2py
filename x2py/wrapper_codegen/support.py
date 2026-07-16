@@ -5,7 +5,15 @@ from __future__ import annotations
 from x2py.semantics import models
 from x2py.semantics.ownership import ObjectKind, PythonBarrierAction
 from x2py.semantics.wrapper_policy import (
+    CallbackABIKind,
+    CallbackResultAction,
+    ClassConstructorKind,
+    ClassMethodKind,
+    ClassSurfacePolicy,
+    DerivedTypePolicy,
+    DerivedNativeHandoff,
     FunctionWrapperPolicy,
+    ModuleObjectAccessMechanism,
     ModuleVariablePolicy,
     NativeArrayDescriptorKind,
     NativeArrayHandleKind,
@@ -25,7 +33,11 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
     def _visit_SemanticModule(self, module: models.SemanticModule) -> WrapperPlanSupportReport:
         """Return a stable support report for a semantic module."""
         child_reports = (
-            *(self.visit(function) for function in module.functions if function.visibility == "public"),
+            *(
+                self.visit(function)
+                for function in module.functions
+                if function.visibility == "public" and self._is_module_function_export(function)
+            ),
             *(self.visit(variable) for variable in module.variables if variable.visibility == "public"),
         )
         blockers = [
@@ -37,6 +49,12 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
             covered_lanes=self._module_lanes(module, child_reports),
             blockers=tuple(blockers),
         )
+
+    @staticmethod
+    def _is_module_function_export(function: models.SemanticFunction) -> bool:
+        """Read the completed decision that hides type-bound root targets."""
+        policy = function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+        return not isinstance(policy, FunctionWrapperPolicy) or policy.module_export
 
     def _visit_SemanticVariable(self, variable: models.SemanticVariable) -> WrapperPlanSupportReport:
         """Return module-variable lane support from completed policy."""
@@ -65,6 +83,13 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         """Return the completed scalar or descriptor module-variable lane."""
         if not policy.supported or blockers:
             return ()
+        if policy.derived is not None:
+            lane = {
+                ModuleObjectAccessMechanism.DIRECT_ADDRESS: "aliased-derived-module-objects",
+                ModuleObjectAccessMechanism.MEMBER_PROXY: "plain-derived-module-proxies",
+                ModuleObjectAccessMechanism.VALUE_COPY: "derived-module-constant-values",
+            }[policy.derived.access]
+            return (lane,)
         if policy.native_array_handle is None:
             return ("scalar-module-variables",)
         return (f"{policy.native_array_handle.descriptor_kind.value}-module-handles",)
@@ -78,37 +103,78 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
                 reason="missing completed function wrapper policy",
             )
             return WrapperPlanSupportReport(owner_path=function.name, blockers=(blocker,))
-        capability_blockers = self._function_capability_blockers(function, policy)
-        blockers = (
-            *capability_blockers,
-            *(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers),
-        )
+        blockers = (*(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers),)
         return WrapperPlanSupportReport(
             owner_path=policy.owner_path,
             covered_lanes=() if blockers else self._function_lanes(policy),
             blockers=blockers,
         )
 
-    def _function_capability_blockers(
-        self,
-        function: models.SemanticFunction,
-        policy: FunctionWrapperPolicy,
-    ) -> tuple[WrapperPlanSupportBlocker, ...]:
-        """Keep source ABI optimizations on legacy until direct lowering owns them."""
-        if not function.metadata.get("fortran_bind_c"):
-            return ()
-        return (
-            WrapperPlanSupportBlocker(
-                owner_path=policy.owner_path,
-                reason="existing bind(C) direct-symbol calls are not implemented by wrapper-plan lowering",
-            ),
-        )
-
     def _module_blockers(self, module: models.SemanticModule) -> tuple[WrapperPlanSupportBlocker, ...]:
         """Return blockers for module-level owners outside completed lanes."""
         blockers = []
-        blockers.extend(self._owner_blockers(module.name, "classes", module.classes))
+        blockers.extend(self._class_orchestration_blockers(module))
         blockers.extend(self._owner_blockers(module.name, "overload sets", module.overload_sets))
+        return tuple(blockers)
+
+    def _class_orchestration_blockers(
+        self,
+        module: models.SemanticModule,
+    ) -> tuple[WrapperPlanSupportBlocker, ...]:
+        """Require completed class and method policy without backend inference."""
+        blockers = []
+        for semantic_class in self._semantic_classes(module.classes):
+            policy = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+            if not isinstance(policy, DerivedTypePolicy):
+                blockers.append(
+                    WrapperPlanSupportBlocker(
+                        owner_path=f"{module.name}.{semantic_class.name}",
+                        reason="missing completed derived-type policy",
+                    )
+                )
+            elif policy.blockers:
+                blockers.extend(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers)
+            surface = semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA)
+            if not isinstance(surface, ClassSurfacePolicy):
+                blockers.append(
+                    WrapperPlanSupportBlocker(
+                        owner_path=f"{module.name}.{semantic_class.name}",
+                        reason="missing completed class-surface policy",
+                    )
+                )
+                continue
+            blockers.extend(WrapperPlanSupportBlocker(surface.owner_path, reason) for reason in surface.blockers)
+            blockers.extend(self._class_function_blockers(semantic_class))
+        return tuple(blockers)
+
+    @staticmethod
+    def _semantic_classes(classes: list[models.SemanticClass]):
+        """Yield classes in stable base-before-nested declaration order."""
+        for semantic_class in classes:
+            yield semantic_class
+            yield from WrapperPlanSupportAnalyzer._semantic_classes(semantic_class.classes)
+
+    @staticmethod
+    def _class_function_blockers(
+        semantic_class: models.SemanticClass,
+    ) -> tuple[WrapperPlanSupportBlocker, ...]:
+        """Return completed method/candidate blockers owned by one class."""
+        functions = (
+            *(method for method in semantic_class.methods if method.name != "__init__"),
+            *(procedure for overload in semantic_class.overload_sets for procedure in overload.procedures),
+        )
+        blockers = []
+        for function in functions:
+            policy = function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+            if not isinstance(policy, FunctionWrapperPolicy):
+                blockers.append(
+                    WrapperPlanSupportBlocker(
+                        owner_path=f"{semantic_class.name}.{function.name}",
+                        reason="missing completed class function policy",
+                    )
+                )
+            else:
+                blockers.extend(WrapperPlanSupportBlocker(policy.owner_path, reason) for reason in policy.blockers)
         return tuple(blockers)
 
     def _covered_lanes(self, reports: tuple[WrapperPlanSupportReport, ...]) -> tuple[str, ...]:
@@ -132,10 +198,49 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
     def _argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
         """Return input-related lanes selected by completed arguments."""
         return (
+            *self._callback_argument_lanes(policy),
             *self._scalar_argument_lanes(policy),
             *self._string_argument_lanes(policy),
             *self._array_argument_lanes(policy),
+            *self._derived_argument_lanes(policy),
         )
+
+    @staticmethod
+    def _callback_argument_lanes(policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Classify callback runtime and typed transfer evidence explicitly."""
+        callbacks = tuple(argument.callback for argument in policy.arguments if argument.callback is not None)
+        if not callbacks:
+            return ()
+        transfers = tuple(
+            transfer
+            for callback in callbacks
+            for transfer in (
+                *callback.arguments,
+                *((callback.result.transfer,) if callback.result.transfer is not None else ()),
+            )
+        )
+        lanes = [
+            "immediate-callbacks",
+            "callback-context-runtime",
+            "callback-same-thread-reentry",
+            "callback-fatal-errors",
+            *WrapperPlanSupportAnalyzer._callback_transfer_lanes({transfer.abi for transfer in transfers}),
+        ]
+        if any(callback.result.action is not CallbackResultAction.RETURN_VOID for callback in callbacks):
+            lanes.append("callback-results")
+        return tuple(lanes)
+
+    @staticmethod
+    def _callback_transfer_lanes(abis: set[CallbackABIKind]) -> tuple[str, ...]:
+        """Map callback ABI kinds to their independently verified rollout lanes."""
+        by_abi = (
+            (CallbackABIKind.VALUE, "callback-scalar-values"),
+            (CallbackABIKind.REFERENCE, "callback-scalar-storage"),
+            (CallbackABIKind.DATA_AND_LENGTH, "callback-fixed-strings"),
+            (CallbackABIKind.DATA_AND_SHAPE, "callback-arrays"),
+            (CallbackABIKind.DERIVED_ADDRESS, "callback-derived-values"),
+        )
+        return tuple(lane for abi, lane in by_abi if abi in abis)
 
     def _output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
         """Return result and writeback lanes selected by completed output policy."""
@@ -143,10 +248,50 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
             *self._scalar_output_lanes(policy),
             *self._string_output_lanes(policy),
             *self._array_output_lanes(policy),
+            *self._derived_output_lanes(policy),
         ]
         if not policy.results and not policy.writeback_actions:
             lanes.append("void-calls")
         return tuple(lanes)
+
+    def _derived_argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return scalar-derived wrapper handoff lanes."""
+        arguments = tuple(
+            argument
+            for argument in policy.arguments
+            if argument.callback is None and argument.ownership.kind is ObjectKind.DERIVED_TYPE
+        )
+        lanes = []
+        if arguments:
+            lanes.append("derived-wrapper-inputs")
+        optional, mutable, typed_value, polymorphic = self._derived_argument_facts(arguments)
+        if optional:
+            lanes.append("optional-derived-inputs")
+        if mutable:
+            lanes.append("in-place-derived-inputs")
+        if typed_value:
+            lanes.append("typed-derived-value-inputs")
+        if polymorphic:
+            lanes.append("scalar-polymorphic-inputs")
+        return tuple(lanes)
+
+    @staticmethod
+    def _derived_argument_facts(arguments: tuple) -> tuple[bool, bool, bool, bool]:
+        """Collect the four independent scalar-derived rollout facts in one pass."""
+        optional = mutable = typed_value = polymorphic = False
+        for argument in arguments:
+            optional |= argument.optional
+            mutable |= argument.ownership.mutates_native
+            typed_value |= bool(
+                argument.derived is not None and argument.derived.native_handoff is DerivedNativeHandoff.TYPED_VALUE
+            )
+            polymorphic |= argument.polymorphic is not None
+        return optional, mutable, typed_value, polymorphic
+
+    def _derived_output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
+        """Return wrapper-owned derived result source lanes."""
+        results = tuple(result for result in policy.results if result.ownership.kind is ObjectKind.DERIVED_TYPE)
+        return self._result_source_lanes(results, prefix="derived")
 
     # Scalar lane classification.
     def _scalar_argument_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
@@ -346,6 +491,9 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
     ) -> tuple[str, ...]:
         """Return child lanes plus explicit Python namespace coverage."""
         lanes = list(self._covered_lanes(reports))
+        lanes.extend(self._derived_type_lanes(module))
+        lanes.extend(self._class_surface_lanes(module))
+        lanes.extend(self._class_function_lanes(module))
         policies = (
             *(
                 function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
@@ -365,6 +513,100 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
         ):
             lanes.append("python-namespaces")
         return tuple(lanes)
+
+    def _class_surface_lanes(self, module: models.SemanticModule) -> tuple[str, ...]:
+        """Return completed public class orchestration lanes."""
+        policies = tuple(
+            semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA)
+            for semantic_class in self._semantic_classes(module.classes)
+        )
+        surfaces = tuple(policy for policy in policies if isinstance(policy, ClassSurfacePolicy))
+        facts = self._class_surface_facts(surfaces)
+        candidates = (
+            (bool(surfaces), "class-registration"),
+            (ClassConstructorKind.DEFAULT_FIELDS in facts, "default-class-constructors"),
+            (ClassConstructorKind.BOUND_PROCEDURE in facts, "bound-class-constructors"),
+            (ClassConstructorKind.OVERLOAD_SET in facts, "overloaded-class-constructors"),
+            (ClassMethodKind.INSTANCE in facts, "instance-methods"),
+            (ClassMethodKind.STATIC in facts, "static-methods"),
+            ("overloads" in facts, "class-overloads"),
+            ("inheritance" in facts, "class-inheritance"),
+            (self._class_has_finalizers(module), "class-finalizers"),
+        )
+        return tuple(lane for covered, lane in candidates if covered)
+
+    @staticmethod
+    def _class_surface_facts(surfaces: tuple[ClassSurfacePolicy, ...]) -> set[object]:
+        """Collect constructor, method, overload, and inheritance facts once."""
+        facts: set[object] = set()
+        for surface in surfaces:
+            facts.add(surface.constructor.kind)
+            facts.update(method.kind for method in surface.methods)
+            if surface.overloads:
+                facts.add("overloads")
+            if surface.base_identities:
+                facts.add("inheritance")
+        return facts
+
+    def _class_has_finalizers(self, module: models.SemanticModule) -> bool:
+        """Return whether any planned class owns a native finalizer."""
+        for semantic_class in self._semantic_classes(module.classes):
+            policy = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+            if isinstance(policy, DerivedTypePolicy) and policy.finalizers:
+                return True
+        return False
+
+    def _class_function_lanes(self, module: models.SemanticModule) -> tuple[str, ...]:
+        """Reuse ordinary transfer lanes for every concrete class callable."""
+        lanes = []
+        for semantic_class in self._semantic_classes(module.classes):
+            functions = (
+                *(method for method in semantic_class.methods if method.name != "__init__"),
+                *(procedure for overload in semantic_class.overload_sets for procedure in overload.procedures),
+            )
+            for function in functions:
+                policy = function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+                if not isinstance(policy, FunctionWrapperPolicy):
+                    continue
+                for lane in self._function_lanes(policy):
+                    if lane not in lanes:
+                        lanes.append(lane)
+        return tuple(lanes)
+
+    def _derived_type_lanes(self, module: models.SemanticModule) -> tuple[str, ...]:
+        """Return public derived field families from completed class policy."""
+        fields = self._derived_fields(module)
+        families = {field.object_kind for field in fields}
+        lanes = [
+            lane
+            for family, lane in (
+                (ObjectKind.SCALAR, "derived-scalar-fields"),
+                (ObjectKind.STRING, "derived-string-fields"),
+                (ObjectKind.DERIVED_TYPE, "derived-borrowed-field-owners"),
+            )
+            if family in families
+        ]
+        if self._has_ordinary_derived_array_field(fields):
+            lanes.append("derived-array-fields")
+        if any(field.native_array_handle is not None for field in fields):
+            lanes.append("derived-native-handle-fields")
+        return tuple(lanes)
+
+    @staticmethod
+    def _derived_fields(module: models.SemanticModule):
+        """Return completed public field policies without reconstructing them."""
+        policies = tuple(
+            semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+            for semantic_class in module.classes
+        )
+        return tuple(field for policy in policies if isinstance(policy, DerivedTypePolicy) for field in policy.fields)
+
+    @staticmethod
+    def _has_ordinary_derived_array_field(fields: tuple) -> bool:
+        """Return whether one non-handle array field uses the live-view lane."""
+        return any(
+            field.object_kind is ObjectKind.NUMPY_ARRAY and field.native_array_handle is None for field in fields
+        )
 
     def _owner_blockers(
         self,

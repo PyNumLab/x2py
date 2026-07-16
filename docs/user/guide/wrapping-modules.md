@@ -80,8 +80,10 @@ the same extension observe the same native module storage.
 ## Module Arrays
 
 An allocatable module array is exposed as a persistent
-`Allocatable[T[...]]` handle. `Aliased` permits live view extraction; without
-that fact, completed policy may select a read-only detached extraction. The
+`Allocatable[T[...]]` handle. Plain and `Aliased` declarations have the same
+extraction behavior: a fresh `to_numpy()` call returns a live view of the
+current allocation or `None`. `Aliased` preserves the native addressability
+fact for other policy; it does not select view versus copy extraction. The
 module attribute remains a handle even when native storage is unallocated:
 
 ```python
@@ -92,10 +94,11 @@ view = handle.to_numpy()
 view[0] = np.float64(5.0)
 ```
 
-For a borrowed extraction, mutation reaches native module storage. A later
-native deallocation or reallocation invalidates old views; use `view.copy()`
-first when Python needs an independent lifetime. The same handle object then
-reports the new allocation state.
+Mutation through either kind of view reaches native module storage. A later
+native deallocation or reallocation may make old views stale; accessing stale
+views is unsupported and may crash. Use `view.copy()` first when Python needs
+an independent lifetime. The same handle object then reports the new allocation
+state.
 
 Pointer-array module variables expose `Pointer[T[...]]` handles with a default
 conservative operation policy. Association inspection and `nullify()` are
@@ -107,8 +110,8 @@ ownership-changing operations require explicit pointer policy.
 A derived-type module variable is not automatically addressable just because
 the same type can be constructed from Python. Python construction asks x2py to
 allocate a new pointer-backed native instance. A pre-existing module variable
-has its own source attributes. `Aliased` on that declaration selects a live
-borrowed wrapper:
+has its own source attributes. Both plain and `Aliased` declarations are read
+as live generated objects, but their bridge mechanisms differ:
 
 ```python
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64
@@ -117,23 +120,20 @@ class box:
     values: Allocatable[Float64[:]]
 
 current: Annotated[box, Aliased]
+plain_current: box
 ```
 
-Reading `module.current` returns a native-owned borrowed wrapper. The wrapper
-does not copy or destroy `current`; it retains the module object's address and
-allows supported component access such as `module.current.values`. That
-component is an `Allocatable[T[...]]` handle retaining the wrapper; call
-`to_numpy()` to obtain its current view.
-
-Without `Aliased` or another completed live-borrow policy, x2py blocks the
-plain derived module variable before wrapper lowering. Whole-object
-`Snapshot[T]` contracts are future-only; the active contract does not generate
-or accept them as a detached fallback.
+Reading either attribute returns a native-owned live object. The wrapper never
+copies or destroys module storage. `current` may use its proved native address;
+`plain_current` uses typed module-specific bridge operations instead of
+fabricating an address. Supported component access such as `.values` returns an
+`Allocatable[T[...]]` handle retaining the object; call `to_numpy()` to obtain
+its current view.
 
 Whole object replacement through `module.current = other` is not exposed.
-Mutate native module state through an `Aliased` borrowed object or a wrapped
-native procedure, then call `.copy()` on an extracted view when Python needs a
-detached value.
+Mutate live native module state through its completed module-object policy or a
+wrapped native procedure. Use `.copy()` on an extracted array view when
+independent NumPy storage is required.
 
 ## Common Blocks
 
@@ -154,10 +154,12 @@ code.
 
 - Private module declarations remain hidden.
 - Common-block variables have no generated attribute surface.
-- Pointer state is exposed only when detached-copy policy is complete; general
-  borrowed pointer variables are blocked.
-- Plain derived-type module variables are exposed only when the recursive
-  snapshot policy covers every field; `Aliased` is required for live borrowing.
+- Pointer state is exposed only when association, target lifetime, and a live
+  descriptor-view mechanism are complete; there is no detached-copy fallback.
+- Plain and `Aliased` derived-type module variables both use the live generated
+  object surface. Plain objects require complete typed member operations;
+  `Aliased` objects may use a direct native address. Unsupported members block
+  generation instead of changing the public representation.
 - Source ordering and external dependency discovery remain the caller's job.
 
 ## Evidence And Troubleshooting

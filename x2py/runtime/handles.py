@@ -359,9 +359,7 @@ class NativeArrayHandleBase:
         {
             "borrowed_view",
             "contiguous_view",
-            "copy_only",
             "descriptor_view",
-            "read_only_detached_copy",
             "unsupported",
         }
     )
@@ -585,7 +583,7 @@ class NativeArrayHandleBase:
         }
 
     def to_numpy(self) -> Any:
-        """Return the current NumPy view/copy, or ``None`` for absent state."""
+        """Return a live view of current native storage, or ``None``."""
         if self._to_numpy_absent_state():
             return None
         if self.to_numpy_policy == "unsupported":
@@ -593,7 +591,7 @@ class NativeArrayHandleBase:
                 f"{self.descriptor_kind} handle to_numpy extraction is unsupported by completed policy"
             )
         if (
-            self.to_numpy_policy in {"contiguous_view", "copy_only"}
+            self.to_numpy_policy == "contiguous_view"
             and "contiguous" in self._ops
             and not bool(self._call_op("contiguous"))
         ):
@@ -613,11 +611,6 @@ class NativeArrayHandleBase:
         self._validate_numpy_result(value)
         if self.to_numpy_policy == "contiguous_view":
             self._validate_contiguous_numpy_result(value)
-            return value
-        if self.to_numpy_policy == "copy_only":
-            return self._detached_numpy_copy(value)
-        if self.to_numpy_policy == "read_only_detached_copy":
-            return self._read_only_detached_numpy_copy(value)
         return value
 
     def _call_op(self, name: str, *args: Any) -> Any:
@@ -807,16 +800,6 @@ class NativeArrayHandleBase:
         if actual not in {"C", "F"}:
             raise ValueError(f"native array handle layout operation returned unsupported layout {layout!r}")
         return actual
-
-    @staticmethod
-    def _detached_numpy_copy(value: np.ndarray) -> np.ndarray:
-        return np.array(value, copy=True, order="K")
-
-    @staticmethod
-    def _read_only_detached_numpy_copy(value: np.ndarray) -> np.ndarray:
-        snapshot = np.array(value, copy=True, order="K")
-        snapshot.setflags(write=False)
-        return snapshot
 
 
 class AllocatableArray(NativeArrayHandleBase):

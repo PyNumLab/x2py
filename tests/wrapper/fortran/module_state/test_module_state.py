@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-
 from x2py.runtime.handles import AllocatableArray
 from tests.wrapper.fortran._support import (
     _build_source_or_generated_pyi_and_import,
@@ -16,6 +15,7 @@ from tests.wrapper.fortran._support import (
 
 MODULE_VARIABLES_F90_SOURCE = wrapper_source("fmodule_vars_f90.f90")
 DERIVED_ALIAS_F90_SOURCE = wrapper_source("fmodule_derived_alias_f90.f90")
+PLAIN_DERIVED_F90_SOURCE = wrapper_source("fmodule_derived_snapshot_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 
 
@@ -76,11 +76,11 @@ def test_scalar_module_variables_use_attributes_and_parameters_have_no_native_se
     build_dir = _module_variables_build_dir(tmp_path, pyi_parity_build_mode)
     if pyi_parity_build_mode == "source":
         wrapper_source = (build_dir / "fmodule_vars_f90_wrapper.c").read_text(encoding="utf-8")
-        summarize_start = wrapper_source.index("static PyObject* bind_c_summarize_wrapper")
-        scaled_start = wrapper_source.index("static PyObject* bind_c_scaled_counter_wrapper")
-        getter_start = wrapper_source.index("static PyObject* bind_c_get_counter_wrapper")
-        setter_start = wrapper_source.index("static PyObject* bind_c_set_counter_wrapper")
-        next_getter_start = wrapper_source.index("static PyObject* bind_c_get_scale_wrapper")
+        summarize_start = wrapper_source.index("static PyObject * wrap_summarize")
+        scaled_start = wrapper_source.index("static PyObject * wrap_scaled_counter")
+        getter_start = wrapper_source.index("static PyObject * module_get_counter")
+        setter_start = wrapper_source.index("static int module_set_counter")
+        next_getter_start = wrapper_source.index("static PyObject * module_get_scale")
         assert "Py_BEGIN_ALLOW_THREADS" in wrapper_source[summarize_start:scaled_start]
         assert "Py_END_ALLOW_THREADS" in wrapper_source[summarize_start:scaled_start]
         assert "Py_BEGIN_ALLOW_THREADS" not in wrapper_source[getter_start:setter_start]
@@ -164,7 +164,7 @@ def test_aliased_derived_module_object_borrows_native_state(
 
     build_dir = _module_variables_build_dir(tmp_path, pyi_parity_build_mode)
     bridge_source = (build_dir / "bind_c_fmodule_derived_alias_f90_wrapper.f90").read_text(encoding="utf-8")
-    assert "c_loc(current)" in bridge_source
+    assert "c_loc(native_current)" in bridge_source
     assert "bind_c_set_current" not in bridge_source
 
     module.deallocate_current()

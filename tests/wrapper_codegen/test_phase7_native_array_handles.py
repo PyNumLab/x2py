@@ -9,6 +9,7 @@ from x2py.semantics.ownership import CodegenAction, ObjectKind, PythonBarrierAct
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
+    NativeArrayDescriptorInterop,
     NativeArrayDescriptorKind,
     NativeArrayDescriptorOwnership,
     NativeArrayOperation,
@@ -63,6 +64,7 @@ def _module_handle_plan():
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64, Pointer, PointerAssociation, PointerPolicy, String
 
 module_allocatable: Annotated[Allocatable[Float64[:]], Aliased]
+plain_allocatable: Allocatable[Float64[:]]
 module_names: Annotated[Allocatable[String[:][:]], Aliased]
 module_pointer: Annotated[
     Pointer[Float64[:]],
@@ -164,14 +166,17 @@ def test_phase7_module_variables_own_borrowed_handle_plans_and_operation_sets():
     plan = _module_handle_plan()
     variables = {variable.symbol_name: variable for variable in plan.namespaces[0].variables}
     allocatable = variables["module_allocatable"].native_array_handle
+    plain = variables["plain_allocatable"].native_array_handle
     names = variables["module_names"].native_array_handle
     pointer = variables["module_pointer"].native_array_handle
 
     assert allocatable is not None
+    assert plain is not None
     assert names is not None
     assert pointer is not None
-    assert allocatable.borrowed is names.borrowed is pointer.borrowed is True
+    assert allocatable.borrowed is plain.borrowed is names.borrowed is pointer.borrowed is True
     assert allocatable.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
+    assert plain.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
     assert names.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
     assert pointer.descriptor_kind is NativeArrayDescriptorKind.POINTER
     assert NativeArrayOperation.DEALLOCATE in allocatable.operations
@@ -183,6 +188,9 @@ def test_phase7_module_variables_own_borrowed_handle_plans_and_operation_sets():
     assert NativeArrayOperation.RESIZE not in names.operations
     assert NativeArrayOperation.DESTROY not in pointer.operations
     assert allocatable.required_headers == ()
+    assert plain.extraction_action.value == "descriptor_view"
+    assert plain.descriptor_interop is NativeArrayDescriptorInterop.MODULE_ALLOCATABLE_C_DESCRIPTOR
+    assert plain.required_headers == ("ISO_Fortran_binding.h",)
     assert pointer.required_headers == ("ISO_Fortran_binding.h",)
     assert plan.required_headers == ("ISO_Fortran_binding.h",)
 
@@ -198,6 +206,22 @@ def test_phase7_deferred_character_module_handles_use_runtime_element_length():
     assert "result = len(native_module_names, kind=c_int64_t)" in bridge_source
 
 
+def test_phase7_plain_module_allocatable_uses_standard_descriptor_callback_without_copy():
+    artifacts = WrapperCodeGenerator().generate(_module_handle_plan())
+    c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
+    bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
+
+    assert "void (*callback)(CFI_cdesc_t *, void *)" in c_source
+    assert "x2py_module_phase7_module_handles_plain_allocatable_descriptor_callback" in c_source
+    assert "descriptor->base_addr" in c_source
+    assert "Py_BuildValue" in c_source
+    assert "subroutine bind_c_plain_allocatable_descriptor(" in bridge_source
+    assert 'bind(c, name="bind_c_plain_allocatable_descriptor")' in bridge_source
+    assert "type(c_funptr), value :: callback_address" in bridge_source
+    assert "procedure(x2py_plain_allocatable_descriptor_consumer), pointer :: callback" in bridge_source
+    assert "call callback(native_plain_allocatable, context)" in bridge_source
+
+
 def test_phase7_generated_artifacts_follow_one_typed_action_vocabulary():
     artifacts = WrapperCodeGenerator().generate(_phase7_plan())
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
@@ -211,8 +235,8 @@ def test_phase7_generated_artifacts_follow_one_typed_action_vocabulary():
     assert "CFI_CDESC_T(1)" in c_source
     assert "real(c_double), allocatable, dimension(:) :: values" in bridge_source
     assert "real(c_double), pointer, dimension(:) :: values" in bridge_source
-    assert "x2py_collect_make_result" not in bridge_source
-    assert "result_value = native_make(n)" in bridge_source
+    assert "x2py_collect_make_allocatable_array_result" in bridge_source
+    assert "call x2py_collect_make_allocatable_array_result(native_make(n), result_value)" in bridge_source
     assert "call move_alloc(result_value, result)" in bridge_source
     assert "x2py_collect_deferred_scalar_descriptor_result" in bridge_source
     assert "character(kind=c_char, len=:), allocatable :: result_value" in bridge_source
@@ -221,7 +245,7 @@ def test_phase7_generated_artifacts_follow_one_typed_action_vocabulary():
     assert "character(kind=c_char, len=:), allocatable, dimension(:) :: names" in bridge_source
 
 
-def test_phase7_numeric_owned_result_moves_once_into_persistent_descriptor():
+def test_phase7_numeric_owned_result_is_collected_before_persistent_descriptor_move():
     bridge_source = next(
         source.text
         for source in WrapperCodeGenerator().generate(_phase7_plan()).sources
@@ -233,11 +257,15 @@ def test_phase7_numeric_owned_result_moves_once_into_persistent_descriptor():
 
     assert "real(c_double), allocatable, dimension(:), intent(out) :: result" in procedure
     assert "real(c_double), allocatable, dimension(:) :: result_value" in procedure
-    assert "result_value = native_make(n)" in procedure
+    assert "call x2py_collect_make_allocatable_array_result(native_make(n), result_value)" in procedure
     assert "call move_alloc(result_value, result)" in procedure
     assert "result = result_value" not in procedure
-    assert "allocated(" not in procedure
-    assert "x2py_collect" not in procedure
+
+    helper_start = bridge_source.index("subroutine x2py_collect_make_allocatable_array_result(")
+    helper_end = bridge_source.index("end subroutine", helper_start)
+    helper = bridge_source[helper_start:helper_end]
+    assert "if (allocated(value)) then" in helper
+    assert "target = value" in helper
 
 
 @pytest.mark.parametrize(
@@ -265,4 +293,15 @@ def test_phase7_plan_edits_fail_central_validation(edit: str, diagnostic: str):
         plan.required_headers = ()
 
     with pytest.raises(ValueError, match=diagnostic):
+        WrapperCodeGenerator().generate(plan)
+
+
+def test_phase7_plain_module_descriptor_view_requires_matching_completed_interop():
+    plan = _module_handle_plan()
+    plain = next(variable for variable in plan.namespaces[0].variables if variable.symbol_name == "plain_allocatable")
+    assert plain.native_array_handle is not None
+    plain.native_array_handle.descriptor_interop = NativeArrayDescriptorInterop.NONE
+    plain.native_array_handle.required_headers = ()
+
+    with pytest.raises(ValueError, match="missing-module-allocatable-descriptor-interop"):
         WrapperCodeGenerator().generate(plan)

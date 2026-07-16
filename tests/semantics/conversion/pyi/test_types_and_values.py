@@ -55,6 +55,25 @@ raw_pointer: Addr(Float64)
     assert raw_pointer.semantic_type.storage.read_only is False
 
 
+def test_by_value_derived_argument_round_trips_as_argument_specific_metadata():
+    module = parse_pyi_text(
+        """
+from x2py.contracts import Annotated, ByValue, Float64, native_type
+
+@native_type(attributes=("bind(c)",))
+class point:
+    x: Float64
+
+def score(value: Annotated[point, ByValue]) -> Float64: ...
+""",
+        module_name="value_contract",
+    )
+
+    value = module.functions[0].arguments[0]
+    assert value.semantic_type.metadata["native_by_value"] is True
+    assert "value: Annotated[point, ByValue]" in emit_module(module)
+
+
 def test_convert_pyi_to_ir_follows_arbitrary_contract_aliases():
     module = pyi_text_to_semantic_module(
         """
@@ -297,32 +316,6 @@ def test_convert_pyi_to_ir_forwards_filename_to_syntax_errors():
     with pytest.raises(SyntaxError) as error:
         parse_pyi_text("from broken import\n", filename="custom.pyi")
     assert error.value.filename == "custom.pyi"
-
-
-def test_convert_pyi_to_ir_rejects_snapshot_type_wrapper():
-    with pytest.raises(ValueError, match=r"Snapshot\[T\] is not an active semantic \.pyi contract"):
-        parse_pyi_text(
-            """
-class box:
-    value: Float64
-
-current: Snapshot[box]
-""",
-            module_name="snapshots",
-        )
-
-    with pytest.raises(ValueError, match=r"Snapshot\[T\] is not an active semantic \.pyi contract"):
-        pyi_text_to_semantic_module(
-            """
-from x2py.contracts import Snapshot
-
-class box:
-    value: Float64
-
-current: Snapshot[box]
-""",
-            module_name="snapshots",
-        )
 
 
 def test_convert_pyi_to_ir_accepts_aliased_contract_wrapper_names():

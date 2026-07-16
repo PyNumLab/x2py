@@ -14,7 +14,7 @@ from x2py.codegen.models.datatypes import (
     NumpyNDArrayType,
 )
 from x2py.codegen.scope import Scope
-from x2py.semantics.ownership import CodegenAction, NativeBarrierAction
+from x2py.semantics.ownership import CodegenAction, NativeBarrierAction, SetterAction, TransferMode
 from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
 from x2py.semantics.models import RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, SemanticModule
@@ -81,7 +81,8 @@ def make_values() -> Allocatable[Float64[:]]: ...
     make_values = lowered.funcs[0]
 
     assert values.native_array_handle_policy.handle_kind == "borrowed_module_descriptor"
-    assert values.native_array_handle_policy.to_numpy == "read_only_detached_copy"
+    assert values.native_array_handle_policy.to_numpy == "descriptor_view"
+    assert values.native_array_handle_policy.descriptor_interop == "module_allocatable_c_descriptor"
     assert make_values.results.var.native_array_handle_policy.handle_kind == "owned_result_descriptor"
     assert make_values.results.var.native_array_handle_policy.output_projection == "handle_result"
 
@@ -329,7 +330,7 @@ end module generic_mod
         )
 
 
-def test_allocatable_module_array_without_aliased_lowers_as_snapshot_copy():
+def test_allocatable_module_array_without_aliased_lowers_as_descriptor_view():
     source = """
 module alloc_mod
   real(8), allocatable :: values(:)
@@ -343,11 +344,13 @@ end module alloc_mod
     )
 
     values = codegen_module.variables[0]
-    assert values.ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
-    assert values.getter_ownership_decision.codegen_action is CodegenAction.SNAPSHOT_COPY
+    assert values.ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
+    assert values.getter_ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
+    assert values.native_array_handle_policy.to_numpy == "descriptor_view"
+    assert values.native_array_handle_policy.descriptor_interop == "module_allocatable_c_descriptor"
 
 
-def test_plain_derived_module_variable_without_live_borrow_policy_blocks_before_lowering():
+def test_plain_derived_module_variable_lowers_completed_live_policy():
     module = parse_pyi_text(
         """
 class child:
@@ -363,8 +366,12 @@ current: box
         module_name="snapshot_mod",
     )
 
-    with pytest.raises(ValueError, match="plain derived module variables require Aliased storage"):
-        semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+    codegen_module = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
+
+    current = codegen_module.variables[0]
+    assert current.ownership_decision.transfer is TransferMode.BORROWED_VIEW
+    assert current.ownership_decision.codegen_action is CodegenAction.BORROWED_VIEW
+    assert current.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
 
 
 def test_allocatable_result_and_output_lower_for_copy_return_codegen():
@@ -491,8 +498,14 @@ end module bad_bind_mod
         )
 
 
-@pytest.mark.parametrize("shape", ["", "(:)"])
-def test_pointer_output_arguments_raise_before_codegen_without_policy(shape):
+@pytest.mark.parametrize(
+    ("shape", "blocker"),
+    [
+        ("", "writable scalar descriptors require explicit intent"),
+        ("(:)", "pointer array dummy reassociation needs explicit PointerPolicy metadata"),
+    ],
+)
+def test_pointer_output_arguments_raise_before_codegen_without_policy(shape, blocker):
     source = f"""
 module pointer_mod
 contains
@@ -503,7 +516,7 @@ end module pointer_mod
 """
     semantic_module = fortran_module_to_semantic_module(parse_fortran_file(source))
 
-    with pytest.raises(ValueError, match="pointer argument 'values'"):
+    with pytest.raises(ValueError, match=blocker):
         semantic_ir_to_codegen_ast(
             semantic_module,
             Scope(name=semantic_module.name, scope_type="module"),

@@ -495,14 +495,14 @@ releases x2py-owned descriptor storage. A component becomes a borrowed
 
 | Term | Meaning | Typical example |
 | --- | --- | --- |
-| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, pointer detached copies. |
+| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, and explicitly copied pointer-scalar values. |
 | Caller-owned | The caller supplied the Python object and retains ownership. | A NumPy array passed as `intent(in)`, `intent(out)`, or `intent(inout)`. |
 | Wrapper-owned | A Python object owns or controls native storage. | A wrapped derived-type result or owned allocatable result handle. |
 | Native-owned | Fortran or an external library owns storage independently of Python. | A module allocatable array or external-library buffer. |
 | Descriptor handle | Python carries native allocation or association state and a completed owner policy. | An allocatable or pointer module variable, field, argument, or supported result. |
 | Borrowed view | Python references storage owned elsewhere and does not destroy it. | A NumPy array extracted from a borrowed descriptor handle. |
 | Copy-return | Native output is copied into a new Python-owned value before return. | An ordinary array result or immutable replacement. |
-| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Scalar pointer copied values or detached handle extraction. |
+| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Scalar pointer copied values or another explicit copy-result contract; native-array-handle `to_numpy()` never selects this behavior. |
 | Call-local association | Native code may use Python storage only during the wrapped call. | Pointer `intent(in)` array arguments. |
 | Blocked | Generation stops because a safe contract cannot be proven. | Pointer reassociation without owner and release policy. |
 
@@ -530,7 +530,7 @@ X2PY_C_DOCS_END -->
 | Value | Who destroys it | When |
 | --- | --- | --- |
 | Python scalar or string | Python | When Python references are gone. |
-| Copy-return or detached-copy NumPy array | NumPy or its generated base capsule | When Python references are gone. |
+| Copy-return or explicitly detached NumPy array | NumPy or its generated base capsule | When Python references are gone. |
 | Caller-supplied NumPy array | The Python caller | According to normal Python lifetime. |
 | Wrapper-owned derived instance | Generated wrapper deallocator | When the owning wrapper is collected. |
 | Borrowed nested component | The parent wrapper | When parent and all borrowed children are gone. |
@@ -984,18 +984,33 @@ np.testing.assert_array_equal(values.to_numpy(), [10.0, 20.0])
 An allocatable derived-type field is owned by its containing native instance.
 Access returns an `AllocatableArray` that retains the wrapper owner. An
 allocatable module array also returns a handle whose descriptor storage remains
-module-owned. `Aliased` permits borrowed view extraction; otherwise completed
-policy may select a detached read-only extraction. The attribute itself remains
-a handle when unallocated. Views returned by `to_numpy()` can become stale
-after native reallocation; copy before reallocation when independent lifetime
-is required.
+module-owned. Plain and `Aliased` module handles both return a current live view
+or `None`; the annotation records addressability for other native policy and
+does not select extraction behavior. The attribute itself remains a handle when
+unallocated. Views returned by `to_numpy()` can become stale after native
+reallocation; accessing a stale view is unsupported and may crash. Copy
+explicitly before reallocation when independent lifetime is required.
 
-Allocatable scalar derived-type dummy replacement remains blocked because a
-safe contract must define native construction, replacement, finalization, and
-exactly-once destruction of the whole wrapped object.
+Rank-zero allocatable and pointer derived module variables expose the same live
+field surface, returning `None` while absent. A wrapper-owned allocatable
+or pointer derived result uses persistent typed holder storage. Module
+allocatables use scoped `move_alloc` transactions for allocatable dummies;
+module pointers use typed local pointer transactions for reassociable pointer
+dummies. Both restore final state exactly once without transporting a native
+descriptor through the interoperable boundary. Reallocation, deallocation,
+reassociation, or
+nullification makes previously returned payload proxies stale; field access on
+such a proxy raises `ReferenceError`.
+
+The full five-actual by six-dummy matrix, including `TARGET`, `VALUE`, empty
+state, pointer `INTENT(IN)`, deliberate incompatibilities, and calls with many
+derived objects, is maintained in
+[Scalar Actuals And Native Dummies](wrapping-derived-types.md#scalar-actuals-and-native-dummies).
 
 Runtime tests:
 [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py)
+and
+[`test_scalar_derived_actual_dummy_matrix.py`](../../../tests/wrapper/fortran/derived_types/test_scalar_derived_actual_dummy_matrix.py)
 and
 [`test_allocatable_replacement.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
 
@@ -1299,8 +1314,10 @@ Private components are omitted from Python descriptors. Allocatable fields use
 descriptor access; that retention does not make the wrapper owner of a pointer
 target. Arrays of derived types are blocked.
 
-Runtime tests: [`test_derived_type_boundaries.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py)
-and [`test_derived_type_methods.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_methods.py).
+Runtime tests: [`test_derived_type_boundaries.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py),
+[`test_derived_type_methods.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_methods.py),
+and the direct Phase 8 object and field evidence in
+[`test_phase8_derived_plan.py`](../../../tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py).
 
 ## Inheritance And Polymorphism
 
@@ -1400,9 +1417,14 @@ class settings:
 
 The target method must have the same Python call shape and return type. A public
 target remains callable as a method; `@private` keeps the signature in the
-standalone `.pyi` but exposes only construction to users. Fortran generic
-constructor interfaces and overloaded runtime `tp_init` lowering are not yet
-mapped; they report explicit blockers.
+standalone `.pyi` but exposes only construction to users.
+
+An edited contract can instead declare multiple `__init__` overload links.
+The wrapper allocates the ordinary Phase 8 native owner once, selects an exact
+candidate from completed dtype/rank/class predicates, invokes that target, and
+commits ownership only after it succeeds. Selection never calls candidates to
+see which one works. Indistinguishable candidates fail during generation and a
+runtime call with no match raises `TypeError` before native entry.
 
 ### Finalization
 
@@ -1417,6 +1439,9 @@ native execution terminates the process.
 
 Runtime tests: [`test_constructors_and_finalizers.py`](../../../tests/wrapper/fortran/derived_types/test_constructors_and_finalizers.py)
 and [`test_borrowed_finalizers.py`](../../../tests/wrapper/fortran/derived_types/test_borrowed_finalizers.py).
+Bound and overloaded constructors are covered by
+[`test_phase9_bound_constructors.py`](../../../tests/wrapper/fortran/derived_types/test_phase9_bound_constructors.py)
+and [`test_phase9_class_overloads.py`](../../../tests/wrapper/fortran/naming/test_phase9_class_overloads.py).
 
 ## Module Variables, Constants, Saved State, And Common Blocks
 
@@ -1678,10 +1703,11 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 The parser and semantic IR still preserve `bind(C)`, `sequence`, component
-order, types, kinds, ranks, shapes, and storage facts. An interoperable
-derived-type `value` argument remains routed through a Fortran bridge so the
-Fortran compiler performs the ABI copy. A non-`bind(C)` derived type used by an
-existing `bind(C)` procedure is rejected before code generation.
+order, types, kinds, ranks, shapes, and storage facts. Every supported exact
+rank-zero monomorphic derived-type `value` argument is routed through a typed
+Fortran bridge so the Fortran compiler performs the call. The binding never mirrors the
+aggregate, so this wrapper mechanism does not require the type itself to be
+`bind(C)`.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -2146,13 +2172,13 @@ wrappers:
 
 | Subject | Blocked form | Missing contract |
 | --- | --- | --- |
-| Allocatables | Allocatable scalar derived-type replacement | Whole-object construction, replacement, finalization, and destruction. |
+| Allocatables | Passing a module allocatable scalar derived object to an allocatable dummy | The object address is not the concrete allocatable descriptor; use a wrapper-owned allocatable result holder. |
 | Arrays | Assumed type `type(*)` | Runtime dtype and descriptor policy. |
 | Arrays | Character arrays not representable as fixed-width bytes dtype | Encoding, ABI, allocation, and ownership. |
 | Arrays | Derived-type arrays | Element layout, construction, destruction, aliasing, and copy/view behavior. |
-| Pointers | Pointer-array results and unproved reassociation or ownership-changing operations | Stable result owner storage, target lifetime, or explicit operation policy. |
+| Pointers | Pointer-array or scalar-derived pointer results and unproved reassociation or ownership-changing operations | Stable result owner storage, target lifetime, descriptor identity, or explicit operation policy. |
 | Polymorphism | Results, mutable dummies, arrays, allocatable/pointer scalars, `class(*)` | Dynamic type, allocation, replacement, and ownership. |
-| Constructors | Generic constructor interfaces and overloaded runtime initialization | Deterministic Python constructor selection and lowering. |
+| Constructors | Incomplete or indistinguishable constructor overload sets | Every candidate needs a complete exact runtime signature and compatible owner lifecycle. |
 | Characters | Mutable scalar allocatable character dummies and deferred-length mutable fields | Allocation, encoding, replacement, and destruction. |
 | Kinds | Real wider than 64 bits, complex wider than 128 bits, wider explicit logical storage | Portable NumPy round-trip without silent precision loss. |
 | Callbacks | Stored, optional, cross-thread, or procedure-pointer callbacks | Persistent ownership, thread, exception, nullability, and teardown. |

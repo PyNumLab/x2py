@@ -423,6 +423,13 @@ parity. Route selection is atomic per merged extension: a generation unit uses
 either the direct wrapper-plan route or the legacy route. It never combines one
 backend from one route with the other backend from the other route.
 
+The documented public contract is authoritative when it intentionally corrects
+legacy behavior. In that case, use the legacy implementation to simplify the
+mechanical ABI, conversion, ownership, and cleanup audit, improve the design
+where the legacy path is unsafe or unnecessarily complex, and record every
+intentional behavioral difference in focused tests. Do not preserve a known
+legacy defect merely to obtain byte-for-byte or semantic parity.
+
 An unsupported owner may select the legacy route before planning. Once the plan
 route is selected, planning, validation, lowering, printing, or compilation
 failure fails the build; it must not fall back to legacy generation.
@@ -586,10 +593,10 @@ summary, the exhaustive matrix, and the test tree disagree.
 
 | Status | Collected nodes |
 | --- | ---: |
-| `wrapper-plan` | 94 |
+| `wrapper-plan` | 236 |
 | `dual-route` | 5 |
-| `legacy` | 123 |
-| `not-applicable` | 96 |
+| `legacy` | 113 |
+| `not-applicable` | 95 |
 | `deferred-real-library` | 2 |
 
 #### Recorded Route Progression
@@ -618,7 +625,10 @@ blockers.
 | Phase 6G raw array addresses | 80 | 5 | 130 | 95 | 2 | 312 |
 | Phase 6 `COPY_F` representation copy | 81 | 5 | 130 | 95 | 2 | 313 |
 | Phase 7 native handles/descriptors | 88 | 5 | 129 | 96 | 2 | 320 |
-| Phase 7 production route reconciliation | 94 | 5 | 123 | 96 | 2 | 320 |
+| Phase 7 production route reconciliation | 94 | 5 | 123 | 95 | 2 | 319 |
+| Phase 8 scalar-derived object lifetimes | 106 | 5 | 123 | 95 | 2 | 331 |
+| Phase 8 complete scalar-derived actual/dummy matrix | 213 | 5 | 123 | 95 | 2 | 438 |
+| Phase 8H failure, qualified-type, and typed-value closure | 222 | 5 | 123 | 95 | 2 | 447 |
 
 Migration is complete only when `legacy`, `dual-route`, and
 `deferred-real-library` are all zero. At that point every runtime-generating
@@ -696,30 +706,33 @@ already covered by the new generator.
 | `tests/wrapper/fortran/build_from_source/test_compiler_verbose.py::*` | direct wrapper/build route | build/compile/link orchestration | `legacy` |
 | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py::*` | direct wrapper/build route | build/compile/link orchestration | `legacy` |
 | `tests/wrapper/fortran/build_from_source/test_source_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
-| `tests/wrapper/fortran/callbacks/test_all_callback_shapes.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines | `legacy` |
-| `tests/wrapper/fortran/callbacks/test_array_callbacks.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines; ordinary arrays | `legacy` |
+| `tests/wrapper/fortran/callbacks/test_all_callback_shapes.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines | `wrapper-plan` |
+| `tests/wrapper/fortran/callbacks/test_array_callbacks.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines; ordinary arrays | `wrapper-plan` |
 | `tests/wrapper/fortran/callbacks/test_callback_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
-| `tests/wrapper/fortran/callbacks/test_derived_callbacks.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines; derived types/snapshots | `legacy` |
-| `tests/wrapper/fortran/callbacks/test_scalar_callbacks.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines; scalar inputs/results | `legacy` |
-| `tests/wrapper/fortran/derived_types/test_borrowed_finalizers.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots; classes/methods/properties/overloads | `legacy` |
-| `tests/wrapper/fortran/derived_types/test_constructors_and_finalizers.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots; classes/methods/properties/overloads | `legacy` |
-| `tests/wrapper/fortran/derived_types/test_derived_layout.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots | `legacy` |
-| `tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots | `legacy` |
+| `tests/wrapper/fortran/callbacks/test_derived_callbacks.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines; derived types/object lifetimes | `wrapper-plan` |
+| `tests/wrapper/fortran/callbacks/test_scalar_callbacks.py::*` | source/generated-.pyi parity or parametrized route | callbacks/trampolines; scalar inputs/results | `wrapper-plan` |
+| `tests/wrapper/fortran/derived_types/test_borrowed_finalizers.py::*` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes; classes/methods/properties/overloads | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_constructors_and_finalizers.py::*` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes; classes/methods/properties/overloads | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_derived_layout.py::*` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py::*` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes | `legacy` |
 | `tests/wrapper/fortran/derived_types/test_derived_type_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
-| `tests/wrapper/fortran/derived_types/test_derived_type_methods.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots; classes/methods/properties/overloads | `legacy` |
-| `tests/wrapper/fortran/derived_types/test_inheritance.py::*` | source/generated-.pyi parity or parametrized route | derived types/snapshots; classes/methods/properties/overloads | `legacy` |
-| `tests/wrapper/fortran/derived_types/test_pointers.py::test_module_and_derived_pointer_handles_track_native_association[*]` | source/generated-.pyi parity or parametrized route | derived types/snapshots; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_derived_type_methods.py::*` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes; classes/methods/properties/overloads | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_inheritance.py::*` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes; classes/methods/properties/overloads | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::*` | reduced passing legacy/source artifacts compared with direct typed-plan generation; plain non-target module objects intentionally use the safer member-proxy correction described in Phase 8 | scalar derived arguments/results; optional and by-value inputs; projected identity; owned/borrowed lifecycle; plain/`Aliased` module objects; scalar/string/array/nested/native-handle fields; production routing | `wrapper-plan` |
+| `tests/wrapper/fortran/derived_types/test_phase9_bound_constructors.py::*` | reduced direct-plan bound-constructor runtime and artifact proof | explicit bound construction; shared method plan; allocation and owner commit | `wrapper-plan` |
+| `tests/wrapper/fortran/derived_types/test_scalar_derived_actual_dummy_matrix.py::*` | complete source/generated-contract and direct-plan proof over the canonical scalar-derived matrix fixture; replaces the former isolated descriptor rejection unit; final Phase 8H cross-suite verification remains a separate closure gate | all five actual declarations from module and wrapper origins; all six dummy forms; exact action/error selection; holder, scoped-address, allocation and pointer transactions; mixed multi-argument acquisition and reverse cleanup | `wrapper-plan` |
+| `tests/wrapper/fortran/derived_types/test_pointers.py::test_module_and_derived_pointer_handles_track_native_association[*]` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes; native handles/descriptors | `legacy` |
 | `tests/wrapper/fortran/derived_types/test_pointers.py::test_module_native_array_handles_match_legacy_and_wrapper_plan_routes` | reduced module-only contract with deliberate legacy rollback comparison | borrowed pointer/allocatable handles; descriptor calls; strided extraction; ordinary array actuals; operation permissions | `wrapper-plan` |
-| `tests/wrapper/fortran/derived_types/test_pointers.py::test_pointer_array_handles_block_on_unsupported_result_owner_policy[*]` | source/generated-.pyi parity or parametrized route | derived types/snapshots; native handles/descriptors | `legacy` |
-| `tests/wrapper/fortran/derived_types/test_pointers.py::test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifetime` | direct wrapper/build route | derived types/snapshots; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_pointers.py::test_pointer_array_handles_block_on_unsupported_result_owner_policy[*]` | source/generated-.pyi parity or parametrized route | derived types/object lifetimes; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/derived_types/test_pointers.py::test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifetime` | direct wrapper/build route | derived types/object lifetimes; native handles/descriptors | `legacy` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_editable_contract_can_use_native_order_arguments_without_native_call` | direct wrapper/build route | semantic .pyi generation/parsing; raw array addresses completed by Phase 6G; derived result remains Phase 8 | `legacy` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_raw_array_addresses_match_legacy_and_wrapper_plan_routes` | reduced edited semantic `.pyi` entries over existing vector/matrix native routines | raw numeric addresses; visible scalar-storage extents; rank one/two; default C and explicit Fortran orientation; mutation; integer-only conversion | `wrapper-plan` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_copy_f_preserves_logical_axes_through_binding_owned_temporary` | reduced edited semantic `.pyi` entries over the existing matrix native routine | explicit C-to-Fortran representation copy; native-input and inout calls; projected original identity; binding-owned copyback and cleanup | `wrapper-plan` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py::test_fixed_string_storage_and_raw_address_match_legacy_and_wrapper_plan_routes` | reduced edited semantic `.pyi` entry over the existing `fnative_call_examples_f90` native unit | fixed mutable rank-zero NumPy bytes storage; raw fixed-string addresses; in-place mutation; rank/dtype/itemsize/writability/type validation | `wrapper-plan` |
-| `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py::*` | direct wrapper/build route | semantic .pyi generation/parsing; native handles/descriptors; derived types/snapshots; optional/presence/writeback | `legacy` |
-| `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_contradictory_ownership_contract_fails_before_bridge_generation` | non-generating: policy validation before bridge generation | semantic .pyi generation/parsing; native handles/descriptors; derived types/snapshots; optional/presence/writeback | `not-applicable` |
-| `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_immutable_array_policy_copies_in_and_returns_replacement` | direct wrapper/build route | semantic .pyi generation/parsing; native handles/descriptors; derived types/snapshots; optional/presence/writeback | `legacy` |
-| `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_immutable_scalar_string_array_and_derived_policies_return_replacements` | direct wrapper/build route | semantic .pyi generation/parsing; native handles/descriptors; derived types/snapshots; optional/presence/writeback | `legacy` |
+| `tests/wrapper/fortran/edit_pyi_contracts/test_ownership_contracts.py::*` | direct wrapper/build route | semantic .pyi generation/parsing; native handles/descriptors; derived types/object lifetimes; optional/presence/writeback | `legacy` |
+| `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_contradictory_ownership_contract_fails_before_bridge_generation` | non-generating: policy validation before bridge generation | semantic .pyi generation/parsing; native handles/descriptors; derived types/object lifetimes; optional/presence/writeback | `not-applicable` |
+| `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_immutable_array_policy_copies_in_and_returns_replacement` | direct wrapper/build route | semantic .pyi generation/parsing; native handles/descriptors; derived types/object lifetimes; optional/presence/writeback | `legacy` |
+| `tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py::test_immutable_scalar_string_array_and_derived_policies_return_replacements` | direct wrapper/build route | semantic .pyi generation/parsing; native handles/descriptors; derived types/object lifetimes; optional/presence/writeback | `legacy` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_surface_edit_contracts.py::*` | direct wrapper/build route | semantic .pyi generation/parsing; classes/methods/properties/overloads; naming/visibility/dispatch | `legacy` |
 | `tests/wrapper/fortran/edit_pyi_contracts/test_visibility_contracts.py::*` | direct wrapper/build route | semantic .pyi generation/parsing; scalar module visibility and namespace projection | `wrapper-plan` |
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_compact_blas_like_folder_generates_one_external_entry_and_preserves_separate_objects` | direct wrapper/build route | external symbols/native linkage; ordinary arrays | `legacy` |
@@ -734,8 +747,8 @@ already covered by the new generator.
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_one_source_with_several_standalone_externals_exports_each_at_root[*]` | source/generated-.pyi parity or parametrized route | scalar external symbols; explicit bridge interfaces | `wrapper-plan` |
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_package_entry_rejects_non_external_root_declaration_before_codegen` | non-generating: validation/failure-path assertion | external symbols/native linkage | `not-applicable` |
 | `tests/wrapper/fortran/function_calls/test_function_call_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
-| `tests/wrapper/fortran/function_calls/test_native_call_examples.py::test_native_call_examples_build_from_generated_pyi_and_native_shared_library` | direct wrapper/build route | native-call projections; ordinary arrays; strings; derived types/snapshots | `legacy` |
-| `tests/wrapper/fortran/function_calls/test_native_call_examples.py::test_native_call_examples_cover_scalar_array_string_and_object_projection[*]` | source/generated-.pyi parity or parametrized route | native-call projections; ordinary arrays; strings; derived types/snapshots | `legacy` |
+| `tests/wrapper/fortran/function_calls/test_native_call_examples.py::test_native_call_examples_build_from_generated_pyi_and_native_shared_library` | direct wrapper/build route | native-call projections; ordinary arrays; strings; derived types/object lifetimes | `legacy` |
+| `tests/wrapper/fortran/function_calls/test_native_call_examples.py::test_native_call_examples_cover_scalar_array_string_and_object_projection[*]` | source/generated-.pyi parity or parametrized route | native-call projections; ordinary arrays; strings; derived types/object lifetimes | `legacy` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_fixed_form_optional_arguments_drive_fortran_present_behavior[*]` | source/generated-.pyi parity or parametrized route | optional/presence; scalar inputs/results | `wrapper-plan` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_fixed_optional_scalar_wrapper_plan_route_matches_all_presence_states` | production plan route with deliberate legacy rollback comparison | optional/presence; scalar inputs/results; build/artifact integration | `wrapper-plan` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_allocatable_scalar_descriptor_distinguishes_omitted_none_and_value` | production plan route with deliberate legacy rollback comparison | optional/presence; nullable scalar descriptor; build/artifact integration | `wrapper-plan` |
@@ -743,7 +756,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_arguments_drive_fortran_present_behavior[*]` | source/generated-.pyi parity or parametrized route | optional/presence/writeback | `legacy` |
 | `tests/wrapper/fortran/function_calls/test_optional_arguments.py::test_optional_array_buffers_match_legacy_and_wrapper_plan_routes` | reduced semantic `.pyi` entry over the existing optional native unit | omitted/`None`/present ordinary array storage; mutation; projected identity; native-handle actuals deferred to Phase 7 | `dual-route` |
 | `tests/wrapper/fortran/function_calls/test_scalar_writeback_plan.py::test_scalar_copy_in_out_returns_replacement_through_both_routes` | production plan route with deliberate legacy rollback comparison | scalar copy-in/native mutation/copy-out/cleanup; build/artifact integration | `wrapper-plan` |
-| `tests/wrapper/fortran/function_calls/test_output_arguments.py::test_output_arguments_and_multiple_results_follow_python_projection_rules[*]` | source/generated-.pyi parity | mixed-type multiple-result aggregation; ordinary arrays; strings; derived types/snapshots; native handles/descriptors | `legacy` |
+| `tests/wrapper/fortran/function_calls/test_output_arguments.py::test_output_arguments_and_multiple_results_follow_python_projection_rules[*]` | source/generated-.pyi parity | mixed-type multiple-result aggregation; ordinary arrays; strings; derived types/object lifetimes; native handles/descriptors | `legacy` |
 | `tests/wrapper/fortran/function_calls/test_output_arguments.py::test_hidden_ordinary_array_output_matches_legacy_and_wrapper_plan_routes` | production output-only plan route with deliberate legacy rollback comparison | fixed/runtime-shape hidden ordinary array output; zero-sized output; allocation/copy failure paths | `wrapper-plan` |
 | `tests/wrapper/fortran/layout_rules/test_wrapper_guide_layout.py::*` | non-generating: wrapper docs/test layout | test/docs layout | `not-applicable` |
 | `tests/wrapper/fortran/module_state/test_allocatable_replacement.py::test_allocatable_inout_arrays_mutate_and_return_the_same_handle[*]` | source/generated-.pyi parity route | module variables/state; native handles/descriptors | `legacy` |
@@ -751,9 +764,9 @@ already covered by the new generator.
 | `tests/wrapper/fortran/module_state/test_allocatable_replacement.py::test_projected_allocatable_descriptor_matches_legacy_and_wrapper_plan_routes` | reduced owned-result plus projected-descriptor contract with deliberate legacy rollback comparison | direct persistent descriptor mutation; allocation/reallocation/deallocation; same-handle result identity | `wrapper-plan` |
 | `tests/wrapper/fortran/module_state/test_allocatable_views.py::test_allocatable_module_fields_and_results_expose_lifetime_safe_handles[*]` | source/generated-.pyi parity with one mixed generation unit | derived class/field handles and parent retention remain Phase 8/9 blockers | `legacy` |
 | `tests/wrapper/fortran/module_state/test_allocatable_views.py::test_scalar_descriptor_module_variables_return_copied_optional_values[*]` | production plan route in source/generated-.pyi parity modes | rank-zero allocatable/pointer arguments, writeback, results, and copied nullable module values | `wrapper-plan` |
-| `tests/wrapper/fortran/module_state/test_allocatable_views.py::test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction[*]` | production plan route in source/generated-.pyi parity modes | detached read-only snapshots of plain allocatable module arrays; capsule-owned lifetime | `wrapper-plan` |
+| `tests/wrapper/fortran/module_state/test_allocatable_views.py::test_plain_allocatable_module_array_exposes_current_live_view[*]` | production plan route after the Phase 7 contract correction | plain and `Aliased` module handles return a current live view or `None`; explicit `.copy()` is independent and a fresh extraction follows current native state | `wrapper-plan` |
 | `tests/wrapper/fortran/module_state/test_common_blocks.py::*` | source/generated-.pyi parity or parametrized route | scalar calls with internal common-block storage | `wrapper-plan` |
-| `tests/wrapper/fortran/module_state/test_module_state.py::test_aliased_derived_module_object_borrows_native_state[*]` | source/generated-.pyi parity or parametrized route | module variables/state; derived types/snapshots | `legacy` |
+| `tests/wrapper/fortran/module_state/test_module_state.py::test_aliased_derived_module_object_borrows_native_state[*]` | source/generated-.pyi parity or parametrized route | module variables/state; derived types/object lifetimes | `legacy` |
 | `tests/wrapper/fortran/module_state/test_module_state.py::test_scalar_module_variables_use_attributes_and_parameters_have_no_native_setter[*]` | source/generated-.pyi parity or parametrized route | module variables/state | `legacy` |
 | `tests/wrapper/fortran/module_state/test_module_state_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
 | `tests/wrapper/fortran/module_state/test_scalar_module_variable_plan.py::test_whole_scalar_module_variable_behavior_matches_legacy_route[*]` | production plan route with deliberate legacy rollback comparison | scalar inputs/results; scalar module variables/state; build/artifact integration | `wrapper-plan` |
@@ -766,6 +779,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/naming/test_defined_operators.py::*` | source/generated-.pyi parity or parametrized route | naming/visibility/dispatch; classes/methods/properties/overloads; operators; generic dispatch | `legacy` |
 | `tests/wrapper/fortran/naming/test_generic_interfaces.py::*` | source/generated-.pyi parity or parametrized route | naming/visibility/dispatch; classes/methods/properties/overloads; generic dispatch | `legacy` |
 | `tests/wrapper/fortran/naming/test_naming_generated_pyi_contracts.py::*` | non-generating: generated semantic .pyi fixture parity | semantic .pyi generation/parsing | `not-applicable` |
+| `tests/wrapper/fortran/naming/test_phase9_class_overloads.py::*` | reduced direct-plan constructor and method overload runtime proof | class-owned exact predicates; constructor ownership; no speculative calls | `wrapper-plan` |
 | `tests/wrapper/fortran/naming/test_visibility_naming.py::test_strict_wrapper_names_reject_python_name_fixes` | direct wrapper/build route | naming/visibility/dispatch; classes/methods/properties/overloads | `legacy` |
 | `tests/wrapper/fortran/naming/test_visibility_naming.py::test_visibility_and_default_python_name_fixing_policy[*]` | source/generated-.pyi parity or parametrized route | naming/visibility/dispatch; classes/methods/properties/overloads | `legacy` |
 | `tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::*` | full BLAS/LAPACK wrapper generation unit | external symbols/native linkage; build/compile/link orchestration; broad wrapper corpus | `deferred-real-library` |
@@ -2142,10 +2156,13 @@ generated shape without dereferencing an invalid address.
 
 ## Phase 7 — Native Array Handles And Descriptors
 
-Implementation status: complete, pending the final verification gate recorded
-at the end of this phase. Phase 6G completed first. The direct route now owns
-the dependency-closed Phase 7A-H cases while every field, pointer-result,
-callback, and deferred-real-library exclusion remains on its later blocker.
+Implementation status: reopened for the view-only `to_numpy()` contract
+correction. The previously completed direct Phase 7A-H slices remain evidence
+for unaffected descriptor handoffs, but Phase 7 is not closed again until
+plain and `Aliased` module-array handles both return a current live view or
+`None` without an implicit copy and the final verification gate is rerun.
+Every field, pointer-result, callback, and deferred-real-library exclusion
+remains on its later blocker.
 
 Scope: migrate the existing native descriptor and runtime-handle contract into
 the wrapper-plan path without redefining that public contract. The maintained
@@ -2178,6 +2195,15 @@ genuinely differ: allocation state versus association state, allowed
 shape-changing operations, target lifetime, extraction policy, and release.
 Do not create independent allocatable and pointer planner hierarchies.
 
+For every rank-positive module handle, `to_numpy()` has one public result:
+`None` for an unallocated/unassociated native object and a live NumPy view of
+the current allocation/target otherwise. Plain and `Aliased` allocatable
+module variables use the same behavior. `Aliased` remains semantic metadata
+but never selects a detached copy. Users call `.copy()` explicitly for
+independent storage; an old live view may become stale after native
+deallocation, reallocation, nullification, or reassociation, and a fresh
+`to_numpy()` call must inspect current native state.
+
 ### Phase 7 Boundary And Explicit Non-Scope
 
 The following four boundaries must remain distinct:
@@ -2208,6 +2234,12 @@ Other exclusions and dependencies are:
 - derived-type field attachment, class construction, parent-wrapper creation,
   and property orchestration, which require Phases 8 and 9 even though the
   shared native-handle plan must already be reusable by those later owners;
+- scalar derived module-variable member access and argument compatibility,
+  which belong to Phase 8. Phase 7 descriptor machinery remains limited to
+  array handles; scalar derived module allocatables use the exact local
+  move-out/move-back route specified in Phase 8H and do not consume Phase 7 CFI
+  descriptor machinery. A failed scalar-object call handoff must not become a
+  module-access blocker;
 - pointer results without completed stable owner storage and target lifetime;
 - callback descriptor arguments or results, which remain in Phase 10;
 - compiler-private descriptor layout inspection or copying;
@@ -2667,23 +2699,60 @@ and handle creation; and the current runtime handle factory.
   state, extraction policy, operation permissions, stale-view behavior, and
   module lifetime.
 - [x] Use `test_allocatable_module_fields_and_results_expose_lifetime_safe_handles`,
-  `test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction`,
+  `test_plain_allocatable_module_array_exposes_current_live_view`,
   and the module portion of
   `test_module_and_derived_pointer_handles_track_native_association` as legacy
   oracles. Split out field/class assertions, which remain Phase 8/9 work.
 
+#### Phase 7F Contract Correction — View-Only Module Extraction
+
+The checked Phase 7F items above record the original migration slice; they do
+not close this changed public contract. Complete this correction before Phase
+8 implementation.
+
+- [x] Update public docs, maintainer docs, generated/checked semantic `.pyi`
+  evidence, and wrapper coverage rows to specify current live view or `None`,
+  explicit `.copy()`, and the unsupported stale-view window.
+- [x] Complete plain and `Aliased` allocatable module arrays as native-owned
+  borrowed handles with the same extraction result. Keep addressability,
+  descriptor mechanism, owner retention, mutability, nullability, storage,
+  operation permissions, and release responsibility as separate completed
+  facts.
+- [x] Remove `read_only_detached_copy` and extraction-only `copy_only` policy,
+  plan, runtime, binding, and bridge dispatch. Preserve only typed live-view
+  mechanisms such as contiguous or standard-descriptor views; unsupported
+  extraction fails instead of copying.
+- [x] For a plain allocatable module array, add the completed standard-
+  descriptor module-state mechanism needed to inspect the current allocation
+  on each extraction. Keep it beneath `ModuleVariablePlan`; do not retain a
+  descriptor or data address as if it were permanently current.
+- [x] Keep binding/bridge ownership explicit: the bridge exposes current native
+  descriptor facts without NumPy knowledge, and the binding validates
+  dtype/rank/shape/strides and creates the NumPy view with its handle owner as
+  the base. Native-handle argument handoff must not call `to_numpy()`.
+- [x] Replace the obsolete read-only-copy test with source/generated-`.pyi`
+  parity covering plain and `Aliased` live mutation, allocated/unallocated and
+  associated/unassociated state, fresh extraction after state changes,
+  explicit-copy independence, stale-view documentation, parent/owned-result
+  retention, and contiguous/strided pointer views.
+- [x] Rerun focused policy/plan/backend/runtime tests, documentation checks,
+  the wrapper suite excluding LAPACK, the wrapper-codegen complexity checker,
+  and the required static-analysis suite before closing Phase 7 again.
+
 ### Phase 7G — Pointer Descriptor Extraction And Build Requirements
 
-Included: pointer `descriptor_view`, `contiguous_view`, `copy_only`, and
-explicitly unsupported extraction actions already selected by completed
-policy; standard descriptor decoding; positive and negative strides; and local
-build/header requirements.
+Included: pointer `descriptor_view`, `contiguous_view`, and explicitly
+unsupported extraction actions already selected by completed policy; standard
+descriptor decoding; positive and negative strides; and local build/header
+requirements. A `copy_only` `to_numpy()` action is obsolete and must not reach
+the corrected plan.
 
-Only `descriptor_view` and persistent allocatable owner storage require standard
-C descriptor support. Generated code may read `CFI_cdesc_t` through
-`ISO_Fortran_binding.h` when the completed plan requests it. It must never guess
-or expose a compiler-private descriptor layout. Unsupported toolchains fail
-readiness/build with the completed owner path and requirement.
+Descriptor views, the corrected plain allocatable module-state path, and
+persistent allocatable owner storage require standard C descriptor support.
+Generated code may read `CFI_cdesc_t` through `ISO_Fortran_binding.h` when the
+completed plan requests it. It must never guess or expose a compiler-private
+descriptor layout. Unsupported toolchains fail readiness/build with the
+completed owner path and requirement.
 
 - [x] Carry typed extraction and descriptor-interop actions plus required
   headers into handle/module/result plans and rendered artifact metadata.
@@ -2790,7 +2859,7 @@ Phase 7 rows were split, proved through both routes, and then recorded as
 | `module_state/test_allocatable_replacement.py::*` | projected same-handle descriptor mutation plus a derived factory generation unit; `legacy` | Phase 7D reduced parity is `wrapper-plan`; the broad factory/class unit remains Phase 8/9 |
 | `module_state/test_allocatable_views.py::test_allocatable_module_fields_and_results_expose_lifetime_safe_handles[*]` | module, result, and derived-field mix; `legacy` | field/class owner retention remains Phase 8/9 |
 | `module_state/test_allocatable_views.py::test_scalar_descriptor_module_variables_return_copied_optional_values[*]` | scalar descriptor arguments/results/module state; `wrapper-plan` | source conversion records descriptor kind and argument/return reference before completed Phase 7H policy |
-| `module_state/test_allocatable_views.py::test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction[*]` | plain allocatable module snapshot; `wrapper-plan` | Phase 7F binding-owned detached read-only snapshot and capsule lifetime |
+| `module_state/test_allocatable_views.py::test_plain_allocatable_module_array_exposes_current_live_view[*]` | corrected source/generated-`.pyi` production-plan evidence | proves Phase 7F plain/`Aliased` current live-view or `None` parity, native mutation, explicit-copy independence, and fresh extraction after state changes |
 | `strings/test_character_arguments.py::test_modern_fortran_character_arguments_and_results[*]` | fixed strings plus deferred allocatable result; `legacy` | Phase 7H reduced deferred-result parity; retain mixed row as needed |
 | `edit_pyi_contracts/test_native_order_contracts.py::test_editable_contract_can_use_native_order_arguments_without_native_call` | includes raw `Addr(Float64[n])` plus a derived result; `legacy` | raw-array subset is the completed Phase 6G prerequisite; derived subset remains Phase 8 |
 
@@ -2835,83 +2904,1728 @@ Required focused intermediate coverage includes:
 - [x] Preserve the completed Phase 6G raw-address boundary while keeping every
   derived-field, pointer-result, callback, and deferred-real-library exclusion
   on its explicit later blocker.
-- [x] Run focused policy/plan/backend tests, relevant runtime-handle tests,
+- [x] Complete the Phase 7F view-only correction for plain and `Aliased`
+  allocatable module arrays and remove every implicit-copy extraction path.
+- [x] Rerun focused policy/plan/backend tests, relevant runtime-handle tests,
   documentation checks, the wrapper suite excluding LAPACK, the wrapper-codegen
-  complexity checker, and the required static-analysis suite before declaring
-  implementation complete.
+  complexity checker, and the required static-analysis suite after the
+  correction.
 - [x] Close Phase 7 only when every live non-field native-handle/descriptor case
   is migrated or explicitly removed from the product contract, and no backend
   infers descriptor policy or silently substitutes a data buffer, raw pointer,
   `.to_numpy()` extraction, or copy fallback.
 
-Closure evidence: 538 focused semantic/policy/plan/backend/runtime tests, 1,133
-documentation and layout tests, and all 318 wrapper tests outside the deferred
-BLAS/LAPACK file pass. The wrapper-codegen complexity check, Ruff, formatting,
-Bandit, Vulture, whitespace, and explicit-base Radon policy pass; full Radon
-complexity and maintainability reports were also recorded. The source/default
-scalar-descriptor projection now records its descriptor kind and argument or
-return reference before policy completion. Binding and bridge lowering dispatch
-only from the resulting typed plans; the remaining mixed derived-field unit is
-an explicit Phase 8/9 blocker rather than a descriptor fallback.
+Historical pre-correction evidence: 538 focused semantic/policy/plan/backend/
+runtime tests, 1,133 documentation and layout tests, and all 318 wrapper tests
+outside the deferred BLAS/LAPACK file passed. The wrapper-codegen complexity
+check, Ruff, formatting, Bandit, Vulture, whitespace, and explicit-base Radon
+policy also passed. This evidence remains valid for unaffected sub-lanes but is
+not closure evidence for the changed view-only extraction contract. Record a
+new success signal after the Phase 7F correction.
 
-## Phase 8 — Derived Types And Snapshots
+Post-correction closure evidence (2026-07-14): 214 focused runtime-handle,
+policy, readiness, lowering, legacy-dispatch, and Phase 7 direct-plan tests;
+199 complete `tests/wrapper_codegen` tests; 1,123 documentation tests; 317
+wrapper tests outside the shared real-library parameter plus the BLAS-only
+parameter; and zero locally executed LAPACK tests all passed. The wrapper
+complexity checker, Ruff lint/format, Bandit, Vulture, whitespace, and the
+explicit-`origin/main` Radon policy passed. The required `--base-ref auto`
+Radon invocation could not resolve a CI base SHA locally; the explicit base
+rerun passed. Advisory full Radon complexity and maintainability reports were
+also produced.
 
-Scope: opaque derived-type wrappers, borrowed views, wrapper-owned instances,
-and snapshot copies.
+Phase 7 was re-verified again with the final Phase 8 closure run on
+2026-07-15: the 704-test semantic/policy/plan/backend regression batch, all 79
+runtime-handle tests, 1,123 documentation tests, and all 326 wrapper tests
+outside LAPACK passed. No LAPACK test was run locally.
 
-- [ ] Before implementation, expand this phase under the mandatory expansion
-  gate, separating origin, owned/borrowed/aliased/snapshot lifetime,
+## Phase 8 — Derived Types And Object Lifetimes
+
+Expansion status: complete. Implementation proceeds only after the Phase 7
+view-only correction is re-verified.
+
+Implementation status: reopened for the complete rank-zero scalar-derived
+actual/dummy compatibility matrix in Phase 8H. The previous Phase 8A-I
+evidence remains authoritative for unaffected fields and lifecycle paths, but
+the old module-allocatable rejection, nonreassociating pointer-only path,
+interoperable-only value restriction, and incomplete module-object call routes
+are superseded. Phase 8 must not close again until direct, scoped-address,
+wrapper-holder, module-transaction, pointer-input, and typed-value actions are
+implemented without a fallback and re-verified with multi-argument calls.
+
+Scope: migrate scalar derived-type storage, arguments, results, borrowed
+objects, and field handoffs into the wrapper-plan route. Phase 8 owns the
+opaque native-instance substrate and the typed transfers that use it. Phase 9
+owns public constructors, methods, overloads, inheritance, and general
+class-surface orchestration built on that substrate. Phase 8 owns public field
+descriptors and their typed getters/setters because every live object origin,
+including plain module proxies, needs the same readable and writable member
+surface.
+
+Do not begin implementation while a Phase 7 native-array-handle correction is
+open. In particular, Phase 8 must consume the final view-only `to_numpy()`
+contract: an array-handle extraction is a live view or `None`, and an
+independent array is obtained with an explicit `.copy()`.
+
+`Snapshot[T]` is no longer an active public contract. Plain and `Aliased`
+rank-zero derived module variables both expose the normal live generated object
+surface. Their lowering mechanisms remain distinct: `Aliased` proves a direct
+address-backed borrow, while a plain declaration requires typed module-specific
+bridge access and must not fabricate a native address. `Aliased` remains an
+addressability and aliasing fact for raw-address legality, pointer association,
+C-pointer policy, and direct derived-object handoff; it does not select
+array-handle `to_numpy()` behavior.
+
+### Phase 8 Boundary And Explicit Non-Scope
+
+The first implementation slice is rank-zero, non-polymorphic derived values.
+The runtime wrapper is opaque: the binding carries a native address, ownership
+state, and an optional retained Python owner, while the bridge performs typed
+native association, assignment, allocation, and destruction. The binding must
+not depend on component offsets or reproduce native aggregate layout.
+
+The following surfaces are in Phase 8:
+
+- required and optional scalar derived arguments;
+- visible `out` and `inout` wrappers whose identity remains caller-visible;
+- hidden output and direct-function-result values materialized as
+  wrapper-owned instances;
+- native `value` arguments for an exact rank-zero monomorphic derived type,
+  using a Fortran bridge-owned typed value copy rather than C-side layout
+  inference; the native type need not be `bind(C)` when the bridge imports its
+  exact definition;
+- derived `parameter` and other explicit constant-value origins materialized
+  through the existing wrapper-owned immutable-value path, never as a fallback
+  for an ordinary mutable module object;
+- plain rank-zero native module objects exposed as live module-backed proxies
+  through typed bridge operations;
+- `Aliased` rank-zero native module objects exposed as live borrowed wrappers;
+- borrowed nested component wrappers, their public field descriptors, and the
+  owner-retention facts required by those descriptors;
+- Phase 7 allocatable/pointer field-handle plans attached to a derived owner;
+- exact destruction, finalization, cleanup, and failure ownership for each of
+  those origins.
+
+The following remain outside Phase 8:
+
+- public default/keyword constructors, explicit `@bind(...)` constructors,
+  `tp_init`, methods, static methods, overload dispatch, Python inheritance,
+  and ordinary type-bound surface assembly; these remain Phase 9. Public field
+  descriptors, getters, and setters are Phase 8 and are not a Phase 9 blocker.
+  A generated semantic `.pyi` field constructor is therefore a whole-unit
+  Phase 9 blocker; only an opaque contract that suppresses default construction
+  may use the direct Phase 8 object route;
+- scalar polymorphic dispatch and inheritance even where the legacy route
+  supports them; Phase 9 owns the class relationship needed to validate the
+  accepted runtime type set;
+- callback-derived arguments and results, adapter procedures, and trampoline
+  ownership; these remain Phase 10;
+- arrays of derived values, whose element layout, construction, destruction,
+  copy, and partial-failure behavior remain explicit readiness blockers;
+- polymorphic results, mutable polymorphic arguments, `class(*)`, abstract
+  instantiation, deferred bindings, and allocatable/pointer polymorphic
+  scalars;
+- polymorphic descriptor-backed scalars. Wrapper-owned allocatable and pointer
+  holders plus scalar derived module ordinary/`TARGET`/allocatable/pointer
+  variables are supported only by their explicit Phase 8H matrix rows. A
+  pointer holder owns its association container, never its target by default;
+  target retention and native release responsibility are completed separately
+  before lowering. Module allocation and pointer transactions use shared typed
+  holder addresses in interoperable callbacks, never CFI or a compiler-private
+  descriptor;
+- any other derived origin that cannot use one of the explicit matrix rows. It
+  remains blocked rather than being silently turned into an address-backed
+  borrow or detached object;
+- C-side aggregate casts, `ctypes` layout promises, compiler-private descriptor
+  inspection, or direct component offsets;
+- ownership of targets reachable through pointer components. A containing
+  derived wrapper does not own such a target without completed pointer policy;
+  and
+- detached whole-object snapshot classes or recursive member-copy graphs. They
+  are removed rather than retained as a compatibility path.
+
+### Public Representation And Lifetime Matrix
+
+Complete this matrix in post-IR policy before adding planner or backend code.
+The rows are distinct origins, not datatype guesses made during lowering.
+
+| Surface | Python representation | Native handoff/storage | Owner and release |
+| --- | --- | --- | --- |
+| required `in` argument | existing wrapper instance | pass its opaque wrapper address and associate a typed native view for the call | wrapper remains owned by its existing Python object; call destroys nothing |
+| required visible `inout` or caller-supplied `out` | same wrapper instance | pass the same address for native mutation | caller-visible wrapper retains identity; its normal wrapper finalizer remains the sole destroyer |
+| optional argument, omitted or `None` | no wrapper instance | explicit absence token/branch; no fabricated native object | no allocation or cleanup |
+| optional argument, present | validated wrapper instance | same typed address handoff as the required case | existing wrapper owner remains responsible |
+| hidden output | new opaque wrapper object | allocate persistent wrapper-owned native storage before the call and pass its address | wrapper deallocator invokes native-aware destruction exactly once |
+| direct function result | new opaque wrapper object | move or copy the native result before its temporary expires into persistent wrapper-owned storage | wrapper deallocator invokes native-aware destruction exactly once |
+| constructor-created instance | Phase 9 only | Phase 9 must allocate through the same persistent wrapper-owned storage and native-aware destructor established here | explicitly blocked until Phase 9 class construction orchestration; no Phase 8 fallback constructor |
+| native `value` input | existing wrapper instance | exact Fortran bridge passes the typed pointee to the native by-value slot; C never lays out or copies the aggregate | call-local native copy only; wrapper ownership is unchanged |
+| plain rank-zero module variable | normal live generated object | module-specific typed getter/setter operations plus a synchronous scoped-address consumer when the object is passed to another procedure | native module owns storage; wrapper retains the module and never destroys storage; a temporary target/address cannot escape its consumer scope |
+| `Aliased` or explicit `TARGET` rank-zero module variable | live borrowed wrapper | use `C_LOC` as the sole whole-object handoff; reconstruct the exact typed bridge view without copying | native module owns storage; wrapper never destroys it and rejects replacement |
+| derived `parameter` or other explicit constant-value origin | wrapper-owned value copy with an immutable module binding | materialize the native value into persistent wrapper-owned storage | wrapper destroys only its materialized copy; no native module setter; normal writable fields modify only that independent copy |
+| nested derived field | live borrowed child wrapper | address/alias of the component through the parent wrapper | child retains parent; child never destroys component storage |
+| allocatable scalar derived module origin | nullable live module-backed proxy carrying its runtime origin | scoped-address consumer for payload-only calls; for an allocatable dummy, module-specific interoperable operations move between the module variable and a bridge-local shared typed holder addressed by `C_PTR` | native module owns storage before and after a transaction; successful move-out has exactly one reverse-order move-back; no descriptor crosses C |
+| pointer scalar derived module origin | nullable live module-backed proxy carrying its runtime origin | current-target address for payload-only calls; for a pointer dummy, a bridge-local shared typed pointer holder receives the initial association and its address is passed to the module-specific restore operation | native module owns the pointer variable and, by default, its target; final association is restored exactly once after a normally returning native call |
+| wrapper-owned allocatable scalar derived result | nullable live generated wrapper backed by one persistent typed allocatable holder per native type | result is moved into `holder%value`; ordinary, target, allocatable, allocatable-target, pointer-input, and value dummies use the explicit compatible matrix actions | each Python wrapper owns one target-capable holder and destroys it exactly once; allocation-state writeback preserves wrapper identity |
+| wrapper-owned pointer scalar derived result | nullable live generated wrapper backed by one persistent typed pointer holder per native type | holder component stores current association and is passed directly to a compatible pointer dummy; payload-only calls use its associated target | wrapper owns and destroys only the holder; target ownership stays native unless completed policy retains a known wrapper/module target; destruction nullifies the component and never deallocates an unowned target |
+| detached whole-object snapshot | removed | no recursive copy graph or snapshot helper is generated | no compatibility parser, lowering, or fallback; read the live object through normal fields instead |
+
+`Aliased` remains a public, language-neutral addressability/aliasing fact and
+must survive parsing, semantic IR, and printing. For derived module objects it
+distinguishes direct-address lowering from module-proxy lowering, not live
+versus copied public behavior. It must never be reused to select live versus
+copied native-array-handle extraction.
+
+### Existing Semantic Authority And Legacy Oracle
+
+Use the current implementation as an oracle, not as permission to preserve its
+architecture:
+
+- `x2py/semantics/ownership.py` already names `DERIVED_TYPE`,
+  `PASS_WRAPPER_ADDRESS`, `WRAPPER_INSTANCE`, and `BORROWED_VIEW`, and contains
+  the current argument/result/module/field owner defaults. Remove the obsolete
+  derived whole-object snapshot action without disturbing ordinary result
+  copies, scalar descriptor value copies, or explicit non-object uses of
+  `snapshot_copy` transfer policy.
+- `x2py/semantics/policy_completion.py` is the only allowed owner of origin,
+  ownership, transfer, destruction, mutability, nullability, projection,
+  release, storage, getter/setter, owner-retention, module-object handoff, and
+  field decisions. It must complete module-proxy policy for plain module
+  objects and direct-address borrowed policy for `Aliased` module objects.
+- `x2py/semantics/wrapper_policy.py` must gain a derived-specific policy branch.
+  Derived values must not continue through primitive-scalar blockers,
+  primitive result checks, or primitive bridge data-action selection.
+- `x2py/semantics/ir2ast.py` and the legacy generators remain the generated
+  artifact oracle. Direct lowering must not call `semantic_ir_to_codegen_ast()`
+  or reconstruct legacy codegen variables.
+- `x2py/codegen/bindings/c_to_python.py` contains the existing wrapper-instance
+  conversion, checked casts, owned/borrowed result construction, owner
+  retention, and allocator/destructor helpers. Remove recursive snapshot
+  construction rather than migrating it into the direct route.
+- `x2py/codegen/bridges/fortran_to_c.py` contains the existing typed wrapper
+  address conversion, native result materialization, borrowed field/module
+  access, native-aware destruction, and typed component getters/setters. Reuse
+  those live member-access mechanics as the artifact oracle while moving every
+  decision into typed plans.
+
+Capture complete legacy artifacts before each direct slice. Preserve observable
+runtime behavior while replacing backend inference with completed typed plans.
+Do not copy the broad legacy generator control flow into `wrapper_codegen`.
+
+The existing wrapper tests decompose as follows:
+
+| Existing test or generation unit | Phase 8 oracle | Required split or later owner |
+| --- | --- | --- |
+| `function_calls/test_native_call_examples.py::test_native_call_examples_cover_scalar_array_string_and_object_projection[*]` | hidden derived result selected by `Return(...)` | add a reduced object-result entry; retain the mixed unit until every included lane is direct |
+| `function_calls/test_output_arguments.py::test_output_arguments_and_multiple_results_follow_python_projection_rules[*]` | hidden derived output and mixed result aggregation | add a reduced derived-output entry; retain the broad unit until its complete tuple is direct |
+| `edit_pyi_contracts/test_policy_dispatch_contracts.py::test_immutable_scalar_string_array_and_derived_policies_return_replacements` | edited projected derived replacement | isolate `make_point` as Phase 8 evidence; retain the mixed policy unit until whole-unit eligibility follows |
+| `derived_types/test_derived_type_boundaries.py::test_scalar_derived_types_cross_procedure_boundaries[*]` | required input, in-place mutation, hidden/direct result, nested borrowed component | reduce first to result-created opaque objects passed back to `point_sum`/`move_point`; field descriptors and nested borrowing are Phase 8, while construction remains Phase 9 |
+| `function_calls/test_optional_arguments.py::test_optional_arguments_drive_fortran_present_behavior[*]` | optional derived input and exact type/absence behavior | complete the optional transfer in Phase 8; the existing constructor-dependent broad runtime unit remains Phase 9 until it can route whole |
+| `module_state/test_module_state.py::test_aliased_derived_module_object_borrows_native_state[*]` | native-owned borrowed module object and replacement rejection | use as the direct-address oracle; add a reduced plain-module proxy case with the same live field behavior; methods remain Phase 9 |
+| `derived_types/test_borrowed_finalizers.py::test_borrowed_child_wrapper_never_finalizes_native_component[*]` | parent retention and exactly-once owner finalization | Phase 8 owns storage/lifetime plans and public field descriptors; constructor/method orchestration remains Phase 9 |
+| `module_state/test_allocatable_views.py::test_allocatable_module_fields_and_results_expose_lifetime_safe_handles[*]` | Phase 7 field handle attached to a derived owner | reuse the existing `NativeArrayHandlePlan` and expose its public property in Phase 8 |
+| `derived_types/test_pointers.py::test_pointer_descriptor_views_preserve_slice_shape_strides_and_parent_lifetime` | pointer field handle and parent lifetime | reuse Phase 7 descriptor extraction; do not move pointer target ownership into Phase 8 |
+| `derived_types/test_derived_layout.py::test_bind_c_derived_types_use_accessors_and_fortran_value_copy[*]` | opaque `bind(C)` wrapper, field accessors, and typed native `value` copy | Phase 8 owns the handoff and field properties; constructor orchestration remains Phase 9 |
+| former `module_state/contracts/fmodule_derived_snapshot_f90/` snapshot fixture | obsolete detached-object behavior | remove the `Snapshot[box]` fixture and snapshot-only runtime assertions; reuse the native unit only for reduced live module-proxy evidence where applicable |
+| `derived_types/test_constructors_and_finalizers.py::*`, `derived_types/test_derived_type_methods.py::*`, and `derived_types/test_inheritance.py::*` | owned-instance finalizer and type facts may inform Phase 8 | production migration remains Phase 9 because the observable unit is constructor/method/property/inheritance owned |
+| `callbacks/test_derived_callbacks.py::*` | none | remain Phase 10 even after ordinary derived transfers are complete |
+
+The plain non-target module-object row has one recorded intentional correction:
+the legacy whole-object getter attempts `c_loc` on storage without the required
+addressability property and therefore has no passing whole-object artifact.
+Phase 8 uses the real source declaration, the passing legacy typed component
+getters/setters, and the passing `Aliased` direct-address behavior as its
+mechanical oracles, then improves the plain path to a typed member proxy. The
+compiled Phase 8 evidence asserts that this proxy never emits a fabricated
+whole-object `c_loc` while its reads and writes remain live.
+
+### Mandatory Phase 8 Migration Algorithm
+
+Apply this same sequence to every dependency-closed sub-lane. A checked item in
+a later step cannot compensate for an incomplete earlier step.
+
+1. Capture the complete generated artifacts and runtime assertions from one
+   real passing legacy/source case. Record which constructor/method or
+   callback assertions remain outside the reduced unit.
+2. Complete object kind, origin, ownership, transfer, destruction, mutability,
+   nullability, projection, storage, release, owner retention, getter/setter,
+   native assignment, and any module-object mechanism before `ir2ast.py`.
+3. Project those facts mechanically into `ArgumentTransferPlan`, `ResultPlan`,
+   or `ModuleVariablePlan`, with native slots and lifecycle actions remaining
+   subordinate references.
+4. Validate type identity, roles, actions, owners, storage, result positions,
+   releases, and cross-backend handoffs before either backend emits source.
+5. Lower through small named binding and bridge methods selected by typed
+   object kind and action. Backend-local temporaries remain implementation
+   details inside the already selected method.
+6. Compare binding, bridge, header, and build artifacts with the captured
+   oracle and explain every intentional difference before compiling.
+7. Add focused policy, plan-edit, validation, printer, backend, runtime,
+   documentation, and source/generated-`.pyi` parity tests.
+8. Promote the reduced generation unit only after compiled legacy/direct parity
+   passes; otherwise retain one exact blocker without a fallback route.
+
+The maintainer trace is therefore always:
+
+```text
+completed semantic facts
+  -> typed argument/result/module-variable plan
+  -> subordinate native slots and lifecycle actions
+  -> validation
+  -> binding and bridge lowering
+  -> generated artifacts
+  -> compiled runtime evidence
+```
+
+### Plan Shape And Stable Action Vocabulary
+
+Do not create a second function plan, a second result hierarchy, or a rendered
+derived-plan layer. Extend the existing plan tree as follows:
+
+- add one explicit derived datatype family or equivalent non-primitive marker
+  so a derived semantic type never indexes the primitive scalar dtype maps;
+- add a concise namespace-owned derived-type definition record containing
+  canonical semantic/native identity, native scope, Python exports, opaque
+  runtime type symbol, allocation role, destruction/finalization role, and the
+  minimal field identities needed by later field plans;
+- add one `DerivedHandoffPlan`-style facet, analogous to `ArrayHandoffPlan`, to
+  `ArgumentTransferPlan`, `ResultPlan`, `ModuleVariablePlan`, and the owning
+  `NativeCallSlotPlan` only where that transfer needs it;
+- give a derived `ModuleVariablePlan` one typed module-object access facet that
+  records the completed direct-address or opaque-callback mechanism, its
+  context/address roles, compiler capability, and module-lifetime owner. This
+  mechanism is subordinate to the module-variable policy and must not change
+  its public borrowed-wrapper facts;
+- keep native slot order, symbolic roles, and ABI positions subordinate to the
+  owning argument or result transfer;
+- represent result destruction, failed-construction cleanup, parent retention,
+  through transfer-owned `LifecycleActionPlan` records in function-wide
+  execution order;
+- add field-handoff records beneath the owning derived-type definition. Do not
+  put their ownership decisions into a backend registry; and
+- keep `FunctionPlan`, `ModulePlan`, namespace assembly, result ordering, GIL
+  envelope, and status-error behavior stable.
+
+Reuse the existing action vocabulary:
+
+- Python boundary: `WRAPPER_INSTANCE` for accepted live wrapper objects and
+  `NONE` for native-produced results;
+- native boundary: `PASS_WRAPPER_ADDRESS` for opaque live objects and `NONE`
+  when the bridge itself owns result production; module-backed proxies use a
+  distinct typed module-origin handoff rather than a fabricated address;
+- transfer/codegen: `CALL_LOCAL_INPUT`, `IN_PLACE_ARGUMENT`,
+  `IDENTITY_OUTPUT`, `WRAPPER_INSTANCE`, and `BORROWED_VIEW` according to the
+  completed matrix row;
+- bridge data: `DIRECT_TRANSFER`, `ASSOCIATE_VIEW`, or
+  `COPY_REPRESENTATION`, with a completed copy reason only when a real native
+  representation copy occurs; and
+- lifecycle: existing ordered copy-in/native-mutation/copy-out/cleanup phases,
+  extended only with a genuinely missing release phase/action rather than a
+  derived-only parallel lifecycle system.
+
+If one of these actions cannot express a required operation, document the
+missing semantic distinction before adding exactly one typed action. Do not use
+method-name strings, datatype conditionals, `intent`, `is_alias`, dotted-name
+shape, or local temporary existence as hidden dispatch.
+
+### Binding, Bridge, And Validation Ownership
+
+| Layer | Owns | Must not own |
+| --- | --- | --- |
+| post-IR policy | origin, dynamic/static type allowance, owner, transfer, destruction, mutability, projection, nullability, storage, owner retention, getter/setter behavior, and blockers | emitted local names or source syntax |
+| wrapper planner | mechanical projection into derived type/handoff facets, native roles, ordered results, and lifecycle indexes | new ownership or lifetime decisions |
+| binding lowering | exact Python type checks, opaque wrapper address extraction, Python wrapper allocation, retained-owner references, result aggregation, and Python reference cleanup | native component layout, native assignment, or native finalization semantics |
+| bridge lowering | typed association from opaque addresses, exact Fortran-owned `value` calls, native instance allocation/assignment, module/component access, and native-aware destruction/finalization | Python classes, C aggregate layout, reference counting, detached-copy fallback, or ownership inference |
+| plan validation | matching type identity, roles, actions, owners, releases, result positions, and cross-backend handoffs before emission | fallback selection |
+
+Validation must reject at least:
+
+- a derived transfer without canonical type identity or an exported runtime
+  wrapper type;
+- a wrapper-address slot whose binding and bridge roles or ABI positions differ;
+- a primitive scalar action or datatype family applied to `DERIVED_TYPE`;
+- a wrapper-owned result without persistent storage, allocator, destroy action,
+  or failure cleanup;
+- a borrowed wrapper with a destroy action, or without its required native
+  module/parent owner retention;
+- a call-local argument that schedules destruction of the caller's wrapper;
+- a visible in-place argument projected as a replacement without completed
+  policy;
+- a hidden output or direct result whose native temporary can escape by
+  address;
+- a plain module proxy without complete typed member-path operations, or an
+  `Aliased` live module borrow without a completed direct-address handoff;
+- binding and bridge module-object access roles that disagree;
+- an obsolete `Snapshot` contract, recursive detached-copy action, or backend
+  fallback that manufactures a detached object;
+- a derived array or unsupported polymorphic form entering scalar-derived
+  lowering; and
+- any backend request to infer a class, owner, addressability, or release from
+  semantic datatype or `intent`.
+
+### Phase 8A — Contract, Origin, And Post-IR Policy Completion
+
+Complete the semantic contract before defining direct plan records.
+
+- [x] Inventory every live scalar derived origin from source and semantic
+  `.pyi`: constructor-created storage, wrapper-owned result, caller-supplied
+  argument, native module object, and nested component.
+- [x] Introduce one typed completed origin/retention representation shared by
+  class-instance, argument, result, module-variable, and field policy.
+  Do not encode origins as ad hoc reason strings.
+- [x] Keep generated and edited `.pyi` type identity stable across module
+  namespaces, imported derived types, renamed Python exports, and same-name
+  types from different native scopes.
+- [x] Complete required, optional, visible `out`, visible `inout`, hidden
+  output, and direct-result ownership without treating `intent` as the final
+  Python signature. The editable signature and `@native_call(...)` projection
+  decide visibility and order; policy only ensures the native call is valid.
+- [x] Complete wrapper-owned result storage and destruction, borrowed
+  module/field owner retention, native setter rejection, result projection,
+  and failure cleanup before `ir2ast.py`.
+- [x] Preserve `Aliased` parsing, printing, and source-derived metadata. Use it
+  for a live derived-module borrow and direct-address legality, but never as a
+  native-array extraction mode.
+- [x] Complete a plain ordinary module object as `owner=NATIVE`,
+  `transfer=BORROWED_VIEW`, native-owner destruction, module lifetime, module
+  owner retention, typed member-path access, and replacement rejection. Do not
+  claim or require a whole-object native address.
+- [x] Complete an `Aliased` module object as `owner=NATIVE`,
+  `transfer=BORROWED_VIEW`, native-owner destruction, alias storage, module
+  owner retention, direct address acquisition, and replacement rejection.
+- [x] Remove the obsolete public `Snapshot` keyword from `x2py.contracts`,
+  parser, printer, generated `.pyi`, semantic IR, policy actions, legacy
+  generators, documentation, and fixtures. Do not remove unrelated explicit
+  copy-result or scalar descriptor value-copy policy.
+- [x] Complete finite typed member-path traversal for plain module proxies.
+  Memoize derived type identities so recursive graphs do not expand forever;
+  require explicit pointer/allocatable association, ownership, and stale-child
+  policy at recursive descriptor-backed edges.
+- [x] Remove the obsolete wrapper-owned pointer-result blocker. Complete a
+  persistent typed pointer-holder origin whose wrapper owns the holder but not
+  its target, then keep only arrays of derived values and unsupported
+  polymorphic forms on exact readiness blockers. Supported scalar module
+  allocatable/`TARGET`/pointer origins use only their explicit Phase 8H
+  actions.
+- [x] Add focused parser, printer, source-conversion, ownership, accessor,
+  policy-completion, and readiness tests for every active matrix row and
+  blocker. Assert the deliberate module-proxy versus direct-address mechanism
+  distinction, their shared live public behavior, and that neither changes a
+  contained native handle's view-only extraction.
+
+### Phase 8B — Derived Plan Records And Preflight Validation
+
+- [x] Add the minimal namespace-owned opaque derived-type definition record and
+  derived handoff facets described above. Keep all per-call decisions in
+  `ArgumentTransferPlan`, `ResultPlan`, or `ModuleVariablePlan`.
+- [x] Add an explicit derived datatype-family/type-reference representation so
+  documentation, roles, native slots, lifecycle records, and printers never
+  fall through primitive scalar maps.
+- [x] Project class instance/self policies, native type identity, wrapper type
+  symbol, native scope, allocator/destroy roles, and finalizer requirements
+  mechanically from completed semantic policy.
+- [x] Project optional presence, input/in-place/output action, native call
+  position, ownership, storage, owner retention, and result position into the
+  existing transfer records.
+- [x] Share the exact `DerivedHandoffPlan` object with its owning
+  `NativeCallSlotPlan` where the array/handle lanes already share subordinate
+  facets; do not duplicate editable state.
+- [x] Add recursive validation for the namespace type definitions, arguments,
+  results, module variables, module-object access facets, field facets, and
+  lifecycle indexes.
+- [x] Make plan edits observable: changing a derived owner, action, type
+  identity, retained owner, or release must either change both backend
+  artifacts consistently or fail `_validate_plan()` before source emission.
+- [x] Extend support analysis with precise derived lanes and blockers. Do not
+  remove the blanket class-owner blocker until the minimal opaque type surface
+  is direct and every remaining Phase 9 dependency is reported separately.
+- [x] Add normal-print plan tests and direct generator preflight tests under
+  `tests/wrapper_codegen/test_phase8_derived_types.py`.
+
+### Phase 8C — Minimal Opaque Wrapper Storage And Lifecycle
+
+This sub-lane creates the runtime substrate needed to return and pass opaque
+objects. It does not implement public construction, fields, or methods by
+itself; Phase 8F/H add the public field surface on this substrate.
+
+- [x] Emit one minimal runtime wrapper type per exported semantic derived type,
+  with an opaque native address, an owned/borrowed state, and an optional
+  retained Python owner. Keep the public constructor unavailable until Phase 9.
+- [x] Generate bridge allocation and destruction helpers from completed type
+  policy. Native-aware destruction owns allocatable components and supported
+  finalization; the binding must not free native storage directly.
+- [x] Ensure owned allocation, initialization, and result conversion failures
+  run native destruction and Python cleanup exactly once.
+- [x] Ensure borrowed wrappers never run native destruction, including when
+  their retained owner is released through cyclic or delayed garbage
+  collection.
+- [x] Register the minimal type in the correct exported namespace so result and
+  module-variable materialization use the same class identity in source and
+  generated-`.pyi` builds.
+- [x] Keep wrapper struct/type declaration, allocation, owner retention, and
+  destruction methods grouped under a derived-type comment in the binding;
+  keep native allocate/associate/destroy helpers grouped likewise in the
+  bridge.
+- [x] Add source-printer and artifact tests for owned, borrowed, failed
+  allocation, failed conversion, and exactly-once native destruction paths.
+
+### Phase 8D — Wrapper-Owned Hidden Outputs And Function Results
+
+- [x] Plan hidden `Return(...)` outputs and direct derived function results as
+  `WRAPPER_INSTANCE` results with persistent wrapper-owned native storage.
+- [x] For hidden output, allocate the result wrapper before the native call and
+  pass its native address at the declared native slot. On failure, destroy it
+  before returning the Python error.
+- [x] For a function result, move or copy the returned native value into
+  persistent wrapper-owned storage before the native temporary expires. Never
+  retain an address into a bridge local.
+- [x] Preserve result order and mixed-result aggregation through the existing
+  `ResultPlan` and lifecycle sequence; do not special-case a derived result in
+  function/module orchestration.
+- [x] Reuse the same result type object and destructor for direct results,
+  hidden outputs, and edited `Returns[...]` projections.
+- [x] Add reduced legacy/direct compiled parity over the existing
+  `make_point` cases in `test_native_call_examples.py`,
+  `test_output_arguments.py`, and `test_derived_type_boundaries.py`, inspecting
+  result storage, slot order, allocation failure, and cleanup artifacts.
+- [x] Promote only those reduced generation units after both source and
+  generated-`.pyi` routes return the correct opaque wrapper and finalization is
+  proved. Field-based assertions remain on Phase 8F/H until their typed member
+  operations are complete.
+
+### Phase 8E — Required, Optional, In-Place, And Caller-Supplied Outputs
+
+- [x] Accept only the exact completed wrapper type for a concrete derived
+  argument. Subclass acceptance belongs to completed Phase 9 polymorphic
+  policy, not normal Python `isinstance` convenience.
+- [x] Extract the opaque native address in the binding and pass it through the
+  single planned role. The bridge associates the matching typed native pointer
+  and calls the native procedure without copying for ordinary reference
+  arguments.
+- [x] Preserve the same Python wrapper identity for visible `inout` and
+  caller-supplied `out` arguments. Return it only when the edited projection
+  requests that sole result; otherwise return `None`. Keep a mixed direct or
+  hidden result plus visible derived writeback on an exact policy blocker until
+  general mixed result/writeback aggregation is completed; do not let the
+  direct route select it and then drop the wrapper identity.
+- [x] Represent optional omission and explicit `None` as native absence. A
+  present wrapper follows the same typed handoff as a required input; no empty
+  wrapper or call-local default object may be fabricated.
+- [x] Keep native slot order independent of normalized Python argument order
+  and preserve user edits to argument visibility and projection.
+- [x] Keep an immutable visible derived replacement on its existing exact
+  blocker because no passing legacy contract defines its native copy and
+  finalization semantics. Existing hidden/direct derived outputs use the owned
+  result path completed in Phase 8D; do not mutate an immutable input or invent
+  a generic object copy merely to remove the blocker.
+- [x] Add focused type-error, optional-presence, wrong-wrapper-class,
+  in-place-identity, caller-supplied-output, projection, and cleanup tests.
+- [x] Add reduced compiled parity that creates a `point` through the Phase 8D
+  result path, passes it to `point_sum`, mutates it through `move_point`, and
+  observes the new value through another native call without requiring a
+  constructor; the follow-on Phase 8F evidence also observes public fields.
+
+### Phase 8F — Module Objects, Components, And Field Owners
+
+- [x] Plan every eligible plain rank-zero derived module variable as a
+  native-owned live module proxy with rejected replacement; plan every
+  supported `Aliased` equivalent as a native-owned direct-address borrowed
+  wrapper. Both retain the module and have no destroy action.
+- [x] Preserve `Aliased` in generated semantic `.pyi` only when supplied by the
+  native/source contract. Prove its module-proxy-versus-direct-address lowering
+  meaning while separately proving that both are live and that it does not
+  affect any contained native handle's view-only extraction.
+- [x] Repeated `Aliased` module reads may create separate Python wrappers, but
+  every wrapper must refer to the same native object and never claim ownership;
+  repeated plain reads may create separate proxies, but every proxy must
+  delegate to the same current native module object.
+- [x] Plan a nested derived component as a borrowed wrapper whose retained
+  owner is the containing wrapper. Releasing the parent name must not destroy
+  the parent while a child wrapper remains live.
+- [x] Ensure a borrowed child never invokes its own native finalizer; releasing
+  the final child/owner reference triggers the containing owned instance's
+  destruction exactly once.
+- [x] Reuse the Phase 7 `NativeArrayHandlePlan` for allocatable/pointer fields,
+  changing only origin=`derived_field`, owner retention=`parent_wrapper`, and
+  the completed field operation roles. Do not create a derived-only handle.
+- [x] Plan scalar, string, ordinary-array, nested-derived, and native-handle
+  field getter/setter handoffs beneath the owning type for both address-backed
+  and module-backed objects. Use typed bridge procedures rather than C layout
+  offsets. Phase 8 emits both the typed low-level operations and public property
+  descriptors, including setter exposure completed by semantic policy.
+- [x] Traverse nested value components by finite member paths and type identity.
+  Memoize recursive type definitions; recursive pointer/allocatable edges use
+  their completed association and owner policy instead of unbounded flattening.
+- [x] Preserve pointer-field target ownership and stale-view rules from
+  completed pointer policy; parent retention does not make the parent own an
+  external pointer target.
+- [x] Add direct plan/backend lifetime tests, then reduced compiled evidence
+  for the distinct plain proxy and `Aliased` direct-address origins, plus the
+  borrowed-finalizer, allocatable-field, and pointer-field fixtures, without
+  promoting constructor or method surfaces that remain Phase 9.
+
+### Phase 8G — Exact Native `value` Copies And Opaque Layout
+
+- [x] Preserve `bind(C)`/`sequence`/ordinary derived-type facts and native
+  `value` metadata through generated `Annotated[T, ByValue]`, post-IR policy,
+  and the derived handoff plan.
+- [x] For every supported exact rank-zero monomorphic native `value` argument,
+  keep Python on the opaque wrapper contract. The Fortran bridge imports the
+  exact native type, reads the typed pointee, and performs the typed call. The
+  binding and C boundary never cast, lay out, or byte-copy the aggregate.
+- [x] Remove the obsolete requirement that the native type itself be
+  interoperable. Ordinary, `sequence`, and `bind(C)` exact derived types use
+  the same Fortran-owned typed-value action; polymorphic or unresolved native
+  types remain exact blockers for type-identity reasons, not layout guesses.
+- [x] Keep ordinary reference arguments and all component access on generated
+  bridge helpers even when a type is `bind(C)`; interoperability does not turn
+  fields into a public binary-layout promise.
+- [x] Replace the obsolete unsupported-aggregate-layout assertions with
+  policy, plan, artifact, and compiled tests for ordinary, `sequence`, and
+  `bind(C)` exact typed value calls. Field-property assertions are Phase 8
+  evidence; retain only constructor-dependent assertions in
+  `test_derived_layout.py` for Phase 9 production promotion.
+
+### Phase 8H — Direct-Address And Module-Proxy Object Access
+
+This sub-lane supplies the distinct lowering mechanisms for the two completed
+module-object origins in Phase 8A/8F: direct address acquisition for an
+`Aliased` live borrow, and typed live member access for a plain module proxy.
+
+- [x] Add one typed module-object access facet beneath `ModuleVariablePlan`.
+  Record `DIRECT_ADDRESS` or `MODULE_PROXY`, the native object type, member-path
+  operations, owner/release behavior, and failure behavior. Do not encode a
+  backend method name.
+- [x] Use the direct path only when completed source/semantic facts make the
+  native address legal. The bridge exposes the opaque address mechanically;
+  the binding constructs the borrowed wrapper and retains its module owner.
+- [x] For a plain module object, use typed per-field bridge getters/setters and
+  operations selected by the completed member graph. The binding constructs a
+  module-retaining proxy with no native destroy action; every read observes
+  current module state and every permitted write updates it.
+- [x] Keep the initial direct-address and module-proxy paths rank-zero,
+  nonallocatable, nonpointer, noncoindexed, and nonpolymorphic; the explicit
+  descriptor-backed correction below adds only its named storage origins and
+  call actions. Record exact blockers for
+  unsupported type parameters, dynamic types, unresolved recursive pointer
+  ownership, or any member without a complete live operation. Do not switch
+  mechanisms as a fallback.
+- [x] Validate direct-address roles or module-proxy member-operation coverage,
+  exported wrapper type identity, owner/release behavior, and
+  replacement rejection before either backend emits source.
+- [x] Prove the `Aliased` address/lifetime premise and plain proxy live
+  read/write behavior in focused compiled source/generated-`.pyi` tests.
+- [x] Remove the `Snapshot` contract name, metadata, recursive copy policy,
+  generated helper classes, documentation, and snapshot-only fixtures. Do not
+  retain a compatibility parser, printer, alias, or backend fallback.
+- [x] Preserve ordinary result materialization, explicit constant-value
+  materialization, scalar descriptor value copies, ordinary array copy
+  results, and any unrelated active transfer action. Their copy semantics are
+  separate from removed whole-object snapshot behavior.
+- [x] Replace the former plain-module snapshot fixture with source/generated-
+  `.pyi` parity and runtime evidence for live scalar, string, ordinary-array,
+  allocatable/pointer-handle, and nested-derived member paths, including
+  recursive-edge blockers and parent/module retention.
+
+#### Phase 8H Contract Correction — Complete Scalar-Derived Call Matrix
+
+This correction replaces every earlier isolated module-allocatable, stable
+pointer-target, direct-address-only, and interoperable-value proposal with one
+complete compatibility matrix. It covers exact rank-zero, monomorphic
+`type(item)` objects. Phase 9 still owns `class(item)`, inheritance, and dynamic
+dispatch; arrays of derived values remain outside this matrix.
+
+The actual declaration and its runtime origin are independent axes. The five
+actual declaration forms are ordinary, `TARGET`, `ALLOCATABLE`,
+`ALLOCATABLE,TARGET`, and `POINTER`; each can be module-owned or represented by
+wrapper-owned storage where such storage is meaningful. The six native dummy
+forms are:
+
+| Key | Exact native dummy |
+| --- | --- |
+| `O` | `type(item) :: arg` |
+| `T` | `type(item), target :: arg` |
+| `A` | `type(item), allocatable :: arg` |
+| `AT` | `type(item), allocatable, target :: arg` |
+| `P` | `type(item), pointer :: arg` |
+| `V` | `type(item), value :: arg` |
+
+`OPTIONAL`, rank, qualified type identity, and `INTENT` remain separate facts.
+For the `P` column, a nonpointer actual is legal only for an explicitly
+`INTENT(IN)` pointer dummy. An absent `INTENT` is reassociable, not read-only.
+If x2py lacks the intent but the compiler has the authoritative imported module
+interface, select a compiler-validated target adapter; if neither has an
+authoritative interface, report an interface error rather than fabricating a
+pointer actual.
+
+Use these completed action names. Parenthesized state requirements are runtime
+preconditions, not alternative fallback actions:
+
+| Action | Meaning |
+| --- | --- |
+| `DIRECT_REFERENCE` | wrapper-owned or direct module address; reconstruct the exact typed object and pass it by reference |
+| `SCOPED_REFERENCE` | originating module synchronously invokes a generic address consumer; the native call completes before the temporary target scope returns |
+| `HOLDER_REFERENCE` | reconstruct a persistent typed holder and pass its component directly |
+| `MODULE_ADDRESS` | originating module returns `C_LOC` for an explicit durable target |
+| `ALLOCATABLE_HOLDER` | pass a persistent wrapper-owned allocatable holder component directly, including unallocated state |
+| `MODULE_ALLOCATABLE_TRANSACTION` | move between the module variable and a bridge-local shared typed transaction holder through interoperable holder-address operations |
+| `POINTEE_REFERENCE` | pass the current target of a pointer holder or module pointer to a nonpointer dummy |
+| `POINTER_HOLDER` | pass a persistent wrapper-owned pointer holder component directly so association writeback updates the same holder |
+| `MODULE_POINTER_TRANSACTION` | initialize one bridge-local typed pointer holder from the current target and restore its final association through an interoperable holder-address operation |
+| `POINTER_INPUT_ADAPTER` | expose a nonpointer actual as a target only for a pointer dummy proved or compiler-validated as `INTENT(IN)` |
+| `TYPED_VALUE_COPY` | the exact Fortran bridge passes the typed object into the native `VALUE` slot; C never copies aggregate bytes |
+| `INCOMPATIBLE` | language-level storage mismatch; raise the specified `TypeError` and never enter native code |
+
+`[allocated]` means an allocated value is required. `[associated]` means an
+associated pointer target is required. `A`, `AT`, and `P` descriptor calls
+accept unallocated or disassociated state where the table does not carry one of
+those preconditions.
+
+| Actual declaration | Origin | `O` | `T` | `A` | `AT` | `P` | `V` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `type(item) :: var` | non-module | `DIRECT_REFERENCE` | `DIRECT_REFERENCE` with call-scoped target | `INCOMPATIBLE` | `INCOMPATIBLE` | `POINTER_INPUT_ADAPTER` | `TYPED_VALUE_COPY` from direct reference |
+| `type(item) :: var` | module proxy | `SCOPED_REFERENCE` | `SCOPED_REFERENCE` with call-scoped target | `INCOMPATIBLE` | `INCOMPATIBLE` | scoped `POINTER_INPUT_ADAPTER` | scoped `TYPED_VALUE_COPY` |
+| `type(item), target :: var` | non-module | `DIRECT_REFERENCE` | `DIRECT_REFERENCE` with owner target lifetime | `INCOMPATIBLE` | `INCOMPATIBLE` | `POINTER_INPUT_ADAPTER` | direct `TYPED_VALUE_COPY` |
+| `type(item), target :: var` | module | `MODULE_ADDRESS` | `MODULE_ADDRESS` with module target lifetime | `INCOMPATIBLE` | `INCOMPATIBLE` | `POINTER_INPUT_ADAPTER` | module-address `TYPED_VALUE_COPY` |
+| `type(item), allocatable :: var` | non-module holder | `HOLDER_REFERENCE [allocated]` | `HOLDER_REFERENCE [allocated]` with holder target lifetime | `ALLOCATABLE_HOLDER` | `ALLOCATABLE_HOLDER` | holder `POINTER_INPUT_ADAPTER [allocated]` | holder `TYPED_VALUE_COPY [allocated]` |
+| `type(item), allocatable :: var` | module | `SCOPED_REFERENCE [allocated]` | `SCOPED_REFERENCE [allocated]` with call-scoped target | `MODULE_ALLOCATABLE_TRANSACTION` | `MODULE_ALLOCATABLE_TRANSACTION` with call target | scoped `POINTER_INPUT_ADAPTER [allocated]` | scoped `TYPED_VALUE_COPY [allocated]` |
+| `type(item), allocatable, target :: var` | non-module holder | `HOLDER_REFERENCE [allocated]` | `HOLDER_REFERENCE [allocated]` with holder target lifetime | `ALLOCATABLE_HOLDER` | `ALLOCATABLE_HOLDER` | holder `POINTER_INPUT_ADAPTER [allocated]` | holder `TYPED_VALUE_COPY [allocated]` |
+| `type(item), allocatable, target :: var` | module | `MODULE_ADDRESS [allocated]` | `MODULE_ADDRESS [allocated]` with module target lifetime | `MODULE_ALLOCATABLE_TRANSACTION` preserving target | `MODULE_ALLOCATABLE_TRANSACTION` preserving target | `POINTER_INPUT_ADAPTER [allocated]` | module-address `TYPED_VALUE_COPY [allocated]` |
+| `type(item), pointer :: var` | non-module holder | `POINTEE_REFERENCE [associated]` | `POINTEE_REFERENCE [associated]` with retained target owner | `INCOMPATIBLE` | `INCOMPATIBLE` | `POINTER_HOLDER` | pointee `TYPED_VALUE_COPY [associated]` |
+| `type(item), pointer :: var` | module | module `POINTEE_REFERENCE [associated]` | module `POINTEE_REFERENCE [associated]` with native target owner | `INCOMPATIBLE` | `INCOMPATIBLE` | `MODULE_POINTER_TRANSACTION` | module-pointee `TYPED_VALUE_COPY [associated]` |
+
+An `Aliased` ordinary module object follows `MODULE_ADDRESS` instead of
+`SCOPED_REFERENCE`, but its original target-lifetime fact still controls whether
+a native pointer may outlive the call. This does not change `Aliased` array-view
+semantics.
+
+The matrix is exhaustive for this Phase 8 scope. Every cell becomes either one
+completed action or one deliberate language-level error before lowering. No
+backend may infer a different action from datatype, `intent`, module shape,
+address presence, or local memory checks.
+
+##### Shared Holder And Callback ABI
+
+Define these support types once per qualified native derived type and import
+the same definitions in every producer, origin operation, and consumer:
+
+```fortran
+type :: item_allocatable_holder
+    type(item), allocatable :: value
+end type
+
+type :: item_pointer_holder
+    type(item), pointer :: value => null()
+end type
+```
+
+A persistent wrapper-owned holder is allocated through a Fortran pointer and
+its opaque holder address is stored by the Python wrapper. Its nonpointer
+allocatable component is a targetable subobject of the persistent holder
+target, so the same carrier supports both `A` and `AT`; do not invent a second
+allocatable-target holder.
+
+Module allocation and pointer transactions use bridge-local holder objects
+declared `TARGET`. The module-specific operations are interoperable
+`BIND(C)` procedures taking only `type(C_PTR), value :: holder_address` plus
+interoperable status/context values. Each operation reconstructs the exact
+shared holder with `C_F_POINTER` and performs `MOVE_ALLOC` or pointer assignment
+entirely in Fortran. The binding transports a typed function pointer and an
+opaque holder address; no allocatable or pointer descriptor crosses C.
+
+The old proposal to pass `type(item), allocatable` or `type(item), pointer`
+directly through a runtime C callback is removed as noninteroperable. The old
+proposal to avoid a transaction holder for module allocation/pointer restore is
+also removed. A bridge-local transaction holder is the portable carrier; it is
+not a persistent replacement for the originating module variable.
+
+For a module allocatable transaction, the bridge performs the equivalent of:
+
+```fortran
+type(item_allocatable_holder), target :: transaction
+
+status = move_out(c_loc(transaction))
+if (status == X2PY_STATUS_OK) then
+    call native_procedure(transaction%value)
+    restore_status = move_back(c_loc(transaction))
+end if
+```
+
+`move_out` executes `move_alloc(module_value, transaction%value)` and
+`move_back` executes `move_alloc(transaction%value, module_value)`. A successful
+move-out makes the module variable unavailable until restoration. When the
+module actual has `TARGET`, both destinations preserve pointer association;
+when it lacks `TARGET`, aliases created through a temporary target have only
+call lifetime.
+
+For a module pointer transaction, the bridge initializes
+`transaction%value` from the current `C_LOC`/`C_NULL_PTR`, passes that component
+to the native pointer dummy, and invokes `restore_pointer(c_loc(transaction))`.
+The origin reconstructs the pointer holder and executes
+`module_pointer => transaction%value`. The final nullification,
+reassociation, allocation, or deallocation is therefore visible in the module
+pointer.
+
+Operation tables use typed C function-pointer fields; do not round-trip a
+function pointer through `void *`. The proxy retains its originating extension
+until every active scoped call or transaction has unwound.
+
+##### Pointer Target Ownership
+
+A pointer holder owns the holder and association variable, not its target.
+Default scalar-derived pointer target ownership is native: holder destruction
+nullifies the component and deallocates only the holder. It must never
+deallocate an unowned target. When final association matches a known module,
+parent, or wrapper-owned target, retain that owner in completed policy; an
+otherwise durable native target retains the originating extension and remains
+the native program's release responsibility. Native code that returns a pointer
+to an expired local target violates the contract rather than creating an x2py
+fallback.
+
+This completed owner/release rule removes the old wrapper-owned pointer-result
+blocker. Reassociation is supported, but it never silently transfers target
+ownership to Python. Public documentation must warn that a native pointer saved
+through a wrapper-owned target remains valid only while the wrapper and target
+allocation remain alive.
+
+##### Multiple Scalar-Derived Arguments
+
+Do not generate `2**N` native call branches. Build one call context with one
+slot per native argument and an ordered acquisition program:
+
+1. validate every Python wrapper, exact qualified type, storage capability,
+   allocation/association precondition, optional presence, and pointer-target
+   owner before entering any native origin operation;
+2. retain all Python/module owners and acquire module transaction guards in a
+   deterministic total order;
+3. deduplicate repeated actual identities so one module allocation or pointer
+   is checked out once and its holder/address can feed multiple native slots;
+4. move out module allocatables in deterministic order, rolling back already
+   moved values in reverse order if a later acquisition fails;
+5. initialize module pointer transaction holders;
+6. enter all `SCOPED_REFERENCE` producers as a nested continuation chain,
+   storing each address in the context; and
+7. invoke the native procedure exactly once after every slot is ready, then
+   unwind scoped producers, pointer restorations, allocation restorations,
+   guards, and retained owners in reverse order.
+
+If the same actual appears in multiple slots and any corresponding dummy may
+define it while another slot references or defines it, reject the call before
+checkout unless completed `INTENT` facts prove the aliasing legal. Read-only
+duplicates share one acquisition. Never move the same module allocatable twice
+or restore the same module pointer through independent locals.
+
+The generic scoped-address consumer ABI remains
+`consumer(object_address, context) -> status`. The context carries all earlier
+addresses, holders, ordinary arguments, result slots, and the first error. A
+consumer never retains `object_address`; multiple module variables are handled
+by nesting producers, not by generating one origin-module cross product per
+native procedure.
+
+##### Error And Cleanup Contract
+
+Use one status protocol across scoped consumers and module transaction
+operations. Do not raise a Python exception, `longjmp`, or unwind C++ through a
+Fortran frame. Record status and any Python exception data in the call context,
+return normally through every producer, complete cleanup, and only then raise
+in the binding.
+
+- wrong qualified wrapper type, an incompatible matrix cell, or a known
+  reassociable pointer dummy receiving nonpointer storage raises `TypeError`
+  before native entry;
+- a required ordinary/target/value/pointer-input actual whose allocatable is
+  unallocated or pointer is disassociated raises `ValueError` before native
+  entry;
+- `A`, `AT`, and `P` descriptor calls preserve valid unallocated or
+  disassociated state and do not reinterpret it as optional omission;
+- only an omitted Python argument or explicit `None` for an optional contract
+  selects native absence; a present empty handle never becomes omitted by
+  accident;
+- an active recursive/concurrent transaction raises `RuntimeError` before the
+  affected origin changes state;
+- every successful move-out has exactly one attempted move-back on every
+  normally returning path, and every native module-pointer call has exactly one
+  attempted association restore;
+- cleanup continues in reverse order after the first restoration failure so
+  independent origins are not stranded; the first failure is reported with
+  later cleanup failures attached as context;
+- a failed restoration leaves its origin guard poisoned instead of advertising
+  a usable proxy, and raises `RuntimeError` after all other cleanup attempts;
+- conversion, result allocation, and Python-object creation that can fail are
+  completed before checkout where possible; failures after native return still
+  restore every transaction before propagating; and
+- process termination, `ERROR STOP`, signals, or invalid native pointers are
+  not recoverable wrapper exceptions. The documentation must state that this
+  cleanup guarantee covers paths that return through the generated ABI.
+
+The per-origin guard must be thread-safe, or the binding must prove that the
+GIL remains held for the complete transaction and that no callback re-entry is
+possible. An unsynchronized Fortran `logical` is not a sufficient concurrency
+guard. Internal synchronous address consumers are Phase 8 bridge machinery;
+they do not expose the public callback semantics deferred to Phase 10.
+
+##### Implementation And Proof Checklist
+
+- [x] Preserve actual declaration attributes, module/non-module origin,
+  `TARGET` lifetime, allocatable/pointer state, exact type identity, and
+  pointer-dummy `INTENT` authority through parsing, semantic IR, and edited or
+  generated `.pyi` round trips.
+- [x] Replace the former category/action-only contract with completed facets
+  capable of representing all six dummy forms and every action in the matrix.
+  `DerivedDummyCategory` remains the completed declared-form label and
+  `DerivedCallAction` remains the completed selected-action label; neither is
+  allowed to stand in for the lifetime, access, failure, cleanup, target-owner,
+  or release facets. The complete record includes `ALLOCATABLE,TARGET`, typed
+  value, target lifetime, pointer-input
+  validation, transaction cleanup, and target owner/release. Remove
+  `RUNTIME_POINTER_TARGET`, the module-allocatable incompatibility, and all old
+  fallback/rejection actions they made obsolete.
+- [x] Complete every matrix decision in post-IR policy before `ir2ast.py`.
+  Binding and bridge generation only dispatch named actions; neither backend
+  inspects datatype, `intent`, module shape, address presence, or allocation
+  state to select a different mechanism.
+- [x] Generate one shared allocatable holder and pointer holder per qualified
+  native type, with persistent create/destroy helpers and bridge-local
+  transaction use. Prove source/generated-`.pyi` bundles import the identical
+  holder definition and reject ABI/type mismatch before reconstruction.
+- [x] Generate scoped-address producer operations for plain module objects and
+  non-`TARGET` allocated module allocatables, direct address operations for
+  durable module targets, move-out/move-back holder-address operations for
+  module allocatables, and current-target/restore holder-address operations for
+  module pointers.
+- [x] Implement the ordered multi-argument acquisition/unwind program,
+  deduplicated origin identity, legal read-only aliasing, reverse rollback,
+  poisoned restoration failures, and a single final native invocation.
+- [x] Implement the exact Python error mapping and optional/empty-state rules
+  above. Add injected failures before first acquisition, after one of several
+  acquisitions, during scoped nesting, after native return, and during each
+  cleanup category.
+- [x] Remove the interoperable-`bind(C)` restriction from typed derived
+  `VALUE` calls. The Fortran bridge must perform the exact typed call without a
+  C aggregate cast, byte copy, layout promise, or detached-object fallback.
+- [x] Support wrapper-owned pointer results with a persistent pointer holder,
+  native target ownership by default, explicit known-owner retention, direct
+  association writeback, and holder-only destruction. Remove the old blanket
+  target-ownership blocker rather than retaining it as a compatibility path.
+- [x] Update public and maintainer documentation to teach the five actual
+  declarations, six dummy forms, complete matrix, direct versus scoped
+  address acquisition, holder and module transactions, `INTENT(IN)` pointer
+  exception, target lifetime, native pointer-target ownership, multi-argument
+  nesting, errors, and cleanup. Examples must show more than one scalar-derived
+  argument and link back to one canonical explanation instead of repeating
+  incomplete fragments.
+- [x] Add one comprehensive native fixture at
+  `tests/data/fortran/wrapper/fscalar_derived_actual_dummy_matrix_f90.f90`, its
+  reduced source/generated contract under
+  `tests/wrapper/fortran/derived_types/contracts/fscalar_derived_actual_dummy_matrix_phase8/`,
+  focused policy/plan/artifact tests in
+  `tests/wrapper_codegen/test_phase8_scalar_derived_actual_dummy_matrix.py`, and
+  compiled tests in
+  `tests/wrapper/fortran/derived_types/test_scalar_derived_actual_dummy_matrix.py`.
+  Replace the earlier proposed separate module-allocatable and
+  module-target/pointer fixtures; do not retain tests that assert their old
+  rejection paths.
+- [x] Make that native fixture a complete Fortran module containing all five
+  module actual declarations, wrapper-owned ordinary/allocatable/pointer
+  producers, all six dummy forms, both pointer `INTENT(IN)` and reassociable
+  pointer procedures, two qualified native types with the same short name,
+  optional arguments, injected operation failures, and state-reset helpers.
+- [x] Parameterize policy/plan tests over every matrix cell. Every legal cell
+  must select its one completed action; every incompatible cell must assert its
+  exact pre-native `TypeError`; allocated/unallocated and
+  associated/disassociated states must assert their exact `ValueError`, valid
+  descriptor call, or optional-absence behavior.
+- [x] Compiled tests must exercise mixed calls containing several
+  scalar-derived arguments. Include at least: multiple nested scoped module
+  objects; two module allocatable transactions plus a module pointer
+  transaction; mixed direct, holder, scoped, allocatable, pointer, target, and
+  value slots in one native call; repeated read-only actual identity; rejected
+  writable duplicate identity; failure after the first of several checkouts;
+  reverse restoration; native deallocation/reallocation; pointer
+  nullification/reassociation/allocation/deallocation; and owner retention.
+  Phase 8 cannot close if the new compiled procedures test only one derived
+  argument at a time.
+- [x] Run the portable ABI fixture with the supported GNU toolchain and every
+  available secondary compiler in the development environment. The proof must
+  cover scoped `C_FUNPTR` consumers, `C_PTR` transaction holders,
+  `C_F_PROCPOINTER`, holder targetability, target-preserving `MOVE_ALLOC`, and
+  the accepted-`INTENT(IN)`/rejected-reassociable pointer distinction.
+
+### Phase 8I — Production Routing, Regression, And Completion
+
+- [x] Add separate support-report lanes for derived inputs, optional derived
+  inputs, in-place derived arguments, wrapper-owned derived results, plain
+  module proxies, `Aliased` borrowed module objects, borrowed field owners,
+  and the exact typed-value slice.
+- [x] Replace the isolated scalar-derived descriptor routes with one
+  dependency-closed actual/dummy-matrix lane only after every unchecked Phase
+  8H row passes. It must cover direct and scoped references, target adapters,
+  allocatable and pointer holders, module allocation and association
+  transactions, exact typed values, and multi-argument acquisition/unwind.
+  No old call-incompatible, nonreassociating-only, or interoperability-only
+  compatibility route may remain selectable.
+- [x] Add one deliberate legacy/direct parity node for every dependency-closed
+  Phase 8 lane and append it to the production rollout evidence only after its
+  generated artifacts and runtime behavior match.
+- [x] Update the migration matrix row for each reduced unit. Keep broad units
+  containing constructors, methods, inheritance, or callbacks on
+  their explicit Phase 9/10 blockers until whole-generation-unit support is
+  complete.
+- [x] Treat source and generated-`.pyi` default field constructors as Phase 9
+  class-surface blockers. Do not select the Phase 8 route merely because the
+  generated constructor was consumed into origin metadata rather than retained
+  as a semantic method; reduced opaque Phase 8 contracts must explicitly
+  suppress construction.
+- [x] Prove an eligible opaque-derived generation unit selects the production
+  wrapper-plan route and no longer invokes `semantic_ir_to_codegen_ast()`.
+- [x] Keep direct plan edits meaningful across both backends and preserve the
+  global no-fallback rule when a derived type, owner, release, or field action
+  is incomplete.
+- [x] In every relevant planner, validator, binding generator, and bridge
+  generator, keep scalar, string, ordinary-array/native-handle, and
+  derived-type lowering methods in consistent groups with one short comment
+  above each group. Preserve typed object-kind/action matching; grouping must
+  not introduce datatype inference or a second dispatcher.
+- [x] Run focused parser/printer, ownership/policy/readiness, plan/validation,
+  binding/bridge/printer, and runtime tests; relevant source/generated-`.pyi`
+  wrapper parity; and regressions for scalar, string, array, and Phase 7 handle
+  lanes.
+- [x] Run the wrapper suite excluding the deferred LAPACK coverage, the wrapper
+  codegen complexity checker, documentation checks, whitespace check, and the
+  required static-analysis suite before closing implementation.
+- [x] Run the comprehensive Phase 8 scalar-derived actual/dummy matrix policy,
+  artifact, and multi-argument compiled tests; all retained holder and Phase
+  7/8 regressions; the wrapper suite excluding LAPACK; documentation and
+  whitespace checks; the wrapper complexity checker; and the required static
+  suite after the replacement route is implemented.
+- [x] Close Phase 8 only when every supported rank-zero non-polymorphic derived
+  input/result/module transfer is direct, both plain module-proxy and `Aliased`
+  address-backed module-object paths are direct, live member operations and
+  recursive-edge policy are validated before emission, and
+  every remaining class-surface/callback/derived-array case has an exact Phase
+  9/10 or unsupported-policy blocker.
+
+### Phase 8 Implementation Evidence
+
+- Post-IR origin, identity, handoff, ownership, field, lifecycle, and exact
+  blocker evidence lives in
+  `tests/wrapper_codegen/test_phase8_derived_types.py`, with supporting parser,
+  printer, source-conversion, ownership, and readiness suites named in
+  `tests/wrapper/CHECKLIST_COVERAGE.md`.
+- Public-field validation is split into named completed-policy, descriptor,
+  typed object-kind, and setter checks so no single semantic-policy routine
+  becomes a second backend-style dispatcher.
+- Compiled legacy/source and direct-plan evidence lives in
+  `tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py`. It covers
+  required, optional, in-place, caller-supplied output, ordinary and `bind(C)`
+  typed native `value`, direct/hidden owned result, module-proxy,
+  direct-address module object, constant value, field, owner-retention,
+  allocation/cleanup artifact, and exactly-once finalization behavior.
+- The former isolated scalar-derived descriptor evidence in
+  `tests/wrapper_codegen/test_phase8_scalar_derived_descriptors.py`,
+  `tests/wrapper/fortran/derived_types/test_scalar_derived_descriptor_plan.py`,
+  and `tests/data/fortran/wrapper/fscalar_derived_descriptors_f90.f90` is
+  superseded by the comprehensive policy/artifact and compiled matrix files
+  named in Phase 8H. They cover all 60 declaration/dummy cells, empty states,
+  qualified same-short-name identities, `sequence` typed values, holder and
+  module transactions, multi-origin unwind, pointer target ownership, injected
+  cleanup failures, and the exact retained incompatibilities. No obsolete
+  module-allocatable rejection, stable-pointer-only, or wrapper-pointer-result
+  blocker remains as negative compatibility coverage.
+- `x2py/pipeline/build.py` registers the dependency-closed Phase 8 support
+  lanes and their passing production evidence. The automatic-route test
+  replaces `semantic_ir_to_codegen_ast()` with a failure sentinel and proves an
+  eligible opaque-derived unit never invokes it.
+- Constructors, methods, properties beyond the completed field descriptors,
+  inheritance, and polymorphic class orchestration remain Phase 9. Public
+  callbacks remain Phase 10. Arrays of derived values, non-scalar holder member
+  operations, recursive value edges without completed descriptor policy,
+  unresolved imported types without an exact runtime definition, immutable visible
+  derived replacement, and mixed native result plus visible-writeback envelopes
+  carry exact unsupported-policy blockers instead of selecting a fallback.
+  Internal synchronous scoped-address consumers and module transactions are
+  Phase 8 implementation machinery, not deferred public callbacks.
+
+Historical Phase 8 closure evidence before the module-allocatable and
+module-pointer restore redesigns (2026-07-15): all 39 focused Phase 8
+plan/compiled tests, the 711-test
+cross-stage regression batch, all 79 runtime-handle tests, 1,133 documentation
+and layout tests, and all 329 wrapper tests outside the deferred full
+BLAS/LAPACK file passed. The wrapper complexity checker, Ruff lint/format,
+Bandit, Vulture, whitespace, and explicit-`origin/main` Radon policy passed;
+the advisory full Radon complexity and maintainability reports were also
+produced. The required `--base-ref auto` Radon invocation could not resolve
+CI-only base-SHA variables locally, and the explicit-base rerun passed. No
+LAPACK test was run locally. This evidence does not close the reopened Phase 8H
+rows.
+
+Final Phase 8H/I closure evidence (2026-07-15): the focused Phase 8 plus route-
+ledger batch passed 180 tests; the affected cross-stage semantic, lowering,
+runtime-handle, planner, and backend batch passed 611 tests; and the complete
+wrapper suite outside the deferred combined BLAS/LAPACK file passed 445 tests.
+Documentation checks passed 1,123 tests and whitespace validation passed. The
+GNU toolchain compiled and ran the complete matrix suite; Intel `ifx` 2026.1.0
+compiled, linked, and ran the same generated ABI for `sequence` typed values,
+mixed six-form input, module allocatable/pointer transactions, target-preserving
+`MOVE_ALLOC`, and the accepted-input/rejected-reassociable pointer distinction.
+The wrapper complexity checker, Ruff lint/format, Bandit, Vulture, explicit-
+`origin/main` Radon policy, and advisory Radon complexity/maintainability runs
+passed. The CI-only `--base-ref auto` Radon lookup was unavailable locally, so
+the required explicit-base rerun was used. No LAPACK test was run locally.
+
+### Phase 8 Expansion Gate
+
+- [x] Inventory the live semantic contract, post-IR ownership policy, active
+  snapshot paths to remove, legacy binding/bridge paths, plan-route blockers,
+  public docs, checked `.pyi` fixtures, and real wrapper tests.
+- [x] Separate origin, owned/borrowed lifetime, module address acquisition,
   input/result/field/module-state use, destruction, owner retention, and
-  recursive member cases found in the live contract.
+  recursive member-path access into dependency-ordered Phase 8A-I sub-lanes.
+- [x] Record the strict Phase 8/9/10 boundaries and identify reduced existing
+  native units that can prove opaque transfers without first migrating public
+  constructors, methods, inheritance, or callbacks. Public field descriptors
+  are part of Phase 8.
+- [x] Begin Phase 8 implementation only from Phase 8A and keep every later
+  sub-lane blocked on its declared dependencies.
 
-- [ ] Define derived-type handoff specs for wrapper address, owned instance,
-  borrowed instance, and snapshot copy.
-- [ ] Represent destruction/release responsibility in the result/writeback plan.
-- [ ] Add binding and bridge actions for derived-type input, result, field
-  access, and snapshot creation.
-- [ ] Represent scalar and later non-scalar field getter/setter behavior only
-  after the owning derived wrapper and class lifecycle are available.
-- [ ] Validate owner-retention and release expectations before emission.
+## Phase 9 — Classes, Constructors, And Methods
 
-## Phase 9 — Classes, Constructors, Properties, And Methods
+Expansion status: complete. Implementation status: complete. The direct class
+path is covered by policy, plan-edit, artifact, compiled runtime, production
+routing, and broad non-LAPACK wrapper-suite evidence below.
 
-Scope: generated Python classes, keyword constructors, explicit constructor
-bindings, properties, methods, static methods, overloads, and direct
-`@bind(func_name)` constructor cases.
+Scope: generated Python class objects, namespace registration, default and
+keyword constructors, explicit constructor bindings, constructor overloads,
+instance and static methods, type-bound dispatch, method overloads, finalizer
+attachment, inheritance, and the first supported scalar polymorphic input
+dispatch. Phase 9 assembles those public class surfaces on the opaque storage,
+field descriptors, handoffs, and lifetime rules completed in Phase 8.
 
-- [ ] Before implementation, expand this phase under the mandatory expansion
-  gate. Inventory class creation and destruction, constructor categories,
-  instance/static/type-bound methods, properties, overloads, inheritance or
-  type relationships, decorator effects, and module initialization needs
-  before defining the sub-lanes.
+### Phase 9 Boundary And Explicit Non-Scope
 
-- [ ] Represent class layout, constructor candidates, explicit constructor
-  bindings, default constructor behavior, and property/method plans.
-- [ ] Keep `.pyi` constructor text, runtime constructor behavior, and bridge
-  calls aligned through the same class plan.
-- [ ] Validate that direct constructor bindings are not confused with overload
-  dispatch.
-- [ ] Validate property setter/getter exposure against bridge handoffs.
+Phase 9 may compose completed Phase 8 records but must not revisit them.
+Constructor and method policy may select how an instance is created or passed;
+it may not change object origin, storage kind, field access, owner retention,
+release, nullability, native setter assignment, or destruction. A class plan
+references the namespace-owned `DerivedTypePlan` and its field plans rather
+than copying or rendering them.
+
+The following surfaces are in Phase 9:
+
+- one generated Python type object for each public supported semantic class,
+  with stable native identity and explicit Python base identity;
+- an explicitly present or deliberately absent public constructor surface;
+- generated default/keyword field initialization for eligible public scalar
+  fields, including omitted-keyword preservation of native defaults;
+- direct `@bind("native_name")` constructors and explicit constructor overload
+  candidates linked to concrete native procedures;
+- passed-object type-bound instance methods, non-type-bound methods attached to
+  the class by the semantic contract, and supported `@staticmethod` methods;
+- class-owned overload sets with exact candidate signatures and deterministic
+  runtime selection;
+- owned-instance finalization through the Phase 8 destroy/release path and
+  borrowed-instance non-destruction;
+- Python inheritance for supported Fortran extension types; and
+- scalar, input-only polymorphic calls whose accepted runtime class set and
+  concrete native dispatch targets are fully enumerated before lowering.
+
+The following remain outside Phase 9:
+
+- callbacks, adapters, trampolines, and callable lifetime; these remain Phase
+  10 even when a callback argument/result is a derived object;
+- module-level generic/operator migration units that do not require a class
+  surface; those remain in Phase 11, although they may reuse the same overload
+  candidate and runtime-match vocabulary;
+- arrays of derived or polymorphic values, elemental class dispatch, and
+  partial construction/destruction of array elements;
+- polymorphic results, mutable polymorphic dummies, allocatable/pointer
+  polymorphic scalars, unlimited polymorphism, abstract instantiation,
+  deferred-binding execution, and runtime extension types not enumerated in
+  the semantic module;
+- any unresolved Phase 8 storage blocker merely because a constructor or
+  method happens to use that type; Phase 9 reuses the completed allocatable and
+  pointer holders and must not invent a second storage path;
+- generic constructor selection whose candidates are indistinguishable at the
+  Python boundary; and
+- compatibility aliases, synthesized legacy entrypoints, string-built backend
+  method names, or a fallback from an incomplete class plan to legacy class
+  lowering.
+
+### Phase 9 Existing Oracle And Inventory
+
+The legacy route plus existing source/generated-`.pyi` runtime assertions are
+the behavioral oracle. Capture complete binding, bridge, header, and runtime
+evidence before each reduced direct-plan slice. Correct unsafe behavior only
+when the documented contract says so; do not preserve legacy architecture.
+
+| Existing unit | Phase 9 behavior to preserve | Required reduced slice |
+| --- | --- | --- |
+| `derived_types/test_constructors_and_finalizers.py::test_fortran_default_constructor_keywords_and_finalization[*]` | default construction, keyword-only scalar fields, native defaults, invalid-call cleanup, and exactly-once finalization | default/keyword constructor plus owned destroy path |
+| `derived_types/test_derived_type_methods.py::test_modern_fortran_derived_type_exposes_class_and_type_bound_methods[*]` | instance methods, explicit binding names, scalar arguments/results, class static factory, and Phase 7 handle fields | split `vector` methods from `vector_store` handle methods and static factory |
+| `derived_types/test_borrowed_finalizers.py::test_borrowed_child_wrapper_never_finalizes_native_component[*]` | borrowed child retains parent; only the owned parent finalizes | class assembly over the completed Phase 8 borrowed-field owner path |
+| `derived_types/test_derived_layout.py::test_bind_c_derived_types_use_accessors_and_fortran_value_copy[*]` | default class creation and methods coexist with opaque field access and typed native value copy | class surface only; Phase 8 retains layout and handoff ownership |
+| `derived_types/test_inheritance.py::test_fortran_extension_types_generate_python_inheritance[*]` | Python subclass relationships, inherited field/method access, overridden methods, unbound base calls, and scalar polymorphic input dispatch | base/extension class graph first, polymorphic call second |
+| `tests/semantics/conversion/pyi/test_classes_and_overloads.py` | generated versus bound constructors, removed constructors, direct constructor targets, explicit overload links, type-bound root targets, and invalid metadata diagnostics | semantic-policy fixtures before planner/backend work |
+| `edit_pyi_contracts/test_surface_edit_contracts.py` | edited contracts can remove constructors/methods/candidates and add explicit bindings without resurrecting source declarations | absence/export validation and source/generated/edited parity |
+| `naming/test_defined_operators.py` and `naming/test_generic_interfaces.py` | exact candidate matching and Python export naming | reuse candidate-match vocabulary; broad module/generic units remain Phase 11 |
+
+Inventory these legacy owners without importing them into the direct package:
+
+- `x2py/semantics/ir2ast.py` currently interprets constructor overloads,
+  passed-object positions, type-bound names, polymorphic variants, and class
+  insertion. Each semantic decision found there must move into post-IR class
+  policy before direct lowering.
+- `x2py/codegen/bindings/c_to_python.py` currently assembles type objects,
+  constructors, methods, overloads, properties, inheritance, module exports,
+  and finalizers. Reuse emitted behavior as the oracle, not its broad control
+  flow or method-name synthesis.
+- `x2py/codegen/bridges/fortran_to_c.py` currently supplies typed constructor
+  allocation, passed-object association, method calls, overload interfaces,
+  and finalization helpers. Direct bridge generation must consume completed
+  class/method actions and reuse Phase 8 native storage helpers.
+- Generated semantic `.pyi` class declarations are a public contract. A
+  consumed default constructor still counts as a constructor surface and must
+  remain a whole-unit Phase 9 route requirement.
+
+### Phase 9 Plan Shape And Action Vocabulary
+
+Extend the existing namespace plan; do not introduce a rendered-class layer or
+a second function plan.
+
+- Add one namespace-owned `ClassSurfacePlan` (name illustrative, not
+  prescriptive) that references exactly one `DerivedTypePlan`, its Python
+  exports, optional base-class identity, constructor plan, ordered methods,
+  ordered overload sets, type-object slots, and module-registration action.
+- Add a `ConstructorPlan` with an explicit kind: `ABSENT`,
+  `DEFAULT_FIELDS`, `BOUND_PROCEDURE`, or `OVERLOAD_SET`. Record allocation
+  action, accepted Python parameters, native target/call slots, initialized
+  fields, omitted-field behavior, cleanup action, and success transition.
+- Reuse `FunctionPlan` for each concrete method or constructor target. Add only
+  a class-call facet recording method kind, passed-object position, self
+  storage requirement, result attachment, public descriptor flags, and the
+  owning class identity.
+- Add an `OverloadSetPlan` containing public export, overload kind, ordered
+  concrete candidate references, typed runtime predicates, ambiguity result,
+  no-match diagnostic, and selected native target. Candidate predicates use
+  exact dtype/rank/derived-class facts already completed by argument plans.
+- Add an `InheritancePlan` containing canonical base identity, storage
+  compatibility, inherited/overridden method ownership, Python base type
+  symbol, and module initialization dependency order.
+- Add a `PolymorphicDispatchPlan` only for supported scalar input calls. It
+  enumerates accepted concrete class identities and a concrete `FunctionPlan`
+  variant for each; it must not rediscover subclasses from runtime object names.
+- Keep destructor selection on the referenced Phase 8 derived handoff/release
+  plan. Phase 9 records only which class slot invokes that existing action and
+  which constructor failure edges need cleanup.
+
+Stable semantic action names must describe behavior, not backend function
+names. At minimum distinguish:
+
+- class registration: `CREATE_TYPE`, `SET_BASE`, `READY_TYPE`, `EXPORT_TYPE`;
+- construction: `OMIT`, `ALLOCATE_DEFAULT`, `ALLOCATE_AND_ASSIGN_FIELDS`,
+  `CALL_BOUND_CONSTRUCTOR`, `DISPATCH_CONSTRUCTOR`, `REJECT_CONSTRUCTION`;
+- method binding: `INSTANCE`, `STATIC`, and explicit unsupported class-method
+  policy until a real class-method contract exists;
+- passed-object handoff: `WRAPPER_ADDRESS`, `BORROWED_ADDRESS`, or the exact
+  completed Phase 8 storage action;
+- overload selection: `MATCH_EXACT`, `SELECT_CANDIDATE`, `NO_MATCH`,
+  `AMBIGUOUS`; and
+- construction lifecycle: `ALLOCATE`, `INITIALIZE`, `COMMIT_OWNER`,
+  `CLEANUP_UNCOMMITTED`, `DESTROY_OWNED`.
+
+### Mandatory Phase 9 Migration Algorithm
+
+For every dependency-closed sub-lane:
+
+1. Capture one passing source/generated-`.pyi` legacy unit and its complete
+   class, binding, bridge, header, and runtime assertions.
+2. Complete class export, constructor kind, method kind, passed-object policy,
+   overload candidates, inheritance, polymorphic accepted set, allocation,
+   commit, cleanup, and destruction before `ir2ast.py`.
+3. Project those facts into the existing namespace, derived-type, function,
+   lifecycle, and native-slot plans plus the smallest class-specific facets.
+4. Validate the complete class graph and every cross-backend symbolic role
+   before either backend emits source.
+5. Lower through small named methods selected only by typed actions. Backend
+   local temporaries may implement a selected action but cannot choose policy.
+6. Compare generated artifacts with the oracle and record intentional
+   differences before compiling.
+7. Add focused policy, plan-edit, validation, printer, binding, bridge,
+   source/generated-`.pyi`, edited-contract, and compiled runtime tests.
+8. Promote production routing only after the reduced unit passes direct-plan
+   runtime parity and no class-surface fallback remains.
+
+### Phase 9A — Semantic Class-Surface Completion
+
+- [x] Add completed post-IR policy records for public class identity, exports,
+  constructor kind, method kind, passed-object position, overload ownership,
+  base identity, type-object registration, and construction permissions.
+- [x] Preserve explicit absence: an edited `.pyi` that removes `__init__`, a
+  method, or an overload candidate must produce an absent plan entry and cannot
+  resurrect source behavior.
+- [x] Move any class-surface inference still in `ir2ast.py` into policy
+  completion. Readiness must report the owner path and exact missing decision.
+- [x] Add policy tests for generated, bound, removed, overloaded, inherited,
+  abstract, and invalid class surfaces before planner changes.
+
+### Phase 9B — Typed Class Plan And Validation
+
+- [x] Add the namespace-owned class, constructor, method-call, overload, and
+  inheritance plan facets described above, each referencing existing Phase 8
+  type/field/lifetime plans rather than copying them.
+- [x] Project Python/native names and export aliases once. Do not synthesize
+  backend method names from strings or recover native targets by scanning
+  emitted functions.
+- [x] Validate unique class/type identity, base-before-derived order, one
+  constructor kind, method ownership, passed-object position, native call-slot
+  agreement, field-plan identity, lifecycle roles, and module export symbols.
+- [x] Add direct plan-edit tests proving invalid constructor, method, base,
+  overload, or lifecycle references fail before emission in both backends.
+
+### Phase 9C — Class Creation And Module Registration
+
+- [x] Emit one Python type object per supported class, attach the completed
+  Phase 8 field descriptors, set the validated base type, ready the type, and
+  export every completed Python name in dependency order.
+- [x] Keep opaque instance storage identical to Phase 8 wrapper storage. Class
+  assembly must not add C aggregate layout, component offsets, or a second
+  native owner field.
+- [x] Attach the Phase 8 destruction action only to owning classes; borrowed
+  proxies and nested objects retain owners and never gain independent destroy
+  slots.
+- [x] Add artifact and compiled reduced tests for an opaque constructible class,
+  an intentionally nonconstructible class, a borrowed child, and exact module
+  export identity.
+
+### Phase 9D — Default And Keyword Field Constructors
+
+- [x] Build constructor parameters only from fields explicitly eligible in
+  completed constructor policy. Preserve keyword-only behavior and native
+  default component initialization for omitted fields.
+- [x] Allocate the Phase 8 persistent native instance first, apply validated
+  field assignments through existing field setter actions, then commit wrapper
+  ownership only after every step succeeds.
+- [x] On parse, conversion, allocation, or field-assignment failure, clean up
+  the uncommitted native instance exactly once. Failed `tp_init` must not leak,
+  double-finalize, or expose a partially initialized wrapper.
+- [x] Replay `fconstructors_f90` for default, partial, complete, positional,
+  unknown-keyword, native-default, and finalization-count assertions through
+  both source and generated-`.pyi` contracts.
+
+### Phase 9E — Explicit And Overloaded Constructors
+
+- [x] Represent direct `@bind("native_name")` construction as one constructor
+  action linked to a concrete function plan. It replaces, rather than wraps or
+  falls back to, the generated field constructor.
+- [x] Represent constructor overloads as an explicit constructor-owned overload
+  set. Do not combine `@overload` and `@native_call`, and do not reinterpret a
+  normal method overload as `tp_init`.
+- [x] Complete allocation-before-call versus native-produced-instance policy,
+  result attachment, owner commit, failure cleanup, and exactly-once release for
+  every candidate before lowering.
+- [x] Reject indistinguishable candidates, missing targets, incompatible self
+  types, mixed constructor kinds, or ambiguous edited declarations during
+  policy/readiness or plan validation, never from candidate trial calls.
+- [x] Add isolated semantic and compiled fixtures for direct bound construction,
+  two distinguishable constructor candidates, no-match, ambiguity, target
+  failure cleanup, and source/generated/edited-contract parity.
+
+### Phase 9F — Instance And Static Methods
+
+- [x] Lower passed-object instance methods from the completed self position and
+  Phase 8 handoff. Preserve native argument order when `self` is not the first
+  native slot.
+- [x] Support explicit binding names and type-bound root-target metadata without
+  exporting the private concrete target as a duplicate module function.
+- [x] Lower supported static methods without fabricating `self`; attach them to
+  the type object with their completed export and descriptor flags.
+- [x] Reuse ordinary function argument/result plans for scalar, string, array,
+  handle, and derived transfers. A method cannot widen an unsupported ordinary
+  call lane.
+- [x] Replay reduced `fclasses_f90` vector methods first, then `vector_store`
+  handle methods and static factory, with exact source/generated-`.pyi` runtime
+  and artifact parity.
+
+### Phase 9G — Class-Owned Overload Dispatch
+
+- [x] Complete ordered candidates and exact runtime predicates for each
+  class-owned overload set. Candidate selection may inspect only typed Python
+  argument facts named by the plan, never invoke candidates speculatively.
+- [x] Reuse one overload matching vocabulary for constructors, methods,
+  operators, and later Phase 11 module generics while keeping their owners and
+  call actions distinct.
+- [x] Detect indistinguishable signatures before emission and produce stable
+  no-match diagnostics listing the public overload and accepted signatures.
+- [x] Validate native target, Python export, argument/result plans, passed-object
+  position, and overload kind across binding and bridge views.
+- [x] Add focused method-overload tests for primitive kinds, ranks, derived
+  subclasses, keyword normalization, exact no-match, and ambiguity; keep broad
+  defined-operator/module-generic promotion in Phase 11.
+
+### Phase 9H — Finalization And Constructor Failure Safety
+
+- [x] Route normal owned-instance deallocation, constructor failure, and
+  native-constructor failure through the same Phase 8 destroy/release action,
+  guarded by an explicit uncommitted/committed lifecycle state.
+- [x] Prove finalization occurs exactly once for successfully constructed
+  owners, once for native storage allocated before a rejected constructor call,
+  and never for borrowed children or native-owned module objects.
+- [x] Prove child-to-parent retention survives method/property access and that
+  deleting the parent first delays only the parent's owning finalizer.
+- [x] Replay `fconstructors_f90` and `fborrowed_finalizer_f90`, including forced
+  Python argument failures and repeated garbage collection.
+
+### Phase 9I — Inheritance And Scalar Polymorphic Input Dispatch
+
+- [x] Complete canonical base/extension relationships, storage compatibility,
+  inherited fields, inherited methods, overrides, Python base symbols, and
+  module initialization order before planning.
+- [x] Construct base and derived wrappers with the same Phase 8 opaque storage
+  contract while preserving exact runtime type identity and safe unbound base
+  method calls on derived instances.
+- [x] For each supported scalar input-only polymorphic dummy, enumerate the
+  accepted concrete class identities and one concrete native call variant per
+  identity. Reject unknown or abstract runtime classes before the native call.
+- [x] Keep polymorphic results, mutable dummies, arrays, descriptor-backed
+  polymorphic scalars, unlimited polymorphism, and unenumerated extensions on
+  exact blockers; inheritance must not silently widen them.
+- [x] Replay `finheritance_f90` for `issubclass`, `isinstance`, inherited field
+  access, override dispatch, unbound base calls, and base/circle/box
+  polymorphic inputs through source and generated-`.pyi` routes.
+
+### Phase 9J — Production Routing, Documentation, And Closure
+
+- [x] Add support-report lanes for class registration, default constructors,
+  bound constructors, constructor overloads, instance methods, static methods,
+  class overloads, finalizers, inheritance, and scalar polymorphic input.
+- [x] Add one reduced compiled direct-plan node per dependency-closed lane, then
+  update its migration-matrix row only after artifact and runtime parity.
+- [x] Prove eligible class units select the production wrapper-plan route and
+  never call `semantic_ir_to_codegen_ast()`; an unsupported class decision must
+  keep the whole generation unit on one exact blocker without partial fallback.
+- [x] Synchronize constructor/method/inheritance user docs, semantic `.pyi`
+  reference, source map, feature matrix, subject README, and checklist coverage
+  with the implemented class contract.
+- [x] Run focused policy/plan/backend tests, all affected existing class wrapper
+  nodes through source/generated-`.pyi` modes, the wrapper suite excluding
+  LAPACK, the wrapper complexity checker, documentation checks, whitespace,
+  and the required static-analysis suite.
+- [x] Close Phase 9 only when every supported constructor/method/inheritance
+  unit routes directly, all Phase 8 field/storage/lifecycle decisions remain
+  unchanged, and every remaining callback, derived-array, polymorphic, or
+  ambiguous-overload case has an exact Phase 10/11 or unsupported-policy
+  blocker.
+
+Closure evidence (2026-07-16): focused semantic, lowering, routing, and direct
+Phase 8-10 plan tests passed 184 tests after the final policy refactor. The
+complete local wrapper suite excluding LAPACK passed 449 tests in source and
+generated-contract modes. The wrapper complexity checker, Ruff lint/format,
+Bandit, Vulture, explicit-`origin/main` Radon policy, and advisory Radon
+complexity/maintainability commands passed. The CI-only `--base-ref auto`
+Radon lookup could not resolve outside CI, so the required explicit-base run
+was used. No LAPACK test was run locally.
+
+### Phase 9 Expansion Gate
+
+- [x] Inventory class creation/destruction, constructor categories,
+  instance/static/type-bound methods, overloads, inheritance/polymorphism,
+  decorator effects, module initialization, legacy owners, semantic fixtures,
+  and passing runtime oracles.
+- [x] Define the Phase 8/9/10/11 ownership boundaries and keep all class
+  implementation rows unchecked.
+- [x] Split implementation into dependency-ordered Phase 9A-J sub-lanes with
+  explicit policy, plan, validation, lowering, artifact, compiled parity,
+  production routing, documentation, and closure gates.
 
 ## Phase 10 — Callbacks And Trampolines
 
-Scope: callback argument conversion, callback result conversion, adapter
-procedures, C trampolines, callback context setup/cleanup, and error/abort
-paths.
+Expansion status: complete. Implementation status: complete. Immediate
+callbacks are covered by focused policy/plan/artifact tests, existing compiled
+runtime oracles, production routing, and broad non-LAPACK wrapper-suite
+evidence below.
 
-- [ ] Before implementation, expand this phase under the mandatory expansion
-  gate. First inventory callback signature categories, context lifetime,
-  re-entry/GIL behavior, exception propagation, abort paths, recursion, and the
-  scalar/string/array/derived argument-result combinations actually supported
-  by the product contract.
+Scope: immediate callback argument validation, call-scoped context lifetime,
+Fortran adapter procedures, C trampolines, scalar/string/array/derived
+argument and result conversion, copy-back, same-thread re-entry and GIL
+handling, callback cleanup, and the documented fatal error boundary.
 
-- [ ] Define callback handoff specs for Python callable validation, callback
-  context, native adapter arguments, trampoline arguments, and callback results.
-- [ ] Represent callback setup and cleanup as call-scoped plan phases.
-- [ ] Add binding/bridge actions for scalar, array, string, and derived callback
-  arguments/results only after those lanes are stable for ordinary calls.
-- [ ] Validate callback result and argument handoffs across binding, bridge,
-  adapter, and trampoline steps before emission.
+### Phase 10 Boundary And Explicit Non-Scope
+
+Phase 10 composes ordinary call transfers completed in Phases 2-9 but does not
+reinterpret them. A callback signature is Fortran-facing: it describes the
+procedure interface that native Fortran calls, including argument order,
+value/reference access, intent-derived copy direction, rank, shape, character
+length, and result representation. Normal wrapper projection and callback
+adapter projection remain distinct completed records.
+
+The supported callback contract is deliberately call-scoped:
+
+- the Python callable is validated and retained before the native call, placed
+  in one thread-local context stack for that callback site, and released after
+  the native call returns;
+- nested callback-taking calls on the same entering Python thread are allowed;
+- each C trampoline validates the entering thread, acquires the GIL, converts
+  completed adapter arguments, invokes the current Python callable, converts
+  or copies back results, releases the GIL, and returns to its Fortran adapter;
+- scalar values use value conversion; scalar reference storage, writable
+  fixed-length character storage, arrays, and derived objects use the exact
+  borrowed/copy-in/copy-out behavior already asserted by the legacy runtime
+  tests; and
+- a Python exception, invalid callback return, missing context, or cross-thread
+  invocation prints the Python error and aborts the host process. The direct
+  path must not fabricate a fallback result or continue native execution.
+
+The following remain outside Phase 10:
+
+- stored callbacks, callback registration/unregistration, procedure-pointer
+  fields, callbacks invoked after the wrapped call, optional dummy procedures,
+  null procedure pointers, asynchronous callbacks, and cross-thread callback
+  execution;
+- persistent callable ownership, callback teardown during object/library
+  destruction, and callback use as a synchronization mechanism;
+- callbacks whose signature is incomplete, assumed-rank, has a runtime-only
+  character length, or otherwise lacks the exact ABI facts required by the
+  adapter and trampoline;
+- callback-specific coercion, recovery, exception-result, or argument
+  reordering policies not present in the public contract or legacy tests; and
+- module generic/operator orchestration that merely contains a callback-taking
+  candidate; its callback transfer may be reusable, but public generic routing
+  remains Phase 11.
+
+### Phase 10 Existing Oracle And Inventory
+
+The public callback guide/reference, generated semantic `.pyi` contracts,
+legacy Python lowering/codegen, and existing source/generated-`.pyi` runtime
+assertions are the behavioral oracle. Capture each reduced legacy artifact and
+runtime assertion before implementing its direct-plan equivalent.
+
+| Existing unit | Phase 10 behavior to preserve | Required reduced slice |
+| --- | --- | --- |
+| `callbacks/test_scalar_callbacks.py::test_immediate_scalar_dummy_procedure_calls_python_callback[*]` | scalar result/void callbacks, callable validation, balanced references, nested same-thread re-entry, held-GIL wrapper envelope, and thread-local context | first context, trampoline, scalar-value, and cleanup slice |
+| `callbacks/test_scalar_callbacks.py::test_callback_exception_prints_traceback_and_aborts_host_process[*]` | callback exception, wrong result, and wrong signature print a Python error and terminate the subprocess | fatal-boundary slice after scalar success |
+| `callbacks/test_array_callbacks.py::test_immediate_dummy_procedure_converts_array_arguments_and_results[*]` | read-only array view, shaped array result, output identity, and copy-back | array argument/result slice |
+| `callbacks/test_all_callback_shapes.py::test_immediate_callbacks_cover_all_supported_argument_shapes[*]` | scalar value, rank-zero scalar storage, fixed strings, arrays, derived values, output/inout copy-back, and one combined call envelope | cross-kind closure slice |
+| `callbacks/test_derived_callbacks.py::test_immediate_dummy_procedure_converts_derived_arguments_and_results[*]` | callback-local borrowed derived input plus wrapper-owned derived result conversion | derived slice after Phase 9 construction |
+| `callbacks/test_callback_generated_pyi_contracts.py` | generated callable access, shape, character-storage, and result annotations round-trip exactly | semantic-contract parity slice |
+| `semantics/conversion/pyi/test_types_and_values.py` callback cases | `Callable` ABI wrappers, inferred dimension names, writable-string validation, and forbidden `Addr(...)` callback forms | policy completion before planner work |
+
+Inventory these legacy Python owners without importing them into
+`x2py.wrapper_codegen`:
+
+- `x2py/semantics/ir2ast.py` currently creates callback `FunctionAddress`
+  records, infers fallback argument records from callable metadata, and decides
+  callback result variables. Every required signature and ownership fact must
+  instead be complete before this lowering boundary.
+- `x2py/codegen/bridges/fortran_to_c.py` currently constructs the typed
+  Fortran adapter, pointer/value ABI arguments, copy-in/copy-out storage,
+  callback result reconstruction, and adapter call ordering. Its behavior is
+  the oracle, not a reusable direct-path dependency.
+- `x2py/codegen/bindings/c_to_python.py` currently validates the callable,
+  pushes/pops thread-local context, emits C trampolines, acquires/releases the
+  GIL, converts Python arguments/results, and implements traceback-plus-abort.
+  Direct lowering must consume completed callback actions through small named
+  methods rather than copying this broad control flow.
+
+### Phase 10 Plan Shape And Action Vocabulary
+
+Extend the existing argument/function plans; do not add a second function plan
+or embed a legacy AST.
+
+- Add one `CallbackHandoffPlan` facet to each callable argument. It records the
+  callable owner, call-scoped lifetime, context symbol, context stack action,
+  entering-thread rule, GIL rule, Fortran adapter symbol, C trampoline symbol,
+  ordered callback argument plans, optional result plan, and fatal-error
+  action.
+- Add a `CallbackTransferPlan` for each callback argument/result containing the
+  semantic type identity, object kind, value/reference ABI, rank/shape/length
+  roles, access direction, Python barrier action, adapter copy-in/copy-out
+  action, borrowed-owner retention, and exact C ABI roles.
+- Reuse ordinary scalar, string, array, and derived plan vocabulary where the
+  representation is identical, but keep callback-direction roles explicit.
+  The native callback is the caller, so normal Python-to-native argument
+  projection cannot be silently reused in reverse.
+- Add ordered function lifecycle phases `VALIDATE_CALLBACK`, `PUSH_CONTEXT`,
+  `ENTER_NATIVE`, `POP_CONTEXT`, and `RELEASE_CALLBACK`. Every failure edge
+  before native entry unwinds acquired references; the fatal trampoline edge
+  never returns.
+- Keep backend-local adapter locals and temporary Python views inside the
+  selected implementation method. They are emitted-code details, not semantic
+  policy.
+
+Stable actions must describe behavior, not generated function names. At
+minimum distinguish:
+
+- callable/context: `VALIDATE_CALLABLE`, `RETAIN_CALLABLE`, `PUSH_CONTEXT`,
+  `POP_CONTEXT`, `RELEASE_CALLABLE`;
+- callback ABI: `VALUE`, `REFERENCE`, `DATA_AND_SHAPE`,
+  `DATA_AND_LENGTH`, and `DERIVED_ADDRESS`;
+- adapter transfer: `COPY_IN`, `COPY_OUT`, `COPY_IN_OUT`, `BORROW_READ_ONLY`,
+  and `BORROW_WRITABLE`;
+- trampoline runtime: `REQUIRE_ENTERING_THREAD`, `ACQUIRE_GIL`, `CALL_PYTHON`,
+  `RELEASE_GIL`, and `ABORT_WITH_PYTHON_ERROR`; and
+- result handling: `RETURN_SCALAR`, `RETURN_ARRAY_ADDRESS`,
+  `RETURN_DERIVED_ADDRESS`, `RETURN_VOID`, and `REJECT_RESULT`.
+
+### Mandatory Phase 10 Migration Algorithm
+
+For every dependency-closed sub-lane:
+
+1. Capture the documented behavior, one passing source/generated-`.pyi`
+   legacy unit, and its callback-related binding, bridge, adapter, trampoline,
+   and runtime assertions.
+2. Complete callable validity, signature order, ABI roles, copy direction,
+   shape/length dependencies, result handling, context lifetime, thread/GIL
+   rules, cleanup, and fatal behavior before `ir2ast.py`.
+3. Project those facts into the existing function/argument/lifecycle plans plus
+   the smallest callback-specific facets.
+4. Validate the binding, bridge, adapter, and trampoline role graph before
+   either backend emits source.
+5. Lower through typed action dispatch and small named methods. Do not trial a
+   callback or infer shape/access from emitted locals.
+6. Compare direct artifacts and behavior with the legacy oracle; document any
+   safety improvement before changing observable behavior.
+7. Add focused policy, editable-plan, validation, binding, bridge, printer,
+   source/generated-`.pyi`, subprocess-failure, and compiled runtime tests.
+8. Promote production routing only after the complete callback-taking
+   generation unit passes direct-plan parity with no callback fallback.
+
+### Phase 10A — Semantic Callback Completion
+
+- [x] Add completed post-IR callback records for callable signature order,
+  argument access, object kind, value/reference ABI, shape/length roles, result
+  representation, call scope, context lifetime, same-thread rule, GIL rule,
+  cleanup, and fatal-error behavior.
+- [x] Preserve generated and edited `Callable` contracts exactly. Reject an
+  incomplete signature, invalid writable character form, forbidden `Addr`,
+  optional procedure, stored/procedure-pointer lifetime, or unsupported result
+  with the owner path and one exact reason.
+- [x] Remove callback signature/result/ownership inference from `ir2ast.py`;
+  lowering may only project the completed callback record.
+- [x] Add policy/readiness tests for every supported access form and retained
+  unsupported form before planner changes.
+
+### Phase 10B — Typed Callback Plan And Validation
+
+- [x] Add callback handoff, transfer, result, context, and lifecycle facets to
+  the existing function plan and reference ordinary datatype plans instead of
+  copying them.
+- [x] Project adapter/trampoline symbols and ABI roles once. Do not synthesize
+  backend handler names or rediscover dimension/length dependencies from
+  emitted variables.
+- [x] Validate unique callback sites, exact argument order, role availability,
+  copy direction, dtype/rank/shape/length agreement, derived type identity,
+  result compatibility, context balance, and validate/push/pop/release order.
+- [x] Add direct plan-edit tests proving invalid callback roles, unbalanced
+  lifecycle, or cross-backend disagreement fail before emission.
+
+### Phase 10C — Context, Trampoline, GIL, And Scalar Values
+
+- [x] Emit one thread-local stack per callback site, callable validation and
+  strong-reference retention before native entry, reverse-order pop/release
+  after return, and cleanup on every ordinary pre-entry failure.
+- [x] Emit one C trampoline and typed Fortran adapter from the completed ABI;
+  validate the entering thread and context before Python conversion.
+- [x] Acquire/release the GIL inside the trampoline and keep the outer
+  callback-taking wrapper on the legacy-observed held-GIL envelope.
+- [x] Lower void and scalar-value arguments/results first, then replay scalar
+  callback success, nested re-entry, non-callable rejection, and balanced
+  reference-count assertions in both build modes.
+
+### Phase 10D — Scalar Reference And Fixed-String Storage
+
+- [x] Lower missing-intent/inout scalar storage as copy-in/out rank-zero NumPy
+  storage, output storage as copy-out only, and explicit input references as
+  Python scalar values according to the completed access plan.
+- [x] Lower read-only fixed strings as Python `str` and writable fixed strings
+  as rank-zero fixed-width bytes storage with the exact length, padding, and
+  copy-back behavior already asserted by the legacy tests.
+- [x] Reject runtime-length or immutable writable string contracts before
+  emission; no adapter-local inference may change the representation.
+- [x] Replay the scalar-storage and string-storage cases from the combined
+  callback fixture through source/generated-`.pyi` routes.
+
+### Phase 10E — Array Arguments And Results
+
+- [x] Lower array callback arguments from completed dtype, rank, shape,
+  ordering, contiguity, alignment, and access facts. Read-only inputs expose
+  read-only borrowed views; writable/output arrays expose writable storage and
+  copy back in adapter order.
+- [x] Lower fixed-shape array results through one validated returned-address
+  ABI and assign them into the native adapter result. Reject incomplete shape
+  or unsupported ownership before emission.
+- [x] Preserve output-array Python identity in the outer ordinary call and do
+  not add a detached-copy fallback.
+- [x] Replay `fcallback_array_f90` plus the combined array-storage callback and
+  artifact assertions in both build modes.
+
+### Phase 10F — Derived Arguments And Results
+
+- [x] Reuse the exact Phase 8/9 type identity, opaque wrapper, owner-retention,
+  and destroy/release actions for callback-local derived wrappers. Do not
+  expose aggregate layout or introduce callback-specific storage ownership.
+- [x] Borrow callback input wrappers only for the callback invocation; convert
+  supported callback results to the completed native result storage and
+  release temporary wrapper ownership exactly once.
+- [x] Validate exact runtime class/type identity before using a returned
+  derived address. Polymorphic, descriptor-backed, or unsupported derived
+  callback forms retain exact blockers.
+- [x] Replay `fcallback_derived_f90` and the combined derived callback after the
+  Phase 9 constructor/class route is green.
+
+### Phase 10G — Fatal Errors, Re-entry, And Cleanup
+
+- [x] Route Python exceptions, argument-call mismatch, invalid callback result,
+  missing context, and cross-thread entry through one
+  traceback-plus-`abort()` action. Never return a fabricated value.
+- [x] Prove nested same-thread callback calls use stack discipline and restore
+  the previous callable/context after the inner call.
+- [x] Prove ordinary validation or setup failures before native entry release
+  every retained reference, and successful calls leave the callable reference
+  count unchanged.
+- [x] Run fatal cases in subprocesses for both source/generated-`.pyi` builds
+  and assert the documented traceback/error text plus nonzero termination.
+
+### Phase 10H — Production Routing, Documentation, And Closure
+
+- [x] Add support-report lanes for callback context, scalar value/storage,
+  fixed strings, arrays, derived values, result conversion, same-thread
+  re-entry, and fatal errors.
+- [x] Add one reduced compiled direct-plan node per dependency-closed lane and
+  update its migration-matrix row only after artifact and runtime parity.
+- [x] Prove eligible callback units select the production wrapper-plan route
+  and never call `semantic_ir_to_codegen_ast()`; unsupported callback policy
+  must keep the whole generation unit on one exact blocker.
+- [x] Synchronize callback guide/reference, semantic `.pyi` reference, feature
+  matrix, callback README, source map, and checklist coverage with the direct
+  implementation.
+- [x] Run focused policy/plan/backend tests, every callback wrapper node in
+  source/generated-`.pyi` modes, the wrapper suite excluding LAPACK, the
+  wrapper complexity checker, documentation checks, whitespace, and the
+  required static-analysis suite.
+- [x] Close Phase 10 only when every supported immediate callback unit routes
+  directly, no callback plan falls back after generation starts, and every
+  stored/optional/asynchronous/cross-thread or incomplete callback form has an
+  exact retained blocker. Stop before Phase 11.
+
+Closure evidence (2026-07-16): callback policy, editable-plan validation,
+binding/bridge artifacts, scalar/string/array/derived conversion, nested
+same-thread re-entry, reference cleanup, and subprocess fatal-boundary tests
+all passed through the direct route. The same 184-test focused batch and
+449-test non-LAPACK wrapper replay used for Phase 9 closure cover the complete
+immediate-callback matrix. Required static checks passed with the explicit
+Radon base noted above, and implementation stopped before Phase 11.
+
+### Phase 10 Expansion Gate
+
+- [x] Inventory the public callback contract, semantic `Callable` records,
+  legacy lowering/codegen owners, source/generated-`.pyi` runtime fixtures,
+  context lifetime, re-entry/GIL behavior, exception/abort behavior, and every
+  supported scalar/string/array/derived argument-result combination.
+- [x] Define the Phase 9/10/11 boundary and retain explicit blockers for stored,
+  optional, asynchronous, cross-thread, incomplete-signature, and unsupported
+  callback forms.
+- [x] Split implementation into dependency-ordered Phase 10A-H sub-lanes with
+  policy, typed plan, validation, lowering, compiled parity, production
+  routing, documentation, and closure gates.
 
 ## Phase 11 — Cross-Cutting Wrapper Suite Completion
 

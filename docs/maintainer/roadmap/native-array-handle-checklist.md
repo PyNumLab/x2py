@@ -71,12 +71,11 @@ storage. Array handles keep a different rule: `Allocatable[T[...]] | None` and
   spelling after migration.
 - [x] `Annotated[T[...], Pointer]` is not an active public pointer-array
   spelling after migration.
-- [x] `Snapshot[T]` is removed from generated and accepted active semantic
-  `.pyi` contracts for this feature.
-- [x] Whole-object snapshots are treated as a future feature, not part of this
-  contract.
-- [x] Borrowed views, detached snapshots, and descriptor handles remain distinct
-  concepts in docs, diagnostics, runtime names, and tests.
+- [x] `Snapshot[T]` is not an allocatable- or pointer-array extraction mode and
+  is no longer an active public contract.
+- [x] Live native-array views, explicit user-requested NumPy copies, live
+  derived objects, and descriptor handles remain distinct concepts in docs,
+  diagnostics, runtime names, and tests.
 
 ## Public `.pyi` Examples
 
@@ -229,8 +228,8 @@ changes.
 - [x] Document that `Allocatable[T[...]]` is a handle, not an ndarray.
 - [x] Document that `Pointer[T[...]]` is a handle to pointer association state,
   not an ndarray.
-- [x] Document that `h.to_numpy()` returns a borrowed view, read-only detached
-  copy, or `None` depending on completed policy and current allocation state.
+- [x] Document that `h.to_numpy()` returns a live view of the current allocation
+  or `None`, never an automatic detached copy.
 - [x] Document that `p.to_numpy()` returns the current target view or `None`,
   and can expose strided pointer targets when descriptor support is available.
 - [x] Document that passing a handle to a handle parameter is descriptor
@@ -260,8 +259,8 @@ changes.
   `allocate()`, `deallocate()`, and `resize()` require explicit policy.
 - [x] Document stale-view hazards after descriptor-changing operations,
   reassociation, nullification, deallocation, or reallocation.
-- [x] Remove active public examples of `Annotated[T[...], Allocatable]`,
-  `Annotated[T[...], Pointer]`, and `Snapshot[T]` for this feature.
+- [x] Remove active public examples of `Annotated[T[...], Allocatable]` and
+  `Annotated[T[...], Pointer]` for this feature.
 
 ### 2. Public Contract Symbols, Parser, And Printer
 
@@ -281,9 +280,9 @@ Implement the public contract wrappers once and parameterize by descriptor kind.
   explicit `| None` spelling.
 - [x] Preserve normal `T[...]` type identity as array data semantics, not
   descriptor semantics.
-- [x] Reject `Snapshot[T]` in active `.pyi` contracts with a clear diagnostic.
-- [x] Remove `Snapshot` from `x2py.contracts` and `CONTRACT_SYMBOLS` once
-  active tests and docs are migrated.
+- [x] Do not interpret `Snapshot[T]` as a native-array descriptor wrapper.
+- [x] Remove the obsolete public `Snapshot` contract, its semantic `.pyi`
+  parsing/printing, generated contracts, and recursive derived-object lowering.
 - [x] Reject or fully migrate `Annotated[T[...], Allocatable]` from active
   public contracts.
 - [x] Reject or fully migrate `Annotated[T[...], Pointer]` from active public
@@ -327,8 +326,8 @@ descriptor-kind field rather than separate unrelated models.
   nullable-value path, not on array handle types.
 - [x] Preserve `T[...]` arguments/results as normal array data in semantic IR
   even when runtime may later accept a handle through data coercion.
-- [x] Model `Snapshot[T]` as unsupported or future-only rather than active
-  semantic IR.
+- [x] Verify `Snapshot[T]` is absent from active semantic IR and remains
+  unrelated to native-array-handle extraction.
 
 ### 4. Post-IR Policy Completion
 
@@ -381,11 +380,9 @@ blocker still prevents wrapper lowering.
   - `borrowed_view`;
   - `descriptor_view`;
   - `contiguous_view`;
-  - `copy_only`;
-  - `read_only_detached_copy`;
   - `unsupported`.
-- [x] Complete pointer C-descriptor interop requirement before lowering:
-  `none` or `pointer_c_descriptor`.
+- [x] Complete standard C-descriptor interop requirement before lowering:
+  `none`, `module_allocatable_c_descriptor`, or `pointer_c_descriptor`.
 - [x] Complete nullability and optional-absent-handle behavior before lowering.
 - [x] Complete contract-value storage mode before lowering: `stack`, `heap`, or
   `alias`.
@@ -399,12 +396,11 @@ blocker still prevents wrapper lowering.
 #### Allocatable Policy Items
 
 - [x] Complete allocated-state support.
-- [x] Complete addressability/aliasability policy for `h.to_numpy()`.
-- [x] Use `borrowed_view` only when safe and legal addressability is proven.
-- [x] Use read-only detached copy when live aliasing is not safe.
-- [x] Do not expose live NumPy views for non-addressable Fortran allocatables.
-- [x] Do not call a read-only borrowed view a snapshot; snapshots are detached
-  copies.
+- [x] Complete live-view mechanism independently from `Aliased`: direct
+  borrowed access where legal, otherwise standard descriptor access.
+- [x] Give plain and `Aliased` module allocatable handles the same native-owned
+  borrowed lifetime, mutability, and live-view-or-`None` public behavior.
+- [x] Block unsupported descriptor extraction explicitly instead of copying.
 - [x] Complete `deallocate()` permission.
 - [x] Complete `resize(shape)` permission.
 - [x] Complete function-result ownership as wrapper-owned stable descriptor
@@ -419,12 +415,11 @@ blocker still prevents wrapper lowering.
 - [x] Complete `to_numpy()` extraction policy:
   - descriptor view;
   - contiguous view;
-  - copy-only fallback if explicitly implemented;
   - unsupported.
 - [x] Select pointer `to_numpy()` policy from completed `PointerPolicy(...)`
-  facts before lowering: contiguous copy requests use `copy_only`, other
-  contiguous policies use `contiguous_view`, and strided/general policies use
-  `descriptor_view`.
+  facts before lowering: contiguous targets use `contiguous_view`, and
+  strided/general targets use `descriptor_view`. A copy-oriented pointer policy
+  may retain unrelated meaning, but must not make extraction copy.
 - [x] Complete `nullify()` permission as the default pointer descriptor
   operation.
 - [x] Complete a default conservative handle profile for plain
@@ -529,10 +524,10 @@ Add or reuse one internal runtime base for both public handle classes.
   handles produce present descriptor facts whose `base_addr` may be null.
 - [x] Carry the completed `.to_numpy()` extraction policy on the runtime
   handle.
-- [x] Apply read-only detached-copy policy in the runtime handle, after the
-  generated operation supplies current storage.
+- [x] Remove detached-copy dispatch from the runtime handle; extraction-enabled
+  operations must supply live storage or standard descriptor facts.
 - [x] Validate generated `.to_numpy()` operations return either a NumPy array or
-  `None` before applying borrowed-view, descriptor-view, or detached-copy
+  `None` before applying borrowed-view, descriptor-view, or contiguous-view
   policy.
 - [x] Validate non-`None` `.to_numpy()` results against the handle's declared
   dtype and rank before returning them to Python.
@@ -546,8 +541,8 @@ Add or reuse one internal runtime base for both public handle classes.
   `to_numpy_policy` to provide the generated `to_numpy` operation at
   construction time; handles without extraction support must use
   `to_numpy_policy="unsupported"`.
-- [x] Enforce contiguous-view and copy-only `.to_numpy()` policies in the
-  shared runtime handle.
+- [x] Enforce live contiguous-view and descriptor-view `.to_numpy()` policies
+  in the shared runtime handle without a copy fallback.
 - [x] Implement `AllocatableArray` as a descriptor-specific subclass.
 - [x] Require allocatable runtime handles to provide the generated `allocated`
   operation at construction time.
@@ -569,12 +564,12 @@ below.
 - [x] `h.deallocate()`
 - [x] `h.resize(shape)`
 - [x] `h.to_numpy()` returns `None` when unallocated.
-- [x] `h.to_numpy()` returns a live mutable borrowed view when
-  addressability/aliasability policy proves it safe.
-- [x] `h.to_numpy()` returns a read-only detached NumPy snapshot when live
-  aliasing is not safe.
+- [x] `h.to_numpy()` returns a live mutable view for every supported allocated
+  handle, using direct or descriptor access as selected by completed policy.
 - [x] Users can call `.copy()` on the returned NumPy array when they need
   independent lifetime.
+- [x] Existing views may become stale after descriptor-changing operations;
+  accessing stale views is unsupported and may crash.
 
 #### Pointer Runtime API
 
@@ -870,9 +865,9 @@ handoff when the wrapped call is native.
   blocked unless explicit pointer policy allows them.
 - [x] Verify unsafe/user-responsibility deallocation is available only through
   the explicit policy value and never by default.
-- [x] Verify completed `PointerPolicy(...)` facts select `copy_only`,
-  `contiguous_view`, or `descriptor_view` before lowering, and only
-  descriptor-view paths request pointer C-descriptor interop.
+- [x] Verify completed `PointerPolicy(...)` facts select `contiguous_view` or
+  `descriptor_view` before lowering, never an extraction-only copy action, and
+  only descriptor-view paths request pointer C-descriptor interop.
 - [x] Verify pointer C-descriptor interop requirements produce an explicit
   readiness blocker while that interop path is unavailable.
 
@@ -908,7 +903,7 @@ handoff when the wrapped call is native.
 - [x] Verify owned handles are marked closed after a failing destroy attempt,
   preventing finalizer retries of the same generated release operation.
 - [x] Verify generated `.to_numpy()` operations cannot return non-NumPy objects
-  from borrowed-view or detached-copy policies, and cannot return non-NumPy
+  from borrowed-view or contiguous-view policies, and cannot return non-NumPy
   objects from descriptor-view policy unless the value is a decoded pointer
   descriptor field mapping or field-record object.
 - [x] Verify generated `.to_numpy()` arrays and decoded pointer descriptor
@@ -921,8 +916,8 @@ handoff when the wrapped call is native.
   descriptor state.
 - [x] Verify extraction-enabled handles without generated `to_numpy` fail at
   construction, while unsupported extraction raises the completed-policy error.
-- [x] Verify contiguous-view policy rejects non-contiguous arrays and copy-only
-  policy returns detached NumPy storage.
+- [x] Verify contiguous-view policy rejects non-contiguous arrays and never
+  copies; descriptor-view policy preserves validated shape and strides.
 - [x] Verify the internal runtime array-actual hook rejects absent descriptor
   state and uses generated handoff ops instead of `to_numpy()`.
 - [x] Verify the internal runtime array-actual hook validates expected dtype,
@@ -970,12 +965,12 @@ handoff when the wrapped call is native.
 - [x] `h.allocated` updates after allocate, deallocate, and resize.
 - [x] `h.shape` updates after allocate, deallocate, and resize.
 - [x] `h.to_numpy()` returns `None` when unallocated.
-- [x] `h.to_numpy()` returns a mutable borrowed view when
-  aliasable/addressable.
-- [x] Mutating a borrowed view mutates native storage when policy allows a live
-  view.
-- [x] `h.to_numpy()` returns a read-only detached snapshot when not
-  aliasable/addressable.
+- [x] Plain and `Aliased` allocated module handles both return mutable live
+  views, and mutating either view updates native module storage.
+- [x] A fresh extraction follows allocation, deallocation, resize, and
+  reallocation state; an explicit `.copy()` remains independent.
+- [x] Tests state the stale-view contract without dereferencing deliberately
+  stale storage.
 - [x] Derived allocatable field is a handle object.
 - [x] Derived-field handle keeps the parent wrapper alive.
 - [x] Derived-field `deallocate()` operates on `parent%field`.
@@ -1013,8 +1008,8 @@ handoff when the wrapped call is native.
   no descriptor-extraction `to_numpy()` operation is generated.
 - [x] Runtime pointer descriptor-view extraction validates required decoded
   TS29113 fields before constructing a NumPy view.
-- [x] If C descriptors are unavailable, test the selected explicit fallback:
-  contiguous-only view, copy fallback, or clear readiness diagnostic.
+- [x] If C descriptors are unavailable, test the selected explicit behavior:
+  contiguous live view or clear readiness diagnostic, never a copy fallback.
 - [x] Pointer `deallocate()` and `resize()` are absent or raise when policy
   disallows them.
 - [x] Pointer `allocate()`, `deallocate()`, and `resize()` work only when

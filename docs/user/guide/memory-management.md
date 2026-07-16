@@ -23,7 +23,7 @@ guess from datatype or intent.
 | Wrapper-owned instance | A generated Python extension object owns one native derived instance. | [`points.f90` result](wrapping-derived-types.md#complete-derived-type-example) |
 | Native-owned storage | Native module state or another native owner controls allocation and release. | [`allocations.f90` module handle](allocatables.md#complete-allocatable-example) |
 | Borrowed view or child | Python refers to storage owned by a module or containing wrapper. | [`points.f90` nested child](wrapping-derived-types.md#complete-derived-type-example) |
-| Detached copy (`snapshot_copy` policy) | Python receives copied current native state, without a live view. | [`allocations.f90` handle extraction](allocatables.md#complete-allocatable-example) |
+| Detached copy (`snapshot_copy` policy) | Python receives copied current native state where an explicit value-copy policy requires it. Native-array-handle `to_numpy()` and derived module-object reads do not select this behavior. | Explicit copy-result contracts |
 | Call-local association | Native code may refer to Python storage only during one wrapped call. | [`pointers.f90` input](pointers.md#complete-pointer-example) |
 
 Those linked pages contain the full source, build commands, and asserted
@@ -41,8 +41,8 @@ attached to one canonical source listing.
 7. Missing owner, lifetime, release, shape, dtype, mutability, nullability, or aliasing facts block generation.
 8. Addressability is an object-origin fact: generated constructors allocate
    pointer-backed instances, while pre-existing derived module objects need
-   `Aliased` or another completed live-borrow policy before they can be
-   exposed.
+   either proved `Aliased` addressability or typed module-specific bridge
+   operations. A backend must not fabricate an address.
 9. Native array descriptor state lives in `Allocatable[T[...]]` and
    `Pointer[T[...]]` handles; borrowed NumPy views and detached NumPy copies are
    explicit extraction results from `to_numpy()`.
@@ -89,14 +89,14 @@ it does not transfer native release responsibility.
 - Allocatable array results use wrapper-owned handles whose finalizer releases
   x2py-owned descriptor storage;
 - Pointer-array handle results block readiness until owner storage, target
-  lifetime, descriptor extraction, and destroy behavior are implemented; plain
-  derived module variables without `Aliased` or another completed policy also
-  block readiness; and
+  lifetime, descriptor extraction, and destroy behavior are implemented;
+- plain and `Aliased` derived module variables remain live native-owned objects
+  through module-specific or address-backed mechanisms respectively; and
 - Borrowed views extracted from handles **share native storage** until native
   invalidation.
 
-Whole-object `Snapshot[T]` contracts are future-only and are not emitted or
-accepted by the active semantic `.pyi` format.
+Native-array-handle extraction remains live-view-or-`None`; callers use
+`.copy()` on an extracted NumPy view for independent array storage.
 
 Return projection and ownership are one contract. An edited `.pyi` cannot ask
 for copy-return without a projected replacement, or combine immutable storage

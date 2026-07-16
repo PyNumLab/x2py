@@ -1,4 +1,4 @@
-from x2py.contracts import Complex128, Float64, Int32, native_type
+from x2py.contracts import Annotated, ByValue, Complex128, Float64, Int32, native_type
 
 @native_type(attributes=('bind(c)',))
 class point:
@@ -31,5 +31,5 @@ def populate(
 ) -> None: ...
 
 def score_by_value(
-    value: tagged_point
+    value: Annotated[tagged_point, ByValue]
 ) -> Float64: ...

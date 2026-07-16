@@ -182,18 +182,22 @@ survive such failures.
 - asynchronous or cross-thread callback invocation; and
 - persistent callback ownership during object or library teardown.
 
-## Future Contract Policy
+## Adapter Policy
 
-Future callback contract work should enrich adapter policy, not reshape the
-callback call signature. A `Callable[[...], T]` must continue to describe the
-Fortran procedure interface that Fortran calls: argument order, value/reference
-passing, storage shape, character length, and result type. The Python callable
-can adapt argument names or order itself, so callback contracts should not grow
-normal wrapper features such as argument reordering or hidden native-call
-projection.
+The post-IR policy stage completes how the adapter crosses the
+Fortran-to-Python-to-Fortran boundary before wrapper generation begins. It
+records value versus reference ABI, copy-in/copy-out direction, array shape,
+fixed character length, exact derived type identity, call-scoped context
+lifetime, entering-thread enforcement, GIL entry, cleanup, and the fatal error
+action. The Python binding and Fortran bridge only lower those completed actions.
 
-The useful future work is explicit policy for how the adapter crosses the
-Fortran-to-Python-to-Fortran boundary:
+`Callable[[...], T]` continues to describe the Fortran procedure interface:
+argument order, value/reference passing, storage shape, character length, and
+result type. The Python callable can adapt argument names or order itself, so
+callback contracts do not use normal wrapper features such as argument
+reordering or hidden native-call projection.
+
+Future work may add user-selectable policy for:
 
 - copy-in, copy-out, borrowed-view, and zero-copy choices;
 - dtype conversion, overflow checks, and result coercion;
@@ -205,8 +209,8 @@ Fortran-to-Python-to-Fortran boundary:
 - callback-specific error/result policy beyond the current fatal native
   callback boundary.
 
-This is planned design work, not current support. The semantic `.pyi` wrapper
-roadmap later tracks the callback-adapter policy work.
+These choices are not currently user-selectable; unsupported forms remain
+blocked instead of selecting a different backend behavior.
 
 ## Evidence And Troubleshooting
 

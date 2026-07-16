@@ -86,6 +86,7 @@ private = _ContractType
 Aliased = _ContractExpression()
 Allocatable = _ContractExpression()
 AssumedType = _ContractExpression()
+ByValue = _ContractExpression()
 Contiguous = _ContractExpression()
 COPY_F = _ContractExpression()
 Flat = _ContractExpression()
@@ -152,6 +153,7 @@ CONTRACT_SYMBOLS = frozenset(
         "Bool",
         "Bounded",
         "Byte",
+        "ByValue",
         "CAnonymous",
         "CAnonymousMember",
         "CEnum",

@@ -108,13 +108,13 @@ def test_default_policy_decisions_cover_public_object_kinds():
     assert module_allocatable.transfer is TransferMode.BORROWED_VIEW
     assert module_allocatable.destruction is DestructionPolicy.NATIVE_OWNER
 
-    snapshot_module_allocatable = resolver.decide_semantic_type(
+    plain_module_allocatable = resolver.decide_semantic_type(
         _array_type(allocatable=True),
         OwnershipContext.module_variable(),
     )
-    assert snapshot_module_allocatable.owner is OwnershipOwner.PYTHON
-    assert snapshot_module_allocatable.transfer is TransferMode.SNAPSHOT_COPY
-    assert snapshot_module_allocatable.destruction is DestructionPolicy.PYTHON_REFCOUNT
+    assert plain_module_allocatable.owner is OwnershipOwner.NATIVE
+    assert plain_module_allocatable.transfer is TransferMode.BORROWED_VIEW
+    assert plain_module_allocatable.destruction is DestructionPolicy.NATIVE_OWNER
 
     derived_output = resolver.decide_semantic_type(_derived_type(), OwnershipContext.result())
     assert derived_output.owner is OwnershipOwner.WRAPPER
@@ -133,12 +133,10 @@ def test_default_policy_decisions_cover_public_object_kinds():
         _derived_type(),
         OwnershipContext.module_variable(),
     )
-    assert plain_module_object.owner is OwnershipOwner.UNKNOWN
-    assert plain_module_object.transfer is TransferMode.BLOCKED
-    assert plain_module_object.destruction is DestructionPolicy.BLOCKED
-    assert plain_module_object.blocker == (
-        "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only"
-    )
+    assert plain_module_object.owner is OwnershipOwner.NATIVE
+    assert plain_module_object.transfer is TransferMode.BORROWED_VIEW
+    assert plain_module_object.destruction is DestructionPolicy.NATIVE_OWNER
+    assert plain_module_object.codegen_action is CodegenAction.BORROWED_VIEW
 
     projected_derived_output = resolver.decide_semantic_type(
         _derived_type(),
@@ -252,8 +250,8 @@ def test_policy_handler_dictionary_changes_one_object_kind():
 
     assert scalar.owner is OwnershipOwner.NATIVE
     assert scalar.transfer is TransferMode.BORROWED_VIEW
-    assert array.owner is OwnershipOwner.PYTHON
-    assert array.transfer is TransferMode.COPY_RETURN
+    assert array.owner is OwnershipOwner.WRAPPER
+    assert array.transfer is TransferMode.WRAPPER_INSTANCE
 
 
 def test_codegen_action_dispatcher_routes_policy_actions_to_named_methods():
@@ -479,7 +477,7 @@ def test_recursive_module_policy_map_includes_nested_fields_and_functions():
     assert decisions["geometry.particle.origin"].owner is OwnershipOwner.WRAPPER
     assert decisions["geometry.particle.buffer.values"].transfer is TransferMode.BORROWED_VIEW
     assert decisions["geometry.build.n"].transfer is TransferMode.CALL_LOCAL
-    assert decisions["geometry.build.return"].transfer is TransferMode.COPY_RETURN
+    assert decisions["geometry.build.return"].transfer is TransferMode.WRAPPER_INSTANCE
 
 
 def test_policy_completion_attaches_decisions_before_ir_lowering():
@@ -561,21 +559,3 @@ def test_policy_completion_attaches_decisions_before_ir_lowering():
     assert field_var.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
     assert arg_var.ownership_decision.owner is OwnershipOwner.CALLER
     assert codegen_action_for_variable(arg_var) is CodegenAction.IN_PLACE_ARGUMENT
-
-
-def test_stale_snapshot_metadata_blocks_in_policy_completion():
-    module = SemanticModule(
-        name="state",
-        variables=[SemanticVariable("current", _derived_type("box", metadata={"snapshot_type": True}))],
-        classes=[SemanticClass("box", fields=[SemanticField("value", _scalar_type())])],
-    )
-
-    complete_semantic_policies(module)
-
-    variable = module.variables[0]
-    decision = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
-    assert decision.is_blocked
-    assert decision.blocker == (
-        "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only"
-    )
-    assert "snapshot_type" not in variable.semantic_type.metadata

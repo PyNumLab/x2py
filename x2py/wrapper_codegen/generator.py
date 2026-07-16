@@ -25,15 +25,37 @@ from x2py.semantics.ownership import (
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
     BridgeDataAction,
+    CallbackABIKind,
+    CallbackFatalAction,
+    CallbackGILAction,
+    CallbackLifecycleAction,
+    CallbackResultAction,
+    CallbackThreadAction,
+    ClassConstructorKind,
+    ClassInvocationKind,
+    ConstructionLifecycleAction,
+    DerivedActualAccess,
+    DerivedCallAction,
+    DerivedDummyCategory,
+    DerivedFieldAccessMechanism,
+    DerivedNativeHandoff,
+    DerivedObjectStorage,
+    DerivedObjectOrigin,
+    DerivedOwnerRetention,
+    DerivedRelease,
+    DerivedWriteback,
+    LifecycleOperation,
     FIXED_STRING_RESULT_COPY_REASON,
     NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER,
     OWNED_NATIVE_ARRAY_HANDLE_COPY_REASON,
     ORDINARY_ARRAY_RESULT_COPY_REASON,
     ModuleGetterAction,
+    ModuleObjectAccessMechanism,
     NativeArrayDescriptorInterop,
     NativeArrayDescriptorKind,
     NativeArrayDescriptorOwnership,
     NativeArrayDestroyBehavior,
+    NativeArrayExtractionAction,
     NativeArrayHandleKind,
     NativeArrayHandleOrigin,
     NativeArrayOperation,
@@ -57,6 +79,10 @@ from x2py.wrapper_codegen.c.binding import CBindingGenerator
 from x2py.wrapper_codegen.fortran.bridge import FortranBridgeGenerator
 from x2py.wrapper_codegen.plan import (
     ArgumentTransferPlan,
+    CallbackHandoffPlan,
+    CallbackTransferPlan,
+    ClassOverloadPlan,
+    ClassSurfacePlan,
     DatatypeFamily,
     FunctionPlan,
     LifecycleActionPlan,
@@ -124,6 +150,9 @@ class WrapperCodeGenerator:
                 diagnostics.extend(self._function_diagnostics(function))
             for variable in namespace.variables:
                 diagnostics.extend(self._module_variable_diagnostics(variable))
+            for class_surface in namespace.classes:
+                diagnostics.extend(self._class_surface_diagnostics(namespace, class_surface))
+        diagnostics.extend(self._class_graph_diagnostics(plan))
         diagnostics.extend(self._generated_symbol_diagnostics(plan))
         diagnostics.extend(self._required_header_diagnostics(plan))
         return tuple(diagnostics)
@@ -136,7 +165,19 @@ class WrapperCodeGenerator:
             for handle in self._namespace_native_array_handles(namespace)
             if handle is not None
         )
-        expected = self._native_array_required_headers(handles)
+        expected_headers = list(self._native_array_required_headers(handles))
+        if any(
+            field.access
+            in {
+                DerivedFieldAccessMechanism.ORDINARY_ARRAY_DESCRIPTOR,
+                DerivedFieldAccessMechanism.NATIVE_ARRAY_HANDLE,
+            }
+            for namespace in plan.namespaces
+            for derived in namespace.derived_types
+            for field in derived.fields
+        ):
+            expected_headers.append(NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER)
+        expected = tuple(dict.fromkeys(expected_headers))
         if plan.required_headers == expected:
             return ()
         return (self._diagnostic(plan.owner_path, "inconsistent-required-headers", plan.required_headers),)
@@ -150,6 +191,7 @@ class WrapperCodeGenerator:
             *(argument.native_array_handle for function in namespace.functions for argument in function.arguments),
             *(result.native_array_handle for function in namespace.functions for result in function.results),
             *(variable.native_array_handle for variable in namespace.variables),
+            *(field.native_array_handle for derived in namespace.derived_types for field in derived.fields),
         )
 
     def _native_array_required_headers(self, handles: tuple[NativeArrayHandlePlan, ...]) -> tuple[str, ...]:
@@ -197,12 +239,337 @@ class WrapperCodeGenerator:
 
     def _namespace_diagnostics(self, plan: NamespacePlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Reject ambiguous Python exports within one namespace."""
-        return (*self._python_export_name_diagnostics(plan), *self._export_owner_diagnostics(plan))
+        return (
+            *self._python_export_name_diagnostics(plan),
+            *self._export_owner_diagnostics(plan),
+            *self._derived_type_diagnostics(plan),
+        )
+
+    # Class validation keeps construction and method references mechanical.
+    def _class_surface_diagnostics(
+        self,
+        namespace: NamespacePlan,
+        surface: ClassSurfacePlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one class against its referenced type and function plans."""
+        functions = {id(function) for function in namespace.functions}
+        return (
+            *self._class_identity_diagnostics(namespace, surface),
+            *self._class_method_reference_diagnostics(surface, functions),
+            *(
+                diagnostic
+                for overload in surface.overloads
+                for diagnostic in self._class_overload_diagnostics(overload, functions)
+            ),
+            *self._constructor_diagnostics(surface),
+            *self._constructor_reference_diagnostics(surface, functions),
+        )
+
+    def _class_identity_diagnostics(
+        self,
+        namespace: NamespacePlan,
+        surface: ClassSurfacePlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one matching Phase 8 type and identical Python exports."""
+        derived = tuple(item for item in namespace.derived_types if item.type_identity == surface.type_identity)
+        if len(derived) != 1:
+            return (
+                self._diagnostic(surface.owner_path, "invalid-class-derived-type-reference", surface.type_identity),
+            )
+        if surface.python_names != derived[0].python_names:
+            return (self._diagnostic(surface.owner_path, "inconsistent-class-python-exports", surface.python_names),)
+        return ()
+
+    def _class_method_reference_diagnostics(
+        self,
+        surface: ClassSurfacePlan,
+        functions: set[int],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require every class method to reuse a namespace function plan."""
+        return tuple(
+            self._diagnostic(method.owner_path, "missing-class-method-function", method.function.owner_path)
+            for method in surface.methods
+            if id(method.function) not in functions
+        )
+
+    def _constructor_reference_diagnostics(
+        self,
+        surface: ClassSurfacePlan,
+        functions: set[int],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the constructor's optional direct or overload target graph."""
+        diagnostics = []
+        constructor = surface.constructor
+        if constructor.target is not None and id(constructor.target) not in functions:
+            diagnostics.append(
+                self._diagnostic(surface.owner_path, "missing-constructor-target", constructor.target.owner_path)
+            )
+        if constructor.overload is not None:
+            diagnostics.extend(self._class_overload_diagnostics(constructor.overload, functions))
+        return tuple(diagnostics)
+
+    def _class_overload_diagnostics(
+        self,
+        overload: ClassOverloadPlan,
+        functions: set[int],
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate candidate references and exact runtime signatures once."""
+        diagnostics = []
+        if not overload.candidates:
+            diagnostics.append(self._diagnostic(overload.owner_path, "empty-class-overload", overload.python_name))
+        if len(overload.candidates) != len(overload.candidate_matches):
+            diagnostics.append(
+                self._diagnostic(
+                    overload.owner_path,
+                    "incomplete-class-overload-match-plan",
+                    (len(overload.candidates), len(overload.candidate_matches)),
+                )
+            )
+        if len(overload.candidates) != len(overload.candidate_passed_objects):
+            diagnostics.append(
+                self._diagnostic(
+                    overload.owner_path,
+                    "incomplete-class-overload-call-plan",
+                    (len(overload.candidates), len(overload.candidate_passed_objects)),
+                )
+            )
+        diagnostics.extend(
+            self._diagnostic(overload.owner_path, "missing-class-overload-candidate", candidate.owner_path)
+            for candidate in overload.candidates
+            if id(candidate) not in functions
+        )
+        signatures = tuple(self._class_overload_signature(matches) for matches in overload.candidate_matches)
+        if len(set(signatures)) != len(signatures):
+            diagnostics.append(self._diagnostic(overload.owner_path, "ambiguous-class-overload", overload.python_name))
+        if len(set(overload.candidate_passed_objects)) > 1:
+            diagnostics.append(
+                self._diagnostic(overload.owner_path, "mixed-class-overload-receivers", overload.python_name)
+            )
+        return tuple(diagnostics)
+
+    @staticmethod
+    def _class_overload_signature(matches: tuple) -> tuple:
+        """Return the runtime-relevant signature of one overload candidate."""
+        return tuple(
+            (
+                match.kind,
+                match.optional,
+                match.semantic_type_name,
+                match.rank,
+                match.derived_type_identity,
+            )
+            for match in matches
+        )
+
+    def _constructor_diagnostics(self, surface: ClassSurfacePlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one complete constructor kind and its exact lifecycle."""
+        constructor = surface.constructor
+        if constructor.kind is ClassConstructorKind.ABSENT:
+            return self._absent_constructor_diagnostics(surface)
+        if constructor.lifecycle != self._expected_constructor_lifecycle():
+            return (self._diagnostic(surface.owner_path, "invalid-constructor-lifecycle", constructor.lifecycle),)
+        return self._constructor_kind_diagnostics(surface)
+
+    @staticmethod
+    def _expected_constructor_lifecycle() -> tuple[ConstructionLifecycleAction, ...]:
+        """Return the one balanced lifecycle shared by all owning constructors."""
+        return (
+            ConstructionLifecycleAction.ALLOCATE,
+            ConstructionLifecycleAction.INITIALIZE,
+            ConstructionLifecycleAction.COMMIT_OWNER,
+            ConstructionLifecycleAction.CLEANUP_UNCOMMITTED,
+            ConstructionLifecycleAction.DESTROY_OWNED,
+        )
+
+    def _absent_constructor_diagnostics(self, surface: ClassSurfacePlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require nonconstructible classes to carry only an explicit rejection."""
+        constructor = surface.constructor
+        if constructor.lifecycle or not constructor.rejection_message:
+            return (self._diagnostic(surface.owner_path, "invalid-absent-constructor", constructor),)
+        return ()
+
+    def _constructor_kind_diagnostics(self, surface: ClassSurfacePlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate only the target facet selected by the completed kind."""
+        constructor = surface.constructor
+        if constructor.kind is ClassConstructorKind.DEFAULT_FIELDS and (
+            constructor.target_owner_path is not None
+            or constructor.overload_name is not None
+            or constructor.target is not None
+            or constructor.overload is not None
+        ):
+            return (self._diagnostic(surface.owner_path, "mixed-default-constructor", constructor),)
+        if constructor.kind is ClassConstructorKind.BOUND_PROCEDURE and constructor.target is None:
+            return (self._diagnostic(surface.owner_path, "missing-bound-constructor-target", constructor),)
+        if constructor.kind is ClassConstructorKind.OVERLOAD_SET and constructor.overload is None:
+            return (self._diagnostic(surface.owner_path, "missing-constructor-overload", constructor),)
+        return ()
+
+    def _class_graph_diagnostics(self, plan: ModulePlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require every base class to exist before its derived class."""
+        seen = set()
+        diagnostics = []
+        for namespace in plan.namespaces:
+            for surface in namespace.classes:
+                diagnostics.extend(
+                    self._diagnostic(surface.owner_path, "missing-or-late-class-base", base)
+                    for base in surface.base_identities
+                    if base not in seen
+                )
+                if surface.type_identity in seen:
+                    diagnostics.append(
+                        self._diagnostic(surface.owner_path, "duplicate-class-type-identity", surface.type_identity)
+                    )
+                seen.add(surface.type_identity)
+        return tuple(diagnostics)
+
+    # Derived-type definition, field, and module validation.
+    def _derived_type_diagnostics(self, plan: NamespacePlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate namespace-owned opaque type and field identities."""
+        return (
+            *self._duplicate_derived_type_diagnostics(plan),
+            *(item for derived in plan.derived_types for item in self._one_derived_type_diagnostics(derived)),
+        )
+
+    def _duplicate_derived_type_diagnostics(self, plan: NamespacePlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Reject duplicate exported derived runtime names."""
+        counts = Counter(name for derived in plan.derived_types for name in derived.python_names)
+        return tuple(
+            self._diagnostic(plan.owner_path, "duplicate-derived-python-name", name)
+            for name, count in counts.items()
+            if count > 1
+        )
+
+    def _one_derived_type_diagnostics(self, derived) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate identity and unique fields for one derived type."""
+        identity = (
+            (self._diagnostic(derived.owner_path, "incomplete-derived-type-identity", derived),)
+            if (
+                not derived.type_name
+                or not derived.native_type_name
+                or not derived.native_scope
+                or derived.type_identity != (derived.native_scope, derived.native_type_name)
+            )
+            else ()
+        )
+        field_counts = Counter(field.name for field in derived.fields)
+        duplicate_fields = tuple(
+            self._diagnostic(derived.owner_path, "duplicate-derived-field", name)
+            for name, count in field_counts.items()
+            if count > 1
+        )
+        field_diagnostics = tuple(
+            diagnostic for field in derived.fields for diagnostic in self._derived_field_diagnostics(field)
+        )
+        return (*identity, *duplicate_fields, *field_diagnostics)
+
+    def _derived_field_diagnostics(self, field) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one typed field handoff before either backend emits it."""
+        diagnostics = []
+        if not field.owner_path or not field.name or not field.native_name or not field.getter_role:
+            diagnostics.append(self._diagnostic(field.owner_path, "incomplete-derived-field-identity", field))
+        expected_retention = (
+            DerivedOwnerRetention.PARENT_WRAPPER
+            if field.access
+            in {
+                DerivedFieldAccessMechanism.ORDINARY_ARRAY_DESCRIPTOR,
+                DerivedFieldAccessMechanism.NATIVE_ARRAY_HANDLE,
+                DerivedFieldAccessMechanism.NESTED_OBJECT,
+            }
+            else DerivedOwnerRetention.NONE
+        )
+        if field.owner_retention is not expected_retention:
+            diagnostics.append(
+                self._diagnostic(field.owner_path, "invalid-derived-field-owner-retention", field.owner_retention)
+            )
+        diagnostics.extend(self._derived_field_setter_diagnostics(field))
+        diagnostics.extend(self._derived_field_family_diagnostics(field))
+        return tuple(diagnostics)
+
+    def _derived_field_setter_diagnostics(self, field) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate Python setter exposure against the native assignment role."""
+        if field.setter_action is SetterAction.WRITE_THROUGH:
+            diagnostics = []
+            if field.setter_role is None:
+                diagnostics.append(self._diagnostic(field.owner_path, "missing-derived-field-setter-role", None))
+            if field.native_assignment not in {AssignmentMode.VALUE_COPY, AssignmentMode.ALIAS}:
+                diagnostics.append(
+                    self._diagnostic(field.owner_path, "invalid-derived-field-assignment", field.native_assignment)
+                )
+            return tuple(diagnostics)
+        if field.setter_role is not None:
+            return (self._diagnostic(field.owner_path, "unexpected-derived-field-setter-role", field.setter_role),)
+        return ()
+
+    def _derived_field_family_diagnostics(self, field) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Dispatch field-facet consistency from its completed object kind."""
+        match field.object_kind:
+            case ObjectKind.SCALAR:
+                valid = self._valid_scalar_derived_field(field)
+            case ObjectKind.STRING:
+                valid = self._valid_string_derived_field(field)
+            case ObjectKind.NUMPY_ARRAY:
+                valid = self._valid_array_derived_field(field)
+            case ObjectKind.DERIVED_TYPE:
+                valid = self._valid_nested_derived_field(field)
+            case _:
+                valid = False
+        if not valid:
+            return (self._diagnostic(field.owner_path, "inconsistent-derived-field-family", field.object_kind),)
+        if field.native_array_handle is None:
+            return ()
+        return tuple(self._native_array_handle_shape_diagnostics(field.owner_path, field.native_array_handle))
+
+    @staticmethod
+    def _valid_scalar_derived_field(field) -> bool:
+        return (
+            field.access is DerivedFieldAccessMechanism.SCALAR_VALUE
+            and field.getter_action is CodegenAction.DIRECT_VALUE
+            and field.rank == 0
+        )
+
+    @staticmethod
+    def _valid_string_derived_field(field) -> bool:
+        return (
+            field.access is DerivedFieldAccessMechanism.FIXED_STRING_COPY
+            and field.getter_action is CodegenAction.COPY_OUT
+            and field.rank == 0
+            and field.character_length is not None
+            and field.character_length > 0
+        )
+
+    @staticmethod
+    def _valid_array_derived_field(field) -> bool:
+        expected_access = (
+            DerivedFieldAccessMechanism.NATIVE_ARRAY_HANDLE
+            if field.native_array_handle is not None
+            else DerivedFieldAccessMechanism.ORDINARY_ARRAY_DESCRIPTOR
+        )
+        return (
+            field.access is expected_access
+            and field.getter_action is CodegenAction.BORROWED_VIEW
+            and field.array is not None
+        )
+
+    @staticmethod
+    def _valid_nested_derived_field(field) -> bool:
+        handoff = field.derived
+        return bool(
+            field.access is DerivedFieldAccessMechanism.NESTED_OBJECT
+            and field.getter_action is CodegenAction.BORROWED_VIEW
+            and field.rank == 0
+            and handoff is not None
+            and handoff.origin is DerivedObjectOrigin.BORROWED_FIELD
+            and handoff.owner_retention is DerivedOwnerRetention.PARENT_WRAPPER
+            and handoff.release is DerivedRelease.NONE
+            and handoff.type_identity == (handoff.native_scope, handoff.native_type_name)
+            and handoff.native_handoff is DerivedNativeHandoff.REFERENCE
+        )
 
     def _python_export_name_diagnostics(self, plan: NamespacePlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return duplicate local export-name diagnostics."""
         names = [function.binding.python_name for function in plan.functions]
         names.extend(name for variable in plan.variables for name in variable.binding.python_names)
+        names.extend(name for derived in plan.derived_types for name in derived.python_names)
         return tuple(
             self._diagnostic(plan.owner_path, "duplicate-python-export", name)
             for name, count in Counter(names).items()
@@ -270,10 +637,100 @@ class WrapperCodeGenerator:
         if not plan.binding.python_names:
             diagnostics.append(self._diagnostic(plan.owner_path, "missing-module-python-name", plan.owner_path))
         diagnostics.extend(self._module_getter_diagnostics(plan))
+        if plan.binding.getter_action is ModuleGetterAction.DERIVED_OBJECT:
+            diagnostics.extend(self._derived_module_object_diagnostics(plan))
         diagnostics.extend(self._module_setter_diagnostics(plan))
         if plan.binding.initializer is not None and plan.binding.setter_action is not SetterAction.WRITE_THROUGH:
             diagnostics.append(self._diagnostic(plan.owner_path, "initializer-without-native-setter", plan.owner_path))
         return tuple(diagnostics)
+
+    def _derived_module_object_diagnostics(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one live direct-address or typed-member module object."""
+        derived = plan.derived
+        if derived is None:
+            return (self._diagnostic(plan.owner_path, "missing-derived-module-object", None),)
+        handoff = derived.handoff
+        expected = self._derived_module_expected_facts(plan)
+        diagnostics = [
+            self._diagnostic(plan.owner_path, f"invalid-derived-module-{name}", actual)
+            for name, actual, required in expected
+            if actual is not required
+        ]
+        if derived.access not in {
+            ModuleObjectAccessMechanism.DIRECT_ADDRESS,
+            ModuleObjectAccessMechanism.MEMBER_PROXY,
+            ModuleObjectAccessMechanism.VALUE_COPY,
+        }:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-module-access", derived.access))
+        if (
+            not handoff.type_name
+            or not handoff.native_type_name
+            or not handoff.native_scope
+            or handoff.type_identity != (handoff.native_scope, handoff.native_type_name)
+        ):
+            diagnostics.append(self._diagnostic(plan.owner_path, "incomplete-derived-module-type", handoff))
+        if plan.native_array_handle is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "derived-module-has-array-handle", None))
+        diagnostics.extend(self._derived_module_member_path_diagnostics(plan))
+        return tuple(diagnostics)
+
+    @staticmethod
+    def _derived_module_expected_facts(plan: ModuleVariablePlan) -> tuple[tuple[str, object, object], ...]:
+        """Return origin/lifetime facts selected by the completed access mechanism."""
+        derived = plan.derived
+        handoff = derived.handoff
+        if derived.access is ModuleObjectAccessMechanism.VALUE_COPY:
+            return (
+                ("family", plan.datatype_family, DatatypeFamily.DERIVED),
+                ("origin", handoff.origin, DerivedObjectOrigin.CONSTANT_VALUE),
+                ("owner-retention", handoff.owner_retention, DerivedOwnerRetention.WRAPPER_INSTANCE),
+                ("release", handoff.release, DerivedRelease.WRAPPER_DESTROY),
+                ("native-handoff", handoff.native_handoff, DerivedNativeHandoff.REFERENCE),
+                ("replacement", derived.replacement, SetterAction.REJECT_REPLACEMENT),
+            )
+        return (
+            ("family", plan.datatype_family, DatatypeFamily.DERIVED),
+            ("origin", handoff.origin, DerivedObjectOrigin.NATIVE_MODULE),
+            ("owner-retention", handoff.owner_retention, DerivedOwnerRetention.NATIVE_MODULE),
+            ("release", handoff.release, DerivedRelease.NATIVE_OWNER),
+            ("native-handoff", handoff.native_handoff, DerivedNativeHandoff.REFERENCE),
+            ("replacement", derived.replacement, SetterAction.REJECT_REPLACEMENT),
+        )
+
+    def _derived_module_member_path_diagnostics(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate finite module-proxy operations and shared field records."""
+        derived = plan.derived
+        if derived is None:
+            return ()
+        if derived.access is ModuleObjectAccessMechanism.VALUE_COPY:
+            return ()
+        if not derived.member_paths:
+            return (self._diagnostic(plan.owner_path, "missing-derived-module-member-paths", None),)
+        counts = Counter(member.path for member in derived.member_paths)
+        diagnostics = [
+            self._diagnostic(plan.owner_path, "duplicate-derived-module-member-path", ".".join(path))
+            for path, count in counts.items()
+            if count > 1
+        ]
+        diagnostics.extend(
+            self._diagnostic(plan.owner_path, "incomplete-derived-module-member-path", member)
+            for member in derived.member_paths
+            if self._invalid_derived_member_path(member)
+        )
+        return tuple(diagnostics)
+
+    @staticmethod
+    def _invalid_derived_member_path(member) -> bool:
+        """Return whether one finite path lacks matching native/type identity."""
+        return bool(
+            not member.path or len(member.path) != len(member.native_path) or not all(member.declaring_type_identity)
+        )
 
     def _module_getter_diagnostics(self, plan: ModuleVariablePlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Return module getter handoff diagnostics."""
@@ -289,6 +746,8 @@ class WrapperCodeGenerator:
             if plan.binding.constant_value is None:
                 diagnostics.append(self._diagnostic(plan.owner_path, "missing-module-constant-value", plan.owner_path))
             return tuple(diagnostics)
+        if action is ModuleGetterAction.DERIVED_OBJECT:
+            return self._derived_module_getter_role_diagnostics(plan)
         if plan.bridge.getter_role is None:
             return (self._diagnostic(plan.owner_path, "missing-module-getter-role", action.value),)
         if action is ModuleGetterAction.NULLABLE_SNAPSHOT and plan.bridge.descriptor_kind not in {
@@ -296,6 +755,29 @@ class WrapperCodeGenerator:
             "pointer",
         }:
             return (self._diagnostic(plan.owner_path, "missing-module-descriptor-kind", action.value),)
+        return ()
+
+    def _derived_module_getter_role_diagnostics(
+        self,
+        plan: ModuleVariablePlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate whole-address roles only on the completed direct mechanism."""
+        derived = plan.derived
+        if derived is None:
+            return ()
+        if derived.access in {
+            ModuleObjectAccessMechanism.DIRECT_ADDRESS,
+            ModuleObjectAccessMechanism.VALUE_COPY,
+        }:
+            if plan.bridge.getter_role is None:
+                return (self._diagnostic(plan.owner_path, "missing-derived-module-getter-role", None),)
+            return ()
+        if plan.bridge.getter_role is not None:
+            return (
+                self._diagnostic(
+                    plan.owner_path, "module-proxy-fabricates-whole-address-role", plan.bridge.getter_role
+                ),
+            )
         return ()
 
     def _module_native_array_handle_diagnostics(
@@ -401,6 +883,8 @@ class WrapperCodeGenerator:
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate descriptor rejection and constant omission choices."""
         action = plan.binding.setter_action
+        if action is SetterAction.REJECT_REPLACEMENT and plan.derived is not None:
+            return ()
         if action is SetterAction.REJECT_REPLACEMENT and plan.bridge.descriptor_kind not in {
             "allocatable",
             "pointer",
@@ -430,6 +914,7 @@ class WrapperCodeGenerator:
             *self._function_output_diagnostics(plan),
             *self._string_result_aggregation_diagnostics(plan),
             *self._status_error_diagnostics(plan),
+            *self._class_call_diagnostics(plan),
         ]
         slots = {slot.native_position: slot for slot in plan.native_call_slots}
         for slot in plan.native_call_slots:
@@ -443,6 +928,27 @@ class WrapperCodeGenerator:
         diagnostics.extend(self._writeback_phase_diagnostics(plan))
         diagnostics.extend(self._string_writeback_diagnostics(plan))
         return tuple(diagnostics)
+
+    def _class_call_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate receiver selection before either backend sees a class call."""
+        call = plan.class_call
+        if call is None:
+            return ()
+        positions = {argument.native_position for argument in plan.arguments}
+        if call.passed_object_position is not None and call.passed_object_position not in positions:
+            return (
+                self._diagnostic(
+                    plan.owner_path,
+                    "missing-class-passed-object",
+                    call.passed_object_position,
+                ),
+            )
+        if call.invocation is ClassInvocationKind.TYPE_BOUND:
+            if call.passed_object_position is None or not call.type_bound_name:
+                return (self._diagnostic(plan.owner_path, "incomplete-type-bound-call", call),)
+        elif call.type_bound_name is not None:
+            return (self._diagnostic(plan.owner_path, "unexpected-type-bound-name", call.type_bound_name),)
+        return ()
 
     def _argument_diagnostics(
         self,
@@ -561,6 +1067,8 @@ class WrapperCodeGenerator:
         available_roles: tuple[str, ...],
     ) -> tuple[WrapperPlanDiagnostic, ...]:
         """Dispatch one argument from its completed object-kind decision."""
+        if plan.callback is not None or plan.datatype_family is DatatypeFamily.CALLBACK:
+            return self._callback_argument_diagnostics(plan)
         match plan.object_kind:
             case ObjectKind.SCALAR:
                 diagnostics = list(self._scalar_boundary_diagnostics(plan))
@@ -585,6 +1093,8 @@ class WrapperCodeGenerator:
                     *self._array_boundary_diagnostics(plan),
                     *self._array_extent_reference_diagnostics(plan, available_roles),
                 )
+            case ObjectKind.DERIVED_TYPE:
+                return self._derived_argument_diagnostics(plan)
             case _:
                 return (
                     self._diagnostic(
@@ -593,6 +1103,327 @@ class WrapperCodeGenerator:
                         plan.object_kind.value,
                     ),
                 )
+
+    def _callback_argument_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one balanced callback role graph before backend emission."""
+        callback = plan.callback
+        if callback is None:
+            return (self._diagnostic(plan.owner_path, "missing-callback-handoff", None),)
+        return (
+            *self._callback_outer_handoff_diagnostics(plan),
+            *self._callback_runtime_diagnostics(plan.owner_path, callback),
+            *self._callback_symbol_diagnostics(plan.owner_path, callback),
+            *(
+                diagnostic
+                for position, transfer in enumerate(callback.arguments)
+                for diagnostic in self._callback_transfer_diagnostics(transfer, position)
+            ),
+            *self._callback_result_diagnostics(callback),
+        )
+
+    def _callback_outer_handoff_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Keep callback outer arguments separate from array and derived handoffs."""
+        diagnostics = []
+        if plan.datatype_family is not DatatypeFamily.CALLBACK:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-callback-datatype-family", plan.datatype_family)
+            )
+        if plan.derived is not None or plan.derived_call is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "callback-has-derived-call-handoff", None))
+        if plan.array is not None or plan.native_array_handle is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "callback-has-outer-array-handoff", None))
+        return tuple(diagnostics)
+
+    def _callback_runtime_diagnostics(
+        self,
+        owner_path: str,
+        callback: CallbackHandoffPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require the documented lifecycle, thread, GIL, and fatal envelope."""
+        candidates = (
+            (callback.lifecycle != tuple(CallbackLifecycleAction), "unbalanced-callback-lifecycle", callback.lifecycle),
+            (
+                callback.thread_action is not CallbackThreadAction.REQUIRE_ENTERING_THREAD,
+                "invalid-callback-thread-action",
+                callback.thread_action,
+            ),
+            (
+                callback.gil_actions != (CallbackGILAction.ACQUIRE_GIL, CallbackGILAction.RELEASE_GIL),
+                "unbalanced-callback-gil-actions",
+                callback.gil_actions,
+            ),
+            (
+                callback.fatal_action is not CallbackFatalAction.ABORT_WITH_PYTHON_ERROR,
+                "invalid-callback-fatal-action",
+                callback.fatal_action,
+            ),
+        )
+        return tuple(self._diagnostic(owner_path, code, value) for invalid, code, value in candidates if invalid)
+
+    def _callback_symbol_diagnostics(
+        self,
+        owner_path: str,
+        callback: CallbackHandoffPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require five distinct valid generated identifiers for one site."""
+        symbols = (
+            callback.context_type_symbol,
+            callback.context_current_symbol,
+            callback.adapter_symbol,
+            callback.trampoline_symbol,
+            callback.abort_symbol,
+        )
+        if any(not symbol or not symbol.isidentifier() for symbol in symbols) or len(set(symbols)) != len(symbols):
+            return (self._diagnostic(owner_path, "invalid-callback-symbols", symbols),)
+        return ()
+
+    def _callback_transfer_diagnostics(
+        self,
+        transfer: CallbackTransferPlan,
+        position: int,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one ordered callback ABI transfer and its subordinate roles."""
+        diagnostics = []
+        if not transfer.owner_path or not transfer.name:
+            diagnostics.append(self._diagnostic(transfer.owner_path, "incomplete-callback-transfer", position))
+        diagnostics.extend(self._callback_array_role_diagnostics(transfer, position))
+        diagnostics.extend(self._callback_string_role_diagnostics(transfer, position))
+        diagnostics.extend(self._callback_derived_role_diagnostics(transfer, position))
+        return tuple(diagnostics)
+
+    def _callback_array_role_diagnostics(
+        self,
+        transfer: CallbackTransferPlan,
+        position: int,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require shape roles exactly for data-and-shape ABI transfers."""
+        if transfer.abi is CallbackABIKind.DATA_AND_SHAPE:
+            if transfer.array is None or transfer.rank <= 0 or len(transfer.extent_roles) != transfer.rank:
+                return (self._diagnostic(transfer.owner_path, "incomplete-callback-array-roles", position),)
+            return ()
+        if transfer.array is not None or transfer.extent_roles:
+            return (self._diagnostic(transfer.owner_path, "unexpected-callback-array-roles", position),)
+        return ()
+
+    def _callback_string_role_diagnostics(
+        self,
+        transfer: CallbackTransferPlan,
+        position: int,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require a fixed length role exactly for data-and-length transfers."""
+        if transfer.abi is CallbackABIKind.DATA_AND_LENGTH:
+            if transfer.character_length is None or transfer.length_role is None:
+                return (self._diagnostic(transfer.owner_path, "incomplete-callback-string-roles", position),)
+            return ()
+        if transfer.length_role is not None:
+            return (self._diagnostic(transfer.owner_path, "unexpected-callback-length-role", position),)
+        return ()
+
+    def _callback_derived_role_diagnostics(
+        self,
+        transfer: CallbackTransferPlan,
+        position: int,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Keep derived ABI selection and type symbols exactly paired."""
+        derived = transfer.abi is CallbackABIKind.DERIVED_ADDRESS
+        if derived != bool(transfer.derived_type_identity and transfer.derived_backend_symbol):
+            return (self._diagnostic(transfer.owner_path, "inconsistent-callback-derived-identity", position),)
+        return ()
+
+    def _callback_result_diagnostics(
+        self,
+        callback: CallbackHandoffPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require the callback result action to agree with its typed transfer."""
+        result = callback.result
+        if result.action is CallbackResultAction.RETURN_VOID:
+            return (
+                (self._diagnostic(callback.owner_path, "callback-void-has-transfer", result.transfer),)
+                if result.transfer is not None
+                else ()
+            )
+        if result.transfer is None:
+            return (self._diagnostic(callback.owner_path, "callback-result-missing-transfer", result.action),)
+        expected_abi = {
+            CallbackResultAction.RETURN_SCALAR: CallbackABIKind.VALUE,
+            CallbackResultAction.RETURN_ARRAY_ADDRESS: CallbackABIKind.DATA_AND_SHAPE,
+            CallbackResultAction.RETURN_DERIVED_ADDRESS: CallbackABIKind.DERIVED_ADDRESS,
+        }.get(result.action)
+        if expected_abi is None or result.transfer.abi is not expected_abi:
+            return (self._diagnostic(callback.owner_path, "inconsistent-callback-result-action", result.action),)
+        return self._callback_transfer_diagnostics(result.transfer, -1)
+
+    # Derived-type argument validation.
+    def _derived_argument_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one wrapper-address handoff and shared derived facet."""
+        diagnostics = []
+        if plan.datatype_family is not DatatypeFamily.DERIVED:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-derived-datatype-family", plan.datatype_family)
+            )
+        if plan.derived is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-derived-handoff", None))
+        elif plan.native_call_slot.derived is not plan.derived:
+            diagnostics.append(self._diagnostic(plan.owner_path, "unshared-derived-handoff", None))
+        else:
+            diagnostics.extend(self._derived_handoff_identity_diagnostics(plan.owner_path, plan.derived))
+            if plan.derived.origin is not DerivedObjectOrigin.CALLER_WRAPPER:
+                diagnostics.append(
+                    self._diagnostic(plan.owner_path, "invalid-derived-argument-origin", plan.derived.origin)
+                )
+        diagnostics.extend(self._derived_call_diagnostics(plan))
+        if plan.bridge.handoff_mode is not ArgumentHandoffMode.OPAQUE_ADDRESS:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-derived-handoff-mode", plan.bridge.handoff_mode)
+            )
+        if plan.array is not None or plan.native_array_handle is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "derived-handoff-has-array-policy", None))
+        return tuple(diagnostics)
+
+    def _derived_call_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate the completed dummy/storage dispatch without re-deriving policy."""
+        call = plan.derived_call
+        if call is None:
+            return (self._diagnostic(plan.owner_path, "missing-derived-call-policy", None),)
+        diagnostics = [
+            *self._derived_call_case_diagnostics(plan),
+            *self._derived_call_writeback_diagnostics(plan),
+        ]
+        expected_handoff = (
+            DerivedNativeHandoff.TYPED_VALUE
+            if call.dummy_category is DerivedDummyCategory.VALUE
+            else DerivedNativeHandoff.REFERENCE
+        )
+        if plan.derived is not None and plan.derived.native_handoff is not expected_handoff:
+            diagnostics.append(
+                self._diagnostic(
+                    plan.owner_path,
+                    "invalid-derived-native-handoff",
+                    plan.derived.native_handoff,
+                )
+            )
+        if not call.status_role or not call.origin_identity_role:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-derived-call-runtime-role", None))
+        if call.acquisition_order != plan.native_position or call.cleanup_order != -plan.native_position:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-call-order", call))
+        return tuple(diagnostics)
+
+    def _derived_call_case_diagnostics(self, plan: ArgumentTransferPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        call = plan.derived_call
+        diagnostics = []
+        storages = tuple(case.actual_storage for case in call.cases)
+        if set(storages) != set(DerivedObjectStorage) or len(storages) != len(DerivedObjectStorage):
+            diagnostics.append(self._diagnostic(plan.owner_path, "incomplete-derived-call-matrix", storages))
+        for case in call.cases:
+            incompatible = case.action is DerivedCallAction.INCOMPATIBLE
+            if incompatible != (case.access is DerivedActualAccess.NONE):
+                diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-call-access", case))
+            if incompatible != bool(case.failure_kind and case.failure_message):
+                diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-call-failure", case))
+            if incompatible == bool(case.abi_code):
+                diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-call-abi-code", case))
+        return tuple(diagnostics)
+
+    def _derived_call_writeback_diagnostics(
+        self,
+        plan: ArgumentTransferPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        call = plan.derived_call
+        diagnostics = []
+        expected_writeback = (
+            DerivedWriteback.NONE
+            if call.dummy_category is DerivedDummyCategory.VALUE
+            else DerivedWriteback.ALLOCATION_STATE
+            if call.dummy_category in {DerivedDummyCategory.ALLOCATABLE, DerivedDummyCategory.ALLOCATABLE_TARGET}
+            else DerivedWriteback.POINTER_ASSOCIATION
+            if call.dummy_category is DerivedDummyCategory.POINTER
+            else DerivedWriteback.OBJECT_MUTATION
+            if plan.mutates_native
+            else DerivedWriteback.NONE
+        )
+        if call.writeback is not expected_writeback:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-writeback", call.writeback.value))
+        return tuple(diagnostics)
+
+    def _derived_handoff_identity_diagnostics(self, owner_path, handoff) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate canonical native identity and a supported typed call mechanism."""
+        diagnostics = []
+        if handoff.type_identity != (handoff.native_scope, handoff.native_type_name):
+            diagnostics.append(self._diagnostic(owner_path, "inconsistent-derived-type-identity", handoff))
+        allowed_storage = {
+            DerivedObjectOrigin.CALLER_WRAPPER: {DerivedObjectStorage.DIRECT},
+            DerivedObjectOrigin.WRAPPER_RESULT: {
+                DerivedObjectStorage.DIRECT,
+                DerivedObjectStorage.ALLOCATABLE_HOLDER,
+                DerivedObjectStorage.POINTER_HOLDER,
+            },
+            DerivedObjectOrigin.NATIVE_MODULE: {
+                DerivedObjectStorage.MODULE_PROXY,
+                DerivedObjectStorage.MODULE_TARGET,
+                DerivedObjectStorage.MODULE_ALLOCATABLE,
+                DerivedObjectStorage.MODULE_ALLOCATABLE_TARGET,
+                DerivedObjectStorage.MODULE_POINTER,
+            },
+            DerivedObjectOrigin.BORROWED_FIELD: {DerivedObjectStorage.DIRECT},
+            DerivedObjectOrigin.CONSTANT_VALUE: {DerivedObjectStorage.DIRECT},
+        }.get(handoff.origin, set())
+        if handoff.storage not in allowed_storage:
+            diagnostics.append(self._diagnostic(owner_path, "invalid-derived-storage", handoff.storage))
+        expected_lifetime = {
+            DerivedObjectOrigin.CALLER_WRAPPER: (
+                DerivedOwnerRetention.CALLER_WRAPPER,
+                DerivedRelease.NONE,
+            ),
+            DerivedObjectOrigin.WRAPPER_RESULT: (
+                DerivedOwnerRetention.WRAPPER_INSTANCE,
+                DerivedRelease.WRAPPER_DESTROY,
+            ),
+            DerivedObjectOrigin.NATIVE_MODULE: (
+                DerivedOwnerRetention.NATIVE_MODULE,
+                DerivedRelease.NATIVE_OWNER,
+            ),
+            DerivedObjectOrigin.BORROWED_FIELD: (
+                DerivedOwnerRetention.PARENT_WRAPPER,
+                DerivedRelease.NONE,
+            ),
+            DerivedObjectOrigin.CONSTANT_VALUE: (
+                DerivedOwnerRetention.WRAPPER_INSTANCE,
+                DerivedRelease.WRAPPER_DESTROY,
+            ),
+        }.get(handoff.origin)
+        if expected_lifetime is None:
+            diagnostics.append(self._diagnostic(owner_path, "invalid-derived-origin", handoff.origin))
+            return tuple(diagnostics)
+        expected_retention, expected_release = expected_lifetime
+        if handoff.owner_retention is not expected_retention:
+            diagnostics.append(self._diagnostic(owner_path, "invalid-derived-owner-retention", handoff.owner_retention))
+        if handoff.release is not expected_release:
+            diagnostics.append(self._diagnostic(owner_path, "invalid-derived-release", handoff.release))
+        target_lifetime = (handoff.target_owner_retention, handoff.target_release)
+        allowed_target_lifetimes = {
+            (DerivedOwnerRetention.NONE, DerivedRelease.NONE),
+            (DerivedOwnerRetention.NATIVE_MODULE, DerivedRelease.NATIVE_OWNER),
+        }
+        if target_lifetime not in allowed_target_lifetimes:
+            diagnostics.append(self._diagnostic(owner_path, "invalid-derived-target-lifetime", target_lifetime))
+        if handoff.storage in {
+            DerivedObjectStorage.POINTER_HOLDER,
+            DerivedObjectStorage.MODULE_POINTER,
+        } and target_lifetime != (DerivedOwnerRetention.NATIVE_MODULE, DerivedRelease.NATIVE_OWNER):
+            diagnostics.append(self._diagnostic(owner_path, "missing-derived-pointer-target-owner", target_lifetime))
+        return tuple(diagnostics)
 
     def _array_extent_reference_diagnostics(
         self,
@@ -744,13 +1575,28 @@ class WrapperCodeGenerator:
 
     def _expected_argument_data_action(self, plan: ArgumentTransferPlan) -> BridgeDataAction:
         """Return the data action implied by completed orthogonal selectors."""
+        if plan.callback is not None:
+            return BridgeDataAction.DIRECT_TRANSFER
+        if self._uses_typed_derived_value(plan):
+            return BridgeDataAction.COPY_REPRESENTATION
+        return self._expected_handoff_data_action(plan)
+
+    def _expected_handoff_data_action(self, plan: ArgumentTransferPlan) -> BridgeDataAction:
+        """Dispatch descriptor, buffer, and scalar/address handoff actions."""
         mode = plan.bridge.handoff_mode
         if mode is ArgumentHandoffMode.NATIVE_DESCRIPTOR:
             return self._expected_native_descriptor_data_action(plan)
-        if mode is ArgumentHandoffMode.ARRAY_BUFFER:
-            return BridgeDataAction.ASSOCIATE_VIEW
-        if mode is ArgumentHandoffMode.CHARACTER_BUFFER:
-            return BridgeDataAction.COPY_REPRESENTATION
+        buffer_actions = {
+            ArgumentHandoffMode.ARRAY_BUFFER: BridgeDataAction.ASSOCIATE_VIEW,
+            ArgumentHandoffMode.CHARACTER_BUFFER: BridgeDataAction.COPY_REPRESENTATION,
+        }
+        if mode in buffer_actions:
+            return buffer_actions[mode]
+        return self._expected_scalar_or_address_data_action(plan)
+
+    def _expected_scalar_or_address_data_action(self, plan: ArgumentTransferPlan) -> BridgeDataAction:
+        """Select remaining scalar, string, optional, and opaque-address actions."""
+        mode = plan.bridge.handoff_mode
         if plan.object_kind is ObjectKind.STRING and mode is ArgumentHandoffMode.OPAQUE_ADDRESS:
             return BridgeDataAction.COPY_REPRESENTATION
         if plan.bridge.optional_mode in {OptionalMode.REQUIRED_DESCRIPTOR, OptionalMode.DESCRIPTOR}:
@@ -758,6 +1604,11 @@ class WrapperCodeGenerator:
         if plan.bridge.optional_mode is OptionalMode.NULLABLE_VALUE or mode is ArgumentHandoffMode.OPAQUE_ADDRESS:
             return BridgeDataAction.ASSOCIATE_VIEW
         return BridgeDataAction.DIRECT_TRANSFER
+
+    @staticmethod
+    def _uses_typed_derived_value(plan: ArgumentTransferPlan) -> bool:
+        """Return whether policy selects the exact typed-value path."""
+        return bool(plan.derived is not None and plan.derived.native_handoff is DerivedNativeHandoff.TYPED_VALUE)
 
     def _expected_native_descriptor_data_action(self, plan: ArgumentTransferPlan) -> BridgeDataAction:
         """Distinguish call-local facts from persistent projected descriptors."""
@@ -768,6 +1619,8 @@ class WrapperCodeGenerator:
 
     def _expected_optional_descriptor_data_action(self, plan: ArgumentTransferPlan) -> BridgeDataAction:
         """Return the scalar optional descriptor view/copy selection."""
+        if plan.derived_call is not None:
+            return BridgeDataAction.ASSOCIATE_VIEW
         if plan.native_call_slot.value_kind == "allocatable":
             return BridgeDataAction.COPY_REPRESENTATION
         return BridgeDataAction.ASSOCIATE_VIEW
@@ -1007,6 +1860,7 @@ class WrapperCodeGenerator:
             *self._native_array_handle_rank_diagnostics(owner_path, handle),
             *self._native_array_handle_buffer_role_diagnostics(owner_path, handle),
             *self._native_array_handle_header_diagnostics(owner_path, handle),
+            *self._native_array_handle_extraction_diagnostics(owner_path, handle),
         ]
         if (
             handle.descriptor_kind is NativeArrayDescriptorKind.POINTER
@@ -1014,6 +1868,41 @@ class WrapperCodeGenerator:
         ):
             diagnostics.append(self._diagnostic(owner_path, "pointer-result-without-stable-owner", None))
         return tuple(diagnostics)
+
+    def _native_array_handle_extraction_diagnostics(
+        self,
+        owner_path: str,
+        handle: NativeArrayHandlePlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate completed live-view action and descriptor mechanism together."""
+        if handle.descriptor_interop is NativeArrayDescriptorInterop.MODULE_ALLOCATABLE_C_DESCRIPTOR:
+            valid = (
+                handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
+                and handle.handle_kind is NativeArrayHandleKind.BORROWED_MODULE_DESCRIPTOR
+                and handle.extraction_action is NativeArrayExtractionAction.DESCRIPTOR_VIEW
+            )
+            if not valid:
+                return (
+                    self._diagnostic(
+                        owner_path,
+                        "invalid-module-allocatable-descriptor-extraction",
+                        handle.extraction_action,
+                    ),
+                )
+        if (
+            handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
+            and handle.handle_kind is NativeArrayHandleKind.BORROWED_MODULE_DESCRIPTOR
+            and handle.extraction_action is NativeArrayExtractionAction.DESCRIPTOR_VIEW
+            and handle.descriptor_interop is not NativeArrayDescriptorInterop.MODULE_ALLOCATABLE_C_DESCRIPTOR
+        ):
+            return (
+                self._diagnostic(
+                    owner_path,
+                    "missing-module-allocatable-descriptor-interop",
+                    handle.descriptor_interop,
+                ),
+            )
+        return ()
 
     def _native_array_handle_rank_diagnostics(
         self,
@@ -1838,6 +2727,7 @@ class WrapperCodeGenerator:
             NativeBarrierAction.PASS_STORAGE_ADDRESS,
             NativeBarrierAction.PASS_ARRAY_BUFFER,
             NativeBarrierAction.PASS_NATIVE_DESCRIPTOR,
+            NativeBarrierAction.PASS_WRAPPER_ADDRESS,
         }:
             diagnostics.append(
                 self._diagnostic(plan.owner_path, "invalid-optional-native-action", plan.bridge.native_action.value)
@@ -1904,6 +2794,8 @@ class WrapperCodeGenerator:
                 return self._string_result_diagnostics(plan)
             case ObjectKind.NUMPY_ARRAY:
                 return self._array_result_diagnostics(plan)
+            case ObjectKind.DERIVED_TYPE:
+                return self._derived_result_diagnostics(plan)
             case _:
                 return (
                     self._diagnostic(
@@ -1912,6 +2804,34 @@ class WrapperCodeGenerator:
                         plan.object_kind.value,
                     ),
                 )
+
+    # Derived-type result validation.
+    def _derived_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate persistent wrapper-owned derived result policy."""
+        diagnostics = []
+        if plan.datatype_family is not DatatypeFamily.DERIVED:
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-result-family", plan.datatype_family))
+        if plan.derived is None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "missing-derived-result-handoff", None))
+        else:
+            diagnostics.extend(self._derived_handoff_identity_diagnostics(plan.owner_path, plan.derived))
+            if plan.derived.origin is not DerivedObjectOrigin.WRAPPER_RESULT:
+                diagnostics.append(
+                    self._diagnostic(plan.owner_path, "invalid-derived-result-origin", plan.derived.origin)
+                )
+        if plan.binding.codegen_action is not CodegenAction.WRAPPER_INSTANCE:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-derived-result-action", plan.binding.codegen_action)
+            )
+        if plan.bridge.data_action is not BridgeDataAction.COPY_REPRESENTATION:
+            diagnostics.append(
+                self._diagnostic(plan.owner_path, "invalid-derived-result-data-action", plan.bridge.data_action)
+            )
+        if plan.array is not None or plan.native_array_handle is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "derived-result-has-array-policy", None))
+        if plan.native_call_slot is not None and plan.native_call_slot.derived is not plan.derived:
+            diagnostics.append(self._diagnostic(plan.owner_path, "unshared-derived-result-handoff", None))
+        return tuple(diagnostics)
 
     # Rank-zero scalar/string descriptor result validation.
     def _scalar_descriptor_result_diagnostics(self, plan: ResultPlan) -> tuple[WrapperPlanDiagnostic, ...]:
@@ -2141,7 +3061,8 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "direct-result-has-native-slot", plan.source_kind))
         expected_data_action = (
             BridgeDataAction.COPY_REPRESENTATION
-            if plan.object_kind in {ObjectKind.STRING, ObjectKind.NUMPY_ARRAY} or plan.scalar_descriptor is not None
+            if plan.object_kind in {ObjectKind.STRING, ObjectKind.NUMPY_ARRAY, ObjectKind.DERIVED_TYPE}
+            or plan.scalar_descriptor is not None
             else BridgeDataAction.DIRECT_TRANSFER
         )
         if plan.bridge.data_action is not expected_data_action:
@@ -2524,7 +3445,8 @@ class WrapperCodeGenerator:
         """Validate direct versus representation-copy native output action."""
         expected = (
             BridgeDataAction.COPY_REPRESENTATION
-            if plan.object_kind in {ObjectKind.STRING, ObjectKind.NUMPY_ARRAY} or plan.scalar_descriptor is not None
+            if plan.object_kind in {ObjectKind.STRING, ObjectKind.NUMPY_ARRAY, ObjectKind.DERIVED_TYPE}
+            or plan.scalar_descriptor is not None
             else BridgeDataAction.DIRECT_TRANSFER
         )
         if plan.bridge_data_action is not expected:
@@ -2575,7 +3497,9 @@ class WrapperCodeGenerator:
         diagnostics = []
         if (plan.binding is None) == (plan.bridge is None):
             diagnostics.append(self._diagnostic(plan.owner_path, "lifecycle-backend-owner", phase_name))
-        expected_bridge_owner = plan.phase is WritebackPhase.NATIVE_MUTATION
+        expected_bridge_owner = (
+            plan.operation is LifecycleOperation.WRITEBACK and plan.phase is WritebackPhase.NATIVE_MUTATION
+        )
         if expected_bridge_owner != (plan.bridge is not None):
             diagnostics.append(self._diagnostic(plan.owner_path, "invalid-writeback-phase-owner", phase_name))
         return tuple(diagnostics)
@@ -2591,13 +3515,49 @@ class WrapperCodeGenerator:
         if binding.source_role != plan.source_role:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-role", phase_name))
         diagnostics.extend(self._binding_lifecycle_fact_diagnostics(plan, phase_name))
-        if binding.codegen_action not in {CodegenAction.COPY_IN_OUT, CodegenAction.IN_PLACE_ARGUMENT}:
+        if plan.operation is LifecycleOperation.WRITEBACK:
+            diagnostics.extend(self._binding_writeback_lifecycle_diagnostics(plan, phase_name))
+        else:
+            diagnostics.extend(self._binding_derived_lifecycle_diagnostics(plan, phase_name))
+        return tuple(diagnostics)
+
+    def _binding_writeback_lifecycle_diagnostics(
+        self,
+        plan: LifecycleActionPlan,
+        phase_name: str,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate one existing input/writeback lifecycle record."""
+        diagnostics = []
+        if plan.binding.codegen_action not in {CodegenAction.COPY_IN_OUT, CodegenAction.IN_PLACE_ARGUMENT}:
             diagnostics.append(
-                self._diagnostic(plan.owner_path, "invalid-writeback-action", binding.codegen_action.value)
+                self._diagnostic(plan.owner_path, "invalid-writeback-action", plan.binding.codegen_action.value)
             )
-        if plan.phase is WritebackPhase.COPY_OUT and not binding.python_result_role:
+        if plan.phase is WritebackPhase.COPY_OUT and not plan.binding.python_result_role:
             diagnostics.append(self._diagnostic(plan.owner_path, "missing-python-writeback-target", phase_name))
-        if plan.phase is not WritebackPhase.COPY_OUT and binding.python_result_role is not None:
+        if plan.phase is not WritebackPhase.COPY_OUT and plan.binding.python_result_role is not None:
+            diagnostics.append(self._diagnostic(plan.owner_path, "unexpected-python-writeback-target", phase_name))
+        return tuple(diagnostics)
+
+    def _binding_derived_lifecycle_diagnostics(
+        self,
+        plan: LifecycleActionPlan,
+        phase_name: str,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Validate failure cleanup or wrapper ownership transfer for one result."""
+        diagnostics = []
+        if plan.operation not in {
+            LifecycleOperation.DESTROY_ON_FAILURE,
+            LifecycleOperation.TRANSFER_TO_WRAPPER,
+        }:
+            diagnostics.append(self._diagnostic(plan.owner_path, "unsupported-lifecycle-operation", plan.operation))
+        if (
+            plan.phase is not WritebackPhase.CLEANUP
+            or plan.object_kind is not ObjectKind.DERIVED_TYPE
+            or plan.datatype_family is not DatatypeFamily.DERIVED
+            or plan.codegen_action is not CodegenAction.WRAPPER_INSTANCE
+        ):
+            diagnostics.append(self._diagnostic(plan.owner_path, "invalid-derived-lifecycle", phase_name))
+        if plan.binding.python_result_role is not None:
             diagnostics.append(self._diagnostic(plan.owner_path, "unexpected-python-writeback-target", phase_name))
         return tuple(diagnostics)
 
@@ -2617,6 +3577,8 @@ class WrapperCodeGenerator:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-family", phase_name))
         if binding.result_position != plan.result_position:
             diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-position", phase_name))
+        if binding.operation is not plan.operation:
+            diagnostics.append(self._diagnostic(plan.owner_path, "inconsistent-lifecycle-operation", phase_name))
         return tuple(diagnostics)
 
     # String lifecycle validation.
@@ -2698,26 +3660,94 @@ class WrapperCodeGenerator:
         diagnostics = [*self._mixed_output_diagnostics(plan)]
         diagnostics.extend(self._binding_result_diagnostics(plan))
         diagnostics.extend(self._writeback_result_diagnostics(plan))
+        diagnostics.extend(self._derived_result_lifecycle_coverage_diagnostics(plan))
         diagnostics.extend(self._native_callable_kind_diagnostics(plan))
         diagnostics.extend(self._unclaimed_result_diagnostics(plan))
         return tuple(diagnostics)
 
+    # Derived-type lifecycle validation.
+    def _derived_result_lifecycle_coverage_diagnostics(
+        self,
+        plan: FunctionPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require explicit failure and release records for every owned object result."""
+        diagnostics = []
+        for result in plan.results:
+            if result.object_kind is not ObjectKind.DERIVED_TYPE:
+                continue
+            diagnostics.extend(self._one_derived_result_lifecycle_coverage_diagnostics(plan, result))
+        return tuple(diagnostics)
+
+    def _one_derived_result_lifecycle_coverage_diagnostics(
+        self,
+        plan: FunctionPlan,
+        result: ResultPlan,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require one failure cleanup and one ownership transfer for a result."""
+        source_role = result.bridge.native_result_role
+        cleanup_count = self._lifecycle_operation_count(
+            plan.cleanup_actions,
+            source_role,
+            LifecycleOperation.DESTROY_ON_FAILURE,
+        )
+        release_count = self._lifecycle_operation_count(
+            plan.release_actions,
+            source_role,
+            LifecycleOperation.TRANSFER_TO_WRAPPER,
+        )
+        diagnostics = []
+        if cleanup_count != 1:
+            diagnostics.append(self._diagnostic(result.owner_path, "derived-failure-cleanup-count", cleanup_count))
+        if release_count != 1:
+            diagnostics.append(self._diagnostic(result.owner_path, "derived-wrapper-release-count", release_count))
+        return tuple(diagnostics)
+
+    @staticmethod
+    def _lifecycle_operation_count(actions, source_role, operation) -> int:
+        """Count lifecycle records matching one result role and operation."""
+        return sum(action.source_role == source_role and action.operation is operation for action in actions)
+
     def _mixed_output_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
-        """Reject simultaneous public result and writeback projections."""
-        if plan.results and plan.writeback_actions:
+        """Allow hidden outputs plus writebacks only with one contiguous order."""
+        if not plan.results or not plan.writeback_actions:
+            return ()
+        writebacks = self._projected_writebacks(plan)
+        if not self._supports_mixed_string_outputs(plan.results, writebacks):
             return (self._diagnostic(plan.owner_path, "mixed-result-and-writeback", plan.owner_path),)
-        return ()
+        positions = tuple(result.result_position for result in plan.results) + tuple(
+            action.binding.result_position for action in writebacks
+        )
+        return self._sequence_diagnostics(plan.owner_path, "mixed-output", positions, len(positions))
+
+    @staticmethod
+    def _projected_writebacks(plan: FunctionPlan) -> tuple:
+        """Return concrete copy-out actions in their planned result order."""
+        return tuple(
+            action
+            for action in plan.writeback_actions
+            if action.phase is WritebackPhase.COPY_OUT and action.binding is not None
+        )
+
+    @staticmethod
+    def _supports_mixed_string_outputs(results: tuple, writebacks: tuple) -> bool:
+        """Recognize the one legacy-observed hidden-string/writeback envelope."""
+        hidden_strings = all(
+            result.source_kind == "hidden_output" and result.object_kind is ObjectKind.STRING for result in results
+        )
+        return hidden_strings and all(action.object_kind is ObjectKind.STRING for action in writebacks)
 
     def _binding_result_diagnostics(self, plan: FunctionPlan) -> tuple[WrapperPlanDiagnostic, ...]:
         """Validate ordered consumers and the sole direct native result."""
-        diagnostics = list(
-            self._sequence_diagnostics(
-                plan.owner_path,
-                "binding-result",
-                tuple(result.result_position for result in plan.results),
-                len(plan.results),
+        diagnostics = []
+        if not plan.writeback_actions:
+            diagnostics.extend(
+                self._sequence_diagnostics(
+                    plan.owner_path,
+                    "binding-result",
+                    tuple(result.result_position for result in plan.results),
+                    len(plan.results),
+                )
             )
-        )
         direct_results = tuple(result for result in plan.results if result.source_kind == "direct_return")
         if len(direct_results) > 1:
             diagnostics.append(self._diagnostic(plan.owner_path, "multiple-direct-results", len(direct_results)))
@@ -2730,6 +3760,8 @@ class WrapperCodeGenerator:
             for action in plan.writeback_actions
             if action.phase is WritebackPhase.COPY_OUT and action.binding is not None
         )
+        if plan.results:
+            return ()
         return self._sequence_diagnostics(
             plan.owner_path,
             "writeback-result",

@@ -508,12 +508,13 @@ module_values: Annotated[
 ```
 
 Python receives a persistent `AllocatableArray` for the module descriptor.
-`handle.to_numpy()` may expose a zero-copy view because `Aliased` proves the
-required addressability. NumPy must not free the data. A native
+`handle.to_numpy()` exposes a current live view for both plain and `Aliased`
+module allocatables. `Aliased` preserves native addressability for other policy;
+it is not the extraction switch. NumPy must not free the data. A native
 allocate/deallocate routine controls the allocation, and a later native
-deallocation or reallocation makes previous views stale. The same handle then
-reports `allocated is False`; the module attribute itself does not become
-`None`.
+deallocation or reallocation makes previous views stale. Accessing stale views
+is unsupported and may crash. The same handle then reports `allocated is
+False`; the module attribute itself does not become `None`.
 
 Lifecycle:
 

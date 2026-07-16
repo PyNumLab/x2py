@@ -21,7 +21,34 @@ from x2py.semantics.ownership import (
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
     BridgeDataAction,
+    CallbackABIKind,
+    CallbackFatalAction,
+    CallbackGILAction,
+    CallbackLifecycleAction,
+    CallbackResultAction,
+    CallbackThreadAction,
+    CallbackTransferAction,
+    ClassConstructorKind,
+    ClassInvocationKind,
+    ClassMethodKind,
+    ClassOverloadMatchKind,
+    ClassRegistrationAction,
+    ConstructionLifecycleAction,
+    DerivedActualAccess,
+    DerivedCallAction,
+    DerivedDummyCategory,
+    DerivedObjectOrigin,
+    DerivedObjectStorage,
+    DerivedFieldAccessMechanism,
+    DerivedNativeHandoff,
+    DerivedPointerIntent,
+    LifecycleOperation,
+    DerivedOwnerRetention,
+    DerivedRelease,
+    DerivedTargetLifetime,
+    DerivedWriteback,
     ModuleGetterAction,
+    ModuleObjectAccessMechanism,
     NativeArrayDescriptorInterop,
     NativeArrayDescriptorKind,
     NativeArrayDescriptorOwnership,
@@ -53,6 +80,193 @@ class DatatypeFamily(Enum):
     REAL = "real"
     COMPLEX = "complex"
     STRING = "string"
+    DERIVED = "derived"
+    CALLBACK = "callback"
+
+
+@dataclass
+class DerivedHandoffPlan(StageRecord):
+    """Editable scalar-derived identity, origin, and lifetime facet."""
+
+    type_name: str
+    type_identity: tuple[str, str]
+    backend_symbol: str
+    native_type_name: str
+    native_scope: str
+    origin: DerivedObjectOrigin
+    owner_retention: DerivedOwnerRetention
+    release: DerivedRelease
+    target_owner_retention: DerivedOwnerRetention
+    target_release: DerivedRelease
+    nullable: bool
+    native_handoff: DerivedNativeHandoff
+    storage: DerivedObjectStorage
+
+
+@dataclass
+class DerivedCallCasePlan(StageRecord):
+    """Editable exhaustive actual-storage/dummy-form compatibility cell."""
+
+    actual_storage: DerivedObjectStorage
+    action: DerivedCallAction
+    access: DerivedActualAccess
+    abi_code: int
+    requires_present: bool
+    target_lifetime: DerivedTargetLifetime
+    failure_kind: str | None
+    failure_message: str | None
+
+
+@dataclass
+class DerivedCallPlan(StageRecord):
+    """Dummy-driven scalar-derived matrix and ordered transaction facts."""
+
+    dummy_category: DerivedDummyCategory
+    cases: tuple[DerivedCallCasePlan, ...]
+    pointer_intent: DerivedPointerIntent
+    writeback: DerivedWriteback
+    status_role: str
+    origin_identity_role: str
+    acquisition_order: int
+    cleanup_order: int
+
+
+@dataclass
+class DerivedFieldPlan(StageRecord):
+    """One field policy subordinate to its owning derived type."""
+
+    owner_path: str
+    name: str
+    native_name: str
+    semantic_type_name: str
+    string_element: bool
+    rank: int
+    object_kind: ObjectKind
+    access: DerivedFieldAccessMechanism
+    getter_action: CodegenAction
+    setter_action: SetterAction
+    native_assignment: AssignmentMode
+    owner_retention: DerivedOwnerRetention
+    character_length: int | None
+    getter_role: str
+    setter_role: str | None
+    array: ArrayHandoffPlan | None = None
+    native_array_handle: NativeArrayHandlePlan | None = None
+    derived: DerivedHandoffPlan | None = None
+    docstring: str = ""
+
+
+@dataclass
+class DerivedMemberPathPlan(StageRecord):
+    """One typed finite module-proxy member path."""
+
+    path: tuple[str, ...]
+    native_path: tuple[str, ...]
+    declaring_type_name: str
+    declaring_type_identity: tuple[str, str]
+    field: DerivedFieldPlan
+
+
+@dataclass
+class DerivedTypePlan(StageRecord):
+    """One namespace-owned opaque derived runtime type definition."""
+
+    owner_path: str
+    type_name: str
+    type_identity: tuple[str, str]
+    backend_symbol: str
+    native_type_name: str
+    native_scope: str
+    python_names: tuple[str, ...]
+    fields: tuple[DerivedFieldPlan, ...]
+    finalizers: tuple[str, ...]
+    bind_c: bool
+    sequence: bool
+
+
+@dataclass
+class ConstructorFieldPlan(StageRecord):
+    """One editable keyword-only generated-constructor field."""
+
+    owner_path: str
+    name: str
+    default_value: str | None
+    setter_action: SetterAction
+
+
+@dataclass
+class ConstructorPlan(StageRecord):
+    """Editable constructor selection and owned-instance lifecycle."""
+
+    kind: ClassConstructorKind
+    fields: tuple[ConstructorFieldPlan, ...]
+    target_owner_path: str | None
+    overload_name: str | None
+    lifecycle: tuple[ConstructionLifecycleAction, ...]
+    rejection_message: str | None = None
+    target: FunctionPlan | None = None
+    overload: ClassOverloadPlan | None = None
+
+
+@dataclass
+class ClassMethodPlan(StageRecord):
+    """One class descriptor linked to an ordinary editable function plan."""
+
+    owner_path: str
+    python_name: str
+    kind: ClassMethodKind
+    passed_object_position: int | None
+    public: bool
+    function: FunctionPlan
+
+
+@dataclass
+class ClassOverloadArgumentMatchPlan(StageRecord):
+    """One editable exact-type predicate for overload dispatch."""
+
+    python_name: str
+    kind: ClassOverloadMatchKind
+    optional: bool
+    semantic_type_name: str
+    rank: int
+    derived_type_identity: tuple[str, str] | None
+
+
+@dataclass
+class ClassOverloadPlan(StageRecord):
+    """One class-owned overload and its concrete editable candidates."""
+
+    owner_path: str
+    python_name: str
+    kind: str
+    candidates: tuple[FunctionPlan, ...]
+    candidate_matches: tuple[tuple[ClassOverloadArgumentMatchPlan, ...], ...]
+    candidate_passed_objects: tuple[bool, ...]
+
+
+@dataclass
+class ClassSurfacePlan(StageRecord):
+    """Namespace-owned generated class composed over a derived type plan."""
+
+    owner_path: str
+    type_identity: tuple[str, str]
+    python_names: tuple[str, ...]
+    base_identities: tuple[tuple[str, str], ...]
+    constructor: ConstructorPlan
+    methods: tuple[ClassMethodPlan, ...]
+    overloads: tuple[ClassOverloadPlan, ...]
+    registration: tuple[ClassRegistrationAction, ...]
+    docstring: str = ""
+
+
+@dataclass
+class DerivedModuleObjectPlan(StageRecord):
+    """Live derived module-object access subordinate to module state."""
+
+    handoff: DerivedHandoffPlan
+    access: ModuleObjectAccessMechanism
+    replacement: SetterAction
+    member_paths: tuple[DerivedMemberPathPlan, ...]
 
 
 @dataclass
@@ -220,6 +434,7 @@ class ModuleVariablePlan(StageRecord):
     binding: BindingModuleVariablePlan
     bridge: BridgeModuleVariablePlan
     native_array_handle: NativeArrayHandlePlan | None
+    derived: DerivedModuleObjectPlan | None = None
 
 
 @dataclass
@@ -240,6 +455,16 @@ class BridgeFunctionPlan(StageRecord):
     external: bool
     native_module: str | None
     native_is_subroutine: bool
+
+
+@dataclass
+class ClassCallPlan(StageRecord):
+    """Native receiver and invocation facts for one class-owned call."""
+
+    kind: ClassMethodKind
+    passed_object_position: int | None
+    invocation: ClassInvocationKind
+    type_bound_name: str | None
 
 
 @dataclass
@@ -308,6 +533,7 @@ class BindingLifecyclePlan(StageRecord):
     datatype_family: DatatypeFamily
     result_position: int
     python_result_role: str | None
+    operation: LifecycleOperation
 
 
 @dataclass
@@ -343,6 +569,73 @@ class NativeCallSlotPlan(StageRecord):
     array: ArrayHandoffPlan | None = None
     native_array_handle: NativeArrayHandlePlan | None = None
     scalar_descriptor: ScalarDescriptorResultPlan | None = None
+    derived: DerivedHandoffPlan | None = None
+
+
+@dataclass
+class PolymorphicVariantPlan(StageRecord):
+    """One concrete class accepted by an enumerated polymorphic input."""
+
+    type_identity: tuple[str, str]
+    backend_symbol: str
+    python_name: str
+    abi_code: int
+
+
+@dataclass
+class PolymorphicDispatchPlan(StageRecord):
+    """Stable concrete-type dispatch for one scalar input dummy."""
+
+    owner_path: str
+    variants: tuple[PolymorphicVariantPlan, ...]
+
+
+@dataclass
+class CallbackTransferPlan(StageRecord):
+    """One typed native-to-Python transfer inside a callback adapter."""
+
+    owner_path: str
+    name: str
+    semantic_type_name: str
+    object_kind: ObjectKind
+    rank: int
+    access: str
+    abi: CallbackABIKind
+    adapter_action: CallbackTransferAction
+    python_action: PythonBarrierAction
+    character_length: int | None
+    array: ArrayHandoffPlan | None
+    derived_type_identity: tuple[str, str] | None
+    derived_backend_symbol: str | None
+    data_role: str
+    extent_roles: tuple[str, ...]
+    length_role: str | None
+
+
+@dataclass
+class CallbackResultPlan(StageRecord):
+    """Typed callback result conversion and its optional transfer."""
+
+    transfer: CallbackTransferPlan | None
+    action: CallbackResultAction
+
+
+@dataclass
+class CallbackHandoffPlan(StageRecord):
+    """Call-scoped callback context, symbols, transfers, and fatal contract."""
+
+    owner_path: str
+    context_type_symbol: str
+    context_current_symbol: str
+    adapter_symbol: str
+    trampoline_symbol: str
+    abort_symbol: str
+    arguments: tuple[CallbackTransferPlan, ...]
+    result: CallbackResultPlan
+    lifecycle: tuple[CallbackLifecycleAction, ...]
+    thread_action: CallbackThreadAction
+    gil_actions: tuple[CallbackGILAction, ...]
+    fatal_action: CallbackFatalAction
 
 
 @dataclass
@@ -369,6 +662,10 @@ class ArgumentTransferPlan(StageRecord):
     array: ArrayHandoffPlan | None
     native_array_actual: NativeArrayActualPlan | None
     native_array_handle: NativeArrayHandlePlan | None
+    derived: DerivedHandoffPlan | None
+    derived_call: DerivedCallPlan | None
+    callback: CallbackHandoffPlan | None
+    polymorphic: PolymorphicDispatchPlan | None
     binding: BindingArgumentPlan
     bridge: BridgeArgumentPlan
     native_call_slot: NativeCallSlotPlan
@@ -398,6 +695,7 @@ class ResultPlan(StageRecord):
     bridge: BridgeResultPlan
     native_call_slot: NativeCallSlotPlan | None = None
     scalar_descriptor: ScalarDescriptorResultPlan | None = None
+    derived: DerivedHandoffPlan | None = None
     transformations: tuple[TransformationPlan, ...] = ()
 
 
@@ -413,6 +711,7 @@ class LifecycleActionPlan(StageRecord):
     datatype_family: DatatypeFamily
     object_kind: ObjectKind
     result_position: int
+    operation: LifecycleOperation
     binding: BindingLifecyclePlan | None = None
     bridge: BridgeLifecyclePlan | None = None
 
@@ -425,6 +724,7 @@ class FunctionPlan(StageRecord):
     symbol_name: str
     binding: BindingFunctionPlan
     bridge: BridgeFunctionPlan
+    class_call: ClassCallPlan | None
     arguments: tuple[ArgumentTransferPlan, ...]
     results: tuple[ResultPlan, ...]
     native_call_slots: tuple[NativeCallSlotPlan, ...]
@@ -442,6 +742,9 @@ class NamespacePlan(StageRecord):
     python_path: tuple[str, ...]
     functions: tuple[FunctionPlan, ...] = ()
     variables: tuple[ModuleVariablePlan, ...] = ()
+    derived_types: tuple[DerivedTypePlan, ...] = ()
+    classes: tuple[ClassSurfacePlan, ...] = ()
+    docstring: str = ""
 
 
 @dataclass

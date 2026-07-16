@@ -68,7 +68,8 @@ def test_immediate_scalar_dummy_procedure_calls_python_callback(pyi_parity_build
         assert "Py_END_ALLOW_THREADS" not in wrapper_source
         assert "PyErr_PrintEx(0);" in wrapper_source
         assert "abort();" in wrapper_source
-        assert "Py_INCREF(bound_callback_obj);" in wrapper_source
+        assert "callback_callback_context.callable = callback_obj;" in wrapper_source
+        assert "Py_INCREF(callback_obj);" in wrapper_source
         assert "Py_DECREF(" in wrapper_source
 
 

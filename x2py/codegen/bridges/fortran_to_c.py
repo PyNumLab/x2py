@@ -171,7 +171,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_convert_array_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_convert_array_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_owned_custom_type_result",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_convert_owned_custom_type_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_convert_borrowed_custom_type_result",
         }
     )
@@ -248,14 +247,12 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_array_module_variable",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_array_module_variable",
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_copied_derived_module_constant",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_snapshot_derived_module_variable",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_derived_module_variable",
         }
     )
     _MODULE_ARRAY_GETTER_POLICY_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_borrowed_module_array_getter_result",
-            (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_snapshot_module_array_getter_result",
         }
     )
     _NATIVE_ARRAY_HANDLE_DISPATCHER = NativeArrayHandlePolicyDispatcher(
@@ -1884,10 +1881,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
     def _borrowed_module_array_getter_result(self, getter_value, _decision, expr):
         """Build a borrowed module-array getter result."""
         return self._get_bind_c_array(expr.name, getter_value, expr.shape, pointer_target=True)
-
-    def _snapshot_module_array_getter_result(self, getter_value, _decision, expr):
-        """Build a copied module-array getter result."""
-        return self._get_allocatable_snapshot_bind_c_array(expr.name, getter_value, expr)
 
     def _visit_DottedVariable(self, expr):
         """
@@ -4446,19 +4439,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             setter_function=None,
         )
 
-    def _snapshot_derived_module_variable(self, expr, decision):
-        """Expose one native module object through a detached snapshot getter."""
-        if decision.boundary_storage_mode is StorageMode.ALIAS:
-            raise ValueError(f"Derived module snapshot {expr.name!r} unexpectedly uses alias boundary storage")
-        if expr.setter_ownership_decision.setter_action is not SetterAction.REJECT_REPLACEMENT:
-            raise ValueError(f"Derived module snapshot {expr.name!r} unexpectedly exposes replacement")
-        return expr.clone(
-            expr.name,
-            new_class=BindCAccessorModuleVariable,
-            getter_function=self._derived_module_copy_getter(expr),
-            setter_function=None,
-        )
-
     def _derived_module_copy_getter(self, expr):
         """Return a pointer to an owned copy of a derived module value."""
         getter_policy = expr.getter_ownership_decision
@@ -4761,77 +4741,6 @@ class FortranToCBridgeGenerator(BridgeGenerator):
             If(
                 IfSection(ArrayAssociated(pointer_var), copy_body),
                 IfSection(convert_to_literal(True), unassociated_body),
-            )
-        ]
-
-        result_var = Variable(
-            BindCArrayType.get_new(rank, has_strides=False),
-            scope.get_new_name(),
-            shape=(rank + 1,),
-        )
-        c_result = BindCVariable(result_var, orig_var)
-        for descriptor in (result_var, c_result):
-            scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(0)), bind_var)
-            for index, shape_var in enumerate(shape_vars):
-                scope.insert_symbolic_alias(IndexedElement(descriptor, convert_to_literal(index + 1)), shape_var)
-
-        return {
-            "c_result": c_result,
-            "body": body,
-            "f_array": ptr_var,
-            "bind_var": bind_var,
-            "shape_vars": shape_vars,
-        }
-
-    def _get_allocatable_snapshot_bind_c_array(self, name, orig_var, source_var):
-        """Return a Python-owned snapshot of allocatable module storage."""
-        dtype = orig_var.dtype
-        rank = orig_var.rank
-        order = orig_var.order
-        scope = self.scope
-
-        bind_var = Variable(BindCPointer(), scope.get_new_name("bound_" + name), memory_handling="alias")
-        shape_vars = [Variable(NumpyInt32Type(), scope.get_new_name(f"{name}_shape_{i + 1}")) for i in range(rank)]
-
-        numpy_dtype = numpy_precision_map[(dtype.primitive_type, dtype.precision)]
-        ptr_var = Variable(
-            NumpyNDArrayType.get_new(numpy_dtype, rank, order),
-            scope.get_new_name(name + "_ptr"),
-            memory_handling="alias",
-        )
-        elem_var = Variable(dtype, scope.get_new_name(name + "_elem"))
-        scope.insert_variable(ptr_var)
-        scope.insert_variable(elem_var)
-
-        shape_assignments = [
-            Assign(
-                shape_var,
-                cast_to(ArrayShapeElement(source_var, convert_to_literal(index)), NumpyInt32Type()),
-            )
-            for index, shape_var in enumerate(shape_vars)
-        ]
-        size = reduce(Mul, [BindCSizeOf(elem_var), *shape_vars])
-        copy_body = [
-            *shape_assignments,
-            Assign(bind_var, c_malloc(size)),
-            If(
-                IfSection(
-                    IsNot(bind_var, NIL),
-                    [
-                        C_F_Pointer(bind_var, ptr_var, shape_vars if order == "F" else shape_vars[::-1]),
-                        Assign(ptr_var, source_var),
-                    ],
-                )
-            ),
-        ]
-        unallocated_body = [
-            Assign(bind_var, NIL),
-            *[Assign(shape_var, convert_to_literal(0, dtype=NumpyInt32Type())) for shape_var in shape_vars],
-        ]
-        body = [
-            If(
-                IfSection(ArrayAllocated(source_var), copy_body),
-                IfSection(convert_to_literal(True), unallocated_body),
             )
         ]
 

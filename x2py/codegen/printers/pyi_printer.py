@@ -19,7 +19,6 @@ from x2py.semantics.metadata import (
     NATIVE_PROJECTION_METADATA,
     OPTIONAL_ABSENT_HANDLE_METADATA,
     SCALAR_STORAGE_CATEGORY,
-    SNAPSHOT_TYPE_METADATA,
     USER_PRIVATE_METADATA,
 )
 from x2py.semantics.models import (
@@ -28,6 +27,7 @@ from x2py.semantics.models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    NATIVE_BY_VALUE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -129,10 +129,6 @@ class PyiPrinter(ClassVisitor):
         """Emit semantic type syntax."""
         if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
             raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
-        if semantic_type.metadata.get(SNAPSHOT_TYPE_METADATA):
-            raise ValueError(
-                "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only"
-            )
         array_descriptor = native_array_descriptor_kind(semantic_type)
         if array_descriptor is not None:
             wrapper = "Allocatable" if array_descriptor == "allocatable" else "Pointer"
@@ -644,6 +640,8 @@ class PyiPrinter(ClassVisitor):
         semantic_type = self._without_constant_constraint(arg.semantic_type)
         type_text = self._visit(semantic_type)
         annotation_metadata = []
+        if self._is_native_by_value_derived_argument(arg):
+            annotation_metadata.append(self._contract("ByValue"))
         if original_name is not None:
             annotation_metadata.append(f"{self._contract('Name')}({json.dumps(original_name)})")
         if annotation_metadata:
@@ -668,6 +666,16 @@ class PyiPrinter(ClassVisitor):
             if default_value is not None:
                 text += f" = {default_value}"
         return text
+
+    @staticmethod
+    def _is_native_by_value_derived_argument(arg: SemanticVariable) -> bool:
+        """Preserve native aggregate value passing without annotating primitive scalars."""
+        if not isinstance(arg, SemanticArgument):
+            return False
+        passes_by_value = bool(
+            arg.semantic_type.metadata.get(NATIVE_BY_VALUE_METADATA) or getattr(arg.origin, "metadata", {}).get("value")
+        )
+        return passes_by_value and arg.semantic_type.name not in SEMANTIC_SCALAR_TYPE_NAMES | {"String"}
 
     def _emit_call_argument(self, func: SemanticFunction, arg: SemanticArgument) -> str:
         """Emit a callable argument with compact output metadata when possible."""

@@ -36,12 +36,14 @@ C_DOCS_END = "X2PY_C_DOCS_END -->"
 C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
 VISIBLE_C_DOCUMENTATION_EXCEPTIONS = {
     "docs/user/guide/enumerations.md": ("bind(C)",),
+    "docs/user/guide/wrapping-derived-types.md": ("bind(C)",),
     "docs/user/guide/arrays.md": ("ORDER_C", "C-contiguous", "C-order", "C-oriented"),
     "docs/user/reference/semantic-pyi-format.md": (
         "ORDER_C",
         "C-contiguous",
         "C-order",
         "C-oriented",
+        "bind(C)",
         "c_input",
     ),
 }
@@ -901,11 +903,11 @@ def test_array_handle_docs_keep_views_copies_and_handles_distinct() -> None:
 
     assert "Reading the Python attribute" in allocatables
     assert "returns an `Allocatable[T[...]]` handle, not `ndarray | None`." in allocatables
-    assert "returns a read-only detached copy" in allocatables
+    assert "never creates an automatic detached snapshot" in allocatables
     assert "A borrowed view is a NumPy array that points at storage Python does not own." in allocatables
     assert "Pointer-array handle results remain blocked" in pointers
     assert "Any NumPy view returned by `p.to_numpy()` is tied to the pointer target" in pointers
-    assert "Whole-object `Snapshot[T]` contracts are future-only" in memory
+    assert "plain and `Aliased` derived module variables remain live native-owned objects" in memory
 
 
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)

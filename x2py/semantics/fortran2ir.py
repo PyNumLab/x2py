@@ -324,6 +324,7 @@ class FortranToIRConverter(ClassVisitor):
             metadata["fortran_polymorphic"] = True
         if getattr(var, "target", False):
             metadata["aliased"] = True
+            metadata["fortran_target"] = True
         if getattr(var, "pointer", False):
             metadata["fortran_pointer"] = True
             metadata["fortran_pointer_association"] = "runtime"
@@ -383,7 +384,7 @@ class FortranToIRConverter(ClassVisitor):
             )
         else:
             semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
-        if isinstance(arg, FortranArgument) and self._is_scalar_descriptor(semantic_type):
+        if isinstance(arg, FortranArgument) and semantic_type.rank == 0:
             semantic_type.metadata["fortran_intent"] = getattr(arg, "intent", None)
         access = self._argument_access(arg, semantic_type)
         if semantic_type.name == "Callable":

@@ -5,7 +5,6 @@ which creates an interface exposing C code to Python.
 
 import ast
 from functools import reduce
-from typing import ClassVar
 
 from x2py.semantics.ownership import (
     CodegenAction,
@@ -19,9 +18,7 @@ from x2py.semantics.ownership import (
     PythonBarrierDispatcher,
     SetterAction,
     SetterActionDispatcher,
-    SnapshotFieldAction,
     StorageMode,
-    TransferMode,
     ownership_decision_for_codegen_variable,
 )
 from x2py.semantics.metadata import SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA
@@ -138,12 +135,10 @@ from .cpython_api import (
     PyModule,
     PyModule_AddObject,
     PyModule_Create,
-    PyModule_GetDict,
     PyModule_SetPropertyType,
     PyObject_CallObject,
     PyObject_GetAttrString,
     PyRuntimeError,
-    PyRun_String,
     PyObject_TypeCheck,
     PySys_GetObject,
     PyTuple_Pack,
@@ -182,7 +177,6 @@ from ..models.datatypes import (
 from ..models.core import Slice
 from .numpy_cpython_api import (
     PyArray_Check,
-    PyArray_CLEARFLAGS,
     PyArray_DATA,
     PyArray_CHKFLAGS,
     PyArray_ISNOTSWAPPED,
@@ -358,15 +352,9 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.NUMPY_ARRAY, CodegenAction.SNAPSHOT_COPY): "_convert_policy_array_result",
             (ObjectKind.NUMPY_ARRAY, CodegenAction.BORROWED_VIEW): "_convert_policy_array_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_convert_policy_custom_result",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_convert_snapshot_policy_custom_result",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_convert_policy_custom_result",
         }
     )
-    _SNAPSHOT_FIELD_DISPATCHER: ClassVar[dict[SnapshotFieldAction, str]] = {
-        SnapshotFieldAction.SCALAR_COPY: "_snapshot_scalar_field_value_expr",
-        SnapshotFieldAction.ARRAY_COPY: "_snapshot_array_field_value_expr",
-        SnapshotFieldAction.NESTED_SNAPSHOT: "_snapshot_nested_field_value_expr",
-    }
     _RESULT_DETAIL_DISPATCHER = PolicyActionDispatcher(
         {
             (ObjectKind.SCALAR, CodegenAction.DIRECT_VALUE): "_default_result_detail_lines",
@@ -388,7 +376,6 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_default_result_detail_lines",
             (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_default_result_detail_lines",
             (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_default_result_detail_lines",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_default_result_detail_lines",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_default_result_detail_lines",
         }
     )
@@ -413,7 +400,6 @@ class CPythonBindingGenerator(BindingGenerator):
             (ObjectKind.DERIVED_TYPE, CodegenAction.WRAPPER_INSTANCE): "_empty_result_notes",
             (ObjectKind.DERIVED_TYPE, CodegenAction.IDENTITY_OUTPUT): "_empty_result_notes",
             (ObjectKind.DERIVED_TYPE, CodegenAction.IN_PLACE_ARGUMENT): "_empty_result_notes",
-            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY): "_empty_result_notes",
             (ObjectKind.DERIVED_TYPE, CodegenAction.BORROWED_VIEW): "_empty_result_notes",
         }
     )
@@ -1759,12 +1745,10 @@ class CPythonBindingGenerator(BindingGenerator):
         create_array = AliasAssign(
             py_equiv, self._array_to_python_call(v, data_var, shape_var, itemsize_var, release_memory)
         )
-        readonly = self._clear_writeable_flag(py_equiv) if self._returns_read_only_snapshot_array(decision) else []
         return [
             call,
             *unallocated_guard,
             create_array,
-            *readonly,
         ]
 
     def _visit_BindCNativeArrayHandleVariable(self, expr):
@@ -1987,21 +1971,6 @@ class CPythonBindingGenerator(BindingGenerator):
             except RuntimeError:
                 pass
         return str(original.name)
-
-    @staticmethod
-    def _returns_read_only_snapshot_array(decision):
-        """Return whether this completed array policy is a read-only snapshot."""
-        return decision.transfer is TransferMode.SNAPSHOT_COPY and decision.storage_mode is StorageMode.HEAP
-
-    @staticmethod
-    def _clear_writeable_flag(py_array):
-        """Clear NumPy writeability on a returned read-only snapshot."""
-        return [
-            PyArray_CLEARFLAGS(
-                ObjectAddress(PointerCast(py_array, PyArray_CLEARFLAGS.arguments[0].var)),
-                numpy_flag_writeable,
-            )
-        ]
 
     def _visit_BindCModuleConstant(self, expr):
         """Convert the ``BindCModuleConstant`` model node."""
@@ -4892,41 +4861,6 @@ class CPythonBindingGenerator(BindingGenerator):
         """Emit the completed custom-value result behavior."""
         return self._convert_custom_type_result(wrapped_var, is_bind_c, funcdef, decision)
 
-    def _convert_snapshot_policy_custom_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
-        """Emit a detached snapshot object for a completed derived snapshot result."""
-        owner_object = getattr(self, "_result_owner_object", None)
-        if owner_object is None:
-            raise ValueError(f"Derived snapshot result {orig_var.name!r} requires a module owner object")
-        wrapped = self._convert_custom_type_result(wrapped_var, is_bind_c, funcdef, decision)
-        wrapper_obj = wrapped["py_result"]
-        helper = self._new_python_object(f"{orig_var.name}_snapshot_helper")
-        helper_args = self._new_python_object(f"{orig_var.name}_snapshot_args")
-        snapshot = self._new_python_object(f"{orig_var.name}_snapshot")
-        helper_name = self._snapshot_helper_name(wrapper_obj.cls_base.scope.get_python_name(wrapper_obj.cls_base.name))
-        body = [
-            *wrapped["body"],
-            AliasAssign(helper, PyObject_GetAttrString(owner_object, CStrStr(convert_to_literal(helper_name)))),
-            If(IfSection(Is(helper, NIL), [Py_DECREF(wrapper_obj), Return(self._error_exit_code)])),
-            AliasAssign(helper_args, PyTuple_Pack(ObjectAddress(wrapper_obj))),
-            If(
-                IfSection(
-                    Is(helper_args, NIL),
-                    [Py_DECREF(helper), Py_DECREF(wrapper_obj), Return(self._error_exit_code)],
-                )
-            ),
-            AliasAssign(snapshot, PyObject_CallObject(helper, helper_args)),
-            Py_DECREF(helper_args),
-            Py_DECREF(helper),
-            Py_DECREF(wrapper_obj),
-            If(IfSection(Is(snapshot, NIL), [Return(self._error_exit_code)])),
-        ]
-        return {
-            "c_results": wrapped["c_results"],
-            "py_result": snapshot,
-            "body": body,
-            "setup": wrapped.get("setup", ()),
-        }
-
     def _convert_policy_scalar_result(self, orig_var, decision, wrapped_var, is_bind_c, funcdef):
         """Emit the completed scalar result behavior."""
         if decision.descriptor_boundary and decision.nullable:
@@ -5398,7 +5332,6 @@ class CPythonBindingGenerator(BindingGenerator):
         body.extend(self._initialise_module_variable_defaults(expr))
 
         body.extend(self._add_classes_to_modules(expr, module_var, namespace_modules, initialised))
-        body.extend(self._install_snapshot_helpers(expr, module_var, namespace_modules, initialised))
         body.extend(self._add_variables_to_modules(expr, module_var, namespace_modules, initialised))
 
         body.append(Return(module_var))
@@ -5406,319 +5339,6 @@ class CPythonBindingGenerator(BindingGenerator):
         self.exit_scope()
 
         return PyModInitFunc(func_name, body, [API_var], func_scope)
-
-    def _install_snapshot_helpers(self, expr, module_var, namespace_modules, initialised):
-        """Install Python helper classes/functions for detached derived snapshots."""
-        body = []
-        for namespace in self._snapshot_helper_namespaces(expr):
-            source = self._snapshot_helper_source(expr, namespace)
-            if source is None:
-                continue
-            target_module = module_var if not namespace else namespace_modules[namespace]
-            module_dict = self._new_python_object("snapshot_module_dict")
-            result = self._new_python_object("snapshot_setup_result")
-            body.extend(
-                [
-                    AliasAssign(module_dict, PyModule_GetDict(target_module)),
-                    If(
-                        IfSection(
-                            Is(module_dict, NIL),
-                            [Py_DECREF(item) for item in initialised] + [Return(self._error_exit_code)],
-                        )
-                    ),
-                    AliasAssign(
-                        result,
-                        PyRun_String(
-                            CStrStr(convert_to_literal(source)),
-                            Variable(CNativeInt(), "Py_file_input"),
-                            module_dict,
-                            module_dict,
-                        ),
-                    ),
-                    If(
-                        IfSection(
-                            Is(result, NIL),
-                            [Py_DECREF(item) for item in initialised] + [Return(self._error_exit_code)],
-                        )
-                    ),
-                    Py_DECREF(result),
-                ]
-            )
-        return body
-
-    def _snapshot_helper_source(self, expr, namespace):
-        """Return Python source defining snapshot classes and builders, if needed."""
-        if not self._module_has_snapshot_variables(expr, namespace):
-            return None
-        codegen_classes = self._snapshot_codegen_classes(expr, namespace)
-        if not codegen_classes:
-            return None
-        class_names = {
-            id(semantic_class): self._snapshot_live_class_name(expr, semantic_class, namespace)
-            for semantic_class in codegen_classes
-        }
-        lines = [
-            "class Snapshot:",
-            "    __slots__ = ('_x2py_frozen',)",
-            "    snapshot_type = None",
-            "    def __setattr__(self, name, value):",
-            "        if getattr(self, '_x2py_frozen', False):",
-            "            raise AttributeError('read-only snapshot')",
-            "        object.__setattr__(self, name, value)",
-            "    def __getattr__(self, name):",
-            "        raise AttributeError(f'read-only snapshot has no attribute {name!r}')",
-            "",
-            "def _x2py_snapshot_array(value):",
-            "    if value is None:",
-            "        return None",
-            "    copied = value.copy()",
-            "    copied.flags.writeable = False",
-            "    return copied",
-            "",
-        ]
-        for semantic_class in codegen_classes:
-            live_name = class_names[id(semantic_class)]
-            snapshot_name = self._snapshot_class_name(live_name)
-            field_names = [
-                self._snapshot_field_name(semantic_class, field)
-                for field in self._snapshot_source_fields(semantic_class)
-            ]
-            slots = tuple(field_names)
-            lines.extend(
-                [
-                    f"class {snapshot_name}(Snapshot):",
-                    f"    __slots__ = {slots!r}",
-                    f"    snapshot_type = {live_name}",
-                    "",
-                ]
-            )
-        class_by_type = {
-            id(self._snapshot_source_class(semantic_class).class_type): semantic_class
-            for semantic_class in codegen_classes
-        }
-        class_by_name = {
-            str(self._snapshot_source_class(semantic_class).class_type.name): semantic_class
-            for semantic_class in codegen_classes
-        }
-        for semantic_class in codegen_classes:
-            live_name = class_names[id(semantic_class)]
-            snapshot_name = self._snapshot_class_name(live_name)
-            helper_name = self._snapshot_helper_name(live_name)
-            lines.extend(
-                [
-                    f"def {helper_name}(source):",
-                    f"    snap = {snapshot_name}.__new__({snapshot_name})",
-                ]
-            )
-            for field in self._snapshot_source_fields(semantic_class):
-                field_name = self._snapshot_field_name(semantic_class, field)
-                source_ref = f"source.{field_name}"
-                value_expr = self._snapshot_field_value_expr(
-                    field,
-                    source_ref,
-                    class_by_type,
-                    class_by_name,
-                    class_names,
-                )
-                lines.append(f"    object.__setattr__(snap, {field_name!r}, {value_expr})")
-            lines.extend(
-                [
-                    "    object.__setattr__(snap, '_x2py_frozen', True)",
-                    "    return snap",
-                    "",
-                ]
-            )
-        return "\n".join(lines)
-
-    @staticmethod
-    def _snapshot_helper_namespaces(expr):
-        """Return namespaces that expose at least one derived snapshot variable."""
-        namespaces = set()
-        variables = getattr(getattr(expr, "original_module", expr), "variables", ())
-        for variable in variables:
-            decision = getattr(variable, "ownership_decision", None)
-            if decision is None:
-                continue
-            if decision.kind is ObjectKind.DERIVED_TYPE and decision.codegen_action is CodegenAction.SNAPSHOT_COPY:
-                for namespace, _ in getattr(expr, "original_module", expr).get_python_exports(variable):
-                    namespaces.add(namespace)
-        return sorted(namespaces, key=lambda item: (len(item), item))
-
-    @staticmethod
-    def _module_has_snapshot_variables(expr, target_namespace):
-        """Return whether the wrapped module exposes any derived snapshot variables."""
-        variables = getattr(getattr(expr, "original_module", expr), "variables", ())
-        for variable in variables:
-            decision = getattr(variable, "ownership_decision", None)
-            if decision is None:
-                continue
-            if (
-                decision.kind is not ObjectKind.DERIVED_TYPE
-                or decision.codegen_action is not CodegenAction.SNAPSHOT_COPY
-            ):
-                continue
-            for namespace, _ in getattr(expr, "original_module", expr).get_python_exports(variable):
-                if namespace == target_namespace:
-                    return True
-        return False
-
-    def _snapshot_codegen_classes(self, expr, namespace):
-        """Return classes reachable from derived snapshot variables in one namespace."""
-        source_by_type = {id(self._snapshot_source_class(cls).class_type): cls for cls in expr.classes}
-        source_by_name = {
-            self._snapshot_source_class(cls).scope.get_python_name(self._snapshot_source_class(cls).name): cls
-            for cls in expr.classes
-        }
-        selected: set[int] = set()
-
-        def visit(semantic_class):
-            if self._class_export_name(expr, semantic_class, namespace) is None:
-                source_class = self._snapshot_source_class(semantic_class)
-                name = source_class.scope.get_python_name(source_class.name)
-                raise ValueError(f"Snapshot class {name!r} is not exported in namespace {namespace!r}")
-            semantic_id = id(semantic_class)
-            if semantic_id in selected:
-                return
-            selected.add(semantic_id)
-            for field in self._snapshot_source_fields(semantic_class):
-                action = self._snapshot_field_action(field)
-                if action is not SnapshotFieldAction.NESTED_SNAPSHOT:
-                    continue
-                nested_class = source_by_type.get(id(field.class_type))
-                if nested_class is None:
-                    nested_class = source_by_name.get(str(getattr(field.class_type, "name", "")))
-                if nested_class is None:
-                    raise ValueError(f"Snapshot field {field.name!s} has no generated nested wrapper class")
-                visit(nested_class)
-
-        variables = getattr(getattr(expr, "original_module", expr), "variables", ())
-        for variable in variables:
-            decision = getattr(variable, "ownership_decision", None)
-            if decision is None:
-                continue
-            if (
-                decision.kind is not ObjectKind.DERIVED_TYPE
-                or decision.codegen_action is not CodegenAction.SNAPSHOT_COPY
-            ):
-                continue
-            if namespace not in {
-                export_namespace for export_namespace, _ in expr.original_module.get_python_exports(variable)
-            }:
-                continue
-            snapshot_class = source_by_type.get(id(variable.class_type))
-            if snapshot_class is None:
-                snapshot_class = source_by_name.get(getattr(variable.class_type, "name", ""))
-            if snapshot_class is None:
-                raise ValueError(f"Snapshot variable {variable.name!r} has no generated wrapper class")
-            visit(snapshot_class)
-
-        return [semantic_class for semantic_class in expr.classes if id(semantic_class) in selected]
-
-    @staticmethod
-    def _snapshot_class_name(live_name):
-        """Return the generated Python snapshot class name."""
-        return f"{live_name}_snapshot"
-
-    @classmethod
-    def _snapshot_helper_name(cls, live_name):
-        """Return the generated Python snapshot builder name."""
-        return f"_x2py_make_{cls._snapshot_class_name(live_name)}"
-
-    @staticmethod
-    def _snapshot_live_class_name(expr, semantic_class, namespace):
-        """Return the root-exported Python name for a live wrapper class."""
-        for export_namespace, class_name in expr.get_python_exports(semantic_class):
-            if export_namespace == namespace:
-                return class_name
-        source_class = CPythonBindingGenerator._snapshot_source_class(semantic_class)
-        name = source_class.scope.get_python_name(source_class.name)
-        raise ValueError(f"Snapshot class {name!r} is not exported in namespace {namespace!r}")
-
-    @staticmethod
-    def _class_export_name(expr, semantic_class, namespace):
-        """Return class export name in one namespace, if present."""
-        for export_namespace, class_name in expr.get_python_exports(semantic_class):
-            if export_namespace == namespace:
-                return class_name
-        return None
-
-    @staticmethod
-    def _snapshot_field_name(semantic_class, field):
-        """Return the Python-visible field name used by wrapper descriptors."""
-        return CPythonBindingGenerator._snapshot_source_class(semantic_class).scope.get_python_name(field.name)
-
-    @staticmethod
-    def _snapshot_source_class(semantic_class):
-        """Return the live wrapper source class for field inspection."""
-        current = semantic_class
-        seen = set()
-        while id(current) not in seen:
-            seen.add(id(current))
-            next_class = getattr(current, "original_class", None)
-            if next_class is None:
-                next_class = getattr(current, "_original_class", None)
-            if next_class is None or next_class is current:
-                return current
-            current = next_class
-        return current
-
-    @classmethod
-    def _snapshot_source_fields(cls, semantic_class):
-        """Return source data fields for one generated wrapper class."""
-        return tuple(cls._snapshot_source_class(semantic_class).attributes)
-
-    @staticmethod
-    def _snapshot_field_action(field):
-        """Return one completed field action or fail closed before emission."""
-        action = field.snapshot_field_action
-        if action is None:
-            raise ValueError(f"Snapshot field {field.name!s} is missing completed copy policy")
-        return SnapshotFieldAction(action)
-
-    def _snapshot_field_value_expr(
-        self,
-        field,
-        source_ref,
-        class_by_type,
-        class_by_name,
-        class_names,
-    ):
-        """Dispatch one field through its completed snapshot copy action."""
-        action = self._snapshot_field_action(field)
-        handler_name = self._SNAPSHOT_FIELD_DISPATCHER[action]
-        return getattr(self, handler_name)(
-            field,
-            source_ref,
-            class_by_type,
-            class_by_name,
-            class_names,
-        )
-
-    @staticmethod
-    def _snapshot_scalar_field_value_expr(field, source_ref, class_by_type, class_by_name, class_names):
-        """Copy a completed scalar snapshot field."""
-        return source_ref
-
-    @staticmethod
-    def _snapshot_array_field_value_expr(field, source_ref, class_by_type, class_by_name, class_names):
-        """Copy and freeze a completed array snapshot field."""
-        return f"_x2py_snapshot_array({source_ref})"
-
-    def _snapshot_nested_field_value_expr(
-        self,
-        field,
-        source_ref,
-        class_by_type,
-        class_by_name,
-        class_names,
-    ):
-        """Recursively copy a completed nested snapshot field."""
-        nested = class_by_type.get(id(field.class_type))
-        if nested is None:
-            nested = class_by_name.get(str(getattr(field.class_type, "name", "")))
-        if nested is None:
-            raise ValueError(f"Snapshot field {field.name!s} has no generated nested wrapper class")
-        return f"{self._snapshot_helper_name(class_names[id(nested)])}({source_ref})"
 
     def _initialise_module_variable_defaults(self, expr):
         """Apply literal `.pyi` defaults to native module storage on import."""
@@ -6151,9 +5771,8 @@ class CPythonBindingGenerator(BindingGenerator):
                     "Unallocated allocatable scalar snapshots return None.",
                 ]
             return [
-                "Plain allocatable module arrays without Aliased are copied into Python-owned NumPy arrays.",
-                "Returned module snapshots are read-only and detached from later native changes.",
-                "Unallocated module arrays return None.",
+                "The explicit array result is copied into Python-owned NumPy storage.",
+                "The returned array is independent from later native changes.",
             ]
         if not var.rank:
             return [

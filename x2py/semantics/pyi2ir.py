@@ -29,6 +29,7 @@ from .models import (
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    NATIVE_BY_VALUE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
@@ -62,9 +63,6 @@ _PYI_OPTIONAL_RETURN_METADATA = "_pyi_optional_return"
 _CONTRACT_MODULE = "x2py.contracts"
 _FLAT_DIMENSION_SENTINEL = "@x2py.Flat"
 _STRIDED_DIMENSION_SENTINEL = "@x2py.Strided"
-_REMOVED_CONTRACT_DIAGNOSTICS = {
-    "Snapshot": "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only",
-}
 
 
 @dataclass(frozen=True)
@@ -136,8 +134,6 @@ class _PyiAstParser:
         for alias in node.names:
             if alias.name == "*":
                 raise ValueError("x2py.contracts does not support wildcard imports")
-            if alias.name in _REMOVED_CONTRACT_DIAGNOSTICS:
-                raise ValueError(_REMOVED_CONTRACT_DIAGNOSTICS[alias.name])
             if alias.name not in CONTRACT_SYMBOLS:
                 raise ValueError(f"Unknown x2py contract name {alias.name!r}")
             local_name = alias.asname or alias.name
@@ -187,7 +183,13 @@ class _PyiAstParser:
 
         metadata = self._class_metadata(base_classes)
         if native_type is not None:
-            metadata["fortran_type_attributes"] = list(native_type.get("attributes", ()))
+            attributes = list(native_type.get("attributes", ()))
+            metadata["fortran_type_attributes"] = attributes
+            normalized_attributes = {str(item).strip().casefold().replace(" ", "") for item in attributes}
+            if "bind(c)" in normalized_attributes:
+                metadata["fortran_bind_c"] = True
+            if "sequence" in normalized_attributes:
+                metadata["fortran_sequence"] = True
             finalizers = list(native_type.get("finalizers", ()))
             if finalizers:
                 metadata["fortran_final_procedures"] = finalizers
@@ -1182,9 +1184,6 @@ class _PyiAstParser:
         return semantic_type, original_name
 
     def semantic_type(self, node: ast.expr) -> SemanticType:
-        removed_name = self._removed_contract_type_name(node)
-        if removed_name is not None:
-            raise ValueError(_REMOVED_CONTRACT_DIAGNOSTICS[removed_name])
         self._reject_unimported_contract_type(node)
         optional_item = self._optional_union_item(node)
         if optional_item is not None:
@@ -1240,14 +1239,6 @@ class _PyiAstParser:
         if name_node.id not in CONTRACT_TYPE_NAMES or name_node.id in self._user_type_names:
             return
         raise ValueError(f"Contract type {name_node.id!r} must be imported from x2py.contracts")
-
-    def _removed_contract_type_name(self, node: ast.expr) -> str | None:
-        name_node = node.value if isinstance(node, ast.Subscript) else node
-        if not isinstance(name_node, ast.Name):
-            return None
-        if name_node.id in self._user_type_names:
-            return None
-        return name_node.id if name_node.id in _REMOVED_CONTRACT_DIAGNOSTICS else None
 
     def _descriptor_type(self, node: ast.Subscript, descriptor: str) -> SemanticType:
         items = self.subscript_items(node)
@@ -1653,6 +1644,10 @@ class _PyiAstParser:
             return True
         if name == "Aliased":
             semantic_type.metadata["aliased"] = True
+            semantic_type.metadata["fortran_target"] = True
+            return True
+        if name == "ByValue":
+            semantic_type.metadata[NATIVE_BY_VALUE_METADATA] = True
             return True
         if name == "AssumedType":
             semantic_type.metadata["fortran_assumed_type"] = True
@@ -2284,6 +2279,10 @@ class _PyiAstParser:
                 raise ValueError(
                     f"Scalar descriptor argument {arg.arg!r} must use a nullable annotation such as Float64 | None"
                 )
+        elif (optional_annotation := self._optional_union_item(annotation)) is not None:
+            optional_type = self.semantic_type(optional_annotation)
+            if self.contract_name(optional_annotation) is None and native_array_descriptor_kind(optional_type) is None:
+                annotation = optional_annotation
         visibility, semantic_type, original_name = self.visible_type(
             annotation,
             allow_optional_absent_handle=True,

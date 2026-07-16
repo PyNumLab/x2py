@@ -817,6 +817,12 @@ The wrappers are valid only in `Callable[[...], T]` argument lists and are
 lowered internally to callback declaration access (`read`, `write`,
 `readwrite`, or `unspecified`). They are not general `.pyi` argument direction
 metadata.
+
+Before wrapper planning, x2py completes these declarations into explicit
+callback ABI, copy direction, result, context-lifecycle, thread/GIL, cleanup,
+and fatal-error actions. The generated C trampoline and Fortran adapter consume
+that completed record directly; editing a `Callable` never causes a backend to
+guess a different access or ownership mode.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -1057,8 +1063,13 @@ Use local constants or generated `Final[...]` names for shape symbols.
 
 ## Metadata With `Annotated`
 
-`Annotated[...]` carries storage metadata and semantic constraints, not
-source-language argument direction:
+`Annotated[...]` carries storage metadata and semantic constraints. It does
+not normally carry source-language argument direction. The one native-call
+exception is `ByValue` on a wrapped derived-type argument: it records that the
+exact native dummy receives the derived object by value rather than by
+reference. The Python API still accepts the same opaque wrapper object; the
+generated Fortran bridge performs the typed call, and the binding never
+exposes or guesses aggregate layout.
 
 ```python
 from x2py.contracts import Annotated, COPY_F, Float64, ORDER_C, ORDER_F
@@ -1079,6 +1090,7 @@ Generated canonical metadata:
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
 | `Name("native-name")` | source name cannot be represented directly as the Python target name |
 | `Aliased` | native storage may be exposed across the Python boundary as an alias |
+| `ByValue` | a wrapped exact rank-zero monomorphic derived-type argument is passed to a native value dummy by the typed Fortran bridge; the binding never lays out the aggregate, so ordinary, `sequence`, and `bind(C)` types share this path |
 | `Immutable` | Python-visible value must not be mutated in place; writable native calls require a completed copy-in/copy-out replacement policy or an explicit call-local discarded-mutation policy |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
 | `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
@@ -1219,8 +1231,9 @@ maybe_value: Float64 | None
 
 `Float64 | None` does not imply a native allocatable or pointer descriptor.
 For array descriptors, use `Allocatable[T[...]]` and `Pointer[T[...]]`.
-`Annotated[T[...], Allocatable]`, `Annotated[T[...], Pointer]`, and
-`Snapshot[T]` are not active public descriptor spellings.
+`Annotated[T[...], Allocatable]` and `Annotated[T[...], Pointer]` are not
+active public descriptor spellings. Derived module objects remain live objects;
+there is no public whole-object snapshot annotation.
 
 Other positional `Annotated` helpers are preserved as semantic constraints:
 
@@ -1304,15 +1317,16 @@ reassociation and deallocation, using `resize`, `allocate_resize`, or
 `deallocate_resize` as appropriate. Other values keep those operations absent
 from the completed handle policy.
 
-Pointer-array extraction policy is selected from the completed pointer policy
-before wrapper lowering. A policy with `transfer="snapshot_copy"`,
-`aliasing="independent_copy"`, or `mutability="copy"` selects `copy_only` only
-when `contiguity="contiguous"` gives the backend a contiguous target path.
-Other contiguous pointer policies select `contiguous_view`. Strided or otherwise
-general pointer views select `descriptor_view`, which requires standard
-descriptor interop support. When generated descriptor interop supplies decoded
-descriptor fields as mappings or field-record objects, the shared runtime can
-build NumPy views for positive or negative descriptor stride multipliers.
+Pointer-array extraction policy is selected from completed descriptor and
+layout facts before wrapper lowering. A contiguous target selects
+`contiguous_view`. A strided or otherwise general target selects
+`descriptor_view`, which requires standard descriptor interop support. Copy-
+oriented `PointerPolicy(...)` values may retain unrelated call/ownership
+meaning, but they do not request a copied `to_numpy()` result. If those facts
+cannot support a live view, extraction is unsupported rather than copied. When
+generated descriptor interop supplies decoded descriptor fields as mappings or
+field-record objects, the shared runtime can build live NumPy views for positive
+or negative descriptor stride multipliers.
 
 ```python
 from x2py.contracts import Annotated, Float64, Pointer, PointerPolicy
@@ -1321,29 +1335,27 @@ value: Annotated[
     Pointer[Float64[:]],
     PointerPolicy(
         nullable=True,
-        transfer="snapshot_copy",
+        transfer="call_local",
         target_owner="module",
         lifetime="module",
         deallocation="never",
         shape_source="pointer_bounds",
         contiguity="contiguous",
-        reassociation="snapshot_final",
-        aliasing="independent_copy",
-        mutability="copy",
+        reassociation="never",
+        aliasing="borrowed",
+        mutability="view",
     ),
 ]
 ```
 For module and derived-field pointer-array handles, a completed contiguous
-policy enables `contiguous_view` or `copy_only` extraction and checks the
-target's current contiguity before reading it. General strided extraction still
-requires the descriptor-view path. Pointer-array function results remain
+policy enables `contiguous_view` extraction and checks the target's current
+contiguity before reading it. General strided extraction still requires the
+descriptor-view path. Pointer-array function results remain
 blocked until returned-handle owner storage, target lifetime, descriptor
 extraction, and destroy behavior are implemented.
 
-Whole-object `Snapshot[T]` contracts are future-only. They are not accepted in
-active semantic `.pyi` files and are not generated for derived module objects.
-Use an explicit live-borrow policy such as `Annotated[T, Aliased]` when the
-native object is addressable:
+Derived module objects use the normal generated class in both plain and
+`Aliased` declarations:
 
 ```python
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64
@@ -1351,12 +1363,15 @@ from x2py.contracts import Aliased, Allocatable, Annotated, Float64
 class box:
     values: Allocatable[Float64[:]]
 
-current: Annotated[box, Aliased]
+live_current: Annotated[box, Aliased]
+plain_current: box
 ```
 
-Without a completed live-borrow policy, a plain derived module variable is a
-readiness blocker. The backend must not silently fall back to a detached object
-copy.
+Both reads return live native-owned objects. `Aliased` remains a
+language-neutral addressability fact: it permits an address-backed borrow, but
+does not make a native-array handle copy. A plain derived module declaration
+uses typed module-specific bridge operations and must not be lowered by
+fabricating a native address.
 
 `Final[T]` is the only public constant spelling. Do not use
 `Annotated[T, Constant]` or `T[Constant]`.
@@ -1699,18 +1714,19 @@ by the selected concrete wrapper, but they do not distinguish overloads;
 overloads that differ only in those properties are rejected during generation.
 X2PY_C_DOCS_END -->
 
-All specifics must have one compatible Python call shape. Parameter names and
-keyword parsing use the first specific procedure's signature. A call that
-matches no specific raises `TypeError`; duplicate dtype/rank signatures are a
-deterministic generation error.
+Each specific keeps its declared Python call shape. The generated dispatcher
+normalizes positional and keyword arguments against each candidate, then uses
+the candidate's exact typed predicates. A call that matches no specific raises
+`TypeError`; duplicate runtime dtype/rank/class signatures are a deterministic
+generation error.
 
 <!-- X2PY_C_DOCS_START
 Wrapped derived types dispatch by their generated extension class. Fortran
-`extends` relationships are preserved semantically but do not currently create
-Python C-type inheritance, so a base-type overload is not a fallback for a
-derived wrapper. Each accepted wrapped derived type needs an explicit specific
-procedure. User-defined Python subclasses are not part of this runtime
-contract.
+`extends` relationships create the corresponding Python extension-type
+inheritance graph. Ordinary overload predicates remain exact-class predicates;
+closed scalar `class(base), intent(in)` dispatch separately enumerates the
+supported descendants most-derived first. User-defined Python subclasses are
+not part of this runtime contract.
 X2PY_C_DOCS_END -->
 
 ## Defined Operators And Assignment
@@ -1815,13 +1831,12 @@ exposed as `Allocatable[T[...]]` handles. The handle carries allocation state
 and descriptor operations. It is not a NumPy array, and unallocated state lives
 inside the handle.
 
-`h.to_numpy()` returns `None` when the descriptor is unallocated. When completed
-policy proves live aliasing is safe, it returns a borrowed NumPy view over
-native storage. For derived-type fields, the extracted view retains the field
+`h.to_numpy()` returns `None` when the descriptor is unallocated. Otherwise it
+returns a live NumPy view over the current native storage and never an automatic
+detached copy. For derived-type fields, the extracted view retains the field
 handle and the field handle retains the containing Python wrapper. For module
-variables, the handle retains the generated module owner while the Fortran
-module controls allocation. When live aliasing is unsafe but copying is
-implemented, `to_numpy()` returns a read-only detached copy instead.
+variables, the handle retains the generated module owner while the native
+module controls allocation.
 
 Existing views are not invalidated, detached, or tracked. If a wrapped Fortran
 procedure reallocates or deallocates native storage while Python still holds an
@@ -1829,7 +1844,7 @@ old view, that old view is stale; reading or writing it is unsupported and may
 crash the process. Users who need independent lifetime must copy explicitly:
 
 ```python
-x = obj.values.to_numpy()        # borrowed view, detached copy, or None
+x = obj.values.to_numpy()        # live view or None
 y = None if x is None else x.copy()
 obj.reset_values()               # may invalidate x; y remains valid
 ```
@@ -1918,9 +1933,11 @@ class state:
 The generated keyword-only shape remains reserved: if undecorated `__init__`
 keeps the `self, *, ...` form and every keyword has a default, the loader treats
 it as the generated field constructor metadata. Constructor overload
-declarations may still be used only when the generated field constructor is
-present; overloaded `tp_init` runtime lowering is not implemented yet and code
-generation reports an explicit blocker for that form.
+declarations replace runtime field initialization with an exact constructor
+overload set linked to concrete same-class targets. The direct wrapper allocates
+one native owner, dispatches without candidate trial calls, and releases an
+uncommitted owner on failure. Missing, incompatible, or indistinguishable
+candidates are rejected before source emission.
 
 Module variables are declarations in the semantic contract. Allocatable array
 module variables expose handles; unallocated state is represented by the handle,
@@ -1930,18 +1947,18 @@ not by making the module attribute `None`:
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64
 
 module_values: Annotated[Allocatable[Float64[:]], Aliased]
-snapshot_values: Allocatable[Float64[:]]
+plain_values: Allocatable[Float64[:]]
 ```
 
-`Aliased` says a native-owned borrowed view may be exposed through
-`to_numpy()`. A plain allocatable module array remains wrappable as a handle;
-if live aliasing is unsafe, `to_numpy()` uses a read-only detached copy when
-that extraction policy is implemented. Fortran source declarations with
-`target` are printed as `Aliased` because they prove that the current allocation
-may be aliased by the wrapper.
+Both declarations expose a stable native-owned handle whose `to_numpy()` call
+returns a current live view or `None`. `Aliased` does not select view versus
+copy extraction. It remains a language-neutral fact that native storage may be
+externally aliased or addressed. Fortran source declarations with `target` are
+printed as `Aliased` because they supply that native fact.
 
-`Aliased` also controls borrowed access to an existing derived-type module
-object:
+`Aliased` also records addressability used by borrowed access to an existing
+derived-type module object. Plain derived module objects remain live but use a
+different bridge mechanism:
 
 ```python
 from x2py.contracts import Aliased, Allocatable, Annotated, Float64
@@ -1950,15 +1967,17 @@ class box:
     values: Allocatable[Float64[:]]
 
 live_current: Annotated[box, Aliased]
+plain_current: box
 ```
 
 The annotation belongs to the module variable, not to `box`. An x2py-created
 `box()` is addressable because its generated constructor allocates
 pointer-backed native storage. A native module declaration is a different object
 origin. `Annotated[box, Aliased]` lets the wrapper retain that object's native
-address and return a live borrowed `box` wrapper. Without `Aliased` or another
-completed policy, the derived module object blocks readiness because
-whole-object snapshots are not part of the active contract.
+address and return a live borrowed `box` wrapper. A plain `box` module variable
+returns the same public wrapper type, backed by typed module-specific bridge
+operations. Unsupported live lifetime or module-access policy blocks readiness;
+the backend must not fall back to a detached object or an invented address.
 
 Public scalar Fortran module variables are emitted directly with their resolved
 semantic type:
@@ -2082,9 +2101,10 @@ The handle carries association state and descriptor operations:
 
 When descriptor-backed extraction is enabled, `to_numpy()` builds NumPy shape and
 strides from descriptor metadata and can expose strided pointer targets. If that
-path is unavailable, the completed policy must choose contiguous-only views,
-an explicit copy fallback, or a readiness diagnostic. Pointer handle ownership
-is descriptor or association access by default, not target ownership.
+path is unavailable, the completed policy must choose a contiguous live view or
+an explicit readiness diagnostic. It must not fall back to a copy. Pointer
+handle ownership is descriptor or association access by default, not target
+ownership.
 The generated descriptor-view path establishes portable descriptor storage,
 associates an `intent(out)` pointer dummy with the live target, and decodes the
 descriptor synchronously. It does not inspect a compiler-private Fortran

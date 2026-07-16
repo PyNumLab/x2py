@@ -25,7 +25,6 @@ from tests._shared.ownership_policy_support import (
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
-    RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA,
     Scope,
     SemanticClass,
     SemanticConstraint,
@@ -50,6 +49,9 @@ from tests._shared.ownership_policy_support import (
     semantic_ir_to_codegen_ast,
     set_ownership_metadata,
 )
+
+from x2py.semantics.models import RESOLVED_MODULE_VARIABLE_POLICY_METADATA
+from x2py.semantics.wrapper_policy import ModuleObjectAccessMechanism
 
 
 def test_native_array_handle_module_shape_changing_operations_use_scalar_extents():
@@ -113,6 +115,14 @@ class box:
     assert requirements.requires_iso_fortran_binding is True
     assert requirements.headers == ("ISO_Fortran_binding.h",)
     assert requirements.items == (
+        NativeArrayBuildRequirement(
+            owner="native_handle_no_interop.values",
+            item="values",
+            descriptor_kind="allocatable",
+            handle_kind="borrowed_module_descriptor",
+            descriptor_interop="module_allocatable_c_descriptor",
+            headers=("ISO_Fortran_binding.h",),
+        ),
         NativeArrayBuildRequirement(
             owner="native_handle_no_interop.target",
             item="target",
@@ -397,7 +407,7 @@ def test_aliased_derived_module_object_is_borrowed_and_rejects_replacement():
     assert codegen_variable.setter_ownership_decision.setter_action is SetterAction.REJECT_REPLACEMENT
 
 
-def test_plain_derived_module_object_blocks_without_live_borrow_policy():
+def test_plain_derived_module_object_completes_live_member_proxy_policy():
     module = SemanticModule(
         name="state",
         variables=[SemanticVariable("current", _derived_type("box"))],
@@ -420,17 +430,14 @@ def test_plain_derived_module_object_blocks_without_live_borrow_policy():
     storage = variable.metadata[RESOLVED_OWNERSHIP_POLICY_METADATA]
     getter = variable.metadata[RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA]
     setter = variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA]
-    assert storage.is_blocked
-    assert storage.blocker == (
-        "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only"
-    )
-    assert getter.is_blocked
-    assert setter.setter_action is SetterAction.OMIT
-    assert all(
-        RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA not in field.metadata
-        for semantic_class in module.classes
-        for field in semantic_class.fields
-    )
+    assert storage.owner is OwnershipOwner.NATIVE
+    assert storage.transfer is TransferMode.BORROWED_VIEW
+    assert storage.codegen_action is CodegenAction.BORROWED_VIEW
+    assert getter.codegen_action is CodegenAction.BORROWED_VIEW
+    assert setter.setter_action is SetterAction.REJECT_REPLACEMENT
+    policy = variable.metadata[RESOLVED_MODULE_VARIABLE_POLICY_METADATA]
+    assert policy.derived.access is ModuleObjectAccessMechanism.MEMBER_PROXY
+    assert policy.owner_path == "state.current"
 
 
 def test_derived_module_constant_uses_wrapper_owned_copy_without_setter():

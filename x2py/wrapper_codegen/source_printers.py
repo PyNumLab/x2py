@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import re
+
 from x2py.wrapper_codegen.nodes import (
     CAllowThreadsBegin,
     CAllowThreadsEnd,
     CComment,
     CDeclaration,
     CExpressionStatement,
+    CFor,
+    CBreak,
     CFunction,
+    CFunctionPointerType,
     CFunctionPrototype,
     CHeader,
     CIf,
@@ -22,6 +27,7 @@ from x2py.wrapper_codegen.nodes import (
     CModulePropertySupport,
     CParameter,
     CReturn,
+    CStructDefinition,
     FortranAllocate,
     FortranAssignment,
     FortranCall,
@@ -32,9 +38,11 @@ from x2py.wrapper_codegen.nodes import (
     FortranInterface,
     FortranInterfaceProcedure,
     FortranModule,
+    FortranNullify,
     FortranParameter,
     FortranPointerAssignment,
     FortranSelectCase,
+    FortranTypeDefinition,
     FortranUse,
 )
 from x2py.stage_values import StageRecord
@@ -92,6 +100,18 @@ class CSourcePrinter(ClassVisitor):
         """Render one C function prototype."""
         prefix = f"{node.storage} " if node.storage else ""
         return f"{prefix}{self._signature(node.return_type, node.name, node.parameters)};"
+
+    def _visit_CFunctionPointerType(self, node: CFunctionPointerType) -> str:
+        """Render one named typed function pointer without an object-pointer cast."""
+        parameters = ", ".join(node.parameter_types) or "void"
+        return f"typedef {node.return_type} (*{node.name})({parameters});"
+
+    def _visit_CStructDefinition(self, node: CStructDefinition) -> str:
+        """Render one typed runtime operation table definition."""
+        lines = [f"typedef struct {node.name} {{"]
+        lines.extend(f"    {self.visit(field)};" for field in node.fields)
+        lines.append(f"}} {node.name};")
+        return "\n".join(lines)
 
     def _visit_CMethodDefTable(self, node: CMethodDefTable) -> str:
         """Render one CPython method table."""
@@ -216,6 +236,9 @@ class CSourcePrinter(ClassVisitor):
 
     def _visit_CParameter(self, node: CParameter) -> str:
         """Render one C parameter."""
+        if node.function_parameters is not None:
+            parameters = ", ".join(node.function_parameters) or "void"
+            return f"{node.type_name} (*{node.name})({parameters})"
         return f"{node.type_name} {node.name}"
 
     def _visit_CDeclaration(self, node: CDeclaration) -> str:
@@ -246,6 +269,17 @@ class CSourcePrinter(ClassVisitor):
         lines.append("}")
         return "\n".join(lines)
 
+    def _visit_CFor(self, node: CFor) -> str:
+        """Render one compact table-dispatch loop."""
+        lines = [f"for ({node.initializer}; {node.condition.text}; {node.increment.text}) {{"]
+        lines.extend(self._indented(self.visit(statement)) for statement in node.body)
+        lines.append("}")
+        return "\n".join(lines)
+
+    def _visit_CBreak(self, _node: CBreak) -> str:
+        """Render one loop break."""
+        return "break;"
+
     def _visit_CReturn(self, node: CReturn) -> str:
         """Render one C return statement."""
         if node.expression is None:
@@ -269,7 +303,7 @@ class CSourcePrinter(ClassVisitor):
 class FortranSourcePrinter(ClassVisitor):
     """Print isolated Fortran source nodes."""
 
-    _LINE_LIMIT = 124
+    _LINE_LIMIT = 112
 
     def doprint(self, node: object) -> str:
         """Render one isolated Fortran backend node."""
@@ -282,6 +316,7 @@ class FortranSourcePrinter(ClassVisitor):
         lines = [f"module {node.name}"]
         lines.extend(self._indented(self.visit(use)) for use in node.uses)
         lines.append("  implicit none")
+        lines.extend(self._indented(self.visit(definition)) for definition in node.type_definitions)
         lines.extend(self._indented(self.visit(interface)) for interface in node.interfaces)
         lines.append("contains")
         lines.extend(self._indented(self.visit(procedure)) for procedure in node.procedures)
@@ -310,6 +345,9 @@ class FortranSourcePrinter(ClassVisitor):
             lines.append(self._indented(f"{node.result_type} :: {node.result_name}"))
         lines.extend(self._indented(self.visit(declaration)) for declaration in node.declarations)
         lines.extend(self._indented(self.visit(statement)) for statement in node.body)
+        if node.internal_procedures:
+            lines.append("contains")
+            lines.extend(self._indented(self.visit(procedure)) for procedure in node.internal_procedures)
         lines.append(f"end {'subroutine' if node.is_subroutine else 'function'} {node.name}")
         return "\n".join(lines)
 
@@ -329,18 +367,37 @@ class FortranSourcePrinter(ClassVisitor):
         """Render one Fortran declaration."""
         return self._declaration(node.type_name, node.name, node.attributes)
 
+    def _visit_FortranTypeDefinition(self, node: FortranTypeDefinition) -> str:
+        """Render one typed holder shared by producers and consumers."""
+        lines = [f"type :: {node.name}"]
+        lines.extend(self._indented(self.visit(component)) for component in node.components)
+        lines.append(f"end type {node.name}")
+        return "\n".join(lines)
+
     def _visit_FortranAssignment(self, node: FortranAssignment) -> str:
         """Render one Fortran assignment."""
-        return f"{node.target} = {node.expression.text}"
+        rendered = f"{node.target} = {node.expression.text}"
+        if len(rendered) <= self._LINE_LIMIT:
+            return rendered
+        call = self._parenthesized_items(node.expression.text, minimum_items=1)
+        if call is None:
+            return rendered
+        function_name, arguments = call
+        return self._continued_call(f"{node.target} = {function_name}(", arguments)
 
     def _visit_FortranPointerAssignment(self, node: FortranPointerAssignment) -> str:
         """Render one Fortran pointer association."""
         return f"{node.target} => {node.expression.text}"
 
+    def _visit_FortranNullify(self, node: FortranNullify) -> str:
+        """Render one pointer nullification statement."""
+        return f"nullify({node.target})"
+
     def _visit_FortranAllocate(self, node: FortranAllocate) -> str:
         """Render one explicit allocation statement."""
         shape = f"({', '.join(item.text for item in node.extents)})" if node.extents else ""
-        return f"allocate({node.target}{shape})"
+        status = f", stat={node.status}" if node.status is not None else ""
+        return f"allocate({node.target}{shape}{status})"
 
     def _visit_FortranDeallocate(self, node: FortranDeallocate) -> str:
         """Render one explicit deallocation statement."""
@@ -355,12 +412,28 @@ class FortranSourcePrinter(ClassVisitor):
 
     def _visit_FortranIf(self, node: FortranIf) -> str:
         """Render one Fortran conditional statement."""
-        lines = [f"if ({node.condition.text}) then"]
+        lines = [self._continued_condition(node.condition.text)]
         lines.extend(self._indented(self.visit(statement)) for statement in node.body)
         if node.else_body:
             lines.append("else")
             lines.extend(self._indented(self.visit(statement)) for statement in node.else_body)
         lines.append("end if")
+        return "\n".join(lines)
+
+    def _continued_condition(self, condition: str) -> str:
+        """Wrap a long logical condition at explicit Fortran operators."""
+        rendered = f"if ({condition}) then"
+        if len(rendered) <= self._LINE_LIMIT:
+            return rendered
+        tokens = re.split(r"\s+(\.(?:and|or)\.)\s+", condition, flags=re.IGNORECASE)
+        terms = tokens[::2]
+        operators = tokens[1::2]
+        if len(terms) == 1:
+            return rendered
+        lines = ["if (&"]
+        for term, operator in zip(terms[:-1], operators, strict=True):
+            lines.append(f"  & {term.strip()} {operator} &")
+        lines.append(f"  & {terms[-1].strip()}) then")
         return "\n".join(lines)
 
     def _visit_FortranSelectCase(self, node: FortranSelectCase) -> str:
@@ -375,7 +448,7 @@ class FortranSourcePrinter(ClassVisitor):
 
     def _visit_FortranInterface(self, node: FortranInterface) -> str:
         """Render one explicit interface block."""
-        lines = ["interface"]
+        lines = ["abstract interface" if node.abstract else "interface"]
         lines.extend(self._indented(self.visit(procedure)) for procedure in node.procedures)
         lines.append("end interface")
         return "\n".join(lines)
@@ -384,7 +457,9 @@ class FortranSourcePrinter(ClassVisitor):
         """Render one native procedure declaration inside an interface."""
         kind = "subroutine" if node.is_subroutine else "function"
         suffix = f" result({node.result_name})" if node.result_name is not None else ""
-        binding = f' bind(c, name="{node.bind_name}")' if node.bind_name is not None else ""
+        binding = (
+            f' bind(c, name="{node.bind_name}")' if node.bind_name is not None else " bind(c)" if node.bind_c else ""
+        )
         lines = [
             self._continued_call(
                 f"{kind} {node.name}(",
@@ -403,7 +478,7 @@ class FortranSourcePrinter(ClassVisitor):
     def _function_signature(self, node: FortranFunction) -> str:
         """Render a Fortran function signature."""
         suffix = f" result({node.result_name})" if node.result_name is not None else ""
-        bind = f' bind(c, name="{node.bind_name}")' if node.bind_name is not None else ""
+        bind = f' bind(c, name="{node.bind_name}")' if node.bind_name is not None else " bind(c)" if node.bind_c else ""
         kind = "subroutine" if node.is_subroutine else "function"
         return self._continued_call(
             f"{kind} {node.name}(",
@@ -421,6 +496,10 @@ class FortranSourcePrinter(ClassVisitor):
         """Wrap one comma-separated Fortran argument list with continuations."""
         rendered = f"{prefix}{', '.join(arguments)}{suffix}"
         if len(rendered) <= self._LINE_LIMIT:
+            return rendered
+        if not arguments:
+            if suffix.startswith(")"):
+                return f"{prefix}) &\n  &{suffix[1:]}"
             return rendered
 
         lines = [f"{prefix}&"]
@@ -496,13 +575,18 @@ class FortranSourcePrinter(ClassVisitor):
             return None
         return tuple(item.strip() for item in expression[1:-1].split(","))
 
-    def _parenthesized_items(self, expression: str) -> tuple[str, tuple[str, ...]] | None:
+    def _parenthesized_items(
+        self,
+        expression: str,
+        *,
+        minimum_items: int = 2,
+    ) -> tuple[str, tuple[str, ...]] | None:
         """Return simple parenthesized items that need continuation lines."""
         opening = expression.find("(")
         if opening < 1 or not expression.endswith(")"):
             return None
         items = tuple(item.strip() for item in expression[opening + 1 : -1].split(","))
-        if len(items) < 2:
+        if len(items) < minimum_items:
             return None
         return expression[:opening], items
 

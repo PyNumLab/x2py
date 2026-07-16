@@ -121,11 +121,39 @@ def scale(x: Float64) -> Float64: ...
         "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
         "test_scalar_descriptor_module_variables_return_copied_optional_values",
         "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
-        "test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction",
+        "test_plain_allocatable_module_array_exposes_current_live_view",
         "tests/wrapper/fortran/strings/test_character_arguments.py::"
         "test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes",
         "tests/wrapper/fortran/strings/test_character_arguments.py::"
         "test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_scalar_derived_objects_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_value_copy_and_optional_derived_inputs_match_source_oracle",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_plain_module_derived_proxy_reads_and_writes_live_members",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_aliased_module_derived_object_uses_direct_live_field_handles",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_derived_module_constant_returns_independent_owned_values",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_fixed_string_fields_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_pointer_field_descriptor_views_match_legacy_and_wrapper_plan_routes",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_borrowed_child_retains_owner_and_finalizes_exactly_once",
+        "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+        "test_eligible_derived_contract_selects_production_plan_without_legacy_lowering",
+        "tests/wrapper/fortran/derived_types/test_phase9_bound_constructors.py::"
+        "test_bound_constructor_replaces_field_initialization_and_reuses_method_plan",
+        "tests/wrapper/fortran/naming/test_phase9_class_overloads.py::"
+        "test_exact_method_overloads_match_without_trial_calls",
+        "tests/wrapper/fortran/naming/test_phase9_class_overloads.py::"
+        "test_constructor_overloads_share_owned_allocation_and_exact_matching",
+        "tests/wrapper/fortran/callbacks/test_all_callback_shapes.py::"
+        "test_immediate_callbacks_cover_all_supported_argument_shapes",
+        "tests/wrapper/fortran/callbacks/test_scalar_callbacks.py::"
+        "test_callback_exception_prints_traceback_and_aborts_host_process",
     )
     assert decision.selection_reason == "wrapper-plan route forced for internal migration verification"
 
@@ -430,30 +458,32 @@ def test_route_selector_keeps_unimplemented_scalar_kinds_on_legacy_route():
     ]
 
 
-def test_route_selector_never_silently_falls_back_when_plan_route_is_forced():
+def test_route_selector_forces_completed_class_units_through_one_plan_route():
     module = _completed_module(
         """
 def scale(x: Float64) -> Float64: ...
 
 class sample:
     value: Int32
+    def reset(self) -> None: ...
 """,
         module_name="fmath",
     )
 
-    with pytest.raises(
-        ValueError,
-        match=r"cannot force wrapper-plan route.*fmath\.sample",
-    ):
-        build_pipeline._select_wrapper_plan_route(
-            module,
-            makefile=False,
-            strict_wrapper_names=False,
-            force_wrapper_plan=True,
-        )
+    decision = build_pipeline._select_wrapper_plan_route(
+        module,
+        makefile=False,
+        strict_wrapper_names=False,
+        force_wrapper_plan=True,
+    )
+
+    assert decision.selected_route == "wrapper-plan"
+    assert "class-registration" in decision.covered_lanes
+    assert "instance-methods" in decision.covered_lanes
+    assert decision.blockers == ()
 
 
-def test_route_selector_keeps_existing_bind_c_direct_symbol_calls_on_legacy():
+def test_route_selector_uses_completed_bind_c_direct_symbol_plan():
     module = _completed_module("def add_one(value: Int32) -> Int32: ...", module_name="bind_c_value")
     module.functions[0].metadata["fortran_bind_c"] = True
     module.functions[0].metadata["fortran_bind_c_name"] = "solver_add_one"
@@ -464,10 +494,13 @@ def test_route_selector_keeps_existing_bind_c_direct_symbol_calls_on_legacy():
         strict_wrapper_names=False,
     )
 
-    assert decision.selected_route == "legacy"
-    assert [blocker.reason for blocker in decision.blockers] == [
-        "existing bind(C) direct-symbol calls are not implemented by wrapper-plan lowering"
-    ]
+    assert decision.selected_route == "wrapper-plan"
+    assert decision.covered_lanes == (
+        "scalar-inputs",
+        "scalar-direct-results",
+        "native-call-runtime",
+    )
+    assert decision.blockers == ()
 
 
 @pytest.mark.parametrize(

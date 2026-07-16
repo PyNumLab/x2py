@@ -65,7 +65,7 @@ this routing page tied to the source hotspots and package README files.
 
 <!-- X2PY_C_DOCS_START
 | Derived types | semantic classes, ownership policy, bridge class handling, CPython class binding | Lifetime, construction, field access, finalization, and invalid calls are tested |
-| Callbacks | semantic callback types, bridge callback conversion, CPython callback handling | Callback lifetime, exception propagation, and call-scoped behavior are tested |
+| Callbacks | completed callback policy, `CallbackHandoffPlan`, direct Fortran adapter lowering, direct CPython trampoline lowering | Callback ABI/copy direction is validated before emission; lifetime, same-thread re-entry, exception abort, and call-scoped cleanup are compiled and tested |
 | Error handling | readiness diagnostics, generated cleanup paths, CPython exception state | Failure path tests prove diagnostics or Python exceptions |
 X2PY_C_DOCS_END -->
 

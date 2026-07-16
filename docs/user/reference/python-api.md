@@ -130,14 +130,15 @@ projections remain ordinary `T | None` values and never produce an
 `AllocatableArray` or `PointerArray`.
 
 `to_numpy()` returns `None` when the descriptor is currently unallocated or
-unassociated. Otherwise, the completed wrapper policy decides whether the result
-is a live view, a detached copy, or an unsupported extraction. Once the handle
-has reported allocated or associated state, generated extraction must return
-array storage rather than `None`. Results must match the handle's declared dtype
-and rank. Contiguous-view policy rejects non-contiguous storage, copy-only policy
-returns detached NumPy storage, and pointer descriptor-view extraction can expose
-positive or negative stride views when generated TS 29113 descriptor support is
-available.
+unassociated. Otherwise, it returns a live NumPy view of the current allocation
+or pointer target and never an automatic detached copy. Results must match the
+handle's declared dtype and rank. Contiguous-view policy rejects non-contiguous
+storage, while descriptor-view extraction can expose positive or negative
+strides when generated standard descriptor support is available. Unsupported
+descriptor extraction fails explicitly. Reallocation, deallocation, pointer
+reassociation, or nullification may make an older view stale; accessing a stale
+view is unsupported and may crash. Call `.copy()` explicitly when independent
+storage is required, and call `to_numpy()` again to inspect current state.
 
 When a generated wrapper accepts a handle for an ordinary `T[...]` argument, it
 uses an internal native array-actual handoff rather than an implicit

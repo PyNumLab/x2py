@@ -381,9 +381,6 @@ class Variable:
     setter_ownership_decision : object, default: None
         Completed policy used when this field is assigned through a generated setter.
 
-    snapshot_field_action : object, default: None
-        Completed copy action used when this field appears in a derived snapshot.
-
     native_array_handle_policy : object, default: None
         Completed policy for native allocatable or pointer array handle lowering.
 
@@ -442,7 +439,6 @@ class Variable:
         "_projected_output",
         "_setter_ownership_decision",
         "_shape",
-        "_snapshot_field_action",
     )
     _attribute_nodes = ()
 
@@ -463,7 +459,6 @@ class Variable:
         getter_ownership_decision=None,
         ownership_decision=None,
         setter_ownership_decision=None,
-        snapshot_field_action=None,
         native_array_handle_policy=None,
         array_interop_policy=None,
         projected_output=False,
@@ -518,7 +513,6 @@ class Variable:
         self._getter_ownership_decision = getter_ownership_decision
         self._ownership_decision = ownership_decision
         self._setter_ownership_decision = setter_ownership_decision
-        self._snapshot_field_action = snapshot_field_action
         self._native_array_handle_policy = native_array_handle_policy
         self._array_interop_policy = array_interop_policy
         if not isinstance(projected_output, bool):
@@ -718,11 +712,6 @@ class Variable:
     def setter_ownership_decision(self):
         """Completed ownership policy used by a generated field setter."""
         return self._setter_ownership_decision
-
-    @property
-    def snapshot_field_action(self):
-        """Completed copy action used when this field appears in a snapshot."""
-        return self._snapshot_field_action
 
     @property
     def native_array_handle_policy(self):

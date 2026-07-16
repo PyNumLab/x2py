@@ -3,12 +3,10 @@
 from tests.codegen.printers._support import (
     ProjectionMapping,
     PyiPrinter,
-    SNAPSHOT_TYPE_METADATA,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
     SemanticConstraint,
-    SemanticField,
     SemanticFunction,
     SemanticMethod,
     SemanticModule,
@@ -22,22 +20,6 @@ from tests.codegen.printers._support import (
     parse_pyi_text,
     pytest,
 )
-
-
-def test_emit_snapshot_type_wrapper_is_not_active_contract():
-    module = SemanticModule(
-        name="snapshot_mod",
-        classes=[SemanticClass(name="box", fields=[SemanticField("value", SemanticType("Float64"))])],
-        variables=[
-            SemanticArgument(
-                "current",
-                SemanticType("box", dtype="box", metadata={SNAPSHOT_TYPE_METADATA: True}),
-            )
-        ],
-    )
-
-    with pytest.raises(ValueError, match=r"Snapshot\[T\] is not an active semantic \.pyi contract"):
-        emit_module(module)
 
 
 def test_emit_basic_scalar_function():

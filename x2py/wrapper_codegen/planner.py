@@ -5,14 +5,27 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 
 from x2py.semantics import models
+from x2py.semantics.native_array_handles import NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER
 from x2py.semantics.wrapper_policy import (
     ArgumentHandoffMode,
     ArrayHandoffPolicy,
+    CallbackABIKind,
+    CallbackHandoffPolicy,
+    CallbackResultPolicy,
+    CallbackTransferPolicy,
+    ClassSurfacePolicy,
+    DerivedCallPolicy,
+    DerivedFieldPolicy,
+    DerivedFieldAccessMechanism,
+    DerivedHandoffPolicy,
+    DerivedTypePolicy,
     ModuleGetterAction,
+    ModuleObjectAccessMechanism,
     ModuleVariablePolicy,
     OptionalMode,
     ArgumentPolicy,
     FunctionWrapperPolicy,
+    LifecycleOperation,
     LifecyclePolicy,
     NativeArrayDescriptorKind,
     NativeCallSlotPolicy,
@@ -21,12 +34,15 @@ from x2py.semantics.wrapper_policy import (
     NativeDescriptorHandoffABI,
     NativeDescriptorHandoffPolicy,
     NativeStatusErrorPolicy,
+    PolymorphicDispatchPolicy,
     ResultPolicy,
     ScalarDescriptorResultPolicy,
     TransformationPolicy,
     WritebackPhase,
     completed_module_variable_policy,
     completed_function_wrapper_policy,
+    completed_derived_type_policy,
+    completed_class_surface_policy,
 )
 from x2py.semantics.wrapper_exports import PythonExportPolicy
 from x2py.semantics.ownership import NativeBarrierAction, SetterAction
@@ -46,7 +62,24 @@ from x2py.wrapper_codegen.plan import (
     BridgeModulePlan,
     BridgeModuleVariablePlan,
     BridgeResultPlan,
+    CallbackHandoffPlan,
+    CallbackResultPlan,
+    CallbackTransferPlan,
+    ClassMethodPlan,
+    ClassCallPlan,
+    ClassOverloadArgumentMatchPlan,
+    ClassOverloadPlan,
+    ClassSurfacePlan,
+    ConstructorFieldPlan,
+    ConstructorPlan,
     DatatypeFamily,
+    DerivedFieldPlan,
+    DerivedCallCasePlan,
+    DerivedCallPlan,
+    DerivedHandoffPlan,
+    DerivedMemberPathPlan,
+    DerivedModuleObjectPlan,
+    DerivedTypePlan,
     FunctionPlan,
     LifecycleActionPlan,
     ModulePlan,
@@ -56,10 +89,13 @@ from x2py.wrapper_codegen.plan import (
     NativeArrayActualPlan,
     NativeArrayHandlePlan,
     NativeDescriptorHandoffPlan,
+    PolymorphicDispatchPlan,
+    PolymorphicVariantPlan,
     ResultPlan,
     ScalarDescriptorResultPlan,
     TransformationPlan,
 )
+from x2py.wrapper_codegen.naming import NativeSymbolNames
 from x2py.wrapper_codegen.support import WrapperPlanSupportAnalyzer
 from x2py.wrapper_codegen.visitor import ClassVisitor
 
@@ -105,22 +141,15 @@ class WrapperPlanner(ClassVisitor):
 
     def _visit_SemanticModule(self, module: models.SemanticModule) -> ModulePlan:
         """Return one module plan after whole-unit support analysis."""
+        self._derived_type_names = {semantic_class.name for semantic_class in module.classes}
+        self._derived_field_plans: dict[str, DerivedFieldPlan] = {}
         report = self.support_analyzer.analyze(module)
         if not report.supported:
             raise ValueError(self._support_error(module.name, report.blockers))
-        functions = self._functions_by_namespace(module)
-        variables = self._variables_by_namespace(module)
-        self._complete_generated_symbols(functions, variables)
-        namespace_paths = self._namespace_paths((*functions, *variables))
-        namespaces = tuple(
-            NamespacePlan(
-                owner_path=self._namespace_owner_path(module.name, path),
-                python_path=path,
-                functions=tuple(functions[path]),
-                variables=tuple(variables[path]),
-            )
-            for path in namespace_paths
-        )
+        self._complete_derived_backend_symbols(module)
+        functions, variables, derived_types, classes = self._namespace_member_plans(module)
+        self._attach_class_functions(functions, classes)
+        namespaces = self._namespace_plans(module.name, functions, variables, derived_types, classes)
         return ModulePlan(
             owner_path=module.name,
             binding=BindingModulePlan(module.name),
@@ -129,16 +158,545 @@ class WrapperPlanner(ClassVisitor):
             required_headers=self._required_headers(namespaces),
         )
 
+    def _namespace_member_plans(self, module: models.SemanticModule) -> tuple[dict, dict, dict, dict]:
+        """Build the four namespace-owned plan maps before linking classes."""
+        return (
+            self._functions_by_namespace(module),
+            self._variables_by_namespace(module),
+            self._derived_types_by_namespace(module),
+            self._classes_by_namespace(module),
+        )
+
+    def _attach_class_functions(self, functions: dict, classes: dict) -> None:
+        """Add each class-owned callable to the namespace's shared function list."""
+        for namespace, surfaces in classes.items():
+            functions[namespace].extend(
+                function for surface in surfaces for function in self._class_function_plans(surface)
+            )
+
+    def _namespace_plans(
+        self,
+        module_name: str,
+        functions: dict,
+        variables: dict,
+        derived_types: dict,
+        classes: dict,
+    ) -> tuple[NamespacePlan, ...]:
+        """Freeze linked namespace members in dependency-safe path order."""
+        self._complete_generated_symbols(functions, variables)
+        namespace_paths = self._namespace_paths((*functions, *variables, *derived_types, *classes))
+        return tuple(
+            self._namespace_plan(
+                module_name,
+                path,
+                tuple(functions[path]),
+                tuple(variables[path]),
+                tuple(derived_types[path]),
+                tuple(classes[path]),
+            )
+            for path in namespace_paths
+        )
+
+    def _namespace_plan(
+        self,
+        module_name: str,
+        path: tuple[str, ...],
+        functions: tuple[FunctionPlan, ...],
+        variables: tuple[ModuleVariablePlan, ...],
+        derived_types: tuple[DerivedTypePlan, ...],
+        classes: tuple[ClassSurfacePlan, ...],
+    ) -> NamespacePlan:
+        """Freeze one namespace with stable public documentation."""
+        return NamespacePlan(
+            owner_path=self._namespace_owner_path(module_name, path),
+            python_path=path,
+            functions=functions,
+            variables=variables,
+            derived_types=derived_types,
+            classes=classes,
+            docstring=self._namespace_docstring(module_name, path, functions, classes),
+        )
+
+    @staticmethod
+    def _namespace_docstring(
+        module_name: str,
+        path: tuple[str, ...],
+        functions: tuple[FunctionPlan, ...],
+        classes: tuple[ClassSurfacePlan, ...],
+    ) -> str:
+        """List the completed callable and class exports in one namespace."""
+        qualified_name = ".".join((module_name, *path))
+        return "\n".join(
+            (
+                qualified_name,
+                "",
+                "Functions",
+                "---------",
+                *(function.binding.python_name for function in functions),
+                "",
+                "Classes",
+                "-------",
+                *(name for surface in classes for name in surface.python_names),
+            )
+        )
+
+    def _complete_derived_backend_symbols(self, module: models.SemanticModule) -> None:
+        """Keep short native type names unless the complete unit needs qualification."""
+        policies = tuple(completed_derived_type_policy(item) for item in module.classes)
+        counts = Counter(policy.native_type_name.casefold() for policy in policies)
+        self._derived_backend_symbols = {
+            policy.type_identity: self._derived_backend_symbol_for_policy(policy, counts) for policy in policies
+        }
+        self._class_python_names = self._completed_class_python_names(policies)
+
+    @staticmethod
+    def _completed_class_python_names(policies: tuple[DerivedTypePolicy, ...]) -> dict[tuple[str, str], str]:
+        """Index the primary completed Python export for each native type."""
+        return {policy.type_identity: policy.python_names[0] for policy in policies if policy.python_names}
+
+    @staticmethod
+    def _derived_backend_symbol_for_policy(policy: DerivedTypePolicy, counts: Counter) -> str:
+        """Choose a short native symbol, qualifying only genuine name collisions."""
+        native_name = policy.native_type_name.casefold()
+        if counts[native_name] == 1:
+            return native_name
+        return NativeSymbolNames.compact(
+            ".".join(policy.type_identity),
+            policy.native_type_name,
+            limit=12,
+        )
+
+    def _derived_backend_symbol(self, type_identity: tuple[str, str]) -> str:
+        """Return the qualified backend symbol completed for one native identity."""
+        try:
+            return self._derived_backend_symbols[type_identity]
+        except KeyError as exc:
+            raise ValueError(f"Missing derived backend symbol for {type_identity!r}") from exc
+
+    # Derived-type definition and field planning.
+    def _derived_types_by_namespace(
+        self,
+        module: models.SemanticModule,
+    ) -> dict[tuple[str, ...], list[DerivedTypePlan]]:
+        """Project opaque types from completed class and field policies."""
+        grouped = defaultdict(list)
+        for semantic_class in self._semantic_classes(module.classes):
+            if semantic_class.visibility != "public":
+                continue
+            policy = completed_derived_type_policy(semantic_class)
+            surface = completed_class_surface_policy(semantic_class)
+            exports_by_namespace = defaultdict(list)
+            for export in policy.python_exports:
+                exports_by_namespace[export.namespace].append(export.name)
+            for namespace, python_names in exports_by_namespace.items():
+                grouped[namespace].append(
+                    self._derived_type_plan(
+                        policy,
+                        tuple(python_names),
+                        fields=surface.effective_fields,
+                    )
+                )
+        return grouped
+
+    def _derived_type_plan(
+        self,
+        policy: DerivedTypePolicy,
+        python_names: tuple[str, ...],
+        *,
+        fields: tuple[DerivedFieldPolicy, ...] | None = None,
+    ) -> DerivedTypePlan:
+        """Mechanically project one completed derived type and its public fields."""
+        planned_fields = tuple(self._derived_field_plan(field) for field in (fields or policy.fields))
+        return DerivedTypePlan(
+            owner_path=policy.owner_path,
+            type_name=policy.type_name,
+            type_identity=policy.type_identity,
+            backend_symbol=self._derived_backend_symbol(policy.type_identity),
+            native_type_name=policy.native_type_name,
+            native_scope=policy.native_scope,
+            python_names=python_names,
+            fields=planned_fields,
+            finalizers=policy.finalizers,
+            bind_c=policy.bind_c,
+            sequence=policy.sequence,
+        )
+
+    # Generated class surfaces compose Phase 8 types and ordinary function plans.
+    def _classes_by_namespace(
+        self,
+        module: models.SemanticModule,
+    ) -> dict[tuple[str, ...], list[ClassSurfacePlan]]:
+        """Project completed class surfaces into their public namespaces."""
+        grouped = defaultdict(list)
+        for semantic_class in self._semantic_classes(module.classes):
+            if semantic_class.visibility != "public":
+                continue
+            policy = completed_class_surface_policy(semantic_class)
+            exports_by_namespace = defaultdict(list)
+            for export in policy.python_exports:
+                exports_by_namespace[export.namespace].append(export.name)
+            for namespace, python_names in exports_by_namespace.items():
+                grouped[namespace].append(
+                    self._class_surface_plan(
+                        module.name,
+                        namespace,
+                        semantic_class,
+                        policy,
+                        tuple(python_names),
+                    )
+                )
+        return grouped
+
+    @staticmethod
+    def _semantic_classes(classes: list[models.SemanticClass]):
+        """Yield classes in source order while retaining nested declarations."""
+        for semantic_class in classes:
+            yield semantic_class
+            yield from WrapperPlanner._semantic_classes(semantic_class.classes)
+
+    def _class_surface_plan(
+        self,
+        module_name: str,
+        namespace: tuple[str, ...],
+        semantic_class: models.SemanticClass,
+        policy: ClassSurfacePolicy,
+        python_names: tuple[str, ...],
+    ) -> ClassSurfacePlan:
+        """Compose one class plan from completed method and constructor facts."""
+        methods = self._class_method_plans(module_name, namespace, semantic_class, policy)
+        overloads_by_name = {overload.owner_path.rsplit(".", 1)[-1]: overload for overload in policy.overloads}
+        overloads = self._class_overload_plans(
+            module_name,
+            namespace,
+            semantic_class,
+            policy.type_identity,
+            overloads_by_name,
+        )
+        return ClassSurfacePlan(
+            owner_path=policy.owner_path,
+            type_identity=policy.type_identity,
+            python_names=python_names,
+            base_identities=policy.base_identities,
+            constructor=self._constructor_plan(
+                module_name,
+                namespace,
+                semantic_class,
+                policy,
+                methods,
+                overloads_by_name,
+            ),
+            methods=methods,
+            overloads=overloads,
+            registration=policy.registration,
+            docstring=self._class_docstring(policy, python_names),
+        )
+
+    def _class_docstring(
+        self,
+        policy: ClassSurfacePolicy,
+        python_names: tuple[str, ...],
+    ) -> str:
+        """Describe fields and methods from the completed class surface."""
+        fields = self._class_documented_fields(policy)
+        methods = self._class_documented_methods(policy)
+        return "\n".join(
+            (
+                python_names[0],
+                "",
+                "Fields",
+                "------",
+                *(fields or ("None",)),
+                "",
+                "Methods",
+                "-------",
+                *(methods or ("None",)),
+            )
+        )
+
+    def _class_documented_fields(self, policy: ClassSurfacePolicy) -> tuple[str, ...]:
+        """Return concise public field signatures in declaration order."""
+        return tuple(
+            f"{field.name} : {self._derived_field_documentation_type(field)}" for field in policy.effective_fields
+        )
+
+    @staticmethod
+    def _class_documented_methods(policy: ClassSurfacePolicy) -> tuple[str, ...]:
+        """Return concrete and overloaded public descriptors in plan order."""
+        concrete = tuple(method.python_name for method in policy.methods if method.public)
+        overloaded = tuple(overload.python_name for overload in policy.overloads)
+        return (*concrete, *overloaded)
+
+    def _class_method_plans(
+        self,
+        module_name: str,
+        namespace: tuple[str, ...],
+        semantic_class: models.SemanticClass,
+        policy: ClassSurfacePolicy,
+    ) -> tuple[ClassMethodPlan, ...]:
+        """Link public methods and a private constructor target in source order."""
+        methods_by_owner = self._class_methods_by_owner(policy)
+        methods = []
+        for method in semantic_class.methods:
+            if method.name == "__init__":
+                continue
+            owner_path = f"{policy.owner_path}.{method.name}"
+            method_policy = methods_by_owner[owner_path]
+            if not self._class_method_is_planned(method, method_policy, owner_path, policy):
+                continue
+            methods.append(
+                self._class_method_plan(
+                    module_name,
+                    namespace,
+                    method,
+                    method_policy,
+                    policy.type_identity,
+                )
+            )
+        return tuple(methods)
+
+    @staticmethod
+    def _class_methods_by_owner(policy: ClassSurfacePolicy) -> dict[str, object]:
+        """Index completed method records by their stable semantic owner path."""
+        return {method.owner_path: method for method in policy.methods}
+
+    @staticmethod
+    def _class_method_is_planned(method, method_policy, owner_path: str, policy: ClassSurfacePolicy) -> bool:
+        """Keep public methods plus the private target selected for construction."""
+        return method_policy.public or owner_path == policy.constructor.target_owner_path
+
+    def _class_overload_plans(
+        self,
+        module_name: str,
+        namespace: tuple[str, ...],
+        semantic_class: models.SemanticClass,
+        type_identity: tuple[str, str],
+        policies: dict,
+    ) -> tuple[ClassOverloadPlan, ...]:
+        """Link every non-constructor overload set to ordinary function plans."""
+        return tuple(
+            self._class_overload_plan(module_name, namespace, type_identity, overload, policies[overload.name])
+            for overload in semantic_class.overload_sets
+            if overload.name != "__init__"
+        )
+
+    def _constructor_plan(
+        self,
+        module_name: str,
+        namespace: tuple[str, ...],
+        semantic_class: models.SemanticClass,
+        policy: ClassSurfacePolicy,
+        methods: tuple[ClassMethodPlan, ...],
+        overloads_by_name: dict,
+    ) -> ConstructorPlan:
+        """Link one completed constructor to its target and lifecycle records."""
+        constructor = policy.constructor
+        target = next((item.function for item in methods if item.owner_path == constructor.target_owner_path), None)
+        overload = self._constructor_overload_plan(
+            module_name,
+            namespace,
+            semantic_class,
+            policy.type_identity,
+            overloads_by_name,
+        )
+        return ConstructorPlan(
+            kind=constructor.kind,
+            fields=tuple(self._constructor_field_plan(field) for field in constructor.fields),
+            target_owner_path=constructor.target_owner_path,
+            overload_name=constructor.overload_name,
+            lifecycle=constructor.lifecycle,
+            rejection_message=constructor.rejection_message,
+            target=target,
+            overload=overload,
+        )
+
+    def _constructor_overload_plan(
+        self,
+        module_name: str,
+        namespace: tuple[str, ...],
+        semantic_class: models.SemanticClass,
+        type_identity: tuple[str, str],
+        policies: dict,
+    ) -> ClassOverloadPlan | None:
+        """Return the constructor-owned overload set, when one was completed."""
+        for overload in semantic_class.overload_sets:
+            if overload.name == "__init__":
+                return self._class_overload_plan(
+                    module_name,
+                    namespace,
+                    type_identity,
+                    overload,
+                    policies[overload.name],
+                )
+        return None
+
+    @staticmethod
+    def _constructor_field_plan(field) -> ConstructorFieldPlan:
+        """Project one editable default-constructor field record."""
+        return ConstructorFieldPlan(
+            owner_path=field.owner_path,
+            name=field.name,
+            default_value=field.default_value,
+            setter_action=field.setter_action,
+        )
+
+    def _class_method_plan(
+        self,
+        module_name: str,
+        namespace: tuple[str, ...],
+        method: models.SemanticMethod,
+        policy,
+        type_identity: tuple[str, str],
+    ) -> ClassMethodPlan:
+        """Link one method descriptor to the existing function transfer path."""
+        function_policy = completed_function_wrapper_policy(method)
+        private_name = self._class_callable_name(type_identity, policy.python_name)
+        function = self._function_plan(
+            function_policy,
+            PythonExportPolicy(namespace, private_name),
+            module_name,
+        )
+        return ClassMethodPlan(
+            owner_path=policy.owner_path,
+            python_name=policy.python_name,
+            kind=policy.kind,
+            passed_object_position=policy.passed_object_position,
+            public=policy.public,
+            function=function,
+        )
+
+    def _class_overload_plan(
+        self,
+        module_name: str,
+        namespace: tuple[str, ...],
+        type_identity: tuple[str, str],
+        overload: models.ProcedureOverloadSet,
+        policy,
+    ) -> ClassOverloadPlan:
+        """Link one overload plan to its explicit concrete candidates."""
+        candidates = tuple(
+            self._function_plan(
+                completed_function_wrapper_policy(procedure),
+                PythonExportPolicy(
+                    namespace,
+                    self._class_callable_name(type_identity, f"{overload.name}_{index}"),
+                ),
+                module_name,
+            )
+            for index, procedure in enumerate(overload.procedures)
+        )
+        return ClassOverloadPlan(
+            owner_path=policy.owner_path,
+            python_name=policy.python_name,
+            kind=policy.kind,
+            candidates=candidates,
+            candidate_matches=tuple(
+                tuple(
+                    ClassOverloadArgumentMatchPlan(
+                        python_name=argument.python_name,
+                        kind=argument.kind,
+                        optional=argument.optional,
+                        semantic_type_name=argument.semantic_type_name,
+                        rank=argument.rank,
+                        derived_type_identity=argument.derived_type_identity,
+                    )
+                    for argument in candidate.arguments
+                )
+                for candidate in policy.candidates
+            ),
+            candidate_passed_objects=tuple(candidate.passed_object for candidate in policy.candidates),
+        )
+
+    def _class_callable_name(self, type_identity: tuple[str, str], name: str) -> str:
+        """Return one private callable export fixed during plan construction."""
+        return f"_x2py_class_{self._derived_backend_symbol(type_identity)}_{name.casefold()}"
+
+    @staticmethod
+    def _class_function_plans(surface: ClassSurfacePlan) -> tuple[FunctionPlan, ...]:
+        """Return every ordinary function plan owned by one class surface."""
+        return (
+            *(method.function for method in surface.methods),
+            *(candidate for overload in surface.overloads for candidate in overload.candidates),
+            *(surface.constructor.overload.candidates if surface.constructor.overload is not None else ()),
+        )
+
+    def _derived_field_plan(self, policy: DerivedFieldPolicy) -> DerivedFieldPlan:
+        """Project one completed field once for every backend and module path."""
+        cached = self._derived_field_plans.get(policy.owner_path)
+        if cached is not None:
+            return cached
+        array = self._array_plan(policy.array, policy.owner_path, include_buffer_roles=False)
+        plan = DerivedFieldPlan(
+            owner_path=policy.owner_path,
+            name=policy.name,
+            native_name=policy.native_name,
+            semantic_type_name=policy.semantic_type_name,
+            string_element=policy.string_element,
+            rank=policy.rank,
+            object_kind=policy.object_kind,
+            access=policy.access,
+            getter_action=policy.getter_action,
+            setter_action=policy.setter_action,
+            native_assignment=policy.native_assignment,
+            owner_retention=policy.owner_retention,
+            character_length=policy.character_length,
+            getter_role=f"{policy.owner_path}:getter",
+            setter_role=(f"{policy.owner_path}:setter" if policy.setter_action is SetterAction.WRITE_THROUGH else None),
+            array=array,
+            native_array_handle=self._native_array_handle_plan(
+                policy.native_array_handle,
+                policy.owner_path,
+                array=array,
+            ),
+            derived=self._derived_handoff_plan(policy.derived),
+            docstring=self._derived_field_docstring(policy),
+        )
+        self._derived_field_plans[policy.owner_path] = plan
+        return plan
+
+    def _derived_field_docstring(self, policy: DerivedFieldPolicy) -> str:
+        """Describe one generated property from its completed field policy."""
+        lines = [f"{policy.name} : {self._derived_field_documentation_type(policy)}"]
+        if policy.native_array_handle is not None:
+            descriptor = policy.native_array_handle.descriptor_kind.value
+            lines.append(f"    Provides a live {descriptor} array descriptor handle.")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _derived_field_documentation_type(policy: DerivedFieldPolicy) -> str:
+        """Spell the public field type without backend inspection."""
+        scalar = _DOCUMENTATION_SCALAR_TYPES.get(policy.semantic_type_name, policy.semantic_type_name)
+        if policy.native_array_handle is not None:
+            prefix = (
+                "AllocatableArray"
+                if policy.native_array_handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
+                else "PointerArray"
+            )
+            return f"{prefix}[{scalar}]"
+        if policy.array is not None:
+            element = "bytes" if policy.semantic_type_name == "String" else scalar
+            return f"ndarray[{element}]"
+        return scalar
+
     def _functions_by_namespace(self, module: models.SemanticModule) -> dict[tuple[str, ...], list[FunctionPlan]]:
         """Group exported function plans by completed Python namespace."""
         functions = defaultdict(list)
         for function in module.functions:
             if function.visibility != "public":
                 continue
-            policy = completed_function_wrapper_policy(function)
+            policy = self._module_function_policy(function)
+            if policy is None:
+                continue
             for export in policy.python_exports:
                 functions[export.namespace].append(self._function_plan(policy, export, module.name))
         return functions
+
+    @staticmethod
+    def _module_function_policy(function: models.SemanticFunction) -> FunctionWrapperPolicy | None:
+        """Return a public function plan policy, excluding class-only root targets."""
+        policy = function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+        if isinstance(policy, FunctionWrapperPolicy) and not policy.module_export:
+            return None
+        return completed_function_wrapper_policy(function)
 
     def _variables_by_namespace(
         self,
@@ -170,6 +728,29 @@ class WrapperPlanner(ClassVisitor):
         for namespace, item in entries:
             if counts[item.symbol_name.casefold()] > 1:
                 item.symbol_name = self._symbol_name(namespace, item.symbol_name)
+        self._qualify_variable_bridge_collisions(functions, variables)
+
+    def _qualify_variable_bridge_collisions(
+        self,
+        functions: dict[tuple[str, ...], list[FunctionPlan]],
+        variables: dict[tuple[str, ...], list[ModuleVariablePlan]],
+    ) -> None:
+        """Qualify a variable helper when its get/set spelling collides with a function."""
+        for namespace, namespace_variables in variables.items():
+            function_symbols = {function.symbol_name for function in functions[namespace]}
+            self._qualify_namespace_variable_helpers(namespace, namespace_variables, function_symbols)
+
+    def _qualify_namespace_variable_helpers(
+        self,
+        namespace: tuple[str, ...],
+        variables: list[ModuleVariablePlan],
+        function_symbols: set[str],
+    ) -> None:
+        """Resolve get/set helper collisions inside one Python namespace."""
+        for variable in variables:
+            helper_symbols = {f"get_{variable.symbol_name}", f"set_{variable.symbol_name}"}
+            if function_symbols & helper_symbols:
+                variable.symbol_name = self._symbol_name(namespace, variable.symbol_name)
 
     def _planned_items(self, grouped: dict[tuple[str, ...], list]) -> tuple[tuple[tuple[str, ...], object], ...]:
         """Flatten namespace groups while retaining each item's namespace."""
@@ -182,15 +763,16 @@ class WrapperPlanner(ClassVisitor):
         python_names: tuple[str, ...],
         module_name: str,
     ) -> ModuleVariablePlan:
-        getter_role = (
-            None if policy.getter_action is ModuleGetterAction.CONSTANT_VALUE else f"{policy.owner_path}:getter"
-        )
+        getter_role = self._module_getter_role(policy)
         setter_role = f"{policy.owner_path}:setter" if policy.setter_action is SetterAction.WRITE_THROUGH else None
         return ModuleVariablePlan(
             owner_path=self._export_owner_path(module_name, namespace, python_names[0]),
             symbol_name=policy.native_name.casefold(),
             semantic_type_name=policy.semantic_type_name,
-            datatype_family=self._datatype_family(policy.semantic_type_name),
+            datatype_family=self._transfer_datatype_family(
+                policy.semantic_type_name,
+                policy.derived.handoff if policy.derived is not None else None,
+            ),
             binding=BindingModuleVariablePlan(
                 python_names=python_names,
                 getter_action=policy.getter_action,
@@ -208,7 +790,35 @@ class WrapperPlanner(ClassVisitor):
                 setter_role=setter_role,
             ),
             native_array_handle=self._native_array_handle_plan(policy.native_array_handle, policy.owner_path),
+            derived=(
+                DerivedModuleObjectPlan(
+                    handoff=self._derived_handoff_plan(policy.derived.handoff),
+                    access=policy.derived.access,
+                    replacement=policy.derived.replacement,
+                    member_paths=tuple(
+                        DerivedMemberPathPlan(
+                            path=member.path,
+                            native_path=member.native_path,
+                            declaring_type_name=member.declaring_type_name,
+                            declaring_type_identity=member.declaring_type_identity,
+                            field=self._derived_field_plan(member.field),
+                        )
+                        for member in policy.derived.member_paths
+                    ),
+                )
+                if policy.derived is not None
+                else None
+            ),
         )
+
+    @staticmethod
+    def _module_getter_role(policy: ModuleVariablePolicy) -> str | None:
+        """Name a whole-value getter only when completed policy crosses one."""
+        if policy.getter_action is ModuleGetterAction.CONSTANT_VALUE:
+            return None
+        if policy.derived is not None and policy.derived.access is ModuleObjectAccessMechanism.MEMBER_PROXY:
+            return None
+        return f"{policy.owner_path}:getter"
 
     def _function_plan(
         self,
@@ -217,10 +827,7 @@ class WrapperPlanner(ClassVisitor):
         module_name: str,
     ) -> FunctionPlan:
         """Return one exported function plan from completed policy."""
-        native_call_slots = tuple(
-            self._native_slot_plan(slot, self._native_slot_role(slot, policy.results))
-            for slot in policy.native_call_slots
-        )
+        native_call_slots = self._native_slot_plans(policy)
         arguments = self._argument_plans(policy, native_call_slots)
         results = self._result_plans(policy, native_call_slots)
         return FunctionPlan(
@@ -238,6 +845,7 @@ class WrapperPlanner(ClassVisitor):
                 policy.native_module,
                 policy.native_is_subroutine,
             ),
+            class_call=self._class_call_plan(policy),
             arguments=arguments,
             results=results,
             native_call_slots=native_call_slots,
@@ -245,6 +853,25 @@ class WrapperPlanner(ClassVisitor):
             writeback_actions=tuple(self.visit(action) for action in policy.writeback_actions),
             cleanup_actions=tuple(self.visit(action) for action in policy.cleanup_actions),
             release_actions=tuple(self.visit(action) for action in policy.release_actions),
+        )
+
+    def _native_slot_plans(self, policy: FunctionWrapperPolicy) -> tuple[NativeCallSlotPlan, ...]:
+        """Project ordered native call slots with their completed symbolic roles."""
+        return tuple(
+            self._native_slot_plan(slot, self._native_slot_role(slot, policy.results))
+            for slot in policy.native_call_slots
+        )
+
+    @staticmethod
+    def _class_call_plan(policy: FunctionWrapperPolicy) -> ClassCallPlan | None:
+        """Project the optional class receiver action without backend inference."""
+        if policy.class_call is None:
+            return None
+        return ClassCallPlan(
+            kind=policy.class_call.kind,
+            passed_object_position=policy.class_call.passed_object_position,
+            invocation=policy.class_call.invocation,
+            type_bound_name=policy.class_call.type_bound_name,
         )
 
     # Stable Python function documentation from completed transfer plans.
@@ -416,6 +1043,14 @@ class WrapperPlanner(ClassVisitor):
 
     def _transfer_base_documentation_type(self, transfer) -> str:
         """Map a completed representation to its non-null Python type."""
+        if transfer.datatype_family is DatatypeFamily.CALLBACK:
+            return self._callback_documentation_type(transfer.callback)
+        if transfer.datatype_family is DatatypeFamily.DERIVED:
+            return transfer.semantic_type_name
+        return self._non_derived_documentation_type(transfer)
+
+    def _non_derived_documentation_type(self, transfer) -> str:
+        """Spell scalar, handle, and array Python types from completed plans."""
         scalar_type = _DOCUMENTATION_SCALAR_TYPES[transfer.semantic_type_name]
         if transfer.native_array_handle is not None:
             return self._native_handle_documentation_type(transfer, scalar_type)
@@ -423,6 +1058,28 @@ class WrapperPlanner(ClassVisitor):
             element_type = "bytes" if transfer.datatype_family is DatatypeFamily.STRING else scalar_type
             return f"ndarray[{element_type}]"
         return scalar_type
+
+    def _callback_documentation_type(self, callback: CallbackHandoffPlan | None) -> str:
+        """Render one callable signature directly from its typed transfer plan."""
+        if callback is None:
+            raise ValueError("Callback documentation requires a completed handoff plan")
+        arguments = ", ".join(self._callback_transfer_documentation_type(item) for item in callback.arguments)
+        result = (
+            "None"
+            if callback.result.transfer is None
+            else self._callback_transfer_documentation_type(callback.result.transfer)
+        )
+        return f"Callable[[{arguments}], {result}]"
+
+    @staticmethod
+    def _callback_transfer_documentation_type(transfer: CallbackTransferPlan) -> str:
+        """Spell one callback-side Python value from completed ABI facts."""
+        if transfer.derived_type_identity is not None:
+            return transfer.semantic_type_name
+        scalar = _DOCUMENTATION_SCALAR_TYPES.get(transfer.semantic_type_name, transfer.semantic_type_name)
+        if transfer.array is not None or transfer.abi is CallbackABIKind.REFERENCE:
+            return f"ndarray[{scalar}]"
+        return scalar
 
     @staticmethod
     def _native_handle_documentation_type(transfer, scalar_type: str) -> str:
@@ -512,7 +1169,11 @@ class WrapperPlanner(ClassVisitor):
             python_position=policy.python_position,
             native_position=policy.native_position,
             semantic_type_name=policy.semantic_type_name,
-            datatype_family=self._datatype_family(policy.semantic_type_name),
+            datatype_family=self._transfer_datatype_family(
+                policy.semantic_type_name,
+                policy.derived,
+                callback=policy.callback,
+            ),
             character_length=policy.character_length,
             object_kind=policy.ownership.kind,
             ownership_owner=policy.ownership.owner,
@@ -521,17 +1182,97 @@ class WrapperPlanner(ClassVisitor):
             storage_mode=policy.storage_mode,
             boundary_storage_mode=policy.boundary_storage_mode,
             nullable=policy.nullable,
-            mutates_native=policy.ownership.mutates_native,
+            mutates_native=policy.writable,
             projects_result=policy.projects_result,
             python_visible=policy.python_visible,
             result_position=policy.result_position,
             array=native_slot.array,
             native_array_actual=self._native_array_actual_plan(policy.native_array_actual),
             native_array_handle=native_array_handle,
+            derived=native_slot.derived,
+            derived_call=self._derived_call_plan(policy.derived_call),
+            callback=self._callback_handoff_plan(policy.callback),
+            polymorphic=self._polymorphic_dispatch_plan(policy.polymorphic),
             binding=self._binding_argument_plan(policy, role, length_role),
             bridge=self._bridge_argument_plan(policy, native_slot, native_array_handle, role, length_role),
             native_call_slot=native_slot,
             transformations=tuple(self.visit(item) for item in policy.transformations),
+        )
+
+    def _callback_handoff_plan(
+        self,
+        policy: CallbackHandoffPolicy | None,
+    ) -> CallbackHandoffPlan | None:
+        """Project one completed callback site and every backend symbol once."""
+        if policy is None:
+            return None
+        stem = NativeSymbolNames.compact(policy.owner_path, "callback", limit=24)
+        return CallbackHandoffPlan(
+            owner_path=policy.owner_path,
+            context_type_symbol=f"x2py_callback_context_{stem}",
+            context_current_symbol=f"x2py_callback_current_{stem}",
+            adapter_symbol=f"x2py_callback_adapter_{stem}",
+            trampoline_symbol=f"x2py_callback_trampoline_{stem}",
+            abort_symbol=f"x2py_callback_abort_{stem}",
+            arguments=tuple(self._callback_transfer_plan(item) for item in policy.arguments),
+            result=self._callback_result_plan(policy.result),
+            lifecycle=policy.lifecycle,
+            thread_action=policy.thread_action,
+            gil_actions=policy.gil_actions,
+            fatal_action=policy.fatal_action,
+        )
+
+    def _callback_result_plan(self, policy: CallbackResultPolicy) -> CallbackResultPlan:
+        """Project one callback result without rebuilding its transfer."""
+        return CallbackResultPlan(
+            transfer=(self._callback_transfer_plan(policy.transfer) if policy.transfer is not None else None),
+            action=policy.action,
+        )
+
+    def _callback_transfer_plan(self, policy: CallbackTransferPolicy) -> CallbackTransferPlan:
+        """Project callback ABI roles and exact derived backend identity."""
+        array = self._array_plan(policy.array, policy.owner_path)
+        return CallbackTransferPlan(
+            owner_path=policy.owner_path,
+            name=policy.name,
+            semantic_type_name=policy.semantic_type_name,
+            object_kind=policy.object_kind,
+            rank=policy.rank,
+            access=policy.access,
+            abi=policy.abi,
+            adapter_action=policy.adapter_action,
+            python_action=policy.python_action,
+            character_length=policy.character_length,
+            array=array,
+            derived_type_identity=policy.derived_type_identity,
+            derived_backend_symbol=(
+                self._derived_backend_symbol(policy.derived_type_identity)
+                if policy.derived_type_identity is not None
+                else None
+            ),
+            data_role=f"{policy.owner_path}:callback-data",
+            extent_roles=(array.extent_roles if array is not None else ()),
+            length_role=(f"{policy.owner_path}:callback-length" if policy.character_length is not None else None),
+        )
+
+    def _polymorphic_dispatch_plan(
+        self,
+        policy: PolymorphicDispatchPolicy | None,
+    ) -> PolymorphicDispatchPlan | None:
+        """Project concrete class identities into stable backend ABI codes."""
+        if policy is None:
+            return None
+        return PolymorphicDispatchPlan(
+            owner_path=policy.owner_path,
+            variants=tuple(
+                PolymorphicVariantPlan(
+                    type_identity=identity,
+                    backend_symbol=self._derived_backend_symbol(identity),
+                    python_name=self._class_python_names[identity],
+                    abi_code=index,
+                )
+                for index, identity in enumerate(policy.variants, start=1)
+            ),
         )
 
     @staticmethod
@@ -636,8 +1377,11 @@ class WrapperPlanner(ClassVisitor):
                 datatype_family=family,
                 result_position=policy.result_position,
                 python_result_role=(
-                    f"{policy.owner_path}:python-result" if policy.phase is WritebackPhase.COPY_OUT else None
+                    f"{policy.owner_path}:python-result"
+                    if policy.operation is LifecycleOperation.WRITEBACK and policy.phase is WritebackPhase.COPY_OUT
+                    else None
                 ),
+                operation=policy.operation,
             )
         return LifecycleActionPlan(
             owner_path=policy.owner_path,
@@ -648,6 +1392,7 @@ class WrapperPlanner(ClassVisitor):
             datatype_family=family,
             object_kind=policy.object_kind,
             result_position=policy.result_position,
+            operation=policy.operation,
             binding=binding,
             bridge=bridge,
         )
@@ -667,7 +1412,7 @@ class WrapperPlanner(ClassVisitor):
         return ResultPlan(
             owner_path=policy.owner_path,
             semantic_type_name=policy.semantic_type_name,
-            datatype_family=self._datatype_family(policy.semantic_type_name),
+            datatype_family=self._transfer_datatype_family(policy.semantic_type_name, policy.derived),
             source_kind=policy.source_kind,
             result_position=policy.result_position,
             character_length=policy.character_length,
@@ -680,6 +1425,7 @@ class WrapperPlanner(ClassVisitor):
             nullable=policy.ownership.nullable,
             array=array,
             native_array_handle=native_array_handle,
+            derived=(native_slot.derived if native_slot is not None else self._derived_handoff_plan(policy.derived)),
             binding=BindingResultPlan(
                 policy.codegen_action,
                 policy.python_barrier_action,
@@ -759,11 +1505,69 @@ class WrapperPlanner(ClassVisitor):
             literal_value=slot.literal_value,
             result_position=slot.result_position,
             semantic_type_name=slot.semantic_type_name,
-            datatype_family=(self._datatype_family(slot.semantic_type_name) if slot.semantic_type_name else None),
+            datatype_family=(
+                self._transfer_datatype_family(
+                    slot.semantic_type_name,
+                    slot.derived,
+                    callback=slot.callback,
+                )
+                if slot.semantic_type_name
+                else None
+            ),
             character_length=slot.character_length,
             array=array,
             native_array_handle=self._native_array_handle_plan(slot.native_array_handle, slot.owner_path, array=array),
             scalar_descriptor=self._scalar_descriptor_result_plan(slot.scalar_descriptor, slot.owner_path),
+            derived=self._derived_handoff_plan(slot.derived),
+        )
+
+    # Derived-type argument, result, and module handoff planning.
+    def _derived_handoff_plan(self, policy: DerivedHandoffPolicy | None) -> DerivedHandoffPlan | None:
+        """Mechanically project one completed scalar-derived handoff."""
+        if policy is None:
+            return None
+        return DerivedHandoffPlan(
+            type_name=policy.type_name,
+            type_identity=policy.type_identity,
+            backend_symbol=self._derived_backend_symbol(policy.type_identity),
+            native_type_name=policy.native_type_name,
+            native_scope=policy.native_scope,
+            origin=policy.origin,
+            owner_retention=policy.owner_retention,
+            release=policy.release,
+            target_owner_retention=policy.target_owner_retention,
+            target_release=policy.target_release,
+            nullable=policy.nullable,
+            native_handoff=policy.native_handoff,
+            storage=policy.storage,
+        )
+
+    @staticmethod
+    def _derived_call_plan(policy: DerivedCallPolicy | None) -> DerivedCallPlan | None:
+        """Mechanically project completed dummy compatibility cases."""
+        if policy is None:
+            return None
+        return DerivedCallPlan(
+            dummy_category=policy.dummy_category,
+            cases=tuple(
+                DerivedCallCasePlan(
+                    case.actual_storage,
+                    case.action,
+                    case.access,
+                    case.abi_code,
+                    case.requires_present,
+                    case.target_lifetime,
+                    case.failure_kind,
+                    case.failure_message,
+                )
+                for case in policy.cases
+            ),
+            pointer_intent=policy.pointer_intent,
+            writeback=policy.writeback,
+            status_role=policy.status_role,
+            origin_identity_role=policy.origin_identity_role,
+            acquisition_order=policy.acquisition_order,
+            cleanup_order=policy.cleanup_order,
         )
 
     # Rank-zero scalar/string descriptor result planning.
@@ -1061,7 +1865,20 @@ class WrapperPlanner(ClassVisitor):
             for handle in self._namespace_native_array_handles(namespace)
             if handle is not None
         )
-        return self._native_array_headers(handles)
+        headers = list(self._native_array_headers(handles))
+        if self._requires_derived_descriptor_header(namespaces):
+            headers.append(NATIVE_ARRAY_POINTER_C_DESCRIPTOR_HEADER)
+        return tuple(dict.fromkeys(headers))
+
+    @staticmethod
+    def _requires_derived_descriptor_header(namespaces: tuple[NamespacePlan, ...]) -> bool:
+        """Return whether one derived field uses a standard C descriptor callback."""
+        descriptor_access = {
+            DerivedFieldAccessMechanism.ORDINARY_ARRAY_DESCRIPTOR,
+            DerivedFieldAccessMechanism.NATIVE_ARRAY_HANDLE,
+        }
+        fields = (field for namespace in namespaces for derived in namespace.derived_types for field in derived.fields)
+        return any(field.access in descriptor_access for field in fields)
 
     def _native_array_headers(self, handles: tuple[NativeArrayHandlePlan, ...]) -> tuple[str, ...]:
         """Deduplicate planned handle headers in encounter order."""
@@ -1075,7 +1892,15 @@ class WrapperPlanner(ClassVisitor):
         return (
             *(handle for function in namespace.functions for handle in self._function_native_array_handles(function)),
             *(variable.native_array_handle for variable in namespace.variables),
+            *self._derived_field_native_array_handles(namespace),
         )
+
+    @staticmethod
+    def _derived_field_native_array_handles(
+        namespace: NamespacePlan,
+    ) -> tuple[NativeArrayHandlePlan | None, ...]:
+        """Return descriptor handles subordinate to namespace-derived fields."""
+        return tuple(field.native_array_handle for derived in namespace.derived_types for field in derived.fields)
 
     def _function_native_array_handles(
         self,
@@ -1100,7 +1925,23 @@ class WrapperPlanner(ClassVisitor):
         try:
             return _DATATYPE_FAMILIES[semantic_type_name]
         except KeyError:
+            if semantic_type_name in getattr(self, "_derived_type_names", set()):
+                return DatatypeFamily.DERIVED
             raise ValueError(f"Unsupported first-lane scalar type {semantic_type_name!r}") from None
+
+    def _transfer_datatype_family(
+        self,
+        semantic_type_name: str,
+        derived: DerivedHandoffPolicy | None,
+        *,
+        callback: CallbackHandoffPolicy | None = None,
+    ) -> DatatypeFamily:
+        """Select the derived family from its completed handoff, never a name guess."""
+        if callback is not None:
+            return DatatypeFamily.CALLBACK
+        if derived is not None:
+            return DatatypeFamily.DERIVED
+        return self._datatype_family(semantic_type_name)
 
     def _support_error(self, owner_path: str, blockers: object) -> str:
         """Return a compact unsupported-generation-unit error."""

@@ -303,7 +303,7 @@ end module derived_module_state
     assert codegen_module.variables[0].is_target is True
 
 
-def test_emit_module_stubs_do_not_print_plain_derived_module_variable_as_snapshot():
+def test_emit_module_stubs_print_plain_derived_module_variable_as_live_object():
     source = """
 module derived_module_snapshot
   type :: box
@@ -317,7 +317,6 @@ end module derived_module_snapshot
 
     code = emit_module_stubs(semantic_module)["derived_module_snapshot"]
 
-    assert "Snapshot[" not in code
     assert "current: box" in code
     loaded = parse_pyi_text(code, module_name="derived_module_snapshot")
     assert loaded.variables[0].semantic_type.name == "box"

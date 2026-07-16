@@ -8,7 +8,6 @@ from x2py.contracts import CONTRACT_SYMBOLS
 
 from x2py import parse_fortran_file as parse_fortran_source
 
-from x2py.semantics.metadata import SNAPSHOT_TYPE_METADATA
 
 from x2py.codegen.binding_pipeline import BindingPipeline
 
@@ -89,7 +88,6 @@ __all__ = (
     "OPERATOR_F90_SOURCE",
     "RUNTIME_HOLD_GIL_METADATA",
     "RUNTIME_STATUS_ERROR_METADATA",
-    "SNAPSHOT_TYPE_METADATA",
     "BindingPipeline",
     "Codegen",
     "Path",

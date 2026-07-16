@@ -251,12 +251,6 @@ def test_bridge_and_binding_generators_expose_ownership_action_maps():
         == "_derived_module_variable"
     )
     assert (
-        FortranToCBridgeGenerator._MODULE_VARIABLE_POLICY_DISPATCHER.handlers[
-            (ObjectKind.DERIVED_TYPE, CodegenAction.SNAPSHOT_COPY)
-        ]
-        == "_snapshot_derived_module_variable"
-    )
-    assert (
         CPythonBindingGenerator._ARRAY_RELEASE_POLICY_DISPATCHER.handlers[DestructionPolicy.PYTHON_REFCOUNT]
         == "_release_python_owned_array_memory"
     )

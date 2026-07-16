@@ -24,6 +24,12 @@ callable alive only for the active wrapped call, installs a callback context,
 passes a generated Fortran adapter to the native routine, and clears the context
 when the wrapped call returns.
 
+Policy completion records the callback ABI, adapter copy direction, context
+lifecycle, entering-thread rule, GIL actions, and fatal action before wrapper
+planning. Direct wrapper-plan generation then emits one typed Fortran adapter
+and one native trampoline per callback site. Neither backend infers callback access,
+shape, or ownership from generated locals.
+
 Native code must not store the callback or call it later. Stored procedure
 pointers, optional dummy procedures, asynchronous callbacks, and cross-thread
 callback invocation are unsupported.

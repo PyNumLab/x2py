@@ -118,6 +118,43 @@ _WRAPPER_PLAN_COMPLETED_LANES = frozenset(
         "pointer-module-handles",
         "scalar-descriptor-results",
         "deferred-string-descriptor-results",
+        # Derived-object rollout lanes.
+        "derived-wrapper-inputs",
+        "optional-derived-inputs",
+        "in-place-derived-inputs",
+        "typed-derived-value-inputs",
+        "derived-direct-results",
+        "derived-hidden-outputs",
+        "plain-derived-module-proxies",
+        "aliased-derived-module-objects",
+        "derived-module-constant-values",
+        "derived-scalar-fields",
+        "derived-string-fields",
+        "derived-array-fields",
+        "derived-native-handle-fields",
+        "derived-borrowed-field-owners",
+        # Generated class orchestration lanes.
+        "class-registration",
+        "default-class-constructors",
+        "bound-class-constructors",
+        "overloaded-class-constructors",
+        "instance-methods",
+        "static-methods",
+        "class-overloads",
+        "class-finalizers",
+        "class-inheritance",
+        "scalar-polymorphic-inputs",
+        # Immediate callback rollout lane.
+        "immediate-callbacks",
+        "callback-context-runtime",
+        "callback-same-thread-reentry",
+        "callback-fatal-errors",
+        "callback-scalar-values",
+        "callback-scalar-storage",
+        "callback-fixed-strings",
+        "callback-arrays",
+        "callback-derived-values",
+        "callback-results",
         # Cross-cutting rollout lanes.
         "void-calls",
         "python-namespaces",
@@ -196,11 +233,39 @@ _WRAPPER_PLAN_EVIDENCE = (
     "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
     "test_scalar_descriptor_module_variables_return_copied_optional_values",
     "tests/wrapper/fortran/module_state/test_allocatable_views.py::"
-    "test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction",
+    "test_plain_allocatable_module_array_exposes_current_live_view",
     "tests/wrapper/fortran/strings/test_character_arguments.py::"
     "test_deferred_allocatable_string_results_match_legacy_and_wrapper_plan_routes",
     "tests/wrapper/fortran/strings/test_character_arguments.py::"
     "test_deferred_character_array_handles_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_scalar_derived_objects_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_value_copy_and_optional_derived_inputs_match_source_oracle",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_plain_module_derived_proxy_reads_and_writes_live_members",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_aliased_module_derived_object_uses_direct_live_field_handles",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_derived_module_constant_returns_independent_owned_values",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_fixed_string_fields_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_pointer_field_descriptor_views_match_legacy_and_wrapper_plan_routes",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_borrowed_child_retains_owner_and_finalizes_exactly_once",
+    "tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py::"
+    "test_eligible_derived_contract_selects_production_plan_without_legacy_lowering",
+    "tests/wrapper/fortran/derived_types/test_phase9_bound_constructors.py::"
+    "test_bound_constructor_replaces_field_initialization_and_reuses_method_plan",
+    "tests/wrapper/fortran/naming/test_phase9_class_overloads.py::"
+    "test_exact_method_overloads_match_without_trial_calls",
+    "tests/wrapper/fortran/naming/test_phase9_class_overloads.py::"
+    "test_constructor_overloads_share_owned_allocation_and_exact_matching",
+    "tests/wrapper/fortran/callbacks/test_all_callback_shapes.py::"
+    "test_immediate_callbacks_cover_all_supported_argument_shapes",
+    "tests/wrapper/fortran/callbacks/test_scalar_callbacks.py::"
+    "test_callback_exception_prints_traceback_and_aborts_host_process",
 )
 
 

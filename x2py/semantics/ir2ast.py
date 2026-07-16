@@ -5,7 +5,6 @@ from __future__ import annotations
 import ast
 from dataclasses import replace
 from itertools import product
-import keyword
 import numpy as np
 import re
 
@@ -55,7 +54,7 @@ from x2py.semantics.models import (
 from x2py.semantics.native_array_handles import array_interop_policy, native_array_descriptor_kind
 from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
-from x2py.semantics.wrapper_policy import NativeStatusErrorPolicy
+from x2py.semantics.wrapper_policy import CallbackHandoffPolicy, FunctionWrapperPolicy, NativeStatusErrorPolicy
 from x2py.utilities.visitor import ClassVisitor
 
 
@@ -690,10 +689,17 @@ def _raise_for_unsupported_array_contracts(node: models.SemanticModule) -> None:
         _raise_for_unsupported_array_contracts_in_class(semantic_class)
 
 
-def _raise_for_unsupported_pointer_outputs(node: models.SemanticFunction) -> None:
+def _raise_for_blocked_non_derived_pointer_outputs(node: models.SemanticFunction) -> None:
+    """Leave completed scalar-derived pointer policy to wrapper planning."""
     for argument in node.arguments:
+        semantic_type = argument.semantic_type
+        scalar_derived = (
+            semantic_type.rank == 0
+            and semantic_type.name not in SEMANTIC_DTYPE_TO_NUMPY_DTYPE
+            and semantic_type.name != "String"
+        )
         decision = _variable_ownership_decision(argument)
-        if _is_pointer(argument.semantic_type) and decision.is_blocked:
+        if _is_pointer(semantic_type) and decision.is_blocked and not scalar_derived:
             raise ValueError(
                 f"Function {node.name!r} has pointer argument {argument.name!r}, "
                 f"which cannot be wrapped safely: {decision.blocker or decision.reason}"
@@ -1031,15 +1037,13 @@ def _semantic_function_decorators(node):
 
 
 def _semantic_type_bound_name(node: models.SemanticFunction, cls_base: ClassDef | None) -> str | None:
-    """Return the native type-bound binding name for a class method call."""
+    """Return the completed native type-bound binding selected before lowering."""
     if cls_base is None:
         return None
-    name = str(node.name)
-    if isinstance(node, models.SemanticMethod) and node.metadata.get(BIND_TARGET_METADATA):
-        candidate = name[:-1] if name.endswith("_") else name
-        if keyword.iskeyword(candidate):
-            return candidate
-    return name
+    policy = node.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+    if not isinstance(policy, FunctionWrapperPolicy):
+        raise ValueError(f"Class method {node.name!r} has no completed wrapper policy")
+    return policy.class_call.type_bound_name if policy.class_call is not None else None
 
 
 def _semantic_variable_type_and_shape(semantic_type, scope, custom_types):
@@ -1471,8 +1475,8 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
 
     def _visit_SemanticFunction(self, node):
         _raise_for_unsupported_bind_c_abi(node, self.class_lookup or {})
-        _raise_for_unsupported_pointer_outputs(node)
         _raise_for_blocked_ownership_contracts_in_function(node)
+        _raise_for_blocked_non_derived_pointer_outputs(node)
         _raise_for_native_array_handle_policies_in_function(node)
         _raise_for_unsupported_assumed_type_contracts(node)
         _raise_for_unsupported_array_contracts_in_function(node)
@@ -1599,14 +1603,10 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
     def _visit_SemanticArgument(self, node):
         if node.semantic_type.name == "Callable":
             metadata = node.semantic_type.metadata
+            callback_policy = metadata.get(models.RESOLVED_CALLBACK_POLICY_METADATA)
+            if not isinstance(callback_policy, CallbackHandoffPolicy):
+                raise ValueError(f"Callback argument {node.name!r} is missing completed callback policy")
             callback_arguments = metadata.get("callback_arguments")
-            if callback_arguments is None:
-                argument_types = metadata.get("arguments")
-                if isinstance(argument_types, list):
-                    callback_arguments = [
-                        models.SemanticArgument(f"arg_{index}", semantic_type)
-                        for index, semantic_type in enumerate(argument_types)
-                    ]
             if not isinstance(callback_arguments, list):
                 raise ValueError(f"Callback argument {node.name!r} is missing a complete callable argument contract")
 
@@ -1683,7 +1683,6 @@ class _SemanticIrToCodegenAstVisitor(ClassVisitor):
             getter_ownership_decision=node.metadata.get(models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA),
             ownership_decision=ownership_decision,
             setter_ownership_decision=node.metadata.get(models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA),
-            snapshot_field_action=node.metadata.get(models.RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA),
             native_array_handle_policy=native_array_handle_policy,
             array_interop_policy=array_policy,
             projected_output=bool(node.metadata.get(PROJECTED_OUTPUT_METADATA)),

@@ -238,13 +238,20 @@ def test_explicit_blocked_policy_normalizes_all_lifetime_axes():
 
 
 def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
+    snapshot_metadata: dict[str, object] = {}
+    set_ownership_metadata(
+        snapshot_metadata,
+        owner="python",
+        transfer="snapshot_copy",
+        destruction="python_refcount",
+    )
     cases = [
         ("by_value", _scalar_type(), OwnershipContext.result()),
         ("call_local_none", _scalar_type(), _read_only_argument_context()),
         ("call_local_cleanup", _string_type(), _hidden_output_context()),
         ("caller_in_place", _array_type(), _writable_argument_context()),
         ("copy_return", _array_type(), OwnershipContext.result()),
-        ("snapshot_copy", _array_type(pointer=True), OwnershipContext.result()),
+        ("snapshot_copy", _array_type(metadata=snapshot_metadata), OwnershipContext.result()),
         (
             "native_borrowed_view",
             _array_type(allocatable=True, metadata={"aliased": True}),
@@ -441,7 +448,7 @@ value: Annotated[
     assert decision.destruction is DestructionPolicy.NATIVE_OWNER
 
 
-def test_complete_contiguous_pointer_policy_enables_module_copy_handle():
+def test_copy_oriented_pointer_policy_still_exposes_live_contiguous_view():
     module = parse_pyi_text(
         """
 value: Annotated[
@@ -468,7 +475,7 @@ value: Annotated[
     handle_policy = module.variables[0].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
     assert not handle_policy.is_blocked
     assert handle_policy.getter_behavior == "handle"
-    assert handle_policy.to_numpy == "copy_only"
+    assert handle_policy.to_numpy == "contiguous_view"
     assert handle_policy.descriptor_interop == "pointer_c_descriptor"
     assert handle_policy.requires_pointer_c_descriptor_interop is True
     assert handle_policy.blocker is None
@@ -592,9 +599,10 @@ def make_target() -> Pointer[Float64[:]]: ...
     assert values.descriptor_ownership == "borrowed"
     assert values.target_lifetime == "module"
     assert values.destroy_behavior == "none"
-    assert values.to_numpy == "read_only_detached_copy"
-    assert values.descriptor_interop == "none"
+    assert values.to_numpy == "descriptor_view"
+    assert values.descriptor_interop == "module_allocatable_c_descriptor"
     assert values.requires_pointer_c_descriptor_interop is False
+    assert values.requires_c_descriptor_interop is True
     assert values.storage_mode == "heap"
     assert set(values.operations) == {"allocated", "deallocate", "resize", "to_numpy"}
 
@@ -692,7 +700,7 @@ def make_target() -> Pointer[Float64[:]]: ...
     assert "stable owner storage and target lifetime" in pointer_result.blocker
 
 
-def test_allocatable_handle_numpy_policy_requires_proven_live_aliasing():
+def test_aliased_does_not_change_allocatable_live_view_semantics():
     module = parse_pyi_text(
         """
 values: Allocatable[Float64[:]]
@@ -706,8 +714,12 @@ shared_values: Annotated[Allocatable[Float64[:]], Aliased]
     values = module.variables[0].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
     shared_values = module.variables[1].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
 
-    assert values.to_numpy == "read_only_detached_copy"
+    assert values.to_numpy == "descriptor_view"
     assert shared_values.to_numpy == "borrowed_view"
+    assert values.owner == shared_values.owner == "native"
+    assert values.borrowed is shared_values.borrowed is True
+    assert values.descriptor_interop == "module_allocatable_c_descriptor"
+    assert shared_values.descriptor_interop == "none"
 
 
 def test_native_array_handle_build_requirements_are_selected_from_completed_policy():
@@ -773,7 +785,7 @@ def inspect(
     contiguous_target = module.functions[0].arguments[1].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
     descriptor_target = module.functions[0].arguments[2].metadata[RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA]
 
-    assert copy_target.to_numpy == "copy_only"
+    assert copy_target.to_numpy == "contiguous_view"
     assert copy_target.requires_pointer_c_descriptor_interop is True
     assert contiguous_target.to_numpy == "contiguous_view"
     assert contiguous_target.requires_pointer_c_descriptor_interop is True
@@ -786,6 +798,14 @@ def inspect(
     assert requirements.requires_iso_fortran_binding is True
     assert requirements.headers == ("ISO_Fortran_binding.h",)
     assert requirements.items == (
+        NativeArrayBuildRequirement(
+            owner="native_handle_build.values",
+            item="values",
+            descriptor_kind="allocatable",
+            handle_kind="borrowed_module_descriptor",
+            descriptor_interop="module_allocatable_c_descriptor",
+            headers=("ISO_Fortran_binding.h",),
+        ),
         NativeArrayBuildRequirement(
             owner="native_handle_build.default_target",
             item="default_target",

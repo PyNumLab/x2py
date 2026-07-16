@@ -86,7 +86,7 @@ def make_pair() -> tuple[Returns["left", Allocatable[Float64[:]]], Returns["righ
     assert "native_array_handle_codegen_unsupported" not in _blocker_codes(report)
 
 
-def test_explicit_borrowed_module_allocatable_requires_aliased_storage():
+def test_explicit_borrowed_plain_module_allocatable_uses_descriptor_view():
     report = _readiness_from_pyi(
         """
 values: Annotated[
@@ -98,20 +98,12 @@ values: Annotated[
 """
     )
 
-    assert report["wrappable"] is False
-    blocker = next(
-        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_ownership_policy_blocked"
-    )
-    assert blocker["items"] == [
-        {
-            "owner": "solver.values",
-            "item": "values",
-            "policy": "borrowed module allocatable views require Aliased storage",
-        }
-    ]
+    assert report["wrappable"] is True
+    assert "fortran_ownership_policy_blocked" not in _blocker_codes(report)
+    assert "native_array_handle_codegen_unsupported" not in _blocker_codes(report)
 
 
-def test_plain_derived_module_object_blocks_and_borrowing_requires_aliased_storage():
+def test_plain_and_aliased_derived_module_objects_are_both_live_and_ready():
     plain = _readiness_from_pyi(
         """
 class box:
@@ -121,13 +113,8 @@ current: box
 """
     )
 
-    assert plain["wrappable"] is False
-    plain_blocker = next(
-        item for item in plain["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
-    )
-    assert plain_blocker["items"][0]["policy"] == (
-        "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only"
-    )
+    assert plain["wrappable"] is True
+    assert plain["wrappability_blockers"] == []
 
     explicit_borrow = _readiness_from_pyi(
         """
@@ -142,10 +129,8 @@ current: Annotated[
 ]
 """
     )
-    explicit_blocker = next(
-        item for item in explicit_borrow["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
-    )
-    assert explicit_blocker["items"][0]["policy"] == ("borrowed derived module objects require Aliased storage")
+    assert explicit_borrow["wrappable"] is True
+    assert explicit_borrow["wrappability_blockers"] == []
 
     aliased = _readiness_from_pyi(
         """
@@ -181,7 +166,7 @@ end module colors
     assert "fortran_ownership_policy_blocked" not in _blocker_codes(report)
 
 
-def test_plain_derived_module_object_with_pointer_field_blocks_until_aliased_policy_is_explicit():
+def test_plain_derived_module_object_with_pointer_field_is_semantically_ready():
     report = _readiness_from_pyi(
         """
 class box:
@@ -191,16 +176,8 @@ current: box
 """
     )
 
-    assert report["wrappable"] is False
-    blocker = next(
-        item for item in report["wrappability_blockers"] if item["code"] == "fortran_ownership_policy_blocked"
-    )
-    assert {
-        "owner": "solver.current",
-        "item": "current",
-        "policy": "plain derived module variables require Aliased storage; whole-object Snapshot[T] is future-only",
-    } in blocker["items"]
-    assert "native_array_handle_codegen_unsupported" not in _blocker_codes(report)
+    assert report["wrappable"] is True
+    assert report["wrappability_blockers"] == []
 
 
 def test_pointer_module_variable_default_handle_policy_is_codegen_ready():
