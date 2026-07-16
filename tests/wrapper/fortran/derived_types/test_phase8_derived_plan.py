@@ -185,12 +185,15 @@ def optional_sum(value: point | None = ...) -> Float64: ...
 def update_point(value: point) -> Returns["value", point]: ...
 def fill_point(value: point) -> Returns["value", point]: ...
 """
+# GCC 13.2 PR113885 ICEs on function-result assignment when a finalizable type
+# has no data components. The marker keeps this lifetime test on its intended path.
 BORROWED_FINALIZER_SOURCE = """\
 module fderived_finalizer_phase8
   implicit none
   integer :: final_count = 0
 
   type :: child
+    integer :: marker = 0
   contains
     final :: cleanup_child
   end type child

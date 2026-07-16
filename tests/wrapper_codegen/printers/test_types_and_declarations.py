@@ -161,17 +161,19 @@ def test_emit_explicit_bound_ranges_as_extents_without_source_dimension_metadata
     source = """
 module bound_mod
 contains
-subroutine bounded(n, default_bound, zero_bound)
+subroutine bounded(n, default_bound, zero_bound, shifted_bound)
   integer, intent(in) :: n
   real(8), intent(inout) :: default_bound(1:n)
   real(8), intent(inout) :: zero_bound(0:n-1)
+  real(8), intent(inout) :: shifted_bound(2:n+1)
 end subroutine bounded
 end module bound_mod
 """
     code = generate_pyi(source)
 
     assert "default_bound: Float64[n]" in code
-    assert "zero_bound: Float64[n - 1 - 0 + 1]" in code
+    assert "zero_bound: Float64[n]" in code
+    assert "shifted_bound: Float64[n]" in code
     assert "ArrayCategory" not in code
 
 

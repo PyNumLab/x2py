@@ -1261,9 +1261,69 @@ class FortranToIRConverter(ClassVisitor):
     @staticmethod
     def _canonical_dimension_expression(expression: str) -> str:
         try:
-            return ast.unparse(ast.parse(expression, mode="eval").body)
+            parsed = ast.parse(expression, mode="eval").body
+            return ast.unparse(FortranToIRConverter._simplify_additive_dimension(parsed))
         except SyntaxError:
             return expression
+
+    @staticmethod
+    def _simplify_additive_dimension(expression: ast.expr) -> ast.expr:
+        """Fold additive bound arithmetic into the public extent expression."""
+        terms: list[tuple[int, ast.expr]] = []
+
+        def collect(node: ast.expr, sign: int = 1) -> None:
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+                collect(node.left, sign)
+                collect(node.right, sign)
+                return
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Sub):
+                collect(node.left, sign)
+                collect(node.right, -sign)
+                return
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+                collect(node.operand, -sign)
+                return
+            terms.append((sign, node))
+
+        collect(expression)
+        constant = sum(
+            sign * node.value
+            for sign, node in terms
+            if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool)
+        )
+        symbolic = [
+            (sign, node)
+            for sign, node in terms
+            if not (isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool))
+        ]
+
+        coefficients: dict[str, tuple[ast.expr, int]] = {}
+        order: list[str] = []
+        for sign, node in symbolic:
+            key = ast.dump(node, include_attributes=False)
+            if key not in coefficients:
+                coefficients[key] = (node, 0)
+                order.append(key)
+            original, coefficient = coefficients[key]
+            coefficients[key] = (original, coefficient + sign)
+
+        result: ast.expr | None = None
+        for key in order:
+            node, coefficient = coefficients[key]
+            for _ in range(abs(coefficient)):
+                if result is None:
+                    result = node if coefficient > 0 else ast.UnaryOp(op=ast.USub(), operand=node)
+                else:
+                    operator: ast.operator = ast.Add() if coefficient > 0 else ast.Sub()
+                    result = ast.BinOp(left=result, op=operator, right=node)
+
+        if result is None:
+            return ast.Constant(value=constant)
+        if constant > 0:
+            return ast.BinOp(left=result, op=ast.Add(), right=ast.Constant(value=constant))
+        if constant < 0:
+            return ast.BinOp(left=result, op=ast.Sub(), right=ast.Constant(value=-constant))
+        return result
 
     @staticmethod
     def _array_order(rank: int, category: str, *, contiguous: bool) -> str | None:
