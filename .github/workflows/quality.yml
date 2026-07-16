@@ -186,8 +186,6 @@ jobs:
       fail-fast: false
       matrix:
         library: [blas, lapack]
-    env:
-      X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR: ${{ runner.temp }}/x2py-real-library-native
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -216,12 +214,13 @@ jobs:
       - name: Restore compiled native library cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR }}
+          path: ${{ runner.temp }}/x2py-real-library-native
           key: real-library-${{ runner.os }}-gfortran13-${{ matrix.library }}-${{ hashFiles('tests/data/fortran/blas/**', 'tests/data/fortran/lapack/**') }}
       - name: Run full ${{ matrix.library }} wrapper test
         env:
           PYTHONPATH: .
           HYPOTHESIS_PROFILE: ci
+          X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR: ${{ runner.temp }}/x2py-real-library-native
         run: >-
           python -m pytest -q --randomly-seed=1
           "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[${{ matrix.library }}]"

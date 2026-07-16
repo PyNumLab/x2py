@@ -69,10 +69,10 @@ python3 -m pytest -q tests/wrapper/fortran \
   --ignore=tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py
 ```
 
-Do not run the full BLAS or LAPACK real-library wrapper tests locally or in
-GitHub Actions during migration. Re-enable both only after every other
-wrapper-plan migration row is complete. General native-bundle tests remain
-active.
+The full LAPACK wrapper test remains CI-only by default. The full BLAS test may
+be run locally when its library-scale evidence is needed, and dedicated
+GitHub Actions jobs run both BLAS and LAPACK on Python 3.12. General
+native-bundle tests remain active in the ordinary matrix.
 
 ## Fixtures and generated expectations
 

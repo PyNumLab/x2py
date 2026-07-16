@@ -228,12 +228,12 @@ reports advisory/manual.
 issues, Ruff formatting drift, Vulture unused test parameters, and the
 too-strict Radon policy.
 
-**Native artifact cache:** the full BLAS/LAPACK native-cache preparation is
-disabled with the deferred real-library wrapper test during wrapper-plan
-migration. Restore the cache job and matrix environment only when Phase 12 of
-the migration checklist explicitly re-enables both corpora. Requested coverage
-runs still collect Python 3.12 coverage data; a final coverage job combines
-that artifact and uploads the XML report.
+**Native artifact cache:** dedicated Python 3.12 BLAS and LAPACK jobs restore a
+separate runner-local native cache for each library before executing the full
+wrapper test. The ordinary pytest matrix excludes that full corpus while
+retaining the lighter native-bundle tests. Requested coverage runs still
+collect Python 3.12 coverage data; a final coverage job combines that artifact
+and uploads the XML report.
 
 **Failure reporting:** each pytest matrix invocation writes
 `pytest-results.xml`; the final failure-only step runs

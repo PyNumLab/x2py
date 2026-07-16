@@ -21,12 +21,12 @@ Fortran bridge compilation. These jobs validate large wrapper generation and
 import/runtime behavior; they are not runtime-performance benchmarks, so the
 fast compile override keeps CI focused on wrapper correctness.
 
-GitHub Actions pins the real-library jobs to `ubuntu-24.04` with `gfortran-13`,
-warms this cache in a pre-matrix job, and then restores it in each Python
-matrix job. The key includes the runner OS, runner architecture, pinned
-`gfortran` version, source content hash, and native cache helper code. Native
-object files are reusable only for the same platform/compiler/source
-combination; a different runner image, compiler, architecture, or BLAS/LAPACK
+GitHub Actions runs separate BLAS and LAPACK jobs on `ubuntu-24.04`, Python
+3.12, and `gfortran-13`. Each job restores its library-specific cache into the
+runner temporary directory and rebuilds it on a cache miss. The key includes
+the runner OS, pinned compiler profile, selected library, and BLAS/LAPACK source
+content. Native object files are reusable only for the same
+platform/compiler/source combination; a different runner image, compiler, or
 fixture content gets a separate rebuildable cache entry.
 
 Contract fixtures: full generated BLAS and LAPACK packages are compared against
