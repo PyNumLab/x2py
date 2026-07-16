@@ -6599,9 +6599,14 @@ class FortranBridgeGenerator(ClassVisitor):
         )
 
     def _external_interface_procedure(self, plan: FunctionPlan) -> FortranInterfaceProcedure:
-        arguments = tuple(sorted(plan.arguments, key=lambda item: item.native_position))
-        parameters = tuple(self._external_interface_parameter(plan, argument) for argument in arguments)
-        imports = tuple(dict.fromkeys(self._iso_symbol(argument.semantic_type_name) for argument in plan.arguments))
+        slots = tuple(sorted(plan.native_call_slots, key=lambda item: item.native_position))
+        arguments = {argument.owner_path: argument for argument in plan.arguments}
+        parameters = tuple(self._external_interface_slot_parameter(plan, slot, arguments) for slot in slots)
+        imports = tuple(
+            dict.fromkeys(
+                self._iso_symbol(slot.semantic_type_name) for slot in slots if slot.semantic_type_name is not None
+            )
+        )
         result_name = None if plan.bridge.native_is_subroutine else "native_result"
         direct_result = self._direct_result(plan)
         result_type = self._native_result_type(plan, direct_result) if result_name is not None else None
@@ -6611,7 +6616,7 @@ class FortranBridgeGenerator(ClassVisitor):
             name=plan.bridge.native_name,
             imports=imports,
             parameters=parameters,
-            parameter_declarations=self._external_interface_parameter_declarations(arguments, parameters),
+            parameter_declarations=self._external_interface_parameter_declarations(slots, parameters),
             result_name=result_name,
             result_type=result_type,
             is_subroutine=plan.bridge.native_is_subroutine,
@@ -6619,23 +6624,23 @@ class FortranBridgeGenerator(ClassVisitor):
 
     @staticmethod
     def _external_interface_parameter_declarations(
-        arguments: tuple[ArgumentTransferPlan, ...],
+        slots: tuple[NativeCallSlotPlan, ...],
         parameters: tuple[FortranParameter, ...],
     ) -> tuple[FortranParameter, ...]:
         """Declare extent providers first without changing native ABI order."""
-        pending = list(zip(arguments, parameters, strict=True))
+        pending = list(zip(slots, parameters, strict=True))
         declarations = []
         emitted_roles = set()
         while pending:
-            for index, (argument, parameter) in enumerate(pending):
+            for index, (slot, parameter) in enumerate(pending):
                 dependencies = (
-                    {role for axis_roles in argument.array.extent_reference_roles for role in axis_roles}
-                    if argument.array is not None
+                    {role for axis_roles in slot.array.extent_reference_roles for role in axis_roles}
+                    if slot.array is not None
                     else set()
                 )
                 if dependencies <= emitted_roles:
                     declarations.append(parameter)
-                    emitted_roles.add(argument.binding.handoff_role)
+                    emitted_roles.add(slot.symbolic_role)
                     pending.pop(index)
                     break
             else:
@@ -6644,6 +6649,117 @@ class FortranBridgeGenerator(ClassVisitor):
                 declarations.extend(parameter for _, parameter in pending)
                 break
         return tuple(declarations)
+
+    def _external_interface_slot_parameter(
+        self,
+        plan: FunctionPlan,
+        slot: NativeCallSlotPlan,
+        arguments: dict[str, ArgumentTransferPlan],
+    ) -> FortranParameter:
+        """Declare one external dummy from its completed ordered ABI slot."""
+        if slot.source_kind in {"implicit", "projection"}:
+            argument = arguments.get(slot.owner_path)
+            if argument is None:
+                raise ValueError(f"External native slot {slot.owner_path!r} has no argument transfer plan")
+            return self._external_interface_parameter(plan, argument, name=slot.native_name.lower())
+        if slot.source_kind == "result":
+            return self._external_interface_result_parameter(plan, slot)
+        if slot.source_kind == "literal":
+            return self._external_interface_literal_parameter(slot)
+        raise ValueError(f"Unsupported external native slot source kind {slot.source_kind!r}")
+
+    def _external_interface_result_parameter(
+        self,
+        plan: FunctionPlan,
+        slot: NativeCallSlotPlan,
+    ) -> FortranParameter:
+        """Declare one hidden output dummy from completed result-slot policy."""
+        if slot.scalar_descriptor is not None:
+            return self._external_interface_scalar_descriptor_result_parameter(slot)
+        match slot.object_kind:
+            case ObjectKind.SCALAR:
+                return self._external_interface_scalar_result_parameter(slot)
+            case ObjectKind.STRING:
+                return self._external_interface_string_result_parameter(slot)
+            case ObjectKind.NUMPY_ARRAY:
+                return self._external_interface_array_result_parameter(plan, slot)
+            case ObjectKind.DERIVED_TYPE:
+                return self._external_interface_derived_result_parameter(slot)
+            case _:
+                raise ValueError(f"Unsupported external hidden output {slot.owner_path!r}")
+
+    @staticmethod
+    def _external_interface_scalar_descriptor_result_parameter(slot: NativeCallSlotPlan) -> FortranParameter:
+        """Declare one completed allocatable or pointer scalar output."""
+        descriptor = slot.scalar_descriptor
+        if descriptor is None:
+            raise ValueError(f"Scalar descriptor output {slot.owner_path!r} has no descriptor plan")
+        attribute = "allocatable" if descriptor.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE else "pointer"
+        if slot.object_kind is ObjectKind.STRING:
+            return FortranParameter(slot.native_name.lower(), "character(kind=c_char, len=:)", (attribute,))
+        if slot.semantic_type_name is None:
+            raise ValueError(f"Scalar descriptor output {slot.owner_path!r} has no element type")
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(slot.semantic_type_name)
+        return FortranParameter(slot.native_name.lower(), scalar_type.fortran_spelling, (attribute,))
+
+    @staticmethod
+    def _external_interface_scalar_result_parameter(slot: NativeCallSlotPlan) -> FortranParameter:
+        """Declare one completed primitive scalar output."""
+        if slot.semantic_type_name is None:
+            raise ValueError(f"Scalar output {slot.owner_path!r} has no element type")
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(slot.semantic_type_name)
+        return FortranParameter(slot.native_name.lower(), scalar_type.fortran_spelling)
+
+    @staticmethod
+    def _external_interface_string_result_parameter(slot: NativeCallSlotPlan) -> FortranParameter:
+        """Declare one completed fixed or assumed-length string output."""
+        length = "*" if slot.character_length is None else str(slot.character_length)
+        return FortranParameter(slot.native_name.lower(), f"character(kind=c_char, len={length})")
+
+    def _external_interface_array_result_parameter(
+        self,
+        plan: FunctionPlan,
+        slot: NativeCallSlotPlan,
+    ) -> FortranParameter:
+        """Declare one completed ordinary or descriptor array output."""
+        if slot.array is None:
+            raise ValueError(f"Array output {slot.owner_path!r} has no shape plan")
+        attributes = []
+        if slot.native_array_handle is not None:
+            attributes.append(
+                "allocatable"
+                if slot.native_array_handle.descriptor_kind is NativeArrayDescriptorKind.ALLOCATABLE
+                else "pointer"
+            )
+        dimension = self._external_array_dimension_from_plan(slot.array, plan)
+        attributes.append(f"dimension({dimension})")
+        return FortranParameter(
+            slot.native_name.lower(),
+            self._array_result_element_type(slot),
+            tuple(attributes),
+        )
+
+    def _external_interface_derived_result_parameter(self, slot: NativeCallSlotPlan) -> FortranParameter:
+        """Declare one completed scalar-derived output."""
+        if slot.derived is None:
+            raise ValueError(f"Derived output {slot.owner_path!r} has no handoff plan")
+        attribute = {
+            DerivedObjectStorage.ALLOCATABLE_HOLDER: ("allocatable",),
+            DerivedObjectStorage.POINTER_HOLDER: ("pointer",),
+        }.get(slot.derived.storage, ())
+        return FortranParameter(
+            slot.native_name.lower(),
+            f"type({self._derived_native_alias(slot.derived.backend_symbol)})",
+            attribute,
+        )
+
+    @staticmethod
+    def _external_interface_literal_parameter(slot: NativeCallSlotPlan) -> FortranParameter:
+        """Declare one hidden literal dummy from its completed scalar type."""
+        if slot.semantic_type_name is None:
+            raise ValueError(f"External literal slot {slot.owner_path!r} has no scalar type")
+        scalar_type = PrimitiveScalarTypeRegistry.type_for(slot.semantic_type_name)
+        return FortranParameter(slot.native_name.lower(), scalar_type.fortran_spelling)
 
     def _native_result_type(self, plan: FunctionPlan, result: ResultPlan | None) -> str:
         """Return the native procedure result type inside an external interface."""

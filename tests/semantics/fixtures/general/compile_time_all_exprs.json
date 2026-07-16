@@ -549,7 +549,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "p_mix - 0 + 1"
+                  "p_mix + 1"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -568,7 +568,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "p_mix - 0 + 1"
+                      "p_mix + 1"
                     ],
                     "lower_bounds": [
                       "0"
@@ -658,7 +658,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "-(-a + b)"
+                  "a - b"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -677,7 +677,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "-(-a + b)"
+                      "a - b"
                     ],
                     "lower_bounds": [],
                     "upper_bounds": [

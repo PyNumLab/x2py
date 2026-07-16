@@ -14,7 +14,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "n1 - 1 - 0 + 1"
+                  "n1"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -33,7 +33,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "n1 - 1 - 0 + 1"
+                      "n1"
                     ],
                     "lower_bounds": [
                       "0"

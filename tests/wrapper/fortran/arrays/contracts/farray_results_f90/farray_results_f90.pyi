@@ -11,7 +11,7 @@ def automatic_vector(
 def automatic_matrix(
     rows: Int32,
     cols: Int32
-) -> Annotated[Float64[rows - 1 - 0 + 1, cols + 1 - 2 + 1], ORDER_F]: ...
+) -> Annotated[Float64[rows, cols], ORDER_F]: ...
 
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Addr(Arg(2))])
 def rank3_cube(

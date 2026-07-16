@@ -9,7 +9,7 @@ def sum_assumed_size(
 @native_call([Addr(Arg(0)), Arg(1)])
 def scale_lower(
     n: Int32,
-    values: Float64[n - 1 - 0 + 1]
+    values: Float64[n]
 ) -> None: ...
 
 def sum_in(

@@ -32,4 +32,9 @@ def scale(x: Float64) -> Float64: ...
     assert "bind_c_scale(&x, &result);" in c_source
     assert "PyObject * result_obj = Double_to_PyDouble(&result);" in c_source
     assert 'subroutine bind_c_scale(x, result) bind(c, name="bind_c_scale")' in fortran_source
+    native_interface = fortran_source.split("subroutine SCALE_OUT(x, result)", maxsplit=1)[1].split(
+        "end subroutine SCALE_OUT", maxsplit=1
+    )[0]
+    assert "real(c_double) :: x" in native_interface
+    assert "real(c_double) :: result" in native_interface
     assert "call SCALE_OUT(x, result)" in fortran_source
