@@ -47,8 +47,8 @@ def test_strided_array_lowering_validates_and_passes_one_explicit_bridge_slice()
 
     assert '_native_array_actual_argument_for_binding_positional"' in c_source
     assert 'PyUnicode_FromString("F")' in c_source
-    assert "values_upper_bound_0" in c_source
-    assert "values_stride_1" in c_source
+    assert "bound_values_upper_bound_0" in c_source
+    assert "bound_values_stride_1" in c_source
     assert "real(c_double), pointer, dimension(:, :) :: values_base" in bridge_source
     assert (
         "values_base(1:values_upper_bound_0 + 1:values_stride_0, 1:values_upper_bound_1 + 1:values_stride_1)"

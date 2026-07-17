@@ -245,9 +245,9 @@ def test_phase7_generated_artifacts_follow_one_typed_action_vocabulary():
     optional_c_end = c_source.index("static PyObject * wrap_replace(", optional_c_start)
     optional_binding = c_source[optional_c_start:optional_c_end]
     assert "} else {" in optional_binding
-    assert "values_elem_len = sizeof(double);" in optional_binding
-    assert "values_descriptor_rank = 1;" in optional_binding
-    assert "values = (CFI_cdesc_t *)&values_storage;" in optional_binding
+    assert "bound_values_elem_len = sizeof(double);" in optional_binding
+    assert "bound_values_descriptor_rank = 1;" in optional_binding
+    assert "bound_values = (CFI_cdesc_t *)&bound_values_storage;" in optional_binding
     assert "x2py_collect_make_allocatable_array_result" in bridge_source
     assert "call x2py_collect_make_allocatable_array_result(native_make(n), result_value)" in bridge_source
     assert "call move_alloc(result_value, result)" in bridge_source

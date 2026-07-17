@@ -26,6 +26,7 @@ STAGE_DIRECTORIES = {
     "semantics",
     "tools",
     "types",
+    "utilities",
     "wrapper_codegen",
 }
 NON_STAGE_DIRECTORIES = {"wrapper"}
@@ -37,6 +38,7 @@ DOCUMENTED_SOURCE_OWNERS = {
     "x2py.pipeline": "tests/pipeline/",
     "x2py.wrapper_codegen": "tests/wrapper_codegen/",
     "x2py.naming": "tests/naming/",
+    "x2py.utilities": "tests/utilities/",
     "x2py.types": "tests/types/",
     "x2py.runtime.handles": "tests/runtime/handles/",
     "x2py.cli": "tests/cli/",

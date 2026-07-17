@@ -593,7 +593,7 @@ summary, the exhaustive matrix, and the test tree disagree.
 
 | Status | Collected nodes |
 | --- | ---: |
-| `wrapper-plan` | 347 |
+| `wrapper-plan` | 348 |
 | `dual-route` | 0 |
 | `legacy` | 0 |
 | `not-applicable` | 75 |
@@ -694,6 +694,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py::test_source_named_root_discovers_and_builds_module_leaf` | direct wrapper/build route | semantic .pyi generation/parsing; build/compile/link orchestration; scalar inputs/results; module variables/state | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_fortran_wrapper_default_module_name_does_not_collide_with_root_function` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_fortran_wrapper_default_places_artifacts_in_invocation_directory` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
+| `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_fortran_wrapper_out_dir_separates_abi_artifact_from_cli_alias` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_fortran_wrapper_out_names_importable_shared_library` | direct wrapper/build route | build/compile/link orchestration; scalar inputs/results | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper` | direct wrapper/build route | build/compile/link orchestration; scalar inputs/results | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_native_link_plan_serializes_interleaved_item_kinds` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |

@@ -144,10 +144,10 @@ def test_dense_array_lowering_uses_planned_shape_checks_and_bridge_orientation()
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
-    assert "PyTuple_SET_ITEM(values_shape, 0, PyLong_FromLongLong((long long)(rows)))" in c_source
-    assert "PyTuple_SET_ITEM(values_shape, 1, PyLong_FromLongLong((long long)(cols)))" in c_source
-    assert 'values_layout = PyUnicode_FromString("F")' in c_source
-    assert 'values_layout = PyUnicode_FromString("C")' in c_source
+    assert "PyTuple_SET_ITEM(bound_values_shape, 0, PyLong_FromLongLong((long long)(bound_rows)))" in c_source
+    assert "PyTuple_SET_ITEM(bound_values_shape, 1, PyLong_FromLongLong((long long)(bound_cols)))" in c_source
+    assert 'bound_values_layout = PyUnicode_FromString("F")' in c_source
+    assert 'bound_values_layout = PyUnicode_FromString("C")' in c_source
     assert '"_native_array_actual_argument_for_binding_positional"' in c_source
     assert "call c_f_pointer(bound_values, values, [values_extent_0, values_extent_1])" in bridge_source
     assert "call c_f_pointer(bound_values, values, [values_extent_1, values_extent_0])" in bridge_source
@@ -204,11 +204,16 @@ def test_copy_f_lowering_keeps_numpy_copy_in_and_copy_out_out_of_the_bridge():
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
-    assert "!PyArray_IS_C_CONTIGUOUS((PyArrayObject *)values_obj)" in c_source
-    assert "values_representation = PyArray_NewCopy((PyArrayObject *)values_obj, NPY_FORTRANORDER)" in c_source
-    assert "values = PyArray_DATA((PyArrayObject *)values_representation)" in c_source
-    assert "PyArray_CopyInto((PyArrayObject *)values_obj, (PyArrayObject *)values_representation) < 0" in c_source
-    assert "Py_XDECREF(values_representation)" in c_source
+    assert "!PyArray_IS_C_CONTIGUOUS((PyArrayObject *)bound_values_obj)" in c_source
+    assert (
+        "bound_values_representation = PyArray_NewCopy((PyArrayObject *)bound_values_obj, NPY_FORTRANORDER)" in c_source
+    )
+    assert "bound_values = PyArray_DATA((PyArrayObject *)bound_values_representation)" in c_source
+    assert (
+        "PyArray_CopyInto((PyArrayObject *)bound_values_obj, (PyArrayObject *)bound_values_representation) < 0"
+        in c_source
+    )
+    assert "Py_XDECREF(bound_values_representation)" in c_source
     assert "call c_f_pointer(bound_values, values, [values_extent_0, values_extent_1])" in bridge_source
     assert "COPY_F" not in bridge_source
 
@@ -237,10 +242,10 @@ def test_copy_f_native_input_and_projected_identity_share_the_same_lifecycle_alg
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
     native_input_body, projected_body = c_source.split("static PyObject * wrap_projected", maxsplit=1)
-    assert "PyArray_NewCopy((PyArrayObject *)values_obj, NPY_FORTRANORDER)" in native_input_body
-    assert "PyArray_CopyInto((PyArrayObject *)values_obj" in native_input_body
-    assert "PyArray_CopyInto((PyArrayObject *)values_obj" in projected_body
-    assert "PyObject * result_obj = values_obj" in projected_body
+    assert "PyArray_NewCopy((PyArrayObject *)bound_values_obj, NPY_FORTRANORDER)" in native_input_body
+    assert "PyArray_CopyInto((PyArrayObject *)bound_values_obj" in native_input_body
+    assert "PyArray_CopyInto((PyArrayObject *)bound_values_obj" in projected_body
+    assert "PyObject * result_obj = bound_values_obj" in projected_body
     assert "Py_INCREF(result_obj)" in projected_body
     assert "COPY_F" not in bridge_source
 

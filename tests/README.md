@@ -23,6 +23,7 @@ user-visible feature that a contributor is changing.
 | Wrap readiness and blockers | `tests/semantics/readiness/` | `python3 -m pytest -q tests/semantics/readiness` |
 | Wrapper planning, bridge/binding generation, and source/`.pyi` printing | `tests/wrapper_codegen/` | `python3 -m pytest -q tests/wrapper_codegen` |
 | Naming policy | `tests/naming/` | `python3 -m pytest -q tests/naming` |
+| Shared Python utilities | `tests/utilities/` | `python3 -m pytest -q tests/utilities` |
 | NumPy and semantic type mapping | `tests/types/` | `python3 -m pytest -q tests/types` |
 | Runtime handles | `tests/runtime/handles/` | `python3 -m pytest -q tests/runtime/handles` |
 | Documentation structure and examples | `tests/docs/` | `python3 -m pytest -q tests/docs` |
@@ -48,6 +49,7 @@ empty directory merely to mirror this table.
 | `x2py.wrapper_codegen` | `tests/wrapper_codegen/` plus compiled behavior under `tests/wrapper/` |
 | `x2py.compiling` | compiled build and runtime feature evidence under `tests/wrapper/fortran/` |
 | `x2py.naming` | `tests/naming/` |
+| `x2py.utilities` | `tests/utilities/` |
 | `x2py.types` | `tests/types/` |
 | `x2py.runtime.handles` | `tests/runtime/handles/` |
 | `x2py.cli` and parser CLIs | `tests/cli/` |

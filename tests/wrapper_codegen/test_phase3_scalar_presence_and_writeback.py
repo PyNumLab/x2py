@@ -44,9 +44,9 @@ def test_optional_scalar_lowering_distinguishes_absent_or_none_from_value():
     fortran_source = _source(artifacts, ".f90")
 
     assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "O|O"' in c_source
-    assert "PyObject * factor_obj = Py_None;" in c_source
-    assert "if (factor_obj != Py_None)" in c_source
-    assert "factor_nullable = &factor;" in c_source
+    assert "PyObject * bound_factor_obj = Py_None;" in c_source
+    assert "if (bound_factor_obj != Py_None)" in c_source
+    assert "bound_factor_nullable = &bound_factor;" in c_source
     assert "bind_c_optional_scale(base, bound_factor)" in fortran_source
     assert "if (c_associated(bound_factor)) then" in fortran_source
     assert "result = optional_scale(base=base, factor=factor)" in fortran_source
@@ -73,11 +73,11 @@ def alloc_state(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
     c_source = _source(artifacts, ".c")
     fortran_source = _source(artifacts, ".f90")
 
-    assert "PyObject * value_obj = NULL;" in c_source
-    assert "if (value_obj != NULL)" in c_source
-    assert "value_present = &value;" in c_source
-    assert "(value_obj != NULL) && (value_obj != Py_None)" in c_source
-    assert "bind_c_alloc_state(value_nullable, value_present)" in c_source
+    assert "PyObject * bound_value_obj = NULL;" in c_source
+    assert "if (bound_value_obj != NULL)" in c_source
+    assert "bound_value_present = &bound_value;" in c_source
+    assert "(bound_value_obj != NULL) && (bound_value_obj != Py_None)" in c_source
+    assert "bind_c_alloc_state(bound_value_nullable, bound_value_present)" in c_source
     assert "type(c_ptr), value :: bound_value_present" in fortran_source
     assert "if (c_associated(bound_value_present)) then" in fortran_source
     assert "result = native_alloc_state(value=value_descriptor)" in fortran_source
@@ -106,7 +106,7 @@ def update(value: Float64 | None) -> Returns["value", Float64] | None: ...
     fortran_source = _source(artifacts, ".f90")
 
     assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "O"' in c_source
-    assert "bind_c_update(value_nullable, &value, &value_descriptor_output_present)" in c_source
+    assert "bind_c_update(bound_value_nullable, &bound_value, &bound_value_descriptor_output_present)" in c_source
     assert "void * value_output" in c_source
     assert "int * value_output_present" in c_source
     assert "type(c_ptr), value :: bound_value_output" in fortran_source
@@ -136,9 +136,9 @@ def test_scalar_writeback_is_an_explicit_binding_lifecycle_result():
     fortran_source = _source(artifacts, ".f90")
 
     assert "void bind_c_bump(int32_t * value);" in c_source
-    assert "bind_c_bump(&value);" in c_source
+    assert "bind_c_bump(&bound_value);" in c_source
     assert "PyObject * result_obj = NULL;" in c_source
-    assert "result_obj = Int32_to_PyLong(&value);" in c_source
+    assert "result_obj = Int32_to_PyLong(&bound_value);" in c_source
     assert "subroutine bind_c_bump(value)" in fortran_source
     assert "call native_bump(value)" in fortran_source
 

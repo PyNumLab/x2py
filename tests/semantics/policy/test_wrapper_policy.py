@@ -678,7 +678,7 @@ def raw_labels(n: Int32, labels: Addr(String[8][n])) -> None: ...
 
     matrix = policies["raw_matrix"].arguments[2]
     assert matrix.array is not None
-    assert matrix.array.order == "ORDER_C"
+    assert matrix.array.order == "ORDER_F"
     assert matrix.array.shape == ("n", "m")
 
     labels = policies["raw_labels"].arguments[1]

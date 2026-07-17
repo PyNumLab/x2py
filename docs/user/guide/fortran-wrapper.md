@@ -1942,6 +1942,11 @@ class_(np.int32(4))      # Python name
 # native call uses native_class_entry
 ```
 
+Python escaping changes only the public Python surface. For example, a native
+Fortran variable named `lambda` remains `lambda` in native code and is exposed
+to Python as `lambda_`. Generated native symbols are checked against their own
+target-language restrictions, not Python's keyword list.
+
 ### Collisions
 
 Every normalized public name must be unique in its namespace. Module members

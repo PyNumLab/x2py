@@ -185,7 +185,7 @@ def update(value: point) -> Returns["value", point]: ...
     assert function.writeback_actions[2].binding.python_result_role.endswith(":python-result")
 
     c_source, _ = _sources(plan)
-    assert "PyObject * result_obj = value_obj;" in c_source
+    assert "PyObject * result_obj = bound_value_obj;" in c_source
     assert "Py_INCREF(result_obj);" in c_source
     assert "point_to_" not in c_source
 

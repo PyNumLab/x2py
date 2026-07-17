@@ -95,16 +95,16 @@ def test_string_addresses_dispatch_to_named_binding_and_bridge_lowering():
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
     assert "void bind_c_storage(void * label);" in c_source
-    assert "PyArray_TYPE((PyArrayObject *)label_obj) != NPY_STRING" in c_source
-    assert "PyArray_NDIM((PyArrayObject *)label_obj) != 0" in c_source
-    assert "PyArray_ITEMSIZE((PyArrayObject *)label_obj) != 8" in c_source
-    assert "PyArray_ISNOTSWAPPED((PyArrayObject *)label_obj)" in c_source
-    assert "PyArray_ISALIGNED((PyArrayObject *)label_obj)" in c_source
-    assert "PyArray_ISWRITEABLE((PyArrayObject *)label_obj)" in c_source
-    assert "label = PyArray_DATA((PyArrayObject *)label_obj);" in c_source
+    assert "PyArray_TYPE((PyArrayObject *)bound_label_obj) != NPY_STRING" in c_source
+    assert "PyArray_NDIM((PyArrayObject *)bound_label_obj) != 0" in c_source
+    assert "PyArray_ITEMSIZE((PyArrayObject *)bound_label_obj) != 8" in c_source
+    assert "PyArray_ISNOTSWAPPED((PyArrayObject *)bound_label_obj)" in c_source
+    assert "PyArray_ISALIGNED((PyArrayObject *)bound_label_obj)" in c_source
+    assert "PyArray_ISWRITEABLE((PyArrayObject *)bound_label_obj)" in c_source
+    assert "bound_label = PyArray_DATA((PyArrayObject *)bound_label_obj);" in c_source
     assert "void bind_c_raw(void * label);" in c_source
-    assert "if (!PyLong_Check(label_obj))" in c_source
-    assert "label = PyLong_AsVoidPtr(label_obj);" in c_source
+    assert "if (!PyLong_Check(bound_label_obj))" in c_source
+    assert "bound_label = PyLong_AsVoidPtr(bound_label_obj);" in c_source
     assert "x2py_malloc" not in c_source
 
     assert 'subroutine bind_c_storage(bound_label) bind(c, name="bind_c_storage")' in bridge_source

@@ -72,13 +72,13 @@ def test_required_array_buffer_dispatches_through_named_binding_and_bridge_metho
     assert "double bind_c_sum_values(void * values, int64_t values_extent_0);" in c_source
     assert '"_native_array_actual_argument_for_binding_positional"' in c_source
     assert (
-        'PyObject_CallFunction(values_helper, "OsiOOiiiiiii", values_obj, "float64", 1, '
-        "values_shape, values_layout, 1, 1, 1, 0, 0, 0, 1)"
+        'PyObject_CallFunction(bound_values_helper, "OsiOOiiiiiii", bound_values_obj, "float64", 1, '
+        "bound_values_shape, bound_values_layout, 1, 1, 1, 0, 0, 0, 1)"
     ) in c_source
-    assert "values = PyLong_AsVoidPtr(PyTuple_GetItem(values_packed, 0));" in c_source
-    assert "values_extent_0 = (int64_t)PyLong_AsLongLong(PyTuple_GetItem(values_packed, 1));" in c_source
-    assert "PyArray_TYPE((PyArrayObject *)values_obj)" not in c_source
-    assert "result = bind_c_sum_values(values, values_extent_0);" in c_source
+    assert "bound_values = PyLong_AsVoidPtr(PyTuple_GetItem(bound_values_packed, 0));" in c_source
+    assert "bound_values_extent_0 = (int64_t)PyLong_AsLongLong(PyTuple_GetItem(bound_values_packed, 1));" in c_source
+    assert "PyArray_TYPE((PyArrayObject *)bound_values_obj)" not in c_source
+    assert "result = bind_c_sum_values(bound_values, bound_values_extent_0);" in c_source
 
     assert "type(c_ptr), value :: bound_values" in bridge_source
     assert "integer(c_int64_t), value :: values_extent_0" in bridge_source

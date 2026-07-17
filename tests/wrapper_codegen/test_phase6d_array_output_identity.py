@@ -46,10 +46,10 @@ def test_projected_array_lowering_increfs_original_objects_and_reuses_tuple_aggr
     artifacts = WrapperCodeGenerator().generate(_output_plan())
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
 
-    assert "PyObject * result_obj = values_obj;" in c_source
+    assert "PyObject * result_obj = bound_values_obj;" in c_source
     assert "Py_INCREF(result_obj);" in c_source
-    assert "PyObject * result_0_obj = left_obj;" in c_source
-    assert "PyObject * result_1_obj = right_obj;" in c_source
+    assert "PyObject * result_0_obj = bound_left_obj;" in c_source
+    assert "PyObject * result_1_obj = bound_right_obj;" in c_source
     assert "PyTuple_New(2)" in c_source
     assert "PyTuple_SET_ITEM(result_obj, 0, result_0_obj)" in c_source
     assert "PyTuple_SET_ITEM(result_obj, 1, result_1_obj)" in c_source

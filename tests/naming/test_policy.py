@@ -14,6 +14,23 @@ def test_public_python_names_escape_keywords_and_collisions():
     assert policy.reserve_public_name(("mod",), "def_", category="function") == "def__2"
 
 
+def test_python_keyword_is_renamed_only_at_the_python_boundary():
+    policy = NamingPolicy()
+
+    assert policy.reserve_public_name(("mod",), "lambda", category="variable") == "lambda_"
+    assert (
+        policy.generated_symbol(
+            "lambda",
+            set(),
+            language="fortran",
+            prefix="mod__",
+            context="variable",
+            parent_context="function",
+        )
+        == "lambda"
+    )
+
+
 def test_strict_public_names_reject_keyword_escaping():
     policy = NamingPolicy(strict_public_names=True)
 
@@ -56,4 +73,31 @@ def test_generated_symbols_apply_target_language_rules():
             parent_context="function",
         )
         == "value_0001"
+    )
+
+
+def test_generated_symbols_reserve_c_entry_point_and_rewrite_special_methods():
+    policy = NamingPolicy()
+
+    assert (
+        policy.generated_symbol(
+            "main",
+            set(),
+            language="c",
+            prefix="owner__",
+            context="module",
+            parent_context="module",
+        )
+        == "main_0001"
+    )
+    assert (
+        policy.generated_symbol(
+            "__init__",
+            set(),
+            language="fortran",
+            prefix="owner__",
+            context="function",
+            parent_context="module",
+        )
+        == "owner__init"
     )

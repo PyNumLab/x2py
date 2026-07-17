@@ -58,9 +58,9 @@ def swap_args(x: Float64, y: Float64) -> Float64: ...
     assert artifacts.extension_init_name == "PyInit_render_demo"
     assert "double bind_c_swap_args(double * y, double * x);" in c_source
     assert 'static char * kwlist[] = {"x", "y", NULL};' in c_source
-    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &x_obj, &y_obj)' in c_source
-    assert "x = PyDouble_to_Double(x_obj);" in c_source
-    assert "result = bind_c_swap_args(&y, &x);" in c_source
+    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &bound_x_obj, &bound_y_obj)' in c_source
+    assert "bound_x = PyDouble_to_Double(bound_x_obj);" in c_source
+    assert "result = bind_c_swap_args(&bound_y, &bound_x);" in c_source
     assert "PyObject * result_obj = Double_to_PyDouble(&result);" in c_source
     assert "PyMODINIT_FUNC PyInit_render_demo(void)" in c_source
     assert "static PyObject * wrap_swap_args" in c_header
@@ -94,12 +94,12 @@ def test_public_generator_reports_each_rendering_operation_in_execution_order():
     [
         (
             "def required_value(x: Float64) -> Float64: ...",
-            "PyObject * x_obj;",
+            "PyObject * bound_x_obj;",
             "result = native_required_value(x)",
         ),
         (
             "def optional_value(x: Int32 = ...) -> Int32: ...",
-            "PyObject * x_obj = Py_None;",
+            "PyObject * bound_x_obj = Py_None;",
             "if (c_associated(bound_x)) then",
         ),
         (
@@ -107,7 +107,7 @@ def test_public_generator_reports_each_rendering_operation_in_execution_order():
 @native_call([Allocatable(Arg(0))])
 def descriptor_value(value: Annotated[Float64, Immutable] | None = ...) -> Int32: ...
 """,
-            "PyObject * value_obj = NULL;",
+            "PyObject * bound_value_obj = NULL;",
             "type(c_ptr), value :: bound_value_present",
         ),
         (
@@ -155,12 +155,12 @@ def test_supported_writeback_actions_select_scalar_result_behavior(codegen_actio
 
     c_source = _rendered_source(WrapperCodeGenerator().generate(edited), ".c")
 
-    assert "bind_c_bump(&value);" in c_source
+    assert "bind_c_bump(&bound_value);" in c_source
     if codegen_action is CodegenAction.COPY_IN_OUT:
         assert "PyObject * result_obj = NULL;" in c_source
-        assert "result_obj = Int32_to_PyLong(&value);" in c_source
+        assert "result_obj = Int32_to_PyLong(&bound_value);" in c_source
     else:
-        assert "PyObject * result_obj = value_obj;" in c_source
+        assert "PyObject * result_obj = bound_value_obj;" in c_source
         assert "Py_INCREF(result_obj);" in c_source
 
 

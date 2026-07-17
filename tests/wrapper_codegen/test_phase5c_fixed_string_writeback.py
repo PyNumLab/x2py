@@ -97,18 +97,18 @@ def test_fixed_string_writeback_dispatches_to_named_binding_and_bridge_lowering(
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
     assert "void bind_c_replace_name(char * name, int64_t name_length);" in c_source
-    assert "const char * name_source = NULL;" in c_source
-    assert "char * name = NULL;" in c_source
-    assert "name = (char *)x2py_malloc((size_t)name_length + 1);" in c_source
+    assert "const char * bound_name_source = NULL;" in c_source
+    assert "char * bound_name = NULL;" in c_source
+    assert "bound_name = (char *)x2py_malloc((size_t)bound_name_length + 1);" in c_source
     assert 'PyExc_MemoryError, "Unable to allocate mutable string buffer for argument name."' in c_source
-    assert "memcpy(name, name_source, (size_t)name_length);" in c_source
-    assert "name[name_length] = '\\0';" in c_source
-    assert "bind_c_replace_name(name, (int64_t)name_length);" in c_source
-    assert 'Py_BuildValue("s", (const char *)name)' in c_source
-    assert c_source.index('Py_BuildValue("s", (const char *)name)') < c_source.index("free(name);")
-    assert c_source.index("free(name);") < c_source.index("if (result_obj == NULL)")
+    assert "memcpy(bound_name, bound_name_source, (size_t)bound_name_length);" in c_source
+    assert "bound_name[bound_name_length] = '\\0';" in c_source
+    assert "bind_c_replace_name(bound_name, (int64_t)bound_name_length);" in c_source
+    assert 'Py_BuildValue("s", (const char *)bound_name)' in c_source
+    assert c_source.index('Py_BuildValue("s", (const char *)bound_name)') < c_source.index("free(bound_name);")
+    assert c_source.index("free(bound_name);") < c_source.index("if (result_obj == NULL)")
     assert "void bind_c_discard_name(const char * name, int64_t name_length);" in c_source
-    assert "bind_c_discard_name(name, (int64_t)name_length);" in c_source
+    assert "bind_c_discard_name(bound_name, (int64_t)bound_name_length);" in c_source
 
     assert "call c_f_pointer(bound_name, name_bytes, [name_length + 1])" in bridge_source
     assert "name = transfer(name_bytes(1:name_length), name)" in bridge_source
@@ -128,8 +128,8 @@ def test_fixed_string_replacement_allocation_runs_after_other_argument_conversio
     artifacts = WrapperCodeGenerator().generate(WrapperPlanner().build(module))
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
 
-    assert c_source.index("PyArray_IsScalar(count_obj, Int)") < c_source.index(
-        "name = (char *)x2py_malloc((size_t)name_length + 1)"
+    assert c_source.index("PyArray_IsScalar(bound_count_obj, Int)") < c_source.index(
+        "bound_name = (char *)x2py_malloc((size_t)bound_name_length + 1)"
     )
 
 
@@ -189,12 +189,12 @@ def optional_identity(label: String = ...) -> None: ...
 
     assert "void bind_c_assumed(char * name, int64_t name_length);" in c_source
     assert "void bind_c_optional(char * label, int64_t label_length);" in c_source
-    assert "PyObject * label_obj = Py_None;" in c_source
-    assert "if (label_obj != Py_None)" in c_source
-    assert "bind_c_optional(label, (int64_t)label_length);" in c_source
-    assert "if (label == NULL)" in c_source
+    assert "PyObject * bound_label_obj = Py_None;" in c_source
+    assert "if (bound_label_obj != Py_None)" in c_source
+    assert "bind_c_optional(bound_label, (int64_t)bound_label_length);" in c_source
+    assert "if (bound_label == NULL)" in c_source
     assert "Py_INCREF(Py_None);" in c_source
-    assert 'result_obj = Py_BuildValue("s", (const char *)label);' in c_source
+    assert 'result_obj = Py_BuildValue("s", (const char *)bound_label);' in c_source
     assert "void bind_c_optional_identity(const char * label, int64_t label_length);" in c_source
 
     assert "character(kind=c_char, len=name_length) :: name" in bridge_source

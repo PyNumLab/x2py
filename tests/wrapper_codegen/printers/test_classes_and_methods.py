@@ -379,7 +379,7 @@ class state:
     assert "init_state" in rendered_source(generated, ".f90")
     assert "state__default_init_wrapper" not in c_wrapper
     assert 'static char * kwlist[] = {"self", "seed", NULL};' in c_wrapper
-    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &bound_self_obj, &seed_obj)' in c_wrapper
+    assert 'PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &bound_self_obj, &bound_seed_obj)' in c_wrapper
     assert "Py_BEGIN_ALLOW_THREADS" in c_wrapper
     assert "Py_END_ALLOW_THREADS" in c_wrapper
 

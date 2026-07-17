@@ -8934,9 +8934,9 @@ class CBindingGenerator(ClassVisitor):
         return f"(*(({scalar_type.c_spelling} *){value_name}))"
 
     def _argument_context_names(self, argument: ArgumentTransferPlan) -> _CArgumentNames:
-        """Name one argument's binding locals from its public Python name."""
+        """Name one argument's binding locals in the binding-private namespace."""
         name = argument.binding.python_name.lower()
-        local = f"bound_{name}" if name in {"self", "args", "kwargs"} else name
+        local = f"bound_{name}"
         rank = (
             15
             if argument.array is not None and argument.array.rank is None

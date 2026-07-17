@@ -49,6 +49,7 @@ through `x2py/__init__.py`.
 | `tests/pipeline/` | Preprocessing and semantic `.pyi` build-orchestration tests. |
 | `tests/semantics/` | Semantic conversion, completed policy, and readiness tests. |
 | `tests/wrapper_codegen/` | Typed planning, direct bridge/binding generation, and source-printer tests. |
+| `tests/utilities/` | Shared Python utility tests. |
 | `tests/wrapper/fortran/` | Runtime wrapper tests that compile, import, call, and check failure paths. |
 | `tests/docs/` | Documentation example and structure checks. |
 | `tests/tools/` | Repository tooling tests. |

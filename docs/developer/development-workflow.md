@@ -308,6 +308,10 @@ X2PY_C_DOCS_END -->
   in semantic IR instead of the printed `.pyi`.
 - Use `SourceName("...")` only when a source identifier cannot be used as the
   Python target. Do not infer source identifiers from normalized Python names.
+- Binding locals derived from a Python-visible argument must use the reserved
+  `bound_` namespace. Generated binding sources include Python, standard-library,
+  optional descriptor, NumPy, and runtime headers, so their imported identifier
+  sets are not a stable public-name vocabulary.
 - Omit `Polymorphic` only for the passed-object dummy of a type-bound procedure,
   where the binding itself restores that native fact. Ordinary `class(T)`
   arguments must retain it.

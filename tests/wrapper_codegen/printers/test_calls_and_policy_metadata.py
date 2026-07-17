@@ -518,13 +518,16 @@ def update(scale: Float64 | None = ..., target: Float64 | None = ...) -> None: .
     assert "call native_update(target=target_descriptor)" in bridge_source
     assert "call native_update(scale=scale_descriptor, target=target_descriptor" in bridge_source
 
-    assert "scale_obj = NULL;" in c_wrapper
-    assert "target_obj = NULL;" in c_wrapper
-    assert "if (scale_obj != NULL)" in c_wrapper
-    assert "scale_present = &scale;" in c_wrapper
-    assert "if ((scale_obj != NULL) && (scale_obj != Py_None))" in c_wrapper
-    assert "scale_nullable = &scale;" in c_wrapper
-    assert "bind_c_update(scale_nullable, scale_present, target_nullable, target_present);" in c_wrapper
+    assert "bound_scale_obj = NULL;" in c_wrapper
+    assert "bound_target_obj = NULL;" in c_wrapper
+    assert "if (bound_scale_obj != NULL)" in c_wrapper
+    assert "bound_scale_present = &bound_scale;" in c_wrapper
+    assert "if ((bound_scale_obj != NULL) && (bound_scale_obj != Py_None))" in c_wrapper
+    assert "bound_scale_nullable = &bound_scale;" in c_wrapper
+    assert (
+        "bind_c_update(bound_scale_nullable, bound_scale_present, bound_target_nullable, bound_target_present);"
+        in c_wrapper
+    )
     assert "Omit to make the native optional dummy absent." in c_wrapper
     assert "Pass None for a present unallocated or unassociated descriptor." in c_wrapper
     assert "Default is None." not in c_wrapper

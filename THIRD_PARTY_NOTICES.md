@@ -1,9 +1,8 @@
 # Third-Party Notices
 
-The native NumPy/Python runtime in `x2py/stdlib/x2py_runtime/` and small
-naming utilities in `x2py/utilities/strings.py`, `x2py/utilities/metaclasses.py`,
-and `x2py/naming/policy.py` contain code adapted from the Pyccel project. The
-current compilation package, semantic printer, and wrapper source printers are
+The native NumPy/Python runtime in `x2py/stdlib/x2py_runtime/` contains code
+adapted from the Pyccel project. The Python utilities, naming policy,
+compilation package, semantic printer, and wrapper source printers are
 independent implementations and are not covered by this attribution.
 
 Upstream project: <https://github.com/pyccel/pyccel>

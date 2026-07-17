@@ -52,17 +52,17 @@ def test_scalar_storage_and_raw_address_lower_to_direct_named_paths():
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
     assert "void bind_c_storage(void * x);" in c_source
-    assert "PyArray_TYPE((PyArrayObject *)x_obj) != NPY_FLOAT64" in c_source
-    assert "PyArray_NDIM((PyArrayObject *)x_obj) != 0" in c_source
-    assert "PyArray_ISNOTSWAPPED((PyArrayObject *)x_obj)" in c_source
-    assert "PyArray_ISALIGNED((PyArrayObject *)x_obj)" in c_source
-    assert "PyArray_ISWRITEABLE((PyArrayObject *)x_obj)" in c_source
-    assert "x = PyArray_DATA((PyArrayObject *)x_obj);" in c_source
-    assert "bind_c_storage(x);" in c_source
+    assert "PyArray_TYPE((PyArrayObject *)bound_x_obj) != NPY_FLOAT64" in c_source
+    assert "PyArray_NDIM((PyArrayObject *)bound_x_obj) != 0" in c_source
+    assert "PyArray_ISNOTSWAPPED((PyArrayObject *)bound_x_obj)" in c_source
+    assert "PyArray_ISALIGNED((PyArrayObject *)bound_x_obj)" in c_source
+    assert "PyArray_ISWRITEABLE((PyArrayObject *)bound_x_obj)" in c_source
+    assert "bound_x = PyArray_DATA((PyArrayObject *)bound_x_obj);" in c_source
+    assert "bind_c_storage(bound_x);" in c_source
     assert "void bind_c_raw(void * x);" in c_source
-    assert "if (!PyLong_Check(x_obj))" in c_source
-    assert "x = PyLong_AsVoidPtr(x_obj);" in c_source
-    assert "bind_c_raw(x);" in c_source
+    assert "if (!PyLong_Check(bound_x_obj))" in c_source
+    assert "bound_x = PyLong_AsVoidPtr(bound_x_obj);" in c_source
+    assert "bind_c_raw(bound_x);" in c_source
 
     assert 'subroutine bind_c_storage(bound_x) bind(c, name="bind_c_storage")' in bridge_source
     assert 'subroutine bind_c_raw(bound_x) bind(c, name="bind_c_raw")' in bridge_source
@@ -118,11 +118,11 @@ def test_scalar_copy_in_out_reuses_one_binding_local_without_bridge_copy():
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
-    assert c_source.count("int32_t value;") == 1
-    assert "value = PyInt32_to_Int32(value_obj);" in c_source
-    assert "bind_c_bump(&value);" in c_source
+    assert c_source.count("int32_t bound_value;") == 1
+    assert "bound_value = PyInt32_to_Int32(bound_value_obj);" in c_source
+    assert "bind_c_bump(&bound_value);" in c_source
     assert "PyObject * result_obj = NULL;" in c_source
-    assert "result_obj = Int32_to_PyLong(&value);" in c_source
+    assert "result_obj = Int32_to_PyLong(&bound_value);" in c_source
     assert "integer(c_int32_t) :: value" in bridge_source
     assert "call native_bump(value)" in bridge_source
     assert "value =" not in bridge_source

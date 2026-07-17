@@ -98,12 +98,12 @@ def test_raw_array_addresses_reuse_integer_extraction_and_named_array_bridge_ass
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
     assert "void bind_c_raw_vector(void * n, void * values);" in c_source
-    assert "if (!PyLong_Check(values_obj))" in c_source
-    assert "values = PyLong_AsVoidPtr(values_obj);" in c_source
-    assert "if (values == NULL && PyErr_Occurred()) return NULL;" in c_source
-    assert "bind_c_raw_vector(n, values);" in c_source
-    assert "values_extent" not in c_source
-    assert "PyArray_Check(values_obj)" not in c_source
+    assert "if (!PyLong_Check(bound_values_obj))" in c_source
+    assert "bound_values = PyLong_AsVoidPtr(bound_values_obj);" in c_source
+    assert "if (bound_values == NULL && PyErr_Occurred()) return NULL;" in c_source
+    assert "bind_c_raw_vector(bound_n, bound_values);" in c_source
+    assert "bound_values_extent" not in c_source
+    assert "PyArray_Check(bound_values_obj)" not in c_source
 
     assert "real(c_double), pointer, dimension(:) :: values" in bridge_source
     assert "call c_f_pointer(bound_values, values, [n])" in bridge_source

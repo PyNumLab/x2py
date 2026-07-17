@@ -65,12 +65,12 @@ def test_optional_assumed_rank_and_character_lowering_follow_named_plan_fields()
     c_source = next(source.text for source in artifacts.sources if source.path.suffix == ".c")
     bridge_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
 
-    assert "PyObject * values_obj = Py_None;" in c_source
-    assert "if (values_obj != Py_None)" in c_source
-    assert "PyArray_NDIM((PyArrayObject *)values_obj) < 1" in c_source
-    assert "values_rank = (int64_t)PyArray_NDIM" in c_source
-    assert "PyArray_TYPE((PyArrayObject *)values_obj) != NPY_STRING" in c_source
-    assert "values_itemsize != 8" in c_source
+    assert "PyObject * bound_values_obj = Py_None;" in c_source
+    assert "if (bound_values_obj != Py_None)" in c_source
+    assert "PyArray_NDIM((PyArrayObject *)bound_values_obj) < 1" in c_source
+    assert "bound_values_rank = (int64_t)PyArray_NDIM" in c_source
+    assert "PyArray_TYPE((PyArrayObject *)bound_values_obj) != NPY_STRING" in c_source
+    assert "bound_values_itemsize != 8" in c_source
     assert "if (c_associated(bound_values)) then" in bridge_source
     assert "select case (values_rank)" in bridge_source
     assert "case (1)" in bridge_source
