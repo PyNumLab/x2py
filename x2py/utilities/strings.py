@@ -27,10 +27,10 @@ def random_string(length: int) -> str:
 def create_incremented_string(
     forbidden_exprs: set[object],
     prefix: str | None = "Dummy",
-    counter: int = 1,
+    counter: int = 2,
     naming_rules: _NameClashRules | None = None,
 ) -> tuple[str, int]:
-    """Return the first available ``prefix_####`` name and next counter.
+    """Return the first available ``prefix_N`` name and next counter.
 
     ``naming_rules`` may implement case-insensitive or language-specific
     collision checks. Without it, membership in ``forbidden_exprs`` decides
@@ -38,7 +38,7 @@ def create_incremented_string(
     """
     stem = "Dummy" if prefix is None else str(prefix)
     for number in count(counter):
-        candidate = f"{stem}_{number:04d}"
+        candidate = f"{stem}_{number}"
         clashes = naming_rules.has_clash(candidate, forbidden_exprs) if naming_rules else candidate in forbidden_exprs
         if not clashes:
             return candidate, number + 1

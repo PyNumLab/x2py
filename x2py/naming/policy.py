@@ -173,11 +173,14 @@ def _native_symbol_spelling(
 
 
 def _available_symbol(name: str, symbols: set[object], rules: GeneratedSymbolRules) -> str:
-    """Return ``name`` or the first numbered spelling without a clash."""
+    """Return a readable non-reserved, non-duplicate generated symbol."""
     if not rules.has_clash(name, symbols):
         return name
-    occupied = set(rules.keywords) | set(symbols)
-    return create_incremented_string(occupied, prefix=name, naming_rules=rules)[0]
+    if rules.has_clash(name, set()):
+        name = f"{name}_x2py"
+        if not rules.has_clash(name, symbols):
+            return name
+    return create_incremented_string(symbols, prefix=name, counter=2, naming_rules=rules)[0]
 
 
 _C_LANGUAGE_KEYWORDS = frozenset(

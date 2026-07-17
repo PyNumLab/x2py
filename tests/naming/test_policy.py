@@ -50,7 +50,7 @@ def test_generated_symbols_apply_target_language_rules():
             context="function",
             parent_context="module",
         )
-        == "module_0001"
+        == "module_x2py"
     )
     assert (
         policy.generated_symbol(
@@ -65,14 +65,14 @@ def test_generated_symbols_apply_target_language_rules():
     )
     assert (
         policy.generated_symbol(
-            "value",
-            {"Value"},
+            "answer",
+            {"Answer"},
             language="fortran",
             prefix="owner__",
             context="variable",
             parent_context="function",
         )
-        == "value_0001"
+        == "answer_2"
     )
 
 
@@ -88,7 +88,7 @@ def test_generated_symbols_reserve_c_entry_point_and_rewrite_special_methods():
             context="module",
             parent_context="module",
         )
-        == "main_0001"
+        == "main_x2py"
     )
     assert (
         policy.generated_symbol(
@@ -100,4 +100,20 @@ def test_generated_symbols_reserve_c_entry_point_and_rewrite_special_methods():
             parent_context="module",
         )
         == "owner__init"
+    )
+
+
+def test_generated_symbols_number_after_an_escaped_native_name():
+    policy = NamingPolicy()
+
+    assert (
+        policy.generated_symbol(
+            "module",
+            {"MODULE_X2PY"},
+            language="fortran",
+            prefix="owner__",
+            context="function",
+            parent_context="module",
+        )
+        == "module_x2py_2"
     )

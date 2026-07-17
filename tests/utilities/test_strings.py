@@ -9,17 +9,17 @@ class _CaseInsensitiveRules:
 
 
 def test_incremented_name_skips_reserved_spellings_and_reports_next_counter():
-    name, counter = create_incremented_string({"bridge_0001", "bridge_0002"}, prefix="bridge")
+    name, counter = create_incremented_string({"bridge_2", "bridge_3"}, prefix="bridge")
 
-    assert name == "bridge_0003"
-    assert counter == 4
+    assert name == "bridge_4"
+    assert counter == 5
 
 
 def test_incremented_name_uses_the_target_language_collision_rule():
-    name, counter = create_incremented_string({"VALUE_0001"}, prefix="value", naming_rules=_CaseInsensitiveRules())
+    name, counter = create_incremented_string({"VALUE_2"}, prefix="value", naming_rules=_CaseInsensitiveRules())
 
-    assert name == "value_0002"
-    assert counter == 3
+    assert name == "value_3"
+    assert counter == 4
 
 
 def test_random_string_has_the_requested_length_and_alphabet():

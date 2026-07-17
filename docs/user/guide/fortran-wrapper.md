@@ -1961,6 +1961,19 @@ class__2
 class__3
 ```
 
+Generated native symbols use the same readable duplicate convention, while a
+target-language reserved word gets an explicit wrapper suffix:
+
+```text
+value          # first generated symbol
+value_2        # another generated symbol named value
+module_x2py    # generated symbol whose original spelling is a native reserved word
+module_x2py_2  # collision with the escaped spelling
+```
+
+The generator does not invent semantic names for collisions: the source name
+and deterministic suffix make generated artifacts easy to trace and reproduce.
+
 Generated helper names use an internal namespace, so a user procedure named
 `get_value` does not collide with the internal accessor for a variable named
 `value`.
