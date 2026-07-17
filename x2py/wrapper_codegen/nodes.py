@@ -16,11 +16,9 @@ class BackendScalarType(StageRecord):
     fortran_spelling: str
     python_parse_unit: str | None = None
     numpy_type_macro: str | None = None
-    python_result_converter: str | None = None
-    python_input_converter: str | None = None
-    python_input_check: str | None = None
+    python_result_kind: str | None = None
     python_type_name: str | None = None
-    python_module_result_converter: str | None = None
+    python_module_result_kind: str | None = None
     cfi_type_spelling: str | None = None
 
 

@@ -120,8 +120,8 @@ def test_fixed_width_character_array_results_lower_itemsize_into_both_backends()
         "PyArray_New(&PyArray_Type, 1, result_obj_dims, NPY_STRING, NULL, labels, 4, "
         "NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_WRITEABLE, NULL)" in c_source
     )
-    assert "PyCapsule_New(result, NULL, capsule_cleanup)" in c_source
-    assert "PyCapsule_New(labels, NULL, capsule_cleanup)" in c_source
+    assert "PyCapsule_New(result, NULL, x2py_release_owned_memory)" in c_source
+    assert "PyCapsule_New(labels, NULL, x2py_release_owned_memory)" in c_source
     assert "character(kind=c_char, len=5), dimension(3) :: result_value" in bridge_source
     assert "character(kind=c_char), pointer, dimension(:) :: result_copy" in bridge_source
     assert "5_c_size_t * size(result_value, kind=c_size_t)" in bridge_source

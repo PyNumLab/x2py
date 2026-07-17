@@ -650,6 +650,34 @@ class CBindingGenerator(ClassVisitor):
             prototypes=tuple(self._binding_prototype(function) for function in self._functions(plan)),
         )
 
+    @staticmethod
+    def _scalar_numpy_type(scalar) -> str:
+        """Return the completed NumPy type selected for one scalar boundary."""
+        if scalar.numpy_type_macro is None:
+            raise ValueError(f"Scalar type {scalar.semantic_name!r} has no NumPy type")
+        return scalar.numpy_type_macro
+
+    def _scalar_matches_expression(self, scalar, object_name: str) -> str:
+        """Return one side-effect-free scalar type predicate."""
+        return f"x2py_scalar_matches({object_name}, {self._scalar_numpy_type(scalar)})"
+
+    def _scalar_unpack_expression(self, scalar, object_name: str, value_name: str) -> str:
+        """Return one checked Python-to-native scalar conversion."""
+        return f"x2py_scalar_unpack({object_name}, {self._scalar_numpy_type(scalar)}, &{value_name})"
+
+    def _scalar_result_expression(self, scalar, value_pointer: str, *, module: bool = False) -> str:
+        """Return one native scalar conversion selected by completed result policy."""
+        result_kind = scalar.python_module_result_kind if module else scalar.python_result_kind
+        converters = {
+            "python": "x2py_scalar_to_python",
+            "numpy": "x2py_scalar_to_numpy",
+        }
+        try:
+            converter = converters[result_kind]
+        except KeyError:
+            raise ValueError(f"Unsupported Python result kind for {scalar.semantic_name!r}: {result_kind!r}") from None
+        return f"{converter}({self._scalar_numpy_type(scalar)}, {value_pointer})"
+
     def _visit_NamespacePlan(self, plan: NamespacePlan) -> tuple[CFunction, ...]:
         """Return binding functions directly owned by one Python namespace."""
         return (
@@ -695,11 +723,12 @@ class CBindingGenerator(ClassVisitor):
             )
         )
 
-    def _module_defines(self, needs_native_support: bool) -> tuple[CMacroDefinition, ...]:
-        """Return compile-time definitions selected by assembled module needs."""
+    @staticmethod
+    def _module_defines(needs_native_support: bool) -> tuple[CMacroDefinition, ...]:
+        """Select the generated translation unit that initializes NumPy's C API."""
         if not needs_native_support:
             return ()
-        return (CMacroDefinition("PY_ARRAY_UNIQUE_SYMBOL", "CWRAPPER_ARRAY_API"),)
+        return (CMacroDefinition("X2PY_BINDING_IMPORT_ARRAY", "1"),)
 
     def _module_includes(
         self,
@@ -790,11 +819,7 @@ class CBindingGenerator(ClassVisitor):
         """Return bundled native-support includes consumed by generated nodes."""
         if not required:
             return ()
-        return (
-            CInclude("binding_support/numpy_version.h", system=False),
-            CInclude("numpy/arrayobject.h"),
-            CInclude("binding_support/x2py_binding.h", system=False),
-        )
+        return (CInclude("binding_support/x2py_binding.h", system=False),)
 
     # Immediate callback runtime.
     def _callback_sites(self, plan: ModulePlan) -> tuple[CallbackHandoffPlan, ...]:
@@ -970,7 +995,7 @@ class CBindingGenerator(ClassVisitor):
             CDeclaration(
                 target,
                 "PyObject *",
-                CodeExpression(f"{scalar.python_result_converter}(&{parameter})"),
+                CodeExpression(self._scalar_result_expression(scalar, f"&{parameter}")),
             ),
         )
 
@@ -1146,10 +1171,9 @@ class CBindingGenerator(ClassVisitor):
             CDeclaration(
                 "callback_value",
                 scalar.c_spelling,
-                CodeExpression(f"{scalar.python_input_converter}(callback_result)"),
             ),
             CIf(
-                CodeExpression("PyErr_Occurred()"),
+                CodeExpression(self._scalar_unpack_expression(scalar, "callback_result", "callback_value") + " < 0"),
                 body=(
                     CExpressionStatement(CodeExpression(f'{callback.abort_symbol}("invalid callback return value")')),
                 ),
@@ -2906,7 +2930,7 @@ class CBindingGenerator(ClassVisitor):
                         self._allocatable_holder_field_bridge_name(derived, field, "get") + "(owner_address)"
                     ),
                 ),
-                CReturn(CodeExpression(scalar.python_result_converter + "(&value)")),
+                CReturn(CodeExpression(self._scalar_result_expression(scalar, "&value"))),
             ),
         )
         if field.setter_action is not SetterAction.WRITE_THROUGH:
@@ -2917,8 +2941,11 @@ class CBindingGenerator(ClassVisitor):
                 *self._allocatable_holder_owner_nodes(derived.backend_symbol, setter=True),
                 self._scalar_field_type_check(field, scalar, "value_obj"),
                 CDeclaration("value", scalar.c_spelling),
-                CExpressionStatement(CodeExpression(f"value = {scalar.python_input_converter}(value_obj)")),
-                CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
+                CExpressionStatement(
+                    CodeExpression(
+                        "if (" + self._scalar_unpack_expression(scalar, "value_obj", "value") + " < 0) return NULL"
+                    )
+                ),
                 CExpressionStatement(
                     CodeExpression(
                         f"{self._allocatable_holder_field_bridge_name(derived, field, 'set')}(owner_address, value)"
@@ -2996,7 +3023,7 @@ class CBindingGenerator(ClassVisitor):
                     scalar.c_spelling,
                     CodeExpression(self._pointer_holder_field_bridge_name(derived, field, "get") + "(owner_address)"),
                 ),
-                CReturn(CodeExpression(scalar.python_result_converter + "(&value)")),
+                CReturn(CodeExpression(self._scalar_result_expression(scalar, "&value"))),
             ),
         )
         if field.setter_action is not SetterAction.WRITE_THROUGH:
@@ -3007,8 +3034,11 @@ class CBindingGenerator(ClassVisitor):
                 *self._pointer_holder_owner_nodes(derived.backend_symbol, setter=True),
                 self._scalar_field_type_check(field, scalar, "value_obj"),
                 CDeclaration("value", scalar.c_spelling),
-                CExpressionStatement(CodeExpression(f"value = {scalar.python_input_converter}(value_obj)")),
-                CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
+                CExpressionStatement(
+                    CodeExpression(
+                        "if (" + self._scalar_unpack_expression(scalar, "value_obj", "value") + " < 0) return NULL"
+                    )
+                ),
                 CExpressionStatement(
                     CodeExpression(
                         f"{self._pointer_holder_field_bridge_name(derived, field, 'set')}(owner_address, value)"
@@ -3615,7 +3645,7 @@ class CBindingGenerator(ClassVisitor):
                 scalar.c_spelling,
                 CodeExpression(f"{self._derived_field_bridge_name(derived, field, 'get')}(owner_address)"),
             ),
-            CReturn(CodeExpression(f"{scalar.python_module_result_converter}(&value)")),
+            CReturn(CodeExpression(self._scalar_result_expression(scalar, "&value", module=True))),
         )
         return self._derived_private_method(self._derived_field_method_name(derived, field, "get"), body)
 
@@ -3630,8 +3660,12 @@ class CBindingGenerator(ClassVisitor):
         body = (
             *self._derived_owner_and_value_nodes(derived),
             self._scalar_field_type_check(field, scalar, "value_obj"),
-            CDeclaration("value", scalar.c_spelling, CodeExpression(f"{scalar.python_input_converter}(value_obj)")),
-            CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
+            CDeclaration("value", scalar.c_spelling),
+            CExpressionStatement(
+                CodeExpression(
+                    "if (" + self._scalar_unpack_expression(scalar, "value_obj", "value") + " < 0) return NULL"
+                )
+            ),
             CExpressionStatement(
                 CodeExpression(f"{self._derived_field_bridge_name(derived, field, 'set')}(owner_address, value)")
             ),
@@ -3653,7 +3687,7 @@ class CBindingGenerator(ClassVisitor):
                 scalar.c_spelling,
                 CodeExpression(f"{self._module_member_bridge_name(variable, member, 'get')}()"),
             ),
-            CReturn(CodeExpression(f"{scalar.python_module_result_converter}(&value)")),
+            CReturn(CodeExpression(self._scalar_result_expression(scalar, "&value", module=True))),
         )
         return self._derived_private_method(self._module_member_method_name(variable, member, "get"), body)
 
@@ -3673,8 +3707,12 @@ class CBindingGenerator(ClassVisitor):
                 CodeExpression('if (!PyArg_ParseTuple(args, "OO", &owner_obj, &value_obj)) return NULL')
             ),
             self._scalar_field_type_check(field, scalar, "value_obj"),
-            CDeclaration("value", scalar.c_spelling, CodeExpression(f"{scalar.python_input_converter}(value_obj)")),
-            CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
+            CDeclaration("value", scalar.c_spelling),
+            CExpressionStatement(
+                CodeExpression(
+                    "if (" + self._scalar_unpack_expression(scalar, "value_obj", "value") + " < 0) return NULL"
+                )
+            ),
             CExpressionStatement(CodeExpression(f"{self._module_member_bridge_name(variable, member, 'set')}(value)")),
             CExpressionStatement(CodeExpression("Py_RETURN_NONE")),
         )
@@ -3922,7 +3960,7 @@ class CBindingGenerator(ClassVisitor):
     def _scalar_field_type_check(self, field: DerivedFieldPlan, scalar, object_name: str) -> CExpressionStatement:
         return CExpressionStatement(
             CodeExpression(
-                f"if (!{scalar.python_input_check.format(object_name=object_name)}) {{ "
+                f"if (!{self._scalar_matches_expression(scalar, object_name)}) {{ "
                 f'PyErr_Format(PyExc_TypeError, "Expected {scalar.python_type_name} for field {field.name}. '
                 f"Received <class '%s'>\", Py_TYPE({object_name})->tp_name); return NULL; }}"
             )
@@ -5127,7 +5165,7 @@ class CBindingGenerator(ClassVisitor):
                     CDeclaration(
                         "result",
                         "PyObject *",
-                        CodeExpression(f"{scalar_type.python_module_result_converter}(&value)"),
+                        CodeExpression(self._scalar_result_expression(scalar_type, "&value", module=True)),
                     ),
                     CReturn(CodeExpression("result")),
                 ),
@@ -5160,7 +5198,7 @@ class CBindingGenerator(ClassVisitor):
                     CDeclaration(
                         "result",
                         "PyObject *",
-                        CodeExpression(f"{scalar_type.python_module_result_converter}(&value)"),
+                        CodeExpression(self._scalar_result_expression(scalar_type, "&value", module=True)),
                     ),
                     CExpressionStatement(CodeExpression("free(data)")),
                     CReturn(CodeExpression("result")),
@@ -5521,9 +5559,14 @@ class CBindingGenerator(ClassVisitor):
                     CDeclaration(
                         "value",
                         scalar_type.c_spelling,
-                        CodeExpression(f"{scalar_type.python_input_converter}(value_obj)"),
                     ),
-                    CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return -1")),
+                    CExpressionStatement(
+                        CodeExpression(
+                            "if ("
+                            + self._scalar_unpack_expression(scalar_type, "value_obj", "value")
+                            + " < 0) return -1"
+                        )
+                    ),
                     CExpressionStatement(CodeExpression(f"{self._module_bridge_setter_name(plan)}(value)")),
                     CReturn(CodeExpression("0")),
                 ),
@@ -5541,7 +5584,7 @@ class CBindingGenerator(ClassVisitor):
     def _module_setter_type_check(self, plan, scalar_type) -> CExpressionStatement:
         return CExpressionStatement(
             CodeExpression(
-                f"if (!{scalar_type.python_input_check.format(object_name='value_obj')}) {{ "
+                f"if (!{self._scalar_matches_expression(scalar_type, 'value_obj')}) {{ "
                 f'PyErr_Format(PyExc_TypeError, "Expected an argument of type '
                 f"{scalar_type.python_type_name} for module variable {plan.binding.python_names[0]}. "
                 "Received <class '%s'>\", Py_TYPE(value_obj)->tp_name); return -1; }"
@@ -5809,7 +5852,6 @@ class CBindingGenerator(ClassVisitor):
                 body=(
                     self._type_check_statement(plan, names.object_name, scalar_type),
                     self._conversion_statement(names, scalar_type),
-                    CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
                     CExpressionStatement(CodeExpression(f"{names.nullable_name} = &{names.value_name}")),
                 ),
             ),
@@ -6050,7 +6092,7 @@ class CBindingGenerator(ClassVisitor):
     ) -> tuple[CDeclaration | CExpressionStatement, ...]:
         """Return declarations and conversion statements for one scalar value."""
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
-        if scalar_type.python_input_converter is None or scalar_type.python_input_check is None:
+        if scalar_type.numpy_type_macro is None:
             raise ValueError(f"Unsupported scalar input type {plan.semantic_type_name!r}")
         names = context.arguments[plan.owner_path]
         return (
@@ -6058,16 +6100,19 @@ class CBindingGenerator(ClassVisitor):
             CDeclaration(names.value_name, scalar_type.c_spelling),
             CExpressionStatement(
                 CodeExpression(
-                    f"if (!{scalar_type.python_input_check.format(object_name=names.object_name)}) {{ "
+                    f"if (!{self._scalar_matches_expression(scalar_type, names.object_name)}) {{ "
                     f'PyErr_Format(PyExc_TypeError, "Expected an argument of type '
                     f"{scalar_type.python_type_name} for argument {plan.binding.python_name}. "
                     f"Received <class '%s'>\", Py_TYPE({names.object_name})->tp_name); return NULL; }}"
                 )
             ),
             CExpressionStatement(
-                CodeExpression(f"{names.value_name} = {scalar_type.python_input_converter}({names.object_name})")
+                CodeExpression(
+                    "if ("
+                    + self._scalar_unpack_expression(scalar_type, names.object_name, names.value_name)
+                    + " < 0) return NULL"
+                )
             ),
-            CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
         )
 
     # String argument lowering.
@@ -7354,7 +7399,6 @@ class CBindingGenerator(ClassVisitor):
                 body=(
                     self._type_check_statement(plan, names.object_name, scalar_type),
                     self._conversion_statement(names, scalar_type),
-                    CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
                     CExpressionStatement(CodeExpression(f"{names.nullable_name} = &{names.value_name}")),
                 ),
             ),
@@ -7457,7 +7501,6 @@ class CBindingGenerator(ClassVisitor):
                 body=(
                     self._type_check_statement(plan, names.object_name, scalar_type),
                     self._conversion_statement(names, scalar_type),
-                    CExpressionStatement(CodeExpression("if (PyErr_Occurred()) return NULL")),
                     CExpressionStatement(CodeExpression(f"{names.nullable_name} = &{names.value_name}")),
                 ),
             ),
@@ -7467,7 +7510,7 @@ class CBindingGenerator(ClassVisitor):
         """Return one scalar type check with the established error surface."""
         return CExpressionStatement(
             CodeExpression(
-                f"if (!{scalar_type.python_input_check.format(object_name=object_name)}) {{ "
+                f"if (!{self._scalar_matches_expression(scalar_type, object_name)}) {{ "
                 f'PyErr_Format(PyExc_TypeError, "Expected an argument of type '
                 f"{scalar_type.python_type_name} for argument {plan.binding.python_name}. "
                 f"Received <class '%s'>\", Py_TYPE({object_name})->tp_name); return NULL; }}"
@@ -7477,7 +7520,11 @@ class CBindingGenerator(ClassVisitor):
     def _conversion_statement(self, names: _CArgumentNames, scalar_type) -> CExpressionStatement:
         """Return one Python-to-native scalar conversion statement."""
         return CExpressionStatement(
-            CodeExpression(f"{names.value_name} = {scalar_type.python_input_converter}({names.object_name})")
+            CodeExpression(
+                "if ("
+                + self._scalar_unpack_expression(scalar_type, names.object_name, names.value_name)
+                + " < 0) return NULL"
+            )
         )
 
     def _visit_ResultPlan(
@@ -7536,10 +7583,10 @@ class CBindingGenerator(ClassVisitor):
             )
         else:
             scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
-            if scalar_type.python_result_converter is None:
+            if scalar_type.python_result_kind is None:
                 raise ValueError(f"Unsupported scalar descriptor type {plan.semantic_type_name!r}")
             conversion = CodeExpression(
-                f"{scalar_type.python_result_converter}(({scalar_type.c_spelling} *){native_name})"
+                self._scalar_result_expression(scalar_type, f"({scalar_type.c_spelling} *){native_name}")
             )
         present_body: tuple[CDeclaration | CExpressionStatement | CIf, ...] = (
             CIf(
@@ -7817,7 +7864,7 @@ class CBindingGenerator(ClassVisitor):
             CDeclaration(
                 base_name,
                 "PyObject *",
-                CodeExpression(f"PyCapsule_New({data_name}, NULL, capsule_cleanup)"),
+                CodeExpression(f"PyCapsule_New({data_name}, NULL, x2py_release_owned_memory)"),
             ),
             CIf(
                 CodeExpression(f"{base_name} == NULL"),
@@ -8140,13 +8187,13 @@ class CBindingGenerator(ClassVisitor):
         scalar_type = PrimitiveScalarTypeRegistry.type_for(plan.semantic_type_name)
         native_name = self._result_native_name(plan, context)
         python_name = context.python_results.get(plan.owner_path)
-        if scalar_type.python_result_converter is None or python_name is None:
+        if scalar_type.python_result_kind is None or python_name is None:
             raise ValueError(f"Unsupported scalar result type {plan.semantic_type_name!r}")
         return (
             CDeclaration(
                 python_name,
                 "PyObject *",
-                CodeExpression(f"{scalar_type.python_result_converter}(&{native_name})"),
+                CodeExpression(self._scalar_result_expression(scalar_type, f"&{native_name}")),
             ),
             CIf(
                 CodeExpression(f"{python_name} == NULL"),
@@ -8746,7 +8793,7 @@ class CBindingGenerator(ClassVisitor):
         target = context.python_results[action.owner_path]
         cleanup = tuple(CExpressionStatement(CodeExpression(f"Py_DECREF({name})")) for name in converted)
         conversion = CExpressionStatement(
-            CodeExpression(f"{target} = {scalar_type.python_result_converter}(&{names.value_name})")
+            CodeExpression(f"{target} = {self._scalar_result_expression(scalar_type, f'&{names.value_name}')}")
         )
         failure = CIf(CodeExpression(f"{target} == NULL"), body=(*cleanup, CReturn(CodeExpression("NULL"))))
         if source.bridge.descriptor_output_presence_role is None:
@@ -11117,7 +11164,7 @@ class CBindingGenerator(ClassVisitor):
                         CDeclaration(
                             object_name,
                             "PyObject *",
-                            CodeExpression(f"{scalar_type.python_module_result_converter}(&{value_name})"),
+                            CodeExpression(self._scalar_result_expression(scalar_type, f"&{value_name}", module=True)),
                         ),
                         CExpressionStatement(
                             CodeExpression(f"if ({object_name} == NULL) {{ Py_DECREF(mod); return NULL; }}")

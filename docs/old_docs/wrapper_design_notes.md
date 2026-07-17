@@ -68,6 +68,14 @@ implementation detail of the generated extension, but their names are
 intentionally x2py-specific so they do not look like user source or a generic
 C wrapper.
 
+The support header exposes a deliberately small `x2py_*` mechanical API:
+scalar type matching, scalar unpacking, scalar creation as a Python or NumPy
+object, and release of a bridge-owned allocation. The generated binding passes
+the completed NumPy type, layout, ownership, and mutation decisions into those
+operations. Native support must not infer a layout, accept a different dtype,
+or choose ownership behavior from a value at runtime; those are completed
+wrapper-plan decisions.
+
 Generated CPython extensions should expose useful NumPy-style docstrings on the
 Python-visible API. The CPython wrapper layer owns this generation because it has
 the final callable signatures, hidden projection decisions, class/property

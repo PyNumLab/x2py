@@ -334,6 +334,6 @@ def make_pair() -> tuple[Int32, point, point]: ...
     assert "deallocate(left_value)" in bridge_source
     allocation_check = c_source.index("if (left == NULL || right == NULL)")
     first_wrapper = c_source.index("PyCapsule_New(left")
-    scalar_conversion = c_source.index("Int32_to_PyLong(&status)")
+    scalar_conversion = c_source.index("x2py_scalar_to_python(NPY_INT32, &status)")
     assert allocation_check < first_wrapper < scalar_conversion
     assert "if (right != NULL) { bind_c_x2py_destroy_point(right); right = NULL; }" in c_source
