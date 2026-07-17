@@ -7,7 +7,6 @@ from tests._shared.pyi_conversion_support import (
     CONTRACT_SYMBOLS,
     PROJECTED_OUTPUT_METADATA,
     ProjectionMapping,
-    Scope,
     SemanticArgument,
     SemanticConstraint,
     SemanticFunction,
@@ -23,30 +22,32 @@ from tests._shared.pyi_conversion_support import (
     parse_pyi_text,
     pytest,
     re,
-    semantic_ir_to_codegen_ast,
 )
 
 
-def test_convert_pyi_to_ir_preserves_callable_signature_metadata():
+def test_convert_pyi_to_ir_preserves_named_prototype_signature_metadata():
     module = parse_pyi_text(
         """
-from x2py.contracts import Callable, Float64, Int32
+from x2py.contracts import Float64, Int32, prototype
 
 class sim_state:
     n: Int32
 
+@prototype
+def objective(state: sim_state, value: Float64) -> Float64: ...
+
 def integrate(
     state: sim_state,
-    objective: Callable[[sim_state, Float64], Float64]
+    callback: objective
 ) -> Float64: ...
 """,
         module_name="callbacks",
     )
 
     callback_type = module.functions[0].arguments[1].semantic_type
-    assert callback_type.name == "Callable"
-    assert callback_type.dtype == "Callable"
-    assert [arg.name for arg in callback_type.metadata["arguments"]] == ["sim_state", "Float64"]
+    assert callback_type.name == "objective"
+    assert callback_type.dtype == "Prototype"
+    assert [arg.name for arg in callback_type.metadata["callback_arguments"]] == ["state", "value"]
     assert callback_type.metadata["return"].name == "Float64"
 
 
@@ -411,12 +412,6 @@ def fill(
     assert func.arguments[1].metadata[PROJECTED_OUTPUT_METADATA] is True
     assert func.projection[1].result_position == 0
 
-    codegen_module = semantic_ir_to_codegen_ast(
-        from_pyi,
-        Scope(name=from_pyi.name, scope_type="module"),
-    )
-    assert codegen_module.funcs[0].arguments[1].var.projected_output is True
-
 
 def test_native_order_outputs_do_not_get_projected_without_native_call():
     from_pyi = parse_pyi_text(
@@ -746,7 +741,10 @@ class vector:
             "Annotated[...] for constraints or array metadata",
         ),
         ("foo.bar: Int32\n", "Unsupported annotation target: 'foo.bar'"),
-        ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument: \"Name('x', 'y')\""),
+        (
+            "value: Annotated[Int32, SourceName('x', 'y')]\n",
+            "SourceName metadata expects one argument: \"SourceName('x', 'y')\"",
+        ),
         ("def f(x: Int32): ...\n", "Unsupported function header: 'def f(x: Int32):'"),
         ("def f(\n    x: Int32,\n): ...\n", "Unterminated callable starting at line 2"),
         ("def f(*x: Int32) -> None: ...\n", "Unsupported function header: 'def f(*x: Int32) -> None:'"),
@@ -923,11 +921,11 @@ def convert(value: F64 | None) -> F64 | None: ...
     [
         (
             "def consume(value: Allocatable[Float64]) -> None: ...\n",
-            "Callable scalar descriptors use nullable value annotations",
+            "Procedure scalar descriptors use nullable value annotations",
         ),
         (
             "def produce() -> Pointer[Float64]: ...\n",
-            "Callable scalar descriptor results use a nullable value annotation",
+            "Procedure scalar descriptor results use a nullable value annotation",
         ),
         (
             "@native_call([Allocatable(Arg(0))])\ndef consume(value: Float64) -> None: ...\n",
@@ -948,12 +946,9 @@ def test_convert_pyi_to_ir_rejects_legacy_or_incomplete_scalar_descriptor_callab
         parse_pyi_text(source, module_name="invalid_descriptor_projection")
 
 
-def test_convert_pyi_to_ir_handles_callable_and_pointer_storage_variants():
+def test_convert_pyi_to_ir_handles_pointer_and_array_storage_variants():
     module = parse_pyi_text(
         """
-plain_callback: Callable
-second_callback: Callable
-opaque_callback: Callable[..., Float64]
 constant: Int32
 deep: Addr[3](Float64)
 rank_any: Float64[...]
@@ -965,16 +960,7 @@ nested_answer: Final[Final[Int32]]
         module_name="storage",
     )
 
-    plain, qualified, callback, constant, deep, rank_any, strided, computed, bounded, nested = [
-        var.semantic_type for var in module.variables
-    ]
-    assert plain.name == "Callable"
-    assert plain.dtype == "Callable"
-    assert qualified.name == "Callable"
-    assert qualified.dtype == "Callable"
-    assert callback.metadata["arguments"] is None
-    assert callback.dtype == "Callable"
-    assert callback.metadata["return"].name == "Float64"
+    constant, deep, rank_any, strided, computed, bounded, nested = [var.semantic_type for var in module.variables]
     assert constant.storage is None
     assert deep.storage.kind == "pointer"
     assert deep.storage.pointer_depth == 3
@@ -994,7 +980,7 @@ nested_answer: Final[Final[Int32]]
     assert nested.constraints == [SemanticConstraint("Constant")]
 
 
-def test_convert_pyi_to_ir_preserves_module_fields_and_private_callable_arguments():
+def test_convert_pyi_to_ir_preserves_module_fields_and_private_function_arguments():
     module = parse_pyi_text(
         """
 output: Float64[:] = ...

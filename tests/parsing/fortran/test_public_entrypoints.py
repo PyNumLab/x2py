@@ -2,10 +2,10 @@
 
 import pytest
 
-from x2py.fortran_parser.parser import FortranParser
+from x2py.parsers.fortran.parser import FortranParser
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
-from x2py.c_parser.parser import parse_c_file
-from x2py.fortran_parser.parser import FortranParser as PackageFortranParser
+from x2py.parsers.c.parser import parse_c_file
+from x2py.parsers.fortran.parser import FortranParser as PackageFortranParser
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 
 

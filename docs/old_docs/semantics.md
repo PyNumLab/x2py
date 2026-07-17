@@ -324,7 +324,7 @@ The converter does not silently invent wrapper policy. It attaches
 - unresolved typedef or unknown type references;
 - legacy parser reports carrying macro-dependent declarations;
 - variadic functions;
-- function pointer/callback signatures without edited `.pyi` `Callable`
+- function pointer/callback signatures without a resolved named prototype
   policy;
 - mutable numeric or `void *` pointer parameters without ownership,
   scalar-storage, raw-address, or array policy;
@@ -399,11 +399,11 @@ use `Annotated[T[...], Constraint, ...]`.
   replacement projection, where the argument remains visible and a
   `Returns["name", T]` item carries the post-call value.
 
-Plain multidimensional array notation is C-oriented (`ORDER_C`) by default.
-Under the current Fortran generation policy, every multidimensional Fortran
-array contract emits `ORDER_F`, including stride-aware assumed-shape arrays.
-Rank-one storage has no C-versus-Fortran order distinction, so no order marker
-is emitted for vectors.
+Plain multidimensional array notation follows the selected native language:
+Fortran contracts default to `ORDER_F` and C contracts to `ORDER_C`.
+Generated contracts omit that default order; an order annotation records only
+an intentional non-default layout. Rank-one storage has no C-versus-Fortran
+order distinction, so no order marker is emitted for vectors.
 
 `ArrayCategory(...)`, `SourceDims(...)`, `LowerBounds(...)` and `Contiguous`
 are not part of newly generated canonical array annotations. They described
@@ -849,7 +849,7 @@ only when a real array storage contract is known.
 
 ## Design Proposal: Self-Contained C Semantic `.pyi` Runtime Contract
 
-> **Status: design only, not implemented runtime support.** x2py currently
+> **Status: design only, not implemented native binding support.** x2py currently
 > parses C, converts the supported subset to semantic IR, emits and loads
 > semantic `.pyi`, and reports readiness. It does not currently generate,
 > lower, compile, or execute C wrappers. Every runtime behavior, wrapper error,
@@ -1032,20 +1032,17 @@ represents pointer-backed array storage; do not additionally wrap it in
 `Addr(...)`.
 
 For multidimensional storage, order is orthogonal to rank, dimensions and
-stride capability. `Annotated[Float64[:, :], ORDER_F]` denotes a rank-two
-dense Fortran-contiguous array, while
-`Annotated[Float64[::, ::], ORDER_F]` denotes a rank-two
-Fortran-oriented strided array. Bare `Float64[::, ::]` retains
-the default `ORDER_C` orientation, and
-`Annotated[Float64[::, ::], ORDER_ANY]` imposes no C/F
-orientation restriction. `Annotated[Float64[...][1:4], ORDER_F]` expresses
-the corresponding Fortran-oriented rank-polymorphic contract. These spellings
-define the semantic format; they are explicit because `ORDER_F` and
-`ORDER_ANY` are non-default in a C-origin stub. Accepting either in a
-runnable C Phase 1 wrapper requires the corresponding native routine to
-accept that storage layout directly. For a rank-one array, `ORDER_C` and
-`ORDER_F` do not distinguish storage, contiguous or strided, so no order
-constraint is written.
+stride capability. In a C contract, `Annotated[Float64[:, :], ORDER_F]`
+denotes a rank-two dense Fortran-contiguous array, while
+`Annotated[Float64[::, ::], ORDER_F]` denotes a rank-two Fortran-oriented
+strided array. Bare `Float64[::, ::]` uses the selected native language's
+default orientation, and `Annotated[Float64[::, ::], ORDER_ANY]` imposes no
+C/F orientation restriction. `Annotated[Float64[...][1:4], ORDER_F]`
+expresses the corresponding Fortran-oriented rank-polymorphic contract.
+These spellings define the semantic format; `ORDER_F`, `ORDER_C`, and
+`ORDER_ANY` are written only when they differ from the selected language's
+default. For a rank-one array, `ORDER_C` and `ORDER_F` do not distinguish
+storage, contiguous or strided, so no order constraint is written.
 For a multidimensional strided annotation, `ORDER_F` is orientation metadata,
 not a requirement that NumPy report `F_CONTIGUOUS`; non-unit strides remain
 part of the contract.
@@ -1293,16 +1290,17 @@ later Pythonic adaptations.
 #### 6.4 Contiguity
 
 Without an explicit layout or stride form, array annotations such as `T[:]`,
-`T[:, :]`, `T[n]`, and `T[...]` require C-contiguous numeric storage; a
-generated C stub does not repeat this as `ORDER_C`. Explicit non-default
-forms such as `Annotated[T[:, :], ORDER_F]`,
-`Annotated[T[::, ::], ORDER_F]`, or
-`Annotated[T[::, ::], ORDER_ANY]` are exact interfaces when
-the native routine accepts that layout and all required metadata remains
-visible in the signature. A bare multidimensional stride form such as
-`T[:, ::]` is also exact when native metadata is visible, but retains
-the implicit `ORDER_C` orientation. Automatic packing, copy-back, or
-derivation of native metadata is a later Pythonic transformation.
+`T[:, :]`, `T[n]`, and `T[...]` require the selected native language's
+default numeric storage order: Fortran-contiguous for Fortran and
+C-contiguous for C. Generated stubs do not repeat that default. Explicit
+non-default forms such as `Annotated[T[:, :], ORDER_F]` in a C contract,
+`Annotated[T[:, :], ORDER_C]` in a Fortran contract, or
+`Annotated[T[::, ::], ORDER_ANY]` are exact interfaces when the native
+routine accepts that layout and all required metadata remains visible in the
+signature. A bare multidimensional stride form such as `T[:, ::]` is also
+exact when native metadata is visible, but retains the language-derived
+default orientation. Automatic packing, copy-back, or derivation of native
+metadata is a later Pythonic transformation.
 For rank one, `T[:]` and `T[n]` are also the canonical Fortran-contiguous
 spelling; write `T[::]` when contiguity is not required.
 

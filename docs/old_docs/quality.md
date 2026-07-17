@@ -127,7 +127,7 @@ removed as redundant maintenance overhead.
 **Role:** generates edge cases for parsers, AST transforms, semantic IR, and
 code generation.
 
-**Bugs found:** generated code-generation cases exposed quoted `Name(...)`
+**Bugs found:** generated code-generation cases exposed quoted `SourceName(...)`
 emission. Generated preprocessing inputs also aligned raw Fortran and C macro
 handling around compiler-required errors.
 
@@ -285,7 +285,7 @@ The `Fuzz` workflow runs deeper discovery every Monday and by manual dispatch:
 | --- | --- | --- | --- |
 | 2026-05-31 | Initial stack integration | Added configuration, CI, documentation, and Hypothesis tests. | Continue staged strictness rollout. |
 | 2026-05-31 | Bandit | Reviewed low-severity findings and confirmed no medium- or high-severity findings. | Re-review when command trust boundaries change. |
-| 2026-05-31 | Hypothesis code generation | Added generated native-name escaping, stable synthetic-import ordering, and semantic-IR-to-Pyi parse-back invariants; fixed quoted `Name(...)` emission. | Keep storing minimized failures. |
+| 2026-05-31 | Hypothesis code generation | Added generated native-name escaping, stable synthetic-import ordering, and semantic-IR-to-Pyi parse-back invariants; fixed quoted `SourceName(...)` emission. | Keep storing minimized failures. |
 | 2026-06-01 | Ruff formatting rollout | Formatted the historical Python tree and changed CI to `ruff format --check .`. | Continue complexity-policy ratchets. |
 | 2026-06-01 | Radon and Ruff complexity policy | Added `tools/check_radon_policy.py`, made the staged Radon policy blocking in CI, and lowered Ruff McCabe from `50` to `45`. | Continue hotspot refactors and later threshold ratchets toward `20`. |
 | 2026-06-02 | Historical mutation-derived tests | Added direct Fortran parser contracts and fixed the directory namespace encoding bug. | Keep the tests as normal regression coverage. |

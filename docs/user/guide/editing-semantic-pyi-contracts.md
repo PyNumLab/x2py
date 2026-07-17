@@ -40,14 +40,13 @@ Build the edited entry contract with the same native implementation artifacts:
 
 ```bash
 python3 -m x2py contracts/edited_solver/__init__.pyi \
-  --wrap \
   --native-objects build/solver.o \
   --native-include-dir build/mod \
   --out-dir build/edited-solver
 ```
 
-The explicit `--wrap` is required here because the entry input is a semantic
-`.pyi` contract, not a Fortran source file.
+The semantic `.pyi` entry contract selects the wrapper build automatically;
+the native artifact options provide the implementation to compile or link.
 
 The entry `.pyi` is the sole semantic input to wrapper generation. x2py does
 not reparse the native source to restore a removed declaration, projection, or
@@ -169,7 +168,10 @@ Each candidate is an independent declaration. Removing one candidate narrows
 runtime dispatch without removing the generic name:
 
 ```python
-from x2py.contracts import Float64, Int32, overload
+from x2py.contracts import Float64, Int32, overload, private
+
+@private
+def convert_integer(value: Int32) -> Int32: ...
 
 @overload("convert_integer")
 def convert(value: Int32) -> Int32: ...
@@ -251,7 +253,13 @@ def norm2(values: Float64[:]) -> Float64: ...
 Link every Python overload to one concrete native specific:
 
 ```python
-from x2py.contracts import Float64, Int32, overload
+from x2py.contracts import Float64, Int32, overload, private
+
+@private
+def scale_integer(value: Int32) -> Int32: ...
+
+@private
+def scale_real(value: Float64) -> Float64: ...
 
 @overload("scale_integer")
 def scale(value: Int32) -> Int32: ...
@@ -264,7 +272,10 @@ To rename the Python overload group while calling an existing native generic,
 preserve the native generic explicitly:
 
 ```python
-from x2py.contracts import Int32, overload
+from x2py.contracts import Int32, overload, private
+
+@private
+def convert_integer(value: Int32) -> Int32: ...
 
 @overload("convert_integer", generic="convert")
 def convert_number(value: Int32) -> Int32: ...
@@ -279,9 +290,13 @@ silently choose a native procedure.
 An edited class may bind `__init__` to one concrete native initializer:
 
 ```python
-from x2py.contracts import Addr, Arg, Int32, Pass, bind, native_call
+from x2py.contracts import Addr, Arg, Int32, Pass, bind, native_call, private
 
 class state:
+    @private
+    @native_call([Pass(), Addr(Arg(0))])
+    def init_state(self, size: Int32) -> None: ...
+
     @bind("init_state")
     @native_call([Pass(), Addr(Arg(0))])
     def __init__(self, size: Int32) -> None: ...
@@ -360,6 +375,14 @@ def scalar_status(
 Removing the explicit `status` parameter and adding the result projection are
 one edit. A projection must map every required native argument exactly once;
 incomplete, duplicate, or out-of-range mappings are contract errors.
+The semantic `.pyi` intentionally has no `intent` annotation. For a generated
+starter contract, source `intent` only helps select the default visible
+arguments and projected results. After loading, the signature, `Returns[...]`,
+and exhaustive `@native_call` list are authoritative. An output dummy may
+remain caller-supplied storage, while a projected output exists only when the
+contract explicitly requests that projection. The bridge may use permissive
+writable local storage; the called native procedure retains and enforces its
+own direction.
 
 ### Make mutation replacement-only
 
@@ -381,6 +404,11 @@ and returns a different NumPy array. The original remains unchanged. The
 compiled evidence is
 [`test_policy_dispatch_contracts.py`](../../../tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py).
 
+Mutability is a property of this argument boundary, not of `Float64`,
+`String[n]`, or another datatype in isolation. The same datatype may be an
+input value, caller-owned writable storage, or a replacement-only value in
+different procedures, so datatype spelling cannot replace `Immutable`.
+
 `Immutable` plus `Transfer("borrowed_view")` on a writable value is
 contradictory: one requests replacement-only semantics and the other requests a
 writable shared view. The contract fails instead of selecting one silently.
@@ -391,20 +419,24 @@ The annotation is runtime policy, not merely an IDE hint. Supported edits can
 tighten or broaden validation without changing the native ABI:
 
 ```python
-from x2py.contracts import Annotated, Float64, ORDER_F
+from x2py.contracts import Float64
 
 def solve(
-    matrix: Annotated[Float64[3, 3], ORDER_F],
+    matrix: Float64[3, 3],
     rhs: Float64[3],
 ) -> Float64[3]: ...
 ```
+
+Plain multidimensional arrays in a Fortran semantic `.pyi` use `ORDER_F` by
+default. Generated contracts omit that default order. Use explicit layout
+metadata only to request a non-default Python storage representation.
 
 The wrapper validates exact dtype, rank, shape, layout, writeability, byte
 order, alignment, and zero-sized-array rules required by the selected backend
 path. Examples of supported changes include:
 
 - `Float64[:, :]` to `Float64[3, 3]` to require one shape;
-- `ORDER_F` to `ORDER_ANY` when the native path is implemented for either
+- `ORDER_ANY` when the native path is implemented for either
   contiguous orientation;
 - `T | None` or a default `= ...` for a genuinely optional native argument;
 - `Allocatable`, `Pointer`, `Aliased`, or `PointerPolicy(...)` when those
@@ -429,10 +461,10 @@ Use `@raises(...)` to turn a projected native status into a Python exception:
 from x2py.contracts import Float64, Int32, Returns, String, raises
 
 @raises(status="status", message="message", success=0)
-def solve(values: Float64[:]) -> Returns[
-    "result", Float64[:],
-    "status", Int32,
-    "message", String,
+def solve(values: Float64[:]) -> tuple[
+    Returns["result", Float64[:]],
+    Returns["status", Int32],
+    Returns["message", String],
 ]: ...
 ```
 
@@ -446,10 +478,13 @@ allows it. Add `@hold_gil` when native code must call Python synchronously or
 otherwise requires the current Python thread to retain the GIL:
 
 ```python
-from x2py.contracts import Callable, Float64, In, hold_gil
+from x2py.contracts import Float64, hold_gil, prototype
+
+@prototype
+def scalar_callback(value: Float64) -> Float64: ...
 
 @hold_gil
-def invoke_callback(callback: Callable[[In(Float64)], Float64]) -> Float64: ...
+def invoke_callback(callback: scalar_callback) -> Float64: ...
 ```
 
 These decorators change wrapper runtime policy; they do not change the native
@@ -462,7 +497,7 @@ Ownership edits use a complete policy triple:
 ```python
 from x2py.contracts import Annotated, Destruction, Float64, Ownership, Transfer
 
-Annotated[
+values: Annotated[
     Float64[:],
     Ownership("native"),
     Transfer("borrowed_view"),
@@ -504,12 +539,13 @@ module_values: Annotated[
 ```
 
 Python receives a persistent `AllocatableArray` for the module descriptor.
-`handle.to_numpy()` may expose a zero-copy view because `Aliased` proves the
-required addressability. NumPy must not free the data. A native
+`handle.to_numpy()` exposes a current live view for both plain and `Aliased`
+module allocatables. `Aliased` preserves native addressability for other policy;
+it is not the extraction switch. NumPy must not free the data. A native
 allocate/deallocate routine controls the allocation, and a later native
-deallocation or reallocation makes previous views stale. The same handle then
-reports `allocated is False`; the module attribute itself does not become
-`None`.
+deallocation or reallocation makes previous views stale. Accessing stale views
+is unsupported and may crash. The same handle then reports `allocated is
+False`; the module attribute itself does not become `None`.
 
 Lifecycle:
 

@@ -6,16 +6,18 @@ from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
-CALLBACK_DECLARATION_ACCESS_METADATA = "callback_declaration_access"
+PROTOTYPE_REF_METADATA = "prototype_ref"
 INTERNAL_MODULE_VARIABLE_ACCESS_METADATA = "internal_module_variable_access"
 INTERNAL_MODULE_VARIABLE_NAME_METADATA = "internal_module_variable_name"
 INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA = "internal_native_array_handle_operation"
 INTERNAL_NATIVE_ARRAY_HANDLE_OWNER_CLASS_METADATA = "internal_native_array_handle_owner_class"
 PYTHON_VALUE_MUTABILITY_METADATA = "python_value_mutability"
 PYTHON_VALUE_IMMUTABLE = "immutable"
+NATIVE_BY_VALUE_METADATA = "native_by_value"
 RUNTIME_HOLD_GIL_METADATA = "runtime_hold_gil"
 RUNTIME_RETAIN_RESULT_OWNER_METADATA = "runtime_retain_result_owner"
 RUNTIME_STATUS_ERROR_METADATA = "runtime_status_error"
+RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA = "resolved_runtime_status_error_policy"
 
 
 # ============================================================
@@ -80,6 +82,7 @@ class SemanticArrayContract:
     source_shape: list[str] = field(default_factory=list)
     category: str | None = None
     order: str | None = None
+    copy_order: str | None = None
     axes: list[str] = field(default_factory=list)
     contiguous: bool | None = None
     allocatable: bool = False
@@ -290,6 +293,16 @@ class SemanticFunction:
 
 
 # ============================================================
+# Named Procedure Prototypes
+# ============================================================
+
+
+@dataclass(eq=False)
+class SemanticPrototype(SemanticFunction):
+    """Named native callback signature with no runtime Python export."""
+
+
+# ============================================================
 # Semantic Methods
 # ============================================================
 
@@ -316,14 +329,21 @@ PYTHON_METHOD_NAME_METADATA = "python_method_name"
 PYTHON_EXPORTS_METADATA = "python_exports"
 PYTHON_EXPORTS_PREPARED_METADATA = "python_exports_prepared"
 POLICY_COMPLETION_PREPARED_METADATA = "policy_completion_prepared"
-RESOLVED_SNAPSHOT_FIELD_ACTION_METADATA = "resolved_snapshot_field_action"
 RESOLVED_OWNERSHIP_POLICY_METADATA = "resolved_ownership_policy"
 RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA = "resolved_return_ownership_policy"
 RESOLVED_CLASS_INSTANCE_POLICY_METADATA = "resolved_class_instance_policy"
 RESOLVED_CLASS_SELF_POLICY_METADATA = "resolved_class_self_policy"
+RESOLVED_DERIVED_FIELD_POLICY_METADATA = "resolved_derived_field_policy"
+RESOLVED_DERIVED_TYPE_POLICY_METADATA = "resolved_derived_type_policy"
+RESOLVED_CLASS_SURFACE_POLICY_METADATA = "resolved_class_surface_policy"
+RESOLVED_MODULE_OVERLOAD_POLICIES_METADATA = "resolved_module_overload_policies"
+RESOLVED_DERIVED_TYPE_IDENTITY_METADATA = "resolved_derived_type_identity"
 RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA = "resolved_getter_ownership_policy"
 RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA = "resolved_setter_ownership_policy"
 RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA = "resolved_native_array_handle_policy"
+RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA = "resolved_function_wrapper_policy"
+RESOLVED_CALLBACK_POLICY_METADATA = "resolved_callback_policy"
+RESOLVED_MODULE_VARIABLE_POLICY_METADATA = "resolved_module_variable_policy"
 RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA = "resolved_module_variable_initializer"
 MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER = "module_variable_initializer_unsupported"
 PYTHON_STATIC_METADATA = "python_static"
@@ -424,6 +444,7 @@ def _array_contract_key(
         array.rank,
         tuple(_canonical_expression(item, name_map) for item in array.shape),
         array.order,
+        array.copy_order,
         tuple(array.axes),
         array.contiguous,
         array.allocatable,
@@ -561,6 +582,8 @@ class SemanticModule:
 
     functions: list[SemanticFunction] = field(default_factory=list)
 
+    prototypes: list[SemanticPrototype] = field(default_factory=list)
+
     overload_sets: list[ProcedureOverloadSet] = field(default_factory=list)
 
     classes: list[SemanticClass] = field(default_factory=list)
@@ -577,7 +600,7 @@ def _iter_semantic_type_tree(semantic_type: SemanticType | None):
     if semantic_type is None:
         return
     yield semantic_type
-    if semantic_type.name == "Callable":
+    if semantic_type.storage is not None and semantic_type.storage.kind == "callback":
         arguments = semantic_type.metadata.get("arguments")
         if isinstance(arguments, list):
             for argument in arguments:
@@ -609,6 +632,10 @@ def _iter_module_semantic_types(module: SemanticModule):
         for argument in function.arguments:
             yield from _iter_semantic_type_tree(argument.semantic_type)
         yield from _iter_semantic_type_tree(function.return_type)
+    for prototype in module.prototypes:
+        for argument in prototype.arguments:
+            yield from _iter_semantic_type_tree(argument.semantic_type)
+        yield from _iter_semantic_type_tree(prototype.return_type)
     for overload_set in module.overload_sets:
         for procedure in overload_set.procedures:
             for argument in procedure.arguments:

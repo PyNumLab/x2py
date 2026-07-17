@@ -90,7 +90,6 @@ class CodegenAction(str, Enum):
     CALL_LOCAL_INPUT = "call_local_input"
     IN_PLACE_ARGUMENT = "in_place_argument"
     IDENTITY_OUTPUT = "identity_output"
-    HIDDEN_OUTPUT = "hidden_output"
     COPY_IN_OUT = "copy_in_out"
     COPY_OUT = "copy_out"
     SNAPSHOT_COPY = "snapshot_copy"
@@ -116,7 +115,8 @@ class NativeBarrierAction(str, Enum):
     PASS_CALL_LOCAL_ADDRESS = "pass_call_local_address"
     PASS_STORAGE_ADDRESS = "pass_storage_address"
     PASS_RAW_ADDRESS = "pass_raw_address"
-    PASS_ARRAY_DESCRIPTOR = "pass_array_descriptor"
+    PASS_ARRAY_BUFFER = "pass_array_buffer"
+    PASS_NATIVE_DESCRIPTOR = "pass_native_descriptor"
     PASS_WRAPPER_ADDRESS = "pass_wrapper_address"
     NONE = "none"
     BLOCKED = "blocked"
@@ -132,12 +132,6 @@ class SetterAction(str, Enum):
     WRITE_THROUGH = "write_through"
     REJECT_REPLACEMENT = "reject_replacement"
     OMIT = "omit"
-
-
-class SnapshotFieldAction(str, Enum):
-    SCALAR_COPY = "scalar_copy"
-    ARRAY_COPY = "array_copy"
-    NESTED_SNAPSHOT = "nested_snapshot"
 
 
 @dataclass(frozen=True)
@@ -568,7 +562,10 @@ class OwnershipPolicyResolver:
         context: OwnershipContext | None = None,
     ) -> OwnershipDecision:
         actual_context = context or self._semantic_variable_context(variable)
-        return self.decide_semantic_type(variable.semantic_type, actual_context)
+        decision = self.decide_semantic_type(variable.semantic_type, actual_context)
+        if bool(getattr(variable, "optional", False)) and actual_context.projects_result:
+            return replace(decision, nullable=True)
+        return decision
 
     def decide_semantic_getter(
         self,
@@ -621,6 +618,8 @@ class OwnershipPolicyResolver:
         if storage.kind is ObjectKind.SCALAR:
             if storage.transfer is TransferMode.SNAPSHOT_COPY and storage.nullable:
                 return SetterAction.REJECT_REPLACEMENT
+            return SetterAction.WRITE_THROUGH
+        if storage.kind is ObjectKind.STRING and context.is_field:
             return SetterAction.WRITE_THROUGH
         if storage.kind is ObjectKind.DERIVED_TYPE and context.is_module_variable:
             return SetterAction.REJECT_REPLACEMENT
@@ -788,6 +787,15 @@ class OwnershipPolicyResolver:
                 mutates_native=True,
                 reason="address-projected scalar value uses mutable native storage and a replacement return",
             )
+        if context.writes_argument and context.projects_result and not context.python_visible:
+            return OwnershipDecision(
+                ObjectKind.SCALAR,
+                OwnershipOwner.PYTHON,
+                TransferMode.BY_VALUE,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
+                reason="address-projected hidden scalar output is returned as a Python value",
+            )
         return OwnershipDecision(
             ObjectKind.SCALAR,
             OwnershipOwner.CALLER,
@@ -849,7 +857,9 @@ class OwnershipPolicyResolver:
                 TransferMode.SNAPSHOT_COPY,
                 DestructionPolicy.PYTHON_REFCOUNT,
                 storage_mode=boundary_storage_mode,
+                boundary_storage_mode=boundary_storage_mode,
                 nullable=True,
+                descriptor_boundary=True,
                 reason=reason,
             )
         if context.writes_argument and not context.projects_result:
@@ -903,6 +913,28 @@ class OwnershipPolicyResolver:
         )
 
     def _string_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        if context.is_result and (facts.allocatable or facts.pointer):
+            storage = StorageMode.HEAP if facts.allocatable else StorageMode.ALIAS
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                storage_mode=storage,
+                boundary_storage_mode=storage,
+                nullable=True,
+                descriptor_boundary=True,
+                reason="scalar string descriptor result is copied before native descriptor release",
+            )
+        if facts.address_role == ADDRESS_ROLE_RAW:
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.CALLER,
+                TransferMode.IN_PLACE,
+                DestructionPolicy.CALLER,
+                mutates_native=True,
+                reason="raw string address aliases caller-owned fixed-width storage",
+            )
         if facts.scalar_storage:
             if context.is_result:
                 return OwnershipDecision(
@@ -983,10 +1015,13 @@ class OwnershipPolicyResolver:
         )
 
     def _array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
-        if context.is_argument and _is_native_array_handle_facts(facts):
-            if context.projects_result and not context.python_visible:
-                return self._native_array_handle_projected_output_decision(facts)
-            return self._native_array_handle_argument_decision(facts, context)
+        if _is_native_array_handle_facts(facts):
+            if context.is_argument:
+                if context.projects_result and not context.python_visible:
+                    return self._native_array_handle_projected_output_decision(facts)
+                return self._native_array_handle_argument_decision(facts, context)
+            if context.is_result:
+                return self._native_array_handle_result_decision(facts)
         if facts.pointer:
             return self._pointer_array_decision(facts, context)
         if facts.allocatable:
@@ -998,6 +1033,15 @@ class OwnershipPolicyResolver:
                 TransferMode.COPY_RETURN,
                 DestructionPolicy.PYTHON_REFCOUNT,
                 reason="array result is returned as Python-owned NumPy storage",
+            )
+        if context.writes_argument and context.projects_result and not context.python_visible:
+            return OwnershipDecision(
+                ObjectKind.NUMPY_ARRAY,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                mutates_native=True,
+                reason="hidden array output is copied into Python-owned NumPy storage",
             )
         if context.writes_argument:
             return OwnershipDecision(
@@ -1092,6 +1136,34 @@ class OwnershipPolicyResolver:
             reason="hidden allocatable descriptor output moves into wrapper-owned stable storage",
         )
 
+    @staticmethod
+    def _native_array_handle_result_decision(facts: _StorageFacts) -> OwnershipDecision:
+        """Materialize a supported direct descriptor result as one runtime handle."""
+        if facts.pointer:
+            return OwnershipDecision(
+                ObjectKind.NUMPY_ARRAY,
+                OwnershipOwner.UNKNOWN,
+                TransferMode.BLOCKED,
+                DestructionPolicy.BLOCKED,
+                storage_mode=StorageMode.ALIAS,
+                boundary_storage_mode=StorageMode.ALIAS,
+                nullable=True,
+                descriptor_boundary=True,
+                blocker="pointer handle results need stable owner storage and target lifetime policy before wrapping",
+                reason="pointer descriptor result has no completed stable target owner",
+            )
+        return OwnershipDecision(
+            ObjectKind.NUMPY_ARRAY,
+            OwnershipOwner.WRAPPER,
+            TransferMode.WRAPPER_INSTANCE,
+            DestructionPolicy.WRAPPER_DEALLOC,
+            storage_mode=StorageMode.HEAP,
+            boundary_storage_mode=StorageMode.ALIAS,
+            nullable=True,
+            descriptor_boundary=True,
+            reason="allocatable descriptor result moves into wrapper-owned stable storage",
+        )
+
     def _allocatable_array_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if context.is_field:
             return OwnershipDecision(
@@ -1106,26 +1178,16 @@ class OwnershipPolicyResolver:
                 reason="allocatable field storage is owned by the containing wrapper instance",
             )
         if context.is_module_variable:
-            if (facts.metadata or {}).get("aliased"):
-                return OwnershipDecision(
-                    ObjectKind.NUMPY_ARRAY,
-                    OwnershipOwner.NATIVE,
-                    TransferMode.BORROWED_VIEW,
-                    DestructionPolicy.NATIVE_OWNER,
-                    storage_mode=StorageMode.HEAP,
-                    boundary_storage_mode=StorageMode.ALIAS,
-                    nullable=True,
-                    borrowed=True,
-                    reason="aliased allocatable module storage is owned by the native module",
-                )
             return OwnershipDecision(
                 ObjectKind.NUMPY_ARRAY,
-                OwnershipOwner.PYTHON,
-                TransferMode.SNAPSHOT_COPY,
-                DestructionPolicy.PYTHON_REFCOUNT,
+                OwnershipOwner.NATIVE,
+                TransferMode.BORROWED_VIEW,
+                DestructionPolicy.NATIVE_OWNER,
                 storage_mode=StorageMode.HEAP,
+                boundary_storage_mode=StorageMode.ALIAS,
                 nullable=True,
-                reason="plain allocatable module storage is copied into a read-only Python snapshot",
+                borrowed=True,
+                reason="allocatable module storage is borrowed from the native module",
             )
         if context.is_result or context.writes_argument:
             return OwnershipDecision(
@@ -1198,6 +1260,9 @@ class OwnershipPolicyResolver:
         )
 
     def _derived_type_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
+        descriptor_boundary = facts.allocatable or facts.pointer
+        boundary_storage = StorageMode.HEAP if facts.allocatable else StorageMode.ALIAS
+        argument_boundary_storage = StorageMode.ALIAS
         if context.is_result or (
             context.writes_argument
             and not context.reads_argument
@@ -1209,8 +1274,10 @@ class OwnershipPolicyResolver:
                 OwnershipOwner.WRAPPER,
                 TransferMode.WRAPPER_INSTANCE,
                 DestructionPolicy.WRAPPER_DEALLOC,
-                storage_mode=StorageMode.STACK,
-                boundary_storage_mode=StorageMode.ALIAS,
+                storage_mode=StorageMode.HEAP,
+                boundary_storage_mode=boundary_storage,
+                nullable=descriptor_boundary,
+                descriptor_boundary=descriptor_boundary,
                 reason="derived output is represented by a wrapper-owned native instance",
             )
         if context.writes_argument and not context.reads_argument:
@@ -1220,6 +1287,9 @@ class OwnershipPolicyResolver:
                 TransferMode.IN_PLACE,
                 DestructionPolicy.WRAPPER_DEALLOC,
                 storage_mode=StorageMode.ALIAS,
+                boundary_storage_mode=argument_boundary_storage,
+                nullable=descriptor_boundary,
+                descriptor_boundary=descriptor_boundary,
                 mutates_native=True,
                 reason="identity derived output mutates the supplied wrapper instance",
             )
@@ -1230,6 +1300,9 @@ class OwnershipPolicyResolver:
                 TransferMode.IN_PLACE,
                 DestructionPolicy.WRAPPER_DEALLOC,
                 storage_mode=StorageMode.ALIAS,
+                boundary_storage_mode=argument_boundary_storage,
+                nullable=descriptor_boundary,
+                descriptor_boundary=descriptor_boundary,
                 mutates_native=True,
                 reason="derived update mutates the wrapper-owned native instance",
             )
@@ -1239,40 +1312,35 @@ class OwnershipPolicyResolver:
             TransferMode.CALL_LOCAL,
             DestructionPolicy.NONE,
             storage_mode=StorageMode.ALIAS,
+            boundary_storage_mode=argument_boundary_storage,
+            nullable=descriptor_boundary,
+            descriptor_boundary=descriptor_boundary,
             reason="derived input is passed through its existing wrapper",
         )
 
     def _module_variable_decision(self, facts: _StorageFacts, context: OwnershipContext) -> OwnershipDecision:
         if facts.constant:
             return self._module_constant_decision(facts)
-        if facts.allocatable and facts.rank == 0:
-            return self._allocatable_scalar_decision(facts, context)
-        if facts.pointer and facts.rank == 0:
-            return self._pointer_scalar_decision(facts, context)
         if facts.is_custom:
-            if not (facts.metadata or {}).get("aliased"):
-                return OwnershipDecision(
-                    ObjectKind.DERIVED_TYPE,
-                    OwnershipOwner.UNKNOWN,
-                    TransferMode.BLOCKED,
-                    DestructionPolicy.BLOCKED,
-                    storage_mode=StorageMode.STACK,
-                    blocker=(
-                        "plain derived module variables require Aliased storage; "
-                        "whole-object Snapshot[T] is future-only"
-                    ),
-                    reason="pre-existing derived module objects need explicit addressability before exposure",
-                )
             return OwnershipDecision(
                 ObjectKind.DERIVED_TYPE,
                 OwnershipOwner.NATIVE,
                 TransferMode.BORROWED_VIEW,
                 DestructionPolicy.NATIVE_OWNER,
-                storage_mode=StorageMode.STACK,
+                storage_mode=StorageMode.ALIAS,
                 boundary_storage_mode=StorageMode.ALIAS,
+                nullable=facts.allocatable or facts.pointer,
                 borrowed=True,
-                reason="aliased derived module storage is borrowed from the native module",
+                reason=(
+                    "addressable derived module storage uses a live native borrow"
+                    if (facts.metadata or {}).get("aliased")
+                    else "plain derived module storage uses live typed module access"
+                ),
             )
+        if facts.allocatable and facts.rank == 0:
+            return self._allocatable_scalar_decision(facts, context)
+        if facts.pointer and facts.rank == 0:
+            return self._pointer_scalar_decision(facts, context)
         if facts.rank > 0 or facts.is_ndarray:
             if facts.pointer:
                 return self._pointer_array_decision(facts, context)
@@ -1338,6 +1406,17 @@ class OwnershipPolicyResolver:
                 borrowed=True,
                 reason="array field storage is part of the containing wrapper instance",
             )
+        if self._kind(facts, OwnershipContext()) is ObjectKind.STRING:
+            return OwnershipDecision(
+                ObjectKind.STRING,
+                OwnershipOwner.PYTHON,
+                TransferMode.COPY_RETURN,
+                DestructionPolicy.PYTHON_REFCOUNT,
+                storage_mode=StorageMode.STACK,
+                boundary_storage_mode=StorageMode.STACK,
+                borrowed=False,
+                reason="fixed string field access copies the current value into Python storage",
+            )
         return OwnershipDecision(
             self._kind(facts, OwnershipContext()),
             OwnershipOwner.WRAPPER,
@@ -1399,38 +1478,11 @@ class OwnershipPolicyResolver:
     @staticmethod
     def _validate_aliased_decision(
         decision: OwnershipDecision,
-        facts: _StorageFacts,
-        context: OwnershipContext,
+        _facts: _StorageFacts,
+        _context: OwnershipContext,
     ) -> OwnershipDecision:
-        if decision.is_blocked:
-            return decision
-        if not context.is_module_variable:
-            return decision
-        if decision.transfer is not TransferMode.BORROWED_VIEW:
-            return decision
-        requires_alias = facts.is_custom or (facts.allocatable and facts.rank > 0)
-        if not requires_alias:
-            return decision
-        if (facts.metadata or {}).get("aliased"):
-            return decision
-        blocker = (
-            "borrowed derived module objects require Aliased storage"
-            if facts.is_custom
-            else "borrowed module allocatable views require Aliased storage"
-        )
-        return replace(
-            decision,
-            owner=OwnershipOwner.UNKNOWN,
-            transfer=TransferMode.BLOCKED,
-            destruction=DestructionPolicy.BLOCKED,
-            borrowed=False,
-            blocker=blocker,
-            reason=(
-                "native module objects need object-level addressability before they can be borrowed"
-                if facts.is_custom
-                else "plain allocatable module arrays use read-only snapshot_copy by default"
-            ),
-        )
+        """Keep Aliased as addressability metadata, not live-object eligibility."""
+        return decision
 
     @staticmethod
     def _validate_scalar_descriptor_decision(
@@ -1440,16 +1492,8 @@ class OwnershipPolicyResolver:
     ) -> OwnershipDecision:
         if decision.is_blocked or facts.rank != 0 or not (facts.allocatable or facts.pointer):
             return decision
-        metadata = facts.metadata or {}
         blocker = None
-        if (
-            context.is_argument
-            and context.writes_argument
-            and "fortran_intent" in metadata
-            and not metadata.get("fortran_intent")
-        ):
-            blocker = "writable scalar descriptors require explicit intent(out) or intent(inout)"
-        elif context.is_argument and context.writes_argument and (facts.is_custom or facts.is_string):
+        if context.is_argument and context.writes_argument and facts.is_string:
             blocker = "scalar descriptor output projection currently supports primitive numeric values only"
         if blocker is None:
             return decision
@@ -1499,6 +1543,11 @@ class OwnershipPolicyResolver:
         """Return a blocker for an unsupported pointer argument policy."""
         if not context.is_argument:
             return None
+        if facts.rank == 0 and facts.is_custom and decision.kind is ObjectKind.DERIVED_TYPE:
+            # Scalar-derived pointer calls are completed by the actual/dummy
+            # handoff policy.  Their association and writeback rules do not
+            # use the older scalar/array descriptor projection lane below.
+            return None
         supported_scalar_write = facts.rank == 0 and decision.descriptor_boundary and context.projects_result
         if context.writes_argument and not supported_scalar_write:
             return "pointer output and reassociation code generation is not implemented"
@@ -1514,6 +1563,8 @@ class OwnershipPolicyResolver:
     ) -> str | None:
         """Return a blocker for an unsupported pointer field or module policy."""
         if not (context.is_field or context.is_module_variable):
+            return None
+        if facts.is_custom and decision.kind is ObjectKind.DERIVED_TYPE:
             return None
         if facts.rank > 0:
             if isinstance((facts.metadata or {}).get(OWNERSHIP_POLICY_METADATA), Mapping):
@@ -1683,7 +1734,7 @@ class OwnershipPolicyResolver:
                 return CodegenAction.IDENTITY_OUTPUT
             if context.python_visible and decision.transfer is TransferMode.IN_PLACE:
                 return CodegenAction.IDENTITY_OUTPUT
-            return CodegenAction.HIDDEN_OUTPUT
+            return _CODEGEN_ACTION_BY_TRANSFER[decision.transfer]
         if (
             context.is_argument
             and context.writes_argument
@@ -1705,6 +1756,8 @@ class OwnershipPolicyResolver:
             return PythonBarrierAction.NONE
         if facts.address_role == ADDRESS_ROLE_RAW:
             return PythonBarrierAction.RAW_ADDRESS
+        if _is_native_array_handle_facts(facts) and decision.descriptor_boundary:
+            return PythonBarrierAction.WRAPPER_INSTANCE
         if facts.scalar_storage or (
             decision.kind is ObjectKind.SCALAR and decision.codegen_action is CodegenAction.IDENTITY_OUTPUT
         ):
@@ -1740,13 +1793,20 @@ class OwnershipPolicyResolver:
         if OwnershipPolicyResolver._passes_scalar_alias_address(decision, facts):
             return NativeBarrierAction.PASS_STORAGE_ADDRESS
         if decision.kind is ObjectKind.NUMPY_ARRAY:
-            return NativeBarrierAction.PASS_ARRAY_DESCRIPTOR
+            if decision.descriptor_boundary:
+                return NativeBarrierAction.PASS_NATIVE_DESCRIPTOR
+            return NativeBarrierAction.PASS_ARRAY_BUFFER
         if decision.kind is ObjectKind.STRING:
             return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
         if decision.kind is ObjectKind.DERIVED_TYPE:
             return NativeBarrierAction.PASS_WRAPPER_ADDRESS
         if decision.kind is ObjectKind.SCALAR:
-            if facts.address_role == ADDRESS_ROLE_PROJECTION or decision.codegen_action is CodegenAction.COPY_IN_OUT:
+            hidden_output = context.projects_result and not context.python_visible and not decision.descriptor_boundary
+            if (
+                facts.address_role == ADDRESS_ROLE_PROJECTION
+                or hidden_output
+                or decision.codegen_action is CodegenAction.COPY_IN_OUT
+            ):
                 return NativeBarrierAction.PASS_CALL_LOCAL_ADDRESS
             return NativeBarrierAction.PASS_VALUE
         return NativeBarrierAction.BLOCKED

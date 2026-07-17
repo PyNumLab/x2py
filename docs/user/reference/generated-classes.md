@@ -59,10 +59,12 @@ Omitted keywords preserve native default initialization. Private components,
 arrays, allocatables, pointers, strings, and nested derived components are not
 automatic constructor keywords.
 
-An edited semantic `.pyi` may remove the generated constructor or bind one
-concrete initializer. x2py does not recreate a constructor intentionally
-removed from the contract. Generic constructor interfaces remain unsupported
-when x2py cannot select one deterministic Python initializer.
+An edited semantic `.pyi` may remove the generated constructor, bind one
+concrete initializer, or replace it with an exact overload set. x2py does not
+recreate a constructor intentionally removed from the contract. Overloaded
+constructors select a concrete target from the completed scalar dtype, array
+dtype/rank, or generated-class predicates before invoking native code. An
+indistinguishable or incomplete set is rejected during generation.
 
 ## Fields And Methods
 
@@ -76,8 +78,10 @@ its parent wrapper; `to_numpy()` performs explicit extraction when completed
 policy supports it. Arrays of derived types are unsupported.
 
 Whole-object snapshot classes are not part of the active generated contract.
-Plain derived module variables need a completed live-borrow policy, such as
-`Aliased`, before wrapper generation can expose them.
+Plain and `Aliased` derived module variables both expose this normal live field
+surface. An `Aliased` declaration permits a direct-address borrowed wrapper;
+a plain declaration uses typed module-specific getter and setter bridge
+operations without fabricating a whole-object address.
 
 Type-bound procedures become methods. The generated semantic contract uses
 `Pass()` on the concrete native-specific method when the native passed-object
@@ -105,9 +109,11 @@ class accumulator:
     ) -> None: ...
 ```
 
-Method dispatch is exact. Indistinguishable overloads or unsupported generic
-constructors block generation. The overload declaration is only a Python
-dispatch link; it cannot also carry `@native_call(...)`.
+Method and constructor dispatch is exact. Calls are normalized against each
+candidate's declared positional and keyword parameters, then matched without
+calling candidates speculatively. Indistinguishable overloads block generation;
+a call with no match raises a stable `TypeError`. The overload declaration is
+only a Python dispatch link; it cannot also carry `@native_call(...)`.
 
 ## Ownership And Finalization
 
@@ -118,9 +124,10 @@ releases that native instance exactly once.
 Borrowed child wrappers, borrowed module objects, and borrowed component views
 do not destroy the storage they reference. They retain the owning wrapper or
 module reference needed for Python lifetime, but explicit native deallocation
-or reallocation can still invalidate borrowed storage. Whole-object snapshots
-are future-only, so the active wrapper blocks plain derived module variables
-that lack addressability or another completed ownership policy.
+or reallocation can still invalidate borrowed storage. Plain and `Aliased`
+derived module objects are both live native-owned objects. An `Aliased` object
+may use a proved native address; a plain object uses module-specific bridge
+operations and must not fabricate addressability.
 
 Native finalizers do not provide a recoverable Python status channel during
 object destruction. Use ordinary wrapped procedures for recoverable cleanup
@@ -148,6 +155,10 @@ Generated class behavior is covered by
 [`test_constructors_and_finalizers.py`](../../../tests/wrapper/fortran/derived_types/test_constructors_and_finalizers.py),
 [`test_borrowed_finalizers.py`](../../../tests/wrapper/fortran/derived_types/test_borrowed_finalizers.py), and
 [`test_inheritance.py`](../../../tests/wrapper/fortran/derived_types/test_inheritance.py).
+Exact class-method and constructor overloads are covered by
+[`test_phase9_class_overloads.py`](../../../tests/wrapper/fortran/naming/test_phase9_class_overloads.py),
+and explicit bound construction by
+[`test_phase9_bound_constructors.py`](../../../tests/wrapper/fortran/derived_types/test_phase9_bound_constructors.py).
 
 When class behavior changes, update this page with the derived-type user guide,
 semantic `.pyi` reference, generated contract fixtures, and ownership evidence.

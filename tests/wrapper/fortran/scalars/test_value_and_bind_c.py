@@ -41,10 +41,14 @@ def test_value_and_existing_bind_c_renamed_symbol_use_correct_abi(
         bridge_source = (
             (tmp_path / "source_build" / "bind_c_fbind_value_f90_wrapper.f90").read_text(encoding="utf-8").lower()
         )
-        assert "bind_c_plus_value" not in bridge_source
-        assert "bind_c_double_value" not in bridge_source
-        assert "bind_c_plus_reference" in bridge_source
-        assert "bind_c_scale_real" not in bridge_source
-        assert "bind_c_conjugate_value" not in bridge_source
-        assert "bind_c_invert_flag" not in bridge_source
-        assert "bind_c_char_code" in bridge_source
+        for native_name in (
+            "plus_value",
+            "double_value",
+            "plus_reference",
+            "scale_real",
+            "conjugate_value",
+            "invert_flag",
+            "char_code",
+        ):
+            assert f"native_{native_name} => {native_name}" in bridge_source
+            assert f"bind_c_{native_name}" in bridge_source

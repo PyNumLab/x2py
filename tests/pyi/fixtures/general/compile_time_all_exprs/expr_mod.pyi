@@ -24,8 +24,8 @@ def all_exprs(
     x3: Int32[p_mul],
     x4: Int32[p_div],
     x5: Int32[p_pow],
-    x6: Int32[p_mix - 0 + 1],
-    x7: Int32[-(-a + b)],
+    x6: Int32[p_mix + 1],
+    x7: Int32[a - b],
     x8: Int32[(a + b) * (c + 1) - 1],
     x9: Int32[(a - b) * (a - c)]
 ) -> None: ...

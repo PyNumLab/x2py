@@ -29,13 +29,12 @@ end module fruntime_abi_f90
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
-  --wrap \
   --out-dir build/fruntime_abi \
   --json
 ```
 
-Recognizable Fortran sources default to `--wrap` when no inspection stage is
-selected, so this is equivalent:
+Recognizable Fortran sources select the wrapper build when no inspection stage
+is selected, so this is equivalent:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \

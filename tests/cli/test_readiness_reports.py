@@ -116,7 +116,7 @@ def test_x2py_readiness_formatting_and_compiler_without_requirements():
             "callback_signature_incomplete",
             {"owner": "handler", "needs": ["arguments", "return type"]},
         )
-        == "handler needs Callable[[...], ...] metadata (arguments, return type)"
+        == "handler needs a complete named @prototype (arguments, return type)"
     )
     assert x2py_cli._format_semantic_blocker_item("c_unknown_type", {"owner": "api", "type": "widget"}) == "api: widget"
     assert x2py_cli._format_semantic_blocker_item("c_unknown_type", {"type": "widget"}) == "<c-source>: widget"
@@ -319,7 +319,7 @@ def test_x2py_semantic_report_preserves_c_module_and_dependency_contracts(monkey
     monkeypatch.setattr(x2py_cli, "_parse_c_project", parse_project)
     monkeypatch.setattr(x2py_cli, "c_project_to_semantic_modules", convert)
     monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
-    monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.wrapper_codegen.printers.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(
@@ -437,7 +437,7 @@ def test_x2py_semantic_report_preserves_fortran_conversion_and_stub_contracts(mo
     monkeypatch.setattr(x2py_cli, "_fortran_wrapped_derived_types", wrapped)
     monkeypatch.setattr(x2py_cli, "_fortran_compile_time_values", compile_values)
     monkeypatch.setattr(x2py_cli, "fortran_file_to_semantic_modules", convert)
-    monkeypatch.setattr("x2py.codegen.printers.pyi_printer.emit_module_stubs", emit)
+    monkeypatch.setattr("x2py.wrapper_codegen.printers.emit_module_stubs", emit)
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
 
     assert x2py_cli._semantic_report(["api"], config) == {
@@ -484,8 +484,9 @@ def test_x2py_wrap_readiness_report_preserves_c_and_pyi_contracts(monkeypatch):
         assert source == str(path)
         return readiness
 
-    def pyi(paths):
+    def pyi(paths, *, native_language):
         assert paths == ["api"]
+        assert native_language == "c"
         return pyi_report
 
     monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
@@ -556,8 +557,9 @@ def test_x2py_wrap_readiness_report_preserves_fortran_and_pyi_contracts(monkeypa
         assert source == str(path)
         return readiness
 
-    def pyi(paths):
+    def pyi(paths, *, native_language):
         assert paths == ["api"]
+        assert native_language == "fortran"
         return pyi_report
 
     expected_compile_time_values = compile_time_values
@@ -611,9 +613,10 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
         calls.append(("expand", paths))
         return [stub]
 
-    def load(paths):
+    def load(paths, *, native_language):
         assert paths == [str(package), str(stub)]
-        calls.append(("load", paths))
+        assert native_language == "c"
+        calls.append(("load", paths, native_language))
         return [module]
 
     def serialize(received):
@@ -633,7 +636,7 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
     monkeypatch.setattr(x2py_cli, "assess_semantic_wrap_readiness", assess)
 
-    assert x2py_cli._pyi_readiness_report([str(package), str(stub), str(ignored)]) == {
+    assert x2py_cli._pyi_readiness_report([str(package), str(stub), str(ignored)], native_language="c") == {
         str(stub): {
             "source_kind": "pyi",
             "semantic_modules": [{"name": "api"}],
@@ -642,7 +645,7 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
     }
     assert calls == [
         ("expand", [str(package), str(stub), str(ignored)]),
-        ("load", [str(package), str(stub)]),
+        ("load", [str(package), str(stub)], "c"),
         ("asdict", module),
         ("assess", [module], str(stub)),
     ]
@@ -707,7 +710,7 @@ def test_x2py_format_semantic_readiness_reports_wrappable_and_blocked_sources():
     - unresolved_semantic_types: unresolved external type
       * api_mod.solve uses unresolved type external_t
     - callback_signature_incomplete: callback metadata incomplete
-      * api_mod.apply needs Callable[[...], ...] metadata (arguments)
+      * api_mod.apply needs a complete named @prototype (arguments)
 
 File: interface.pyi
   Source: pyi
@@ -738,7 +741,7 @@ File: partial.f90
     assert "  Why not wrappable:" in text
     assert "    - unresolved_semantic_types: unresolved external type" in text
     assert "      * api_mod.solve uses unresolved type external_t" in text
-    assert "      * api_mod.apply needs Callable[[...], ...] metadata (arguments)" in text
+    assert "      * api_mod.apply needs a complete named @prototype (arguments)" in text
     assert "File: interface.pyi" in text
     assert "  Source: pyi" in text
     assert "  Semantic modules: <none>" in text

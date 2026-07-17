@@ -2,7 +2,6 @@
 
 import pytest
 
-from x2py.codegen.scope import Scope
 from x2py.naming import NamingPolicy
 from x2py.naming import normalize_public_name
 
@@ -13,6 +12,23 @@ def test_public_python_names_escape_keywords_and_collisions():
     assert normalize_public_name("def").name == "def_"
     assert policy.reserve_public_name(("mod",), "def", category="function") == "def_"
     assert policy.reserve_public_name(("mod",), "def_", category="function") == "def__2"
+
+
+def test_python_keyword_is_renamed_only_at_the_python_boundary():
+    policy = NamingPolicy()
+
+    assert policy.reserve_public_name(("mod",), "lambda", category="variable") == "lambda_"
+    assert (
+        policy.generated_symbol(
+            "lambda",
+            set(),
+            language="fortran",
+            prefix="mod__",
+            context="variable",
+            parent_context="function",
+        )
+        == "lambda"
+    )
 
 
 def test_strict_public_names_reject_keyword_escaping():
@@ -34,7 +50,7 @@ def test_generated_symbols_apply_target_language_rules():
             context="function",
             parent_context="module",
         )
-        == "module_0001"
+        == "module_x2py"
     )
     assert (
         policy.generated_symbol(
@@ -49,26 +65,55 @@ def test_generated_symbols_apply_target_language_rules():
     )
     assert (
         policy.generated_symbol(
-            "value",
-            {"Value"},
+            "answer",
+            {"Answer"},
             language="fortran",
             prefix="owner__",
             context="variable",
             parent_context="function",
         )
-        == "value_0001"
+        == "answer_2"
     )
 
 
-def test_scope_uses_injected_generated_symbol_language():
-    python_scope = Scope(name="owner", scope_type="module")
+def test_generated_symbols_reserve_c_entry_point_and_rewrite_special_methods():
+    policy = NamingPolicy()
 
-    assert str(python_scope.get_new_name("__add__", object_type="function")) == "__add__"
+    assert (
+        policy.generated_symbol(
+            "main",
+            set(),
+            language="c",
+            prefix="owner__",
+            context="module",
+            parent_context="module",
+        )
+        == "main_x2py"
+    )
+    assert (
+        policy.generated_symbol(
+            "__init__",
+            set(),
+            language="fortran",
+            prefix="owner__",
+            context="function",
+            parent_context="module",
+        )
+        == "owner__init"
+    )
 
-    scope = Scope(name="owner", scope_type="module", symbol_language="fortran")
 
-    assert str(scope.get_new_name("module", object_type="function")) == "module_0001"
-    child = scope.new_child_scope("child", "function")
+def test_generated_symbols_number_after_an_escaped_native_name():
+    policy = NamingPolicy()
 
-    assert child.symbol_language == "fortran"
-    assert str(child.get_new_name("value", object_type="variable")) == "value_0001"
+    assert (
+        policy.generated_symbol(
+            "module",
+            {"MODULE_X2PY"},
+            language="fortran",
+            prefix="owner__",
+            context="function",
+            parent_context="module",
+        )
+        == "module_x2py_2"
+    )

@@ -139,13 +139,13 @@ def _import_extension(module_name: str, build_dir: Path):
 
 
 def _build_sources(sources: tuple[Path, ...], build_dir: Path) -> tuple[object, dict[str, object]]:
+    build_dir.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
         [
             sys.executable,
             "-m",
             "x2py",
             *(str(source) for source in sources),
-            "--wrap",
             "--out-dir",
             str(build_dir),
             "--json",
@@ -153,6 +153,7 @@ def _build_sources(sources: tuple[Path, ...], build_dir: Path) -> tuple[object, 
         capture_output=True,
         text=True,
         check=True,
+        cwd=build_dir,
     )
     payload = json.loads(result.stdout)
     return _import_extension(str(payload["module_name"]), build_dir), payload
@@ -319,7 +320,6 @@ def test_makefile_mode_reproduces_multi_source_build(tmp_path: Path):
         "x2py",
         str(first),
         str(second),
-        "--wrap",
         "--makefile",
         "--out-dir",
         str(tmp_path),

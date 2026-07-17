@@ -67,11 +67,14 @@ python -m coverage report
 
 For subprocess coverage investigations, mirror that command shape before
 deciding a fix. A plain local coverage run can miss subprocess data.
-GitHub Actions runs ordinary PR tests without coverage overhead. Python 3.10
-and 3.11 run the regular suite, BLAS real-library wrapper test, and native
-bundle tests; the full LAPACK real-library wrapper test runs only on Python
-3.12. Pushes to `main` always run the Python 3.12 test job under coverage and
-publish the coverage report. Add the `run-coverage` PR label, or pass
+GitHub Actions runs ordinary PR tests without coverage overhead. During the
+wrapper-plan migration, every Python version excludes the full BLAS/LAPACK
+real-library wrapper test while retaining general native-bundle coverage.
+One separate Python 3.12 job runs the full BLAS and LAPACK nodes together. A
+pull request may use the `ignore-real-library-wrappers` label to skip that
+expensive job without disabling the ordinary Python-version matrix.
+Pushes to `main` always run the remaining Python 3.12 test job under coverage
+and publish the coverage report. Add the `run-coverage` PR label, or pass
 `coverage: true` to the reusable workflow, to request the same coverage gate
 outside the main branch.
 
@@ -150,7 +153,7 @@ removed as redundant maintenance overhead.
 code generation.
 
 <!-- X2PY_C_DOCS_START
-**Bugs found:** generated code-generation cases exposed quoted `Name(...)`
+**Bugs found:** generated code-generation cases exposed quoted `SourceName(...)`
 emission. Generated preprocessing inputs also aligned raw Fortran and C macro
 handling around compiler-required errors.
 X2PY_C_DOCS_END -->
@@ -228,21 +231,12 @@ reports advisory/manual.
 issues, Ruff formatting drift, Vulture unused test parameters, and the
 too-strict Radon policy.
 
-**Native artifact cache:** the Quality workflow pins the test runner to
-`ubuntu-24.04`, installs `gfortran-13`, and warms
-`.pytest_cache/x2py/real-library-native` in a dedicated pre-matrix job. The
-Python matrix restores that exact cache before pytest and sets
-`X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR` to the restored path. Requested coverage
-runs collect Python 3.12 coverage data; a final coverage job combines that
-artifact and uploads the XML report. This cache holds the full BLAS/LAPACK
-object files, archives, and shared libraries used by the real-library wrapper
-tests. Cache keys include the runner OS, runner
-architecture, pinned `gfortran` version, BLAS/LAPACK source content, and native
-cache helper code. Native object files are not portable across different
-platforms, compilers, compiler flags, or source revisions; a key change
-intentionally rebuilds them. Cold object builds compile independent sources in
-parallel after required module sources; set `X2PY_REAL_LIBRARY_NATIVE_JOBS` to
-override the bounded worker count.
+**Native artifact cache:** dedicated Python 3.12 BLAS and LAPACK jobs restore a
+separate runner-local native cache for each library before executing the full
+wrapper test. The ordinary pytest matrix excludes that full corpus while
+retaining the lighter native-bundle tests. Requested coverage runs still
+collect Python 3.12 coverage data; a final coverage job combines that artifact
+and uploads the XML report.
 
 **Failure reporting:** each pytest matrix invocation writes
 `pytest-results.xml`; the final failure-only step runs
@@ -335,7 +329,7 @@ The `Fuzz` workflow runs deeper discovery every Monday and by manual dispatch:
 | --- | --- | --- | --- |
 | 2026-05-31 | Initial stack integration | Added configuration, CI, documentation, and Hypothesis tests. | Continue staged strictness rollout. |
 | 2026-05-31 | Bandit | Reviewed low-severity findings and confirmed no medium- or high-severity findings. | Re-review when command trust boundaries change. |
-| 2026-05-31 | Hypothesis code generation | Added generated native-name escaping, stable synthetic-import ordering, and semantic-IR-to-Pyi parse-back invariants; fixed quoted `Name(...)` emission. | Keep storing minimized failures. |
+| 2026-05-31 | Hypothesis code generation | Added generated native-name escaping, stable synthetic-import ordering, and semantic-IR-to-Pyi parse-back invariants; fixed quoted `SourceName(...)` emission. | Keep storing minimized failures. |
 | 2026-06-01 | Ruff formatting rollout | Formatted the historical Python tree and changed CI to `ruff format --check .`. | Continue complexity-policy ratchets. |
 | 2026-06-01 | Radon and Ruff complexity policy | Added `tools/check_radon_policy.py`, made the staged Radon policy blocking in CI, and lowered Ruff McCabe from `50` to `45`. | Continue hotspot refactors and later threshold ratchets toward `20`. |
 | 2026-06-02 | Historical mutation-derived tests | Added direct Fortran parser contracts and fixed the directory namespace encoding bug. | Keep the tests as normal regression coverage. |

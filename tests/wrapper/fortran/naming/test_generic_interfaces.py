@@ -31,6 +31,17 @@ def test_fortran_generic_interfaces_dispatch_in_generated_c_extension(
         pyi_parity_build_mode,
     )
 
+    assert "Module Attributes" not in module.__doc__
+    assert "convert(*args, **kwargs)" in module.__doc__
+    assert "_x2py_overload_" not in module.__doc__
+    assert "convert_integer" not in module.__doc__
+    assert "convert(value: int32) -> int32" in module.convert.__doc__
+    assert "convert(value: float64) -> float64" in module.convert.__doc__
+    assert "convert(value: complex128) -> complex128" in module.convert.__doc__
+    assert "convert_integer" not in module.convert.__doc__
+    assert "convert_real" not in module.convert.__doc__
+    assert "convert_complex" not in module.convert.__doc__
+
     assert module.convert(np.int32(4)) == np.int32(14)
     assert module.convert(np.float64(4.0)) == np.float64(4.5)
     assert module.convert(np.complex128(2.0 + 3.0j)) == np.complex128(3.0 + 2.0j)

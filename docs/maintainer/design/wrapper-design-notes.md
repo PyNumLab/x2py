@@ -40,7 +40,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | Gap | Current risk | Proposed direction |
 | &#45;&#45;- | &#45;&#45;- | &#45;&#45;- |
-| Function pointers and callbacks | The parser can capture function-pointer shape, but semantic conversion does not yet preserve a complete callable contract that wrappers can use safely. | Round-trip callback signatures as a first-class semantic callable form, such as a dedicated callback type or `Callable[[...], ...]` plus native callback metadata. Keep wrapper readiness blocked until lifetime, threading, exception, context-pointer, and unregister policy is supplied. |
+| Function pointers and callbacks | The parser can capture function-pointer shape, but some C callback declarations still lack a complete wrapper policy. | Round-trip callback signatures as named `@prototype` declarations and keep wrapper readiness blocked until lifetime, threading, exception, context-pointer, and unregister policy is supplied. |
 | Pointer ownership and array extents | Raw pointers, pointer-to-pointer values, unknown extents, output buffers, and arrays of pointers are ambiguous without user policy. | Keep exact pointer topology in semantic IR. Require explicit `.pyi` ownership, borrow, output, shape, nullability, descriptor handoff, and copy/readback policy before projecting to Python containers, handles, or NumPy arrays. |
 | Unions | `CUnion` identifies the native type, but it does not say which member is active or whether by-value union ABI is safe. | Continue representing named and anonymous unions explicitly with `CUnion`; require active-member/discriminant policy for high-level access. Prefer a compiled shim or target layout proof for by-value union calls; otherwise keep a readiness blocker. |
 | Bitfields | Bit width is parser-visible, but Python field access needs target layout, signedness, padding, and read/write rules. | Preserve bit width, declared base type, containing aggregate, and layout-sensitive attributes. Generate access through a compiled C shim or target layout probe; block direct field projection when layout cannot be proven. |
@@ -53,16 +53,16 @@ X2PY_C_DOCS_END -->
 | Gap | Current risk | Proposed direction |
 | --- | --- | --- |
 | Procedure pointers and dummy procedures | A broad `Procedure` type loses enough signature and lifetime information that wrappers cannot safely call or receive callbacks. | Resolve abstract interface signatures into a first-class semantic callable form. Preserve procedure pointer, optional, pass-through, and callback lifetime facts; block wrapper generation until call direction and ownership policy are explicit. |
-| Pointer and allocatable ownership | Allocatable and pointer arrays use explicit descriptor handles. Module and derived-field handles borrow their native owner; owned allocatable results retain persistent wrapper-owned descriptor storage. An unallocated or unassociated descriptor remains a present handle whose `to_numpy()` result is `None`. Allocatable `intent(inout)` descriptor arguments accept handles and project the same caller handle, while ordinary arrays and ordinary array results keep NumPy data-buffer semantics. Pointer targets remain non-owning, and unsupported result or reassociation shapes fail readiness. | Complete descriptor kind, handle kind, owner retention, extraction, mutation, release, and operation permissions in post-IR policy before lowering. Route module, field, argument, and result generation through named handle-policy dispatch. Keep borrowed views, detached read-only copies, and descriptor handles distinct; never fall back from an incomplete handle policy to an ndarray copy contract. Block allocatable scalar derived-type replacement until ownership and destruction policy is defined. |
+| Pointer and allocatable ownership | Allocatable and pointer arrays use explicit descriptor handles. Module and derived-field handles borrow their native owner; owned allocatable results retain persistent wrapper-owned descriptor storage. An unallocated or unassociated descriptor remains a present handle whose `to_numpy()` result is `None`; otherwise `to_numpy()` returns a current live view and callers use `.copy()` explicitly for independent storage. Allocatable `intent(inout)` descriptor arguments accept handles and project the same caller handle, while ordinary arrays and ordinary array results keep NumPy data-buffer semantics. Rank-zero derived module allocatables/pointers use nullable live member proxies. Wrapper-owned allocatable and pointer derived results use persistent typed holders. Module allocatable dummies use reversible `move_alloc` holder transactions; module pointer dummies use typed association transactions and exact restoration. C transports opaque holder addresses and typed operation pointers, never descriptors. A pointer holder owns its association container, not an unknown native target. | Complete descriptor kind, handle/storage kind, actual declaration, dummy form, owner retention, live extraction or member mechanism, mutation/writeback, release, transaction cleanup, and operation permissions in post-IR policy before lowering. Route module, field, argument, and result generation through named policy dispatch. Keep contiguous-view, descriptor-view, scoped-reference, module-transaction, and typed-holder mechanisms distinct; never fall back from incomplete policy to a copy, fabricated address, or compiler-private descriptor. |
 | Assumed-rank, assumed-type, and optional descriptor-heavy arguments | Descriptors such as `dimension(..)` and `type(*)` can accept many native shapes that Python cannot infer safely. | Represent descriptor category, rank constraints, element type availability, optional presence, and contiguity. Generate wrappers only for explicit accepted rank/dtype policies or through backend shims that validate descriptors. |
 | Generic interfaces and operators | Named generics, defined operators, named operators, and defined assignment now preserve explicit concrete-target links. Python cannot intercept `=`, arbitrary named operators, or infer safe in-place mutation. Static extension-type inheritance is represented in Python, and scalar polymorphic input dispatch reuses the same generated overload selection path. | Use Python data-model slots for intrinsic operators, `operator_name`/`r_operator_name` methods for named operators, and mutating `assign` methods for defined assignment. Keep exact dtype/rank/extension-class dispatch and reject indistinguishable signatures during generation. |
 | Coarrays, teams, events, and directive-driven device/offload behavior | These introduce parallel runtime or device-memory semantics outside normal host wrappers. | Treat as out of the initial wrapper scope. Preserve diagnostics where detected and require a separate runtime design before claiming support. |
 
 <!-- X2PY_C_DOCS_START
 | `character(len=...)` and character ABI | Mapping all character forms to `String` loses length, kind, hidden length arguments, fixed buffers, and `bind(c)` byte-string behavior. | Represent character storage with length expression, kind, assumed-length status, array shape, and C-interoperability metadata. Require explicit encoding, termination, copy, and hidden-length ABI handling in wrapper policy. |
-| Polymorphic `class(...)` and unlimited polymorphism | Static extension-type inheritance is represented by Python C-type inheritance. Scalar `class(base), intent(in)` dummies are safe when the accepted dynamic types are the closed set of known wrapped base/descendant classes, but replacement, allocation, pointer association, results, and unlimited polymorphism still need stronger contracts. | Preserve the `class(...)` source fact. Allow concrete type-bound passed-object arguments. For scalar `class(base), intent(in)` arguments, generate concrete dispatch candidates through the normal overload dispatcher, ordered from descendants to base. Block polymorphic results, arrays, `intent(out)`/`intent(inout)`, allocatable scalars, pointer scalars, and `class(*)` until wrapper policy defines accepted dynamic types, allocation behavior, and ownership. Keep `class(*)` under the assumed-type descriptor blocker. |
+| Polymorphic `class(...)` and unlimited polymorphism | Static extension-type inheritance is represented by Python C-type inheritance. Scalar `class(base), intent(in)` dummies are safe when the accepted dynamic types are the closed set of known wrapped base/descendant classes, but replacement, allocation, pointer association, results, and unlimited polymorphism still need stronger contracts. | Preserve the `class(...)` source fact for ordinary arguments. Infer it for the passed-object dummy of a resolved type-bound binding so generated `.pyi` does not repeat `Polymorphic` there. For scalar `class(base), intent(in)` arguments, generate concrete dispatch candidates through the normal overload dispatcher, ordered from descendants to base. Block polymorphic results, arrays, `intent(out)`/`intent(inout)`, allocatable scalars, pointer scalars, and `class(*)` until wrapper policy defines accepted dynamic types, allocation behavior, and ownership. Keep `class(*)` under the assumed-type descriptor blocker. |
 | Advanced type-bound procedure details | Default `pass`, explicit `pass(name)`, `nopass`, concrete type-bound generics, concrete type-bound operators, and concrete overrides are preserved and wrapped. Finalizers and deferred bindings still need stronger contracts. | Preserve complete binding metadata on semantic classes. Type-bound generics and operators use explicit `.pyi` `@overload("specific")` links and generated C-extension dispatch; unresolved or deferred targets are readiness blockers. |
-| Derived-type layout and interoperability | `sequence`, `bind(c)`, common ABI expectations, and component layout are wrapper-critical but not yet a complete runtime contract. | Add explicit Fortran derived-type markers and metadata for `bind(c)`, `sequence`, component order, and interoperable layout. Use compiler layout probes or generated Fortran/C shims before passing derived types by value or exposing memory views. |
+| Derived-type layout and interoperability | `sequence`, `bind(c)`, component order, and layout remain semantic facts, but all Python wrappers are opaque. Exact monomorphic by-value dummies are called by typed Fortran bridge code; the C boundary never mirrors or byte-copies the aggregate. | Preserve the exact qualified native type and by-value fact before lowering. Keep component access in typed Fortran operations. Require compiler-proved layout only for a future direct C view, never for the opaque typed-value path. |
 X2PY_C_DOCS_END -->
 
 ## Settled Scope
@@ -76,12 +76,21 @@ callbacks, and the metadata needed for readiness decisions.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-Generated CPython extension builds copy their bundled C/Python support sources
-into an `x2py_runtime/` directory inside the build output. The generated C
-extension includes `x2py_runtime/python_runtime.h`. These files are an
-implementation detail of the generated extension, but their names are
-intentionally x2py-specific so they do not look like user source or a generic
-C wrapper.
+Generated CPython extension builds copy their bundled C/Python support header
+into a `binding_support/` directory inside the build output. The generated C
+extension includes `binding_support/x2py_binding.h`. This header is an
+implementation detail of the generated extension, but its name is intentionally
+x2py-specific so it does not look like user source or a generic C wrapper.
+
+The support header is header-only: each helper has internal linkage and is
+eligible for inlining when the generated binding translation unit is compiled.
+There is no separately compiled or linked support object. It exposes a
+deliberately small `x2py_*` mechanical API: scalar type matching, scalar
+unpacking, scalar creation as a Python or NumPy object, and release of a
+bridge-owned allocation. The generated binding passes the completed NumPy type,
+layout, ownership, and mutation decisions into those operations. Native support
+must not infer a layout, accept a different dtype, or choose ownership behavior
+from a value at runtime; those are completed wrapper-plan decisions.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -89,30 +98,38 @@ Generated CPython extensions should expose useful NumPy-style docstrings on the
 Python-visible API. The CPython wrapper layer owns this generation because it has
 the final callable signatures, hidden projection decisions, class/property
 layout, and return conversion policy. These docstrings are for Python users and
-should stay compact. Use NumPy-style sections with short type headers such as
+should stay compact. One plan-side docstring builder must consume completed
+wrapper-plan records; binding and bridge lowering must not reconstruct
+documentation from native declarations or generated source. Use NumPy-style
+sections with short type headers such as
 `x : ndarray[float64]` and `result : ndarray[float64] or None`. Put only the
 facts that are known and useful: rank for arrays, shape only when constrained or
 known, layout for rank greater than one as `F-contiguous` or `C-contiguous`,
-intent for arguments, mutation for `intent(out)`/`intent(inout)`, ownership
+native mutation for writable arguments, ownership
 when it matters using `Ownership: Python-owned` or `Ownership: Native-owned`,
 and when `None` can be returned. Do not emit placeholder unknowns such as
 runtime-determined shape or scalar rank. Avoid long
-wrapper-internal explanations. Class docstrings should
-summarize fields and methods. Get/set descriptor docstrings should describe
-class attributes, including borrowed view lifetimes for allocatable arrays.
-Pointer-array fields and module variables must document handle availability
-as conservative descriptor handles, and must call out that generated accessors
-are still a readiness blocker until descriptor-handle code generation is
-implemented. Module variables exposed through getter functions should document
-the getter, since CPython modules do not provide a portable per-variable
-descriptor docstring for plain module attributes.
+wrapper-internal explanations.
+
+Every public surface must participate. Namespace docstrings list functions,
+module attributes, and classes without empty headings. Function and method
+docstrings show the public signature, parameters, ordered returns, optional
+omission versus present-`None` behavior, and planned exceptions. Overload
+docstrings list their accepted public signatures without exposing private
+candidate names. Class docstrings summarize the public constructor, fields,
+methods, and overloads. Constructor and method descriptors carry their own
+docstrings so `help(Type.method)` is useful. Property docstrings describe the
+public type, whether replacement assignment is supported, and relevant borrowed
+or descriptor-handle lifetime. Because CPython modules do not provide portable
+per-variable descriptors, module-variable documentation belongs in the
+namespace docstring.
 X2PY_C_DOCS_END -->
 
 Verbose wrapper builds should print the exact compiler command lines they run,
 not only the source or target being compiled. The printed command should be
 shell-quoted so users can copy it to reproduce object compilation, generated
-wrapper compilation, runtime support compilation, and final shared-library
-linking.
+wrapper compilation (including its header-only native binding support), and
+final shared-library linking.
 
 <!-- X2PY_C_DOCS_START
 Normal C parsing uses a real compiler preprocessor first. Macro expansion,

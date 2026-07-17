@@ -47,16 +47,18 @@ Build it with the default output locations:
 python3 -m x2py scale.f90
 ```
 
-By default, x2py writes the importable `.so` beside the input source and keeps
-generated build intermediates under `__x2py__/`:
+By default, x2py writes generated build artifacts, including the ABI-suffixed
+extension, under `__x2py__/` in the directory where you run the command. A
+direct CLI build also writes a stable `<module>.so` import alias there:
 
 ```text
 .
   scale.f90
   scale.so
   __x2py__/
+    scale.<extension-suffix>.so
     generated-wrapper sources
-    x2py_runtime/
+    binding_support/
 ```
 
 Name the Python extension and final `.so` explicitly with `--out NAME`:
@@ -72,16 +74,17 @@ Expected result:
   scale.f90
   SCALE.so
   __x2py__/
+    SCALE.<extension-suffix>.so
     generated-wrapper sources
-    x2py_runtime/
+    binding_support/
 ```
 
 For a wrapper build, `--out SCALE` selects the Python module name and the final
 shared-library filename. This first example is a standalone procedure, so it is
 exposed directly at the extension root.
 
-Use `--out-dir` when you want the shared library and generated intermediates in
-an explicit build directory:
+Use `--out-dir` when you want the ABI-specific shared library and generated
+intermediates in an explicit build directory:
 
 ```bash
 python3 -m x2py scale.f90 \
@@ -92,10 +95,12 @@ python3 -m x2py scale.f90 \
 Expected result:
 
 ```text
-build/SCALE/
+.
   SCALE.so
-  generated-wrapper sources
-  x2py_runtime/
+  build/SCALE/
+    SCALE.<extension-suffix>.so
+    generated-wrapper sources
+    binding_support/
 ```
 
 Generate the semantic `.pyi` contract for the same source:
@@ -116,6 +121,8 @@ contracts/
 Expected contract (`contracts/__init__.pyi`):
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, external, native_call
+
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
@@ -124,12 +131,17 @@ def scale(
 ) -> Float64: ...
 ```
 
+The semantic contract does not repeat Fortran `intent`. Source `intent` helps
+x2py choose the generated Python arguments and results, while `@native_call`
+records the exact native argument order and transport. The compiled native
+procedure keeps its own `intent`; editing the `.pyi` changes the wrapper call
+contract, not the native procedure declaration.
+
 Then build the shared library from the package-entry `.pyi` contract and the
 same native implementation source:
 
 ```bash
 python3 -m x2py contracts/__init__.pyi \
-  --wrap \
   --native-fortran-sources scale.f90 \
   --out SCALE \
   --out-dir build/SCALE_from_pyi
@@ -141,10 +153,12 @@ Use `--out NAME` with wrapper builds when you want the import name and final
 The `.pyi` build produces the same importable extension shape:
 
 ```text
-build/SCALE_from_pyi/
+.
   SCALE.so
-  generated-wrapper sources
-  x2py_runtime/
+  build/SCALE_from_pyi/
+    SCALE.<extension-suffix>.so
+    generated-wrapper sources
+    binding_support/
 ```
 
 The direct source build exposes the standalone procedure at the extension root:
@@ -213,6 +227,8 @@ python3 -m x2py points.f90 --pyi --out contracts
 Expected contract (`contracts/points.pyi`):
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, native_call
+
 class point:
     def __init__(
         self,
@@ -299,8 +315,9 @@ The runtime wrapper mechanism is:
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> Fortran parser
-  -> semantic IR and readiness validation
-  -> generated native bridge and Python binding
+  -> semantic IR construction and readiness validation
+  -> post-IR policy completion and ordered wrapper plan
+  -> direct native-bridge and Python-binding lowering
   -> native compilation and shared-library link
   -> importable Python extension
 ```
@@ -310,9 +327,10 @@ Fortran sources
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> Fortran parser
-  -> semantic IR and readiness validation
-  -> generated Fortran bind(C) bridge
-  -> generated C/CPython binding and x2py runtime support
+  -> semantic IR construction and readiness validation
+  -> post-IR policy completion and ordered wrapper plan
+  -> direct Fortran bind(C) bridge lowering
+  -> direct C/CPython binding lowering and native binding support
   -> native compilation and shared-library link
   -> importable Python extension
 ```

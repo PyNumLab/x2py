@@ -24,7 +24,27 @@ MODIFIED_POLICY_CONTRACT = (
 )
 
 
-def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_path: Path, monkeypatch):
+def _wrapper_start(source: str, function_name: str) -> int:
+    return source.index(f"static PyObject * wrap_{function_name}")
+
+
+def _assert_runtime_policy_source(source: str) -> None:
+    released_start = _wrapper_start(source, "pause_for_one_second")
+    held_start = _wrapper_start(source, "pause_with_gil")
+    solve_start = _wrapper_start(source, "solve")
+    released_wrapper = source[released_start:held_start]
+    held_wrapper = source[held_start:solve_start]
+    assert "Py_BEGIN_ALLOW_THREADS" in released_wrapper
+    assert "Py_END_ALLOW_THREADS" in released_wrapper
+    assert "Py_BEGIN_ALLOW_THREADS" not in held_wrapper
+    assert "Py_END_ALLOW_THREADS" not in held_wrapper
+    assert "PyErr_SetObject(PyExc_RuntimeError" in source
+
+
+def test_compiled_runtime_policies_release_gil_and_project_native_errors(
+    tmp_path: Path,
+    monkeypatch,
+):
     from x2py.pipeline import build
     from x2py.semantics.models import RUNTIME_HOLD_GIL_METADATA, RUNTIME_STATUS_ERROR_METADATA
 
@@ -80,19 +100,12 @@ def test_compiled_runtime_policies_release_gil_and_project_native_errors(tmp_pat
         sys.path.remove(str(tmp_path))
 
     wrapper_source = (tmp_path / "fruntime_policy_f90_wrapper.c").read_text(encoding="utf-8")
-    released_start = wrapper_source.index("static PyObject* bind_c_pause_for_one_second_wrapper")
-    held_start = wrapper_source.index("static PyObject* bind_c_pause_with_gil_wrapper")
-    solve_start = wrapper_source.index("static PyObject* bind_c_solve_wrapper")
-    released_wrapper = wrapper_source[released_start:held_start]
-    held_wrapper = wrapper_source[held_start:solve_start]
-    assert "Py_BEGIN_ALLOW_THREADS" in released_wrapper
-    assert "Py_END_ALLOW_THREADS" in released_wrapper
-    assert "Py_BEGIN_ALLOW_THREADS" not in held_wrapper
-    assert "Py_END_ALLOW_THREADS" not in held_wrapper
-    assert "PyErr_SetObject(PyExc_RuntimeError" in wrapper_source
+    _assert_runtime_policy_source(wrapper_source)
 
 
-def test_pyi_runtime_policies_release_gil_and_project_native_errors(tmp_path: Path):
+def test_pyi_runtime_policies_release_gil_and_project_native_errors(
+    tmp_path: Path,
+):
     native_object = _compile_native_object(RUNTIME_POLICY_SOURCE, tmp_path / "native")
     result = build_pyi_extension(
         MODIFIED_POLICY_CONTRACT,
@@ -129,13 +142,4 @@ def test_pyi_runtime_policies_release_gil_and_project_native_errors(tmp_path: Pa
     assert failures == []
 
     wrapper_source = (result.output_dir / "fruntime_policy_f90_wrapper.c").read_text(encoding="utf-8")
-    released_start = wrapper_source.index("static PyObject* bind_c_pause_for_one_second_wrapper")
-    held_start = wrapper_source.index("static PyObject* bind_c_pause_with_gil_wrapper")
-    solve_start = wrapper_source.index("static PyObject* bind_c_solve_wrapper")
-    released_wrapper = wrapper_source[released_start:held_start]
-    held_wrapper = wrapper_source[held_start:solve_start]
-    assert "Py_BEGIN_ALLOW_THREADS" in released_wrapper
-    assert "Py_END_ALLOW_THREADS" in released_wrapper
-    assert "Py_BEGIN_ALLOW_THREADS" not in held_wrapper
-    assert "Py_END_ALLOW_THREADS" not in held_wrapper
-    assert "PyErr_SetObject(PyExc_RuntimeError" in wrapper_source
+    _assert_runtime_policy_source(wrapper_source)

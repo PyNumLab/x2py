@@ -35,7 +35,7 @@ def test_cjson_regression_source_and_header_are_available():
 def test_cjson_header_raw_parse_requires_preprocessing():
     import pytest
 
-    from x2py.c_parser import CParseError, parse_c_file
+    from x2py.parsers.c import CParseError, parse_c_file
 
     with pytest.raises(CParseError, match="require compiler preprocessing") as exc_info:
         parse_c_file(_CJSON_DIR / "cJSON.h")
@@ -43,7 +43,7 @@ def test_cjson_header_raw_parse_requires_preprocessing():
 
 
 def test_cjson_header_preprocessed_mode_has_no_error_diagnostics():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
 
     parsed = parse_c_file(
         _preprocessed_cjson_source("cJSON.h"),
@@ -55,7 +55,7 @@ def test_cjson_header_preprocessed_mode_has_no_error_diagnostics():
 
 
 def test_cjson_callback_hook_declarations_are_preprocessed_without_error_diagnostics():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
 
     parsed = parse_c_file(
         _preprocessed_cjson_source("cJSON.h"),
@@ -68,7 +68,7 @@ def test_cjson_callback_hook_declarations_are_preprocessed_without_error_diagnos
 
 
 def test_cjson_source_file_parse_skips_function_bodies_safely():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
 
     parsed = parse_c_file(
         _preprocessed_cjson_source("cJSON.c"),
@@ -81,7 +81,7 @@ def test_cjson_source_file_parse_skips_function_bodies_safely():
 
 
 def test_cjson_project_parse_links_header_and_source():
-    from x2py.c_parser import parse_c_project
+    from x2py.parsers.c import parse_c_project
 
     sources = {filename: _preprocessed_cjson_source(filename) for filename in ("cJSON.h", "cJSON.c")}
     project = parse_c_project(sources, preprocessing="compiler")

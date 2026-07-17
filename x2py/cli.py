@@ -10,12 +10,12 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, fields, is_dataclass, replace
 from pathlib import Path
 
-from x2py.c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
-from x2py.c_parser.models import CParseError
-from x2py.c_parser.parser import CParser
-from x2py.fortran_parser.cli import _format_report
-from x2py.fortran_parser.models import FortranParseError
-from x2py.fortran_parser.parser import FortranParser
+from x2py.parsers.c.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
+from x2py.parsers.c.models import CParseError
+from x2py.parsers.c.parser import CParser
+from x2py.parsers.fortran.cli import _format_report
+from x2py.parsers.fortran.models import FortranParseError
+from x2py.parsers.fortran.parser import FortranParser
 from x2py.semantics.c2ir import c_project_to_semantic_modules
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 from x2py.pipeline.pyi import pyi_paths_to_semantic_modules
@@ -72,9 +72,9 @@ _CLI_HELP_EPILOG = (
     "  Build wrappers:\n"
     "    python3 -m x2py path/to/file.f\n"
     "    python3 -m x2py path/to/file.f90 --out my_extension\n"
-    "    python3 -m x2py dependency.f90 api.f90 --wrap --makefile --out-dir build\n"
-    "    python3 -m x2py contracts/__init__.pyi --wrap --out my_extension --native-objects native.o\n"
-    "    python3 -m x2py --build-manifest build/x2py-build.json --wrap\n"
+    "    python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
+    "    python3 -m x2py contracts/__init__.pyi --out my_extension --native-objects native.o\n"
+    "    python3 -m x2py --build-manifest build/x2py-build.json\n"
     "\n"
     "  Write stage output:\n"
     "    python3 -m x2py path/to/file.f90 --parse --json --out report.json\n"
@@ -569,7 +569,7 @@ _SOURCE_SEMANTIC_PIPELINES = {
 
 
 def _semantic_payload_for_converted_files(converted_files) -> dict[str, dict]:
-    from x2py.codegen.printers.pyi_printer import emit_module_stubs
+    from x2py.wrapper_codegen.printers import emit_module_stubs
 
     out: dict[str, dict] = {}
     available_modules = [module for _p, modules in converted_files for module in modules]
@@ -596,7 +596,7 @@ def _is_fortran_semantic_file(modules) -> bool:
 
 
 def _fortran_contract_payload(path: Path, modules, available_modules) -> dict[str, object]:
-    from x2py.codegen.printers.pyi_printer import emit_module_stubs
+    from x2py.wrapper_codegen.printers import emit_module_stubs
 
     native_modules = [module for module in modules if module.origin.source_kind == "module"]
     external_modules = [module for module in modules if module.origin.source_kind != "module"]
@@ -745,18 +745,19 @@ def _wrap_readiness_report(
         }
         for path, modules in converted_files
     }
-    out.update(_pyi_readiness_report(paths))
+    out.update(_pyi_readiness_report(paths, native_language=language))
     return out
 
 
-def _pyi_readiness_report(paths: list[str]) -> dict[str, dict]:
+def _pyi_readiness_report(paths: list[str], *, native_language: str = "fortran") -> dict[str, dict]:
     """Load one edited `.pyi` file set and report each interface path."""
 
     pyi_paths = _expand_pyi_paths(paths)
     if not pyi_paths:
         return {}
     modules = pyi_paths_to_semantic_modules(
-        [raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"]
+        [raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"],
+        native_language=native_language,
     )
     return {
         str(path): {
@@ -856,7 +857,7 @@ def _format_semantic_blocker_item(code: str, item) -> str:
         return f"{item['owner']} needs literal value for Final constant {item['symbol']}"
     if code == "callback_signature_incomplete":
         needs = ", ".join(item.get("needs") or [])
-        return f"{item['owner']} needs Callable[[...], ...] metadata ({needs})"
+        return f"{item['owner']} needs a complete named @prototype ({needs})"
     if code.startswith("c_"):
         owner = item.get("owner", "<c-source>")
         detail = item.get("type") or item.get("source") or item.get("function") or item.get("parameter")
@@ -1009,11 +1010,17 @@ def _wrapper_compile_options_used(args: argparse.Namespace) -> bool:
 
 
 def _stage_defaults_to_wrap(args: argparse.Namespace) -> bool:
+    """Return whether wrapper-specific input selects the default build stage."""
     return bool(
         args.language == "fortran"
         and not _has_stage(args)
-        and not getattr(args, "makefile", False)
-        and any(Path(path).is_dir() or _path_is_fortran_source(path) for path in args.paths)
+        and (
+            getattr(args, "build_manifest", None) is not None
+            or any(
+                Path(path).is_dir() or _path_is_fortran_source(path) or _path_is_pyi_contract(path)
+                for path in args.paths
+            )
+        )
     )
 
 
@@ -1051,11 +1058,11 @@ def _fortran_type_probe_options_used(args: argparse.Namespace) -> bool:
 
 def _validate_pyi_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     if any(Path(path).is_dir() for path in args.paths):
-        parser.error("--wrap from .pyi expects semantic contract files, not directories")
+        parser.error("A .pyi wrapper build expects semantic contract files, not directories")
     if any(not _path_is_pyi_contract(path) for path in args.paths):
-        parser.error("--wrap from .pyi cannot mix positional native sources; pass native artifacts with flags")
+        parser.error("A .pyi wrapper build cannot mix positional native sources; pass native artifacts with flags")
     if len(args.paths) != 1:
-        parser.error("--wrap from .pyi accepts exactly one entry contract")
+        parser.error("A .pyi wrapper build accepts exactly one entry contract")
     if not (
         getattr(args, "native_fortran_sources", None)
         or getattr(args, "native_objects", None)
@@ -1063,7 +1070,7 @@ def _validate_pyi_wrap_options(args: argparse.Namespace, parser: argparse.Argume
         or getattr(args, "native_link_items", None)
     ):
         parser.error(
-            "--wrap from .pyi requires --native-fortran-sources, --native-objects, "
+            "A .pyi wrapper build requires --native-fortran-sources, --native-objects, "
             "--native-library, or --native-link-item"
         )
 
@@ -1079,11 +1086,11 @@ def _validate_manifest_wrap_options(args: argparse.Namespace, parser: argparse.A
 
 def _validate_source_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     if not args.paths:
-        parser.error("--wrap expects at least one Fortran source file or a semantic .pyi contract")
+        parser.error("A wrapper build expects at least one Fortran source file or a semantic .pyi contract")
     if _native_link_options_used(args):
         parser.error("Native artifact link flags are only supported for .pyi wrapper builds")
     if any(Path(path).is_dir() for path in args.paths):
-        parser.error("--wrap expects Fortran source files, not directories")
+        parser.error("A wrapper build expects Fortran source files, not directories")
 
 
 def _validate_wrapper_out(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -1156,14 +1163,10 @@ def _validate_stage_selection(args: argparse.Namespace, parser: argparse.Argumen
     selected = _selected_stage_flags(args)
     if len(selected) > 1:
         parser.error(f"Choose exactly one stage flag; cannot combine {', '.join(selected)}")
-    if getattr(args, "makefile", False) and not getattr(args, "wrap", False):
-        parser.error("--makefile requires --wrap")
 
 
 def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
     _validate_stage_selection(args, parser)
-    if getattr(args, "build_manifest", None) is not None and not getattr(args, "wrap", False):
-        parser.error("--build-manifest requires --wrap")
     if not args.paths and getattr(args, "build_manifest", None) is None:
         parser.error("Source input is required unless --build-manifest is used")
 
@@ -1284,12 +1287,12 @@ def _cli_wrapper_c_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
 
 def _wrapper_shared_library_alias_path(result, raw_out: str | None) -> Path:
     if raw_out in (None, ""):
-        return result.shared_library.with_name(f"{result.module_name}.so")
+        return Path.cwd() / f"{result.module_name}.so"
 
     path = Path(raw_out)
     target = path if path.suffix else path.with_suffix(".so")
     if not target.is_absolute() and target.parent == Path("."):
-        return result.shared_library.with_name(target.name)
+        return Path.cwd() / target.name
     return target
 
 
@@ -1394,12 +1397,17 @@ def _run_stage_reports_with_diagnostics(args: argparse.Namespace, preprocessing:
 def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig):
     from x2py.pipeline.build import build_fortran_extension, build_pyi_extension, build_pyi_extension_from_manifest
 
+    def record_total_build_time(elapsed: float) -> None:
+        args._verbose_total_build_time = elapsed
+
+    total_build_time_reporter = record_total_build_time if getattr(args, "verbose", False) else None
     if _wrap_uses_build_manifest(args):
         result = build_pyi_extension_from_manifest(
             args.build_manifest,
             output_name=_wrapper_output_name(args),
             makefile=getattr(args, "makefile", False),
             verbose=1 if getattr(args, "verbose", False) else 0,
+            _on_total_build_time=total_build_time_reporter,
         )
         return _copy_wrapper_shared_library_alias(args, result)
 
@@ -1421,6 +1429,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
             wrapper_compiler_debug=getattr(args, "wrapper_compiler_debug", False),
             wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
             wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
+            _on_total_build_time=total_build_time_reporter,
         )
         return _copy_wrapper_shared_library_alias(args, result)
 
@@ -1439,6 +1448,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
         wrapper_compiler_debug=getattr(args, "wrapper_compiler_debug", False),
         wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
         wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
+        _on_total_build_time=total_build_time_reporter,
     )
     return _copy_wrapper_shared_library_alias(args, result)
 
@@ -1673,6 +1683,7 @@ def _print_wrap_build_output(args: argparse.Namespace, result) -> None:
     payload = result.to_dict()
     if args.json:
         print(json.dumps(payload, indent=2))
+        _print_verbose_total_build_time(args)
         return
 
     if payload.get("compiled", True):
@@ -1688,6 +1699,14 @@ def _print_wrap_build_output(args: argparse.Namespace, result) -> None:
         print("Generated sources:")
         for path in generated_sources:
             print(f"  - {path}")
+    _print_verbose_total_build_time(args)
+
+
+def _print_verbose_total_build_time(args: argparse.Namespace) -> None:
+    """Print the delayed CLI total after its final artifact summary line."""
+    elapsed = getattr(args, "_verbose_total_build_time", None)
+    if elapsed is not None:
+        print(f">> Total build time: {elapsed:.3f}s")
 
 
 def print_pyi_output(code: str) -> None:
@@ -2014,7 +2033,8 @@ def main() -> int:
         metavar="DIR",
         help=(
             "Directory for --wrap generated sources, objects, and extension module; "
-            "by default build files go in __x2py__ and the extension is written beside the source"
+            "by default build files and the ABI-suffixed extension go in ./__x2py__, "
+            "with a stable .so alias in the current directory"
         ),
     )
     output_group.add_argument("--verbose", action="store_true", help="Print wrapper compiler commands and build steps")

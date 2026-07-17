@@ -174,7 +174,11 @@ contract, not the normal source-generated subroutine API. Editing Semantic
   reassociation without completed policy remain blocked.
 - Character arrays require fixed-width NumPy bytes dtype storage. Arrays of
   derived types are blocked.
-- Allocatable scalar derived-type replacement is blocked.
+- Wrapper-owned allocatable scalar derived results may be passed to compatible
+  dummies with same-object allocation-state writeback. Module allocatable and
+  pointer scalar objects use reversible typed transactions for compatible
+  descriptor dummies. The later Wrapping Derived Types guide gives the complete
+  “Scalar Actuals And Native Dummies” matrix.
 - Unsupported output combinations stop at readiness; code generation does not
   silently select another projection.
 

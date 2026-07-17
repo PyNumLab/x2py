@@ -1,82 +1,45 @@
-"""Module containing helper functions for managing strings"""
+"""Small, self-contained helpers for generated identifiers."""
 
-import random
-import string
+from __future__ import annotations
+
+from itertools import count
+from secrets import choice
+from string import ascii_lowercase, digits
+from typing import Protocol
 
 __all__ = ("create_incremented_string", "random_string")
-# ==============================================================================
-random_selector = random.SystemRandom()
+
+_RANDOM_ALPHABET = ascii_lowercase + digits
 
 
-def random_string(n):
+class _NameClashRules(Protocol):
+    """Protocol for target-language-aware identifier collision checks."""
+
+    def has_clash(self, name: object, symbols: set[object]) -> bool:
+        """Return whether ``name`` cannot be used with ``symbols``."""
+
+
+def random_string(length: int) -> str:
+    """Return ``length`` random lower-case letters and decimal digits."""
+    return "".join(choice(_RANDOM_ALPHABET) for _ in range(length))
+
+
+def create_incremented_string(
+    forbidden_exprs: set[object],
+    prefix: str | None = "Dummy",
+    counter: int = 2,
+    naming_rules: _NameClashRules | None = None,
+) -> tuple[str, int]:
+    """Return the first available ``prefix_N`` name and next counter.
+
+    ``naming_rules`` may implement case-insensitive or language-specific
+    collision checks. Without it, membership in ``forbidden_exprs`` decides
+    availability.
     """
-    Generate a random string.
-
-    Generate a random string with length n made of lower case characters and digits.
-
-    Parameters
-    ----------
-    n : int
-      The length of the random string.
-
-    Returns
-    -------
-    str
-       The random string.
-    """
-    chars = string.ascii_lowercase + string.digits
-    return "".join(random_selector.choice(chars) for _ in range(n))
-
-
-# ==============================================================================
-def create_incremented_string(forbidden_exprs, prefix="Dummy", counter=1, naming_rules=None):
-    """
-    Create a new unique string by incrementing a prefix.
-
-    This function takes a prefix and a counter and uses them to construct
-    a new name of the form:
-
-         prefix_<counter>
-
-    Where counter is formatted to fill 4 characters
-    The new name is checked against a list of forbidden expressions. If the
-    constructed name is forbidden then the counter is incremented until a valid
-    name is found.
-
-    Parameters
-    ----------
-    forbidden_exprs : set
-        A set of all the values which are not valid solutions to this problem.
-    prefix : str
-        The prefix used to begin the string.
-    counter : int
-        The expected value of the next name.
-    naming_rules : object, optional
-        An object providing a `has_clash` function which determines if names
-        clash in a target language.
-
-    Returns
-    -------
-    name : str
-        The incremented string name.
-    counter : int
-        The expected value of the next name.
-    """
-    nDigits = 4
-
-    if prefix is None:
-        prefix = "Dummy"
-
-    name_format = "{prefix}_{counter:0=" + str(nDigits) + "d}"
-    name = name_format.format(prefix=prefix, counter=counter)
-    counter += 1
-    if naming_rules:
-        while naming_rules.has_clash(name, forbidden_exprs):
-            name = name_format.format(prefix=prefix, counter=counter)
-            counter += 1
-    else:
-        while name in forbidden_exprs:
-            name = name_format.format(prefix=prefix, counter=counter)
-            counter += 1
-
-    return name, counter
+    stem = "Dummy" if prefix is None else str(prefix)
+    for number in count(counter):
+        candidate = f"{stem}_{number}"
+        clashes = naming_rules.has_clash(candidate, forbidden_exprs) if naming_rules else candidate in forbidden_exprs
+        if not clashes:
+            return candidate, number + 1
+    raise RuntimeError("unreachable: an unbounded counter always yields a candidate")

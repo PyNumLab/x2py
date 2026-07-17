@@ -379,7 +379,7 @@ X2PY_C_DOCS_END -->
 - unresolved typedef or unknown type references;
 - legacy parser reports carrying macro-dependent declarations;
 - variadic functions;
-- function pointer/callback signatures without edited `.pyi` `Callable`
+- function pointer/callback signatures without a resolved named prototype
   policy;
 - mutable numeric or `void *` pointer parameters without ownership,
   scalar-storage, raw-address, or array policy;
@@ -439,11 +439,12 @@ storage, NumPy array storage, Python strings, raw address values, and generated
 wrapper instances. The native barrier distinguishes direct values, call-local
 addresses, caller/Python-backed storage addresses, raw addresses, packed array
 descriptors, and wrapper-owned native addresses. These decisions are semantic
-policy. `ir2ast.py`, bindings, bridges, and printers may create backend-local
-temporaries, but they must not infer or override a barrier action from datatype,
-source-declaration direction, array category, aliasing, or memory-storage checks.
+policy. Wrapper planning, binding/bridge lowering, and printers may create
+backend-local temporaries, but they must not infer or override a barrier action
+from datatype, source-declaration direction, array category, aliasing, or
+memory-storage checks.
 
-Parser-model conversion and codegen model traversal use the shared
+Parser-model conversion and semantic/wrapper-model traversal use the shared
 `x2py.utilities.visitor.ClassVisitor` dispatcher and one configured
 `<prefix>_<ClassName>` protocol. The default prefix is `_visit`; specialized
 visitors may choose clearer names such as `_print` or `_parse` while still using
@@ -454,7 +455,7 @@ nodes. These tables are separate from model-node dispatch.
 
 ### Round Trips And Provenance
 
-`x2py.pyi_parser` parses the documented semantic `.pyi` subset into Python AST.
+`x2py.parsers.pyi` parses the documented semantic `.pyi` subset into Python AST.
 `convert_pyi_to_ir` converts that AST into the same public storage contracts
 emitted by the source semantic pipelines; `pyi_file_to_semantic_module` combines file parsing
 and conversion. Focused round-trip tests cover:
@@ -517,7 +518,7 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-> **Status: design only, not implemented runtime support.** x2py currently
+> **Status: design only, not implemented native binding support.** x2py currently
 > parses C, converts the supported subset to semantic IR, emits and loads
 > semantic `.pyi`, and reports readiness. It does not currently generate,
 > lower, compile, or execute C wrappers. Every runtime behavior, wrapper error,

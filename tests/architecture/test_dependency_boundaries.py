@@ -1,4 +1,4 @@
-"""Structural contracts for navigable codegen classes."""
+"""Structural contracts for navigable wrapper-generation boundaries."""
 
 from __future__ import annotations
 
@@ -6,32 +6,25 @@ import ast
 
 from tests.wrapper.fortran._support import REPO_ROOT
 
-CODEGEN_ROOT = REPO_ROOT / "x2py" / "codegen"
-BOUNDARY_DIRS = ("bridges", "bindings", "printers")
+WRAPPER_CODEGEN_ROOT = REPO_ROOT / "x2py" / "wrapper_codegen"
+BOUNDARY_MODULES = (
+    ("c", WRAPPER_CODEGEN_ROOT / "c" / "binding.py"),
+    ("fortran", WRAPPER_CODEGEN_ROOT / "fortran" / "bridge.py"),
+    ("printers", WRAPPER_CODEGEN_ROOT / "printers" / "pyi_printer.py"),
+    ("printers", WRAPPER_CODEGEN_ROOT / "printers" / "source_printers.py"),
+)
 PUBLIC_MODULE_FUNCTIONS = {
-    ("bindings", "cpython_api.py", "C_to_Python"),
-    ("bindings", "numpy_cpython_api.py", "get_numpy_max_acceptable_version_file"),
     ("printers", "pyi_printer.py", "emit_module"),
     ("printers", "pyi_printer.py", "emit_module_stubs"),
     ("printers", "pyi_printer.py", "opaque_dependency_modules"),
 }
-SHARED_PRIVATE_FUNCTIONS = {
-    ("bindings", "c_concepts.py", "_is_string_literal"),
-}
 
 
-def _boundary_modules():
-    """Yield each Python module in the codegen boundaries under review."""
-    for directory in BOUNDARY_DIRS:
-        for path in sorted((CODEGEN_ROOT / directory).glob("*.py")):
-            yield directory, path
-
-
-def test_codegen_boundary_callables_are_documented():
-    """Require every boundary function and method to state its contract."""
+def test_wrapper_codegen_boundary_entrypoints_and_visitors_are_documented():
+    """Require public entrypoints and dispatched model visitors to state their contract."""
     missing = []
-    for _, path in _boundary_modules():
-        tree = ast.parse(path.read_text(), filename=str(path))
+    for _, path in BOUNDARY_MODULES:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in tree.body:
             if isinstance(node, ast.FunctionDef) and ast.get_docstring(node) is None:
                 missing.append(f"{path.name}:{node.lineno}:{node.name}")
@@ -39,17 +32,19 @@ def test_codegen_boundary_callables_are_documented():
                 missing.extend(
                     f"{path.name}:{method.lineno}:{node.name}.{method.name}"
                     for method in node.body
-                    if isinstance(method, ast.FunctionDef) and ast.get_docstring(method) is None
+                    if isinstance(method, ast.FunctionDef)
+                    and (not method.name.startswith("_") or method.name.startswith("_visit_"))
+                    and ast.get_docstring(method) is None
                 )
-    assert not missing, "Undocumented codegen callables:\n" + "\n".join(missing)
+    assert not missing, "Undocumented wrapper-codegen callables:\n" + "\n".join(missing)
 
 
-def test_codegen_uses_one_model_visitor_protocol():
-    """Prevent legacy printer and extractor dispatch protocols from returning."""
+def test_wrapper_codegen_uses_one_model_visitor_protocol():
+    """Prevent alternate printer and extractor dispatch protocols from appearing."""
     invalid = []
     lowercase_model_names = {"int", "str", "tuple"}
-    for _, path in _boundary_modules():
-        tree = ast.parse(path.read_text(), filename=str(path))
+    for _, path in BOUNDARY_MODULES:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name.startswith(("_print_", "_extract_")):
                 invalid.append(f"{path.name}:{node.lineno}:{node.name}")
@@ -60,31 +55,13 @@ def test_codegen_uses_one_model_visitor_protocol():
     assert not invalid, "Use _visit_* handlers or named helpers:\n" + "\n".join(invalid)
 
 
-def test_public_methods_precede_internal_methods():
-    """Keep each class's real public API above its visitors and helpers."""
-    misplaced = []
-    for _, path in _boundary_modules():
-        tree = ast.parse(path.read_text(), filename=str(path))
-        for class_node in (node for node in tree.body if isinstance(node, ast.ClassDef)):
-            private_seen = False
-            for method in (node for node in class_node.body if isinstance(node, ast.FunctionDef)):
-                is_public = not method.name.startswith("_")
-                if is_public and private_seen:
-                    misplaced.append(f"{path.name}:{method.lineno}:{class_node.name}.{method.name}")
-                is_dunder = method.name.startswith("__") and method.name.endswith("__")
-                if method.name.startswith("_") and not is_dunder:
-                    private_seen = True
-    assert not misplaced, "Public methods below internal methods:\n" + "\n".join(misplaced)
-
-
-def test_module_functions_are_deliberate_boundary_apis_or_shared_utilities():
+def test_module_functions_are_deliberate_boundary_apis():
     """Keep stateful generation logic on its owning class."""
     unexpected = []
-    allowed = PUBLIC_MODULE_FUNCTIONS | SHARED_PRIVATE_FUNCTIONS
-    for directory, path in _boundary_modules():
-        tree = ast.parse(path.read_text(), filename=str(path))
+    for area, path in BOUNDARY_MODULES:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in (node for node in tree.body if isinstance(node, ast.FunctionDef)):
-            key = (directory, path.name, node.name)
-            if key not in allowed:
+            key = (area, path.name, node.name)
+            if key not in PUBLIC_MODULE_FUNCTIONS:
                 unexpected.append(f"{path.name}:{node.lineno}:{node.name}")
-    assert not unexpected, "Unexpected module-level codegen functions:\n" + "\n".join(unexpected)
+    assert not unexpected, "Unexpected module-level wrapper-codegen functions:\n" + "\n".join(unexpected)

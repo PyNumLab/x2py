@@ -44,7 +44,7 @@ Generate an editable contract package:
 python3 -m x2py solver.f90 --pyi --out contracts/solver
 ```
 
-In `contracts/solver/solver_api.pyi`, keep the generated native types and add
+In `contracts/solver/solver.pyi`, keep the generated native types and add
 the explicit status policy:
 
 ```python
@@ -61,9 +61,8 @@ Build that contract against the same simple native source:
 
 ```bash
 python3 -m x2py contracts/solver/__init__.pyi \
-  --wrap \
   --native-fortran-sources solver.f90 \
-  --out-dir build/solver \
+  --out-dir build/solver
 ```
 
 The success outputs are consumed, while a nonzero status becomes

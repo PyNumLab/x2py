@@ -48,11 +48,14 @@ jobs:
 
           C_DOC="docs/developer/c-parser-reference.md"
           FORTRAN_DOC="docs/developer/fortran-parser-reference.md"
+          PYI_DOC="docs/user/reference/semantic-pyi-format.md"
 
           C_DOC_CHANGED=false
           FORTRAN_DOC_CHANGED=false
+          PYI_DOC_CHANGED=false
           C_PARSER_CHANGED=false
           FORTRAN_PARSER_CHANGED=false
+          PYI_PARSER_CHANGED=false
           SHARED_PARSER_CHANGED=false
 
           if grep -Fxq "$C_DOC" <<< "$CHANGED_FILES"; then
@@ -61,18 +64,25 @@ jobs:
           if grep -Fxq "$FORTRAN_DOC" <<< "$CHANGED_FILES"; then
             FORTRAN_DOC_CHANGED=true
           fi
+          if grep -Fxq "$PYI_DOC" <<< "$CHANGED_FILES"; then
+            PYI_DOC_CHANGED=true
+          fi
 
           while IFS= read -r changed_file; do
             case "$changed_file" in
-              c_parser/*|x2py/c_parser/*|tests/parser/c/*|tests/parsing/c/*|tests/data/c/*|tests/probes/test_c_types.py)
+              x2py/parsers/c/*|tests/parser/c/*|tests/parsing/c/*|tests/data/c/*|tests/probes/test_c_types.py)
                 C_PARSER_CHANGED=true
                 ;;
-              fortran_parser/*|x2py/fortran_parser/*|tests/parser/fortran/*|tests/parsing/fortran/*|tests/data/fortran/*|tests/probes/test_fortran_types.py)
+              x2py/parsers/fortran/*|tests/parser/fortran/*|tests/parsing/fortran/*|tests/data/fortran/*|tests/probes/test_fortran_types.py)
                 FORTRAN_PARSER_CHANGED=true
+                ;;
+              x2py/parsers/pyi/*|tests/parsing/pyi/*|tests/pipeline/pyi_builds/*)
+                PYI_PARSER_CHANGED=true
                 ;;
               tests/parser/conftest.py|\
               tests/cli/*|\
               tests/pipeline/preprocessing/*|\
+              x2py/parsers/__init__.py|\
               x2py/preprocessing.py)
                 SHARED_PARSER_CHANGED=true
                 ;;
@@ -80,11 +90,11 @@ jobs:
           done <<< "$CHANGED_FILES"
 
           if [[ ",${PR_LABELS}," == *",${FORCE_LABEL},"* ]]; then
-            if [ "$C_DOC_CHANGED" = true ] || [ "$FORTRAN_DOC_CHANGED" = true ]; then
+            if [ "$C_DOC_CHANGED" = true ] || [ "$FORTRAN_DOC_CHANGED" = true ] || [ "$PYI_DOC_CHANGED" = true ]; then
               echo "${FORCE_LABEL} label present and at least one parser reference changed."
             else
               echo "${FORCE_LABEL} label present, but no parser reference changed."
-              echo "Update ${C_DOC} or ${FORTRAN_DOC}, or remove ${FORCE_LABEL}."
+              echo "Update ${C_DOC}, ${FORTRAN_DOC}, or ${PYI_DOC}, or remove ${FORCE_LABEL}."
               exit 1
             fi
           fi
@@ -101,11 +111,17 @@ jobs:
             FAILED=true
           fi
 
+          if [ "$PYI_PARSER_CHANGED" = true ] && [ "$PYI_DOC_CHANGED" != true ]; then
+            echo "Semantic .pyi parser-related files changed without updating ${PYI_DOC}."
+            FAILED=true
+          fi
+
           if [ "$SHARED_PARSER_CHANGED" = true ] && \
              [ "$C_DOC_CHANGED" != true ] && \
-             [ "$FORTRAN_DOC_CHANGED" != true ]; then
+             [ "$FORTRAN_DOC_CHANGED" != true ] && \
+             [ "$PYI_DOC_CHANGED" != true ]; then
             echo "Shared parser workflow files changed without updating a parser reference."
-            echo "Update ${C_DOC} or ${FORTRAN_DOC}, whichever behavior changed."
+            echo "Update ${C_DOC}, ${FORTRAN_DOC}, or ${PYI_DOC}, whichever behavior changed."
             FAILED=true
           fi
 
@@ -119,6 +135,9 @@ jobs:
           fi
           if [ "$FORTRAN_DOC_CHANGED" = true ]; then
             echo "${FORTRAN_DOC} changed."
+          fi
+          if [ "$PYI_DOC_CHANGED" = true ]; then
+            echo "${PYI_DOC} changed."
           fi
 
           echo "Parser reference guard passed."

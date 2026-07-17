@@ -369,7 +369,7 @@ end subroutine resize
 
 
 def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
-    from x2py.fortran_parser.type_resolver import extract_kind_from_type_spec
+    from x2py.parsers.fortran.type_resolver import extract_kind_from_type_spec
 
     var = FortranVariable(name="empty", shape=[""])
     assert var.shape_info == [{"raw": "", "lower": None, "upper": None}]
@@ -400,7 +400,7 @@ def test_structured_shape_handles_empty_dimensions_and_use_mapping_equality():
     ],
 )
 def test_extract_kind_from_type_spec_contract(base_type, type_spec, expected):
-    from x2py.fortran_parser.type_resolver import extract_kind_from_type_spec
+    from x2py.parsers.fortran.type_resolver import extract_kind_from_type_spec
 
     assert extract_kind_from_type_spec(base_type, type_spec) == expected
 

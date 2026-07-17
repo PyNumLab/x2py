@@ -922,6 +922,7 @@
                     ],
                     "category": "assumed_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "strided"
                     ],
@@ -1137,6 +1138,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -1241,6 +1243,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -1422,6 +1425,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": "ORDER_F",
+                    "copy_order": null,
                     "axes": [
                       "dense",
                       "dense"
@@ -1732,6 +1736,7 @@
           }
         }
       ],
+      "prototypes": [],
       "overload_sets": [],
       "classes": [
         {
@@ -1895,6 +1900,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -2062,6 +2068,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -2314,7 +2321,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "counter",
-            "native_scope": null,
+            "native_scope": "modern_math_physics",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -2375,7 +2382,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "hidden_scale",
-            "native_scope": null,
+            "native_scope": "modern_math_physics",
             "source_kind": "variable",
             "source_type": "real(kind=8)",
             "source_location": {},

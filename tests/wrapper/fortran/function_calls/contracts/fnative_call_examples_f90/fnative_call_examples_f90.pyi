@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, Return, Returns, String, native_call
+from x2py.contracts import Addr, Arg, Float64, Int32, Return, Returns, String, native_call
 
 class summary_point:
     def __init__(
@@ -26,9 +26,9 @@ def fill_vector(
 def shift_matrix(
     n: Int32,
     m: Int32,
-    values: Annotated[Float64[n, m], ORDER_F],
-    out: Annotated[Float64[n, m], ORDER_F]
-) -> Returns["out", Annotated[Float64[n, m], ORDER_F]]: ...
+    values: Float64[n, m],
+    out: Float64[n, m]
+) -> Returns["out", Float64[n, m]]: ...
 
 @native_call([Arg(0), Return('status', 0)])
 def scale_with_status(

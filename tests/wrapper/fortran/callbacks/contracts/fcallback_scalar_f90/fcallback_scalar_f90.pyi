@@ -1,19 +1,34 @@
-from x2py.contracts import Addr, Arg, Callable, Float64, In, native_call
+from x2py.contracts import Addr, Arg, Float64, native_call, prototype
+
+@prototype
+def scalar_callback(
+    value: Float64
+) -> Float64: ...
+
+@prototype
+def notify_callback(
+    value: Float64
+) -> None: ...
+
+@prototype
+def callback(
+    value: Float64
+) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def apply_scalar(
-    callback: Callable[[In(Float64)], Float64],
+    callback: scalar_callback,
     value: Float64
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def apply_explicit(
-    callback: Callable[[In(Float64)], Float64],
+    callback: callback,
     value: Float64
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def call_notify(
-    callback: Callable[[In(Float64)], None],
+    callback: notify_callback,
     value: Float64
 ) -> None: ...

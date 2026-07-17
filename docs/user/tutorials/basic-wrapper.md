@@ -72,7 +72,7 @@ Fortran sources
   -> parser facts
   -> semantic IR and readiness blockers
   -> generated Fortran bind(C) bridge
-  -> generated C/CPython binding and runtime support
+  -> generated C/CPython binding and native binding support
   -> compiled Python extension
 ```
 X2PY_C_DOCS_END -->
@@ -206,15 +206,14 @@ From the command line, a build looks like this:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
-  --wrap \
   --out-dir build/fruntime_abi \
   --json
 ```
 
 The command writes generated bridge, binding, runtime, object, and shared
 library artifacts under the output directory. The JSON output reports the
-module name and generated files. The `--wrap` flag is optional when all inputs
-are recognizable Fortran sources and no inspection stage is selected.
+module name and generated files. Recognizable wrapper inputs select the wrapper
+build stage automatically when no inspection stage is selected.
 
 ## Step 5: Import And Call The Extension
 

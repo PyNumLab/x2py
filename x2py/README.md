@@ -14,16 +14,18 @@ jumping directly into generated-code internals.
 | `probes/` | C ABI facts, Fortran kind/storage facts, and type mapping reports. |
 | `runtime/` | Python runtime objects used by generated extensions. |
 | `types/` | Semantic-to-Python ecosystem type mappings. |
-| `c_parser/` and `fortran_parser/` | Native source frontends and parser models. |
-| `semantics/` | Language-neutral semantic IR, policy completion, readiness, `.pyi` conversion, and codegen lowering. |
-| `codegen/` | Codegen AST, Fortran bridge generation, CPython binding generation, and printers. |
-| `compiling/` | Native compiler objects, wrapper compilation, runtime support installation, and linking. |
+| `parsers/` | Parser namespace containing the `c`, `fortran`, and semantic `.pyi` frontends. |
+| `semantics/` | Language-neutral semantic IR, policy completion, readiness, and `.pyi` conversion. |
+| `wrapper_codegen/` | Canonical wrapper plans, direct native bridge/binding generation, and source printers. |
+| `compiling/` | Native compiler objects, wrapper compilation, native support installation, and linking. |
 | `utilities/` | Small domain-neutral helpers, including class visitor dispatch. |
 
-The package root contains only `__init__.py`, `__main__.py`, and `cli.py`.
-Supported library symbols are flattened through `x2py.__init__`; internal code
-imports the canonical owning module. `x2py.contracts` remains a deliberate
-public submodule because its import path is part of semantic `.pyi` syntax.
+The package root contains the public entrypoint modules plus the shared
+`stage_values.py` record support. Supported library symbols are flattened
+through `x2py.__init__`; internal modules import their canonical owner.
+`x2py.contracts` remains a deliberate public submodule because its import path
+is part of semantic `.pyi` syntax. Parser-specific imports use the public
+`x2py.parsers.c`, `x2py.parsers.fortran`, and `x2py.parsers.pyi` namespaces.
 
 ## Source Navigation Docs
 

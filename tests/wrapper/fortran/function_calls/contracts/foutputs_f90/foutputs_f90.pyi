@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int32, ORDER_F, Return, Returns, String, native_call
+from x2py.contracts import Addr, Allocatable, Arg, Float64, Int32, Return, Returns, String, native_call
 
 class output_point:
     def __init__(
@@ -26,8 +26,8 @@ def fill_vector(
 def fill_matrix(
     n: Int32,
     m: Int32,
-    values: Annotated[Float64[n, m], ORDER_F]
-) -> Returns["values", Annotated[Float64[n, m], ORDER_F]]: ...
+    values: Float64[n, m]
+) -> Returns["values", Float64[n, m]]: ...
 
 @native_call([Addr(Arg(0)), Return('values', 0)])
 def build_alloc(

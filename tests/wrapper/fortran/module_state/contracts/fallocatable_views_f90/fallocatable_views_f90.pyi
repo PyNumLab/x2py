@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, Int32, ORDER_F, Pass, Return, native_call
+from x2py.contracts import Addr, Aliased, Allocatable, Annotated, Arg, Float64, Int32, Pass, Return, native_call
 
 class buffer:
     def __init__(self) -> None: ...
@@ -46,7 +46,7 @@ def build_values(
 def build_matrix(
     n: Int32,
     m: Int32
-) -> Allocatable[Annotated[Float64[:, :], ORDER_F]]: ...
+) -> Allocatable[Float64[:, :]]: ...
 
 @native_call([Addr(Arg(0))])
 def make_values(
@@ -57,4 +57,4 @@ def make_values(
 def make_matrix(
     n: Int32,
     m: Int32
-) -> Allocatable[Annotated[Float64[:, :], ORDER_F]]: ...
+) -> Allocatable[Float64[:, :]]: ...

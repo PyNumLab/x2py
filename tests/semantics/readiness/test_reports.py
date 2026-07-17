@@ -427,11 +427,12 @@ def test_readiness_metadata_defaults_and_duplicate_unit_blockers_are_stable():
 
 def test_readiness_preserves_ordering_and_nested_type_context():
     nested_callback = SemanticType(
-        "Callable",
+        "nested_prototype",
         metadata={
             "arguments": [SemanticType("types_mod.input_t")],
             "return": SemanticType("Float64", shape=["n + missing"]),
         },
+        storage=SemanticStorageContract(kind="callback"),
     )
     module = SemanticModule(
         "ordered",
@@ -534,11 +535,12 @@ def test_readiness_report_preserves_blocker_payloads_and_unit_ownership():
         metadata={"readiness_blockers": [{"code": "type_policy", "message": "type message", "item": {"detail": "t"}}]},
     )
     callback_type = SemanticType(
-        "Callable",
+        "callback_prototype",
         metadata={
             "arguments": [SemanticType("MissingCallbackArg")],
             "return": SemanticType("MissingCallbackReturn"),
         },
+        storage=SemanticStorageContract(kind="callback"),
     )
     module = SemanticModule(
         name="api",
@@ -654,7 +656,7 @@ def test_readiness_report_preserves_blocker_payloads_and_unit_ownership():
     assert units["api.unknown"]["kind"] == "function"
     assert set(units) == {"api", "api.State", "api.State.apply", "api.hook", "api.unknown"}
     assert set(report["why_not_wrappable"]) == {
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
         "Some compile-time constants are declared but do not have literal .pyi values.",
         "Some semantic type references are not declared by the .pyi interface or its imports.",
         "argument message",

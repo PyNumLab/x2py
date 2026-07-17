@@ -2,8 +2,8 @@
 
 import pytest
 
-from x2py.fortran_parser.models import FortranModule
-from x2py.fortran_parser.parser import FortranParser, _ParserScope
+from x2py.parsers.fortran.models import FortranModule
+from x2py.parsers.fortran.parser import FortranParser, _ParserScope
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 
 

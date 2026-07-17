@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+import keyword
 import re
 from collections.abc import Iterable
-from dataclasses import replace
 
 from x2py.types.numpy import SEMANTIC_SCALAR_TYPE_NAMES
 from x2py.semantics.ownership import (
-    DestructionPolicy,
+    CodegenAction,
     OWNERSHIP_POLICY_METADATA,
     POINTER_POLICY_METADATA,
     OwnershipDecision,
     OwnershipContext,
-    OwnershipOwner,
+    ObjectKind,
     SetterAction,
-    TransferMode,
     default_ownership_policy,
     ownership_context_for_argument,
 )
@@ -23,20 +23,44 @@ from x2py.semantics.metadata import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_PROJECTION,
     ADDRESS_ROLE_RAW,
+    BIND_TARGET_METADATA,
     OPTIONAL_ABSENT_HANDLE_METADATA,
     PROJECTED_OUTPUT_METADATA,
     SCALAR_STORAGE_CATEGORY,
-    SNAPSHOT_TYPE_METADATA,
 )
 from x2py.semantics import models
 from x2py.semantics.native_array_handles import NativeArrayHandlePolicy, native_array_descriptor_kind
+from x2py.semantics.wrapper_policy import (
+    ArgumentPolicy,
+    OverloadArgumentPolicy,
+    OverloadMatchKind,
+    OverloadPolicy,
+    ClassInvocationKind,
+    ClassMethodKind,
+    ClassMethodPolicy,
+    ClassSurfacePolicy,
+    DerivedFieldPolicy,
+    DerivedTypePolicy,
+    FunctionWrapperPolicy,
+    NativeStatusErrorPolicy,
+    NativeStatusOutputPolicy,
+    OptionalMode,
+    PythonExceptionKind,
+    build_class_surface_policy,
+    build_callback_handoff_policy,
+    build_derived_field_policy,
+    build_derived_type_policy,
+    build_module_variable_policy,
+    build_module_overload_policy,
+    build_function_wrapper_policy,
+    derived_member_path_policies,
+    overload_builtin_scalar_family,
+)
+from x2py.semantics.wrapper_exports import complete_python_export_policy
 
 __all__ = ("complete_semantic_policies",)
 
 
-_UNSUPPORTED_SNAPSHOT_CONTRACT = (
-    "Snapshot[T] is not an active semantic .pyi contract; whole-object snapshots are future-only"
-)
 _POINTER_ALLOCATE_PERMISSION_VALUES = frozenset(
     {
         "allocate",
@@ -66,6 +90,8 @@ _POINTER_RESIZE_PERMISSION_VALUES = frozenset(
 
 def complete_semantic_policies(
     semantic_ir: models.SemanticModule | Iterable[models.SemanticModule],
+    *,
+    strict_wrapper_names: bool = False,
 ) -> list[models.SemanticModule]:
     """Complete policy decisions for semantic modules after parser-to-IR conversion.
 
@@ -80,7 +106,8 @@ def complete_semantic_policies(
     modules = list(semantic_ir) if not isinstance(semantic_ir, models.SemanticModule) else [semantic_ir]
     for module in modules:
         _complete_entry_export_policy(module)
-        _complete_ownership_policies(module)
+        complete_python_export_policy(module, strict_wrapper_names=strict_wrapper_names)
+        _complete_ownership_policies(module, strict_wrapper_names=strict_wrapper_names)
     return modules
 
 
@@ -111,7 +138,11 @@ def _entry_exports(declaration: object) -> object:
     raise TypeError(f"Unsupported semantic declaration: {type(declaration).__name__}")
 
 
-def _complete_ownership_policies(module: models.SemanticModule) -> models.SemanticModule:
+def _complete_ownership_policies(
+    module: models.SemanticModule,
+    *,
+    strict_wrapper_names: bool,
+) -> models.SemanticModule:
     """Attach resolved ownership decisions to a full semantic module.
 
     Raw semantic types such as ``Float64[:]`` do not carry enough context to
@@ -119,50 +150,137 @@ def _complete_ownership_policies(module: models.SemanticModule) -> models.Semant
     signatures are known and before ``ir2ast`` lowering.
     """
 
+    _complete_local_derived_type_identities(module)
     for variable in module.variables:
         _complete_variable(variable, OwnershipContext.module_variable())
         _complete_accessor_policies(variable, OwnershipContext.module_variable())
         _complete_module_variable_initializer(variable)
-        _block_unsupported_snapshot_contract(variable)
     for semantic_class in module.classes:
-        _complete_class(semantic_class)
+        class_scope = str(semantic_class.origin.native_scope or module.name)
+        _complete_class(semantic_class, f"{class_scope}.{semantic_class.name}")
+    derived_types = _complete_derived_type_graph_policies(module.classes)
+    _complete_class_surface_policies(
+        module.classes,
+        derived_types,
+        strict_wrapper_names=strict_wrapper_names,
+    )
+    class_targets = _class_root_target_names(module.classes)
+    polymorphic_variants = _polymorphic_variant_map(module.classes)
+    _complete_class_method_policies(
+        module.classes,
+        module.functions,
+        derived_types,
+        polymorphic_variants,
+    )
+    _complete_class_overload_policies(module.classes)
+    for variable in module.variables:
+        variable_scope = str(variable.origin.native_scope or module.name)
+        variable.metadata[models.RESOLVED_MODULE_VARIABLE_POLICY_METADATA] = build_module_variable_policy(
+            variable,
+            module_name=variable_scope,
+            derived_types=derived_types,
+        )
     for function in module.functions:
-        _complete_function(function)
+        function_scope = str(function.origin.native_scope or module.name)
+        native_name = str(function.native_name or function.name)
+        _complete_function(
+            function,
+            f"{function_scope}.{function.name}",
+            derived_types=derived_types,
+            module_export=native_name not in class_targets,
+            polymorphic_variants=polymorphic_variants,
+        )
     for overload_set in module.overload_sets:
+        native_dispatch_name = next(
+            (
+                str(procedure.metadata[models.FORTRAN_GENERIC_NAME_METADATA])
+                for procedure in overload_set.procedures
+                if procedure.metadata.get(models.FORTRAN_GENERIC_NAME_METADATA)
+            ),
+            overload_set.name,
+        )
         for procedure in overload_set.procedures:
-            _complete_function(procedure)
+            procedure_scope = str(procedure.origin.native_scope or module.name)
+            _complete_function(
+                procedure,
+                f"{procedure_scope}.{overload_set.name}.{procedure.name}",
+                derived_types=derived_types,
+                native_dispatch_name=native_dispatch_name,
+            )
+    overload_functions = {
+        f"{(procedure.origin.native_scope or module.name)!s}.{overload_set.name}.{procedure.name}": procedure
+        for overload_set in module.overload_sets
+        for procedure in overload_set.procedures
+    }
+    module.metadata[models.RESOLVED_MODULE_OVERLOAD_POLICIES_METADATA] = tuple(
+        _complete_overload_policy(
+            build_module_overload_policy(module, overload_set),
+            overload_functions,
+            require_uniform_receiver=False,
+        )
+        for overload_set in module.overload_sets
+    )
     module.metadata[models.POLICY_COMPLETION_PREPARED_METADATA] = True
     return module
 
 
-def _block_unsupported_snapshot_contract(variable: models.SemanticVariable) -> None:
-    """Turn stale Snapshot IR metadata into an explicit post-IR blocker."""
-    if not variable.semantic_type.metadata.get(SNAPSHOT_TYPE_METADATA):
-        return
-    decision = variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA]
-    blocked = _blocked_snapshot_decision(decision)
-    variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = blocked
-    variable.metadata[models.RESOLVED_GETTER_OWNERSHIP_POLICY_METADATA] = blocked
-    variable.metadata[models.RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA] = replace(
-        blocked,
-        setter_action=SetterAction.OMIT,
-    )
-    variable.semantic_type.metadata.pop(SNAPSHOT_TYPE_METADATA, None)
+def _complete_local_derived_type_identities(module: models.SemanticModule) -> None:
+    """Attach canonical native identities to unqualified local type references."""
+    identities: dict[str, set[tuple[str, str]]] = {}
+    scoped_identities: dict[tuple[str, str], set[tuple[str, str]]] = {}
+
+    def collect_class(semantic_class: models.SemanticClass) -> None:
+        identity = (
+            str(semantic_class.origin.native_scope or module.name),
+            str(semantic_class.native_name or semantic_class.name),
+        )
+        identities.setdefault(semantic_class.name, set()).add(identity)
+        scoped_identities.setdefault((identity[0], semantic_class.name), set()).add(identity)
+        for nested in semantic_class.classes:
+            collect_class(nested)
+
+    for semantic_class in module.classes:
+        collect_class(semantic_class)
+
+    def annotate(semantic_type: models.SemanticType | None, native_scope: str) -> None:
+        if semantic_type is None or models.EXTERNAL_TYPE_REF_METADATA in semantic_type.metadata:
+            return
+        matches = scoped_identities.get((native_scope, semantic_type.name), set())
+        if not matches:
+            matches = identities.get(semantic_type.name, set())
+        if len(matches) == 1:
+            semantic_type.metadata[models.RESOLVED_DERIVED_TYPE_IDENTITY_METADATA] = next(iter(matches))
+
+    def annotate_function(function: models.SemanticFunction) -> None:
+        native_scope = str(function.origin.native_scope or module.name)
+        for argument in function.arguments:
+            annotate(argument.semantic_type, native_scope)
+        annotate(function.return_type, native_scope)
+
+    def annotate_class(semantic_class: models.SemanticClass) -> None:
+        native_scope = str(semantic_class.origin.native_scope or module.name)
+        for field in semantic_class.fields:
+            annotate(field.semantic_type, native_scope)
+        for method in semantic_class.methods:
+            annotate_function(method)
+        for overload_set in semantic_class.overload_sets:
+            for procedure in overload_set.procedures:
+                annotate_function(procedure)
+        for nested in semantic_class.classes:
+            annotate_class(nested)
+
+    for variable in module.variables:
+        annotate(variable.semantic_type, str(variable.origin.native_scope or module.name))
+    for function in module.functions:
+        annotate_function(function)
+    for overload_set in module.overload_sets:
+        for procedure in overload_set.procedures:
+            annotate_function(procedure)
+    for semantic_class in module.classes:
+        annotate_class(semantic_class)
 
 
-def _blocked_snapshot_decision(decision: OwnershipDecision) -> OwnershipDecision:
-    return replace(
-        decision,
-        owner=OwnershipOwner.UNKNOWN,
-        transfer=TransferMode.BLOCKED,
-        destruction=DestructionPolicy.BLOCKED,
-        borrowed=False,
-        blocker=_UNSUPPORTED_SNAPSHOT_CONTRACT,
-        reason="whole-object snapshots are not part of the active contract",
-    )
-
-
-def _complete_class(semantic_class: models.SemanticClass) -> None:
+def _complete_class(semantic_class: models.SemanticClass, owner_path: str) -> None:
     class_type = models.SemanticType(name=semantic_class.name, dtype=semantic_class.name)
     semantic_class.metadata[models.RESOLVED_CLASS_INSTANCE_POLICY_METADATA] = (
         default_ownership_policy.decide_semantic_type(class_type, OwnershipContext.result())
@@ -174,19 +292,572 @@ def _complete_class(semantic_class: models.SemanticClass) -> None:
     for field in semantic_class.fields:
         _complete_variable(field, OwnershipContext.field())
         _complete_accessor_policies(field, OwnershipContext.field())
+        field.metadata[models.RESOLVED_DERIVED_FIELD_POLICY_METADATA] = build_derived_field_policy(
+            field,
+            owner_path=owner_path,
+        )
+    semantic_class.metadata[models.RESOLVED_DERIVED_TYPE_POLICY_METADATA] = build_derived_type_policy(
+        semantic_class,
+        owner_path=owner_path,
+    )
     for nested in semantic_class.classes:
-        _complete_class(nested)
+        _complete_class(nested, f"{owner_path}.{nested.name}")
+
+
+def _derived_type_policy_map(
+    classes: list[models.SemanticClass],
+) -> dict[tuple[str, str], DerivedTypePolicy]:
+    """Return completed type policies by canonical semantic identity."""
+    policies: dict[tuple[str, str], DerivedTypePolicy] = {}
+
+    def collect(semantic_class: models.SemanticClass) -> None:
+        policy = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+        if isinstance(policy, DerivedTypePolicy):
+            policies[policy.type_identity] = policy
+        for nested in semantic_class.classes:
+            collect(nested)
+
+    for semantic_class in classes:
+        collect(semantic_class)
+    return policies
+
+
+def _complete_derived_type_graph_policies(
+    classes: list[models.SemanticClass],
+) -> dict[tuple[str, str], DerivedTypePolicy]:
+    """Validate finite derived member graphs after every local type is known."""
+    policies = _derived_type_policy_map(classes)
+
+    def complete(semantic_class: models.SemanticClass) -> None:
+        policy = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+        if isinstance(policy, DerivedTypePolicy):
+            _paths, graph_blockers = derived_member_path_policies(policy, policies)
+            blockers = tuple(dict.fromkeys((*policy.blockers, *graph_blockers)))
+            completed = replace(policy, supported=not blockers, blockers=blockers)
+            semantic_class.metadata[models.RESOLVED_DERIVED_TYPE_POLICY_METADATA] = completed
+            policies[completed.type_identity] = completed
+        for nested in semantic_class.classes:
+            complete(nested)
+
+    for semantic_class in classes:
+        complete(semantic_class)
+    return policies
+
+
+def _complete_class_surface_policies(
+    classes: list[models.SemanticClass],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    *,
+    strict_wrapper_names: bool,
+) -> None:
+    """Complete class orchestration after every derived identity is known."""
+    identities = {
+        semantic_class.name: policy.type_identity
+        for semantic_class in _iter_semantic_classes(classes)
+        for policy in (semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA),)
+        if isinstance(policy, DerivedTypePolicy)
+    }
+    for semantic_class in _iter_semantic_classes(classes):
+        derived = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+        if not isinstance(derived, DerivedTypePolicy):
+            continue
+        surface = build_class_surface_policy(
+            semantic_class,
+            owner_path=derived.owner_path,
+            derived=derived,
+            class_identities=identities,
+            strict_wrapper_names=strict_wrapper_names,
+        )
+        completed_derived = replace(derived, fields=surface.effective_fields)
+        semantic_class.metadata[models.RESOLVED_DERIVED_TYPE_POLICY_METADATA] = completed_derived
+        derived_types[completed_derived.type_identity] = completed_derived
+        fields_by_owner = {field.owner_path: field for field in surface.effective_fields}
+        for field in semantic_class.fields:
+            owner_path = f"{derived.owner_path}.{field.name}"
+            if owner_path in fields_by_owner:
+                field.metadata[models.RESOLVED_DERIVED_FIELD_POLICY_METADATA] = fields_by_owner[owner_path]
+        semantic_class.metadata[models.RESOLVED_CLASS_SURFACE_POLICY_METADATA] = surface
+
+    surfaces = {
+        surface.type_identity: (semantic_class, surface)
+        for semantic_class in _iter_semantic_classes(classes)
+        for surface in (semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA),)
+        if isinstance(surface, ClassSurfacePolicy)
+    }
+
+    def effective_fields(
+        identity: tuple[str, str],
+        active: frozenset[tuple[str, str]] = frozenset(),
+    ) -> tuple[DerivedFieldPolicy, ...]:
+        """Compose inherited fields once while guarding malformed base cycles."""
+        if identity in active:
+            return ()
+        entry = surfaces.get(identity)
+        if entry is None:
+            return ()
+        _semantic_class, surface = entry
+        inherited = tuple(
+            field for base in surface.base_identities for field in effective_fields(base, active | {identity})
+        )
+        derived = derived_types[identity]
+        return (*inherited, *derived.fields)
+
+    for identity, (semantic_class, surface) in surfaces.items():
+        semantic_class.metadata[models.RESOLVED_CLASS_SURFACE_POLICY_METADATA] = replace(
+            surface,
+            effective_fields=effective_fields(identity),
+        )
+
+
+def _complete_class_method_policies(
+    classes: list[models.SemanticClass],
+    module_functions: list[models.SemanticFunction],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Complete methods once from class policy, type graphs, and dispatch sets."""
+    type_bound_targets = _type_bound_target_names(module_functions)
+    module_targets = {str(function.native_name or function.name) for function in module_functions}
+    for semantic_class in _iter_semantic_classes(classes):
+        _complete_one_class_method_policy(
+            semantic_class,
+            type_bound_targets,
+            module_targets,
+            derived_types,
+            polymorphic_variants,
+        )
+
+
+def _type_bound_target_names(module_functions: list[models.SemanticFunction]) -> set[str]:
+    """Return native names explicitly marked as type-bound root targets."""
+    return {
+        str(function.native_name or function.name)
+        for function in module_functions
+        if function.metadata.get("fortran_type_bound_target")
+    }
+
+
+def _complete_one_class_method_policy(
+    semantic_class: models.SemanticClass,
+    type_bound_targets: set[str],
+    module_targets: set[str],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Complete ordinary and overloaded calls for one prepared class surface."""
+    derived = semantic_class.metadata.get(models.RESOLVED_DERIVED_TYPE_POLICY_METADATA)
+    surface = semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA)
+    if not isinstance(derived, DerivedTypePolicy) or not isinstance(surface, ClassSurfacePolicy):
+        return
+    native_bindings = {
+        str(method.native_name or method.name): _native_type_bound_binding_name(method)
+        for method in semantic_class.methods
+        if method.name != "__init__"
+    }
+    completed_methods = _completed_class_method_invocations(
+        surface,
+        native_bindings,
+        type_bound_targets,
+        module_targets,
+    )
+    semantic_class.metadata[models.RESOLVED_CLASS_SURFACE_POLICY_METADATA] = replace(
+        surface,
+        methods=completed_methods,
+    )
+    _complete_concrete_class_methods(
+        semantic_class,
+        derived,
+        completed_methods,
+        derived_types,
+        polymorphic_variants,
+    )
+    _complete_class_overload_methods(
+        semantic_class,
+        derived,
+        type_bound_targets,
+        module_targets,
+        derived_types,
+        polymorphic_variants,
+    )
+
+
+def _completed_class_method_invocations(
+    surface: ClassSurfacePolicy,
+    native_bindings: dict[str, str],
+    type_bound_targets: set[str],
+    module_targets: set[str],
+) -> tuple[ClassMethodPolicy, ...]:
+    """Select direct or type-bound invocation for every ordinary method."""
+    return tuple(
+        replace(
+            method,
+            invocation=ClassInvocationKind.TYPE_BOUND,
+            type_bound_name=native_bindings[method.native_name],
+        )
+        if _uses_type_bound_invocation(method, type_bound_targets, module_targets)
+        else method
+        for method in surface.methods
+    )
+
+
+def _complete_concrete_class_methods(
+    semantic_class: models.SemanticClass,
+    derived: DerivedTypePolicy,
+    completed_methods: tuple[ClassMethodPolicy, ...],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Attach completed function policy to constructors and ordinary methods."""
+    calls = {method.owner_path: method for method in completed_methods}
     for method in semantic_class.methods:
-        _complete_function(method)
-    for overload_set in semantic_class.overload_sets:
-        for procedure in overload_set.procedures:
-            _complete_function(procedure)
+        owner_path = f"{derived.owner_path}.{method.name}"
+        if method.name == "__init__":
+            if method.metadata.get("bind_target"):
+                _complete_function(
+                    method,
+                    owner_path,
+                    derived_types=derived_types,
+                    module_export=False,
+                    polymorphic_variants=polymorphic_variants,
+                )
+            continue
+        _complete_function(
+            method,
+            owner_path,
+            derived_types=derived_types,
+            class_call=calls.get(owner_path),
+            polymorphic_variants=polymorphic_variants,
+        )
 
 
-def _complete_function(function: models.SemanticFunction) -> None:
+def _complete_class_overload_methods(
+    semantic_class: models.SemanticClass,
+    derived: DerivedTypePolicy,
+    type_bound_targets: set[str],
+    module_targets: set[str],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Complete every concrete overload through one typed call leaf."""
+    generic_bindings = {
+        str(procedure.native_name or procedure.name): overload.name
+        for overload in semantic_class.overload_sets
+        if overload.name != "__init__"
+        for procedure in overload.procedures
+    }
+    for overload in semantic_class.overload_sets:
+        for procedure in overload.procedures:
+            _complete_one_class_overload_method(
+                overload,
+                procedure,
+                derived,
+                generic_bindings,
+                type_bound_targets,
+                module_targets,
+                derived_types,
+                polymorphic_variants,
+            )
+
+
+def _complete_one_class_overload_method(
+    overload: models.ProcedureOverloadSet,
+    procedure: models.SemanticFunction,
+    derived: DerivedTypePolicy,
+    generic_bindings: dict[str, str],
+    type_bound_targets: set[str],
+    module_targets: set[str],
+    derived_types: dict[tuple[str, str], DerivedTypePolicy],
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]],
+) -> None:
+    """Complete one overload candidate and its native dispatch spelling."""
+    owner_path = f"{derived.owner_path}.{overload.name}.{procedure.name}"
+    native_name = str(procedure.native_name or procedure.name)
+    passed_position = _class_overload_passed_object_position(procedure)
+    type_bound = native_name in type_bound_targets or (
+        passed_position is not None and native_name not in module_targets
+    )
+    call = _class_overload_call_policy(
+        overload,
+        procedure,
+        owner_path,
+        type_bound=type_bound,
+        type_bound_name=generic_bindings.get(native_name) if type_bound else None,
+    )
+    overload_kind = str(procedure.metadata.get(models.OVERLOAD_KIND_METADATA, "generic"))
+    native_dispatch_name = (
+        str(procedure.metadata.get(models.FORTRAN_GENERIC_NAME_METADATA, overload.name))
+        if overload_kind != "generic"
+        else None
+    )
+    _complete_function(
+        procedure,
+        owner_path,
+        derived_types=derived_types,
+        class_call=call,
+        polymorphic_variants=polymorphic_variants,
+        native_dispatch_name=native_dispatch_name,
+    )
+
+
+def _uses_type_bound_invocation(
+    method: ClassMethodPolicy,
+    explicit_targets: set[str],
+    module_targets: set[str],
+) -> bool:
+    """Restore generated-.pyi type-bound calls when their private root target is absent."""
+    if method.kind is ClassMethodKind.STATIC:
+        return False
+    return method.native_name in explicit_targets or method.native_name not in module_targets
+
+
+def _native_type_bound_binding_name(method: models.SemanticMethod) -> str:
+    """Recover the native binding hidden by Python keyword normalization."""
+    name = str(method.name)
+    if method.metadata.get(BIND_TARGET_METADATA) and name.endswith("_"):
+        candidate = name[:-1]
+        if keyword.iskeyword(candidate):
+            return candidate
+    return name
+
+
+def _complete_class_overload_policies(classes: list[models.SemanticClass]) -> None:
+    """Attach exact runtime predicates after concrete calls are completed."""
+    for semantic_class in _iter_semantic_classes(classes):
+        surface = semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA)
+        if not isinstance(surface, ClassSurfacePolicy):
+            continue
+        functions = {
+            f"{surface.owner_path}.{overload.name}.{procedure.name}": procedure
+            for overload in semantic_class.overload_sets
+            for procedure in overload.procedures
+        }
+        blockers = list(surface.blockers)
+        overloads = []
+        for overload in surface.overloads:
+            completed = _complete_overload_policy(overload, functions, require_uniform_receiver=True)
+            overloads.append(completed)
+            blockers.extend(completed.blockers)
+        semantic_class.metadata[models.RESOLVED_CLASS_SURFACE_POLICY_METADATA] = replace(
+            surface,
+            overloads=tuple(overloads),
+            supported=not blockers,
+            blockers=tuple(dict.fromkeys(blockers)),
+        )
+
+
+def _complete_overload_policy(
+    overload: OverloadPolicy,
+    functions: dict[str, models.SemanticFunction],
+    *,
+    require_uniform_receiver: bool,
+) -> OverloadPolicy:
+    """Attach exact candidate predicates after all concrete calls are complete."""
+    blockers = list(overload.blockers)
+    candidates = []
+    for candidate in overload.candidates:
+        function = functions[candidate.owner_path]
+        function_policy = function.metadata.get(models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA)
+        if not isinstance(function_policy, FunctionWrapperPolicy):
+            blockers.append(f"overload candidate {candidate.owner_path!r} has no completed call policy")
+            candidates.append(candidate)
+            continue
+        if (
+            function_policy.class_call is not None
+            and function_policy.class_call.invocation is ClassInvocationKind.TYPE_BOUND
+            and function_policy.class_call.type_bound_name is None
+        ):
+            blockers.append(f"overload candidate {candidate.owner_path!r} has no accessible type-bound binding")
+        matches, match_blockers = _overload_matches(function_policy)
+        blockers.extend(f"overload candidate {candidate.owner_path!r}: {reason}" for reason in match_blockers)
+        candidates.append(
+            replace(
+                candidate,
+                arguments=matches,
+                passed_object=(
+                    function_policy.class_call is not None
+                    and function_policy.class_call.passed_object_position is not None
+                ),
+            )
+        )
+    if require_uniform_receiver and len({candidate.passed_object for candidate in candidates}) > 1:
+        blockers.append(f"overload {overload.owner_path!r} mixes instance and static candidates")
+    signatures = tuple(_overload_candidate_signature(candidate.arguments) for candidate in candidates)
+    if len(set(signatures)) != len(signatures):
+        blockers.append(f"overload {overload.owner_path!r} has indistinguishable Python signatures")
+    builtin_signatures = tuple(_overload_candidate_builtin_signature(candidate.arguments) for candidate in candidates)
+    if len(set(builtin_signatures)) != len(builtin_signatures):
+        blockers.append(f"overload {overload.owner_path!r} has overlapping reflected scalar signatures")
+    return replace(overload, candidates=tuple(candidates), blockers=tuple(dict.fromkeys(blockers)))
+
+
+def _overload_candidate_signature(arguments: tuple[OverloadArgumentPolicy, ...]) -> tuple:
+    """Return only runtime-relevant facts for ambiguity detection."""
+    return tuple(
+        (
+            argument.kind,
+            argument.optional,
+            argument.semantic_type_name,
+            argument.rank,
+            argument.derived_type_identity,
+        )
+        for argument in arguments
+    )
+
+
+def _overload_candidate_builtin_signature(arguments: tuple[OverloadArgumentPolicy, ...]) -> tuple:
+    """Normalize reflected Python scalar domains for overlap detection."""
+    return tuple(
+        (
+            argument.kind,
+            argument.optional,
+            (
+                overload_builtin_scalar_family(argument.semantic_type_name)
+                if argument.accept_builtin_scalar
+                else argument.semantic_type_name
+            ),
+            argument.rank,
+            argument.derived_type_identity,
+        )
+        for argument in arguments
+    )
+
+
+def _overload_matches(
+    function: FunctionWrapperPolicy,
+) -> tuple[tuple[OverloadArgumentPolicy, ...], tuple[str, ...]]:
+    """Translate one completed call signature into exact Python predicates."""
+    passed_position = function.class_call.passed_object_position if function.class_call is not None else None
+    reflected = bool(function.class_call is not None and function.class_call.passed_object_position not in {None, 0})
+    matches = []
+    blockers = []
+    for argument in function.arguments:
+        if not argument.python_visible or argument.native_position == passed_position:
+            continue
+        match = _overload_argument_match(argument, accept_builtin_scalar=reflected)
+        if match is None:
+            blockers.append(
+                f"argument {argument.python_name!r} has no exact overload predicate for {argument.ownership.kind.value}"
+            )
+        else:
+            matches.append(match)
+    return tuple(matches), tuple(blockers)
+
+
+def _overload_argument_match(
+    argument: ArgumentPolicy,
+    *,
+    accept_builtin_scalar: bool,
+) -> OverloadArgumentPolicy | None:
+    """Return one typed match record without embedding generated source text."""
+    kind = argument.ownership.kind
+    match_kind = None
+    derived_identity = None
+    if kind is ObjectKind.SCALAR and argument.semantic_type_name in SEMANTIC_SCALAR_TYPE_NAMES:
+        match_kind = OverloadMatchKind.NUMPY_SCALAR
+    elif kind is ObjectKind.STRING:
+        match_kind = OverloadMatchKind.STRING
+    elif kind is ObjectKind.NUMPY_ARRAY and argument.array is not None:
+        match_kind = OverloadMatchKind.NUMPY_ARRAY
+    elif kind is ObjectKind.DERIVED_TYPE and argument.derived is not None:
+        match_kind = OverloadMatchKind.DERIVED
+        derived_identity = argument.derived.type_identity
+    if match_kind is None:
+        return None
+    return OverloadArgumentPolicy(
+        python_name=argument.python_name,
+        kind=match_kind,
+        optional=argument.optional_mode not in {OptionalMode.REQUIRED, OptionalMode.REQUIRED_DESCRIPTOR},
+        semantic_type_name=argument.semantic_type_name,
+        rank=argument.rank,
+        derived_type_identity=derived_identity,
+        accept_builtin_scalar=accept_builtin_scalar and match_kind is OverloadMatchKind.NUMPY_SCALAR,
+    )
+
+
+def _iter_semantic_classes(classes: list[models.SemanticClass]):
+    """Yield one stable depth-first class sequence for policy completion."""
+    for semantic_class in classes:
+        yield semantic_class
+        yield from _iter_semantic_classes(semantic_class.classes)
+
+
+def _class_root_target_names(classes: list[models.SemanticClass]) -> frozenset[str]:
+    """Return native procedures consumed exclusively by completed class descriptors."""
+    targets = {
+        method.native_name or method.name
+        for semantic_class in _iter_semantic_classes(classes)
+        for method in semantic_class.methods
+        if method.name != "__init__" or method.metadata.get("bind_target")
+    }
+    return frozenset(str(target) for target in targets)
+
+
+def _polymorphic_variant_map(
+    classes: list[models.SemanticClass],
+) -> dict[tuple[str, str], tuple[tuple[str, str], ...]]:
+    """Enumerate known extensions from completed base identities, most-derived first."""
+    surfaces = tuple(
+        surface
+        for semantic_class in _iter_semantic_classes(classes)
+        for surface in (semantic_class.metadata.get(models.RESOLVED_CLASS_SURFACE_POLICY_METADATA),)
+        if isinstance(surface, ClassSurfacePolicy)
+    )
+    bases = {surface.type_identity: surface.base_identities for surface in surfaces}
+
+    def extends(candidate: tuple[str, str], base: tuple[str, str]) -> bool:
+        return candidate == base or any(extends(parent, base) for parent in bases.get(candidate, ()))
+
+    identities = tuple(surface.type_identity for surface in surfaces)
+    return {
+        base: tuple(candidate for candidate in reversed(identities) if extends(candidate, base)) for base in identities
+    }
+
+
+def _class_overload_call_policy(
+    overload: models.ProcedureOverloadSet,
+    procedure: models.SemanticFunction,
+    owner_path: str,
+    *,
+    type_bound: bool,
+    type_bound_name: str | None,
+) -> ClassMethodPolicy:
+    """Complete one concrete class-overload call from parser-owned metadata."""
+    passed = _class_overload_passed_object_position(procedure)
+    return ClassMethodPolicy(
+        owner_path=owner_path,
+        python_name=str(procedure.metadata.get(models.PYTHON_METHOD_NAME_METADATA, overload.name)),
+        native_name=str(procedure.native_name or procedure.name),
+        kind=ClassMethodKind.INSTANCE if passed is not None else ClassMethodKind.STATIC,
+        passed_object_position=passed,
+        public=True,
+        invocation=ClassInvocationKind.TYPE_BOUND if type_bound else ClassInvocationKind.MODULE_PROCEDURE,
+        type_bound_name=type_bound_name,
+    )
+
+
+def _class_overload_passed_object_position(procedure: models.SemanticFunction) -> int | None:
+    """Return one validated parser-owned passed-object position."""
+    position = procedure.metadata.get(models.PYTHON_BOUND_POSITION_METADATA)
+    return position if isinstance(position, int) and not isinstance(position, bool) else None
+
+
+def _complete_function(
+    function: models.SemanticFunction,
+    owner_path: str,
+    *,
+    derived_types: dict[tuple[str, str], DerivedTypePolicy] | None = None,
+    class_call: ClassMethodPolicy | None = None,
+    module_export: bool | None = None,
+    polymorphic_variants: dict[tuple[str, str], tuple[tuple[str, str], ...]] | None = None,
+    native_dispatch_name: str | None = None,
+) -> None:
     _complete_callable_address_policy(function)
     for argument in function.arguments:
-        _complete_variable(argument, ownership_context_for_argument(function, argument))
+        _complete_variable(
+            argument,
+            ownership_context_for_argument(function, argument),
+            owner_path=f"{owner_path}.{argument.name}",
+        )
     if function.return_type is not None:
         decision = default_ownership_policy.decide_semantic_type(function.return_type, OwnershipContext.result())
         function.metadata[models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA] = decision
@@ -194,6 +865,135 @@ def _complete_function(function: models.SemanticFunction) -> None:
     else:
         function.metadata.pop(models.RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA, None)
         function.metadata.pop(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA, None)
+    _complete_native_status_error_policy(function, owner_path)
+    function.metadata[models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA] = build_function_wrapper_policy(
+        function,
+        owner_path=owner_path,
+        derived_types=derived_types,
+        class_call=class_call,
+        module_export=module_export,
+        polymorphic_variants=polymorphic_variants,
+        native_dispatch_name=native_dispatch_name,
+    )
+
+
+def _complete_native_status_error_policy(function: models.SemanticFunction, owner_path: str) -> None:
+    """Validate and complete one native-status-to-Python-exception decision."""
+    raw_policy = function.metadata.get(models.RUNTIME_STATUS_ERROR_METADATA)
+    if raw_policy is None:
+        function.metadata.pop(models.RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA, None)
+        return
+    if not isinstance(raw_policy, dict):
+        raise ValueError(f"Function {function.name!r} has invalid raises metadata")
+
+    success = raw_policy.get("success", 0)
+    if not isinstance(success, int) or isinstance(success, bool):
+        raise ValueError(f"Function {function.name!r} raises success value must be an integer")
+    status = _native_status_output(function, owner_path, raw_policy.get("status"), subject="status")
+    if status.rank != 0 or not _is_scalar_integer_status(status.semantic_type_name):
+        raise ValueError(
+            f"Function {function.name!r} raises status target {status.name!r} must be a scalar integer hidden output"
+        )
+
+    message_name = raw_policy.get("message")
+    message = None
+    if message_name is not None:
+        message = _native_status_output(function, owner_path, message_name, subject="message")
+        if message.rank != 0 or message.semantic_type_name != "String":
+            raise ValueError(
+                f"Function {function.name!r} raises message target {message.name!r} "
+                "must be a scalar string hidden output"
+            )
+        if message.owner_path == status.owner_path:
+            raise ValueError(f"Function {function.name!r} raises status and message targets must be distinct")
+
+    function.metadata[models.RESOLVED_RUNTIME_STATUS_ERROR_POLICY_METADATA] = NativeStatusErrorPolicy(
+        status=status,
+        message=message,
+        success=success,
+        exception_kind=PythonExceptionKind.RUNTIME_ERROR,
+    )
+
+
+def _native_status_output(
+    function: models.SemanticFunction,
+    owner_path: str,
+    output_name: object,
+    *,
+    subject: str,
+) -> NativeStatusOutputPolicy:
+    """Return one completed hidden output selected by a runtime policy."""
+    if not isinstance(output_name, str) or not output_name:
+        raise ValueError(f"Function {function.name!r} raises {subject} target must name a hidden output")
+    mappings = tuple(
+        mapping
+        for mapping in function.projection
+        if (
+            mapping.python_position is None
+            and isinstance(mapping.result_position, int)
+            and output_name in {mapping.python_name, mapping.native_name}
+        )
+    )
+    if len(mappings) != 1:
+        raise ValueError(f"Function {function.name!r} raises {subject} target must name a hidden output")
+    mapping = mappings[0]
+    argument = next((item for item in function.arguments if item.name == mapping.python_name), None)
+    if argument is None or not isinstance(mapping.native_position, int):
+        raise ValueError(f"Function {function.name!r} raises {subject} target must name a hidden output")
+    decision = argument.metadata.get(models.RESOLVED_OWNERSHIP_POLICY_METADATA)
+    if not isinstance(decision, OwnershipDecision) or not _is_compatible_status_handoff(decision):
+        raise ValueError(
+            f"Function {function.name!r} raises {subject} target {output_name!r} "
+            "has no compatible completed hidden-output handoff"
+        )
+    semantic_type = argument.semantic_type
+    return NativeStatusOutputPolicy(
+        owner_path=f"{owner_path}.{argument.name}",
+        name=argument.name,
+        native_name=mapping.native_name or argument.name,
+        native_position=mapping.native_position,
+        result_position=mapping.result_position,
+        semantic_type_name=semantic_type.name,
+        rank=int(semantic_type.rank or 0),
+        character_length=_fixed_character_length(semantic_type),
+    )
+
+
+def _is_compatible_status_handoff(decision: OwnershipDecision) -> bool:
+    expected_action = {
+        ObjectKind.SCALAR: CodegenAction.DIRECT_VALUE,
+        ObjectKind.STRING: CodegenAction.COPY_OUT,
+    }.get(decision.kind)
+    return bool(decision.projects_result and not decision.python_visible and decision.codegen_action is expected_action)
+
+
+def _is_scalar_integer_status(semantic_type_name: str) -> bool:
+    return semantic_type_name in {
+        "Byte",
+        "CEnum",
+        "Int",
+        "Int8",
+        "Int16",
+        "Int32",
+        "Int64",
+        "SizeT",
+        "UInt",
+        "UInt8",
+        "UInt16",
+        "UInt32",
+        "UInt64",
+    }
+
+
+def _fixed_character_length(semantic_type: models.SemanticType) -> int | None:
+    if semantic_type.rank != 0:
+        return None
+    value = semantic_type.metadata.get("fortran_character_length")
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value
+    if isinstance(value, str) and value.strip().isdigit() and int(value.strip()) > 0:
+        return int(value.strip())
+    return None
 
 
 def _complete_native_array_handle_result_policy(
@@ -264,7 +1064,11 @@ def _native_array_handle_policy(
         target_lifetime=_native_array_target_lifetime(descriptor_kind, handle_kind, semantic_type, blocker),
         destroy_behavior=_native_array_destroy_behavior(handle_kind, blocker),
         to_numpy=to_numpy,
-        descriptor_interop=_native_array_descriptor_interop_requirement(descriptor_kind, handle_kind),
+        descriptor_interop=_native_array_descriptor_interop_requirement(
+            descriptor_kind,
+            handle_kind,
+            semantic_type,
+        ),
         nullable=bool(decision.nullable or optional_absent),
         optional_absent=optional_absent,
         storage_mode=decision.storage_mode.value,
@@ -438,8 +1242,8 @@ def _native_array_to_numpy_policy(
         return _native_array_pointer_to_numpy_policy(semantic_type)
     if decision.is_blocked:
         return "unsupported"
-    if handle_kind == "borrowed_module_descriptor" and not decision.borrowed:
-        return "read_only_detached_copy"
+    if handle_kind == "borrowed_module_descriptor" and not semantic_type.metadata.get("aliased"):
+        return "descriptor_view"
     return "borrowed_view"
 
 
@@ -448,18 +1252,8 @@ def _native_array_pointer_to_numpy_policy(semantic_type: models.SemanticType) ->
     if not pointer_policy:
         return "unsupported"
     if _pointer_policy_value(pointer_policy, "contiguity") == "contiguous":
-        if _pointer_policy_requests_copy_extraction(pointer_policy):
-            return "copy_only"
         return "contiguous_view"
     return "descriptor_view"
-
-
-def _pointer_policy_requests_copy_extraction(policy: dict[str, object]) -> bool:
-    return (
-        _pointer_policy_value(policy, "transfer") == "snapshot_copy"
-        or _pointer_policy_value(policy, "aliasing") == "independent_copy"
-        or _pointer_policy_value(policy, "mutability") == "copy"
-    )
 
 
 def _native_array_handle_operations(
@@ -475,7 +1269,9 @@ def _native_array_handle_operations(
         if handle_kind in {"borrowed_module_descriptor", "borrowed_field_descriptor", "owned_result_descriptor"} or (
             context.is_argument and context.writes_argument
         ):
-            operations.update({"deallocate", "resize"})
+            operations.add("deallocate")
+            if not _is_deferred_character_array(semantic_type):
+                operations.add("resize")
         return tuple(sorted(operations))
     operations = {"associated", "nullify", "to_numpy"}
     pointer_policy = _pointer_policy_metadata(semantic_type)
@@ -488,9 +1284,24 @@ def _native_array_handle_operations(
     return tuple(sorted(operations))
 
 
-def _native_array_descriptor_interop_requirement(descriptor_kind: str, handle_kind: str) -> str:
+def _is_deferred_character_array(semantic_type: models.SemanticType) -> bool:
+    """Return whether shape mutation also requires a runtime character length."""
+    return semantic_type.name == "String" and semantic_type.metadata.get("fortran_character_length") == ":"
+
+
+def _native_array_descriptor_interop_requirement(
+    descriptor_kind: str,
+    handle_kind: str,
+    semantic_type: models.SemanticType,
+) -> str:
     if descriptor_kind == "allocatable" and handle_kind == "owned_result_descriptor":
         return "owned_allocatable_c_descriptor"
+    if (
+        descriptor_kind == "allocatable"
+        and handle_kind == "borrowed_module_descriptor"
+        and not semantic_type.metadata.get("aliased")
+    ):
+        return "module_allocatable_c_descriptor"
     if descriptor_kind == "pointer" and handle_kind != "unsupported":
         return "pointer_c_descriptor"
     return "none"
@@ -536,6 +1347,7 @@ def _native_array_handle_blocker(
 
 def _complete_callable_address_policy(function: models.SemanticFunction) -> None:
     """Validate Python/native address boundaries and complete scalar projections."""
+    _complete_hidden_scalar_output_projections(function)
     visible_scalar_names = {
         argument.name for argument in function.arguments if _is_visible_extent_source(argument.semantic_type)
     }
@@ -554,6 +1366,20 @@ def _complete_callable_address_policy(function: models.SemanticFunction) -> None
             visible_scalar_names=visible_scalar_names,
         )
     _complete_native_address_projections(function)
+
+
+def _complete_hidden_scalar_output_projections(function: models.SemanticFunction) -> None:
+    """Complete every primitive hidden ``Return(...)`` as address storage."""
+    arguments_by_name = {argument.name: argument for argument in function.arguments}
+    for mapping in function.projection:
+        if mapping.python_position is not None or mapping.result_position is None:
+            continue
+        if mapping.value_kind:
+            continue
+        argument = arguments_by_name.get(mapping.python_name)
+        if argument is None or not _is_primitive_scalar_value(argument.semantic_type, allow_completed_projection=True):
+            continue
+        _apply_scalar_address_projection(argument)
 
 
 def _complete_native_address_projections(function: models.SemanticFunction) -> None:
@@ -698,10 +1524,15 @@ def _is_resolved_extent(value: object, visible_scalar_names: set[str]) -> bool:
     return names <= visible_scalar_names
 
 
-def _complete_variable(variable: models.SemanticVariable, context: OwnershipContext) -> None:
+def _complete_variable(
+    variable: models.SemanticVariable,
+    context: OwnershipContext,
+    *,
+    owner_path: str | None = None,
+) -> None:
     decision = default_ownership_policy.decide_semantic_variable(variable, context)
     variable.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = decision
-    _complete_callable_policy(variable.semantic_type)
+    _complete_prototype_reference_policy(variable.semantic_type, owner_path=owner_path or variable.name)
     _complete_native_array_handle_variable_policy(variable, context)
 
 
@@ -778,8 +1609,12 @@ def _is_constant(variable: models.SemanticVariable) -> bool:
     return any(constraint.name == "Constant" for constraint in variable.semantic_type.constraints)
 
 
-def _complete_callable_policy(semantic_type: models.SemanticType) -> None:
-    if semantic_type.name != "Callable":
+def _complete_prototype_reference_policy(
+    semantic_type: models.SemanticType,
+    *,
+    owner_path: str,
+) -> None:
+    if semantic_type.storage is None or semantic_type.storage.kind != "callback":
         return
 
     visible_scalar_names: set[str] = set()
@@ -790,60 +1625,52 @@ def _complete_callable_policy(semantic_type: models.SemanticType) -> None:
             for argument in callback_arguments
             if isinstance(argument, models.SemanticArgument) and _is_visible_extent_source(argument.semantic_type)
         }
-        for argument in callback_arguments:
+        for index, argument in enumerate(callback_arguments):
             if isinstance(argument, models.SemanticArgument):
                 _validate_callback_argument_contract(argument)
                 _validate_raw_address_type(
                     argument.semantic_type,
-                    owner="Callable",
+                    owner="prototype",
                     item=argument.name,
                     visible_scalar_names=visible_scalar_names,
                 )
                 _complete_variable(
                     argument,
                     _callback_argument_ownership_context(argument),
+                    owner_path=f"{owner_path}.callback_arg_{index}",
                 )
 
     return_type = semantic_type.metadata.get("return")
     if isinstance(return_type, models.SemanticType) and return_type.name != "None":
         _validate_raw_address_type(
             return_type,
-            owner="Callable",
+            owner="prototype",
             item="return",
             visible_scalar_names=visible_scalar_names,
         )
         decision = default_ownership_policy.decide_semantic_type(return_type, OwnershipContext.result())
         return_type.metadata[models.RESOLVED_OWNERSHIP_POLICY_METADATA] = decision
+    semantic_type.metadata[models.RESOLVED_CALLBACK_POLICY_METADATA] = build_callback_handoff_policy(
+        semantic_type,
+        owner_path=owner_path,
+    )
 
 
 def _callback_argument_ownership_context(argument: models.SemanticArgument) -> OwnershipContext:
     if bool(getattr(argument.origin, "metadata", {}).get("value")):
         return OwnershipContext.argument(reads_argument=True, writes_argument=False)
-    access = argument.metadata.get(models.CALLBACK_DECLARATION_ACCESS_METADATA, "read")
-    match access:
-        case "write":
-            return OwnershipContext.argument(reads_argument=False, writes_argument=True)
-        case "readwrite" | "unspecified":
-            return OwnershipContext.argument(reads_argument=True, writes_argument=True)
-        case _:
-            return OwnershipContext.argument(reads_argument=True, writes_argument=False)
+    return OwnershipContext.argument(reads_argument=True, writes_argument=True)
 
 
 def _validate_callback_argument_contract(argument: models.SemanticArgument) -> None:
     semantic_type = argument.semantic_type
     if semantic_type.name != "String":
         return
-    access = argument.metadata.get(models.CALLBACK_DECLARATION_ACCESS_METADATA, "read")
-    if access == "read":
-        return
     if bool(getattr(argument.origin, "metadata", {}).get("value")):
         return
     if _is_scalar_string_storage(semantic_type):
         return
-    raise ValueError(
-        "Writable callback strings require mutable scalar character storage; "
-        "use String[n][()] inside Out(...), InOut(...), or missing-intent callback arguments"
-    )
+    raise ValueError("Reference callback strings require mutable scalar character storage")
 
 
 def _is_scalar_string_storage(semantic_type: models.SemanticType) -> bool:

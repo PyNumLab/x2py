@@ -20,7 +20,6 @@ merged extension:
 python3 -m x2py \
   tests/data/fortran/wrapper/first_api.f90 \
   tests/data/fortran/wrapper/second_api.f90 \
-  --wrap \
   --out-dir build/multi_api \
   --json
 ```

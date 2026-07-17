@@ -93,7 +93,7 @@ Supported public API:
 
 ## Parser organization notes
 
-`x2py/fortran_parser/parser.py` is now intentionally organized into clearly labeled
+`x2py/parsers/fortran/parser.py` is now intentionally organized into clearly labeled
 sections and carries embedded implementation guidance. Start with the thin public
 wrappers at the bottom, then read the class from top to bottom:
 
@@ -116,11 +116,11 @@ wrappers at the bottom, then read the class from top to bottom:
 Parser methods carry focused docstrings, with examples where a grammar visitor
 or lexical helper is easier to understand from a concrete call.
 
-The Fortran parser is now packaged under `x2py.fortran_parser` rather than a
+The Fortran parser is now packaged under `x2py.parsers.fortran` rather than a
 top-level parser package. The package includes its CLI module, lexer,
 JSON-compatible parse models, project parser, type resolver, and utility
 helpers. Public callers should use the stable top-level `x2py` parser exports
-or `x2py.fortran_parser` package imports.
+or `x2py.parsers.fortran` package imports.
 
 ## Implementation Inventory And Maintenance
 
@@ -130,10 +130,10 @@ testing workflow, and maintenance guard policy live here.
 
 The implementation inventory is maintained across these surfaces:
 
-- `x2py/fortran_parser/parser.py` owns source slicing, declaration extraction,
+- `x2py/parsers/fortran/parser.py` owns source slicing, declaration extraction,
   diagnostics, project ordering, dependency resolution, and compile-time
   expression resolution.
-- `x2py/fortran_parser/models.py` owns parse-only dataclasses and JSON-compatible
+- `x2py/parsers/fortran/models.py` owns parse-only dataclasses and JSON-compatible
   parser facts.
 - `x2py/semantics/fortran2ir.py` owns conversion from parser facts to semantic IR,
   including kind mapping, compile-time specialization, storage contracts,
@@ -146,9 +146,9 @@ The implementation inventory is maintained across these surfaces:
 <!-- X2PY_C_DOCS_START
 Parser-related pull requests should update this file when the documented
 feature inventory, public API, diagnostics, project behavior, semantic handoff,
-or maintenance workflow changes. The parser-reference guard watches
-Fortran and C references independently. For Fortran, it watches
-`x2py/fortran_parser/`, `tests/parser/fortran/`, `tests/data/fortran/`, and focused
+or maintenance workflow changes. The parser-reference guard watches C,
+Fortran, and semantic `.pyi` references independently. For Fortran, it watches
+`x2py/parsers/fortran/`, `tests/parser/fortran/`, `tests/data/fortran/`, and focused
 Fortran parser tests directly under `tests/parser/`. It expects
 `docs/developer/fortran-parser-reference.md` to change unless the PR is explicitly labeled to skip
 the guard.

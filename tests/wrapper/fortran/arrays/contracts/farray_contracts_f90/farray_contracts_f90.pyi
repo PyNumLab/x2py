@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Annotated, Arg, Flat, Float64, Int32, ORDER_F, Returns, native_call
+from x2py.contracts import Addr, Arg, Flat, Float64, Int32, Returns, native_call
 
 @native_call([Addr(Arg(0)), Arg(1)])
 def sum_assumed_size(
@@ -9,7 +9,7 @@ def sum_assumed_size(
 @native_call([Addr(Arg(0)), Arg(1)])
 def scale_lower(
     n: Int32,
-    values: Float64[n - 1 - 0 + 1]
+    values: Float64[n]
 ) -> None: ...
 
 def sum_in(
@@ -30,71 +30,71 @@ def shift1(
 ) -> Returns["out", Float64[::]]: ...
 
 def shift2(
-    values: Annotated[Float64[::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::], ORDER_F]]: ...
+    values: Float64[::, ::],
+    out: Float64[::, ::]
+) -> Returns["out", Float64[::, ::]]: ...
 
 def shift3(
-    values: Annotated[Float64[::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::],
+    out: Float64[::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::]]: ...
 
 def shift4(
-    values: Annotated[Float64[::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::]]: ...
 
 def shift5(
-    values: Annotated[Float64[::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::]]: ...
 
 def shift6(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::]]: ...
 
 def shift7(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift8(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift9(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift10(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift11(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift12(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift13(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift14(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]]: ...
 
 def shift15(
-    values: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::], ORDER_F]]: ...
+    values: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::],
+    out: Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::, ::]]: ...

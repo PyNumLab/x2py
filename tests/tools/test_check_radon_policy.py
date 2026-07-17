@@ -11,7 +11,6 @@ from tools.check_radon_policy import (
     changed_block_violates_policy,
     complexity_blocks_for_file,
     is_under_source_roots,
-    legacy_baseline_complexity,
     main,
     parse_changed_python_files,
     resolve_base_ref,
@@ -60,7 +59,7 @@ def test_policy_tracks_hotspot_average_without_changed_base(tmp_path: Path):
 
 
 def test_source_root_filter_uses_path_boundaries():
-    assert is_under_source_roots("x2py/c_parser/parser.py", ("x2py",))
+    assert is_under_source_roots("x2py/parsers/c/parser.py", ("x2py",))
     assert is_under_source_roots("x2py", ("x2py",))
     assert not is_under_source_roots("x2py_extra/parser.py", ("x2py",))
 
@@ -73,21 +72,6 @@ def test_changed_python_files_preserve_pre_rename_paths():
         ChangedPythonFile("x2py/cli.py", "x2py/cli.py"),
         ChangedPythonFile("x2py/new.py", None),
     ]
-
-
-def test_legacy_baseline_is_limited_to_named_imported_hotspots():
-    known = ComplexityBlock(
-        Path("x2py/semantics/ir2ast.py"),
-        "function",
-        "semantic_ir_to_codegen_ast",
-        1,
-        10,
-        33,
-    )
-    unknown = ComplexityBlock(Path("x2py/new.py"), "function", "branchy", 1, 10, 33)
-
-    assert legacy_baseline_complexity(known) == 33
-    assert legacy_baseline_complexity(unknown) is None
 
 
 def test_changed_block_policy_allows_existing_hotspots_unless_worsened():

@@ -155,7 +155,7 @@ def test_allocatable_to_numpy_policy_returns_mutable_borrowed_view():
     assert source[1] == 8.0
 
 
-def test_allocatable_to_numpy_policy_returns_read_only_detached_snapshot():
+def test_allocatable_to_numpy_explicit_copy_is_independent():
     source = np.array([1.0, 2.0, 3.0], dtype=np.float64)
     state = _ArrayState(shape=source.shape, value=source)
     handle = AllocatableArray(
@@ -167,17 +167,17 @@ def test_allocatable_to_numpy_policy_returns_read_only_detached_snapshot():
             "deallocate": lambda _handle: None,
             "resize": lambda _handle, _shape: None,
         },
-        to_numpy_policy="read_only_detached_copy",
+        to_numpy_policy="descriptor_view",
     )
 
-    snapshot = handle.to_numpy()
+    view = handle.to_numpy()
+    independent = view.copy()
 
-    assert np.shares_memory(snapshot, source) is False
-    assert snapshot.flags.writeable is False
+    assert np.shares_memory(view, source) is True
+    assert np.shares_memory(independent, source) is False
     source[0] = 99.0
-    assert snapshot[0] == 1.0
-    with pytest.raises(ValueError, match="assignment destination is read-only"):
-        snapshot[0] = 4.0
+    assert view[0] == 99.0
+    assert independent[0] == 1.0
 
 
 def test_to_numpy_contiguous_view_policy_rejects_non_contiguous_storage():
@@ -200,7 +200,7 @@ def test_to_numpy_contiguous_view_policy_rejects_non_contiguous_storage():
         handle.to_numpy()
 
 
-def test_to_numpy_copy_only_policy_returns_detached_writeable_copy():
+def test_to_numpy_descriptor_view_policy_never_copies_storage():
     source = np.arange(4, dtype=np.float64)
     handle = PointerArray(
         dtype=np.dtype(np.float64),
@@ -212,20 +212,20 @@ def test_to_numpy_copy_only_policy_returns_detached_writeable_copy():
             "associated": lambda _handle: True,
             "nullify": lambda _handle: None,
         },
-        to_numpy_policy="copy_only",
+        to_numpy_policy="descriptor_view",
     )
 
-    copy = handle.to_numpy()
+    view = handle.to_numpy()
 
-    assert np.shares_memory(copy, source) is False
-    assert copy.flags.writeable is True
-    copy[0] = 99.0
-    assert source[0] == 0.0
+    assert np.shares_memory(view, source) is True
+    assert view.flags.writeable is True
+    view[0] = 99.0
+    assert source[0] == 99.0
 
 
 @pytest.mark.parametrize(
     "policy",
-    ["borrowed_view", "contiguous_view", "copy_only", "descriptor_view", "read_only_detached_copy"],
+    ["borrowed_view", "contiguous_view", "descriptor_view"],
 )
 def test_to_numpy_rejects_generated_non_numpy_results(policy: str):
     handle = AllocatableArray(

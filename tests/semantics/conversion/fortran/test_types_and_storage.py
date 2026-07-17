@@ -739,12 +739,13 @@ def test_fortran_native_storage_contracts_preserve_exact_bounds_and_member_flags
         "ownership": "borrowed",
         "array": {
             "rank": 2,
-            "shape": ["4 - 1 - 0 + 1", ":"],
+            "shape": ["4", ":"],
             "lower_bounds": ["0", None],
             "upper_bounds": ["4 - 1", "*"],
             "source_shape": ["0:4 - 1", "*"],
             "category": "assumed_size",
             "order": "ORDER_F",
+            "copy_order": None,
             "axes": ["dense", "dense"],
             "contiguous": True,
             "allocatable": False,
@@ -762,6 +763,7 @@ def test_fortran_native_storage_contracts_preserve_exact_bounds_and_member_flags
         "source_shape": [".."],
         "category": "assumed_rank",
         "order": None,
+        "copy_order": None,
         "axes": ["dense"],
         "contiguous": None,
         "allocatable": False,
@@ -790,10 +792,11 @@ def test_explicit_bound_ranges_remain_shaped_storage_contracts():
     source = """
 module bound_mod
 contains
-subroutine bounded(n, default_bound, zero_bound)
+subroutine bounded(n, default_bound, zero_bound, shifted_bound)
   integer, intent(in) :: n
   real(8), intent(inout) :: default_bound(1:n)
   real(8), intent(inout) :: zero_bound(0:n-1)
+  real(8), intent(inout) :: shifted_bound(2:n+1)
 end subroutine bounded
 end module bound_mod
 """
@@ -806,7 +809,11 @@ end module bound_mod
 
     zero_bound = array_contract(args["zero_bound"].semantic_type)
     assert zero_bound.category == "explicit_shape"
-    assert zero_bound.shape == ["n - 1 - 0 + 1"]
+    assert zero_bound.shape == ["n"]
+
+    shifted_bound = array_contract(args["shifted_bound"].semantic_type)
+    assert shifted_bound.category == "explicit_shape"
+    assert shifted_bound.shape == ["n"]
 
 
 def test_allocatable_pointer():

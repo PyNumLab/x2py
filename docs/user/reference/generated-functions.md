@@ -45,7 +45,7 @@ contract uses `@native_call(...)` and `Returns[...]` to preserve the native call
 shape:
 
 ```python
-from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, Returns, native_call
+from x2py.contracts import Addr, Arg, Float64, Int32, Returns, native_call
 
 @native_call([Addr(Arg(0)), Arg(1)])
 def fill_vector(
@@ -57,9 +57,9 @@ def fill_vector(
 def shift_matrix(
     n: Int32,
     m: Int32,
-    values: Annotated[Float64[n, m], ORDER_F],
-    out: Annotated[Float64[n, m], ORDER_F]
-) -> Returns["out", Annotated[Float64[n, m], ORDER_F]]: ...
+    values: Float64[n, m],
+    out: Float64[n, m]
+) -> Returns["out", Float64[n, m]]: ...
 ```
 
 `Returns["name", Type]` names a projected Python return. `tuple[...]` is used

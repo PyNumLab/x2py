@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from x2py.fortran_parser import cli as fortran_parser_cli
+from x2py.parsers.fortran import cli as fortran_parser_cli
 
 from x2py import FortranParseError
 

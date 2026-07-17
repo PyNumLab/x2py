@@ -21,11 +21,9 @@ user-visible feature that a contributor is changing.
 | `.pyi` AST-to-semantic conversion | `tests/semantics/conversion/pyi/` | `python3 -m pytest -q tests/semantics/conversion/pyi` |
 | Completed semantic policy | `tests/semantics/policy/` | `python3 -m pytest -q tests/semantics/policy` |
 | Wrap readiness and blockers | `tests/semantics/readiness/` | `python3 -m pytest -q tests/semantics/readiness` |
-| Semantic IR-to-codegen lowering | `tests/lowering/` | `python3 -m pytest -q tests/lowering` |
-| Bridge generation | `tests/codegen/bridges/` | `python3 -m pytest -q tests/codegen/bridges` |
-| Python binding generation | `tests/codegen/bindings/` | `python3 -m pytest -q tests/codegen/bindings` |
-| Source and `.pyi` printers | `tests/codegen/printers/` | `python3 -m pytest -q tests/codegen/printers` |
+| Wrapper planning, bridge/binding generation, and source/`.pyi` printing | `tests/wrapper_codegen/` | `python3 -m pytest -q tests/wrapper_codegen` |
 | Naming policy | `tests/naming/` | `python3 -m pytest -q tests/naming` |
+| Shared Python utilities | `tests/utilities/` | `python3 -m pytest -q tests/utilities` |
 | NumPy and semantic type mapping | `tests/types/` | `python3 -m pytest -q tests/types` |
 | Runtime handles | `tests/runtime/handles/` | `python3 -m pytest -q tests/runtime/handles` |
 | Documentation structure and examples | `tests/docs/` | `python3 -m pytest -q tests/docs` |
@@ -40,20 +38,18 @@ empty directory merely to mirror this table.
 
 | Source package or surface | Primary test owner |
 | --- | --- |
-| `x2py.c_parser` | `tests/parsing/c/` |
-| `x2py.fortran_parser` | `tests/parsing/fortran/` |
-| `x2py.pyi_parser` | `tests/parsing/pyi/` |
+| `x2py.parsers.c` | `tests/parsing/c/` |
+| `x2py.parsers.fortran` | `tests/parsing/fortran/` |
+| `x2py.parsers.pyi` | `tests/parsing/pyi/` |
 | `x2py.probes` | `tests/probes/` |
 | `x2py.pipeline` | matching subject under `tests/pipeline/` |
 | `x2py.semantics.c2ir`, `fortran2ir`, `pyi2ir` | matching language under `tests/semantics/conversion/` |
 | semantic ownership and policy completion | `tests/semantics/policy/` |
 | `x2py.semantics.readiness` | `tests/semantics/readiness/` |
-| `x2py.semantics.ir2ast` | `tests/lowering/` |
-| `x2py.codegen.bridges` | `tests/codegen/bridges/` |
-| `x2py.codegen.bindings` | `tests/codegen/bindings/` |
-| `x2py.codegen.printers` | `tests/codegen/printers/` |
+| `x2py.wrapper_codegen` | `tests/wrapper_codegen/` plus compiled behavior under `tests/wrapper/` |
 | `x2py.compiling` | compiled build and runtime feature evidence under `tests/wrapper/fortran/` |
 | `x2py.naming` | `tests/naming/` |
+| `x2py.utilities` | `tests/utilities/` |
 | `x2py.types` | `tests/types/` |
 | `x2py.runtime.handles` | `tests/runtime/handles/` |
 | `x2py.cli` and parser CLIs | `tests/cli/` |
@@ -73,8 +69,17 @@ know roadmap wording but not the feature module. Source-build,
 generated-`.pyi`, and modified-`.pyi` scenarios for one feature stay together;
 identical source/generated behavior uses one shared assertion body.
 
-Do not run LAPACK wrapper runtime tests locally. Leave LAPACK coverage to GitHub
-Actions unless the task explicitly requests it.
+The legacy lowering AST and `x2py.codegen` implementation are removed. Their
+handler maps and emitted-source details have no compatibility tests. Behavior
+still required by users belongs either in `tests/wrapper_codegen/` against the
+canonical plan/generator or in compiled `tests/wrapper/` coverage against the
+public build APIs.
+
+During the wrapper-plan migration, do not run the full BLAS or LAPACK
+real-library wrapper tests locally or in GitHub Actions. Exclude
+`wrapper/fortran/real_libraries/test_real_blas_lapack.py`; keep the general
+native-bundle tests active. Re-enable both corpora only after every other
+migration row is complete.
 
 ## Adding a test or helper
 

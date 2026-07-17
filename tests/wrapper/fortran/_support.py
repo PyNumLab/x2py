@@ -14,7 +14,21 @@ import pytest
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran.fmath_cases import fmath_cases
 from x2py import build_pyi_extension
+from x2py.compiling.objects import ObjectFile
+from x2py.parsers.fortran.parser import parse_fortran_project
+from x2py.pipeline.build import (
+    NativeBuildPlan,
+    _apply_source_python_exports,
+    _build_rendered_wrapper_extension,
+    _fortran_source_for_pipeline,
+    _merge_wrapper_modules,
+)
+from x2py.pipeline.preprocessing import PreprocessingConfig
+from x2py.pipeline.build import build_fortran_extension
 from x2py.runtime.handles import AllocatableArray
+from x2py.semantics.fortran2ir import fortran_project_to_semantic_modules
+from x2py.semantics.policy_completion import complete_semantic_policies
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WRAPPER_TEST_ROOT = Path(__file__).resolve().parent
@@ -70,7 +84,7 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
         str(workdir),
         "--json",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=workdir)
     payload = json.loads(result.stdout)
 
     shared_library = Path(payload["shared_library"])
@@ -79,7 +93,7 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
     assert shared_library.parent == workdir
     assert {Path(path).name for path in payload["generated_sources"]} == expected_generated_sources
     generated_files = [Path(path) for path in payload["generated_files"]]
-    assert any(path.name == "python_runtime.c" and path.parent.name == "x2py_runtime" for path in generated_files)
+    assert any(path.name == "x2py_binding.h" and path.parent.name == "binding_support" for path in generated_files)
 
     sys.modules.pop(module_name, None)
     sys.path.insert(0, str(workdir))
@@ -184,6 +198,67 @@ def _build_source_or_generated_pyi_and_import(
     return _build_generated_pyi_and_import(source_template, workdir / "generated_pyi_build", expected_contract_package)
 
 
+def _build_source_and_import(
+    source_template: Path,
+    workdir: Path,
+    expected_generated_sources: set[str],
+):
+    """Build one source entry through the canonical production generator."""
+    result = build_fortran_extension(source_template, output_dir=workdir)
+    assert result.shared_library.exists()
+    assert {path.name for path in result.generated_sources} == expected_generated_sources
+    return _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
+
+
+def _build_source_wrapper_plan_and_import(
+    source_template: Path,
+    workdir: Path,
+    *,
+    unwrap_namespace: bool = True,
+):
+    source_dir = workdir / "source"
+    source_dir.mkdir(parents=True)
+    source = source_dir / source_template.name
+    shutil.copyfile(source_template, source)
+
+    native_object = _compile_native_object(source, workdir / "native")
+    native_compile_obj = ObjectFile(
+        source=source,
+        object_path=native_object,
+        language="fortran",
+        include_dirs=(native_object.parent,),
+    )
+    parsed = parse_fortran_project(
+        {
+            str(source): _fortran_source_for_pipeline(
+                source,
+                PreprocessingConfig(),
+            )
+        }
+    )
+    modules = fortran_project_to_semantic_modules(parsed)
+    _apply_source_python_exports(modules)
+    module = _merge_wrapper_modules(modules, name=source.stem)
+    complete_semantic_policies(module)
+
+    plan = WrapperPlanner().build(module)
+    rendered = WrapperCodeGenerator().generate(plan)
+    native_build_plan = NativeBuildPlan(
+        produced_objects=(native_object,),
+        module_dirs=(native_object.parent,),
+        include_dirs=(native_object.parent,),
+    )
+    result = _build_rendered_wrapper_extension(
+        rendered,
+        output_dir=workdir / "wrapper_plan_build",
+        sources=(source,),
+        native_build_plan=native_build_plan,
+        native_dependencies=(native_compile_obj,),
+    )
+    module = _import_from_build_dir(result.module_name, result.output_dir)
+    return (_sole_native_module(module) if unwrap_namespace else module), result
+
+
 def _build_text_and_import(source_text: str, filename: str, workdir: Path, expected_generated_sources: set[str]):
     source = workdir / filename
     source.write_text(source_text, encoding="utf-8")
@@ -198,7 +273,7 @@ def _build_text_and_import(source_text: str, filename: str, workdir: Path, expec
         str(workdir),
         "--json",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=workdir)
     payload = json.loads(result.stdout)
 
     shared_library = Path(payload["shared_library"])
@@ -230,7 +305,7 @@ def _build_sources_and_import(source_texts: list[tuple[str, str]], workdir: Path
         str(workdir),
         "--json",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=workdir)
     payload = json.loads(result.stdout)
     module_name = payload["module_name"]
 

@@ -13,6 +13,7 @@ from .models import (
     SemanticFunction,
     SemanticMethod,
     SemanticModule,
+    SemanticPrototype,
     SemanticType,
     _iter_module_semantic_types,
 )
@@ -47,6 +48,8 @@ def _prepare_module(module: SemanticModule) -> None:
         _set_origin(variable, native_scope, "variable")
     for function in module.functions:
         _prepare_function(function, native_scope)
+    for prototype in module.prototypes:
+        _prepare_prototype(prototype, native_scope)
     for overload_set in module.overload_sets:
         for procedure in overload_set.procedures:
             _prepare_function(procedure, native_scope)
@@ -71,6 +74,13 @@ def _prepare_function(function: SemanticFunction, native_scope: str) -> None:
     function.origin.native_name = function.native_name or function.name
     for argument in function.arguments:
         _set_origin(argument, function.origin.native_name, "argument")
+
+
+def _prepare_prototype(prototype: SemanticPrototype, native_scope: str) -> None:
+    _set_origin(prototype, native_scope, "prototype")
+    prototype.origin.native_name = prototype.native_name or prototype.name
+    for argument in prototype.arguments:
+        _set_origin(argument, prototype.origin.native_name, "prototype_argument")
 
 
 def _prepare_class(semantic_class: SemanticClass, native_scope: str) -> None:
@@ -103,6 +113,11 @@ def native_contract_issues(module: SemanticModule) -> list[NativeContractIssue]:
         issues.extend(_type_issues(variable.semantic_type, f"{module.name}.{variable.name}"))
     for function in module.functions:
         issues.extend(_function_issues(function, module, owner_kind="module"))
+    for prototype in module.prototypes:
+        for argument in prototype.arguments:
+            issues.extend(_type_issues(argument.semantic_type, f"{module.name}.{prototype.name}.{argument.name}"))
+        if prototype.return_type is not None and prototype.return_type.name != "None":
+            issues.extend(_type_issues(prototype.return_type, f"{module.name}.{prototype.name}.return"))
     for overload_set in module.overload_sets:
         for procedure in overload_set.procedures:
             issues.extend(_function_issues(procedure, module, owner_kind="module"))
@@ -235,15 +250,15 @@ def _type_issues(semantic_type: SemanticType, owner: str) -> list[NativeContract
                 owner,
             )
         ]
-    if semantic_type.name != "Callable":
+    if semantic_type.storage is None or semantic_type.storage.kind != "callback":
         return []
     arguments = semantic_type.metadata.get("arguments")
-    kind = semantic_type.metadata.get("fortran_callback_kind")
+    kind = semantic_type.metadata.get("native_callback_kind")
     if not isinstance(arguments, list) or kind not in {"function", "subroutine"}:
         return [
             NativeContractIssue(
                 "pyi_native_callback_incomplete",
-                "Native callbacks require a complete Callable argument and return signature.",
+                "Native callbacks require a resolved named prototype.",
                 owner,
             )
         ]

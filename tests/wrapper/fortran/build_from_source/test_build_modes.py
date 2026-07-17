@@ -12,7 +12,6 @@ import numpy as np
 import pytest
 
 from tests.wrapper.fortran._support import _assert_fmath_examples, _sole_native_module, wrapper_source
-from x2py.compiling.basic import CompileObj
 from x2py.pipeline.preprocessing import PreprocessingConfig
 from x2py.pipeline.build import NativeBuildPlan, NativeLinkItem, build_fortran_extension
 
@@ -39,6 +38,7 @@ def test_verbose_mode_prints_full_direct_build_commands(tmp_path: Path):
         capture_output=True,
         text=True,
         check=True,
+        cwd=tmp_path,
     )
     command_lines = result.stdout.splitlines()
 
@@ -50,11 +50,43 @@ def test_verbose_mode_prints_full_direct_build_commands(tmp_path: Path):
     assert "-O3" in c_wrapper_parts
     assert "-DNDEBUG" in c_wrapper_parts
     assert "-g" not in c_wrapper_parts
-    assert any("-shared" in line and "verbose_api" in line for line in command_lines)
-    assert any(line.startswith(">> Command completed in ") for line in command_lines)
-    assert any(line.startswith(">> Timing :: Wrapper creation: ") for line in command_lines)
-    assert any(line.startswith(">> Timing :: Wrapper printing: ") for line in command_lines)
-    assert any(line.startswith(">> Timing :: Wrapper compilation: ") for line in command_lines)
+    link_command = next(line for line in command_lines if "-shared" in line and "verbose_api" in line)
+    link_parts = shlex.split(link_command)
+    link_output = link_parts[link_parts.index("-o") + 1]
+    step_lines = [
+        line.removeprefix(">> ")
+        for line in command_lines
+        if line.startswith(">> ") and not line.startswith((">> Timing", ">> Total build time"))
+    ]
+    bridge_source = tmp_path / "bind_c_verbose_api_wrapper.f90"
+    binding_source = tmp_path / "verbose_api_wrapper.c"
+    header = tmp_path / "verbose_api_wrapper.h"
+    native_object = tmp_path / "verbose_api.o"
+    bridge_object = tmp_path / "bind_c_verbose_api_wrapper.o"
+    binding_object = tmp_path / "verbose_api_wrapper.o"
+    assert step_lines[:4] == [
+        "Complete wrapper policies",
+        "Generate binding source",
+        "Generate bridge source",
+        "Generate binding header",
+    ]
+    binding_generation = command_lines.index(">> Generate binding source")
+    bridge_generation = command_lines.index(">> Generate bridge source")
+    header_generation = command_lines.index(">> Generate binding header")
+    assert bridge_generation == binding_generation + 2
+    assert header_generation == bridge_generation + 2
+    assert command_lines[binding_generation + 1].startswith(">> Timing: ")
+    assert command_lines[bridge_generation + 1].startswith(">> Timing: ")
+    assert command_lines[header_generation + 1].startswith(">> Timing: ")
+    assert f"Compile native source: {source} -> {native_object}" in step_lines
+    assert f"Write bridge source: {bridge_source}" in step_lines
+    assert f"Write binding source: {binding_source}" in step_lines
+    assert f"Write binding header: {header}" in step_lines
+    assert f"Compile bridge source: {bridge_source} -> {bridge_object}" in step_lines
+    assert f"Compile binding source: {binding_source} -> {binding_object}" in step_lines
+    assert f"Create shared library: {link_output}" in step_lines
+    assert any(line.startswith(">> Timing: ") for line in command_lines)
+    assert command_lines[-1].startswith(">> Total build time: ")
     assert "Built extension:" in result.stdout
 
 
@@ -81,6 +113,7 @@ def test_verbose_mode_prints_custom_wrapper_flags(tmp_path: Path):
         capture_output=True,
         text=True,
         check=True,
+        cwd=tmp_path,
     )
     command_lines = result.stdout.splitlines()
 
@@ -94,22 +127,51 @@ def test_verbose_mode_prints_custom_wrapper_flags(tmp_path: Path):
     assert "-O2" in shlex.split(link_command)
 
 
-def test_fortran_wrapper_default_places_extension_beside_source(tmp_path: Path):
-    source = tmp_path / DEFAULT_OUTPUT_SOURCE.name
+def test_fortran_wrapper_default_places_artifacts_in_invocation_directory(tmp_path: Path):
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    source = source_dir / DEFAULT_OUTPUT_SOURCE.name
     shutil.copyfile(DEFAULT_OUTPUT_SOURCE, source)
 
     cmd = [sys.executable, "-m", "x2py", str(source), "--json"]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=run_dir)
     payload = json.loads(result.stdout)
 
-    build_dir = tmp_path / "__x2py__"
+    build_dir = run_dir / "__x2py__"
     shared_library = Path(payload["shared_library"])
-    assert shared_library.parent == tmp_path
+    assert shared_library.parent == run_dir
     assert shared_library.name == "fdefault_output.so"
     assert shared_library.exists()
     assert Path(payload["output_dir"]) == build_dir
     assert (build_dir / "bind_c_fdefault_output_wrapper.f90").exists()
-    assert not list(tmp_path.glob("*_wrapper.c"))
+    assert len(tuple(build_dir.glob("fdefault_output.*.so"))) == 1
+    assert not list(source_dir.glob("*_wrapper.c"))
+
+
+def test_fortran_wrapper_out_dir_separates_abi_artifact_from_cli_alias(tmp_path: Path):
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    source = source_dir / DEFAULT_OUTPUT_SOURCE.name
+    shutil.copyfile(DEFAULT_OUTPUT_SOURCE, source)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", str(source), "--out-dir", "build", "--json"],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=run_dir,
+    )
+    payload = json.loads(result.stdout)
+
+    build_dir = run_dir / "build"
+    assert Path(payload["shared_library"]) == run_dir / "fdefault_output.so"
+    assert (run_dir / "fdefault_output.so").is_file()
+    assert len(tuple(build_dir.glob("fdefault_output.*.so"))) == 1
+    assert not (build_dir / "fdefault_output.so").exists()
 
 
 def test_fortran_wrapper_default_module_name_does_not_collide_with_root_function(tmp_path: Path):
@@ -121,6 +183,7 @@ def test_fortran_wrapper_default_module_name_does_not_collide_with_root_function
         capture_output=True,
         text=True,
         check=True,
+        cwd=tmp_path,
     )
     payload = json.loads(result.stdout)
 
@@ -157,6 +220,7 @@ def test_fortran_wrapper_out_names_importable_shared_library(tmp_path: Path):
         capture_output=True,
         text=True,
         check=True,
+        cwd=tmp_path,
     )
     payload = json.loads(result.stdout)
 
@@ -164,7 +228,7 @@ def test_fortran_wrapper_out_names_importable_shared_library(tmp_path: Path):
     assert shared_library == output_name.with_suffix(".so")
     assert shared_library.is_file()
     assert payload["module_name"] == "SCALE"
-    assert any(path.name.startswith("SCALE.") and path.suffix == ".so" for path in tmp_path.iterdir())
+    assert any(path.name.startswith("SCALE.") and path.suffix == ".so" for path in (tmp_path / "__x2py__").iterdir())
     assert str(shared_library) in payload["generated_files"]
 
     sys.modules.pop("SCALE", None)
@@ -190,7 +254,7 @@ def test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper(tmp
     assert result.compiled is True
     assert result.build_makefile is None
     assert any(
-        path.name == "python_runtime.c" and path.parent.name == "x2py_runtime" for path in result.generated_files
+        path.name == "x2py_binding.h" and path.parent.name == "binding_support" for path in result.generated_files
     )
 
     sys.modules.pop(result.module_name, None)
@@ -243,19 +307,6 @@ def test_native_link_plan_serializes_interleaved_item_kinds():
         {"kind": "named_library", "name": "lapack"},
         {"kind": "linker_argument", "argument": "-Wl,--end-group"},
     ]
-
-
-def test_compile_object_dependency_modules_keep_caller_order(tmp_path: Path):
-    first = CompileObj("first.f90", tmp_path)
-    archive = CompileObj("libsolver.a", tmp_path)
-    shared = CompileObj("libsupport.so", tmp_path)
-    main = CompileObj("wrapper.c", tmp_path, dependencies=(first, archive, shared))
-
-    assert main.extra_modules == (
-        first.module_target,
-        archive.module_target,
-        shared.module_target,
-    )
 
 
 def test_wrapper_build_rejects_empty_source_list(tmp_path: Path):

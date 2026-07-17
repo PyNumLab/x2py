@@ -42,6 +42,7 @@
                     ],
                     "category": "assumed_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "strided"
                     ],
@@ -282,6 +283,7 @@
                     ],
                     "category": "assumed_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "strided"
                     ],
@@ -388,6 +390,7 @@
           }
         }
       ],
+      "prototypes": [],
       "overload_sets": [],
       "classes": [],
       "variables": [],

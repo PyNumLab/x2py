@@ -14,7 +14,7 @@
                 "rank": 1,
                 "dtype": "Int32",
                 "shape": [
-                  "n1 - 1 - 0 + 1"
+                  "n1"
                 ],
                 "constraints": [],
                 "coercions": [],
@@ -33,7 +33,7 @@
                   "array": {
                     "rank": 1,
                     "shape": [
-                      "n1 - 1 - 0 + 1"
+                      "n1"
                     ],
                     "lower_bounds": [
                       "0"
@@ -46,6 +46,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -152,6 +153,7 @@
                     ],
                     "category": "explicit_shape",
                     "order": null,
+                    "copy_order": null,
                     "axes": [
                       "dense"
                     ],
@@ -258,6 +260,7 @@
           }
         }
       ],
+      "prototypes": [],
       "overload_sets": [],
       "classes": [],
       "variables": [
@@ -312,7 +315,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "n0",
-            "native_scope": null,
+            "native_scope": "dims_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},
@@ -382,7 +385,7 @@
           "origin": {
             "source_language": "fortran",
             "native_name": "n1",
-            "native_scope": null,
+            "native_scope": "dims_mod",
             "source_kind": "variable",
             "source_type": "integer",
             "source_location": {},

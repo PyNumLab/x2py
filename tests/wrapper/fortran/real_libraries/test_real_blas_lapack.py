@@ -402,9 +402,9 @@ def test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_li
     if library == "blas":
         bridge = (result.output_dir / "bind_c_full_blas_wrapper.f90").read_text(encoding="utf-8").lower()
         assert "use full_blas_interfaces" not in bridge
-        assert "subroutine daxpy(" in bridge
+        assert "external :: daxpy" in bridge
+        assert "subroutine daxpy(" not in bridge
         assert "private\n" not in bridge
-        assert "private :: c_malloc" in bridge
         assert "public :: bind_c_daxpy" not in bridge
         _assert_blas_runtime_smoke(module)
     else:

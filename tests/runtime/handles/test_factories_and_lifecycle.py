@@ -172,6 +172,55 @@ def test_generated_owned_handle_factory_passes_persistent_owner_to_every_operati
     ]
 
 
+def test_generated_owned_handle_normalizes_compiler_zero_extent_descriptor_records():
+    owner = 1234
+    descriptor = {
+        "base_addr": 5678,
+        "elem_len": 8,
+        "rank": 1,
+        "dim": [{"lower_bound": 1, "extent": -1, "sm": 8}],
+    }
+    handle = _native_array_handle_from_generated_ops(
+        "allocatable",
+        "float64",
+        1,
+        {
+            "shape": lambda _native_owner: descriptor,
+            "array_actual": lambda _native_owner: 5678,
+            "descriptor": lambda _native_owner: 5678,
+            "to_numpy": lambda _native_owner: descriptor,
+            "allocated": lambda _native_owner: True,
+            "destroy": lambda _native_owner: None,
+        },
+        owner=owner,
+        descriptor_ownership="owned",
+    )
+
+    assert handle.shape == (0,)
+    assert handle.to_numpy().shape == (0,)
+
+
+def test_generated_handle_resolves_deferred_character_dtype_from_runtime_element_length():
+    state = {"itemsize": 3}
+    handle = _native_array_handle_from_generated_ops(
+        "allocatable",
+        None,
+        1,
+        {
+            "shape": lambda: (2,),
+            "element_length": lambda: state["itemsize"],
+            "array_actual": lambda: 0x1234,
+            "descriptor": lambda: 0x1234,
+            "allocated": lambda: True,
+            "to_numpy": lambda: np.array([b"red", b"sky"], dtype=f"S{state['itemsize']}"),
+        },
+    )
+
+    assert handle.dtype == np.dtype("S3")
+    state["itemsize"] = 5
+    assert handle.dtype == np.dtype("S5")
+
+
 def test_generated_owned_handle_factory_releases_owner_once_when_construction_fails():
     calls = []
     owner = 0x1234

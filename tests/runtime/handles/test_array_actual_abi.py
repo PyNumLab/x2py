@@ -273,13 +273,13 @@ def test_array_actual_binding_helper_accepts_ndarray_path_with_shared_validation
         is values
     )
 
-    with pytest.raises(ValueError, match="expected rank 1"):
+    with pytest.raises(TypeError, match="expected rank 1"):
         _native_array_actual_for_binding(values, expected_rank=1)
     with pytest.raises(TypeError, match="expected dtype"):
         _native_array_actual_for_binding(values, expected_dtype=np.float32)
-    with pytest.raises(ValueError, match=r"expected shape .* axis 0"):
+    with pytest.raises(TypeError, match=r"incompatible shape at axis 0"):
         _native_array_actual_for_binding(values, expected_shape=(1, 3))
-    with pytest.raises(ValueError, match="expected layout 'C'"):
+    with pytest.raises(TypeError, match=r"expected ordering \(C\)"):
         _native_array_actual_for_binding(values, expected_layout="C")
 
     read_only = values.copy()
@@ -415,7 +415,7 @@ def test_array_actual_argument_abi_packer_uses_ndarray_data_pointer_and_shape_fi
         True,
         True,
         True,
-    ) == (values.ctypes.data, 2, values.dtype.itemsize, 2, 3, 2, 3, 1, 1)
+    ) == (values.ctypes.data, 2, values.dtype.itemsize, 2, 3, 1, 2, 1, 1)
 
 
 def test_array_actual_argument_abi_packer_uses_allocatable_native_array_actual_without_numpy_conversion():
@@ -449,7 +449,7 @@ def test_array_actual_argument_abi_packer_uses_allocatable_native_array_actual_w
         True,
         True,
         True,
-    ) == (actual.address, 1, np.dtype(np.float64).itemsize, 2, 2, 1)
+    ) == (actual.address, 1, np.dtype(np.float64).itemsize, 2, 1, 1)
     assert calls == ["array_actual"]
 
 

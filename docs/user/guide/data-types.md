@@ -90,7 +90,7 @@ The tables below summarize the currently verified Fortran-to-Python type mapping
 | supported logical storage | `Bool` | `bool` or `numpy.bool_` as documented by the generated contract | `numpy.bool_` |
 | scalar character | `String` or `String[n]` | `str` | fixed-width NumPy bytes, such as `S8` |
 | derived type | generated class name | instance of that generated class | arrays of derived types are unsupported |
-| dummy procedure | `Callable[[...], T]` | Python callable with the exact argument/result contract | not applicable |
+| dummy procedure | named `@prototype` reference | Python callable matching the named prototype | not applicable |
 
 ## Source Kind Names
 
@@ -107,8 +107,9 @@ native storage instead of silently narrowing it.
 
 ## Scalar Values And Native Storage
 
-A bare numeric semantic type is a Python-visible value. `T` is the
-read-only value form. Its default native boundary is pass-by-value.
+A bare numeric semantic type is a Python-visible value. `T` is a value
+contract, not a copy of Fortran `intent`. Its default native boundary is
+pass-by-value.
 `Addr(Arg(...))` in `@native_call` means x2py converts that Python-visible value
 to call-local native scalar storage and passes the storage address to native
 code.
@@ -117,7 +118,11 @@ Use `T[()]` when the Python API itself exposes safe caller-provided scalar
 storage as a rank-0 NumPy array. Use `Addr(T)` only when the caller passes a raw
 address such as `array.ctypes.data`. For raw array addresses such as
 `Addr(Float64[n])`, every extent must be a fixed literal or a visible argument;
-the address value itself does not carry shape.
+the address value itself does not carry shape. x2py does not reject zero or
+negative integer addresses or validate that raw-address extents are positive.
+It reports integer-to-pointer overflow, but otherwise the caller is responsible
+for supplying a live address and a valid pointee shape before native code uses
+either value.
 
 Arrays and strings are storage-like at the native boundary. `Float64[n]` already
 passes the NumPy data address, and `String[8]` already passes the address of
@@ -165,9 +170,10 @@ Array annotations combine an element dtype with rank and shape:
 
 Plain `:` records a dense axis. `::` records an axis where the contract allows
 runtime strides; x2py reads that exact slice spelling from the `.pyi` source
-before Python AST normalization. Multidimensional dense arrays are validated
-against their documented orientation, such as `ORDER_F` for Fortran-oriented
-storage.
+before Python AST normalization. Multidimensional dense arrays in a
+Fortran-facing contract use Fortran orientation by default; generated contracts
+omit `ORDER_F`. Explicit order metadata appears only when a contract
+deliberately requests a non-default representation.
 
 The wrapper validates exact dtype, native byte order, rank, known extents,
 alignment, layout, and writeability before entering native code. It does not
@@ -232,7 +238,7 @@ finalization behavior.
 ## Unsupported Widths And Forms
 
 The semantic format can represent names such as `Float128` and `Complex256`,
-but representation in a `.pyi` file is not a runtime support claim. Current
+but representation in a `.pyi` file is not a native binding support claim. Current
 Fortran wrapper generation blocks:
 
 - real storage wider than 64 bits;

@@ -2,9 +2,9 @@
 
 from importlib import import_module
 
-from x2py.c_parser.models import CFile, CParseError, CProject
-from x2py.c_parser.parser import parse_c_file, parse_c_project
-from x2py.fortran_parser.models import (
+from x2py.parsers.c.models import CFile, CParseError, CProject
+from x2py.parsers.c.parser import parse_c_file, parse_c_project
+from x2py.parsers.fortran.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
@@ -17,8 +17,8 @@ from x2py.fortran_parser.models import (
     FortranProject,
     FortranSubmodule,
 )
-from x2py.fortran_parser.parser import parse_fortran_file, parse_fortran_project
-from x2py.pyi_parser import parse_pyi_file, parse_pyi_text
+from x2py.parsers.fortran.parser import parse_fortran_file, parse_fortran_project
+from x2py.parsers.pyi import parse_pyi_file, parse_pyi_text
 from x2py.semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_file_to_semantic_modules,
@@ -39,7 +39,7 @@ from x2py.semantics.c2ir import (
 )
 from x2py.semantics.pyi2ir import convert_pyi_to_ir
 from x2py.pipeline.pyi import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
-from x2py.codegen.printers.pyi_printer import emit_module_stubs, opaque_dependency_modules
+from x2py.wrapper_codegen.printers import emit_module_stubs, opaque_dependency_modules
 from x2py.semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 from x2py.runtime.handles import AllocatableArray, NativeArrayHandleBase, PointerArray
 

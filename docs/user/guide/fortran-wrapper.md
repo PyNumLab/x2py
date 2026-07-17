@@ -126,9 +126,9 @@ ordered Fortran source files
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
   -> semantic modules and readiness blockers
-  -> source-root export tree preserving native module namespaces
-  -> codegen AST
-  -> generated native bridge and Python binding
+  -> post-IR policy completion
+  -> ordered wrapper plan preserving native module namespaces and ABI slots
+  -> direct native-bridge and Python-binding lowering
   -> compile and link one Python extension module
 ```
 
@@ -139,10 +139,10 @@ ordered Fortran source files
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
   -> semantic modules and readiness blockers
-  -> source-root export tree preserving native module namespaces
-  -> codegen AST
-  -> Fortran bind(C) bridge
-  -> C/CPython binding and x2py runtime support
+  -> post-IR policy completion
+  -> ordered wrapper plan preserving native module namespaces and ABI slots
+  -> direct Fortran bind(C) bridge lowering
+  -> direct C/CPython binding lowering and native binding support
   -> compile user sources and generated sources
   -> link one Python extension module
 ```
@@ -153,11 +153,16 @@ binding validates arguments, manages wrapper-owned temporaries, calls native
 code, and projects results onto the documented Python API. Shared runtime
 support supplies array, error, allocation, and ownership helpers.
 
+There is no separate codegen-AST conversion stage. Post-IR completion freezes
+object kind, storage, ownership, mutation, output projection, and native-call
+policy; wrapper planning orders those completed decisions, and the binding and
+bridge generators dispatch them directly into emitted source.
+
 <!-- X2PY_C_DOCS_START
 The Fortran bridge converts non-interoperable Fortran contracts into a stable
 C ABI. The generated C layer validates Python and NumPy objects, manages Python
 references and wrapper-owned temporaries, calls the bridge, and projects native
-results onto the documented Python API. The runtime support supplies shared
+results onto the documented Python API. The native binding support supplies shared
 array, error, allocation, and ownership helpers.
 X2PY_C_DOCS_END -->
 
@@ -165,7 +170,7 @@ Typical generated artifacts are:
 
 | Artifact | Purpose |
 | --- | --- |
-| `x2py_runtime/` | Shared native runtime support |
+| `binding_support/` | Header-only native binding support |
 | user and generated `.o`/`.mod` files | Native build intermediates |
 | `<module>.<extension-suffix>.so` | Importable extension on Linux |
 
@@ -185,14 +190,18 @@ When a folder contains only standalone BLAS/LAPACK-style procedures,
 separate artifacts.
 
 <!-- X2PY_C_DOCS_START
-Without `&#45;&#45;out-dir`, x2py uses a private `__x2py__` build directory beside the
-source and places the importable extension beside the source file. Generated
+Without `&#45;&#45;out-dir`, x2py writes generated artifacts, including the ABI-suffixed
+extension, in a private `__x2py__` build directory in the current working
+directory. A direct CLI build writes its stable `<module>.so` import alias in
+the current working directory unless `&#45;&#45;out` gives it an explicit path. Generated
 Fortran and C wrapper sources remain build artifacts; users do not edit them to
 change the Python API.
 X2PY_C_DOCS_END -->
 
-Without `--out-dir`, x2py uses a private `__x2py__` build directory beside the
-source and places the importable extension beside the source file. Generated
+Without `--out-dir`, x2py writes generated artifacts, including the ABI-suffixed
+extension, in a private `__x2py__` build directory in the current working
+directory. A direct CLI build writes its stable `<module>.so` import alias in
+the current working directory unless `--out` gives it an explicit path. Generated
 wrapper sources remain build artifacts; users do not edit them to change the
 Python API.
 
@@ -202,11 +211,11 @@ ownership, and destruction, is explained later in Editing Semantic `.pyi`
 Contracts. The complete grammar appears later in the Semantic `.pyi` Format
 reference.
 The normal CLI build is source-driven: recognizable Fortran sources build
-wrappers without a stage flag and cannot be combined with `--pyi`. For the
-implemented `.pyi` subset, pass `--wrap` with a semantic `.pyi` file and native
-build artifacts such as `.o`, `.a`, or `.so` inputs. In that mode the `.pyi` is
-the Python API source of truth; native source is not reparsed during wrapper
-generation.
+wrappers without a stage flag and cannot be combined with `--pyi`. A semantic
+`.pyi` entry contract also selects the wrapper stage automatically when its
+native build artifacts, such as `.o`, `.a`, or `.so` inputs, are supplied. In
+that mode the `.pyi` is the Python API source of truth; native source is not
+reparsed during wrapper generation.
 
 The current `.pyi` build subset requires the contract filename stem to match
 the native Fortran module name. Supply the native module file directory as an
@@ -214,7 +223,6 @@ include directory when the generated bridge contains `use <module>`:
 
 ```bash
 python3 -m x2py path/to/module.pyi \
-  --wrap \
   --native-objects path/to/module.o \
   --native-include-dir path/to/mod-files \
   --out-dir build/module
@@ -240,14 +248,13 @@ replayed directly:
 
 ```bash
 python3 -m x2py contracts/module.pyi \
-  --wrap \
   --native-fortran-sources native/module.f90 \
   --native-fortran-flags="-O3 -fopenmp" \
   --out-dir build/module \
   --makefile
 
-python3 -m x2py --build-manifest build/module/x2py-build.json --wrap
-python3 -m x2py --build-manifest build/module/x2py-build.json --wrap --makefile
+python3 -m x2py --build-manifest build/module/x2py-build.json
+python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
 ```
 
 Edited `.pyi` contracts may expose the native call shape directly. If every
@@ -278,10 +285,19 @@ Runtime tests: [`test_pyi_wrapper_builds.py`](../../../tests/wrapper/fortran/bui
 [`test_policy_dispatch_contracts.py`](../../../tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py).
 
 Use `--verbose` to execute a build while printing every exact, shell-escaped
-compiler and linker command. Verbose builds also print elapsed time for each
-compiler/linker command and for the wrapper creation, printing, and compilation
-stages. Use `--wrap --makefile` to generate an editable `Makefile.x2py` without
-compiling. These modes are mutually exclusive.
+compiler and linker command. It first announces binding, bridge, and header
+source-text generation on separate lines without paths, because those files do
+not exist yet. Each line is printed immediately before its separate lowering
+and printing operation, followed by `Timing: ...` for that operation. It then announces each written artifact with its output path
+(`Write bridge source: ...` and `Write native support: ...`), each native, bridge, and binding compilation with its
+source and object path (`Compile bridge source: source -> object`), and the final
+extension path before linking (`Create shared library: ...`). The exact
+shell-escaped command follows each compilation or link announcement, so it can
+be copied to reproduce that step. Verbose builds print elapsed time for policy
+completion, each source-text generation, every compilation,
+and linking, followed by total build time; writing generated files has no separate
+timing. Use `--makefile` to generate an editable
+`Makefile.x2py` without compiling. These modes are mutually exclusive.
 
 <!-- X2PY_C_DOCS_START
 Direct wrapper builds use the compiler release profile by default, so generated
@@ -353,9 +369,10 @@ The plan records:
 `link_items` is the order-sensitive representation. It can record objects,
 static archives, direct shared-library paths, named `-l` libraries, and explicit
 linker arguments without flattening them into one ambiguous string list.
-Current CLI options expose objects, archives, shared libraries, named
-libraries, library directories, and include/module directories. A general CLI
-for arbitrary ordered linker arguments is planned in the later manifest stage.
+The typed convenience options expose objects, archives, shared libraries,
+named libraries, library directories, and include/module directories.
+`--native-link-item KIND:VALUE` exposes the ordered form directly, including
+explicit linker arguments, when caller order must be preserved.
 
 Example 1: a source-driven build records native source compilation separately
 from generated wrapper files.
@@ -427,7 +444,7 @@ assert result.native_build_plan.library_dirs == (Path("vendor"),)
 ```
 
 Example 5: the ordered representation can express linker control arguments for
-future manifest and Makefile replay without pretending they are objects or
+CLI, manifest, and Makefile replay without pretending they are objects or
 libraries.
 
 ```python
@@ -495,14 +512,14 @@ releases x2py-owned descriptor storage. A component becomes a borrowed
 
 | Term | Meaning | Typical example |
 | --- | --- | --- |
-| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, pointer detached copies. |
+| Python-owned | Python or NumPy owns the value or data buffer and releases it normally. | Scalar results, strings, copy-return arrays, and explicitly copied pointer-scalar values. |
 | Caller-owned | The caller supplied the Python object and retains ownership. | A NumPy array passed as `intent(in)`, `intent(out)`, or `intent(inout)`. |
 | Wrapper-owned | A Python object owns or controls native storage. | A wrapped derived-type result or owned allocatable result handle. |
 | Native-owned | Fortran or an external library owns storage independently of Python. | A module allocatable array or external-library buffer. |
 | Descriptor handle | Python carries native allocation or association state and a completed owner policy. | An allocatable or pointer module variable, field, argument, or supported result. |
 | Borrowed view | Python references storage owned elsewhere and does not destroy it. | A NumPy array extracted from a borrowed descriptor handle. |
 | Copy-return | Native output is copied into a new Python-owned value before return. | An ordinary array result or immutable replacement. |
-| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Scalar pointer copied values or detached handle extraction. |
+| Detached copy (`snapshot_copy` policy) | Python receives a copy of current native state, not a live view. | Scalar pointer copied values or another explicit copy-result contract; native-array-handle `to_numpy()` never selects this behavior. |
 | Call-local association | Native code may use Python storage only during the wrapped call. | Pointer `intent(in)` array arguments. |
 | Blocked | Generation stops because a safe contract cannot be proven. | Pointer reassociation without owner and release policy. |
 
@@ -530,7 +547,7 @@ X2PY_C_DOCS_END -->
 | Value | Who destroys it | When |
 | --- | --- | --- |
 | Python scalar or string | Python | When Python references are gone. |
-| Copy-return or detached-copy NumPy array | NumPy or its generated base capsule | When Python references are gone. |
+| Copy-return or explicitly detached NumPy array | NumPy or its generated base capsule | When Python references are gone. |
 | Caller-supplied NumPy array | The Python caller | According to normal Python lifetime. |
 | Wrapper-owned derived instance | Generated wrapper deallocator | When the owning wrapper is collected. |
 | Borrowed nested component | The parent wrapper | When parent and all borrowed children are gone. |
@@ -622,7 +639,32 @@ Python immutable scalars cannot expose native in-place mutation. Scalar
 `intent(out)` values are hidden and returned as new Python values, while mutable
 semantics for strings use replacement projection as described below.
 
-Runtime tests: [`test_verified_baseline.py`](../../../tests/wrapper/fortran/scalars/test_verified_baseline.py).
+Editable semantic contracts distinguish three numeric scalar boundaries:
+
+- `Float64` accepts a scalar value. If a writable native reference is projected
+  back with `Returns["value", Float64]`, x2py copies into call-local storage and
+  returns the mutated replacement; the original Python scalar is unchanged.
+- `Float64[()]` accepts caller-owned rank-zero NumPy storage. x2py validates its
+  exact dtype, native byte order, alignment, rank, and writeability, then passes
+  its data address so native `out` or `inout` mutation remains visible in the
+  same array.
+- `Addr(Float64)` accepts an integer raw address and forwards it without copying
+  or owning the pointee. For a NumPy buffer, pass `value.ctypes.data`.
+
+```python
+storage = np.array(3.5, dtype=np.float64)
+update_storage(storage)
+
+raw_storage = np.array(4.5, dtype=np.float64)
+update_raw(raw_storage.ctypes.data)
+```
+
+`Addr(Arg(i))` inside `@native_call(...)` is different from `Addr(T)`: it tells
+the wrapper to take the address of its converted call-local scalar. It does not
+make the Python caller pass an address.
+
+Runtime tests: [`test_verified_baseline.py`](../../../tests/wrapper/fortran/scalars/test_verified_baseline.py)
+and [`test_scalar_boundary_plan.py`](../../../tests/wrapper/fortran/scalars/test_scalar_boundary_plan.py).
 
 ## Generic Procedure Interfaces
 
@@ -809,6 +851,24 @@ use ordinary return annotations; hidden allocatable array outputs use
 `Allocatable[T[...]]` handles whose unallocated state remains inside the
 handle.
 
+### Generated Docstrings
+
+Generated modules, functions, classes, constructors, methods, overloads, and
+properties expose compact NumPy-style docstrings derived from the same completed
+wrapper plan as the executable code. `help(module.function)` therefore reports
+the Python-visible signature rather than the native dummy list, including
+hidden outputs, ordered tuple results, optional omission versus a present
+`None`, constrained array shape and layout, handle ownership, and native-status
+exceptions.
+
+Module docstrings index their public functions, module attributes, and classes.
+Class docstrings index the public constructor, fields, methods, and overloads;
+the individual constructor, method, overload, and property descriptors also
+carry focused docstrings. Private wrapper helper names and internal bridge roles
+are never shown. Module attributes are documented in the module docstring
+because Python extension modules do not provide portable per-attribute
+descriptor docstrings.
+
 Runtime tests: [`test_output_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_output_arguments.py),
 [`test_native_call_examples.py`](../../../tests/wrapper/fortran/function_calls/test_native_call_examples.py).
 
@@ -847,7 +907,8 @@ unallocated or unassociated state. Hidden scalar or derived-type `Return(...)`
 outputs are different: the wrapper requests them with native temporary storage,
 so they are present and returned on every call.
 
-Runtime tests: [`test_optional_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_optional_arguments.py).
+Runtime tests: [`test_optional_arguments.py`](../../../tests/wrapper/fortran/function_calls/test_optional_arguments.py),
+[`test_scalar_writeback_plan.py`](../../../tests/wrapper/fortran/function_calls/test_scalar_writeback_plan.py).
 
 <!-- X2PY_C_DOCS_START
 ## `value` And Existing `bind(C)` Procedures
@@ -958,18 +1019,33 @@ np.testing.assert_array_equal(values.to_numpy(), [10.0, 20.0])
 An allocatable derived-type field is owned by its containing native instance.
 Access returns an `AllocatableArray` that retains the wrapper owner. An
 allocatable module array also returns a handle whose descriptor storage remains
-module-owned. `Aliased` permits borrowed view extraction; otherwise completed
-policy may select a detached read-only extraction. The attribute itself remains
-a handle when unallocated. Views returned by `to_numpy()` can become stale
-after native reallocation; copy before reallocation when independent lifetime
-is required.
+module-owned. Plain and `Aliased` module handles both return a current live view
+or `None`; the annotation records addressability for other native policy and
+does not select extraction behavior. The attribute itself remains a handle when
+unallocated. Views returned by `to_numpy()` can become stale after native
+reallocation; accessing a stale view is unsupported and may crash. Copy
+explicitly before reallocation when independent lifetime is required.
 
-Allocatable scalar derived-type dummy replacement remains blocked because a
-safe contract must define native construction, replacement, finalization, and
-exactly-once destruction of the whole wrapped object.
+Rank-zero allocatable and pointer derived module variables expose the same live
+field surface, returning `None` while absent. A wrapper-owned allocatable
+or pointer derived result uses persistent typed holder storage. Module
+allocatables use scoped `move_alloc` transactions for allocatable dummies;
+module pointers use typed local pointer transactions for reassociable pointer
+dummies. Both restore final state exactly once without transporting a native
+descriptor through the interoperable boundary. Reallocation, deallocation,
+reassociation, or
+nullification makes previously returned payload proxies stale; field access on
+such a proxy raises `ReferenceError`.
+
+The full five-actual by six-dummy matrix, including `TARGET`, `VALUE`, empty
+state, pointer `INTENT(IN)`, deliberate incompatibilities, and calls with many
+derived objects, is maintained in
+[Scalar Actuals And Native Dummies](wrapping-derived-types.md#scalar-actuals-and-native-dummies).
 
 Runtime tests:
 [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py)
+and
+[`test_scalar_derived_actual_dummy_matrix.py`](../../../tests/wrapper/fortran/derived_types/test_scalar_derived_actual_dummy_matrix.py)
 and
 [`test_allocatable_replacement.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_replacement.py).
 
@@ -1067,8 +1143,8 @@ assert values.flags.owndata or values.base is not None
 np.testing.assert_array_equal(values, [1.0, 2.0, 3.0, 4.0])
 ```
 
-Ordinary returned arrays preserve dtype, rank, bounds information needed by the
-wrapper, and Fortran ordering for multidimensional results. Numeric results
+Ordinary returned arrays preserve dtype, rank, required extents, and Fortran
+ordering for multidimensional results. Numeric results
 support ranks 1 through 15 and zero-sized dimensions. An allocatable zero-sized
 result is a present handle with a zero extent; an unallocated result is a
 present handle whose `allocated` property is false and whose `to_numpy()`
@@ -1139,6 +1215,13 @@ caller must provide enough storage for the native routine.
 Generated semantic `.pyi` contracts spell this final assumed-size dimension as
 `Flat`, for example `Float64[Flat]` for `real(8) :: values(*)`.
 
+`Flat` marks one storage axis rather than forcing rank one. For example,
+`Float64[:, Flat]` remains a rank-two Fortran-contiguous Python and bridge
+contract. An external interface uses `values(*)` when the preceding extent is
+available only from the Python array, because `values(:, *)` is not a legal
+Fortran assumed-size declaration; the bridge nevertheless associates the
+address with both runtime extents.
+
 <!-- X2PY_C_DOCS_START
 For handwritten contracts over native routines that consume a raw flat buffer,
 `Flat` may also describe a C-contiguous Python view when it appears first and is
@@ -1148,6 +1231,11 @@ not a literal Fortran dummy declaration: the generated wrapper validates a
 C-contiguous `(n, 3)` view, constructs the corresponding rank-2 bridge view over
 the same storage, and passes that view to the native assumed-size dummy. The
 native routine's `values(*)` dummy receives the flattened element sequence.
+Dimensions stay in Python logical order, so the symmetric fixed-prefix forms
+are `Float64[rows, Flat]` for Fortran order and
+`Annotated[Float64[Flat, columns], ORDER_C]` for C order. The latter becomes a
+Fortran bridge view with reversed extents `(columns, rows)` without changing
+the Python contract's rank.
 X2PY_C_DOCS_END -->
 
 Non-default lower bounds are preserved when computing shape constraints; they
@@ -1261,8 +1349,10 @@ Private components are omitted from Python descriptors. Allocatable fields use
 descriptor access; that retention does not make the wrapper owner of a pointer
 target. Arrays of derived types are blocked.
 
-Runtime tests: [`test_derived_type_boundaries.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py)
-and [`test_derived_type_methods.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_methods.py).
+Runtime tests: [`test_derived_type_boundaries.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_boundaries.py),
+[`test_derived_type_methods.py`](../../../tests/wrapper/fortran/derived_types/test_derived_type_methods.py),
+and the direct Phase 8 object and field evidence in
+[`test_phase8_derived_plan.py`](../../../tests/wrapper/fortran/derived_types/test_phase8_derived_plan.py).
 
 ## Inheritance And Polymorphism
 
@@ -1362,9 +1452,14 @@ class settings:
 
 The target method must have the same Python call shape and return type. A public
 target remains callable as a method; `@private` keeps the signature in the
-standalone `.pyi` but exposes only construction to users. Fortran generic
-constructor interfaces and overloaded runtime `tp_init` lowering are not yet
-mapped; they report explicit blockers.
+standalone `.pyi` but exposes only construction to users.
+
+An edited contract can instead declare multiple `__init__` overload links.
+The wrapper allocates the ordinary Phase 8 native owner once, selects an exact
+candidate from completed dtype/rank/class predicates, invokes that target, and
+commits ownership only after it succeeds. Selection never calls candidates to
+see which one works. Indistinguishable candidates fail during generation and a
+runtime call with no match raises `TypeError` before native entry.
 
 ### Finalization
 
@@ -1379,6 +1474,9 @@ native execution terminates the process.
 
 Runtime tests: [`test_constructors_and_finalizers.py`](../../../tests/wrapper/fortran/derived_types/test_constructors_and_finalizers.py)
 and [`test_borrowed_finalizers.py`](../../../tests/wrapper/fortran/derived_types/test_borrowed_finalizers.py).
+Bound and overloaded constructors are covered by
+[`test_phase9_bound_constructors.py`](../../../tests/wrapper/fortran/derived_types/test_phase9_bound_constructors.py)
+and [`test_phase9_class_overloads.py`](../../../tests/wrapper/fortran/naming/test_phase9_class_overloads.py).
 
 ## Module Variables, Constants, Saved State, And Common Blocks
 
@@ -1456,6 +1554,8 @@ covered in [Runtime Errors, The GIL, OpenMP, And Concurrency](#runtime-errors-th
 
 Runtime tests: [`test_module_state.py`](../../../tests/wrapper/fortran/module_state/test_module_state.py)
 and [`test_common_blocks.py`](../../../tests/wrapper/fortran/module_state/test_common_blocks.py).
+Scalar module-variable route parity is covered by
+[`test_scalar_module_variable_plan.py`](../../../tests/wrapper/fortran/module_state/test_scalar_module_variable_plan.py).
 
 ## Fortran Enums
 
@@ -1638,10 +1738,11 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 The parser and semantic IR still preserve `bind(C)`, `sequence`, component
-order, types, kinds, ranks, shapes, and storage facts. An interoperable
-derived-type `value` argument remains routed through a Fortran bridge so the
-Fortran compiler performs the ABI copy. A non-`bind(C)` derived type used by an
-existing `bind(C)` procedure is rejected before code generation.
+order, types, kinds, ranks, shapes, and storage facts. Every supported exact
+rank-zero monomorphic derived-type `value` argument is routed through a typed
+Fortran bridge so the Fortran compiler performs the call. The binding never mirrors the
+aggregate, so this wrapper mechanism does not require the type itself to be
+`bind(C)`.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -1729,7 +1830,6 @@ objects are separate build inputs and keep caller order.
 
 ```bash
 python3 -m x2py contracts/__init__.pyi \
-  --wrap \
   --out first_api \
   --native-objects native/first_api.o native/second_api.o \
   --native-include-dir native \
@@ -1772,16 +1872,16 @@ module contracts; the entry only changes the Python-facing export tree.
 ### Editable Makefile
 
 ```bash
-python3 -m x2py mesh.f90 solver.f90 --wrap --makefile --out-dir build
+python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
 <!-- X2PY_C_DOCS_START
-The Makefile covers user sources, generated wrappers, runtime support, and the
+The Makefile covers user sources, generated wrappers, the header-only native binding support, and the
 shared-library link. It records resolved compilers and exposes `FC`, `CC`,
 `X2PY_LD`, `X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS`. User Fortran
-sources are conservatively chained in supplied order; independent generated C
-and runtime work may run in parallel. This target expects GNU Make and a POSIX
+sources are conservatively chained in supplied order; generated bridge and C
+binding work may run in parallel. This target expects GNU Make and a POSIX
 shell.
 X2PY_C_DOCS_END -->
 
@@ -1790,12 +1890,11 @@ For semantic `.pyi` builds, Makefile mode writes `x2py-build.json` before
 
 ```bash
 python3 -m x2py contracts/solver.pyi \
-  --wrap \
   --native-fortran-sources native/solver.f90 \
   --out-dir build/solver \
   --makefile
 
-python3 -m x2py --build-manifest build/solver/x2py-build.json --wrap
+python3 -m x2py --build-manifest build/solver/x2py-build.json
 ```
 
 Runtime tests: [`test_multi_source_builds.py`](../../../tests/wrapper/fortran/multiple_files/test_multi_source_builds.py),
@@ -1843,6 +1942,11 @@ class_(np.int32(4))      # Python name
 # native call uses native_class_entry
 ```
 
+Python escaping changes only the public Python surface. For example, a native
+Fortran variable named `lambda` remains `lambda` in native code and is exposed
+to Python as `lambda_`. Generated native symbols are checked against their own
+target-language restrictions, not Python's keyword list.
+
 ### Collisions
 
 Every normalized public name must be unique in its namespace. Module members
@@ -1857,6 +1961,19 @@ class__2
 class__3
 ```
 
+Generated native symbols use the same readable duplicate convention, while a
+target-language reserved word gets an explicit wrapper suffix:
+
+```text
+value          # first generated symbol
+value_2        # another generated symbol named value
+module_x2py    # generated symbol whose original spelling is a native reserved word
+module_x2py_2  # collision with the escaped spelling
+```
+
+The generator does not invent semantic names for collisions: the source name
+and deterministic suffix make generated artifacts easy to trace and reproduce.
+
 Generated helper names use an internal namespace, so a user procedure named
 `get_value` does not collide with the internal accessor for a variable named
 `value`.
@@ -1870,9 +1987,11 @@ Runtime tests: [`test_visibility_naming.py`](../../../tests/wrapper/fortran/nami
 ## Immediate Python Callbacks
 
 x2py supports dummy procedures invoked during the wrapped call. It resolves
-local explicit interfaces and named abstract interfaces into a complete
-callable contract containing argument order, types, intents, array ranks and
-shapes, derived-type references, and optional result type.
+local explicit interfaces and named abstract interfaces into named
+`@prototype` declarations containing argument order, types, value/reference
+transport, array ranks and shapes, derived-type references, and result type.
+Source `intent` remains in the native interface when that interface must be
+imported, but it is not repeated in the semantic prototype.
 
 ```fortran
 abstract interface
@@ -1898,12 +2017,13 @@ thread are supported.
 
 ### Callback Values
 
-- scalars use the matching Python numeric conversion;
+- value scalars use the matching Python numeric conversion, while reference
+  scalars use writable rank-zero NumPy storage;
 - arrays require exact dtype, rank, declared shape, alignment, and Fortran
   contiguity;
 - derived values require the generated wrapper type;
-- array and derived `intent(out)` or `intent(inout)` values are copied back
-  before the adapter returns; and
+- reference scalar, array, character, and derived storage is handled
+  permissively and written back before the adapter returns; and
 - temporary NumPy views and borrowed derived wrappers passed to the callback are
   valid only during that callback invocation.
 
@@ -1975,8 +2095,6 @@ def solve(
 ```
 
 ```python
-from x2py.contracts import raises
-
 solve(values)            # returns None when status == 0
 solve(bad_values)        # raises RuntimeError(message) otherwise
 ```
@@ -2016,7 +2134,7 @@ uses the normal GIL-release policy. For GNU Fortran, pass OpenMP flags to both
 compile and link steps:
 
 ```bash
-python3 -m x2py parallel_api.f90 --wrap --makefile --out-dir build
+python3 -m x2py parallel_api.f90 --makefile --out-dir build
 make -f build/Makefile.x2py \
   X2PY_FFLAGS=-fopenmp \
   X2PY_LDFLAGS=-fopenmp
@@ -2047,15 +2165,6 @@ Runtime tests: [`test_runtime_policies.py`](../../../tests/wrapper/fortran/runti
 This chapter groups behavior for which implementation or policy is incomplete.
 These items are not enabled by parser support or by editing metadata unless the
 backend contract described here is also implemented.
-
-### Output Projection Metadata Is Not The Sole Codegen Source
-
-Semantic IR preserves explicit projection mappings, and the documented output
-behaviors are implemented and runtime-tested. Wrapper generation does not yet
-consume those semantic mappings as the single authoritative mechanism for every
-projection path. Some output decisions are still represented by the established
-lowered argument/result structures. This is an internal integration gap, not a
-different user-visible tuple or mutation contract.
 
 ### Pointer Views, Results, And Reassociation
 
@@ -2106,13 +2215,13 @@ wrappers:
 
 | Subject | Blocked form | Missing contract |
 | --- | --- | --- |
-| Allocatables | Allocatable scalar derived-type replacement | Whole-object construction, replacement, finalization, and destruction. |
+| Allocatables | Passing a module allocatable scalar derived object to an allocatable dummy | The object address is not the concrete allocatable descriptor; use a wrapper-owned allocatable result holder. |
 | Arrays | Assumed type `type(*)` | Runtime dtype and descriptor policy. |
 | Arrays | Character arrays not representable as fixed-width bytes dtype | Encoding, ABI, allocation, and ownership. |
 | Arrays | Derived-type arrays | Element layout, construction, destruction, aliasing, and copy/view behavior. |
-| Pointers | Pointer-array results and unproved reassociation or ownership-changing operations | Stable result owner storage, target lifetime, or explicit operation policy. |
+| Pointers | Pointer-array or scalar-derived pointer results and unproved reassociation or ownership-changing operations | Stable result owner storage, target lifetime, descriptor identity, or explicit operation policy. |
 | Polymorphism | Results, mutable dummies, arrays, allocatable/pointer scalars, `class(*)` | Dynamic type, allocation, replacement, and ownership. |
-| Constructors | Generic constructor interfaces and overloaded runtime initialization | Deterministic Python constructor selection and lowering. |
+| Constructors | Incomplete or indistinguishable constructor overload sets | Every candidate needs a complete exact runtime signature and compatible owner lifecycle. |
 | Characters | Mutable scalar allocatable character dummies and deferred-length mutable fields | Allocation, encoding, replacement, and destruction. |
 | Kinds | Real wider than 64 bits, complex wider than 128 bits, wider explicit logical storage | Portable NumPy round-trip without silent precision loss. |
 | Callbacks | Stored, optional, cross-thread, or procedure-pointer callbacks | Persistent ownership, thread, exception, nullability, and teardown. |

@@ -6,6 +6,8 @@ import ast
 from collections import Counter
 from pathlib import Path
 import re
+import subprocess
+import sys
 
 from tests.wrapper.fortran._support import REPO_ROOT, WRAPPER_FORTRAN_DATA, WRAPPER_TEST_ROOT
 
@@ -13,6 +15,7 @@ WRAPPER_ROOT = WRAPPER_TEST_ROOT
 WRAPPER_SUITE_ROOT = WRAPPER_ROOT.parent
 DOCS_ROOT = REPO_ROOT / "docs"
 CHECKLIST_COVERAGE = WRAPPER_SUITE_ROOT / "CHECKLIST_COVERAGE.md"
+WRAPPER_PLAN_MIGRATION_CHECKLIST = DOCS_ROOT / "maintainer" / "roadmap" / "wrapper-plan-migration-checklist.md"
 FORTRAN_SUFFIXES = {".f", ".f90", ".f95", ".for"}
 ROOT_FILES = {
     "README.md",
@@ -50,11 +53,11 @@ SUBJECT_TEST_MODULES = {
         "test_array_results.py",
         "test_assumed_rank_arrays.py",
         "test_array_generated_pyi_contracts.py",
-        "test_bind_c_array_type.py",
         "test_multidimensional_arrays.py",
     ),
     "scalars": (
         "test_fortran_enums.py",
+        "test_scalar_boundary_plan.py",
         "test_scalar_generated_pyi_contracts.py",
         "test_scalar_kinds.py",
         "test_value_and_bind_c.py",
@@ -65,6 +68,7 @@ SUBJECT_TEST_MODULES = {
         "test_native_call_examples.py",
         "test_optional_arguments.py",
         "test_output_arguments.py",
+        "test_scalar_writeback_plan.py",
     ),
     "strings": (
         "test_character_arguments.py",
@@ -78,6 +82,9 @@ SUBJECT_TEST_MODULES = {
         "test_derived_type_boundaries.py",
         "test_derived_type_generated_pyi_contracts.py",
         "test_derived_type_methods.py",
+        "test_phase8_derived_plan.py",
+        "test_phase9_bound_constructors.py",
+        "test_scalar_derived_actual_dummy_matrix.py",
         "test_inheritance.py",
         "test_pointers.py",
     ),
@@ -94,6 +101,7 @@ SUBJECT_TEST_MODULES = {
         "test_common_blocks.py",
         "test_module_state_generated_pyi_contracts.py",
         "test_module_state.py",
+        "test_scalar_module_variable_plan.py",
     ),
     "runtime_behavior": (
         "test_openmp_runtime.py",
@@ -105,6 +113,7 @@ SUBJECT_TEST_MODULES = {
         "test_defined_operators.py",
         "test_generic_interfaces.py",
         "test_naming_generated_pyi_contracts.py",
+        "test_phase9_class_overloads.py",
         "test_visibility_naming.py",
     ),
     "layout_rules": ("test_wrapper_guide_layout.py",),
@@ -113,6 +122,18 @@ ALLOWED_SUBJECTS = tuple(SUBJECT_TEST_MODULES)
 SUBJECT_TEST_PATHS = tuple(
     f"{subject}/{filename}" for subject, filenames in SUBJECT_TEST_MODULES.items() for filename in filenames
 )
+MIGRATION_MATRIX_STATUS_VALUES = {
+    "not-applicable",
+    "deferred-real-library",
+    "legacy",
+    "dual-route",
+    "wrapper-plan",
+}
+MIGRATION_MATRIX_ROW_RE = re.compile(
+    r"^\| `(?P<selector>tests/wrapper/[^`]+)` \| (?P<unit>[^|]+) "
+    r"\| (?P<lanes>[^|]+) \| `(?P<status>[^`]+)` \|$"
+)
+MIGRATION_SUMMARY_ROW_RE = re.compile(r"^\| `(?P<status>[^`]+)` \| (?P<count>[0-9]+) \|$")
 
 
 def _is_meaningful(path: Path) -> bool:
@@ -144,6 +165,59 @@ def _docs_and_test_text_paths() -> list[Path]:
         and path != Path(__file__)
         and "docs/old_docs" not in path.as_posix()
     )
+
+
+def _collected_wrapper_test_nodes() -> list[str]:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "tests/wrapper",
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return sorted(line for line in result.stdout.splitlines() if line.startswith("tests/wrapper/") and "::" in line)
+
+
+def _wrapper_plan_migration_matrix_rows() -> dict[str, dict[str, str]]:
+    rows = {}
+    for line in WRAPPER_PLAN_MIGRATION_CHECKLIST.read_text(encoding="utf-8").splitlines():
+        match = MIGRATION_MATRIX_ROW_RE.match(line)
+        if match is None:
+            continue
+        selector = match.group("selector")
+        rows[selector] = {
+            "unit": match.group("unit").strip(),
+            "lanes": match.group("lanes").strip(),
+            "status": match.group("status"),
+        }
+    return rows
+
+
+def _wrapper_plan_migration_summary_counts() -> dict[str, int]:
+    counts = {}
+    for line in WRAPPER_PLAN_MIGRATION_CHECKLIST.read_text(encoding="utf-8").splitlines():
+        match = MIGRATION_SUMMARY_ROW_RE.match(line)
+        if match is None or match.group("status") not in MIGRATION_MATRIX_STATUS_VALUES:
+            continue
+        status = match.group("status")
+        assert status not in counts, f"duplicate migration summary row: {status}"
+        counts[status] = int(match.group("count"))
+    return counts
+
+
+def _migration_selector_matches(selector: str, nodeid: str) -> bool:
+    if selector.endswith("::*"):
+        return nodeid.startswith(f"{selector[:-3]}::")
+    if selector.endswith("[*]"):
+        return nodeid.startswith(f"{selector[:-3]}[")
+    return nodeid == selector
 
 
 def test_fortran_wrapper_tree_uses_only_allowed_subjects():
@@ -282,6 +356,48 @@ def test_wrapper_checklist_python_evidence_references_existing_test_nodes():
     assert missing == []
 
 
+def test_wrapper_plan_migration_matrix_tracks_collected_wrapper_nodes():
+    matrix_rows = _wrapper_plan_migration_matrix_rows()
+    assert matrix_rows
+
+    invalid_status_rows = sorted(
+        selector for selector, row in matrix_rows.items() if row["status"] not in MIGRATION_MATRIX_STATUS_VALUES
+    )
+    assert invalid_status_rows == []
+
+    incomplete_rows = sorted(selector for selector, row in matrix_rows.items() if not row["unit"] or not row["lanes"])
+    assert incomplete_rows == []
+
+    collected_nodes = _collected_wrapper_test_nodes()
+    assert collected_nodes
+
+    unmatched_nodes = []
+    multiply_matched_nodes = []
+    statuses_by_node = {}
+    for nodeid in collected_nodes:
+        matches = [selector for selector in matrix_rows if _migration_selector_matches(selector, nodeid)]
+        if not matches:
+            unmatched_nodes.append(nodeid)
+        elif len(matches) > 1:
+            multiply_matched_nodes.append((nodeid, matches))
+        else:
+            statuses_by_node[nodeid] = matrix_rows[matches[0]]["status"]
+
+    stale_selectors = sorted(
+        selector
+        for selector in matrix_rows
+        if not any(_migration_selector_matches(selector, nodeid) for nodeid in collected_nodes)
+    )
+
+    assert unmatched_nodes == []
+    assert multiply_matched_nodes == []
+    assert stale_selectors == []
+
+    collected_status_counts = Counter(statuses_by_node.values())
+    expected_summary = {status: collected_status_counts.get(status, 0) for status in MIGRATION_MATRIX_STATUS_VALUES}
+    assert _wrapper_plan_migration_summary_counts() == expected_summary
+
+
 def test_wrapper_language_suite_and_user_guide_link_current_subject_paths():
     root_test_modules = sorted(path.name for path in WRAPPER_SUITE_ROOT.glob("test_*.py"))
     assert root_test_modules == []
@@ -289,15 +405,7 @@ def test_wrapper_language_suite_and_user_guide_link_current_subject_paths():
     assert "fortran/README.md" in (WRAPPER_SUITE_ROOT / "README.md").read_text(encoding="utf-8")
 
     guide = (DOCS_ROOT / "user/guide/fortran-wrapper.md").read_text(encoding="utf-8")
-    runtime_paths = [
-        test_path
-        for test_path in SUBJECT_TEST_PATHS
-        if not test_path.startswith("layout_rules/")
-        and test_path
-        not in {
-            "arrays/test_bind_c_array_type.py",
-        }
-    ]
+    runtime_paths = [test_path for test_path in SUBJECT_TEST_PATHS if not test_path.startswith("layout_rules/")]
     missing = [test_path for test_path in runtime_paths if test_path not in guide]
     assert missing == []
     assert "- [x]" not in guide

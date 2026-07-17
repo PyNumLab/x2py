@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass
 import os
 import platform
@@ -13,11 +14,18 @@ import sys
 
 import pytest
 
+from x2py import pyi_text_to_semantic_module
+
 
 ROOT = Path(__file__).parents[2]
 DOC_PATHS = [
     ROOT / "README.md",
     *sorted(path for path in (ROOT / "docs").rglob("*.md") if "old_docs" not in path.parts),
+]
+AUDITED_PYTHON_DOC_PATHS = [
+    ROOT / "README.md",
+    *sorted((ROOT / "docs/user/getting-started").glob("*.md")),
+    *sorted((ROOT / "docs/user/guide").glob("*.md")),
 ]
 TEST_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test:\s*(run|exact)(?:\s+([a-z0-9_-]+))?\s*-->\s*$")
 OUTPUT_MARKER = re.compile(r"^\s*<!--\s*x2py-doc-test-output\s*-->\s*$")
@@ -57,6 +65,17 @@ class DocumentedSource:
     line: int
     source_path: Path
     source_text: str
+
+    @property
+    def test_id(self) -> str:
+        return f"{self.path.relative_to(ROOT)}:{self.line}"
+
+
+@dataclass(frozen=True)
+class DocumentedPythonBlock:
+    path: Path
+    line: int
+    source: str
 
     @property
     def test_id(self) -> str:
@@ -198,6 +217,24 @@ DOCUMENTATION_EXAMPLES = [example for examples, _sources in DOCUMENTATION_CONTEN
 DOCUMENTED_SOURCES = [source for _examples, sources in DOCUMENTATION_CONTENT for source in sources]
 
 
+def _documented_python_blocks(path: Path) -> list[DocumentedPythonBlock]:
+    """Collect every visible Python fence for syntax and contract validation."""
+    lines = _visible_documentation_lines(path)
+    blocks = []
+    index = 0
+    while index < len(lines):
+        if lines[index].strip() != "```python":
+            index += 1
+            continue
+        source, after_block, _language = _fenced_block(lines, index, language="python")
+        blocks.append(DocumentedPythonBlock(path=path, line=index + 1, source=source))
+        index = after_block
+    return blocks
+
+
+DOCUMENTED_PYTHON_BLOCKS = [block for path in AUDITED_PYTHON_DOC_PATHS for block in _documented_python_blocks(path)]
+
+
 def _command_argv(example: DocumentationExample) -> list[str]:
     if example.language == "python":
         return [sys.executable, "-c", example.command]
@@ -227,6 +264,14 @@ def test_documentation_has_automatically_verified_examples():
 def test_documented_source_input(source: DocumentedSource):
     assert source.source_path.is_file(), f"{source.test_id}: documented source does not exist: {source.source_path}"
     assert source.source_text.rstrip("\n") == source.source_path.read_text(encoding="utf-8").rstrip("\n")
+
+
+@pytest.mark.parametrize("block", DOCUMENTED_PYTHON_BLOCKS, ids=lambda block: block.test_id)
+def test_documented_python_block_is_valid(block: DocumentedPythonBlock):
+    """Keep Python examples parseable and semantic contract examples loadable."""
+    ast.parse(block.source, filename=block.test_id)
+    if "from x2py.contracts import" in block.source:
+        pyi_text_to_semantic_module(block.source, module_name="documentation_example")
 
 
 @pytest.mark.parametrize("path", DOC_PATHS, ids=lambda path: str(path.relative_to(ROOT)))

@@ -10,7 +10,7 @@ pytest.importorskip("hypothesis")
 
 from hypothesis import given, strategies as st
 
-from x2py.c_parser import parse_c_file
+from x2py.parsers.c import parse_c_file
 
 from x2py.semantics.c2ir import c_file_to_semantic_modules
 
@@ -31,7 +31,7 @@ from x2py.semantics.models import (
 
 from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 
-from x2py.codegen.printers.pyi_printer import emit_module
+from x2py.wrapper_codegen.printers import emit_module
 
 from x2py import parse_fortran_file
 

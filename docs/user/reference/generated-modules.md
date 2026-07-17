@@ -84,11 +84,19 @@ Python, but it does not mutate the native parameter.
 
 Supported module arrays, allocatables, pointers, and derived objects follow the
 ownership rules in [Memory Management](../guide/memory-management.md) and
-the topic-specific user-guide pages. `Aliased` derived module variables return
-live borrowed wrappers. Plain derived module variables without a completed
-live-borrow policy block readiness; whole-object `Snapshot[T]` contracts are a
-future feature, not an active generated module surface. Missing addressability,
-ownership, release, mutability, or safe-copy facts block generation.
+the topic-specific user-guide pages. Plain and `Aliased` derived module
+variables return live native-owned objects. `Aliased` permits an address-backed
+borrow; a plain declaration uses typed module-specific access. Missing
+ownership, release, mutability, or a supported module-object mechanism blocks
+generation.
+
+Rank-zero `Allocatable[Derived]` and `Pointer[Derived]` module variables are
+nullable live proxies: the module attribute is `None` while native state is
+absent and otherwise exposes the generated fields. Compatible allocatable
+dummies use a reversible typed `move_alloc` transaction; reassociable pointer
+dummies use a typed pointer transaction and restore the final association.
+Payload-only calls use direct or synchronous scoped addresses. See the
+[complete scalar-derived compatibility matrix](../guide/wrapping-derived-types.md#scalar-actuals-and-native-dummies).
 
 ## Visibility, Binding Names, And Imports
 

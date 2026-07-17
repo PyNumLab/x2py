@@ -36,6 +36,16 @@ C_DOCS_END = "X2PY_C_DOCS_END -->"
 C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
 VISIBLE_C_DOCUMENTATION_EXCEPTIONS = {
     "docs/user/guide/enumerations.md": ("bind(C)",),
+    "docs/user/guide/wrapping-derived-types.md": ("bind(C)",),
+    "docs/user/guide/arrays.md": ("ORDER_C", "C-contiguous", "C-order", "C-oriented"),
+    "docs/user/reference/semantic-pyi-format.md": (
+        "ORDER_C",
+        "C-contiguous",
+        "C-order",
+        "C-oriented",
+        "bind(C)",
+        "c_input",
+    ),
 }
 VISIBLE_C_DOCUMENTATION = re.compile(
     r"(?:"
@@ -54,7 +64,7 @@ VISIBLE_C_DOCUMENTATION = re.compile(
     r"|\b(?:ORDER_C|REQUIRE_C_CONTIGUOUS|NPY_C_CONTIGUOUS)\b"
     r"|\b(?:CToIR|CFile|CProject|CParse|CDiagnostic)[A-Za-z0-9_]*\b"
     r"|\b(?:parse_c|c_file|c_project|c_function|c_parameter|c_struct|c_type)_[A-Za-z0-9_]+\b"
-    r"|(?:tests/data/c|tests/parser/c|x2py/c_parser|/c/general/)"
+    r"|(?:tests/data/c|tests/parser/c|x2py/parsers/c|/c/general/)"
     r"|(?:c-parser|inspect-c-api|c-api)"
     r"|\b(?:structs?|unions?|typedefs?|declarators?|bitfields?|K&R)\b"
     r"|--language\s+c\b"
@@ -202,11 +212,11 @@ SOURCE_NAVIGATION_CORPUS = [
     "docs/developer/repository-structure.md",
     "docs/maintainer/internal-architecture/pipeline-map.md",
     "x2py/README.md",
-    "x2py/c_parser/README.md",
-    "x2py/fortran_parser/README.md",
-    "x2py/pyi_parser/README.md",
+    "x2py/parsers/README.md",
+    "x2py/parsers/c/README.md",
+    "x2py/parsers/fortran/README.md",
+    "x2py/parsers/pyi/README.md",
     "x2py/semantics/README.md",
-    "x2py/codegen/README.md",
     "x2py/compiling/README.md",
 ]
 SOURCE_NAVIGATION_HOTSPOTS = [
@@ -217,11 +227,11 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/probes/c_types.py",
     "x2py/probes/fortran_types.py",
     "x2py/semantics/ownership.py",
-    "x2py/c_parser/parser.py",
-    "x2py/c_parser/cli.py",
-    "x2py/fortran_parser/parser.py",
-    "x2py/fortran_parser/cli.py",
-    "x2py/pyi_parser/parser.py",
+    "x2py/parsers/c/parser.py",
+    "x2py/parsers/c/cli.py",
+    "x2py/parsers/fortran/parser.py",
+    "x2py/parsers/fortran/cli.py",
+    "x2py/parsers/pyi/parser.py",
     "x2py/semantics/models.py",
     "x2py/semantics/fortran2ir.py",
     "x2py/semantics/c2ir.py",
@@ -229,22 +239,18 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/pipeline/pyi.py",
     "x2py/semantics/policy_completion.py",
     "x2py/semantics/readiness.py",
-    "x2py/semantics/ir2ast.py",
-    "x2py/codegen/binding_pipeline.py",
-    "x2py/codegen/bridges/fortran_to_c.py",
-    "x2py/codegen/bindings/c_to_python.py",
-    "x2py/codegen/bindings/cpython_api.py",
-    "x2py/codegen/bindings/numpy_cpython_api.py",
-    "x2py/codegen/printers/fcode.py",
-    "x2py/codegen/printers/ccode.py",
-    "x2py/codegen/printers/cpythoncode.py",
-    "x2py/codegen/printers/pyi_printer.py",
-    "x2py/compiling/basic.py",
+    "x2py/wrapper_codegen/plan.py",
+    "x2py/wrapper_codegen/planner.py",
+    "x2py/wrapper_codegen/generator.py",
+    "x2py/wrapper_codegen/c/binding.py",
+    "x2py/wrapper_codegen/fortran/bridge.py",
+    "x2py/wrapper_codegen/printers/pyi_printer.py",
+    "x2py/wrapper_codegen/printers/source_printers.py",
+    "x2py/compiling/objects.py",
     "x2py/compiling/compilers.py",
-    "x2py/compiling/python_wrapper.py",
-    "x2py/compiling/runtime_support.py",
+    "x2py/compiling/native_support.py",
     "x2py/naming/policy.py",
-    "x2py/stdlib/",
+    "x2py/binding_support/",
 ]
 SOURCE_NAVIGATION_PUBLIC_DOCS = [
     "README.md",
@@ -286,9 +292,8 @@ SOURCE_NAVIGATION_TEST_TARGETS = [
     "tests/semantics/conversion/c/",
     "tests/semantics/readiness/test_c_readiness.py",
     "tests/semantics/conversion/fortran/",
-    "tests/lowering/test_semantic_ir.py",
-    "tests/codegen/printers/",
-    "tests/codegen/printers/test_modern_example.py",
+    "tests/wrapper_codegen/printers/",
+    "tests/wrapper_codegen/printers/test_modern_example.py",
     "tests/semantics/readiness/",
     "tests/docs/test_examples.py",
     "tests/docs/test_structure.py",
@@ -369,18 +374,15 @@ REQUIRED_EXAMPLE_RECIPE_PAGES = [
     "user/examples/recipes/compiler-preprocessing.md",
 ]
 MAJOR_SOURCE_PACKAGES = [
-    "x2py/c_parser/",
-    "x2py/fortran_parser/",
+    "x2py/parsers/",
     "x2py/semantics/",
-    "x2py/codegen/",
+    "x2py/wrapper_codegen/",
     "x2py/compiling/",
 ]
 PACKAGE_READMES = [
     "x2py/README.md",
-    "x2py/c_parser/README.md",
-    "x2py/fortran_parser/README.md",
+    "x2py/parsers/README.md",
     "x2py/semantics/README.md",
-    "x2py/codegen/README.md",
     "x2py/compiling/README.md",
 ]
 ARCHIVED_OLD_DOCS = [
@@ -871,19 +873,14 @@ def test_getting_started_pages_keep_advanced_stage_flags_out_of_beginner_path() 
     assert "--json" not in content
 
 
-def test_user_guide_keeps_default_source_builds_free_of_redundant_stage_flags() -> None:
+def test_user_guide_uses_automatic_wrapper_stage_selection() -> None:
     content = "\n".join(
         _visible_documentation_source(DOCS_ROOT / relative_path) for relative_path in REQUIRED_USER_GUIDE_PAGES
     )
 
-    assert "--json" not in content
-    assert "--wrap-readiness" not in content
-    assert "points.f90 --wrap" not in content
-    assert "src/scale.f90 --wrap --out-dir" not in content
-    assert "fruntime_abi_f90.f90 \\\n  --wrap" not in content
-    assert "solver.f90 \\\n  diagnostics.f90 \\\n  --wrap" not in content
-    assert "python3 -m x2py contracts/solver/__init__.pyi \\\n  --wrap" in content
-    assert "Makefile mode is an explicit wrapper submode" in content
+    assert "python3 -m x2py src/scale.f90 \\\n  --makefile" in content
+    assert "python3 -m x2py contracts/solver/__init__.pyi \\\n  --native-fortran-sources solver.f90" in content
+    assert "python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build" in content
 
 
 def test_array_handle_docs_keep_views_copies_and_handles_distinct() -> None:
@@ -893,11 +890,11 @@ def test_array_handle_docs_keep_views_copies_and_handles_distinct() -> None:
 
     assert "Reading the Python attribute" in allocatables
     assert "returns an `Allocatable[T[...]]` handle, not `ndarray | None`." in allocatables
-    assert "returns a read-only detached copy" in allocatables
+    assert "never creates an automatic detached snapshot" in allocatables
     assert "A borrowed view is a NumPy array that points at storage Python does not own." in allocatables
     assert "Pointer-array handle results remain blocked" in pointers
     assert "Any NumPy view returned by `p.to_numpy()` is tied to the pointer target" in pointers
-    assert "Whole-object `Snapshot[T]` contracts are future-only" in memory
+    assert "plain and `Aliased` derived module variables remain live native-owned objects" in memory
 
 
 @pytest.mark.parametrize("heading", CLI_HELP_GROUP_HEADINGS)

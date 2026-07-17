@@ -1,9 +1,17 @@
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pytest
 
-from tests.wrapper.fortran._support import _build_source_or_generated_pyi_and_import, wrapper_source
+from x2py import build_pyi_extension
+from tests.wrapper.fortran._support import (
+    _build_source_or_generated_pyi_and_import,
+    _compile_native_object,
+    _import_from_build_dir,
+    _sole_native_module,
+    wrapper_source,
+)
 
 
 SOURCE = wrapper_source("multid_arrays.f90")
@@ -248,3 +256,51 @@ def test_rank3_assumed_shape_accepts_fortran_ordered_strided_views(module):
         module.shift3_strided(c_ordered_strided_source, contiguous_out)
     with pytest.raises(TypeError, match=r"expected ordering \(F\)"):
         module.checksum3_strided(c_ordered_strided_source, contiguous_checksum)
+
+
+def test_dense_strided_and_projected_arrays_use_canonical_plan(tmp_path: Path):
+    """Replay dense extents, positive strides, and returned storage identity."""
+    native_object = _compile_native_object(SOURCE, tmp_path / "native")
+    selected = ("scale2_contiguous", "scale2_strided", "scale2_explicit", "shift3_strided")
+    contract_package = tmp_path / "multid_arrays_contract"
+    shutil.copytree(CONTRACT_FIXTURES / "multid_arrays", contract_package)
+    (contract_package / "__init__.pyi").write_text(
+        "".join(f"from .multid_arrays import {name}\n" for name in selected),
+        encoding="utf-8",
+    )
+    result = build_pyi_extension(
+        contract_package / "__init__.pyi",
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "build",
+    )
+    imported = _import_from_build_dir(result.module_name, result.output_dir)
+    module = imported if hasattr(imported, "scale2_contiguous") else _sole_native_module(imported)
+
+    dense = _matrix()
+    dense_out = np.zeros_like(dense, order="F")
+    assert module.scale2_contiguous(dense, dense_out) is dense_out
+    np.testing.assert_allclose(dense_out, 2.0 * dense)
+
+    explicit_out = np.zeros_like(dense, order="F")
+    assert module.scale2_explicit(np.int32(4), np.int32(3), dense, explicit_out) is explicit_out
+    np.testing.assert_allclose(explicit_out, 4.0 * dense)
+
+    strided = _strided_matrix()
+    strided_out = _strided_matrix_output(strided.shape)
+    assert module.scale2_strided(strided, strided_out) is strided_out
+    np.testing.assert_allclose(strided_out, 3.0 * strided)
+
+    empty = _strided_matrix(0, 3)
+    empty_out = _strided_matrix_output(empty.shape)
+    assert module.scale2_strided(empty, empty_out) is empty_out
+    assert empty_out.shape == (0, 3)
+
+    dense = _matrix()
+    output = np.zeros_like(dense, order="F")
+    with pytest.raises(TypeError):
+        module.scale2_strided(_reversed_fortran_matrix(), output)
+    with pytest.raises(TypeError):
+        module.scale2_strided(_broadcast_fortran_like_matrix(), output)
+    with pytest.raises(TypeError):
+        module.scale2_contiguous(np.array(dense, order="C"), output)

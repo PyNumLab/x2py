@@ -35,12 +35,12 @@ contains
     values = values + 1.0_8
   end subroutine shift
 
-  function automatic_vector(size) result(values)
-    integer(4), intent(in) :: size
-    real(8) :: values(size)
+  function automatic_vector(count) result(values)
+    integer(4), intent(in) :: count
+    real(8) :: values(count)
     integer(4) :: index
 
-    values = [(2.0_8 * index, index = 1, size)]
+    values = [(2.0_8 * index, index = 1, count)]
   end function automatic_vector
 end module array_ops
 ```
@@ -48,25 +48,25 @@ end module array_ops
 Inspecting `arrays.f90` prints these array contracts:
 
 ```python
-from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, native_call
+from x2py.contracts import Addr, Arg, Float64, Int32, native_call
 
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2)])
 def scale_matrix(
     rows: Int32,
     columns: Int32,
-    values: Annotated[Float64[rows, columns], ORDER_F]
+    values: Float64[rows, columns]
 ) -> None: ...
 
 @native_call([Addr(Arg(0)), Arg(1)])
 def shift(
     size: Int32,
-    values: Float64[size - 1 - 0 + 1]
+    values: Float64[size]
 ) -> None: ...
 
 @native_call([Addr(Arg(0))])
 def automatic_vector(
-    size: Int32
-) -> Float64[size]: ...
+    count: Int32
+) -> Float64[count]: ...
 ```
 
 Build it:
@@ -109,8 +109,10 @@ an automatic rank-one result. Other supported contracts can use `Float64[:]`,
 `Float64[3]`, `Float64[::]`, `Float64[Flat]`, or `Float64[...]`.
 
 The element name maps to an exact NumPy dtype; see [Data Types](data-types.md).
-Dimension expressions constrain extents. Python remains zero-indexed even when
-the native declaration has non-default lower bounds.
+Dimension expressions constrain extents, not source lower/upper-bound
+spellings. The native dimension `0:size-1` therefore becomes the public extent
+`size`. Python remains zero-indexed even when the native declaration has
+non-default lower bounds.
 
 ## Validation
 
@@ -131,6 +133,31 @@ runs.
 
 Use `numpy.asfortranarray` or `order="F"` for a multidimensional contract that
 requires Fortran orientation, as shown by `matrix` in the complete example.
+
+Layout annotations describe a deliberate non-default storage representation;
+they do not request an automatic conversion. Plain multidimensional
+Fortran-facing arrays already pass Fortran-contiguous storage with their logical
+axes unchanged. `ORDER_C` passes the same C-contiguous data address without
+copying and constructs the Fortran bridge view with reversed axes. For example,
+a C-order Python shape `(2, 3)` is a Fortran bridge shape `(3, 2)` over the
+same six elements. Use `ORDER_C` only when the native operation intentionally
+accepts that transposed storage view.
+
+Add `COPY_F` when Python should accept C-contiguous storage but native Fortran
+must observe the same logical axes in Fortran order:
+
+```python
+values: Annotated[Float64[:, :], ORDER_C, COPY_F]
+```
+
+The binding owns this complete representation lifecycle. It creates an
+F-contiguous NumPy temporary before the call, passes that ordinary F-order
+buffer through the unchanged bridge path, copies values back into the original
+C-order array after the call, and releases the temporary. Projected results
+return the original C-order object. Native `intent(in)` remains a property of
+the native procedure call; neither the semantic `.pyi` nor the bridge temporary
+needs a separate direction annotation for `COPY_F`. The bridge performs neither
+half of this argument conversion.
 
 Rank-one contiguous arrays can satisfy their documented contiguous contract
 without a meaningful row/column distinction. Legacy fixed-form array contracts

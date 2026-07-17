@@ -36,7 +36,7 @@ python3 -m x2py src/scale.f90 --out-dir build/scale
 python3 python/check_scale.py
 ```
 
-The asserted result remains `numpy.float64(7.5)`, as shown with the original
+The asserted result remains the Python value `7.5`, as shown with the original
 source in the packaging example.
 
 Record the required Python and NumPy versions, compiler family, compiler flags,

@@ -104,6 +104,8 @@ def _native_array_handle_from_generated_ops(
             normalized = _generated_handoff_operation(operation, owner=owner, pass_owner=owned)
         elif name == "descriptor" and owned:
             normalized = _generated_owned_descriptor_operation(operation, owner)
+        elif name in {"shape", "to_numpy"} and owned:
+            normalized = _generated_owned_descriptor_record_operation(operation, owner)
         elif name in {"allocate", "resize"}:
             normalized = _generated_shape_operation(operation, owner=owner if owned else None)
         elif owned:
@@ -159,6 +161,27 @@ def _generated_owned_descriptor_operation(operation: HandleOperation, owner: Any
     def call(_handle: NativeArrayHandleBase, *args: Any) -> _NativeArrayDescriptorHandoff:
         value = operation(owner, *args)
         return _native_array_descriptor_handoff_from_generated_result(value, owner=owner)
+
+    return call
+
+
+def _generated_owned_descriptor_record_operation(operation: HandleOperation, owner: Any) -> HandleOperation:
+    """Adapt owned descriptor facts and normalize compiler zero-extent sentinels."""
+
+    def call(_handle: NativeArrayHandleBase, *args: Any) -> Any:
+        value = operation(owner, *args)
+        if not isinstance(value, Mapping):
+            return value
+        dimensions = value.get("dim")
+        if not isinstance(dimensions, Sequence):
+            return value
+        normalized_dimensions = []
+        for dimension in dimensions:
+            if not isinstance(dimension, Mapping) or dimension.get("extent") != -1:
+                normalized_dimensions.append(dimension)
+                continue
+            normalized_dimensions.append({**dimension, "extent": 0})
+        return {**value, "dim": normalized_dimensions}
 
     return call
 
@@ -336,9 +359,7 @@ class NativeArrayHandleBase:
         {
             "borrowed_view",
             "contiguous_view",
-            "copy_only",
             "descriptor_view",
-            "read_only_detached_copy",
             "unsupported",
         }
     )
@@ -379,7 +400,26 @@ class NativeArrayHandleBase:
 
     @property
     def dtype(self) -> Any:
-        return self._dtype
+        if self._dtype is not None:
+            return self._dtype
+        return self._deferred_character_dtype()
+
+    def _deferred_character_dtype(self) -> np.dtype:
+        """Resolve one deferred character width from generated native state."""
+        if "element_length" in self._ops:
+            length = operator.index(self._call_op("element_length"))
+            if length < 0:
+                raise ValueError("native character array element length must be non-negative")
+            return np.dtype(f"S{length}")
+        value = self._call_op("to_numpy")
+        if isinstance(value, np.ndarray) and value.dtype.kind == "S":
+            return value.dtype
+        if _is_pointer_descriptor_record(value):
+            length = _required_descriptor_int(value, "elem_len")
+            if length < 0:
+                raise ValueError("native character array element length must be non-negative")
+            return np.dtype(f"S{length}")
+        raise TypeError("deferred character handle cannot resolve its runtime element length")
 
     @property
     def rank(self) -> int:
@@ -457,6 +497,7 @@ class NativeArrayHandleBase:
         require_writeable: bool = False,
         require_native_byte_order: bool = False,
         require_aligned: bool = False,
+        require_contiguous: bool = False,
     ) -> Any:
         """Return the generated native array actual after validating handle state."""
         self._validate_array_actual_state()
@@ -476,6 +517,7 @@ class NativeArrayHandleBase:
         self._validate_writeable(require_writeable)
         self._validate_native_byte_order(require_native_byte_order)
         self._validate_aligned(require_aligned)
+        self._validate_contiguous(require_contiguous)
         return self._required_handoff_result("array_actual", self._call_op("array_actual"))
 
     def _descriptor_for_binding(
@@ -501,6 +543,8 @@ class NativeArrayHandleBase:
         if isinstance(descriptor, _NativeArrayDescriptorHandoff):
             return descriptor
         if _is_pointer_descriptor_record(descriptor):
+            if _pointer_descriptor_base_addr(descriptor) == 0:
+                return self._contiguous_descriptor_record(0, None)
             _validate_pointer_descriptor_itemsize(descriptor, np.dtype(self.dtype))
             descriptor_shape, _ = _pointer_descriptor_shape_and_strides(descriptor)
             if len(descriptor_shape) != self.rank:
@@ -539,7 +583,7 @@ class NativeArrayHandleBase:
         }
 
     def to_numpy(self) -> Any:
-        """Return the current NumPy view/copy, or ``None`` for absent state."""
+        """Return a live view of current native storage, or ``None``."""
         if self._to_numpy_absent_state():
             return None
         if self.to_numpy_policy == "unsupported":
@@ -547,7 +591,7 @@ class NativeArrayHandleBase:
                 f"{self.descriptor_kind} handle to_numpy extraction is unsupported by completed policy"
             )
         if (
-            self.to_numpy_policy in {"contiguous_view", "copy_only"}
+            self.to_numpy_policy == "contiguous_view"
             and "contiguous" in self._ops
             and not bool(self._call_op("contiguous"))
         ):
@@ -567,11 +611,6 @@ class NativeArrayHandleBase:
         self._validate_numpy_result(value)
         if self.to_numpy_policy == "contiguous_view":
             self._validate_contiguous_numpy_result(value)
-            return value
-        if self.to_numpy_policy == "copy_only":
-            return self._detached_numpy_copy(value)
-        if self.to_numpy_policy == "read_only_detached_copy":
-            return self._read_only_detached_numpy_copy(value)
         return value
 
     def _call_op(self, name: str, *args: Any) -> Any:
@@ -667,6 +706,19 @@ class NativeArrayHandleBase:
         if not bool(self._call_op("writeable")):
             raise TypeError(f"{self.descriptor_kind} handle array actual must be writeable")
 
+    def _validate_contiguous(self, require_contiguous: bool) -> None:
+        """Validate the data-buffer ABI's contiguous-storage requirement."""
+        if not require_contiguous:
+            return
+        if "contiguous" in self._ops:
+            contiguous = bool(self._call_op("contiguous"))
+        elif "layout" in self._ops:
+            contiguous = self._normalize_actual_layout_name(self._call_op("layout")) in {"C", "F"}
+        else:
+            raise ValueError(f"{self.descriptor_kind} handle cannot prove contiguous array storage")
+        if not contiguous:
+            raise ValueError(f"{self.descriptor_kind} handle array actual must be contiguous")
+
     def _validate_native_byte_order(self, require_native_byte_order: bool) -> None:
         """Validate native byte order before native array-actual handoff."""
         if not require_native_byte_order:
@@ -748,16 +800,6 @@ class NativeArrayHandleBase:
         if actual not in {"C", "F"}:
             raise ValueError(f"native array handle layout operation returned unsupported layout {layout!r}")
         return actual
-
-    @staticmethod
-    def _detached_numpy_copy(value: np.ndarray) -> np.ndarray:
-        return np.array(value, copy=True, order="K")
-
-    @staticmethod
-    def _read_only_detached_numpy_copy(value: np.ndarray) -> np.ndarray:
-        snapshot = np.array(value, copy=True, order="K")
-        snapshot.setflags(write=False)
-        return snapshot
 
 
 class AllocatableArray(NativeArrayHandleBase):
@@ -870,6 +912,7 @@ def _native_array_actual_for_binding(
     require_writeable: bool = False,
     require_native_byte_order: bool = False,
     require_aligned: bool = False,
+    require_contiguous: bool = False,
 ) -> Any:
     """Return an ndarray or generated native array actual for a normal array argument."""
     if isinstance(value, NativeArrayHandleBase):
@@ -881,6 +924,7 @@ def _native_array_actual_for_binding(
             require_writeable=require_writeable,
             require_native_byte_order=require_native_byte_order,
             require_aligned=require_aligned,
+            require_contiguous=require_contiguous,
         )
     if isinstance(value, np.ndarray):
         _validate_ndarray_array_actual(
@@ -892,6 +936,7 @@ def _native_array_actual_for_binding(
             require_writeable=require_writeable,
             require_native_byte_order=require_native_byte_order,
             require_aligned=require_aligned,
+            require_contiguous=require_contiguous,
         )
         return value
     if value is None:
@@ -911,17 +956,24 @@ def _native_array_actual_argument_for_binding_positional(
     include_rank: bool = False,
     include_itemsize: bool = False,
     include_strides: bool = False,
+    require_contiguous: bool = False,
 ) -> tuple[int, ...]:
     """Pack a normal array actual into generated Bind-C array descriptor fields."""
+    strided_ndarray = include_strides and isinstance(value, np.ndarray)
+    if strided_ndarray:
+        _validate_ndarray_positive_strides(value)
     actual = _native_array_actual_for_binding(
         value,
         expected_dtype=expected_dtype,
         expected_rank=expected_rank,
         expected_shape=expected_shape,
-        expected_layout=expected_layout,
+        # Positive-stride validation below is the exact Fortran-order contract
+        # for a strided ndarray; NumPy's contiguous flag is intentionally false.
+        expected_layout=None if strided_ndarray else expected_layout,
         require_writeable=bool(require_writeable),
         require_native_byte_order=bool(require_native_byte_order),
         require_aligned=bool(require_aligned),
+        require_contiguous=bool(require_contiguous),
     )
     address, shape, itemsize = _normal_array_actual_abi_facts(value, actual, expected_dtype)
     fields = [address]
@@ -931,9 +983,58 @@ def _native_array_actual_argument_for_binding_positional(
         fields.append(itemsize)
     fields.extend(shape)
     if include_strides:
-        fields.extend(shape)
-        fields.extend(1 for _axis in shape)
+        extents, upper_bounds, strides = _normal_array_actual_stride_facts(actual, shape, itemsize)
+        fields[-len(shape) :] = extents
+        fields.extend(upper_bounds)
+        fields.extend(strides)
     return tuple(fields)
+
+
+def _normal_array_actual_stride_facts(
+    actual: Any,
+    shape: tuple[int, ...],
+    itemsize: int,
+) -> tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...]]:
+    """Pack the positive-stride base extent and slice facts used by the bridge."""
+    if isinstance(actual, _NativeArrayHandoff):
+        return shape, tuple(max(extent - 1, -1) for extent in shape), (1,) * len(shape)
+    if not isinstance(actual, np.ndarray):
+        raise TypeError(f"normal array actual operation returned unsupported value {type(actual).__name__}")
+    if actual.size == 0:
+        # NumPy may report zero strides for empty dimensions.  No element can
+        # be addressed, so use the bridge's canonical empty-array facts.
+        return shape, tuple(max(extent - 1, -1) for extent in shape), (1,) * len(shape)
+    if any(stride <= 0 for stride in actual.strides):
+        raise ValueError("array actual strides must be positive")
+
+    extents = []
+    upper_bounds = []
+    relative_strides = []
+    base_product = 1
+    element_strides = tuple(stride // itemsize for stride in actual.strides)
+    for axis, (logical_extent, element_stride) in enumerate(zip(shape, element_strides, strict=True)):
+        relative_stride = element_stride // base_product
+        relative_strides.append(relative_stride)
+        upper_bound = -1 if logical_extent == 0 else (logical_extent - 1) * relative_stride
+        upper_bounds.append(upper_bound)
+        base_extent = max(element_strides[axis + 1] // base_product, 1) if axis + 1 < len(shape) else upper_bound + 1
+        extents.append(base_extent)
+        base_product *= base_extent
+    return tuple(extents), tuple(upper_bounds), tuple(relative_strides)
+
+
+def _validate_ndarray_positive_strides(value: np.ndarray) -> None:
+    """Match the bridge's positive non-overlapping Fortran slice contract."""
+    for axis, stride in enumerate(value.strides):
+        invalid = stride % value.itemsize != 0 or (value.size > 0 and value.shape[axis] > 1 and stride <= 0)
+        if axis:
+            invalid |= (
+                value.size > 0
+                and value.shape[axis - 1] > 0
+                and (stride < value.strides[axis - 1] * value.shape[axis - 1])
+            )
+        if invalid:
+            raise TypeError("NumPy array actual has incompatible layout; expected ordering (F)")
 
 
 def _normal_array_actual_abi_facts(
@@ -1101,19 +1202,21 @@ def _validate_ndarray_array_actual(
     require_writeable: bool = False,
     require_native_byte_order: bool = False,
     require_aligned: bool = False,
+    require_contiguous: bool = False,
 ) -> None:
     _validate_ndarray_expected_rank(value, expected_rank)
+    _validate_ndarray_native_byte_order(value, require_native_byte_order)
     _validate_ndarray_expected_dtype(value, expected_dtype)
     _validate_ndarray_expected_shape(tuple(int(dimension) for dimension in value.shape), expected_shape)
     _validate_ndarray_expected_layout(value, expected_layout)
     _validate_ndarray_writeable(value, require_writeable)
-    _validate_ndarray_native_byte_order(value, require_native_byte_order)
     _validate_ndarray_aligned(value, require_aligned)
+    _validate_ndarray_contiguous(value, require_contiguous)
 
 
 def _validate_ndarray_expected_rank(value: np.ndarray, expected_rank: int | None) -> None:
     if expected_rank is not None and value.ndim != int(expected_rank):
-        raise ValueError(f"NumPy array rank {value.ndim} does not match expected rank {int(expected_rank)}")
+        raise TypeError(f"NumPy array rank {value.ndim} does not match expected rank {int(expected_rank)}")
 
 
 def _validate_ndarray_expected_dtype(value: np.ndarray, expected_dtype: Any) -> None:
@@ -1136,6 +1239,11 @@ def _validate_ndarray_aligned(value: np.ndarray, require_aligned: bool) -> None:
         raise TypeError("NumPy array actual must be aligned")
 
 
+def _validate_ndarray_contiguous(value: np.ndarray, require_contiguous: bool) -> None:
+    if require_contiguous and not (value.flags.c_contiguous or value.flags.f_contiguous):
+        raise TypeError("NumPy array actual must be contiguous")
+
+
 def _validate_ndarray_expected_shape(
     shape: tuple[int, ...],
     expected_shape: Sequence[int | None] | int | None,
@@ -1144,10 +1252,12 @@ def _validate_ndarray_expected_shape(
         return
     expected = NativeArrayHandleBase._normalize_expected_shape(expected_shape)
     if len(expected) != len(shape):
-        raise ValueError(f"NumPy array shape rank {len(shape)} does not match expected shape rank {len(expected)}")
+        raise TypeError(f"NumPy array shape rank {len(shape)} does not match expected shape rank {len(expected)}")
     for axis, (actual, wanted) in enumerate(zip(shape, expected, strict=True)):
         if wanted is not None and actual != wanted:
-            raise ValueError(f"NumPy array shape {shape!r} does not match expected shape {expected!r} at axis {axis}")
+            raise TypeError(
+                f"NumPy array has incompatible shape at axis {axis}: received {shape!r}, expected {expected!r}"
+            )
 
 
 def _validate_ndarray_expected_layout(value: np.ndarray, expected_layout: str | None) -> None:
@@ -1156,7 +1266,7 @@ def _validate_ndarray_expected_layout(value: np.ndarray, expected_layout: str | 
     required = NativeArrayHandleBase._normalize_expected_layout_name(expected_layout)
     matches = value.flags.f_contiguous if required == "F" else value.flags.c_contiguous
     if not matches:
-        raise ValueError(f"NumPy array layout does not match expected layout {expected_layout!r}")
+        raise TypeError(f"NumPy array actual has incompatible layout; expected ordering ({required})")
 
 
 __all__ = (

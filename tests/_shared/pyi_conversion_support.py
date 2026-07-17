@@ -34,7 +34,6 @@ from x2py.semantics.native_array_handles import (
 )
 
 from x2py.semantics.models import (
-    CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
     PYTHON_VALUE_IMMUTABLE,
     PYTHON_VALUE_MUTABILITY_METADATA,
@@ -57,9 +56,7 @@ from x2py.semantics.pyi2ir import (
 
 from x2py.pipeline.pyi import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
 
-from x2py.pyi_parser import parse_pyi_text as parse_pyi_ast_text
-
-from x2py.semantics.ir2ast import semantic_ir_to_codegen_ast as _semantic_ir_to_codegen_ast
+from x2py.parsers.pyi import parse_pyi_text as parse_pyi_ast_text
 
 from x2py.semantics.native_contract import native_contract_issues
 
@@ -67,11 +64,7 @@ from x2py.semantics.policy_completion import complete_semantic_policies
 
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
-from x2py.codegen.bindings.c_to_python import CPythonBindingGenerator
-
-from x2py.codegen.printers.pyi_printer import emit_module
-
-from x2py.codegen.scope import Scope
+from x2py.wrapper_codegen.printers import emit_module
 
 from tests._shared.fixture_outputs import FORTRAN_DATA_DIR, FORTRAN_SUFFIXES
 
@@ -85,12 +78,6 @@ _ALL_FORTRAN_PYI_COMPARE_FIXTURES = sorted(
     for path in (FORTRAN_DATA_DIR / dirname).rglob("*")
     if path.is_file() and path.suffix.lower() in FORTRAN_SUFFIXES
 )
-
-
-def semantic_ir_to_codegen_ast(node, *args, **kwargs):
-    if isinstance(node, SemanticModule):
-        complete_semantic_policies(node)
-    return _semantic_ir_to_codegen_ast(node, *args, **kwargs)
 
 
 def _sample_pyi_compare_fixtures(paths: list[Path]) -> list[Path]:
@@ -139,7 +126,6 @@ __all__ = (
     "ADDRESS_ROLE_PROJECTION",
     "ADDRESS_ROLE_RAW",
     "BIND_TARGET_METADATA",
-    "CALLBACK_DECLARATION_ACCESS_METADATA",
     "CONTRACT_IMPORT",
     "CONTRACT_SYMBOLS",
     "FORTRAN_PYI_COMPARE_FIXTURES",
@@ -150,10 +136,8 @@ __all__ = (
     "PYTHON_VALUE_MUTABILITY_METADATA",
     "SUPPRESS_DEFAULT_CONSTRUCTOR_METADATA",
     "USER_PRIVATE_METADATA",
-    "CPythonBindingGenerator",
     "Path",
     "ProjectionMapping",
-    "Scope",
     "SemanticArgument",
     "SemanticConstraint",
     "SemanticField",
@@ -187,5 +171,4 @@ __all__ = (
     "pyi_text_to_semantic_module",
     "pytest",
     "re",
-    "semantic_ir_to_codegen_ast",
 )

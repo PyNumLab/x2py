@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Allocatable, Annotated, Arg, Float64, Int64, ORDER_F, Pass, Polymorphic, bind, native_call
+from x2py.contracts import Addr, Allocatable, Arg, Float64, Int64, Pass, bind, native_call
 
 class vector:
     def __init__(
@@ -31,7 +31,7 @@ class vector_store:
     def __init__(self) -> None: ...
 
     values: Allocatable[Float64[:]]
-    matrix: Allocatable[Annotated[Float64[:, :], ORDER_F]]
+    matrix: Allocatable[Float64[:, :]]
 
     @native_call([Pass(), Addr(Arg(0))])
     def allocate_values(
@@ -53,7 +53,7 @@ class vector_store:
 
     def set_matrix(
         self,
-        source: Annotated[Float64[::, ::], ORDER_F]
+        source: Float64[::, ::]
     ) -> None: ...
 
     @staticmethod
@@ -66,42 +66,42 @@ class vector_store:
 
 @native_call([Arg(0), Addr(Arg(1))])
 def scale(
-    self: Annotated[vector, Polymorphic],
+    self: vector,
     factor: Float64
 ) -> None: ...
 
 @native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def shift_vector(
     dx: Float64,
-    owner: Annotated[vector, Polymorphic],
+    owner: vector,
     dy: Float64
 ) -> None: ...
 
 def magnitude(
-    self: Annotated[vector, Polymorphic]
+    self: vector
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def allocate_values(
-    self: Annotated[vector_store, Polymorphic],
+    self: vector_store,
     n: Int64
 ) -> None: ...
 
 def set_values(
-    self: Annotated[vector_store, Polymorphic],
+    self: vector_store,
     source: Float64[::]
 ) -> None: ...
 
 @native_call([Arg(0), Addr(Arg(1)), Addr(Arg(2))])
 def allocate_matrix(
-    self: Annotated[vector_store, Polymorphic],
+    self: vector_store,
     rows: Int64,
     cols: Int64
 ) -> None: ...
 
 def set_matrix(
-    self: Annotated[vector_store, Polymorphic],
-    source: Annotated[Float64[::, ::], ORDER_F]
+    self: vector_store,
+    source: Float64[::, ::]
 ) -> None: ...
 
 @native_call([Addr(Arg(0)), Addr(Arg(1))])

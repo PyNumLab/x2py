@@ -38,7 +38,7 @@ under version control. Do not commit `build/`.
 
 <!-- X2PY_C_DOCS_START
 Keep native sources under `src/` and Python tests under `tests/`. Do not edit
-generated bridge, C binding, object, module, runtime-support, or shared-library
+generated bridge, C binding, object, module, native-support, or shared-library
 files under `build/`; the next build can replace them.
 X2PY_C_DOCS_END -->
 
@@ -109,7 +109,7 @@ You normally do not need to open generated files. When debugging, expect
 
 | Artifact | Purpose |
 | --- | --- |
-| `x2py_runtime/` | shared runtime support sources |
+| `binding_support/` | header-only native binding support |
 | `.o` and `.mod` files | native intermediates |
 | `<name>.<extension-suffix>` | importable extension |
 

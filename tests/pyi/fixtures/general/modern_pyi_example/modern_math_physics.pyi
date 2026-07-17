@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, Return, Returns, native_call
+from x2py.contracts import Addr, Arg, Float64, Int32, Return, Returns, native_call
 
 class particle:
     def __init__(
@@ -48,8 +48,8 @@ def dot3(
 ) -> Float64: ...
 
 def fill_identity3(
-    a: Annotated[Float64[3, 3], ORDER_F]
-) -> Returns["a", Annotated[Float64[3, 3], ORDER_F]]: ...
+    a: Float64[3, 3]
+) -> Returns["a", Float64[3, 3]]: ...
 
 def normalize_particle(
     p: particle

@@ -9,7 +9,7 @@ status: planned-documentation
 # Design Documents
 
 Design documents record long-term technical decisions for maintainers. They do
-not by themselves establish runtime support.
+not by themselves establish native binding support.
 
 ## Pages
 

@@ -57,18 +57,19 @@ not carry a native pointer descriptor.
 
 `p.to_numpy()` is the explicit extraction operation. It returns `None` when the
 handle is unassociated. When descriptor extraction is supported, it returns the
-current target view and may expose strided targets. If descriptor extraction is
-unavailable, policy must choose a contiguous-only path, an explicit copy
-fallback, or a readiness diagnostic; x2py must not guess compiler-specific
-descriptor layout. A generated handle without an extraction path raises a clear
-unavailable-operation error instead of fabricating a view.
+current target view and may expose strided targets. It never creates an
+automatic detached snapshot or copy. If no supported live-view mechanism can
+expose the current target, policy completion or readiness fails explicitly;
+x2py does not guess compiler-specific descriptor layout or fall back to a copy.
 
 Any NumPy view returned by `p.to_numpy()` is tied to the pointer target at the
 time of extraction. After native code nullifies, reassociates, deallocates, or
-otherwise changes that target, discard older views and call `p.to_numpy()` again
-or copy the data before the target-changing operation. Each fresh extraction
-starts at the target's current native lower bounds rather than assuming a
-fixed Fortran lower bound.
+otherwise changes that target, discard older views and call `p.to_numpy()`
+again. Accessing a stale view is unsupported and may crash. Users who need
+independent storage must call `.copy()` before the target-changing operation.
+Each fresh extraction inspects the current descriptor and starts at the
+target's current native lower bounds rather than assuming a fixed Fortran lower
+bound.
 
 `p.nullify()` is the default pointer descriptor operation. `allocate(shape)`,
 `deallocate()`, and `resize(shape)` are exposed only when completed pointer
@@ -175,14 +176,31 @@ The generated semantic contract distinguishes the module descriptor, an
 ordinary array parameter, and a pointer-descriptor parameter:
 
 ```python
-from x2py.contracts import Aliased, Annotated, Float64, Pointer, PointerAssociation
+from x2py.contracts import (
+    Aliased,
+    Annotated,
+    Destruction,
+    Float64,
+    Ownership,
+    Pointer,
+    PointerAssociation,
+    Transfer,
+)
 
 storage: Annotated[Float64[3], Aliased]
 values: Annotated[Pointer[Float64[:]], PointerAssociation("runtime")]
 
 def associate_values() -> None: ...
 def sum_array(actual: Float64[::]) -> Float64: ...
-def sum_pointer(actual: Pointer[Float64[:]]) -> Float64: ...
+def sum_pointer(
+    actual: Annotated[
+        Pointer[Float64[:]],
+        PointerAssociation("runtime"),
+        Ownership("caller"),
+        Transfer("call_local"),
+        Destruction("none"),
+    ]
+) -> Float64: ...
 ```
 
 Build it:
@@ -251,9 +269,9 @@ copy for `Pointer[T[...]]` results.
 
 ## Pointer Fields And Module Variables
 
-Pointer-backed fields and module variables expose `Pointer[T[...]]` handles.
-Their runtime Python class is `PointerArray`. Scalar pointers never produce a
-`PointerArray`; they remain ordinary `T | None` values at the Python boundary.
+Pointer-backed array fields and module variables expose `Pointer[T[...]]`
+handles. Their runtime Python class is `PointerArray`. A scalar pointer to a
+derived object instead returns its generated live wrapper or `None`.
 The containing object or module does not automatically own the pointer target.
 Derived-field handles keep the parent wrapper alive for descriptor access, but
 that retention is not target ownership. Plain `Pointer[T[...]]` has a default
@@ -263,6 +281,20 @@ wrapper, and generated module operations address the native module variable.
 Neither path invents target ownership or enables ownership-changing operations
 that completed pointer policy did not allow.
 
+An associated scalar derived module pointer can be passed to an ordinary,
+target, input-only pointer, or value dummy through its current target. For a
+reassociable pointer dummy, x2py uses a typed local pointer holder and restores
+the final association—associated, reassociated, allocated, disassociated, or
+deallocated—to the module pointer exactly once. A wrapper-owned pointer result
+uses the same persistent holder component directly. The holder owns its
+association variable, not an unknown target, and its destructor never
+deallocates native-owned target storage. Nullification or reassociation makes an
+older payload proxy stale, and later field access raises `ReferenceError`.
+
+The later Wrapping Derived Types guide gives the canonical “Scalar Actuals And
+Native Dummies” matrix, including the `INTENT(IN)` exception for nonpointer
+actuals, empty-state behavior, module transactions, and multi-argument cleanup.
+
 ## Unsupported Forms
 
 - pointer array `intent(out)` and `intent(inout)` reassociation without a
@@ -271,7 +303,9 @@ that completed pointer policy did not allow.
 - unknown target owners or release responsibility;
 - persistent associations to Python storage after return; and
 - stale-view invalidation after target reassociation, nullification, or
-  deallocation.
+  deallocation; and
+- scalar-derived pointer targets whose lifetime or release responsibility is
+  neither native nor tied to a retained known owner.
 
 Semantic `.pyi` metadata can record these policy facts, but metadata does not
 implement a missing runtime path.
@@ -281,6 +315,9 @@ implement a missing runtime path.
 Scalar pointer inputs, outputs, inout readback, nullable results, array pointer
 handles, descriptor views, normal array-actual handoff, and dtype rejection are exercised by
 [`test_pointers.py`](../../../tests/wrapper/fortran/derived_types/test_pointers.py).
+Scalar derived module-pointer state, reassociation writeback, wrapper pointer
+holders, stale proxy rejection, and multi-argument cleanup are exercised by
+[`test_scalar_derived_actual_dummy_matrix.py`](../../../tests/wrapper/fortran/derived_types/test_scalar_derived_actual_dummy_matrix.py).
 The scalar `out` and `inout` parity cases are exercised by
 [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
 

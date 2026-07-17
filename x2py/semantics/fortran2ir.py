@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import re
 from pathlib import Path
 
-from x2py.fortran_parser.models import (
+from x2py.parsers.fortran.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
@@ -27,14 +27,15 @@ from x2py.semantics.metadata import PROJECTED_OUTPUT_METADATA, SCALAR_STORAGE_CA
 from x2py.utilities.visitor import ClassVisitor
 
 from .models import (
-    CALLBACK_DECLARATION_ACCESS_METADATA,
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
     OVERLOAD_TARGET_METADATA,
+    NATIVE_BY_VALUE_METADATA,
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
+    PROTOTYPE_REF_METADATA,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
@@ -46,6 +47,7 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticOrigin,
+    SemanticPrototype,
     SemanticStorageContract,
     SemanticType,
     SemanticVariable,
@@ -324,6 +326,7 @@ class FortranToIRConverter(ClassVisitor):
             metadata["fortran_polymorphic"] = True
         if getattr(var, "target", False):
             metadata["aliased"] = True
+            metadata["fortran_target"] = True
         if getattr(var, "pointer", False):
             metadata["fortran_pointer"] = True
             metadata["fortran_pointer_association"] = "runtime"
@@ -383,10 +386,8 @@ class FortranToIRConverter(ClassVisitor):
             )
         else:
             semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
-        if isinstance(arg, FortranArgument) and self._is_scalar_descriptor(semantic_type):
-            semantic_type.metadata["fortran_intent"] = getattr(arg, "intent", None)
         access = self._argument_access(arg, semantic_type)
-        if semantic_type.name == "Callable":
+        if semantic_type.storage is not None and semantic_type.storage.kind == "callback":
             pass
         elif semantic_type.rank > 0:
             self._apply_array_argument_contract(semantic_type, arg, writes_argument=access[1])
@@ -400,11 +401,15 @@ class FortranToIRConverter(ClassVisitor):
             self._apply_pointer_input_policy(semantic_type)
         self._apply_argument_ownership(semantic_type, writes_argument=access[1])
 
+        metadata = {}
+        if getattr(arg, "pass_by_value", False) and str(getattr(arg, "base_type", "")).casefold() == "derived":
+            metadata[NATIVE_BY_VALUE_METADATA] = True
         return SemanticArgument(
             name=arg.name,
             semantic_type=semantic_type,
             optional=getattr(arg, "optional", False),
             visibility=getattr(arg, "visibility", "public"),
+            metadata=metadata,
             origin=self._argument_origin(arg),
         )
 
@@ -480,8 +485,8 @@ class FortranToIRConverter(ClassVisitor):
     ) -> SemanticType:
         if getattr(arg, "pointer", False):
             return self._convert_variable_type(arg, derived_type_context=derived_type_context)
-        interface_name = str(arg.kind or arg.name).casefold()
-        signature = callback_interfaces.get(interface_name)
+        interface_name = str(arg.kind or arg.name)
+        signature = callback_interfaces.get(interface_name.casefold())
         if signature is None:
             return self._convert_variable_type(arg, derived_type_context=derived_type_context)
 
@@ -489,26 +494,30 @@ class FortranToIRConverter(ClassVisitor):
         projected_arguments = list(signature.arguments)
         callback_arguments = [self.visit(item, derived_type_context=context) for item in projected_arguments]
         for source_argument, callback_argument in zip(projected_arguments, callback_arguments, strict=True):
-            access = self._callback_declaration_access(source_argument)
-            callback_argument.metadata[CALLBACK_DECLARATION_ACCESS_METADATA] = access
-            self._normalize_callback_character_storage(callback_argument, source_argument, access)
+            self._normalize_callback_reference_storage(callback_argument, source_argument)
         callback_return = (
             self.visit(signature.result, derived_type_context=context, as_type=True)
             if signature.result
             else SemanticType("None", dtype="None")
         )
+        prototype_module = str(signature.module or "")
         return SemanticType(
-            "Callable",
-            dtype="Callable",
+            interface_name,
+            dtype="Prototype",
             metadata={
                 "arguments": [item.semantic_type for item in callback_arguments],
                 "callback_arguments": callback_arguments,
                 "return": callback_return,
-                "fortran_callback_interface": signature.name,
-                "fortran_callback_kind": signature.kind,
+                PROTOTYPE_REF_METADATA: {
+                    "name": interface_name,
+                    "local_name": interface_name,
+                    "origin_module": prototype_module,
+                },
+                "native_callback_kind": signature.kind,
                 "callback_lifetime": "call",
                 "callback_thread": "entering_thread",
                 "callback_exception": "print_traceback_and_abort",
+                "prototype_metadata": self._procedure_metadata(signature),
             },
             storage=SemanticStorageContract(
                 kind="callback",
@@ -521,48 +530,84 @@ class FortranToIRConverter(ClassVisitor):
                 native_scope=getattr(arg, "procedure", None),
                 source_kind="dummy_procedure",
                 source_type=self._fortran_source_type(arg),
-                metadata={"interface": signature.name},
+                metadata={"prototype": interface_name},
             ),
         )
 
     @staticmethod
-    def _callback_declaration_access(arg: FortranArgument | FortranVariable) -> str:
-        """Return exact callback declaration access for Fortran adapter printing."""
-        match getattr(arg, "intent", None):
-            case "in":
-                return "read"
-            case "out":
-                return "write"
-            case "inout":
-                return "readwrite"
-            case _:
-                return "unspecified"
-
-    @staticmethod
-    def _normalize_callback_character_storage(
+    def _normalize_callback_reference_storage(
         callback_argument: SemanticArgument,
         source_argument: FortranArgument | FortranVariable,
-        access: str,
     ) -> None:
-        """Use mutable scalar bytes storage for writable callback character dummies."""
-        semantic_type = callback_argument.semantic_type
-        if semantic_type.name != "String" or semantic_type.rank != 0:
-            return
+        """Make every non-value callback dummy a permissive reference contract."""
         if getattr(source_argument, "pass_by_value", False):
             return
-        if access == "read":
-            return
-        semantic_type.storage = SemanticStorageContract(
-            kind="array",
-            read_only=False,
-            mutable=True,
-            array=SemanticArrayContract(
-                rank=0,
-                shape=[],
-                category=SCALAR_STORAGE_CATEGORY,
-            ),
-        )
+        semantic_type = callback_argument.semantic_type
+        if semantic_type.name == "String" and semantic_type.rank == 0:
+            semantic_type.storage = SemanticStorageContract(
+                kind="array",
+                read_only=False,
+                mutable=True,
+                array=SemanticArrayContract(
+                    rank=0,
+                    shape=[],
+                    category=SCALAR_STORAGE_CATEGORY,
+                ),
+            )
+        elif semantic_type.storage is None:
+            semantic_type.storage = SemanticStorageContract(
+                kind="reference",
+                read_only=False,
+                mutable=True,
+                pointer_depth=1,
+            )
+        else:
+            semantic_type.storage.read_only = False
+            semantic_type.storage.mutable = True
         semantic_type.ownership.mutable = True
+
+    def _module_prototypes(
+        self,
+        module: FortranModule,
+        context: _DerivedTypeContext,
+        referenced: set[str],
+    ) -> list[SemanticPrototype]:
+        """Convert abstract and callback-local interfaces into semantic prototypes."""
+        prototypes: list[SemanticPrototype] = []
+        seen: set[str] = set()
+        for interface in module.interfaces:
+            for signature in interface.procedures:
+                name = interface.name if interface.name and len(interface.procedures) == 1 else signature.name
+                if not interface.abstract and name.casefold() not in referenced:
+                    continue
+                if name in seen:
+                    continue
+                seen.add(name)
+                arguments = [self.visit(item, derived_type_context=context) for item in signature.arguments]
+                for source_argument, argument in zip(signature.arguments, arguments, strict=True):
+                    self._normalize_callback_reference_storage(argument, source_argument)
+                return_type = (
+                    self.visit(signature.result, derived_type_context=context, as_type=True)
+                    if signature.result is not None
+                    else SemanticType("None", dtype="None")
+                )
+                prototypes.append(
+                    SemanticPrototype(
+                        name=name,
+                        native_name=name,
+                        arguments=arguments,
+                        return_type=return_type,
+                        metadata=self._procedure_metadata(signature),
+                        visibility=self._symbol_visibility(module, name),
+                        origin=SemanticOrigin(
+                            source_language="fortran",
+                            native_name=name,
+                            native_scope=module.name,
+                            source_kind="prototype",
+                        ),
+                    )
+                )
+        return prototypes
 
     @staticmethod
     def _visit_FortranEnumerator(enumerator: FortranEnumerator, *, enum: FortranEnum) -> SemanticVariable:
@@ -728,6 +773,13 @@ class FortranToIRConverter(ClassVisitor):
             )
             for proc in module.procedures
         ]
+        callback_prototypes = {
+            argument.semantic_type.name.casefold()
+            for function in semantic_functions
+            for argument in function.arguments
+            if argument.semantic_type.storage is not None and argument.semantic_type.storage.kind == "callback"
+        }
+        prototypes = self._module_prototypes(module, context, callback_prototypes)
         procedure_lookup = {func.name.casefold(): func for func in semantic_functions}
 
         semantic_classes = [
@@ -756,17 +808,21 @@ class FortranToIRConverter(ClassVisitor):
             for enum in getattr(module, "enums", [])
             for enumerator in enum.enumerators
         ]
+        module_variables = [
+            self.visit(var, as_data_member=True, derived_type_context=context)
+            for var in getattr(module, "variables", [])
+            if var.name.casefold() not in common_variables
+        ]
+        for variable in module_variables:
+            if variable.origin.native_scope is None:
+                variable.origin.native_scope = module.name
         return SemanticModule(
             name=module.name,
             functions=semantic_functions,
+            prototypes=prototypes,
             overload_sets=overload_sets,
             classes=semantic_classes,
-            variables=[
-                self.visit(var, as_data_member=True, derived_type_context=context)
-                for var in getattr(module, "variables", [])
-                if var.name.casefold() not in common_variables
-            ]
-            + enum_constants,
+            variables=module_variables + enum_constants,
             imports=self._module_imports(module),
             metadata=metadata,
             origin=SemanticOrigin(
@@ -1254,9 +1310,69 @@ class FortranToIRConverter(ClassVisitor):
     @staticmethod
     def _canonical_dimension_expression(expression: str) -> str:
         try:
-            return ast.unparse(ast.parse(expression, mode="eval").body)
+            parsed = ast.parse(expression, mode="eval").body
+            return ast.unparse(FortranToIRConverter._simplify_additive_dimension(parsed))
         except SyntaxError:
             return expression
+
+    @staticmethod
+    def _simplify_additive_dimension(expression: ast.expr) -> ast.expr:
+        """Fold additive bound arithmetic into the public extent expression."""
+        terms: list[tuple[int, ast.expr]] = []
+
+        def collect(node: ast.expr, sign: int = 1) -> None:
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+                collect(node.left, sign)
+                collect(node.right, sign)
+                return
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Sub):
+                collect(node.left, sign)
+                collect(node.right, -sign)
+                return
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+                collect(node.operand, -sign)
+                return
+            terms.append((sign, node))
+
+        collect(expression)
+        constant = sum(
+            sign * node.value
+            for sign, node in terms
+            if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool)
+        )
+        symbolic = [
+            (sign, node)
+            for sign, node in terms
+            if not (isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool))
+        ]
+
+        coefficients: dict[str, tuple[ast.expr, int]] = {}
+        order: list[str] = []
+        for sign, node in symbolic:
+            key = ast.dump(node, include_attributes=False)
+            if key not in coefficients:
+                coefficients[key] = (node, 0)
+                order.append(key)
+            original, coefficient = coefficients[key]
+            coefficients[key] = (original, coefficient + sign)
+
+        result: ast.expr | None = None
+        for key in order:
+            node, coefficient = coefficients[key]
+            for _ in range(abs(coefficient)):
+                if result is None:
+                    result = node if coefficient > 0 else ast.UnaryOp(op=ast.USub(), operand=node)
+                else:
+                    operator: ast.operator = ast.Add() if coefficient > 0 else ast.Sub()
+                    result = ast.BinOp(left=result, op=operator, right=node)
+
+        if result is None:
+            return ast.Constant(value=constant)
+        if constant > 0:
+            return ast.BinOp(left=result, op=ast.Add(), right=ast.Constant(value=constant))
+        if constant < 0:
+            return ast.BinOp(left=result, op=ast.Sub(), right=ast.Constant(value=-constant))
+        return result
 
     @staticmethod
     def _array_order(rank: int, category: str, *, contiguous: bool) -> str | None:
@@ -2013,6 +2129,13 @@ class FortranToIRConverter(ClassVisitor):
             )
             mapping_python_position = None if is_hidden_output else python_position
             mapping_result_position = result_position if is_returned_output else None
+            descriptor_kind = FortranToIRConverter._scalar_descriptor_kind(arg.semantic_type)
+            descriptor_value = FortranToIRConverter._scalar_descriptor_projection_value(
+                arg.name,
+                descriptor_kind=descriptor_kind,
+                python_position=mapping_python_position,
+                result_position=mapping_result_position,
+            )
             if is_returned_output:
                 arg.metadata[PROJECTED_OUTPUT_METADATA] = True
             projection.append(
@@ -2022,6 +2145,12 @@ class FortranToIRConverter(ClassVisitor):
                     native_position=native_position,
                     python_position=mapping_python_position,
                     result_position=mapping_result_position,
+                    value_kind=("value" if arg.metadata.get(NATIVE_BY_VALUE_METADATA) else descriptor_kind or ""),
+                    value=(
+                        {"kind": "arg", "position": mapping_python_position}
+                        if arg.metadata.get(NATIVE_BY_VALUE_METADATA)
+                        else descriptor_value
+                    ),
                 )
             )
             if is_returned_output:
@@ -2046,6 +2175,38 @@ class FortranToIRConverter(ClassVisitor):
             and semantic_type.rank == 0
             and (semantic_type.metadata.get("fortran_allocatable") or semantic_type.metadata.get("fortran_pointer"))
         )
+
+    @staticmethod
+    def _scalar_descriptor_kind(semantic_type: SemanticType | None) -> str | None:
+        """Return the ABI-relevant descriptor kind for one rank-zero value."""
+        if semantic_type is None or semantic_type.rank != 0:
+            return None
+        allocatable = bool(semantic_type.metadata.get("fortran_allocatable"))
+        pointer = bool(semantic_type.metadata.get("fortran_pointer"))
+        if allocatable and pointer:
+            return None
+        if allocatable:
+            return "allocatable"
+        if pointer:
+            return "pointer"
+        return None
+
+    @staticmethod
+    def _scalar_descriptor_projection_value(
+        name: str,
+        *,
+        descriptor_kind: str | None,
+        python_position: int | None,
+        result_position: int | None,
+    ) -> dict[str, int | str] | None:
+        """Record the explicit argument/return reference wrapped by a descriptor helper."""
+        if descriptor_kind is None:
+            return None
+        if python_position is not None:
+            return {"kind": "arg", "position": python_position}
+        if result_position is not None:
+            return {"kind": "return", "name": name, "position": result_position}
+        raise ValueError(f"Scalar descriptor {name!r} has no Python argument or result projection")
 
     @staticmethod
     def _is_scalar_copy_return(semantic_type: SemanticType | None) -> bool:

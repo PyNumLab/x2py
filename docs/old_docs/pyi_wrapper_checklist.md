@@ -217,8 +217,9 @@ different public API or runtime contract.
   `@external` generation and runtime parity.
 - [ ] One source containing several standalone procedures generates external
   declarations for all of them and exposes each at the extension root.
-- [ ] `@external` makes the bridge emit an explicit interface and no module
-  `use`; a module procedure makes the bridge emit the correct `use <module>`.
+- [ ] `@external` makes the bridge emit an implicit external declaration or a
+  required explicit interface and no module `use`; a module procedure makes
+  the bridge emit the correct `use <module>`.
 - [ ] `@external` composes with `@bind("native_name")`: the native external is
   called while the wrapper declaration and root export may use different names.
 - [ ] A handwritten external `.pyi` plus native artifacts builds without source

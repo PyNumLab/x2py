@@ -1,0 +1,173 @@
+/* Native mechanics shared by x2py-generated CPython bindings. */
+
+#ifndef X2PY_BINDING_H
+#define X2PY_BINDING_H
+
+#define PY_SSIZE_T_CLEAN
+
+#include <Python.h>
+#include <complex.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "numpy_version.h"
+
+#ifndef PY_ARRAY_UNIQUE_SYMBOL
+#define PY_ARRAY_UNIQUE_SYMBOL X2PY_BINDING_ARRAY_API
+#endif
+#ifndef X2PY_BINDING_IMPORT_ARRAY
+#define NO_IMPORT_ARRAY
+#endif
+#include <numpy/arrayobject.h>
+
+/* Return whether value is exactly the NumPy scalar required by numpy_type. */
+static inline bool x2py_scalar_matches(PyObject *value, int numpy_type)
+{
+    switch (numpy_type) {
+    case NPY_BOOL:
+        return PyBool_Check(value) || PyArray_IsScalar(value, Bool);
+    case NPY_INT8:
+        return PyArray_IsScalar(value, Int8);
+    case NPY_INT16:
+        return PyArray_IsScalar(value, Int16);
+    case NPY_INT32:
+        return PyArray_IsScalar(value, Int);
+    case NPY_INT64:
+        return PyArray_IsScalar(value, Int64);
+    case NPY_FLOAT32:
+        return PyArray_IsScalar(value, Float);
+    case NPY_FLOAT64:
+        return PyArray_IsScalar(value, Double);
+    case NPY_COMPLEX64:
+        return PyArray_IsScalar(value, CFloat);
+    case NPY_COMPLEX128:
+        return PyArray_IsScalar(value, CDouble);
+    default:
+        return false;
+    }
+}
+
+/* Copy one Python scalar into caller-owned native storage after boundary checks. */
+static inline int x2py_scalar_unpack(PyObject *value, int numpy_type, void *destination)
+{
+    if (destination == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "x2py generated a null scalar destination");
+        return -1;
+    }
+
+    if (numpy_type == NPY_BOOL) {
+        int truth = PyObject_IsTrue(value);
+        if (truth < 0) {
+            return -1;
+        }
+        *(bool *)destination = truth != 0;
+        return 0;
+    }
+    if (x2py_scalar_matches(value, numpy_type)) {
+        PyArray_ScalarAsCtype(value, destination);
+        return PyErr_Occurred() == NULL ? 0 : -1;
+    }
+
+    switch (numpy_type) {
+    case NPY_INT8:
+        *(int8_t *)destination = (int8_t)PyLong_AsLong(value);
+        break;
+    case NPY_INT16:
+        *(int16_t *)destination = (int16_t)PyLong_AsLong(value);
+        break;
+    case NPY_INT32:
+        *(int32_t *)destination = (int32_t)PyLong_AsLong(value);
+        break;
+    case NPY_INT64:
+        *(int64_t *)destination = (int64_t)PyLong_AsLongLong(value);
+        break;
+    case NPY_FLOAT32:
+        *(float *)destination = (float)PyFloat_AsDouble(value);
+        break;
+    case NPY_FLOAT64:
+        *(double *)destination = PyFloat_AsDouble(value);
+        break;
+    case NPY_COMPLEX64: {
+        float real = (float)PyComplex_RealAsDouble(value);
+        float imaginary = (float)PyComplex_ImagAsDouble(value);
+        *(float complex *)destination = real + imaginary * I;
+        break;
+    }
+    case NPY_COMPLEX128: {
+        double real = PyComplex_RealAsDouble(value);
+        double imaginary = PyComplex_ImagAsDouble(value);
+        *(double complex *)destination = real + imaginary * I;
+        break;
+    }
+    default:
+        PyErr_Format(PyExc_TypeError, "unsupported x2py scalar type %d", numpy_type);
+        return -1;
+    }
+    return PyErr_Occurred() == NULL ? 0 : -1;
+}
+
+/* Create a normal Python scalar from native storage. */
+static inline PyObject *x2py_scalar_to_python(int numpy_type, const void *value)
+{
+    if (value == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "x2py generated a null scalar value");
+        return NULL;
+    }
+
+    switch (numpy_type) {
+    case NPY_BOOL:
+        return PyBool_FromLong(*(const bool *)value);
+    case NPY_INT8:
+        return PyLong_FromLong(*(const int8_t *)value);
+    case NPY_INT16:
+        return PyLong_FromLong(*(const int16_t *)value);
+    case NPY_INT32:
+        return PyLong_FromLong(*(const int32_t *)value);
+    case NPY_INT64:
+        return PyLong_FromLongLong(*(const int64_t *)value);
+    case NPY_FLOAT32:
+        return PyFloat_FromDouble(*(const float *)value);
+    case NPY_FLOAT64:
+        return PyFloat_FromDouble(*(const double *)value);
+    case NPY_COMPLEX64: {
+        float complex number = *(const float complex *)value;
+        return PyComplex_FromDoubles(crealf(number), cimagf(number));
+    }
+    case NPY_COMPLEX128: {
+        double complex number = *(const double complex *)value;
+        return PyComplex_FromDoubles(creal(number), cimag(number));
+    }
+    default:
+        PyErr_Format(PyExc_TypeError, "unsupported x2py scalar type %d", numpy_type);
+        return NULL;
+    }
+}
+
+/* Create a NumPy scalar from native storage. */
+static inline PyObject *x2py_scalar_to_numpy(int numpy_type, const void *value)
+{
+    if (value == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "x2py generated a null scalar value");
+        return NULL;
+    }
+
+    PyArray_Descr *descriptor = PyArray_DescrFromType(numpy_type);
+    if (descriptor == NULL) {
+        return NULL;
+    }
+    return PyArray_Scalar((void *)value, descriptor, NULL);
+}
+
+/* Release a bridge-owned allocation transferred through a NumPy base capsule. */
+static inline void x2py_release_owned_memory(PyObject *capsule)
+{
+    void *memory = PyCapsule_GetPointer(capsule, NULL);
+    if (memory == NULL) {
+        PyErr_Clear();
+        return;
+    }
+    free(memory);
+}
+
+#endif

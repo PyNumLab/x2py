@@ -18,4 +18,4 @@ shared-library inputs.
 
 Tests: `test_function_call_generated_pyi_contracts.py`,
 `test_optional_arguments.py`, `test_output_arguments.py`,
-`test_native_call_examples.py`.
+`test_native_call_examples.py`, `test_scalar_writeback_plan.py`.

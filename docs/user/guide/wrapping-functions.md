@@ -62,12 +62,12 @@ Example (`function_results.f90`):
 module results
   implicit none
 contains
-  function squares(size) result(values)
-    integer(4), intent(in) :: size
-    real(8) :: values(size)
+  function squares(count) result(values)
+    integer(4), intent(in) :: count
+    real(8) :: values(count)
     integer(4) :: index
 
-    values = [(real(index, 8) * real(index, 8), index = 1, size)]
+    values = [(real(index, 8) * real(index, 8), index = 1, count)]
   end function squares
 end module results
 ```
@@ -79,8 +79,8 @@ from x2py.contracts import Addr, Arg, Float64, Int32, native_call
 
 @native_call([Addr(Arg(0))])
 def squares(
-    size: Int32
-) -> Float64[size]: ...
+    count: Int32
+) -> Float64[count]: ...
 ```
 
 Build it:

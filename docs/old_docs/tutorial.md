@@ -52,7 +52,7 @@ ordered Fortran sources
   -> semantic IR
   -> codegen AST
   -> generated Fortran bind(C) bridge
-  -> generated C/CPython binding and runtime support
+  -> generated C/CPython binding and native binding support
   -> compiled and linked Python extension
 ```
 
@@ -264,8 +264,10 @@ assert value == np.float64(7.5)
 The exact NumPy scalar types are intentional. The wrapper validates the native
 ABI contract instead of silently converting arbitrary Python numeric objects.
 
-Without `--out-dir`, intermediate files go into `__x2py__` beside the first
-source and the extension is placed beside that source. Use `--verbose` to print
+Without `--out-dir`, intermediate files and the ABI-suffixed extension go into
+`__x2py__` in the current working directory, while a direct CLI build writes
+its stable `<module>.so` alias there unless `--out` gives it an explicit path. Use
+`--verbose` to print
 the executed compiler and linker commands.
 
 ### 6. Understand The Generated Boundary
@@ -277,9 +279,9 @@ The build lowers semantic IR through two native layers:
 2. A generated C/CPython binding validates Python objects, manages ownership
    and references, invokes the bridge, and creates Python or NumPy results.
 
-The x2py runtime support is compiled with those generated sources. The final
-link combines user objects, the Fortran bridge, the CPython binding, and the
-runtime into one extension module. Generated sources are build artifacts; the
+The header-only native binding support is compiled as part of the generated
+CPython binding. The final link combines user objects, the Fortran bridge, and
+the CPython binding into one extension module. Generated sources are build artifacts; the
 public behavior is the documented semantic and wrapper contract.
 
 For a build-system-controlled workflow, generate sources and a GNU Make build
@@ -558,7 +560,8 @@ Python return values.
 The loader accepts semantic interface syntax such as:
 
 ```python
-from typing import Callable, Final
+from typing import Final
+from x2py.contracts import prototype
 
 nmax: Final[Int32] = 32
 
@@ -566,15 +569,18 @@ class state:
     count: Int32
     values: Float64[nmax]
 
+@prototype
+def objective(value: Float64) -> Float64: ...
+
 def integrate(
-    objective: Callable[[Float64], Float64],
+    callback: objective,
     x0: Float64
 ) -> Float64: ...
 ```
 
-A complete `Callable[[...], Return]` can resolve a callback-signature
-readiness blocker. A placeholder such as `Procedure` or
-`Callable[..., Return]` remains incomplete because argument types are unknown.
+A complete named prototype resolves a callback-signature readiness blocker. A
+placeholder such as `Procedure` remains incomplete because its argument and
+result types are unknown.
 
 Supported projection metadata such as `@native_call(...)` is parsed and
 preserved. The source-driven Fortran wrapper executes the built-in projection
@@ -670,7 +676,7 @@ Use x2py for the behavior implemented and tested today:
 
 - generated and compiled CPython extensions from one or more ordered Fortran
   source files;
-- generated Fortran `bind(C)` bridges, C/CPython bindings, and runtime support
+- generated Fortran `bind(C)` bridges, C/CPython bindings, and native binding support
   for the contracts in the [Fortran wrapper guide](fortran_wrapper.md);
 - wrapper-relevant Fortran and C source-fact extraction;
 - compiler-preprocessed CLI workflows;

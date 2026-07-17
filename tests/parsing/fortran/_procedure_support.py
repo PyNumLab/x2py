@@ -1,6 +1,6 @@
 import pytest
 
-from x2py.fortran_parser.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
+from x2py.parsers.fortran.models import FortranFunctionCall, FortranSlice, FortranUseMapping, FortranVariable
 
 from x2py import FortranParseError, parse_fortran_file, parse_fortran_project
 

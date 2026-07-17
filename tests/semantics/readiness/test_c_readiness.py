@@ -6,7 +6,7 @@ owned by semantic IR or edited ``.pyi`` interfaces, not by the C parser.
 
 
 def test_c_semantic_readiness_accepts_plain_primitive_function_signatures():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.semantics.c2ir import c_file_to_semantic_modules
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
@@ -25,7 +25,7 @@ double scale(double x);
 
 
 def test_c_semantic_readiness_reports_unresolved_typedefs():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.semantics.c2ir import c_file_to_semantic_modules
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
@@ -38,7 +38,7 @@ def test_c_semantic_readiness_reports_unresolved_typedefs():
 
 
 def test_c_semantic_readiness_reports_variadic_functions_as_blockers():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.semantics.c2ir import c_file_to_semantic_modules
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
@@ -51,7 +51,7 @@ def test_c_semantic_readiness_reports_variadic_functions_as_blockers():
 
 
 def test_c_semantic_readiness_reports_callback_policy_required():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.semantics.c2ir import c_file_to_semantic_modules
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
@@ -72,11 +72,14 @@ def test_completed_pyi_callback_policy_can_make_c_api_semantically_ready():
 
     module = parse_pyi_text(
         """
-from x2py.contracts import Addr, Callable, Int8
+from x2py.contracts import Addr, Int8, prototype
+
+@prototype
+def item_visitor(item: Int8, userdata: Int8) -> None: ...
 
 def each_item(
     items: Addr(Int8),
-    visit: Callable[[Int8, Int8], None],
+    visit: item_visitor,
     userdata: Addr(Int8),
 ) -> None: ...
 """,
@@ -90,7 +93,7 @@ def each_item(
 
 
 def test_c_semantic_readiness_reports_pointer_ownership_ambiguity():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.semantics.c2ir import c_file_to_semantic_modules
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
@@ -103,7 +106,7 @@ def test_c_semantic_readiness_reports_pointer_ownership_ambiguity():
 
 
 def test_c_semantic_readiness_accepts_enum_values_and_blocks_mutable_enum_pointers():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.semantics.c2ir import c_file_to_semantic_modules
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
@@ -125,7 +128,7 @@ void update_status(enum status *status);
 
 
 def test_c_semantic_readiness_aggregates_file_and_function_blockers():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.semantics.c2ir import c_file_to_semantic_modules
     from x2py.semantics.readiness import assess_semantic_wrap_readiness
 

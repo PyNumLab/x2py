@@ -145,7 +145,7 @@ def test_x2py_main_semantic_readiness_blocker_formatting():
     assert "step uses unresolved type sim_state" in text
     assert "fill shape 'n' uses unresolved symbol n" in text
     assert "fill needs literal value for Final constant n" in text
-    assert "integrate.objective needs Callable[[...], ...] metadata (callback argument types)" in text
+    assert "integrate.objective needs a complete named @prototype (callback argument types)" in text
     assert "empty needs public functions" in text
     assert "{'payload': 1}" in text
 
@@ -171,4 +171,4 @@ def test_x2py_main_argument_validation_errors(tmp_path: Path, monkeypatch, capsy
     with pytest.raises(SystemExit) as stage_error:
         x2py_cli.main()
     assert stage_error.value.code == 2
-    assert "Select at least one stage flag" in capsys.readouterr().err
+    assert "A .pyi wrapper build requires --native-fortran-sources" in capsys.readouterr().err

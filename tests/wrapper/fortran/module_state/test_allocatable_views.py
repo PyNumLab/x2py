@@ -22,7 +22,7 @@ from x2py.runtime.handles import AllocatableArray
 ALLOCATABLE_VIEW_F90_SOURCE = wrapper_source("fallocatable_views_f90.f90")
 CONTRACT_FIXTURES = Path(__file__).parent / "contracts"
 PLAIN_ALLOCATABLE_MODULE_SOURCE = """\
-module fallocatable_snapshot_f90
+module fallocatable_plain_f90
   implicit none
   real(8), allocatable :: values(:)
 contains
@@ -44,7 +44,7 @@ contains
   subroutine deallocate_values()
     if (allocated(values)) deallocate(values)
   end subroutine deallocate_values
-end module fallocatable_snapshot_f90
+end module fallocatable_plain_f90
 """
 SCALAR_DESCRIPTOR_MODULE_SOURCE = """\
 module fscalar_descriptors_f90
@@ -173,8 +173,8 @@ end module fscalar_descriptors_f90
 """
 
 
-def _plain_allocatable_snapshot_module(build_mode: str, tmp_path: Path):
-    filename = "fallocatable_snapshot_f90.f90"
+def _plain_allocatable_module(build_mode: str, tmp_path: Path):
+    filename = "fallocatable_plain_f90.f90"
     if build_mode == "source":
         source_build_dir = tmp_path / "source_build"
         source_build_dir.mkdir(parents=True)
@@ -183,12 +183,12 @@ def _plain_allocatable_snapshot_module(build_mode: str, tmp_path: Path):
             filename,
             source_build_dir,
             {
-                "bind_c_fallocatable_snapshot_f90_wrapper.f90",
-                "fallocatable_snapshot_f90_wrapper.c",
-                "fallocatable_snapshot_f90_wrapper.h",
+                "bind_c_fallocatable_plain_f90_wrapper.f90",
+                "fallocatable_plain_f90_wrapper.c",
+                "fallocatable_plain_f90_wrapper.h",
             },
         )
-        return module, (source_build_dir / "fallocatable_snapshot_f90_wrapper.c").read_text(encoding="utf-8")
+        return module, (source_build_dir / "fallocatable_plain_f90_wrapper.c").read_text(encoding="utf-8")
 
     source_dir = tmp_path / "source"
     source_dir.mkdir(parents=True)
@@ -217,7 +217,7 @@ def _plain_allocatable_snapshot_module(build_mode: str, tmp_path: Path):
         output_dir=tmp_path / "pyi_build",
     )
     module = _sole_native_module(_import_from_build_dir(result.module_name, result.output_dir))
-    return module, (result.output_dir / "fallocatable_snapshot_f90_wrapper.c").read_text(encoding="utf-8")
+    return module, (result.output_dir / "fallocatable_plain_f90_wrapper.c").read_text(encoding="utf-8")
 
 
 def _scalar_descriptor_module(build_mode: str, tmp_path: Path):
@@ -283,6 +283,10 @@ def test_allocatable_module_fields_and_results_expose_lifetime_safe_handles(
     )
 
     assert "Functions" in module.__doc__
+    assert "Module Attributes" in module.__doc__
+    assert "module_values : AllocatableArray[float64]" in module.__doc__
+    assert "Persistent allocatable descriptor handle." in module.__doc__
+    assert "Replacement assignment is not supported." in module.__doc__
     assert "build_values" in module.__doc__
     assert "buffer" in module.__doc__
     assert "build_values(n) -> AllocatableArray[float64]" in module.build_values.__doc__
@@ -431,17 +435,14 @@ def test_scalar_descriptor_module_variables_return_copied_optional_values(
     assert module.selected_scale is None
 
 
-def test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction(
+def test_plain_allocatable_module_array_exposes_current_live_view(
     pyi_parity_build_mode: str,
     tmp_path: Path,
 ):
-    module, wrapper_source_text = _plain_allocatable_snapshot_module(pyi_parity_build_mode, tmp_path)
+    module, wrapper_source_text = _plain_allocatable_module(pyi_parity_build_mode, tmp_path)
 
-    assert (
-        "Plain allocatable module arrays without Aliased are copied into Python-owned NumPy arrays."
-        in wrapper_source_text
-    )
-    assert "Returned module snapshots are read-only and detached from later native changes." in wrapper_source_text
+    assert "void (*callback)(CFI_cdesc_t *, void *)" in wrapper_source_text
+    assert "descriptor->base_addr" in wrapper_source_text
 
     handle = module.values
     assert isinstance(handle, AllocatableArray)
@@ -454,18 +455,25 @@ def test_plain_allocatable_module_array_exposes_handle_with_read_only_extraction
     assert handle.allocated is True
     assert handle.shape == (3,)
 
-    snapshot = handle.to_numpy()
-    np.testing.assert_allclose(snapshot, np.array([1.0, 2.0, 3.0], dtype=np.float64))
-    assert snapshot.flags.writeable is False
-    with pytest.raises(ValueError, match="read-only"):
-        snapshot[0] = np.float64(9.0)
+    view = handle.to_numpy()
+    np.testing.assert_allclose(view, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+    assert view.flags.writeable is True
+    view[0] = np.float64(9.0)
+    independent = view.copy()
 
     module.scale_values(np.float64(2.0))
-    np.testing.assert_allclose(snapshot, np.array([1.0, 2.0, 3.0], dtype=np.float64))
+    np.testing.assert_allclose(view, np.array([18.0, 4.0, 6.0], dtype=np.float64))
+    np.testing.assert_allclose(independent, np.array([9.0, 2.0, 3.0], dtype=np.float64))
 
     fresh = handle.to_numpy()
-    assert fresh.flags.writeable is False
-    np.testing.assert_allclose(fresh, np.array([2.0, 4.0, 6.0], dtype=np.float64))
+    assert fresh.flags.writeable is True
+    np.testing.assert_allclose(fresh, np.array([18.0, 4.0, 6.0], dtype=np.float64))
+
+    module.allocate_values(np.int32(4))
+    reallocated = handle.to_numpy()
+    assert reallocated is not view
+    np.testing.assert_allclose(reallocated, np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
+    np.testing.assert_allclose(independent, np.array([9.0, 2.0, 3.0], dtype=np.float64))
 
     handle.resize((2,))
     assert handle.allocated is True

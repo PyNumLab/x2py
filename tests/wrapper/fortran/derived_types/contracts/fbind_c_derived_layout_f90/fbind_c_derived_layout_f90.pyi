@@ -1,4 +1,4 @@
-from x2py.contracts import Complex128, Float64, Int32, native_type
+from x2py.contracts import Arg, Complex128, Float64, Int32, Value, native_call, native_type
 
 @native_type(attributes=('bind(c)',))
 class point:
@@ -30,6 +30,7 @@ def populate(
     weight: Complex128
 ) -> None: ...
 
+@native_call([Value(Arg(0))])
 def score_by_value(
     value: tagged_point
 ) -> Float64: ...

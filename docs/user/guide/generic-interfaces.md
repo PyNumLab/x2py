@@ -20,6 +20,8 @@ Create `generic.f90`:
 ```fortran
 module conversions
   implicit none
+  private
+  public :: convert
   interface convert
     module procedure convert_integer
     module procedure convert_real

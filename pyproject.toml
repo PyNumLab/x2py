@@ -32,7 +32,7 @@ where = ["."]
 include = ["x2py*"]
 
 [tool.setuptools.package-data]
-"x2py.stdlib" = ["x2py_runtime/*"]
+"x2py.binding_support" = ["*.h"]
 
 [project.scripts]
 x2py = "x2py.cli:main"

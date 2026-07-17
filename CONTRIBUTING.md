@@ -11,12 +11,12 @@
 This repo includes a CI guard that may require updating parser reference docs
 when parser-related files change.
 
-- **C parser changes**: if you change `x2py/c_parser/`, `tests/parser/c/`, or
+- **C parser changes**: if you change `x2py/parsers/c/`, `tests/parser/c/`, or
   `tests/data/c/`, update `docs/c_parser.md` when the change affects the
   documented feature inventory, public API, diagnostics, fixtures, semantic
   handoff, or maintenance workflow. The guard also treats
   `tests/probes/test_c_types.py` as C parser related.
-- **Fortran parser changes**: if you change `x2py/fortran_parser/`,
+- **Fortran parser changes**: if you change `x2py/parsers/fortran/`,
   `tests/parser/fortran/`, or `tests/data/fortran/`, update
   `docs/fortran_parser.md` when the change affects the documented feature
   inventory, public API, diagnostics, fixtures, semantic handoff, or

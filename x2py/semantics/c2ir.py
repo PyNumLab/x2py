@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from x2py.c_parser.models import (
+from x2py.parsers.c.models import (
     CArray,
     CAtomic,
     CBool,

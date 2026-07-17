@@ -84,6 +84,7 @@ class NativeArrayHandlePolicy:
     def requires_c_descriptor_interop(self) -> bool:
         """Return whether generated code needs standard C descriptor support."""
         return self.descriptor_interop in {
+            "module_allocatable_c_descriptor",
             "owned_allocatable_c_descriptor",
             "pointer_c_descriptor",
         }

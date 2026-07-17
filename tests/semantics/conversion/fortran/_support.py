@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from x2py.fortran_parser.models import (
+from x2py.parsers.fortran.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
@@ -51,7 +51,7 @@ from x2py.semantics.metadata import SCALAR_STORAGE_CATEGORY
 
 from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
-from x2py.codegen.printers.pyi_printer import emit_module
+from x2py.wrapper_codegen.printers import emit_module
 
 from x2py.semantics.models import (
     ProjectionMapping,

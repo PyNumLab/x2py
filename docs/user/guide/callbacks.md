@@ -9,16 +9,16 @@ status: maintained
 # Callbacks
 
 x2py supports Python callbacks invoked immediately during one wrapped native
-call. Callback annotations are Fortran-facing: they describe the procedure
-signature that Fortran will call, then x2py lifts those arguments into Python
-objects for the callback invocation.
+call. A semantic `.pyi` declares each native callback shape once as a named
+prototype, then callback-taking procedures refer to that prototype by name.
 
 This is the opposite direction from a normal `.pyi` function signature. A
 normal function signature describes how Python calls the wrapper; x2py may
-lower that call into any compatible native bridge shape. A `Callable[[...], T]`
-argument describes how Fortran calls the callback adapter, so the argument
-order, value/reference passing, explicit or missing callback intent, rank,
-shape, character length, and result shape are part of the callback contract.
+lower that call into any compatible native bridge shape. A `@prototype`
+declaration describes how native code calls the callback adapter, so argument
+order, value/reference passing, rank, shape, character length, and result shape
+are part of the callback contract. Native callback direction is deliberately
+not repeated in semantic `.pyi`.
 
 ## Complete Callback Example
 
@@ -74,82 +74,61 @@ is unsupported unless the value is explicitly copied.
 
 ## Callback Values
 
-Callback argument wrappers are valid only inside `Callable[[...], T]`:
+Callback arguments use ordinary semantic types. Native code passes them by
+reference unless the prototype applies the one ABI override, `Value(T)`:
 
 ```python
-from x2py.contracts import Callable, Float64, In, InOut, Int32, Out, PassByRef
+from x2py.contracts import Float64, Int32, Value, prototype
 
-callback: Callable[
-    [
-        Int32,
-        PassByRef(Float64),
-        In(Float64),
-        Out(Float64),
-        InOut(Float64),
-        In(Float64[n]),
-    ],
-    None,
-]
+@prototype
+def update_values(
+    count: Int32,
+    scale: Value(Float64),
+    values: Float64[count],
+) -> None: ...
+
+def apply_update(callback: update_values, count: Int32) -> None: ...
 ```
 
-The wrappers mean:
+The spellings mean:
 
 | Callback spelling | Fortran callback dummy | Python callback object |
 | --- | --- | --- |
-| `Int32` | scalar `value` dummy | Python scalar value |
-| `PassByRef(Float64)` | scalar by reference with missing intent | rank-zero NumPy scalar storage |
-| `In(Float64)` | scalar by reference with `intent(in)` | Python scalar value |
-| `Out(Float64)` | scalar by reference with `intent(out)` | rank-zero NumPy scalar storage |
-| `InOut(Float64)` | scalar by reference with `intent(inout)` | rank-zero NumPy scalar storage |
-| `Float64[n]` | array with missing intent | NumPy array view |
-| `In(Float64[n])` | array with `intent(in)` | read-only NumPy array view |
-| `Out(Float64[n])` | array with `intent(out)` | writable NumPy array view |
-| `InOut(Float64[n])` | array with `intent(inout)` | writable NumPy array view |
+| `Int32` | scalar reference dummy | writable rank-zero NumPy scalar storage |
+| `Value(Float64)` | scalar `value` dummy | Python scalar value |
+| `Float64[n]` | array reference dummy | writable NumPy array view |
+| `point_t` | derived reference dummy | generated wrapper object |
+| `Value(point_t)` | derived `value` dummy | generated wrapper over the call-local value copy |
 
 Array callback arguments require exact dtype, rank, declared shape, alignment,
 and required Fortran contiguity. Derived values use the generated wrapper class.
-Array, scalar-storage, character-storage, and derived output/inout callback
-values are copied back before the callback adapter returns.
+Reference arguments are exposed permissively. Mutable scalar, array, character,
+and derived storage is written back before the callback adapter returns. A
+`Value(...)` argument is a native copy, so Python mutation cannot replace the
+caller's original object.
 
 ## Character Callback Arguments
 
-Read-only fixed-length character callback arguments use Python `str`:
+Fixed-length character callback arguments use their ordinary semantic spelling:
 
 ```python
-from x2py.contracts import Callable, In, String
+from x2py.contracts import String, prototype
 
-callback: Callable[[In(String[8])], None]
+@prototype
+def label_callback(label: String[8]) -> None: ...
 ```
 
-The callback receives a Python string with exactly eight encoded bytes. Writable
-character callback arguments cannot use plain `String[8]`, because Python
-strings are immutable. Use mutable rank-zero fixed-width bytes storage instead:
-
-```python
-from x2py.contracts import Callable, InOut, Out, String
-
-callback: Callable[[InOut(String[8][()])], None]
-callback: Callable[[Out(String[8][()])], None]
-```
-
-The callback receives a NumPy scalar bytes array, for example an object with
-shape `()` and dtype `S8`. The Python callback writes through that storage:
+Because reference callbacks are permissive, the callback receives mutable
+rank-zero NumPy bytes storage with shape `()` and dtype `S8`. The Python
+callback reads or writes through that storage:
 
 ```python
 def rewrite_label(label):
     label[...] = b"done    "
 ```
 
-Generated `.pyi` contracts use `String[n][()]` automatically for Fortran
-callback character dummies with `intent(out)` or `intent(inout)`. Manual
-contracts reject these writable immutable forms:
-
-```python
-from x2py.contracts import Callable, InOut, Out, String
-
-Callable[[Out(String[8])], None]     # invalid
-Callable[[InOut(String[8])], None]   # invalid
-```
+The semantic callback annotation remains `String[n]`; the callback adapter
+chooses mutable scalar storage without encoding native direction in `.pyi`.
 
 A non-callable argument raises `TypeError` before native execution.
 
@@ -182,31 +161,44 @@ survive such failures.
 - asynchronous or cross-thread callback invocation; and
 - persistent callback ownership during object or library teardown.
 
-## Future Contract Policy
+## Adapter Policy
 
-Future callback contract work should enrich adapter policy, not reshape the
-callback call signature. A `Callable[[...], T]` must continue to describe the
-Fortran procedure interface that Fortran calls: argument order, value/reference
-passing, storage shape, character length, and result type. The Python callable
-can adapt argument names or order itself, so callback contracts should not grow
-normal wrapper features such as argument reordering or hidden native-call
-projection.
+The post-IR policy stage completes how the adapter crosses the
+Fortran-to-Python-to-Fortran boundary before wrapper generation begins. It
+records value versus reference ABI, permissive reference writeback, array shape,
+fixed character length, exact derived type identity, call-scoped context
+lifetime, entering-thread enforcement, GIL entry, cleanup, and the fatal error
+action. The Python binding and Fortran bridge only lower those completed actions.
 
-The useful future work is explicit policy for how the adapter crosses the
-Fortran-to-Python-to-Fortran boundary:
+A `@prototype` declaration is a compile-time semantic declaration, not a
+Python runtime export. Its declaration order, value/reference transport,
+storage shape, character length, and result type define the callback transport
+contract. The Python callable may adapt argument names itself, so prototypes do
+not use normal wrapper projection such as `@native_call`.
 
-- copy-in, copy-out, borrowed-view, and zero-copy choices;
+Post-IR policy selects the weakest correct native declaration from the complete
+prototype. Classic scalar, explicit-shape, and assumed-size signatures use an
+implicit external declaration. Signatures with optional or descriptor
+arguments, polymorphism, or non-scalar/descriptor results use the
+named native prototype through an explicit declaration. That path imports the
+real interface, including direction facts deliberately omitted from semantic
+`.pyi`, so its compiler module file must be available. `Value(...)` alone does
+not force the explicit path when a typed external declaration is sufficient.
+
+Future work may add user-selectable policy for:
+
+- borrowed-view, detached-copy, and zero-copy choices;
 - dtype conversion, overflow checks, and result coercion;
 - fixed-length character encoding, padding, truncation, and writeback rules;
 - ownership and lifetime rules for arrays, scalar storage, derived wrappers,
   and temporary callback values;
-- writeback protocols for output or inout values that cannot be mutated
+- writeback protocols for values that cannot be mutated
   directly by the Python object currently passed to the callback; and
 - callback-specific error/result policy beyond the current fatal native
   callback boundary.
 
-This is planned design work, not current support. The semantic `.pyi` wrapper
-roadmap later tracks the callback-adapter policy work.
+These choices are not currently user-selectable; unsupported forms remain
+blocked instead of selecting a different backend behavior.
 
 ## Evidence And Troubleshooting
 

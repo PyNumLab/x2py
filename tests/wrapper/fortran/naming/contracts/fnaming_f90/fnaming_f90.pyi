@@ -1,15 +1,15 @@
-from x2py.contracts import Addr, Annotated, Arg, Int32, Name, bind, native_call
+from x2py.contracts import Addr, Annotated, Arg, Int32, SourceName, bind, native_call
 
 class visible_t:
     def __init__(
         self,
         *,
-        lambda_: Annotated[Int32, Name("lambda")] = 3,
-        lambda__2: Annotated[Int32, Name("lambda_")] = 4
+        lambda_: Annotated[Int32, SourceName("lambda")] = 3,
+        lambda__2: Annotated[Int32, SourceName("lambda_")] = 4
     ) -> None: ...
 
-    lambda_: Annotated[Int32, Name("lambda")] = 3
-    lambda__2: Annotated[Int32, Name("lambda_")] = 4
+    lambda_: Annotated[Int32, SourceName("lambda")] = 3
+    lambda__2: Annotated[Int32, SourceName("lambda_")] = 4
 
     @bind("visible_from")
     def from_(self) -> Int32: ...

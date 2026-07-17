@@ -23144,12 +23144,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -23766,12 +23766,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -23784,12 +23784,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -23822,12 +23822,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 3
         }
       ]
@@ -23841,7 +23841,7 @@
       "n_variables": 0,
       "messages": [
         "Some shape expressions refer to symbols not supplied by the semantic interface.",
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
@@ -23851,7 +23851,7 @@
         },
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -23864,13 +23864,13 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
         "Some shape expressions refer to symbols not supplied by the semantic interface."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         },
         {
@@ -23956,12 +23956,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -23974,12 +23974,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -23992,12 +23992,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -24010,12 +24010,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -24682,12 +24682,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -24700,12 +24700,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -24718,12 +24718,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -24736,12 +24736,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -24764,12 +24764,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -24782,12 +24782,12 @@
       "n_classes": 0,
       "n_variables": 0,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -25036,12 +25036,12 @@
       "n_classes": 0,
       "n_variables": 3,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 1
         }
       ]
@@ -25054,12 +25054,12 @@
       "n_classes": 0,
       "n_variables": 5,
       "messages": [
-        "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file."
+        "Some callback or procedure arguments need a complete named prototype in the .pyi file."
       ],
       "blockers": [
         {
           "code": "callback_signature_incomplete",
-          "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+          "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
           "n_items": 2
         }
       ]

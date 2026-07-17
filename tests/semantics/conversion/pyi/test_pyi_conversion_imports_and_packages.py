@@ -4,7 +4,6 @@ from tests._shared.pyi_conversion_support import (
     CONTRACT_IMPORT,
     FORTRAN_PYI_COMPARE_FIXTURES,
     Path,
-    Scope,
     SemanticImport,
     SemanticImportItem,
     _semantic_modules_for_source,
@@ -19,7 +18,6 @@ from tests._shared.pyi_conversion_support import (
     pyi_pipeline,
     pyi_text_to_semantic_module,
     pytest,
-    semantic_ir_to_codegen_ast,
 )
 
 
@@ -335,33 +333,6 @@ def test_convert_pyi_to_ir_and_import_parser_edge_cases():
 
     with pytest.raises(SyntaxError):
         pyi_text_to_semantic_module("from m import\n", module_name="edited")
-
-
-def test_pyi_codegen_imports_public_generic_not_private_specific_targets():
-    module = parse_pyi_text(
-        """
-@private
-def convert_integer(
-    value: Addr(Int32)
-) -> Int32: ...
-
-@overload("convert_integer")
-def convert(
-    value: Addr(Int32)
-) -> Int32: ...
-""",
-        module_name="foverloads_f90",
-    )
-
-    codegen_module = semantic_ir_to_codegen_ast(module, Scope(name=module.name, scope_type="module"))
-    imported = {
-        (str(target.name), str(target.local_alias))
-        for native_import in codegen_module.imports
-        for target in native_import.target
-    }
-
-    assert ("convert", "convert") in imported
-    assert all("convert_integer" not in item for names in imported for item in names)
 
 
 def test_generated_pyi_loads_and_reemits_for_all_fortran_fixtures(tmp_path: Path):

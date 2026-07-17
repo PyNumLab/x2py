@@ -1,17 +1,17 @@
-from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, Returns, native_call
+from x2py.contracts import Addr, Arg, Float64, Int32, Returns, native_call
 
 def scale2_contiguous(
-    a: Annotated[Float64[:, :], ORDER_F],
-    out: Annotated[Float64[:, :], ORDER_F]
-) -> Returns["out", Annotated[Float64[:, :], ORDER_F]]: ...
+    a: Float64[:, :],
+    out: Float64[:, :]
+) -> Returns["out", Float64[:, :]]: ...
 
 def scale2_strided(
-    a: Annotated[Float64[::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::], ORDER_F]]: ...
+    a: Float64[::, ::],
+    out: Float64[::, ::]
+) -> Returns["out", Float64[::, ::]]: ...
 
 def checksum2_strided(
-    a: Annotated[Float64[::, ::], ORDER_F],
+    a: Float64[::, ::],
     checksum: Float64[1]
 ) -> Returns["checksum", Float64[1]]: ...
 
@@ -19,21 +19,21 @@ def checksum2_strided(
 def scale2_explicit(
     rows: Int32,
     cols: Int32,
-    a: Annotated[Float64[rows, cols], ORDER_F],
-    out: Annotated[Float64[rows, cols], ORDER_F]
-) -> Returns["out", Annotated[Float64[rows, cols], ORDER_F]]: ...
+    a: Float64[rows, cols],
+    out: Float64[rows, cols]
+) -> Returns["out", Float64[rows, cols]]: ...
 
 def shift3_contiguous(
-    a: Annotated[Float64[:, :, :], ORDER_F],
-    out: Annotated[Float64[:, :, :], ORDER_F]
-) -> Returns["out", Annotated[Float64[:, :, :], ORDER_F]]: ...
+    a: Float64[:, :, :],
+    out: Float64[:, :, :]
+) -> Returns["out", Float64[:, :, :]]: ...
 
 def shift3_strided(
-    a: Annotated[Float64[::, ::, ::], ORDER_F],
-    out: Annotated[Float64[::, ::, ::], ORDER_F]
-) -> Returns["out", Annotated[Float64[::, ::, ::], ORDER_F]]: ...
+    a: Float64[::, ::, ::],
+    out: Float64[::, ::, ::]
+) -> Returns["out", Float64[::, ::, ::]]: ...
 
 def checksum3_strided(
-    a: Annotated[Float64[::, ::, ::], ORDER_F],
+    a: Float64[::, ::, ::],
     checksum: Float64[1]
 ) -> Returns["checksum", Float64[1]]: ...

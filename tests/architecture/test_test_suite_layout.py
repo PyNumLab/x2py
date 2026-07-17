@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parents[2]
 TEST_ROOT = REPO_ROOT / "tests"
 TEST_INDEX = TEST_ROOT / "README.md"
 MIGRATION_CHECKLIST = REPO_ROOT / "docs/maintainer/roadmap/test-suite-organization-checklist.md"
+QUALITY_WORKFLOW = REPO_ROOT / ".github/workflows/quality.yml"
+FULL_REAL_LIBRARY_TEST = "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py"
 
 STAGE_DIRECTORIES = {
     "architecture",
     "benchmarks",
     "cli",
-    "codegen",
     "docs",
-    "lowering",
     "naming",
     "parsing",
     "pipeline",
@@ -26,19 +26,19 @@ STAGE_DIRECTORIES = {
     "semantics",
     "tools",
     "types",
+    "utilities",
+    "wrapper_codegen",
 }
 NON_STAGE_DIRECTORIES = {"wrapper"}
 DOCUMENTED_SOURCE_OWNERS = {
-    "x2py.c_parser": "tests/parsing/c/",
-    "x2py.fortran_parser": "tests/parsing/fortran/",
-    "x2py.pyi_parser": "tests/parsing/pyi/",
+    "x2py.parsers.c": "tests/parsing/c/",
+    "x2py.parsers.fortran": "tests/parsing/fortran/",
+    "x2py.parsers.pyi": "tests/parsing/pyi/",
     "x2py.probes": "tests/probes/",
     "x2py.pipeline": "tests/pipeline/",
-    "x2py.semantics.ir2ast": "tests/lowering/",
-    "x2py.codegen.bridges": "tests/codegen/bridges/",
-    "x2py.codegen.bindings": "tests/codegen/bindings/",
-    "x2py.codegen.printers": "tests/codegen/printers/",
+    "x2py.wrapper_codegen": "tests/wrapper_codegen/",
     "x2py.naming": "tests/naming/",
+    "x2py.utilities": "tests/utilities/",
     "x2py.types": "tests/types/",
     "x2py.runtime.handles": "tests/runtime/handles/",
     "x2py.cli": "tests/cli/",
@@ -55,6 +55,7 @@ ARCHITECTURE_TEST_MODULES = {
     "test_dependency_boundaries.py",
     "test_package_structure.py",
     "test_test_suite_layout.py",
+    "test_visitor_protocol.py",
 }
 DEPRECATED_PYTEST_ROOTS = {
     TEST_ROOT / "parser",
@@ -161,3 +162,21 @@ def test_maintained_docs_do_not_name_deprecated_pytest_locations() -> None:
             if pattern in text:
                 stale.append(f"{path.relative_to(REPO_ROOT)}: {pattern}")
     assert stale == []
+
+
+def test_full_real_library_nodes_have_one_dedicated_quality_job() -> None:
+    text = QUALITY_WORKFLOW.read_text(encoding="utf-8")
+    ordinary_jobs, dedicated_and_later = text.split("  real-library-wrappers:", maxsplit=1)
+    dedicated_job, _later_jobs = dedicated_and_later.split("\n  coverage-report:", maxsplit=1)
+
+    assert f"--ignore={FULL_REAL_LIBRARY_TEST}" in ordinary_jobs
+    assert (
+        f'"{FULL_REAL_LIBRARY_TEST}::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[blas]"'
+        in dedicated_job
+    )
+    assert (
+        f'"{FULL_REAL_LIBRARY_TEST}::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[lapack]"'
+        in dedicated_job
+    )
+    assert "ignore-real-library-wrappers" in dedicated_job
+    assert "matrix.library" not in dedicated_job

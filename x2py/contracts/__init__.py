@@ -7,7 +7,6 @@ expressions at runtime.
 
 from __future__ import annotations
 
-from collections.abc import Callable as Callable
 from typing import Annotated as Annotated, Any as Any, Final as Final
 
 
@@ -87,6 +86,7 @@ Aliased = _ContractExpression()
 Allocatable = _ContractExpression()
 AssumedType = _ContractExpression()
 Contiguous = _ContractExpression()
+COPY_F = _ContractExpression()
 Flat = _ContractExpression()
 FortranAllocatable = _ContractExpression()
 Immutable = _ContractExpression()
@@ -102,23 +102,17 @@ ArrayCategory = _expression
 Bounded = _expression
 Destruction = _expression
 Finite = _expression
-In = _expression
-InOut = _expression
 IsPresent = _expression
 Len = _expression
-LowerBounds = _expression
-Name = _expression
-Out = _expression
 Ownership = _expression
 Pass = _expression
-PassByRef = _expression
 PointerAssociation = _expression
 PointerPolicy = _expression
-Return = _expression
 Range = _expression
-SourceDims = _expression
+Return = _expression
+SourceName = _expression
 Transfer = _expression
-UpperBounds = _expression
+Value = _expression
 Work = _expression
 
 bind = _decorator
@@ -127,6 +121,7 @@ hold_gil = _decorator
 native_call = _decorator
 native_type = _decorator
 overload = _decorator
+prototype = _decorator
 raises = _decorator
 
 CAnonymous = _ContractType
@@ -156,12 +151,12 @@ CONTRACT_SYMBOLS = frozenset(
         "CEnum",
         "CStruct",
         "CUnion",
-        "Callable",
         "Char",
         "Complex64",
         "Complex128",
         "Complex256",
         "Contiguous",
+        "COPY_F",
         "Destruction",
         "Final",
         "Finite",
@@ -172,8 +167,6 @@ CONTRACT_SYMBOLS = frozenset(
         "Float128",
         "FortranAllocatable",
         "Immutable",
-        "In",
-        "InOut",
         "Int",
         "Int8",
         "Int16",
@@ -181,18 +174,14 @@ CONTRACT_SYMBOLS = frozenset(
         "Int64",
         "IsPresent",
         "Len",
-        "LowerBounds",
         "Matrix",
-        "Name",
         "Opaque",
         "OpaqueHandle",
         "ORDER_ANY",
         "ORDER_C",
         "ORDER_F",
-        "Out",
         "Ownership",
         "Pass",
-        "PassByRef",
         "Pointer",
         "PointerAssociation",
         "PointerPolicy",
@@ -201,7 +190,7 @@ CONTRACT_SYMBOLS = frozenset(
         "Return",
         "Returns",
         "SizeT",
-        "SourceDims",
+        "SourceName",
         "Strided",
         "String",
         "Transfer",
@@ -210,7 +199,7 @@ CONTRACT_SYMBOLS = frozenset(
         "UInt16",
         "UInt32",
         "UInt64",
-        "UpperBounds",
+        "Value",
         "Vector",
         "Void",
         "Work",
@@ -221,6 +210,7 @@ CONTRACT_SYMBOLS = frozenset(
         "native_call",
         "native_type",
         "overload",
+        "prototype",
         "private",
         "raises",
     }
@@ -239,7 +229,6 @@ CONTRACT_TYPE_NAMES = frozenset(
         "CEnum",
         "CStruct",
         "CUnion",
-        "Callable",
         "Char",
         "Complex64",
         "Complex128",

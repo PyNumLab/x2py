@@ -32,7 +32,7 @@ before generated wrappers should treat them as supported behavior.
 
 | Gap | Current risk | Proposed direction |
 | --- | --- | --- |
-| Function pointers and callbacks | The parser can capture function-pointer shape, but semantic conversion does not yet preserve a complete callable contract that wrappers can use safely. | Round-trip callback signatures as a first-class semantic callable form, such as a dedicated callback type or `Callable[[...], ...]` plus native callback metadata. Keep wrapper readiness blocked until lifetime, threading, exception, context-pointer, and unregister policy is supplied. |
+| Function pointers and callbacks | The parser can capture function-pointer shape, but some C callback declarations still lack a complete wrapper policy. | Round-trip callback signatures as named `@prototype` declarations and keep wrapper readiness blocked until lifetime, threading, exception, context-pointer, and unregister policy is supplied. |
 | Pointer ownership and array extents | Raw pointers, pointer-to-pointer values, unknown extents, output buffers, and arrays of pointers are ambiguous without user policy. | Keep exact pointer topology in semantic IR. Require explicit `.pyi` ownership, borrow, output, shape, nullability, and copy/readback policy before projecting to Python containers or NumPy arrays. |
 | Unions | `CUnion` identifies the native type, but it does not say which member is active or whether by-value union ABI is safe. | Continue representing named and anonymous unions explicitly with `CUnion`; require active-member/discriminant policy for high-level access. Prefer a compiled shim or target layout proof for by-value union calls; otherwise keep a readiness blocker. |
 | Bitfields | Bit width is parser-visible, but Python field access needs target layout, signedness, padding, and read/write rules. | Preserve bit width, declared base type, containing aggregate, and layout-sensitive attributes. Generate access through a compiled C shim or target layout probe; block direct field projection when layout cannot be proven. |
@@ -61,12 +61,21 @@ The supported target is the API surface needed to produce or validate wrappers:
 functions, variables, structs, enums, typedefs, constants, arrays, pointers,
 callbacks, and the metadata needed for readiness decisions.
 
-Generated CPython extension builds copy their bundled C/Python support sources
-into an `x2py_runtime/` directory inside the build output. The generated C
-extension includes `x2py_runtime/python_runtime.h`. These files are an
-implementation detail of the generated extension, but their names are
-intentionally x2py-specific so they do not look like user source or a generic
-C wrapper.
+Generated CPython extension builds copy their bundled C/Python support header
+into a `binding_support/` directory inside the build output. The generated C
+extension includes `binding_support/x2py_binding.h`. This header is an
+implementation detail of the generated extension, but its name is intentionally
+x2py-specific so it does not look like user source or a generic C wrapper.
+
+The support header is header-only: each helper has internal linkage and is
+eligible for inlining when the generated binding translation unit is compiled.
+There is no separately compiled or linked support object. It exposes a
+deliberately small `x2py_*` mechanical API: scalar type matching, scalar
+unpacking, scalar creation as a Python or NumPy object, and release of a
+bridge-owned allocation. The generated binding passes the completed NumPy type,
+layout, ownership, and mutation decisions into those operations. Native support
+must not infer a layout, accept a different dtype, or choose ownership behavior
+from a value at runtime; those are completed wrapper-plan decisions.
 
 Generated CPython extensions should expose useful NumPy-style docstrings on the
 Python-visible API. The CPython wrapper layer owns this generation because it has
@@ -91,8 +100,8 @@ attributes.
 Verbose wrapper builds should print the exact compiler command lines they run,
 not only the source or target being compiled. The printed command should be
 shell-quoted so users can copy it to reproduce object compilation, generated
-wrapper compilation, runtime support compilation, and final shared-library
-linking.
+wrapper compilation (including its header-only native binding support), and
+final shared-library linking.
 
 Normal C parsing uses a real compiler preprocessor first. Macro expansion,
 conditional compilation, token paste, stringify, and include resolution belong

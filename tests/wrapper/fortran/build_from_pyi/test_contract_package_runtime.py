@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from x2py import build_pyi_extension
+from x2py import build_fortran_extension, build_pyi_extension
 
 from tests._shared.fixture_outputs import PYI_WRAPPER_CONTRACT_FIXTURE_DIR
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
@@ -23,6 +23,7 @@ SOURCE_NAMESPACE = GENERAL_FORTRAN_DATA / "contract_mixed_module_external.f90"
 STANDALONE_ONLY = GENERAL_FORTRAN_DATA / "contract_standalone_only.f90"
 SAME_NAME_MIXED = GENERAL_FORTRAN_DATA / "contract_same_name.f90"
 TRANSITIVE_NATIVE = GENERAL_FORTRAN_DATA / "contract_import_graph.f90"
+MULTI_MODULE = GENERAL_FORTRAN_DATA / "contract_multi_module.f90"
 
 
 def _compiler() -> str:
@@ -103,12 +104,13 @@ def _build_contract(
     cwd: Path | None = None,
     output_name: str | None = None,
 ):
+    invocation_dir = cwd or build_dir
+    invocation_dir.mkdir(parents=True, exist_ok=True)
     command = [
         sys.executable,
         "-m",
         "x2py",
         str(entry),
-        "--wrap",
         "--native-objects",
         str(native_object),
         "--native-include-dir",
@@ -119,9 +121,49 @@ def _build_contract(
     ]
     if output_name is not None:
         command.extend(("--out", output_name))
-    payload = _run_json(command, cwd=cwd)
+    payload = _run_json(command, cwd=invocation_dir)
     module = _import_extension(str(payload["module_name"]), build_dir)
     return module, payload
+
+
+def _assert_general_source_surface(source: Path, module) -> None:
+    """Assert the public hierarchy and calls of one complete general fixture."""
+    if source == SOURCE_NAMESPACE:
+        assert not hasattr(module, "module_increment")
+        assert module.contract_math_mod.module_increment(np.int32(4)) == np.int32(5)
+        assert module.external_double(np.int32(4)) == np.int32(8)
+    elif source == TRANSITIVE_NATIVE:
+        assert not hasattr(module, "func")
+        assert not hasattr(module, "deep_func")
+        assert module.m1.func(np.int32(2)) == np.int32(3)
+        assert module.deep.deep_func(np.int32(3)) == np.int32(6)
+    elif source == MULTI_MODULE:
+        assert not hasattr(module, "shared_value")
+        assert module.contract_left_mod.shared_value(np.int32(3)) == np.int32(4)
+        assert module.contract_right_mod.shared_value(np.int32(3)) == np.int32(6)
+    elif source == STANDALONE_ONLY:
+        assert module.standalone_ping() is None
+        assert module.standalone_double(np.int32(4)) == np.int32(8)
+    else:
+        assert source == SAME_NAME_MIXED
+        assert not hasattr(module, "module_ping")
+        assert module.external_ping() is None
+        assert module.contract_same_name.module_ping() is None
+
+
+@pytest.mark.parametrize(
+    "source",
+    [SOURCE_NAMESPACE, TRANSITIVE_NATIVE, MULTI_MODULE, STANDALONE_ONLY, SAME_NAME_MIXED],
+    ids=lambda path: path.stem,
+)
+def test_complete_general_source_preserves_namespaces_through_canonical_plan(
+    tmp_path: Path,
+    source: Path,
+):
+    result = build_fortran_extension(source, output_dir=tmp_path / "build")
+    module = _import_extension(result.module_name, result.output_dir)
+
+    _assert_general_source_surface(source, module)
 
 
 def test_source_build_preserves_modules_and_root_externals(tmp_path: Path):
@@ -133,7 +175,6 @@ def test_source_build_preserves_modules_and_root_externals(tmp_path: Path):
             "-m",
             "x2py",
             str(source),
-            "--wrap",
             "--out-dir",
             str(build_dir),
             "--json",
@@ -192,7 +233,7 @@ def test_recursive_graph_preserves_module_and_symbol_aliases_and_ignores_support
     nested.mkdir(parents=True)
     entry.write_text(
         "from types import SimpleNamespace\n"
-        "from x2py.contracts import Callable\n"
+        "from x2py.contracts import prototype\n"
         "from . import facade as m2\n"
         "from .m1 import func as f\n",
         encoding="utf-8",
@@ -216,9 +257,21 @@ def test_recursive_graph_preserves_module_and_symbol_aliases_and_ignores_support
     assert not hasattr(module, "m1")
     assert not hasattr(module, "func")
     assert not hasattr(module, "SimpleNamespace")
-    assert not hasattr(module, "Callable")
     assert module.f(np.int32(2)) == np.int32(3)
     assert module.m2.branch.deep_func(np.int32(3)) == np.int32(6)
+
+    plan_result = build_pyi_extension(
+        entry,
+        native_objects=[native_object],
+        native_include_dirs=[native_object.parent],
+        output_dir=tmp_path / "plan_build",
+    )
+    plan_module = _import_extension(plan_result.module_name, plan_result.output_dir)
+    assert not hasattr(plan_module, "facade")
+    assert not hasattr(plan_module, "m1")
+    assert not hasattr(plan_module, "func")
+    assert plan_module.f(np.int32(2)) == np.int32(3)
+    assert plan_module.m2.branch.deep_func(np.int32(3)) == np.int32(6)
 
 
 def test_recursive_graph_reports_missing_relative_contract_before_native_validation(tmp_path: Path):

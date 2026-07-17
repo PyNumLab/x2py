@@ -15,4 +15,5 @@ interfaces and overload sets, and Stage 8 editable contract visibility and
 renaming semantics.
 
 Tests: `test_defined_operators.py`, `test_naming_generated_pyi_contracts.py`,
-`test_generic_interfaces.py`, `test_visibility_naming.py`.
+`test_generic_interfaces.py`, `test_visibility_naming.py`, and
+`test_phase9_class_overloads.py`.

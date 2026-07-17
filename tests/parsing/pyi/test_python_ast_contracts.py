@@ -65,7 +65,7 @@ def test_pyi_parser_preserves_generic_constraints_as_annotation_metadata():
     module = parse_pyi_text(
         """
 value: Annotated[Int32, Bounded(1, 8), Finite]
-alias: Annotated[Int32, Name("native_alias"), Finite]
+alias: Annotated[Int32, SourceName("native_alias"), Finite]
 """,
         module_name="edited",
     )

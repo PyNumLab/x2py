@@ -34,7 +34,6 @@ you provide the native artifacts explicitly:
 
 ```bash
 python3 -m x2py path/to/module.pyi \
-  --wrap \
   --native-objects path/to/module.o path/to/support.a \
   --native-include-dir path/to/mod-files path/to/vendor-mod-files \
   --out-dir build/module

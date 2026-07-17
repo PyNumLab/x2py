@@ -21,17 +21,13 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | `x2py/probes/` | Compiler-derived target facts and target type mapping reports. |
 | `x2py/runtime/` | Python runtime objects used by generated extension modules. |
 | `x2py/types/` | Cross-layer mappings from resolved semantic types to Python ecosystem types. |
-| `x2py/fortran_parser/` | Fortran parser frontend and Fortran parse report helpers. |
-| `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, readiness, and codegen lowering. |
-| `x2py/compiling/` | Native compile objects, compiler command orchestration, runtime support installation, and linking. |
-| `x2py/stdlib/` | Native runtime support copied into generated wrapper builds. |
+| `x2py/parsers/` | Public namespace for language and semantic-contract frontends and parser models. |
+| `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, policy completion, and readiness. |
+| `x2py/wrapper_codegen/` | Typed wrapper plans, direct native bridge/binding lowering, and source and semantic `.pyi` printers. |
+| `x2py/compiling/` | Native compile objects, compiler command orchestration, native support installation, and linking. |
+| `x2py/binding_support/` | Bundled header-only native support copied into generated wrapper builds. |
 | `x2py/naming/` | Unified public-name and generated-symbol policy. |
 | `x2py/utilities/` | Small shared Python utilities. |
-
-<!-- X2PY_C_DOCS_START
-| `x2py/c_parser/` | C parser frontend and C parser CLI helpers. |
-| `x2py/codegen/` | Codegen AST models, Fortran bridge generation, CPython binding generation, and printers. |
-X2PY_C_DOCS_END -->
 
 The major source packages have local README files under `x2py/` for
 developers reading directly in the source tree. Those README files should link
@@ -40,19 +36,23 @@ back to the maintained source-navigation docs instead of old top-level docs.
 Only `x2py/__init__.py`, `x2py/__main__.py`, and `x2py/cli.py` live directly at
 the package root. Public library symbols are deliberately flattened through
 `x2py/__init__.py`; internal modules are imported through their owning package.
-The one public submodule namespace is `x2py.contracts`, because semantic `.pyi`
-files use direct `from x2py.contracts import ...` declarations as part of their
-contract syntax.
+The deliberate public submodule namespaces are `x2py.contracts`, whose import
+path is part of semantic `.pyi` syntax, and `x2py.parsers`, which groups the
+language-specific frontends. Stable convenience functions remain flattened
+through `x2py/__init__.py`.
 
 ## Tests
 
 | Path | Purpose |
 | --- | --- |
-| `tests/parser/` | Parser, preprocessing, CLI, and parser fixture tests. |
-| `tests/semantics/` | Semantic IR, readiness, type mapping, and lowering tests. |
-| `tests/pyi/` | Semantic `.pyi` parser and fixture tests. |
+| `tests/parsing/` | Parser and parser fixture tests grouped by source language. |
+| `tests/pipeline/` | Preprocessing and semantic `.pyi` build-orchestration tests. |
+| `tests/semantics/` | Semantic conversion, completed policy, and readiness tests. |
+| `tests/wrapper_codegen/` | Typed planning, direct bridge/binding generation, and source-printer tests. |
+| `tests/utilities/` | Shared Python utility tests. |
 | `tests/wrapper/fortran/` | Runtime wrapper tests that compile, import, call, and check failure paths. |
-| `tests/tools/` | Tooling tests, including documentation example and structure checks. |
+| `tests/docs/` | Documentation example and structure checks. |
+| `tests/tools/` | Repository tooling tests. |
 
 <!-- X2PY_C_DOCS_START
 | `tests/parser/c/` | C parser-specific tests and fixture maintenance. |

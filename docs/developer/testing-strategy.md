@@ -22,9 +22,8 @@ Stage and unit tests mirror the implementation pipeline:
   workflow;
 - semantic conversion, completed policy, and readiness have separate owners
   under `tests/semantics/`;
-- semantic-to-codegen conversion lives under `tests/lowering/`;
-- bridge, binding, and printer generation live under matching
-  `tests/codegen/` subjects;
+- wrapper planning, bridge/binding generation, and source/`.pyi` printing live
+  under `tests/wrapper_codegen/`;
 - runtime handles, naming, and type mapping live under `tests/runtime/`,
   `tests/naming/`, and `tests/types/`;
 - documentation, repository-tool, and architecture checks live under
@@ -37,13 +36,17 @@ crosses subjects. For example:
 python3 -m pytest -q tests/parsing/fortran
 python3 -m pytest -q tests/semantics/conversion/fortran
 python3 -m pytest -q tests/semantics/policy
-python3 -m pytest -q tests/lowering
-python3 -m pytest -q tests/codegen/bridges
+python3 -m pytest -q tests/wrapper_codegen
 ```
 
 CLI behavior has its own `tests/cli/` owner. Property and regression tests live
 with their owning stage and retain their markers, so a stage-directory command
 does not omit them.
+
+The legacy lowering AST and `x2py.codegen` package are removed. Their bridge,
+binding, and printer implementation tests are not carried through cutover. Any
+still-relevant contract is expressed against completed semantic policy,
+`WrapperPlan`/`WrapperCodeGenerator`, or public compiled wrapper behavior.
 
 ## Wrapper runtime features
 
@@ -58,14 +61,21 @@ modes execute one shared behavioral assertion body. Modified-contract behavior
 stays in the same feature subject but uses its intentionally different
 assertions.
 
-Run all Fortran wrapper subjects except real-library runtime work with:
+During the wrapper-plan migration, run all Fortran wrapper subjects except the
+deferred full BLAS/LAPACK corpus with:
 
 ```bash
-python3 -m pytest -q tests/wrapper/fortran --ignore=tests/wrapper/fortran/real_libraries
+python3 -m pytest -q tests/wrapper/fortran \
+  --ignore=tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py
 ```
 
-Do not run LAPACK runtime tests locally unless the task explicitly requests
-them. BLAS-only evidence may be selected separately when relevant.
+The full LAPACK wrapper test remains CI-only by default. The full BLAS test may
+be run locally when its library-scale evidence is needed. One dedicated GitHub
+Actions job runs the exact full BLAS and LAPACK nodes together on Python 3.12;
+the ordinary Python-version matrix excludes their complete test file. Add the
+`ignore-real-library-wrappers` label to a pull request to skip only this
+expensive dedicated job. General native-bundle tests remain active in the
+ordinary matrix.
 
 ## Fixtures and generated expectations
 
