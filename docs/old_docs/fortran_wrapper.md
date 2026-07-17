@@ -124,7 +124,7 @@ Typical generated artifacts are:
 | --- | --- |
 | `bind_c_<module>_wrapper.f90` | Fortran-to-C ABI bridge |
 | `<module>_wrapper.c` and `.h` | CPython extension binding |
-| `binding_support/` | Shared native binding support |
+| `binding_support/` | Header-only native binding support |
 | user and generated `.o`/`.mod` files | Native build intermediates |
 | `<module>.<extension-suffix>.so` | Importable extension on Linux |
 
@@ -1320,11 +1320,11 @@ python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build --json
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
-The Makefile covers user sources, generated wrappers, native binding support, and the
+The Makefile covers user sources, generated wrappers, the header-only native binding support, and the
 shared-library link. It records resolved compilers and exposes `FC`, `CC`,
 `X2PY_LD`, `X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS`. User Fortran
-sources are conservatively chained in supplied order; independent generated C
-and runtime work may run in parallel. This target expects GNU Make and a POSIX
+sources are conservatively chained in supplied order; generated bridge and C
+binding work may run in parallel. This target expects GNU Make and a POSIX
 shell.
 
 Runtime tests: [`test_multi_source_builds.py`](../tests/wrapper/fortran/multi_source/test_multi_source_builds.py),

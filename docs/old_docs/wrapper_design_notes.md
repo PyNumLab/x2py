@@ -61,20 +61,21 @@ The supported target is the API surface needed to produce or validate wrappers:
 functions, variables, structs, enums, typedefs, constants, arrays, pointers,
 callbacks, and the metadata needed for readiness decisions.
 
-Generated CPython extension builds copy their bundled C/Python support sources
+Generated CPython extension builds copy their bundled C/Python support header
 into a `binding_support/` directory inside the build output. The generated C
-extension includes `binding_support/x2py_binding.h`. These files are an
-implementation detail of the generated extension, but their names are
-intentionally x2py-specific so they do not look like user source or a generic
-C wrapper.
+extension includes `binding_support/x2py_binding.h`. This header is an
+implementation detail of the generated extension, but its name is intentionally
+x2py-specific so it does not look like user source or a generic C wrapper.
 
-The support header exposes a deliberately small `x2py_*` mechanical API:
-scalar type matching, scalar unpacking, scalar creation as a Python or NumPy
-object, and release of a bridge-owned allocation. The generated binding passes
-the completed NumPy type, layout, ownership, and mutation decisions into those
-operations. Native support must not infer a layout, accept a different dtype,
-or choose ownership behavior from a value at runtime; those are completed
-wrapper-plan decisions.
+The support header is header-only: each helper has internal linkage and is
+eligible for inlining when the generated binding translation unit is compiled.
+There is no separately compiled or linked support object. It exposes a
+deliberately small `x2py_*` mechanical API: scalar type matching, scalar
+unpacking, scalar creation as a Python or NumPy object, and release of a
+bridge-owned allocation. The generated binding passes the completed NumPy type,
+layout, ownership, and mutation decisions into those operations. Native support
+must not infer a layout, accept a different dtype, or choose ownership behavior
+from a value at runtime; those are completed wrapper-plan decisions.
 
 Generated CPython extensions should expose useful NumPy-style docstrings on the
 Python-visible API. The CPython wrapper layer owns this generation because it has
@@ -99,8 +100,8 @@ attributes.
 Verbose wrapper builds should print the exact compiler command lines they run,
 not only the source or target being compiled. The printed command should be
 shell-quoted so users can copy it to reproduce object compilation, generated
-wrapper compilation, native binding support compilation, and final shared-library
-linking.
+wrapper compilation (including its header-only native binding support), and
+final shared-library linking.
 
 Normal C parsing uses a real compiler preprocessor first. Macro expansion,
 conditional compilation, token paste, stringify, and include resolution belong

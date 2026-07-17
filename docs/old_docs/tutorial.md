@@ -279,9 +279,9 @@ The build lowers semantic IR through two native layers:
 2. A generated C/CPython binding validates Python objects, manages ownership
    and references, invokes the bridge, and creates Python or NumPy results.
 
-The native binding support is compiled with those generated sources. The final
-link combines user objects, the Fortran bridge, the CPython binding, and the
-runtime into one extension module. Generated sources are build artifacts; the
+The header-only native binding support is compiled as part of the generated
+CPython binding. The final link combines user objects, the Fortran bridge, and
+the CPython binding into one extension module. Generated sources are build artifacts; the
 public behavior is the documented semantic and wrapper contract.
 
 For a build-system-controlled workflow, generate sources and a GNU Make build

@@ -8,9 +8,9 @@ SUPPORT_HEADER = ROOT / "x2py" / "binding_support" / "x2py_binding.h"
 SUPPORT_SOURCE = ROOT / "x2py" / "binding_support" / "x2py_binding.c"
 
 
-def test_native_binding_support_exposes_only_the_small_x2py_api():
+def test_native_binding_support_is_header_only_and_exposes_the_small_x2py_api():
     header = SUPPORT_HEADER.read_text(encoding="utf-8")
-    source = SUPPORT_SOURCE.read_text(encoding="utf-8")
+    assert not SUPPORT_SOURCE.exists()
 
     expected_api = (
         "x2py_scalar_matches",
@@ -21,7 +21,7 @@ def test_native_binding_support_exposes_only_the_small_x2py_api():
     )
     for name in expected_api:
         assert name in header
-        assert name in source
+    assert header.count("static inline") == len(expected_api)
 
     removed_compatibility_names = (
         "PyInt32_to_Int32",
@@ -33,4 +33,3 @@ def test_native_binding_support_exposes_only_the_small_x2py_api():
     )
     for name in removed_compatibility_names:
         assert name not in header
-        assert name not in source

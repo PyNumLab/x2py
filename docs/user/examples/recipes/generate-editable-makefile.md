@@ -22,7 +22,7 @@ python3 -m x2py tests/data/fortran/wrapper/fruntime_abi_f90.f90 \
   --json
 ```
 
-This writes generated wrapper sources, native binding support, dependency files, and
+This writes generated wrapper sources, the header-only native binding support, dependency files, and
 `build/fruntime_abi/Makefile.x2py`.
 
 For a semantic `.pyi` contract with native implementation sources, use the same

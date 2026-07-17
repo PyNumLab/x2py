@@ -131,27 +131,23 @@ def scale(x: Float64) -> Float64: ...
     bridge_source = build_dir / "bind_c_plan_scalar_build_wrapper.f90"
     binding_source = build_dir / "plan_scalar_build_wrapper.c"
     header = build_dir / "plan_scalar_build_wrapper.h"
-    native_support_source = build_dir / "binding_support" / "x2py_binding.c"
-    native_support_object = build_dir / "binding_support" / "x2py_binding.o"
+    native_support_header = build_dir / "binding_support" / "x2py_binding.h"
 
     assert bridge_source.read_text(encoding="utf-8") == rendered.sources[0].text
     assert binding_source.read_text(encoding="utf-8") == rendered.sources[1].text
     assert header.read_text(encoding="utf-8") == rendered.sources[2].text
-    assert native_support_source.exists()
-    assert native_support_object.exists()
-    assert [object_file.language for object_file, _verbose in compiler.compiled] == ["fortran", "c", "c"]
+    assert native_support_header.exists()
+    assert [object_file.language for object_file, _verbose in compiler.compiled] == ["fortran", "c"]
 
     bridge_obj = compiler.compiled[0][0]
-    native_support_obj = compiler.compiled[1][0]
-    binding_obj = compiler.compiled[2][0]
+    binding_obj = compiler.compiled[1][0]
     assert native_dir in bridge_obj.include_dirs
-    assert native_support_obj.tools == frozenset({"python"})
     assert binding_obj.tools == frozenset({"python"})
     assert compiler.linked == (
         "plan_scalar_build",
         tmp_path / "extension",
         "fortran",
-        (native_obj, bridge_obj, native_support_obj, binding_obj),
+        (native_obj, bridge_obj, binding_obj),
         ("-lm",),
         (native_dir,),
         (),
@@ -171,8 +167,7 @@ def scale(x: Float64) -> Float64: ...
     assert result.generated_sources == (bridge_source, binding_source, header)
     assert bridge_obj.object_path in result.generated_files
     assert binding_obj.object_path in result.generated_files
-    assert native_support_source in result.generated_files
-    assert native_support_object in result.generated_files
+    assert native_support_header in result.generated_files
     step_lines = [
         line.removeprefix(">> ")
         for line in capsys.readouterr().out.splitlines()
@@ -184,7 +179,6 @@ def scale(x: Float64) -> Float64: ...
         f"Write binding header: {header}",
         f"Write native support: {build_dir / 'binding_support'}",
         f"Compile bridge source: {bridge_source} -> {bridge_obj.object_path}",
-        f"Compile native support source: {native_support_source} -> {native_support_obj.object_path}",
         f"Compile binding source: {binding_source} -> {binding_obj.object_path}",
         f"Create shared library: {result.shared_library}",
     ]

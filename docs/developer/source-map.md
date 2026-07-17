@@ -72,7 +72,7 @@ X2PY_C_DOCS_END -->
 | `x2py/parsers/` | Public namespace for language and semantic `.pyi` frontends | child parser packages | `tests/parsing/`, parser references, semantic `.pyi` reference |
 | `x2py/parsers/fortran/` | Fortran lexer, recursive parser, models, type resolver, and parser CLI helpers | `parser.py`, `lexer.py`, `models.py`, `type_resolver.py`, `cli.py` | `tests/parser/`, `tests/parser/fortran/`, `docs/developer/fortran-parser-reference.md` |
 | `x2py/compiling/` | Native compile objects, compiler command execution, shared-library linking, and native support installation; wrapper build orchestration lives in `x2py/pipeline/build.py` | `objects.py`, `compilers.py`, `compiler_profiles.py`, `native_support.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/build_from_source/test_runtime_abi.py` |
-| `x2py/binding_support/` | Bundled native binding support copied into generated wrapper builds | support implementation and header | wrapper build tests |
+| `x2py/binding_support/` | Bundled header-only native binding support copied into generated wrapper builds | support header | wrapper build tests |
 | `x2py/utilities/` | Small shared Python utilities | `strings.py`, `visitor.py` | tests that exercise callers |
 
 <!-- X2PY_C_DOCS_START

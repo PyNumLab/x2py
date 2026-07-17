@@ -93,7 +93,7 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
     assert shared_library.parent == workdir
     assert {Path(path).name for path in payload["generated_sources"]} == expected_generated_sources
     generated_files = [Path(path) for path in payload["generated_files"]]
-    assert any(path.name == "x2py_binding.c" and path.parent.name == "binding_support" for path in generated_files)
+    assert any(path.name == "x2py_binding.h" and path.parent.name == "binding_support" for path in generated_files)
 
     sys.modules.pop(module_name, None)
     sys.path.insert(0, str(workdir))

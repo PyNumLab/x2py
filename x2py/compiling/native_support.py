@@ -8,9 +8,6 @@ import numpy as np
 
 import x2py.binding_support as binding_support_folder
 
-from .objects import ObjectFile
-
-
 _NATIVE_SUPPORT_IMPORT = "binding_support"
 _NATIVE_SUPPORT_SOURCE = Path(binding_support_folder.__file__).parent
 
@@ -26,10 +23,10 @@ def _numpy_version_header() -> str:
     return header
 
 
-def install_native_support(imports, *, x2py_dirpath, verbose: bool | int = False) -> tuple[ObjectFile, ...]:
-    """Write native binding support and return its explicit compilation inputs."""
+def install_native_support(imports, *, x2py_dirpath, verbose: bool | int = False) -> None:
+    """Write header-only native binding support when a generated binding imports it."""
     if not any(name == _NATIVE_SUPPORT_IMPORT or name.startswith(f"{_NATIVE_SUPPORT_IMPORT}/") for name in imports):
-        return ()
+        return
 
     destination = Path(x2py_dirpath) / _NATIVE_SUPPORT_IMPORT
     if verbose:
@@ -41,13 +38,4 @@ def install_native_support(imports, *, x2py_dirpath, verbose: bool | int = False
     (destination / "numpy_version.h").write_text(
         _numpy_version_header(),
         encoding="utf-8",
-    )
-    return (
-        ObjectFile(
-            source=destination / "x2py_binding.c",
-            object_path=destination / "x2py_binding.o",
-            language="c",
-            include_dirs=(destination,),
-            tools=frozenset({"python"}),
-        ),
     )

@@ -25,7 +25,7 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, policy completion, and readiness. |
 | `x2py/wrapper_codegen/` | Typed wrapper plans, direct native bridge/binding lowering, and source and semantic `.pyi` printers. |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, native support installation, and linking. |
-| `x2py/binding_support/` | Bundled native sources copied into generated wrapper builds. |
+| `x2py/binding_support/` | Bundled header-only native support copied into generated wrapper builds. |
 | `x2py/naming/` | Unified public-name and generated-symbol policy. |
 | `x2py/utilities/` | Small shared Python utilities. |
 

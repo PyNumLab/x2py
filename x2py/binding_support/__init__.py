@@ -1,1 +1,1 @@
-"""Bundled C sources used by generated CPython bindings."""
+"""Bundled header-only C support used by generated CPython bindings."""

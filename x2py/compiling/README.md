@@ -11,7 +11,7 @@ linking.
 | `objects.py` | Explicit source-to-object compilation inputs. |
 | `compilers.py` | Compiler command execution and tool lookup helpers. |
 | `compiler_profiles.py` | Built-in vendor compiler profiles and Python-link settings. |
-| `native_support.py` | Writing native binding support and declaring its object inputs. |
+| `native_support.py` | Writing the header-only native binding support. |
 
 Generated-wrapper object assembly and shared-library orchestration live in
 `x2py/pipeline/build.py`, where the canonical rendered wrapper artifacts are
@@ -25,17 +25,17 @@ native source files
   -> native object files
 generated Fortran bridge
   -> bridge object files
-generated C/CPython binding and its native support
-  -> runtime and binding object files
+generated C/CPython binding and its header-only native support
+  -> binding object files
 all explicit object files and link inputs
   -> linked Python extension
 ```
 
 The bridge and binding sources are rendered together from one completed wrapper
 plan before compilation starts. Their object stages remain separate: the bridge
-is compiled after native objects so it can consume native module files; runtime
-support is compiled before the binding that includes it; and linking runs only
-after every required object exists. Each compiler invocation receives its
+is compiled after native objects so it can consume native module files; the
+header-only native support is compiled with the binding that includes it; and
+linking runs only after every required object exists. Each compiler invocation receives its
 source, target, flags, includes, and ordered link inputs explicitly.
 
 Compilation must not decide semantic ownership, Python API shape, or wrapper

@@ -170,7 +170,7 @@ Typical generated artifacts are:
 
 | Artifact | Purpose |
 | --- | --- |
-| `binding_support/` | Shared native binding support |
+| `binding_support/` | Header-only native binding support |
 | user and generated `.o`/`.mod` files | Native build intermediates |
 | `<module>.<extension-suffix>.so` | Importable extension on Linux |
 
@@ -289,7 +289,7 @@ compiler and linker command. It first announces binding, bridge, and header
 source-text generation on separate lines without paths, because those files do
 not exist yet. Each line is printed immediately before its separate lowering
 and printing operation, followed by `Timing: ...` for that operation. It then announces each written artifact with its output path
-(`Write bridge source: ...` and `Write native support: ...`), each native, bridge, native-support, and binding compilation with its
+(`Write bridge source: ...` and `Write native support: ...`), each native, bridge, and binding compilation with its
 source and object path (`Compile bridge source: source -> object`), and the final
 extension path before linking (`Create shared library: ...`). The exact
 shell-escaped command follows each compilation or link announcement, so it can
@@ -1877,11 +1877,11 @@ make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
 <!-- X2PY_C_DOCS_START
-The Makefile covers user sources, generated wrappers, native binding support, and the
+The Makefile covers user sources, generated wrappers, the header-only native binding support, and the
 shared-library link. It records resolved compilers and exposes `FC`, `CC`,
 `X2PY_LD`, `X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS`. User Fortran
-sources are conservatively chained in supplied order; independent generated C
-and runtime work may run in parallel. This target expects GNU Make and a POSIX
+sources are conservatively chained in supplied order; generated bridge and C
+binding work may run in parallel. This target expects GNU Make and a POSIX
 shell.
 X2PY_C_DOCS_END -->
 

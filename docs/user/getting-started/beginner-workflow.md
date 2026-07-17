@@ -109,7 +109,7 @@ You normally do not need to open generated files. When debugging, expect
 
 | Artifact | Purpose |
 | --- | --- |
-| `binding_support/` | shared native binding support sources |
+| `binding_support/` | header-only native binding support |
 | `.o` and `.mod` files | native intermediates |
 | `<name>.<extension-suffix>` | importable extension |
 
