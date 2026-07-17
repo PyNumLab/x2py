@@ -620,12 +620,12 @@ class CBindingGenerator(ClassVisitor):
             if surface.python_names
         }
         functions = tuple(function for namespace in plan.namespaces for function in self.visit(namespace))
-        needs_runtime = self.requires_runtime_support(plan)
+        needs_native_support = self.requires_native_support(plan)
         needs_free = self._module_needs_allocator(plan)
         return CModule(
             name=f"{plan.binding.owner_path}_wrapper",
-            defines=self._module_defines(needs_runtime),
-            includes=self._module_includes(plan, needs_runtime, needs_free),
+            defines=self._module_defines(needs_native_support),
+            includes=self._module_includes(plan, needs_native_support, needs_free),
             declarations=self._module_declarations(plan),
             functions=(
                 *self._module_allocator_functions(needs_free),
@@ -638,7 +638,7 @@ class CBindingGenerator(ClassVisitor):
                 *self._derived_handle_operation_functions(plan),
                 *self._native_array_operation_functions(plan),
                 *functions,
-                self._module_init(plan, needs_runtime),
+                self._module_init(plan, needs_native_support),
             ),
         )
 
@@ -657,8 +657,8 @@ class CBindingGenerator(ClassVisitor):
             *(function for variable in plan.variables for function in self.visit(variable)),
         )
 
-    def requires_runtime_support(self, plan: ModulePlan) -> bool:
-        """Return whether module lowering consumes NumPy/runtime helpers."""
+    def requires_native_support(self, plan: ModulePlan) -> bool:
+        """Return whether module lowering consumes bundled native helpers."""
         return (
             bool(tuple(self._variables(plan)))
             or any(function.arguments or function.results for function in self._functions(plan))
@@ -695,16 +695,16 @@ class CBindingGenerator(ClassVisitor):
             )
         )
 
-    def _module_defines(self, needs_runtime: bool) -> tuple[CMacroDefinition, ...]:
+    def _module_defines(self, needs_native_support: bool) -> tuple[CMacroDefinition, ...]:
         """Return compile-time definitions selected by assembled module needs."""
-        if not needs_runtime:
+        if not needs_native_support:
             return ()
         return (CMacroDefinition("PY_ARRAY_UNIQUE_SYMBOL", "CWRAPPER_ARRAY_API"),)
 
     def _module_includes(
         self,
         plan: ModulePlan,
-        needs_runtime: bool,
+        needs_native_support: bool,
         needs_free: bool,
     ) -> tuple[CInclude, ...]:
         """Return dependency-closed includes for one assembled C module."""
@@ -721,7 +721,7 @@ class CBindingGenerator(ClassVisitor):
                 else ()
             ),
             *(CInclude(header) for header in plan.required_headers),
-            *self._module_runtime_includes(needs_runtime),
+            *self._module_native_support_includes(needs_native_support),
             CInclude(f"{plan.binding.owner_path}_wrapper.h", system=False),
         )
 
@@ -786,14 +786,14 @@ class CBindingGenerator(ClassVisitor):
         """Return whether runtime-selected module origins need typed operations."""
         return any(variable.derived is not None for variable in self._variables(plan))
 
-    def _module_runtime_includes(self, required: bool) -> tuple[CInclude, ...]:
-        """Return NumPy/runtime includes when generated nodes consume them."""
+    def _module_native_support_includes(self, required: bool) -> tuple[CInclude, ...]:
+        """Return bundled native-support includes consumed by generated nodes."""
         if not required:
             return ()
         return (
-            CInclude("x2py_runtime/numpy_version.h", system=False),
+            CInclude("binding_support/numpy_version.h", system=False),
             CInclude("numpy/arrayobject.h"),
-            CInclude("x2py_runtime/python_runtime.h", system=False),
+            CInclude("binding_support/x2py_binding.h", system=False),
         )
 
     # Immediate callback runtime.
@@ -10288,14 +10288,14 @@ class CBindingGenerator(ClassVisitor):
             f"{owner}_{symbol}_methods",
         )
 
-    def _module_init(self, plan: ModulePlan, needs_runtime: bool) -> CFunction:
+    def _module_init(self, plan: ModulePlan, needs_native_support: bool) -> CFunction:
         module_name = plan.binding.owner_path
         root_namespace = self._namespace(plan, ())
         return CFunction(
             f"PyInit_{module_name}",
             "PyMODINIT_FUNC",
             body=(
-                *((CExpressionStatement(CodeExpression("import_array()")),) if needs_runtime else ()),
+                *((CExpressionStatement(CodeExpression("import_array()")),) if needs_native_support else ()),
                 CDeclaration(
                     "mod",
                     "PyObject *",

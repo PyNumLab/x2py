@@ -142,7 +142,7 @@ ordered Fortran source files
   -> post-IR policy completion
   -> ordered wrapper plan preserving native module namespaces and ABI slots
   -> direct Fortran bind(C) bridge lowering
-  -> direct C/CPython binding lowering and x2py runtime support
+  -> direct C/CPython binding lowering and native binding support
   -> compile user sources and generated sources
   -> link one Python extension module
 ```
@@ -162,7 +162,7 @@ bridge generators dispatch them directly into emitted source.
 The Fortran bridge converts non-interoperable Fortran contracts into a stable
 C ABI. The generated C layer validates Python and NumPy objects, manages Python
 references and wrapper-owned temporaries, calls the bridge, and projects native
-results onto the documented Python API. The runtime support supplies shared
+results onto the documented Python API. The native binding support supplies shared
 array, error, allocation, and ownership helpers.
 X2PY_C_DOCS_END -->
 
@@ -170,7 +170,7 @@ Typical generated artifacts are:
 
 | Artifact | Purpose |
 | --- | --- |
-| `x2py_runtime/` | Shared native runtime support |
+| `binding_support/` | Shared native binding support |
 | user and generated `.o`/`.mod` files | Native build intermediates |
 | `<module>.<extension-suffix>.so` | Importable extension on Linux |
 
@@ -289,7 +289,7 @@ compiler and linker command. It first announces binding, bridge, and header
 source-text generation on separate lines without paths, because those files do
 not exist yet. Each line is printed immediately before its separate lowering
 and printing operation, followed by `Timing: ...` for that operation. It then announces each written artifact with its output path
-(`Write bridge source: ...` and `Write runtime support: ...`), each native, bridge, runtime, and binding compilation with its
+(`Write bridge source: ...` and `Write native support: ...`), each native, bridge, native-support, and binding compilation with its
 source and object path (`Compile bridge source: source -> object`), and the final
 extension path before linking (`Create shared library: ...`). The exact
 shell-escaped command follows each compilation or link announcement, so it can
@@ -1877,7 +1877,7 @@ make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
 <!-- X2PY_C_DOCS_START
-The Makefile covers user sources, generated wrappers, runtime support, and the
+The Makefile covers user sources, generated wrappers, native binding support, and the
 shared-library link. It records resolved compilers and exposes `FC`, `CC`,
 `X2PY_LD`, `X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS`. User Fortran
 sources are conservatively chained in supplied order; independent generated C

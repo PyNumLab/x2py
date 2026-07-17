@@ -131,27 +131,27 @@ def scale(x: Float64) -> Float64: ...
     bridge_source = build_dir / "bind_c_plan_scalar_build_wrapper.f90"
     binding_source = build_dir / "plan_scalar_build_wrapper.c"
     header = build_dir / "plan_scalar_build_wrapper.h"
-    runtime_source = build_dir / "x2py_runtime" / "python_runtime.c"
-    runtime_object = build_dir / "x2py_runtime" / "python_runtime.o"
+    native_support_source = build_dir / "binding_support" / "x2py_binding.c"
+    native_support_object = build_dir / "binding_support" / "x2py_binding.o"
 
     assert bridge_source.read_text(encoding="utf-8") == rendered.sources[0].text
     assert binding_source.read_text(encoding="utf-8") == rendered.sources[1].text
     assert header.read_text(encoding="utf-8") == rendered.sources[2].text
-    assert runtime_source.exists()
-    assert runtime_object.exists()
+    assert native_support_source.exists()
+    assert native_support_object.exists()
     assert [object_file.language for object_file, _verbose in compiler.compiled] == ["fortran", "c", "c"]
 
     bridge_obj = compiler.compiled[0][0]
-    runtime_obj = compiler.compiled[1][0]
+    native_support_obj = compiler.compiled[1][0]
     binding_obj = compiler.compiled[2][0]
     assert native_dir in bridge_obj.include_dirs
-    assert runtime_obj.tools == frozenset({"python"})
+    assert native_support_obj.tools == frozenset({"python"})
     assert binding_obj.tools == frozenset({"python"})
     assert compiler.linked == (
         "plan_scalar_build",
         tmp_path / "extension",
         "fortran",
-        (native_obj, bridge_obj, runtime_obj, binding_obj),
+        (native_obj, bridge_obj, native_support_obj, binding_obj),
         ("-lm",),
         (native_dir,),
         (),
@@ -171,8 +171,8 @@ def scale(x: Float64) -> Float64: ...
     assert result.generated_sources == (bridge_source, binding_source, header)
     assert bridge_obj.object_path in result.generated_files
     assert binding_obj.object_path in result.generated_files
-    assert runtime_source in result.generated_files
-    assert runtime_object in result.generated_files
+    assert native_support_source in result.generated_files
+    assert native_support_object in result.generated_files
     step_lines = [
         line.removeprefix(">> ")
         for line in capsys.readouterr().out.splitlines()
@@ -182,26 +182,26 @@ def scale(x: Float64) -> Float64: ...
         f"Write bridge source: {bridge_source}",
         f"Write binding source: {binding_source}",
         f"Write binding header: {header}",
-        f"Write runtime support: {build_dir / 'x2py_runtime'}",
+        f"Write native support: {build_dir / 'binding_support'}",
         f"Compile bridge source: {bridge_source} -> {bridge_obj.object_path}",
-        f"Compile runtime source: {runtime_source} -> {runtime_obj.object_path}",
+        f"Compile native support source: {native_support_source} -> {native_support_obj.object_path}",
         f"Compile binding source: {binding_source} -> {binding_obj.object_path}",
         f"Create shared library: {result.shared_library}",
     ]
 
 
-def test_build_rendered_wrapper_extension_rejects_unknown_runtime_support_key(tmp_path: Path):
+def test_build_rendered_wrapper_extension_rejects_unknown_native_support_key(tmp_path: Path):
     rendered = RenderedGeneratedWrapperArtifacts(
         artifacts=GeneratedWrapperArtifacts(
             module_name="bad_runtime",
             binding_sources=(Path("bad_runtime_wrapper.c"),),
-            runtime_support_keys=("unknown_runtime",),
+            native_support_keys=("unknown_native_support",),
         ),
         sources=(GeneratedSourceFile(Path("bad_runtime_wrapper.c"), "PyObject *unused;\n"),),
         extension_init_name="PyInit_bad_runtime",
     )
 
-    with pytest.raises(ValueError, match="Unsupported wrapper runtime support key"):
+    with pytest.raises(ValueError, match="Unsupported wrapper native support key"):
         _build_rendered_wrapper_extension(
             rendered,
             output_dir=tmp_path,

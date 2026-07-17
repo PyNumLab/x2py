@@ -158,7 +158,7 @@ class WrapperCodeGenerator:
             c_source,
             c_header_source,
             fortran_source,
-            runtime_support_keys=(("python_runtime",) if self._c_generator.requires_runtime_support(plan) else ()),
+            native_support_keys=(("binding_support",) if self._c_generator.requires_native_support(plan) else ()),
             required_headers=plan.required_headers,
         )
 
@@ -4082,7 +4082,7 @@ class WrapperCodeGenerator:
         c_source: str,
         c_header: str,
         fortran_source: str,
-        runtime_support_keys: tuple[str, ...],
+        native_support_keys: tuple[str, ...],
         required_headers: tuple[str, ...],
     ) -> RenderedGeneratedWrapperArtifacts:
         artifacts = GeneratedWrapperArtifacts(
@@ -4090,7 +4090,7 @@ class WrapperCodeGenerator:
             bridge_sources=(Path(f"bind_c_{module_name}_wrapper.f90"),),
             binding_sources=(Path(f"{module_name}_wrapper.c"),),
             header_files=(Path(f"{module_name}_wrapper.h"),),
-            runtime_support_keys=runtime_support_keys,
+            native_support_keys=native_support_keys,
             required_headers=required_headers,
         )
         return RenderedGeneratedWrapperArtifacts(

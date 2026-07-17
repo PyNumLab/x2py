@@ -97,7 +97,7 @@ X2PY_C_DOCS_END -->
   verification paths, fixture regeneration, documentation examples, wrapper
   runtime tests, and static-analysis gates.
 - [ ] `docs/developer/build-system.md`: document native compile model,
-  generated Makefiles, build manifests, runtime support files, compiler probes,
+  generated Makefiles, build manifests, native support files, compiler probes,
   and future packaging boundaries.
 - [ ] `docs/developer/coding-standards.md`: document Python style,
   documentation front matter, no-compatibility-layer rule, parser/codegen
@@ -127,7 +127,7 @@ X2PY_C_DOCS_END -->
   preprocessing boundaries, model facts, diagnostics, and fixture strategy.
 - [ ] `docs/maintainer/design/semantic-analysis.md`: document source-to-IR lowering,
   `.pyi`-to-IR loading, policy completion, readiness blockers, and invariants.
-- [ ] `docs/maintainer/design/runtime-model.md`: document runtime support files, generated
+- [ ] `docs/maintainer/design/runtime-model.md`: document native support files, generated
   wrappers, native state, callbacks, threading, and finalization.
 - [ ] `docs/maintainer/design/error-propagation-model.md`: document diagnostic categories,
   Python exception projection, native failure handling, cleanup, and user-facing
@@ -149,7 +149,7 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/maintainer/internal-architecture/type-system.md`: document scalar kinds, arrays,
   characters, derived types, pointers, allocatables, callbacks, and unsupported
   storage forms.
-- [ ] `docs/maintainer/internal-architecture/runtime-layer.md`: document runtime support
+- [ ] `docs/maintainer/internal-architecture/runtime-layer.md`: document native support
   installation, extension initialization, callbacks, cleanup, and shared native
   state.
 - [ ] `docs/maintainer/internal-architecture/ownership-tracking.md`: document ownership

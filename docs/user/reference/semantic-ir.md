@@ -518,7 +518,7 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-> **Status: design only, not implemented runtime support.** x2py currently
+> **Status: design only, not implemented native binding support.** x2py currently
 > parses C, converts the supported subset to semantic IR, emits and loads
 > semantic `.pyi`, and reports readiness. It does not currently generate,
 > lower, compile, or execute C wrappers. Every runtime behavior, wrapper error,

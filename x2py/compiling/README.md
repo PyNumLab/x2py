@@ -1,7 +1,7 @@
 # Compiling Package
 
 This package owns native compiler command construction, compile objects,
-generated wrapper compilation, runtime support installation, and shared-library
+generated wrapper compilation, native support installation, and shared-library
 linking.
 
 ## Entry Points
@@ -11,7 +11,7 @@ linking.
 | `objects.py` | Explicit source-to-object compilation inputs. |
 | `compilers.py` | Compiler command execution and tool lookup helpers. |
 | `compiler_profiles.py` | Built-in vendor compiler profiles and Python-link settings. |
-| `runtime_support.py` | Writing runtime support and declaring its object inputs. |
+| `native_support.py` | Writing native binding support and declaring its object inputs. |
 
 Generated-wrapper object assembly and shared-library orchestration live in
 `x2py/pipeline/build.py`, where the canonical rendered wrapper artifacts are
@@ -25,7 +25,7 @@ native source files
   -> native object files
 generated Fortran bridge
   -> bridge object files
-generated C/CPython binding and its runtime support
+generated C/CPython binding and its native support
   -> runtime and binding object files
 all explicit object files and link inputs
   -> linked Python extension

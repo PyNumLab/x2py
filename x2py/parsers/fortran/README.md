@@ -28,6 +28,6 @@ callers may also use the stable parser functions and models exported from the
 - Fixture suite: `tests/parsing/fortran/test_fortran_fixture_suite.py`
 - Semantic handoff tests: `tests/semantics/conversion/fortran/`
 
-Parser support alone does not establish wrapper runtime support. Wrapper
+Parser support alone does not establish native binding support. Wrapper
 features need semantic lowering, readiness policy, codegen, compilation, and
 runtime tests.

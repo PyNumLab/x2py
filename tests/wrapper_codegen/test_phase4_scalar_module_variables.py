@@ -144,7 +144,7 @@ def test_module_setter_assignment_mismatch_fails_before_backend_preflight_or_low
     fortran_generator.require_supported.assert_not_called()
     c_generator.visit.assert_not_called()
     fortran_generator.visit.assert_not_called()
-    c_generator.requires_runtime_support.assert_not_called()
+    c_generator.requires_native_support.assert_not_called()
     c_printer.doprint.assert_not_called()
     fortran_printer.doprint.assert_not_called()
 

@@ -248,9 +248,9 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/wrapper_codegen/printers/source_printers.py",
     "x2py/compiling/objects.py",
     "x2py/compiling/compilers.py",
-    "x2py/compiling/runtime_support.py",
+    "x2py/compiling/native_support.py",
     "x2py/naming/policy.py",
-    "x2py/stdlib/",
+    "x2py/binding_support/",
 ]
 SOURCE_NAVIGATION_PUBLIC_DOCS = [
     "README.md",

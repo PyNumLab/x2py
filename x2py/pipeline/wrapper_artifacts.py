@@ -30,7 +30,7 @@ class GeneratedWrapperArtifacts(StageRecord):
     bridge_sources: tuple[Path, ...] = ()
     binding_sources: tuple[Path, ...] = ()
     header_files: tuple[Path, ...] = ()
-    runtime_support_keys: tuple[str, ...] = ()
+    native_support_keys: tuple[str, ...] = ()
     required_headers: tuple[str, ...] = ()
 
     @property

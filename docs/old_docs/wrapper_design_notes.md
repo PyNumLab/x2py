@@ -62,8 +62,8 @@ functions, variables, structs, enums, typedefs, constants, arrays, pointers,
 callbacks, and the metadata needed for readiness decisions.
 
 Generated CPython extension builds copy their bundled C/Python support sources
-into an `x2py_runtime/` directory inside the build output. The generated C
-extension includes `x2py_runtime/python_runtime.h`. These files are an
+into a `binding_support/` directory inside the build output. The generated C
+extension includes `binding_support/x2py_binding.h`. These files are an
 implementation detail of the generated extension, but their names are
 intentionally x2py-specific so they do not look like user source or a generic
 C wrapper.
@@ -91,7 +91,7 @@ attributes.
 Verbose wrapper builds should print the exact compiler command lines they run,
 not only the source or target being compiled. The printed command should be
 shell-quoted so users can copy it to reproduce object compilation, generated
-wrapper compilation, runtime support compilation, and final shared-library
+wrapper compilation, native binding support compilation, and final shared-library
 linking.
 
 Normal C parsing uses a real compiler preprocessor first. Macro expansion,

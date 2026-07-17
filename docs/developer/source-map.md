@@ -45,7 +45,7 @@ change crosses ownership boundaries.
 | Semantic `.pyi` wrapper orchestration from native artifacts | `x2py/pipeline/build.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py` | `docs/user/guide/fortran-wrapper.md`, `docs/user/reference/semantic-pyi-format.md` | `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py`, `tests/wrapper/fortran/build_from_pyi/test_contract_package_runtime.py` |
 | Ownership, lifetime, output projection, and unsupported wrapper policy | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/wrapper_codegen/planner.py` | `docs/user/guide/fortran-wrapper.md`, `docs/user/guide/editing-semantic-pyi-contracts.md` | `tests/semantics/policy/`, `tests/wrapper_codegen/`, `tests/wrapper/fortran/` |
 | Immediate callback policy, typed adapters, and trampolines | `x2py/semantics/wrapper_policy.py`, `x2py/semantics/policy_completion.py`, `x2py/wrapper_codegen/plan.py`, `x2py/wrapper_codegen/planner.py`, `x2py/wrapper_codegen/c/binding.py`, `x2py/wrapper_codegen/fortran/bridge.py` | `docs/user/guide/callbacks.md`, `docs/user/reference/callbacks.md`, `docs/user/reference/semantic-pyi-format.md` | `tests/wrapper_codegen/test_phase10_callbacks.py`, `tests/wrapper/fortran/callbacks/` |
-| Native compilation, runtime support, and shared-library linking | `x2py/pipeline/build.py`, `x2py/compiling/compilers.py`, `x2py/compiling/runtime_support.py` | `docs/user/guide/fortran-wrapper.md`, `docs/developer/build-system.md` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
+| Native compilation, binding support, and shared-library linking | `x2py/pipeline/build.py`, `x2py/compiling/compilers.py`, `x2py/compiling/native_support.py` | `docs/user/guide/fortran-wrapper.md`, `docs/developer/build-system.md` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
 | Public Python exports | `x2py/__init__.py` | `README.md`, `docs/user/reference/python-api.md` | `tests/parsing/fortran/test_public_entrypoints.py` |
 | Source navigation documentation | `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`, package README files | `docs/developer/source-map.md` | `tests/docs/test_structure.py` |
 
@@ -71,8 +71,8 @@ X2PY_C_DOCS_END -->
 | `x2py/types/` | Semantic-to-Python ecosystem type mappings | `numpy.py` | `tests/types/test_numpy.py` |
 | `x2py/parsers/` | Public namespace for language and semantic `.pyi` frontends | child parser packages | `tests/parsing/`, parser references, semantic `.pyi` reference |
 | `x2py/parsers/fortran/` | Fortran lexer, recursive parser, models, type resolver, and parser CLI helpers | `parser.py`, `lexer.py`, `models.py`, `type_resolver.py`, `cli.py` | `tests/parser/`, `tests/parser/fortran/`, `docs/developer/fortran-parser-reference.md` |
-| `x2py/compiling/` | Native compile objects, compiler command execution, shared-library linking, and runtime support installation; wrapper build orchestration lives in `x2py/pipeline/build.py` | `objects.py`, `compilers.py`, `compiler_profiles.py`, `runtime_support.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/build_from_source/test_runtime_abi.py` |
-| `x2py/stdlib/` | Native runtime support files copied into generated wrapper builds | `x2py_runtime/` | wrapper runtime tests |
+| `x2py/compiling/` | Native compile objects, compiler command execution, shared-library linking, and native support installation; wrapper build orchestration lives in `x2py/pipeline/build.py` | `objects.py`, `compilers.py`, `compiler_profiles.py`, `native_support.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/build_from_source/test_runtime_abi.py` |
+| `x2py/binding_support/` | Bundled native binding support copied into generated wrapper builds | support implementation and header | wrapper build tests |
 | `x2py/utilities/` | Small shared Python utilities | `strings.py`, `visitor.py` | tests that exercise callers |
 
 <!-- X2PY_C_DOCS_START
@@ -117,9 +117,9 @@ update this table, the package README files, and the mechanical checks in
 | `x2py/wrapper_codegen/printers/pyi_printer.py` | Semantic `.pyi` printing. |
 | `x2py/compiling/objects.py` | Native compile object model. |
 | `x2py/compiling/compilers.py` | Compiler command execution and tool lookup. |
-| `x2py/compiling/runtime_support.py` | Runtime support installation for generated wrappers. |
+| `x2py/compiling/native_support.py` | Native binding support installation for generated wrappers. |
 | `x2py/naming/policy.py` | Public wrapper names and generated target-language symbols. |
-| `x2py/stdlib/` | Runtime support payload copied into generated builds. |
+| `x2py/binding_support/` | Native binding support payload copied into generated builds. |
 
 <!-- X2PY_C_DOCS_START
 | `x2py/probes/c_types.py` | C target ABI type probing. |

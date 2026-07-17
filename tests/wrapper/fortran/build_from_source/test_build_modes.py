@@ -254,7 +254,7 @@ def test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper(tmp
     assert result.compiled is True
     assert result.build_makefile is None
     assert any(
-        path.name == "python_runtime.c" and path.parent.name == "x2py_runtime" for path in result.generated_files
+        path.name == "x2py_binding.c" and path.parent.name == "binding_support" for path in result.generated_files
     )
 
     sys.modules.pop(result.module_name, None)

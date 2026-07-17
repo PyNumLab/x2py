@@ -68,7 +68,7 @@ outside project-specific build scripts.
 ## Generated Artifacts
 
 An output directory can contain native object and module files, generated
-wrapper sources, runtime support, build metadata, and the importable extension.
+wrapper sources, native binding support, build metadata, and the importable extension.
 These files are build products. Do not edit them as the source of the public
 API; change the native source or an intentional semantic `.pyi` contract.
 

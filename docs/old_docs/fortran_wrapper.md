@@ -107,7 +107,7 @@ ordered Fortran source files
   -> merged public wrapper module and collision-safe Python names
   -> codegen AST
   -> Fortran bind(C) bridge
-  -> C/CPython binding and x2py runtime support
+  -> C/CPython binding and native binding support
   -> compile user sources and generated sources
   -> link one Python extension module
 ```
@@ -115,7 +115,7 @@ ordered Fortran source files
 The Fortran bridge converts non-interoperable Fortran contracts into a stable
 C ABI. The generated C layer validates Python and NumPy objects, manages Python
 references and wrapper-owned temporaries, calls the bridge, and projects native
-results onto the documented Python API. The runtime support supplies shared
+results onto the documented Python API. The native binding support supplies shared
 array, error, allocation, and ownership helpers.
 
 Typical generated artifacts are:
@@ -124,7 +124,7 @@ Typical generated artifacts are:
 | --- | --- |
 | `bind_c_<module>_wrapper.f90` | Fortran-to-C ABI bridge |
 | `<module>_wrapper.c` and `.h` | CPython extension binding |
-| `x2py_runtime/` | Shared native runtime support |
+| `binding_support/` | Shared native binding support |
 | user and generated `.o`/`.mod` files | Native build intermediates |
 | `<module>.<extension-suffix>.so` | Importable extension on Linux |
 
@@ -1320,7 +1320,7 @@ python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build --json
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
-The Makefile covers user sources, generated wrappers, runtime support, and the
+The Makefile covers user sources, generated wrappers, native binding support, and the
 shared-library link. It records resolved compilers and exposes `FC`, `CC`,
 `X2PY_LD`, `X2PY_FFLAGS`, `X2PY_CFLAGS`, and `X2PY_LDFLAGS`. User Fortran
 sources are conservatively chained in supplied order; independent generated C

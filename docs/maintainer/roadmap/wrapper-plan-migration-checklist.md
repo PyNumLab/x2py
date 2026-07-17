@@ -357,7 +357,7 @@ class WrapperCodeGenerator:
 
 The generator constructs `RenderedGeneratedWrapperArtifacts` directly from the
 printed source plus artifact metadata. It does not duplicate native build plans,
-compiler selection, link ordering, runtime-support installation, or compilation
+compiler selection, link ordering, native-support installation, or compilation
 policy; those remain in existing build/link orchestration.
 
 ## Direct Lowering Methods

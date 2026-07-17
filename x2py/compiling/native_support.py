@@ -1,4 +1,4 @@
-"""Install the bundled native runtime used by generated CPython wrappers."""
+"""Install bundled native binding support for generated CPython wrappers."""
 
 from pathlib import Path
 import shutil
@@ -6,17 +6,17 @@ import shutil
 from filelock import FileLock
 import numpy as np
 
-import x2py.stdlib as stdlib_folder
+import x2py.binding_support as binding_support_folder
 
 from .objects import ObjectFile
 
 
-_RUNTIME_IMPORT = "x2py_runtime"
-_RUNTIME_SOURCE = Path(stdlib_folder.__file__).parent / _RUNTIME_IMPORT
+_NATIVE_SUPPORT_IMPORT = "binding_support"
+_NATIVE_SUPPORT_SOURCE = Path(binding_support_folder.__file__).parent
 
 
 def _numpy_version_header() -> str:
-    """Return NumPy API version guards for the bundled native runtime."""
+    """Return NumPy API version guards for the bundled native support."""
     maximum_supported = [1, 19]
     current = [int(value) for value in np.version.version.split(".")[:2]]
     major, minor = min(maximum_supported, current)
@@ -26,17 +26,17 @@ def _numpy_version_header() -> str:
     return header
 
 
-def install_runtime_support(imports, *, x2py_dirpath, verbose: bool | int = False) -> tuple[ObjectFile, ...]:
-    """Write runtime support and return its explicit compilation inputs."""
-    if not any(name == _RUNTIME_IMPORT or name.startswith(f"{_RUNTIME_IMPORT}/") for name in imports):
+def install_native_support(imports, *, x2py_dirpath, verbose: bool | int = False) -> tuple[ObjectFile, ...]:
+    """Write native binding support and return its explicit compilation inputs."""
+    if not any(name == _NATIVE_SUPPORT_IMPORT or name.startswith(f"{_NATIVE_SUPPORT_IMPORT}/") for name in imports):
         return ()
 
-    destination = Path(x2py_dirpath) / _RUNTIME_IMPORT
+    destination = Path(x2py_dirpath) / _NATIVE_SUPPORT_IMPORT
     if verbose:
-        print(f">> Write runtime support: {destination}")
+        print(f">> Write native support: {destination}")
     with FileLock(str(destination.with_suffix(".lock"))):
         shutil.rmtree(destination, ignore_errors=True)
-        shutil.copytree(_RUNTIME_SOURCE, destination)
+        shutil.copytree(_NATIVE_SUPPORT_SOURCE, destination)
 
     (destination / "numpy_version.h").write_text(
         _numpy_version_header(),
@@ -44,8 +44,8 @@ def install_runtime_support(imports, *, x2py_dirpath, verbose: bool | int = Fals
     )
     return (
         ObjectFile(
-            source=destination / "python_runtime.c",
-            object_path=destination / "python_runtime.o",
+            source=destination / "x2py_binding.c",
+            object_path=destination / "x2py_binding.o",
             language="c",
             include_dirs=(destination,),
             tools=frozenset({"python"}),

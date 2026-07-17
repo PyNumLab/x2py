@@ -72,7 +72,7 @@ Fortran sources
   -> parser facts
   -> semantic IR and readiness blockers
   -> generated Fortran bind(C) bridge
-  -> generated C/CPython binding and runtime support
+  -> generated C/CPython binding and native binding support
   -> compiled Python extension
 ```
 X2PY_C_DOCS_END -->

@@ -6,8 +6,8 @@
  * - Functions which test the type of PythonObjects
  */
 
-#ifndef X2PY_PYTHON_RUNTIME_H
-# define X2PY_PYTHON_RUNTIME_H
+#ifndef X2PY_BINDING_H
+# define X2PY_BINDING_H
 # define PY_SSIZE_T_CLEAN
 
 # include "Python.h"

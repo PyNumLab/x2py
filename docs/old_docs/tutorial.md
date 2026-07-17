@@ -52,7 +52,7 @@ ordered Fortran sources
   -> semantic IR
   -> codegen AST
   -> generated Fortran bind(C) bridge
-  -> generated C/CPython binding and runtime support
+  -> generated C/CPython binding and native binding support
   -> compiled and linked Python extension
 ```
 
@@ -279,7 +279,7 @@ The build lowers semantic IR through two native layers:
 2. A generated C/CPython binding validates Python objects, manages ownership
    and references, invokes the bridge, and creates Python or NumPy results.
 
-The x2py runtime support is compiled with those generated sources. The final
+The native binding support is compiled with those generated sources. The final
 link combines user objects, the Fortran bridge, the CPython binding, and the
 runtime into one extension module. Generated sources are build artifacts; the
 public behavior is the documented semantic and wrapper contract.
@@ -676,7 +676,7 @@ Use x2py for the behavior implemented and tested today:
 
 - generated and compiled CPython extensions from one or more ordered Fortran
   source files;
-- generated Fortran `bind(C)` bridges, C/CPython bindings, and runtime support
+- generated Fortran `bind(C)` bridges, C/CPython bindings, and native binding support
   for the contracts in the [Fortran wrapper guide](fortran_wrapper.md);
 - wrapper-relevant Fortran and C source-fact extraction;
 - compiler-preprocessed CLI workflows;

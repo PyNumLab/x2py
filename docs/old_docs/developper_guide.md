@@ -75,7 +75,7 @@ Use these documentation roles consistently:
 | [fortran_parser.md](fortran_parser.md) | Maintainer inventory for the Fortran frontend |
 | [semantics.md](semantics.md) | Accepted semantic IR and datatype contract |
 | [pyi_format.md](pyi_format.md) | User-visible semantic `.pyi` syntax and roadmap |
-| [wrapper_design_notes.md](wrapper_design_notes.md) | Clearly deferred wrapper policy, not current runtime support |
+| [wrapper_design_notes.md](wrapper_design_notes.md) | Clearly deferred wrapper policy, not current native binding support |
 
 When adding a user example:
 
@@ -210,7 +210,7 @@ implementation files.
 | Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/test_multi_source_builds.py` |
 | Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
 | Fortran-to-C bridge and CPython binding | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | `tests/wrapper/` subject suites |
-| Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/native_build/test_runtime_abi.py`, `tests/wrapper/fortran/native_build/test_build_modes.py` |
+| Native compilation and binding support | `x2py/compiling/`, `x2py/binding_support/` | `tests/wrapper/fortran/native_build/test_runtime_abi.py`, `tests/wrapper/fortran/native_build/test_build_modes.py` |
 | Public API exports | `x2py/__init__.py` | `tests/parser/test_parser_public_entrypoints.py`, `tests/parser/c/test_c_public_api_skeleton.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/tools/test_documentation_examples.py` |
 
@@ -729,7 +729,7 @@ The main ownership boundaries are:
   reference handling, and CPython wrapper construction;
 - `x2py/codegen/printers/{fcode,ccode,cpythoncode}.py`: source rendering only;
 - `x2py/compiling/`: compiler commands and shared-library linking; and
-- `x2py/stdlib/x2py_runtime/`: native runtime support copied into each build.
+- `x2py/binding_support/`: native binding support copied into each build.
 
 Do not move semantic ownership or projection policy into printers. Do not infer
 source dependencies: multi-source builds compile in caller order, and the first

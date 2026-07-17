@@ -58,7 +58,7 @@ direct CLI build also writes a stable `<module>.so` import alias there:
   __x2py__/
     scale.<extension-suffix>.so
     generated-wrapper sources
-    x2py_runtime/
+    binding_support/
 ```
 
 Name the Python extension and final `.so` explicitly with `--out NAME`:
@@ -76,7 +76,7 @@ Expected result:
   __x2py__/
     SCALE.<extension-suffix>.so
     generated-wrapper sources
-    x2py_runtime/
+    binding_support/
 ```
 
 For a wrapper build, `--out SCALE` selects the Python module name and the final
@@ -100,7 +100,7 @@ Expected result:
   build/SCALE/
     SCALE.<extension-suffix>.so
     generated-wrapper sources
-    x2py_runtime/
+    binding_support/
 ```
 
 Generate the semantic `.pyi` contract for the same source:
@@ -158,7 +158,7 @@ The `.pyi` build produces the same importable extension shape:
   build/SCALE_from_pyi/
     SCALE.<extension-suffix>.so
     generated-wrapper sources
-    x2py_runtime/
+    binding_support/
 ```
 
 The direct source build exposes the standalone procedure at the extension root:
@@ -330,7 +330,7 @@ Fortran sources
   -> semantic IR construction and readiness validation
   -> post-IR policy completion and ordered wrapper plan
   -> direct Fortran bind(C) bridge lowering
-  -> direct C/CPython binding lowering and x2py runtime support
+  -> direct C/CPython binding lowering and native binding support
   -> native compilation and shared-library link
   -> importable Python extension
 ```

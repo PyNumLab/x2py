@@ -238,7 +238,7 @@ finalization behavior.
 ## Unsupported Widths And Forms
 
 The semantic format can represent names such as `Float128` and `Complex256`,
-but representation in a `.pyi` file is not a runtime support claim. Current
+but representation in a `.pyi` file is not a native binding support claim. Current
 Fortran wrapper generation blocks:
 
 - real storage wider than 64 bits;

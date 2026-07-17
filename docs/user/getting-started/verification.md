@@ -77,10 +77,10 @@ python3 -m x2py scale.f90 \
 The command must create:
 
 - an importable `scale` extension under `build/verify`; and
-- generated native bridge, object, runtime-support, and extension files.
+- generated native bridge, object, native-support, and extension files.
 
 <!-- X2PY_C_DOCS_START
-- generated bridge, C binding, object, and runtime-support files.
+- generated bridge, C binding, object, and native-support files.
 X2PY_C_DOCS_END -->
 
 Import the extension from that build directory:

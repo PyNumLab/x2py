@@ -17,7 +17,7 @@ jumping directly into generated-code internals.
 | `parsers/` | Parser namespace containing the `c`, `fortran`, and semantic `.pyi` frontends. |
 | `semantics/` | Language-neutral semantic IR, policy completion, readiness, and `.pyi` conversion. |
 | `wrapper_codegen/` | Canonical wrapper plans, direct native bridge/binding generation, and source printers. |
-| `compiling/` | Native compiler objects, wrapper compilation, runtime support installation, and linking. |
+| `compiling/` | Native compiler objects, wrapper compilation, native support installation, and linking. |
 | `utilities/` | Small domain-neutral helpers, including class visitor dispatch. |
 
 The package root contains the public entrypoint modules plus the shared

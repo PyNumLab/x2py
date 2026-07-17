@@ -192,7 +192,7 @@ def test_generated_wrapper_artifacts_keep_compile_and_link_ownership_out_of_the_
         bridge_sources=(Path("bind_c_demo.f90"),),
         binding_sources=(Path("demo.c"),),
         header_files=(Path("demo.h"),),
-        runtime_support_keys=("python_runtime",),
+        native_support_keys=("binding_support",),
     )
 
     assert artifacts.source_files == (Path("bind_c_demo.f90"), Path("demo.c"))
@@ -203,6 +203,6 @@ def test_generated_wrapper_artifacts_keep_compile_and_link_ownership_out_of_the_
         "bridge_sources",
         "binding_sources",
         "header_files",
-        "runtime_support_keys",
+        "native_support_keys",
         "required_headers",
     }

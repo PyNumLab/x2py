@@ -29,7 +29,7 @@ CLI request
   -> typed wrapper plan
   -> generated Fortran bind(C) bridge
   -> generated C/CPython binding
-  -> native compile, runtime support install, and link
+  -> native compile, binding support install, and link
   -> importable Python extension
   -> wrapper runtime tests
 ```
@@ -99,7 +99,7 @@ Use these rules when adding a new notion:
   it in `policy_completion.py` before readiness or wrapper planning.
 - Put it in compiling or wrapping when it describes build inputs or build
   execution: sources, objects, libraries, library directories, include
-  directories, compiler flags, link items, runtime support files, and generated
+  directories, compiler flags, link items, binding support files, and generated
   artifact paths.
 
 <!-- X2PY_C_DOCS_START
@@ -160,7 +160,7 @@ X2PY_C_DOCS_END -->
 | Editable semantic contracts | `x2py/parsers/pyi/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/wrapper_codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md` |
 | Readiness | `x2py/semantics/readiness.py` | `docs/user/reference/diagnostic-codes.md` |
 | Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/wrapper_codegen/planner.py`, `x2py/wrapper_codegen/generator.py` | `docs/user/guide/fortran-wrapper.md`, ownership docs |
-| Native build | `x2py/pipeline/build.py`, `x2py/compiling/compilers.py`, `x2py/compiling/runtime_support.py` | compiling package README and build-system docs |
+| Native build | `x2py/pipeline/build.py`, `x2py/compiling/compilers.py`, `x2py/compiling/native_support.py` | compiling package README and build-system docs |
 
 <!-- X2PY_C_DOCS_START
 | Parser facts | `x2py/parsers/c/parser.py`, `x2py/parsers/fortran/parser.py` | parser package README files and parser references |
@@ -280,4 +280,4 @@ X2PY_C_DOCS_END -->
 | Ownership, lifetime, ABI, or projection policy is unsafe | `x2py/semantics/ownership.py`, readiness, or `ir2ast` |
 | Generated code cannot represent a supported contract | bridge or binding generator with focused tests |
 | Compiler/linker invocation is wrong | `x2py/compiling/` or `x2py/pipeline/build.py` |
-| Python runtime behavior is wrong | generated binding, runtime support, or ownership policy |
+| Python binding behavior is wrong | generated binding, native support, or ownership policy |

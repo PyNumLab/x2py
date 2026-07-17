@@ -95,7 +95,7 @@ def test_fmath_scalar_sources_use_canonical_wrapper_plan(
     assert {path.name for path in wrapper_result.generated_sources} == expected_generated_sources
     assert any(path.name == f"{source.stem}_wrapper.h" for path in wrapper_result.generated_files)
     assert any(
-        path.name == "python_runtime.c" and path.parent.name == "x2py_runtime"
+        path.name == "x2py_binding.c" and path.parent.name == "binding_support"
         for path in wrapper_result.generated_files
     )
     assert wrapper_result.compiled is True

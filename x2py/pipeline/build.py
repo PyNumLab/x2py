@@ -12,7 +12,7 @@ import time
 
 from x2py.compiling.objects import ObjectFile
 from x2py.compiling.compilers import Compiler, get_condaless_search_path
-from x2py.compiling.runtime_support import install_runtime_support
+from x2py.compiling.native_support import install_native_support
 from x2py.parsers.fortran.parser import parse_fortran_project
 from x2py.probes.fortran_types import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
 from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
@@ -66,8 +66,8 @@ _RENDERED_WRAPPER_SOURCE_LANGUAGES = {
     ".for": "fortran",
     ".ftn": "fortran",
 }
-_RENDERED_WRAPPER_RUNTIME_IMPORTS = {
-    "python_runtime": ("x2py_runtime/python_runtime",),
+_RENDERED_WRAPPER_NATIVE_SUPPORT_IMPORTS = {
+    "binding_support": ("binding_support/x2py_binding",),
 }
 
 
@@ -295,9 +295,9 @@ def _expected_generated_files(
         output_dir / f"{module_name}_wrapper.o",
         shared_library,
     ]
-    runtime_support_dir = output_dir / "x2py_runtime"
-    if runtime_support_dir.is_dir():
-        candidates.extend(sorted(path for path in runtime_support_dir.rglob("*") if path.is_file()))
+    native_support_dir = output_dir / "binding_support"
+    if native_support_dir.is_dir():
+        candidates.extend(sorted(path for path in native_support_dir.rglob("*") if path.is_file()))
     return tuple(path for path in candidates if path.exists())
 
 
@@ -363,14 +363,14 @@ def _rendered_wrapper_source_language(path: Path) -> str:
         raise ValueError(f"Unsupported rendered wrapper source suffix: {path}") from None
 
 
-def _rendered_wrapper_runtime_imports(runtime_support_keys: Iterable[str]) -> tuple[str, ...]:
-    """Return runtime-support import keys consumed by the existing installer."""
+def _rendered_wrapper_native_support_imports(native_support_keys: Iterable[str]) -> tuple[str, ...]:
+    """Return native-support import keys consumed by the support installer."""
     imports: list[str] = []
-    for key in runtime_support_keys:
+    for key in native_support_keys:
         try:
-            imports.extend(_RENDERED_WRAPPER_RUNTIME_IMPORTS[key])
+            imports.extend(_RENDERED_WRAPPER_NATIVE_SUPPORT_IMPORTS[key])
         except KeyError:
-            raise ValueError(f"Unsupported wrapper runtime support key: {key!r}") from None
+            raise ValueError(f"Unsupported wrapper native support key: {key!r}") from None
     return tuple(imports)
 
 
@@ -495,9 +495,9 @@ def _build_rendered_wrapper_extension(
             )
         ),
     )
-    runtime_imports = _rendered_wrapper_runtime_imports(rendered.artifacts.runtime_support_keys)
-    runtime_objects = install_runtime_support(
-        runtime_imports,
+    native_support_imports = _rendered_wrapper_native_support_imports(rendered.artifacts.native_support_keys)
+    native_support_objects = install_native_support(
+        native_support_imports,
         x2py_dirpath=str(output_path),
         verbose=verbose,
     )
@@ -509,8 +509,8 @@ def _build_rendered_wrapper_extension(
     )
     _compile_object_stage(
         compiler,
-        runtime_objects,
-        label="Compile runtime source",
+        native_support_objects,
+        label="Compile native support source",
         verbose=verbose,
     )
     _compile_object_stage(
@@ -525,7 +525,7 @@ def _build_rendered_wrapper_extension(
         module_name=rendered.artifacts.module_name,
         output_dir=shared_output_path,
         language=_rendered_wrapper_link_language(bridge_objects, binding_objects),
-        objects=(*tuple(native_dependencies), *bridge_objects, *runtime_objects, *binding_objects),
+        objects=(*tuple(native_dependencies), *bridge_objects, *native_support_objects, *binding_objects),
         link_args=tuple(native_link_args),
         library_dirs=resolved_native_build_plan.library_dirs,
         flags=_compiler_flags(wrapper_c_flags),

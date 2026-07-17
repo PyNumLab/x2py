@@ -214,7 +214,7 @@ implementation files.
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/readiness/`, `tests/semantics/readiness/test_wrap_readiness_fixture_suite.py` |
 | Fortran wrapper orchestration | `x2py/pipeline/build.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
 | Wrapper planning and direct lowering | `x2py/wrapper_codegen/plan.py`, `x2py/wrapper_codegen/planner.py`, `x2py/wrapper_codegen/generator.py` | `tests/wrapper_codegen/`, `tests/wrapper/` |
-| Native compilation and runtime support | `x2py/compiling/`, `x2py/stdlib/x2py_runtime/` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
+| Native compilation and binding support | `x2py/compiling/`, `x2py/binding_support/` | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py`, `tests/wrapper/fortran/build_from_source/test_build_modes.py` |
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/docs/test_examples.py` |
 
 <!-- X2PY_C_DOCS_START
@@ -859,7 +859,7 @@ The main ownership boundaries are:
 - `x2py/wrapper_codegen/generator.py`: direct bridge, binding, and source
   artifact generation;
 - `x2py/compiling/`: compiler commands and shared-library linking; and
-- `x2py/stdlib/x2py_runtime/`: native runtime support copied into each build.
+- `x2py/binding_support/`: native binding support copied into each build.
 
 <!-- X2PY_C_DOCS_START
 - `x2py/wrapper_codegen/fortran/bridge.py`: Fortran-to-C ABI adaptation;
