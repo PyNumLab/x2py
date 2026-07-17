@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, Pass, Polymorphic, bind, native_call, overload, private
+from x2py.contracts import Addr, Arg, Float64, Int32, Pass, bind, native_call, overload, private
 
 
 class accumulator:
@@ -26,7 +26,7 @@ class accumulator:
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def accumulator_add_integer(
-    self: Annotated[accumulator, Polymorphic],
+    self: accumulator,
     value: Int32,
 ) -> None: ...
 
@@ -34,6 +34,6 @@ def accumulator_add_integer(
 @private
 @native_call([Arg(0), Addr(Arg(1))])
 def accumulator_add_real(
-    self: Annotated[accumulator, Polymorphic],
+    self: accumulator,
     value: Float64,
 ) -> None: ...

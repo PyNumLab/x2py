@@ -1,13 +1,13 @@
-from x2py.contracts import Annotated, Float32, Int32, ORDER_F, external
+from x2py.contracts import Float32, Int32, external
 
 @external
 def fill_grid(
-    x: Annotated[Int32[::, ::], ORDER_F]
+    x: Int32[::, ::]
 ) -> None: ...
 
 @external
 def update_plane(
-    x: Annotated[Float32[::, ::], ORDER_F]
+    x: Float32[::, ::]
 ) -> None: ...
 
 @external

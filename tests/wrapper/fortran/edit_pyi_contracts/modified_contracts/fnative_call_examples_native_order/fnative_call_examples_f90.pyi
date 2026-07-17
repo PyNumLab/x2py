@@ -1,6 +1,6 @@
 # Intentional difference: no native-call decorators.  Output slots stay
 # visible in native dummy-argument order.
-from x2py.contracts import Addr, Annotated, Float64, Int32, ORDER_F, String, bind
+from x2py.contracts import Addr, Float64, Int32, String, bind
 
 class summary_point:
     def __init__(
@@ -38,8 +38,8 @@ def fill_vector_raw(
 def shift_matrix(
     n: Int32[()],
     m: Int32[()],
-    values: Annotated[Float64[n, m], ORDER_F],
-    out: Annotated[Float64[n, m], ORDER_F]
+    values: Float64[n, m],
+    out: Float64[n, m]
 ) -> None: ...
 
 def scale_with_status(

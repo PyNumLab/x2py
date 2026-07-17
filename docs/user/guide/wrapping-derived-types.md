@@ -269,6 +269,13 @@ deallocation. Native termination from a finalizer terminates the process.
 Supported extension types form a matching Python inheritance hierarchy. A
 scalar polymorphic input over a known hierarchy dispatches descendant-first.
 
+Ordinary native `class(T)` arguments retain `Annotated[T, Polymorphic]` in the
+semantic `.pyi` because that source fact selects the accepted dynamic-type
+dispatch. The passed-object dummy of a type-bound procedure is different: its
+class binding already proves that it is polymorphic, so generated contracts use
+the plain declared type for that one argument and restore the fact when loading
+the binding.
+
 Polymorphic results, mutable polymorphic arguments, arrays, allocatable or pointer
 polymorphic scalars, `class(*)`, abstract instantiation, and deferred bindings
 are blocked.

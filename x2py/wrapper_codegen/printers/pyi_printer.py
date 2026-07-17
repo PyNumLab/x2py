@@ -82,10 +82,17 @@ class PyiPrinter(ClassVisitor):
         self._semantic_class_names: set[str] = set()
         self._contract_imports: set[str] = set()
         self._contract_aliases: dict[str, str] = {}
+        self._default_array_order: str | None = None
 
     def emit(self, node) -> str:
         """Emit the supported semantic model passed by the caller."""
-        if self._normalize_fortran_public_names and isinstance(node, SemanticModule):
+        if not isinstance(node, SemanticModule):
+            return self._visit(node)
+        previous_default_order = self._default_array_order
+        self._default_array_order = self._native_default_array_order(node.origin.source_language)
+        try:
+            if not self._normalize_fortran_public_names:
+                return self._visit(node)
             previous_policy = self._naming_policy
             previous_namespace = self._public_namespace
             previous_reserved = self._reserved_public_names
@@ -98,7 +105,8 @@ class PyiPrinter(ClassVisitor):
                 self._naming_policy = previous_policy
                 self._public_namespace = previous_namespace
                 self._reserved_public_names = previous_reserved
-        return self._visit(node)
+        finally:
+            self._default_array_order = previous_default_order
 
     @staticmethod
     def _visit_not_supported(node):
@@ -190,12 +198,25 @@ class PyiPrinter(ClassVisitor):
         decorator = self._decorators(func, emitted_name=name)
         return self._emit_callable(
             name=name,
-            arguments=[self._emit_call_argument(func, arg) for arg in self._call_arguments(func)],
+            arguments=[self._emit_contract_argument(func, arg) for arg in self._call_arguments(func)],
             return_type=return_type,
             decorator=decorator,
             def_indent="",
             parameter_indent="    ",
         )
+
+    def _emit_contract_argument(self, func: SemanticFunction, arg: SemanticArgument) -> str:
+        """Omit native facts already implied by the surrounding callable contract."""
+        passed_object_name = func.metadata.get("fortran_passed_object_name")
+        if (
+            func.metadata.get("fortran_type_bound_target")
+            and isinstance(passed_object_name, str)
+            and arg.name == passed_object_name
+            and arg.semantic_type.metadata.get("fortran_polymorphic")
+        ):
+            arg = deepcopy(arg)
+            arg.semantic_type.metadata.pop("fortran_polymorphic", None)
+        return self._emit_call_argument(func, arg)
 
     def _visit_SemanticMethod(self, method: SemanticMethod) -> str:
         """Emit method syntax."""
@@ -447,12 +468,16 @@ class PyiPrinter(ClassVisitor):
         """Handle array annotation metadata for the current generation context."""
         if array is None:
             return []
+        if array.rank is None or array.rank <= 1:
+            return []
         metadata: list[str] = []
-        if array.order in {"ORDER_F", "ORDER_ANY"} and not (
-            array.category == "assumed_size" and array.order == "ORDER_F"
+        if (
+            array.order in {"ORDER_F", "ORDER_ANY"}
+            and array.order != self._default_array_order
+            and not (array.category == "assumed_size" and array.order == "ORDER_F")
         ):
             metadata.append(self._contract(array.order))
-        if array.order == "ORDER_C" and PyiPrinter._is_c_order_flat_array(array):
+        if array.order == "ORDER_C" and array.order != self._default_array_order:
             metadata.append(self._contract("ORDER_C"))
         if array.copy_order == "ORDER_F":
             metadata.append(self._contract("COPY_F"))
@@ -463,15 +488,13 @@ class PyiPrinter(ClassVisitor):
         return metadata
 
     @staticmethod
-    def _is_c_order_flat_array(array: SemanticArrayContract) -> bool:
-        """Return whether an assumed-size contract uses leading Flat storage."""
-        return (
-            array.category == "assumed_size"
-            and array.rank is not None
-            and array.rank > 1
-            and bool(array.source_shape)
-            and PyiPrinter._assumed_size_array_dimension(array.source_shape[0]) == _FLAT_DIMENSION_PRINT_SENTINEL
-        )
+    def _native_default_array_order(native_language: str | None) -> str | None:
+        """Return the implicit multidimensional storage order for one native language."""
+        if native_language == "fortran":
+            return "ORDER_F"
+        if native_language == "c":
+            return "ORDER_C"
+        return "ORDER_F"
 
     def _semantic_annotation_metadata(self, semantic_type: SemanticType) -> list[str]:
         """Handle semantic annotation metadata for the current generation context."""
@@ -633,7 +656,7 @@ class PyiPrinter(ClassVisitor):
         type_text = self._visit(semantic_type)
         annotation_metadata = []
         if original_name is not None:
-            annotation_metadata.append(f"{self._contract('Name')}({json.dumps(original_name)})")
+            annotation_metadata.append(f"{self._contract('SourceName')}({json.dumps(original_name)})")
         if annotation_metadata:
             type_text = self._annotated_type_text(type_text, annotation_metadata)
         if self._is_constant(arg.semantic_type):
@@ -940,7 +963,10 @@ class PyiPrinter(ClassVisitor):
             or "..."
         )
         if name != field.name:
-            type_text = self._annotated_type_text(type_text, [f"{self._contract('Name')}({json.dumps(field.name)})"])
+            type_text = self._annotated_type_text(
+                type_text,
+                [f"{self._contract('SourceName')}({json.dumps(field.name)})"],
+            )
         return f"{name}: {type_text} = {default_value}"
 
     @staticmethod

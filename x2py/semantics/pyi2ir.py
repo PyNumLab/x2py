@@ -72,12 +72,22 @@ class _CallbackArgumentSpec:
     passes_by_value: bool
 
 
-def convert_pyi_to_ir(tree: ast.Module, *, module_name: str = "<pyi>", source: str = "") -> SemanticModule:
+def convert_pyi_to_ir(
+    tree: ast.Module,
+    *,
+    module_name: str = "<pyi>",
+    source: str = "",
+    native_language: str = "fortran",
+) -> SemanticModule:
     """Convert a parsed semantic `.pyi` AST into semantic IR."""
 
     if not isinstance(tree, ast.Module):
         raise TypeError("convert_pyi_to_ir expects a Python ast.Module parsed by x2py.parsers.pyi")
-    module = _PyiAstParser(module_name=module_name, source=source).parse(tree)
+    module = _PyiAstParser(
+        module_name=module_name,
+        source=source,
+        native_language=native_language,
+    ).parse(tree)
     _annotate_imported_external_type_refs(module)
     return module
 
@@ -108,9 +118,13 @@ class _PendingOverload:
 
 
 class _PyiAstParser:
-    def __init__(self, *, module_name: str, source: str = ""):
-        self.module = SemanticModule(name=module_name)
+    def __init__(self, *, module_name: str, source: str = "", native_language: str = "fortran"):
+        native_language = native_language.casefold()
+        if native_language not in {"c", "fortran"}:
+            raise ValueError(f"Unsupported semantic .pyi native language: {native_language!r}")
+        self.module = SemanticModule(name=module_name, origin=SemanticOrigin(source_language=native_language))
         self.source = source
+        self.native_language = native_language
         self._pending_overloads: list[_PendingOverload] = []
         self._contract_bindings: dict[str, str] = {}
         self._user_type_names: set[str] = set()
@@ -698,6 +712,7 @@ class _PyiAstParser:
                 target.metadata["fortran_type_bound_target"] = True
                 target.metadata["fortran_passed_object_name"] = target.arguments[passed_position].name
                 target.metadata["fortran_passed_object_position"] = passed_position
+                target.arguments[passed_position].semantic_type.metadata["fortran_polymorphic"] = True
 
     @classmethod
     def _iter_classes(cls, classes: list[SemanticClass]):
@@ -1377,6 +1392,7 @@ class _PyiAstParser:
         pointee = self.semantic_type(node.args[0])
         read_only = pointee.storage.read_only if pointee.storage is not None else False
         metadata = dict(pointee.storage.metadata) if pointee.storage is not None else {}
+        array = pointee.storage.array if pointee.storage is not None else None
         metadata[ADDRESS_ROLE_METADATA] = ADDRESS_ROLE_RAW
         pointer_depth = self._addr_depth(node.func)
         pointee.storage = SemanticStorageContract(
@@ -1384,6 +1400,7 @@ class _PyiAstParser:
             read_only=read_only,
             mutable=not read_only,
             pointer_depth=pointer_depth,
+            array=array,
             metadata=metadata,
         )
         pointee.ownership.mutable = not read_only
@@ -1479,8 +1496,8 @@ class _PyiAstParser:
         lower, upper, _step = text.split(":", 2)
         return f"{lower.strip()}:{upper.strip()}:{_STRIDED_DIMENSION_SENTINEL}"
 
-    @staticmethod
     def _array_type_from_dimensions(
+        self,
         name: str,
         dims: list[str],
         *,
@@ -1498,7 +1515,7 @@ class _PyiAstParser:
         array = SemanticArrayContract(
             rank=rank,
             shape=list(dims),
-            order=_PyiAstParser._array_order_for_dimensions(category, rank, source_shape),
+            order=self._array_order_for_dimensions(category, rank, source_shape),
             axes=["strided" if strided else "dense" for strided in strided_axes],
             contiguous=not any(strided_axes),
             category=category,
@@ -1551,8 +1568,8 @@ class _PyiAstParser:
             upper_bounds,
         )
 
-    @staticmethod
     def _array_order_for_dimensions(
+        self,
         category: str | None,
         rank: int | None,
         source_shape: list[str],
@@ -1561,7 +1578,7 @@ class _PyiAstParser:
             return None
         if category == "assumed_size":
             return _PyiAstParser._flat_array_order(source_shape, rank)
-        return "ORDER_C"
+        return "ORDER_F" if self.native_language == "fortran" else "ORDER_C"
 
     @staticmethod
     def _flat_array_order(source_shape: list[str], rank: int | None) -> str | None:
@@ -1696,9 +1713,16 @@ class _PyiAstParser:
     def _apply_metadata_name(self, semantic_type: SemanticType, name: str) -> bool:
         if name in {"ORDER_C", "ORDER_F", "ORDER_ANY"}:
             array = self._require_array_storage(semantic_type)
+            if array.rank is None or array.rank <= 1:
+                raise ValueError(f"{name} requires a multidimensional array")
             expected_order = self._flat_array_order(array.source_shape, array.rank)
             if expected_order is not None and name != expected_order:
                 raise ValueError(f"{name} conflicts with {expected_order} implied by Flat placement")
+            default_order = self._array_order_for_dimensions(array.category, array.rank, array.source_shape)
+            if expected_order is None and name == default_order:
+                raise ValueError(
+                    f"{name} is implicit for {self.native_language} semantic .pyi contracts; remove the annotation"
+                )
             array.order = name
             return True
         if name == "COPY_F":
@@ -2048,9 +2072,9 @@ class _PyiAstParser:
         )
 
     def name_metadata(self, node: ast.expr) -> str | None:
-        if isinstance(node, ast.Call) and self.matches_name(node.func, "Name"):
+        if isinstance(node, ast.Call) and self.matches_name(node.func, "SourceName"):
             if len(node.args) != 1:
-                raise ValueError(f"Name metadata expects one argument: {ast.unparse(node)!r}")
+                raise ValueError(f"SourceName metadata expects one argument: {ast.unparse(node)!r}")
             return str(ast.literal_eval(node.args[0]))
         return None
 

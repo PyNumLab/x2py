@@ -55,8 +55,8 @@ def test_fortran_generated_contracts_reserve_colliding_public_names_by_namespace
 
     code = emit_module(module, normalize_fortran_public_names=True)
 
-    assert 'lambda_: Annotated[Int32, Name("lambda")]' in code
-    assert 'lambda__2: Annotated[Int32, Name("lambda_")]' in code
+    assert 'lambda_: Annotated[Int32, SourceName("lambda")]' in code
+    assert 'lambda__2: Annotated[Int32, SourceName("lambda_")]' in code
     assert '@bind("lambda")\ndef lambda_() -> Int32: ...' in code
     assert '@bind("lambda_")\ndef lambda__2() -> Int32: ...' in code
     assert "def lambda__3" not in code

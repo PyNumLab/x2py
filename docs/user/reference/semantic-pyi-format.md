@@ -1083,17 +1083,22 @@ Use local constants or generated `Final[...]` names for shape symbols.
 
 `Annotated[...]` carries storage metadata and semantic constraints. It does
 not carry source-language argument direction or per-call value/reference
-selection. Native call transport belongs to `@native_call`: a wrapped derived
+selection. The Fortran semantic pipeline supplies `ORDER_F` as the default
+multidimensional layout. Generated contracts omit that default. Write explicit
+layout metadata only when the Python-visible storage deliberately differs from
+that Fortran representation, such as a row-major input accepted by a Fortran
+wrapper.
+Native call transport belongs to `@native_call`: a wrapped derived
 object uses its normal reference handoff with `Arg(i)` and exact typed value
 handoff with `Value(Arg(i))`. The Python API accepts the same opaque wrapper
 object in both cases; the generated Fortran bridge performs the typed call, and
 the binding never exposes or guesses aggregate layout.
 
 ```python
-from x2py.contracts import Annotated, COPY_F, Float64, ORDER_C, ORDER_F
+from x2py.contracts import Annotated, COPY_F, Float64, ORDER_C
 
 def fill(
-    a: Annotated[Float64[:, :], ORDER_F],
+    a: Float64[:, :],
     c_input: Annotated[Float64[:, :], ORDER_C, COPY_F],
     out: Float64[()],
 ) -> None: ...
@@ -1103,12 +1108,12 @@ Generated canonical metadata:
 
 | Metadata | Meaning |
 | --- | --- |
-| `ORDER_F` | multidimensional Fortran-oriented storage |
 | `COPY_F` | accept the declared C-contiguous Python layout, create an F-contiguous temporary with the same logical axes, and copy back after visible native mutation |
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
-| `Name("native-name")` | source name cannot be represented directly as the Python target name |
+| `SourceName("native-name")` | source name cannot be represented directly as the Python target name |
 | `Aliased` | native storage may be exposed across the Python boundary as an alias |
-| `Immutable` | Python-visible value must not be mutated in place; writable native calls require a completed copy-in/copy-out replacement policy or an explicit call-local discarded-mutation policy |
+| `Immutable` | Python-visible value must not be mutated in place; this is a use-site boundary policy rather than an intrinsic datatype property, and writable native calls require a completed copy-in/copy-out replacement policy or an explicit call-local discarded-mutation policy |
+| `Polymorphic` | an ordinary derived argument is a native polymorphic `class(T)` dummy; the passed-object dummy of a type-bound procedure omits this metadata because the binding already proves it |
 | `Ownership("python" | "native" | "wrapper" | "caller" | "temporary" | "unknown")` | explicit owner override for the wrapper ownership policy |
 | `Transfer("copy_return" | "snapshot_copy" | "borrowed_view" | "call_local" | "in_place" | "by_value" | "wrapper_instance" | "blocked")` | explicit boundary transfer override for the wrapper ownership policy |
 | `Destruction("python_refcount" | "wrapper_dealloc" | "native_owner" | "caller" | "call_local" | "none" | "blocked")` | explicit destruction override for the wrapper ownership policy |
@@ -1127,7 +1132,10 @@ Loaded compatibility metadata:
 | `FortranAllocatable` | older scalar character allocatable metadata; generated contracts use `Allocatable[String]` |
 
 <!-- X2PY_C_DOCS_START
-| `ORDER_C` | explicit C-oriented storage; this is also the default for plain multidimensional arrays |
+| `ORDER_F` | explicit Fortran-oriented storage in a C contract |
+| `ORDER_C` | explicit C-oriented storage in a Fortran contract |
+Plain multidimensional C contracts default to `ORDER_C`; generated contracts
+omit that marker and retain only an intentional alternate layout.
 X2PY_C_DOCS_END -->
 
 Without `COPY_F`, `ORDER_C` is zero-copy and native Fortran observes the
@@ -2191,14 +2199,14 @@ is a user contract applied to a declaration that was otherwise available to the
 wrapper, so the declaration remains printed and loadable as wrapper input.
 
 Names that are not valid Python identifiers are represented with `var[...]` for
-data declarations, or with `Annotated[..., Name("native-name")]` for callable
+data declarations, or with `Annotated[..., SourceName("native-name")]` for callable
 arguments:
 
 ```python
-from x2py.contracts import Annotated, Int32, Name
+from x2py.contracts import Annotated, Int32, SourceName
 
 var["class"]: Int32
-def f(class_: Annotated[Int32, Name("class")]) -> None: ...
+def f(class_: Annotated[Int32, SourceName("class")]) -> None: ...
 ```
 
 ## Projection Metadata
@@ -2268,7 +2276,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Hidden Fortran outputs | Python returns plus generated `@native_call` in native argument order |
 | Scalar address inputs | Python-visible `T` plus `Addr(Arg(...))` native-call projection |
 | Writable scalar storage | `T[()]`, or visible `T` plus projected replacement `Returns["name", T]` |
-| Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
+| Arrays | shaped storage with extents and strided axes; multidimensional order defaults from the selected native language |
 | Module variables | direct module-level annotations; native accessors remain internal |
 | Native array descriptor handles | `Allocatable[T[...]]` and `Pointer[T[...]]` handles for module variables, supported fields, and descriptor arguments; owned allocatable result handles; unallocated or unassociated state remains inside the handle |
 | Constants | `Final[T]` module variables |

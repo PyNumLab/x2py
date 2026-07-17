@@ -110,7 +110,7 @@ def test_raw_array_addresses_use_canonical_plan(tmp_path: Path):
         encoding="utf-8",
     )
     (contract_package / "fnative_call_examples_f90.pyi").write_text(
-        """from x2py.contracts import Addr, Annotated, Float64, Int32, ORDER_F, bind
+        """from x2py.contracts import Addr, Float64, Int32, bind
 
 @bind("fill_vector")
 def fill_vector_raw(n: Int32[()], values: Addr(Float64[n])) -> None: ...
@@ -127,8 +127,8 @@ def shift_matrix_raw_c(
 def shift_matrix_raw_f(
     n: Int32[()],
     m: Int32[()],
-    values: Annotated[Addr(Float64[n, m]), ORDER_F],
-    out: Annotated[Addr(Float64[n, m]), ORDER_F]
+    values: Addr(Float64[n, m]),
+    out: Addr(Float64[n, m])
 ) -> None: ...
 """,
         encoding="utf-8",

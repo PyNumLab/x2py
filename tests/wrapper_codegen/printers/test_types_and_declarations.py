@@ -149,7 +149,7 @@ end module
 
     code = generate_pyi(source)
 
-    assert "A: Annotated[Float64[::, ::], ORDER_F" in code
+    assert "A: Float64[::, ::]" in code
     assert "Shape" not in code
     assert "x: Float64[::]" in code
     assert "y: Float64[::]" in code
@@ -270,7 +270,7 @@ end module
 
     code = generate_pyi(source)
 
-    assert "A: Annotated[Float64[10, 20], ORDER_F]" in code
+    assert "A: Float64[10, 20]" in code
 
 
 def test_parameter_target_sanitizes_non_identifier_names():
@@ -285,7 +285,7 @@ def test_emit_argument_escapes_original_name_metadata():
     emitted = PyiPrinter().emit(SemanticArgument('quote"name', SemanticType("Int32")))
     reparsed = parse_pyi_text(f"def consume({emitted}) -> None: ...\n", module_name="quoted")
 
-    assert emitted == 'quote_name: Annotated[Int32, Name("quote\\"name")]'
+    assert emitted == 'quote_name: Annotated[Int32, SourceName("quote\\"name")]'
     assert reparsed.functions[0].arguments[0].name == 'quote"name'
 
 
@@ -371,12 +371,12 @@ end module
     # Matrix annotations
     # --------------------------------------------------------
 
-    assert "K: Annotated[Float64[::, ::], ORDER_F" in code
-    assert 'Returns["K", Annotated[Float64[::, ::], ORDER_F]]' in code
+    assert "K: Float64[::, ::]" in code
+    assert 'Returns["K", Float64[::, ::]]' in code
 
-    assert "coords: Annotated[Float64[::, ::], ORDER_F" in code
+    assert "coords: Float64[::, ::]" in code
 
-    assert "connectivity: Annotated[Int32[::, ::], ORDER_F" in code
+    assert "connectivity: Int32[::, ::]" in code
 
     # --------------------------------------------------------
     # Return type
@@ -445,7 +445,7 @@ def test_printer_emit_visitor_dispatches_semantic_models():
 
     assert printer.emit(constraint) == "Finite"
     assert printer.emit(semantic_type) == "Float64[:]"
-    assert printer.emit(argument) == 'class_: Annotated[Float64[:], Name("class")] = ...'
+    assert printer.emit(argument) == 'class_: Annotated[Float64[:], SourceName("class")] = ...'
     assert "def reset(self) -> None: ..." in printer.emit(method)
     assert "@private\nclass thing:" in printer.emit(cls)
     assert "var['bad-name']: Float64[:]" in printer.emit(cls)
@@ -495,6 +495,24 @@ def test_printer_emits_flat_dimension_for_assumed_size_arrays():
 
     assert PyiPrinter().emit(fortran_type) == "Float64[3, Flat]"
     assert PyiPrinter().emit(c_type) == "Annotated[Float64[Flat, 3], ORDER_C]"
+
+    nondefault_c_type = SemanticType(
+        "Float64",
+        dtype="Float64",
+        rank=2,
+        shape=[":", ":"],
+        storage=SemanticStorageContract(
+            kind="array",
+            array=SemanticArrayContract(
+                rank=2,
+                shape=[":", ":"],
+                source_shape=[":", ":"],
+                order="ORDER_C",
+                contiguous=True,
+            ),
+        ),
+    )
+    assert PyiPrinter().emit(nondefault_c_type) == "Annotated[Float64[:, :], ORDER_C]"
 
     lower_bound_assumed_size = SemanticType(
         "Float64",

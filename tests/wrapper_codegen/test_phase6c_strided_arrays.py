@@ -12,9 +12,9 @@ from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 def _strided_plan():
     module = parse_pyi_text(
         """
-from x2py.contracts import Annotated, Float64, ORDER_F
+from x2py.contracts import Float64
 
-def strided(values: Annotated[Float64[::, ::], ORDER_F]) -> None: ...
+def strided(values: Float64[::, ::]) -> None: ...
 """,
         module_name="strided_arrays",
     )

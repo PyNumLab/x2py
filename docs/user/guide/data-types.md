@@ -170,9 +170,10 @@ Array annotations combine an element dtype with rank and shape:
 
 Plain `:` records a dense axis. `::` records an axis where the contract allows
 runtime strides; x2py reads that exact slice spelling from the `.pyi` source
-before Python AST normalization. Multidimensional dense arrays are validated
-against their documented orientation, such as `ORDER_F` for Fortran-oriented
-storage.
+before Python AST normalization. Multidimensional dense arrays in a
+Fortran-facing contract use Fortran orientation by default; generated contracts
+omit `ORDER_F`. Explicit order metadata appears only when a contract
+deliberately requests a non-default representation.
 
 The wrapper validates exact dtype, native byte order, rank, known extents,
 alignment, layout, and writeability before entering native code. It does not

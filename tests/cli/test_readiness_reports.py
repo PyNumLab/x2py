@@ -484,8 +484,9 @@ def test_x2py_wrap_readiness_report_preserves_c_and_pyi_contracts(monkeypatch):
         assert source == str(path)
         return readiness
 
-    def pyi(paths):
+    def pyi(paths, *, native_language):
         assert paths == ["api"]
+        assert native_language == "c"
         return pyi_report
 
     monkeypatch.setattr(x2py_cli, "expand_c_paths", expand)
@@ -556,8 +557,9 @@ def test_x2py_wrap_readiness_report_preserves_fortran_and_pyi_contracts(monkeypa
         assert source == str(path)
         return readiness
 
-    def pyi(paths):
+    def pyi(paths, *, native_language):
         assert paths == ["api"]
+        assert native_language == "fortran"
         return pyi_report
 
     expected_compile_time_values = compile_time_values
@@ -611,9 +613,10 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
         calls.append(("expand", paths))
         return [stub]
 
-    def load(paths):
+    def load(paths, *, native_language):
         assert paths == [str(package), str(stub)]
-        calls.append(("load", paths))
+        assert native_language == "c"
+        calls.append(("load", paths, native_language))
         return [module]
 
     def serialize(received):
@@ -633,7 +636,7 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
     monkeypatch.setattr(x2py_cli, "asdict", serialize)
     monkeypatch.setattr(x2py_cli, "assess_semantic_wrap_readiness", assess)
 
-    assert x2py_cli._pyi_readiness_report([str(package), str(stub), str(ignored)]) == {
+    assert x2py_cli._pyi_readiness_report([str(package), str(stub), str(ignored)], native_language="c") == {
         str(stub): {
             "source_kind": "pyi",
             "semantic_modules": [{"name": "api"}],
@@ -642,7 +645,7 @@ def test_x2py_pyi_readiness_report_preserves_loading_and_assessment_contracts(tm
     }
     assert calls == [
         ("expand", [str(package), str(stub), str(ignored)]),
-        ("load", [str(package), str(stub)]),
+        ("load", [str(package), str(stub)], "c"),
         ("asdict", module),
         ("assess", [module], str(stub)),
     ]

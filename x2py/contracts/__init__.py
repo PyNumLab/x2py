@@ -104,15 +104,15 @@ Destruction = _expression
 Finite = _expression
 IsPresent = _expression
 Len = _expression
-Name = _expression
 Ownership = _expression
 Pass = _expression
 PointerAssociation = _expression
 PointerPolicy = _expression
-Return = _expression
-Value = _expression
 Range = _expression
+Return = _expression
+SourceName = _expression
 Transfer = _expression
+Value = _expression
 Work = _expression
 
 bind = _decorator
@@ -175,7 +175,6 @@ CONTRACT_SYMBOLS = frozenset(
         "IsPresent",
         "Len",
         "Matrix",
-        "Name",
         "Opaque",
         "OpaqueHandle",
         "ORDER_ANY",
@@ -191,6 +190,7 @@ CONTRACT_SYMBOLS = frozenset(
         "Return",
         "Returns",
         "SizeT",
+        "SourceName",
         "Strided",
         "String",
         "Transfer",

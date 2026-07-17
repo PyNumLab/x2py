@@ -745,18 +745,19 @@ def _wrap_readiness_report(
         }
         for path, modules in converted_files
     }
-    out.update(_pyi_readiness_report(paths))
+    out.update(_pyi_readiness_report(paths, native_language=language))
     return out
 
 
-def _pyi_readiness_report(paths: list[str]) -> dict[str, dict]:
+def _pyi_readiness_report(paths: list[str], *, native_language: str = "fortran") -> dict[str, dict]:
     """Load one edited `.pyi` file set and report each interface path."""
 
     pyi_paths = _expand_pyi_paths(paths)
     if not pyi_paths:
         return {}
     modules = pyi_paths_to_semantic_modules(
-        [raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"]
+        [raw for raw in paths if Path(raw).is_dir() or Path(raw).suffix.lower() == ".pyi"],
+        native_language=native_language,
     )
     return {
         str(path): {

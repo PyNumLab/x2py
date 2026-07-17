@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Annotated, Arg, Float64, Pass, Polymorphic, bind, native_call
+from x2py.contracts import Addr, Arg, Float64, Pass, bind, native_call
 
 
 class vector:
@@ -16,6 +16,6 @@ class vector:
 @native_call([Addr(Arg(0)), Arg(1), Addr(Arg(2))])
 def shift_vector(
     dx: Float64,
-    owner: Annotated[vector, Polymorphic],
+    owner: vector,
     dy: Float64,
 ) -> None: ...

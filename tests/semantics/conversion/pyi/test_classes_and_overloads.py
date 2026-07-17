@@ -466,15 +466,17 @@ class vector:
     ) -> None: ...
 
 def scale(
-    self: Annotated[vector, Polymorphic],
+    self: vector,
     factor: Addr(Float64)
 ) -> None: ...
 
 def shift_vector(
     dx: Addr(Float64),
-    owner: Annotated[vector, Polymorphic],
+    owner: vector,
     dy: Addr(Float64)
 ) -> None: ...
+
+def inspect(value: Annotated[vector, Polymorphic]) -> None: ...
 """,
         module_name="edited",
     )
@@ -483,9 +485,17 @@ def shift_vector(
     assert functions["scale"].metadata["fortran_type_bound_target"] is True
     assert functions["scale"].metadata["fortran_passed_object_name"] == "self"
     assert functions["scale"].metadata["fortran_passed_object_position"] == 0
+    assert functions["scale"].arguments[0].semantic_type.metadata["fortran_polymorphic"] is True
     assert functions["shift_vector"].metadata["fortran_type_bound_target"] is True
     assert functions["shift_vector"].metadata["fortran_passed_object_name"] == "owner"
     assert functions["shift_vector"].metadata["fortran_passed_object_position"] == 1
+    assert functions["shift_vector"].arguments[1].semantic_type.metadata["fortran_polymorphic"] is True
+
+    emitted = emit_module(from_pyi)
+    assert "self: vector" in emitted
+    assert "owner: vector" in emitted
+    assert "value: Annotated[vector, Polymorphic]" in emitted
+    assert parse_pyi_text(emitted, module_name="edited") == from_pyi
 
 
 def test_pyi_keyword_normalized_type_bound_method_keeps_native_binding_name():

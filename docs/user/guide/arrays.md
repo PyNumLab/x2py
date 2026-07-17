@@ -48,13 +48,13 @@ end module array_ops
 Inspecting `arrays.f90` prints these array contracts:
 
 ```python
-from x2py.contracts import Addr, Annotated, Arg, Float64, Int32, ORDER_F, native_call
+from x2py.contracts import Addr, Arg, Float64, Int32, native_call
 
 @native_call([Addr(Arg(0)), Addr(Arg(1)), Arg(2)])
 def scale_matrix(
     rows: Int32,
     columns: Int32,
-    values: Annotated[Float64[rows, columns], ORDER_F]
+    values: Float64[rows, columns]
 ) -> None: ...
 
 @native_call([Addr(Arg(0)), Arg(1)])
@@ -134,14 +134,14 @@ runs.
 Use `numpy.asfortranarray` or `order="F"` for a multidimensional contract that
 requires Fortran orientation, as shown by `matrix` in the complete example.
 
-Layout annotations describe the exact storage accepted by the native contract;
-they do not request an automatic conversion. `ORDER_F` passes a
-Fortran-contiguous array with its logical axes unchanged. `ORDER_C` passes the
-same C-contiguous data address without copying and constructs the Fortran
-bridge view with reversed axes. For example, a C-order Python shape `(2, 3)`
-is a Fortran bridge shape `(3, 2)` over the same six elements. Use `ORDER_C`
-only when the native operation intentionally accepts that transposed storage
-view.
+Layout annotations describe a deliberate non-default storage representation;
+they do not request an automatic conversion. Plain multidimensional
+Fortran-facing arrays already pass Fortran-contiguous storage with their logical
+axes unchanged. `ORDER_C` passes the same C-contiguous data address without
+copying and constructs the Fortran bridge view with reversed axes. For example,
+a C-order Python shape `(2, 3)` is a Fortran bridge shape `(3, 2)` over the
+same six elements. Use `ORDER_C` only when the native operation intentionally
+accepts that transposed storage view.
 
 Add `COPY_F` when Python should accept C-contiguous storage but native Fortran
 must observe the same logical axes in Fortran order:

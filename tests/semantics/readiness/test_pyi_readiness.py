@@ -119,6 +119,19 @@ def test_assess_pyi_wrap_readiness_honors_explicit_encoding(tmp_path: Path):
     assert _blocker_codes(report) == set()
 
 
+def test_assess_pyi_wrap_readiness_uses_the_selected_native_language(tmp_path: Path):
+    pyi = tmp_path / "c_contract.pyi"
+    pyi.write_text(
+        f"{CONTRACT_IMPORT}matrix: Annotated[Float64[:, :], ORDER_F]\n",
+        encoding="utf-8",
+    )
+
+    report = assess_pyi_wrap_readiness(pyi, native_language="c")
+
+    assert report["n_modules"] == 1
+    assert report["source"] == [str(pyi)]
+
+
 def test_readiness_accepts_qualified_types_from_imported_modules_and_aliases():
     report = _readiness_from_pyi(
         """

@@ -44,21 +44,21 @@ class box(base_shape):
     def area(self) -> Float64: ...
 
 def base_area(
-    self: Annotated[base_shape, Polymorphic]
+    self: base_shape
 ) -> Float64: ...
 
 @native_call([Arg(0), Addr(Arg(1))])
 def base_set_size(
-    self: Annotated[base_shape, Polymorphic],
+    self: base_shape,
     value: Float64
 ) -> None: ...
 
 def circle_area(
-    self: Annotated[circle, Polymorphic]
+    self: circle
 ) -> Float64: ...
 
 def box_area(
-    self: Annotated[box, Polymorphic]
+    self: box
 ) -> Float64: ...
 
 def describe_shape(

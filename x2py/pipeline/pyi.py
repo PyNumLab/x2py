@@ -16,7 +16,7 @@ __all__ = ("pyi_file_to_semantic_module", "pyi_paths_to_semantic_modules", "pyi_
 
 @dataclass
 class _PyiSemanticModuleCache:
-    modules: dict[tuple[Path, str, str], SemanticModule] = field(default_factory=dict)
+    modules: dict[tuple[Path, str, str, str], SemanticModule] = field(default_factory=dict)
 
     def file_to_semantic_module(
         self,
@@ -24,10 +24,11 @@ class _PyiSemanticModuleCache:
         *,
         module_name: str | None = None,
         encoding: str = "utf-8",
+        native_language: str = "fortran",
     ) -> SemanticModule:
         pyi_path = Path(path)
         resolved_module_name = module_name or pyi_path.stem
-        key = (pyi_path.resolve(), resolved_module_name, encoding)
+        key = (pyi_path.resolve(), resolved_module_name, encoding, native_language)
         cached = self.modules.get(key)
         if cached is not None:
             return cached
@@ -37,6 +38,7 @@ class _PyiSemanticModuleCache:
                 source,
                 module_name=resolved_module_name,
                 filename=str(pyi_path),
+                native_language=native_language,
             )
         except ValueError as exc:
             raise ValueError(f"{pyi_path}: {exc}") from exc
@@ -48,6 +50,7 @@ class _PyiSemanticModuleCache:
         paths: str | Path | Iterable[str | Path],
         *,
         encoding: str = "utf-8",
+        native_language: str = "fortran",
     ) -> list[SemanticModule]:
         raw_paths = [paths] if isinstance(paths, str | Path) else list(paths)
         expanded: dict[Path, str | None] = {}
@@ -66,32 +69,62 @@ class _PyiSemanticModuleCache:
                 expanded.setdefault(path, None)
         return reconcile_external_type_refs(
             [
-                self.file_to_semantic_module(path, module_name=module_name, encoding=encoding)
+                self.file_to_semantic_module(
+                    path,
+                    module_name=module_name,
+                    encoding=encoding,
+                    native_language=native_language,
+                )
                 for path, module_name in sorted(expanded.items())
             ]
         )
 
 
-def pyi_text_to_semantic_module(source: str, *, module_name: str = "<pyi>", filename: str = "<pyi>") -> SemanticModule:
+def pyi_text_to_semantic_module(
+    source: str,
+    *,
+    module_name: str = "<pyi>",
+    filename: str = "<pyi>",
+    native_language: str = "fortran",
+) -> SemanticModule:
     """Parse inline semantic `.pyi` text and convert it to semantic IR."""
 
     tree = parse_pyi_text(source, filename=filename)
-    module = convert_pyi_to_ir(tree, module_name=module_name, source=source)
+    module = convert_pyi_to_ir(
+        tree,
+        module_name=module_name,
+        source=source,
+        native_language=native_language,
+    )
     module.metadata[PYI_LOADED_METADATA] = True
     return module
 
 
 def pyi_file_to_semantic_module(
-    path: str | Path, *, module_name: str | None = None, encoding: str = "utf-8"
+    path: str | Path,
+    *,
+    module_name: str | None = None,
+    encoding: str = "utf-8",
+    native_language: str = "fortran",
 ) -> SemanticModule:
     """Convert one semantic `.pyi` file to semantic IR."""
-    return _PyiSemanticModuleCache().file_to_semantic_module(path, module_name=module_name, encoding=encoding)
+    return _PyiSemanticModuleCache().file_to_semantic_module(
+        path,
+        module_name=module_name,
+        encoding=encoding,
+        native_language=native_language,
+    )
 
 
 def pyi_paths_to_semantic_modules(
     paths: str | Path | Iterable[str | Path],
     *,
     encoding: str = "utf-8",
+    native_language: str = "fortran",
 ) -> list[SemanticModule]:
     """Convert semantic `.pyi` files or directories and reconcile external types."""
-    return _PyiSemanticModuleCache().paths_to_semantic_modules(paths, encoding=encoding)
+    return _PyiSemanticModuleCache().paths_to_semantic_modules(
+        paths,
+        encoding=encoding,
+        native_language=native_language,
+    )

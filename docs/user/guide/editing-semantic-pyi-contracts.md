@@ -404,6 +404,11 @@ and returns a different NumPy array. The original remains unchanged. The
 compiled evidence is
 [`test_policy_dispatch_contracts.py`](../../../tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py).
 
+Mutability is a property of this argument boundary, not of `Float64`,
+`String[n]`, or another datatype in isolation. The same datatype may be an
+input value, caller-owned writable storage, or a replacement-only value in
+different procedures, so datatype spelling cannot replace `Immutable`.
+
 `Immutable` plus `Transfer("borrowed_view")` on a writable value is
 contradictory: one requests replacement-only semantics and the other requests a
 writable shared view. The contract fails instead of selecting one silently.
@@ -414,20 +419,24 @@ The annotation is runtime policy, not merely an IDE hint. Supported edits can
 tighten or broaden validation without changing the native ABI:
 
 ```python
-from x2py.contracts import Annotated, Float64, ORDER_F
+from x2py.contracts import Float64
 
 def solve(
-    matrix: Annotated[Float64[3, 3], ORDER_F],
+    matrix: Float64[3, 3],
     rhs: Float64[3],
 ) -> Float64[3]: ...
 ```
+
+Plain multidimensional arrays in a Fortran semantic `.pyi` use `ORDER_F` by
+default. Generated contracts omit that default order. Use explicit layout
+metadata only to request a non-default Python storage representation.
 
 The wrapper validates exact dtype, rank, shape, layout, writeability, byte
 order, alignment, and zero-sized-array rules required by the selected backend
 path. Examples of supported changes include:
 
 - `Float64[:, :]` to `Float64[3, 3]` to require one shape;
-- `ORDER_F` to `ORDER_ANY` when the native path is implemented for either
+- `ORDER_ANY` when the native path is implemented for either
   contiguous orientation;
 - `T | None` or a default `= ...` for a genuinely optional native argument;
 - `Allocatable`, `Pointer`, `Aliased`, or `PointerPolicy(...)` when those

@@ -1,4 +1,4 @@
-from x2py.contracts import Addr, Annotated, Arg, Bool, Complex128, Complex64, Flat, Float32, Float64, Int32, ORDER_F, Return, Returns, String, bind, external, native_call
+from x2py.contracts import Addr, Arg, Bool, Complex128, Complex64, Flat, Float32, Float64, Int32, Return, Returns, String, bind, external, native_call
 from . import LA_CONSTANTS
 from . import LA_XISNAN
 
@@ -2879,7 +2879,7 @@ def chesvxx(
 def cheswapr(
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex64[LDA, N], ORDER_F],
+    A: Complex64[LDA, N],
     LDA: Int32,
     I1: Int32,
     I2: Int32
@@ -3934,8 +3934,8 @@ def cla_lin_berr(
     N: Int32,
     NZ: Int32,
     NRHS: Int32,
-    RES: Annotated[Complex64[N, NRHS], ORDER_F],
-    AYB: Annotated[Float32[N, NRHS], ORDER_F],
+    RES: Complex64[N, NRHS],
+    AYB: Float32[N, NRHS],
     BERR: Float32[NRHS]
 ) -> None: ...
 
@@ -4505,9 +4505,9 @@ def clahr2(
     A: Complex64[LDA, Flat],
     LDA: Int32,
     TAU: Complex64[NB],
-    T: Annotated[Complex64[LDT, NB], ORDER_F],
+    T: Complex64[LDT, NB],
     LDT: Int32,
-    Y: Annotated[Complex64[LDY, NB], ORDER_F],
+    Y: Complex64[LDY, NB],
     LDY: Int32
 ) -> None: ...
 
@@ -7308,7 +7308,7 @@ def csysvxx(
 def csyswapr(
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex64[LDA, N], ORDER_F],
+    A: Complex64[LDA, N],
     LDA: Int32,
     I1: Int32,
     I2: Int32
@@ -11463,8 +11463,8 @@ def dla_lin_berr(
     N: Int32,
     NZ: Int32,
     NRHS: Int32,
-    RES: Annotated[Float64[N, NRHS], ORDER_F],
-    AYB: Annotated[Float64[N, NRHS], ORDER_F],
+    RES: Float64[N, NRHS],
+    AYB: Float64[N, NRHS],
     BERR: Float64[NRHS]
 ) -> None: ...
 
@@ -12172,9 +12172,9 @@ def dlahr2(
     A: Float64[LDA, Flat],
     LDA: Int32,
     TAU: Float64[NB],
-    T: Annotated[Float64[LDT, NB], ORDER_F],
+    T: Float64[LDT, NB],
     LDT: Int32,
-    Y: Annotated[Float64[LDY, NB], ORDER_F],
+    Y: Float64[LDY, NB],
     LDY: Int32
 ) -> None: ...
 
@@ -20918,8 +20918,8 @@ def sla_lin_berr(
     N: Int32,
     NZ: Int32,
     NRHS: Int32,
-    RES: Annotated[Float32[N, NRHS], ORDER_F],
-    AYB: Annotated[Float32[N, NRHS], ORDER_F],
+    RES: Float32[N, NRHS],
+    AYB: Float32[N, NRHS],
     BERR: Float32[NRHS]
 ) -> None: ...
 
@@ -21627,9 +21627,9 @@ def slahr2(
     A: Float32[LDA, Flat],
     LDA: Int32,
     TAU: Float32[NB],
-    T: Annotated[Float32[LDT, NB], ORDER_F],
+    T: Float32[LDT, NB],
     LDT: Int32,
-    Y: Annotated[Float32[LDY, NB], ORDER_F],
+    Y: Float32[LDY, NB],
     LDY: Int32
 ) -> None: ...
 
@@ -30724,7 +30724,7 @@ def zhesvxx(
 def zheswapr(
     UPLO: String[1],
     N: Int32,
-    A: Annotated[Complex128[LDA, N], ORDER_F],
+    A: Complex128[LDA, N],
     LDA: Int32,
     I1: Int32,
     I2: Int32
@@ -31772,8 +31772,8 @@ def zla_lin_berr(
     N: Int32,
     NZ: Int32,
     NRHS: Int32,
-    RES: Annotated[Complex128[N, NRHS], ORDER_F],
-    AYB: Annotated[Float64[N, NRHS], ORDER_F],
+    RES: Complex128[N, NRHS],
+    AYB: Float64[N, NRHS],
     BERR: Float64[NRHS]
 ) -> None: ...
 
@@ -32343,9 +32343,9 @@ def zlahr2(
     A: Complex128[LDA, Flat],
     LDA: Int32,
     TAU: Complex128[NB],
-    T: Annotated[Complex128[LDT, NB], ORDER_F],
+    T: Complex128[LDT, NB],
     LDT: Int32,
-    Y: Annotated[Complex128[LDY, NB], ORDER_F],
+    Y: Complex128[LDY, NB],
     LDY: Int32
 ) -> None: ...
 

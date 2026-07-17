@@ -280,6 +280,7 @@ def test_c_pyi_fixtures_round_trip_through_semantic_ir(fixture: Path):
         expected,
         module_name=fixture.stem,
         filename=str(fixture),
+        native_language="c",
     )
 
     assert module.name == fixture.stem

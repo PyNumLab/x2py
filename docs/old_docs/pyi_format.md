@@ -451,7 +451,7 @@ Generated canonical metadata:
 | `Allocatable` | Fortran allocatable array storage |
 | `Pointer` | Fortran pointer array storage |
 | `PointerAssociation("runtime")` | pointer association is a runtime state rather than a declaration-time constant |
-| `Name("native-name")` | source name cannot be represented directly as the Python target name |
+| `SourceName("native-name")` | source name cannot be represented directly as the Python target name |
 | `FortranCharacterLength("n")` | Fortran character storage length for `String` contracts |
 | `FortranAllocatable` | Fortran scalar character storage is allocatable |
 | `Aliased` | native storage may be exposed across the Python boundary as an alias |
@@ -464,7 +464,7 @@ Loaded compatibility metadata:
 
 | Metadata | Meaning |
 | --- | --- |
-| `ORDER_C` | explicit C-oriented storage; this is also the default for plain multidimensional arrays |
+| `ORDER_C` | explicit C-oriented storage in a Fortran contract |
 | `Contiguous` | source provenance says the array is contiguous |
 | `ArrayCategory("...")` | source array category provenance |
 | `SourceDims(...)` | source declaration dimensions |
@@ -976,12 +976,12 @@ is a user contract applied to a declaration that was otherwise available to the
 wrapper, so the declaration remains printed and loadable as wrapper input.
 
 Names that are not valid Python identifiers are represented with `var[...]` for
-data declarations, or with `Annotated[..., Name("native-name")]` for callable
+data declarations, or with `Annotated[..., SourceName("native-name")]` for callable
 arguments:
 
 ```python
 var["class"]: Int32
-def f(class_: Annotated[Int32, Name("class")]) -> None: ...
+def f(class_: Annotated[Int32, SourceName("class")]) -> None: ...
 ```
 
 ## Projection Metadata
@@ -1022,7 +1022,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | C primitive scalars | compiler-probed semantic dtype names when a target report is supplied |
 | Functions/subroutines | exact native argument order and direct return type |
 | Fortran scalar storage | `T`, `T[()]`, `Addr(Arg(...))`, `Returns[...]` |
-| Arrays | shaped storage with extents, strided axes, `ORDER_F` for multidimensional Fortran arrays |
+| Arrays | shaped storage with extents and strided axes; multidimensional order defaults from the selected native language |
 | Allocatable borrowed views | derived-type fields and target-backed module arrays, with `None` for unallocated storage |
 | Constants | `Final[T]` module variables |
 | C and Fortran enums | module-level `Final[...]` integer constants |

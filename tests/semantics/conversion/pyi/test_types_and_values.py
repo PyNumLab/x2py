@@ -342,7 +342,7 @@ def test_convert_pyi_to_ir_forwards_filename_to_syntax_errors():
 def test_convert_pyi_to_ir_accepts_aliased_contract_wrapper_names():
     module = pyi_text_to_semantic_module(
         """
-from x2py.contracts import Annotated as Metadata, Float64 as F64, Name as NativeName
+from x2py.contracts import Annotated as Metadata, Float64 as F64, SourceName as NativeName
 from x2py.contracts import Returns as Gives
 
 alias: Metadata[F64[1:n], NativeName("native_alias")]
@@ -477,7 +477,7 @@ def test_convert_pyi_to_ir_preserves_explicit_array_source_dimensions():
     module = parse_pyi_text(
         """
 def apply(
-    A: Annotated[Float64[LDA, N], ORDER_F],
+    A: Float64[LDA, N],
     work: Float64[::],
     scratch: Float64[:]
 ) -> None: ...
@@ -516,27 +516,49 @@ explicit_bounded: Float64[0:n:Strided]
     assert [array.contiguous for array in arrays] == [False, False, False, False]
 
 
-def test_convert_pyi_to_ir_accepts_c_and_fortran_order_constraints():
-    module = parse_pyi_text(
+def test_convert_pyi_to_ir_uses_the_selected_native_language_array_default():
+    fortran = parse_pyi_text(
         """
 def consume(
     a: Float64[:, :],
-    b: Annotated[Float64[:, :], ORDER_F],
     c: Annotated[Float64[:, :], ORDER_C],
     any_order: Annotated[Float64[:, :], ORDER_ANY]
 ) -> None: ...
 """,
-        module_name="edited",
+        module_name="fortran_contract",
+    )
+    c = parse_pyi_text(
+        """
+def consume(
+    a: Float64[:, :],
+    f: Annotated[Float64[:, :], ORDER_F],
+    any_order: Annotated[Float64[:, :], ORDER_ANY]
+) -> None: ...
+""",
+        module_name="c_contract",
+        native_language="c",
     )
 
-    arrays = [arg.semantic_type.storage.array for arg in module.functions[0].arguments]
-    assert arrays[0].order == "ORDER_C"
-    assert arrays[1].order == "ORDER_F"
-    assert arrays[2].order == "ORDER_C"
-    assert arrays[3].order == "ORDER_ANY"
-    assert arrays[0].category is None
-    assert arrays[1].source_shape == []
-    assert all(not arg.semantic_type.constraints for arg in module.functions[0].arguments)
+    fortran_arrays = [arg.semantic_type.storage.array for arg in fortran.functions[0].arguments]
+    c_arrays = [arg.semantic_type.storage.array for arg in c.functions[0].arguments]
+    assert [array.order for array in fortran_arrays] == ["ORDER_F", "ORDER_C", "ORDER_ANY"]
+    assert [array.order for array in c_arrays] == ["ORDER_C", "ORDER_F", "ORDER_ANY"]
+    assert fortran_arrays[0].category is None
+    assert c_arrays[1].source_shape == []
+    assert all(not arg.semantic_type.constraints for arg in fortran.functions[0].arguments)
+
+
+@pytest.mark.parametrize(
+    ("native_language", "order"),
+    [("fortran", "ORDER_F"), ("c", "ORDER_C")],
+)
+def test_convert_pyi_to_ir_rejects_redundant_default_array_order(native_language: str, order: str):
+    with pytest.raises(ValueError, match=rf"{order} is implicit for {native_language}"):
+        parse_pyi_text(
+            f"value: Annotated[Float64[:, :], {order}]\n",
+            module_name="redundant_order",
+            native_language=native_language,
+        )
 
 
 def test_convert_pyi_to_ir_records_explicit_c_to_fortran_copy_order():
@@ -602,7 +624,7 @@ c_tensor: Annotated[Float64[Flat, 3, 4], ORDER_C]
 def test_convert_pyi_to_ir_preserves_extended_array_metadata_and_nested_selector():
     module = parse_pyi_text(
         """
-value: Annotated[Float64[:, :], ORDER_F, Contiguous, ArrayCategory("deferred_shape")]
+value: Annotated[Float64[:, :], Contiguous, ArrayCategory("deferred_shape")]
 nested: Float64[:, :][rank, kind]
 name: Annotated[String[16], FortranAllocatable]
 
@@ -633,10 +655,10 @@ def fill(x: Float64[:]) -> None: ...
 def test_convert_pyi_to_ir_accepts_array_descriptor_handle_wrappers():
     module = pyi_text_to_semantic_module(
         """
-from x2py.contracts import Allocatable as A, Annotated, Float64 as F64, Name, Pointer as P, String as Str
+from x2py.contracts import Allocatable as A, Annotated, Float64 as F64, Pointer as P, SourceName, String as Str
 
 values: A[F64[:]]
-target: Annotated[P[F64[:, :]], Name("target_values")]
+target: Annotated[P[F64[:, :]], SourceName("target_values")]
 labels: P[Str[8][:]]
 plain_values: F64[:]
 
@@ -833,7 +855,7 @@ def helper(value: Int32) -> None: ...
             "ORDER_C conflicts with ORDER_F implied by Flat placement",
         ),
         (
-            "value: Annotated[Float64[:, :], ORDER_F, COPY_F]\n",
+            "value: Annotated[Float64[:, :], COPY_F]\n",
             "COPY_F requires a C-order Python array and targets Fortran order",
         ),
         (
@@ -841,7 +863,7 @@ def helper(value: Int32) -> None: ...
             "COPY_F requires a concrete multidimensional array rank",
         ),
         (
-            "value: Annotated[Float64[::, ::], COPY_F]\n",
+            "value: Annotated[Float64[::, ::], ORDER_C, COPY_F]\n",
             "COPY_F initially supports only dense concrete-shape arrays",
         ),
         (

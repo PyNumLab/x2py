@@ -741,7 +741,10 @@ class vector:
             "Annotated[...] for constraints or array metadata",
         ),
         ("foo.bar: Int32\n", "Unsupported annotation target: 'foo.bar'"),
-        ("value: Annotated[Int32, Name('x', 'y')]\n", "Name metadata expects one argument: \"Name('x', 'y')\""),
+        (
+            "value: Annotated[Int32, SourceName('x', 'y')]\n",
+            "SourceName metadata expects one argument: \"SourceName('x', 'y')\"",
+        ),
         ("def f(x: Int32): ...\n", "Unsupported function header: 'def f(x: Int32):'"),
         ("def f(\n    x: Int32,\n): ...\n", "Unterminated callable starting at line 2"),
         ("def f(*x: Int32) -> None: ...\n", "Unsupported function header: 'def f(*x: Int32) -> None:'"),

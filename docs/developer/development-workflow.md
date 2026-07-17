@@ -288,11 +288,17 @@ Important implementation rules:
 
 - `Addr(T)` and `Addr(T)` are storage contracts, not just pretty syntax.
 - Array subscriptions such as `Float64[n]` are semantic array contracts.
-- `Annotated[..., ORDER_F]` and `ORDER_ANY` are array storage metadata.
+- `Annotated[..., ORDER_F]` and `ORDER_ANY` are non-default array storage
+  metadata. Plain multidimensional Fortran `.pyi` arrays use `ORDER_F`; do not
+  print or retain that default marker in a generated contract.
   `Allocatable[T[...]]` and `Pointer[T[...]]` are descriptor-handle wrappers
   around the array storage contract. Output and writeback behavior is
   represented by writable storage plus `Returns["name", T]` when a Python
   result is projected.
+<!-- X2PY_C_DOCS_START
+- Plain multidimensional C `.pyi` arrays use `ORDER_C`; generated contracts
+  omit that language default and retain only an intentional alternate layout.
+X2PY_C_DOCS_END -->
 - `Final[T]` is the public constant spelling. Do not reintroduce
   `Constant` as user-facing `.pyi` syntax.
 - `@native_call` is projection metadata. Use it only when the Python-visible
@@ -300,6 +306,11 @@ Important implementation rules:
 - Generated stubs should preserve behavior-changing native contracts while
   staying compact; exact source intent that does not change execution can stay
   in semantic IR instead of the printed `.pyi`.
+- Use `SourceName("...")` only when a source identifier cannot be used as the
+  Python target. Do not infer source identifiers from normalized Python names.
+- Omit `Polymorphic` only for the passed-object dummy of a type-bound procedure,
+  where the binding itself restores that native fact. Ordinary `class(T)`
+  arguments must retain it.
 
 When changing `.pyi` syntax:
 
