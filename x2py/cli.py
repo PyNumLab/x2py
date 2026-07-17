@@ -1287,12 +1287,12 @@ def _cli_wrapper_c_flags(raw_flags: list[str] | None) -> tuple[str, ...]:
 
 def _wrapper_shared_library_alias_path(result, raw_out: str | None) -> Path:
     if raw_out in (None, ""):
-        return result.shared_library.with_name(f"{result.module_name}.so")
+        return Path.cwd() / f"{result.module_name}.so"
 
     path = Path(raw_out)
     target = path if path.suffix else path.with_suffix(".so")
     if not target.is_absolute() and target.parent == Path("."):
-        return result.shared_library.with_name(target.name)
+        return Path.cwd() / target.name
     return target
 
 
@@ -1397,12 +1397,17 @@ def _run_stage_reports_with_diagnostics(args: argparse.Namespace, preprocessing:
 def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig):
     from x2py.pipeline.build import build_fortran_extension, build_pyi_extension, build_pyi_extension_from_manifest
 
+    def record_total_build_time(elapsed: float) -> None:
+        args._verbose_total_build_time = elapsed
+
+    total_build_time_reporter = record_total_build_time if getattr(args, "verbose", False) else None
     if _wrap_uses_build_manifest(args):
         result = build_pyi_extension_from_manifest(
             args.build_manifest,
             output_name=_wrapper_output_name(args),
             makefile=getattr(args, "makefile", False),
             verbose=1 if getattr(args, "verbose", False) else 0,
+            _on_total_build_time=total_build_time_reporter,
         )
         return _copy_wrapper_shared_library_alias(args, result)
 
@@ -1424,6 +1429,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
             wrapper_compiler_debug=getattr(args, "wrapper_compiler_debug", False),
             wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
             wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
+            _on_total_build_time=total_build_time_reporter,
         )
         return _copy_wrapper_shared_library_alias(args, result)
 
@@ -1442,6 +1448,7 @@ def _run_wrap_build(args: argparse.Namespace, preprocessing: PreprocessingConfig
         wrapper_compiler_debug=getattr(args, "wrapper_compiler_debug", False),
         wrapper_fortran_flags=_cli_wrapper_fortran_flags(getattr(args, "wrapper_fortran_flags", None)),
         wrapper_c_flags=_cli_wrapper_c_flags(getattr(args, "wrapper_c_flags", None)),
+        _on_total_build_time=total_build_time_reporter,
     )
     return _copy_wrapper_shared_library_alias(args, result)
 
@@ -1676,6 +1683,7 @@ def _print_wrap_build_output(args: argparse.Namespace, result) -> None:
     payload = result.to_dict()
     if args.json:
         print(json.dumps(payload, indent=2))
+        _print_verbose_total_build_time(args)
         return
 
     if payload.get("compiled", True):
@@ -1691,6 +1699,14 @@ def _print_wrap_build_output(args: argparse.Namespace, result) -> None:
         print("Generated sources:")
         for path in generated_sources:
             print(f"  - {path}")
+    _print_verbose_total_build_time(args)
+
+
+def _print_verbose_total_build_time(args: argparse.Namespace) -> None:
+    """Print the delayed CLI total after its final artifact summary line."""
+    elapsed = getattr(args, "_verbose_total_build_time", None)
+    if elapsed is not None:
+        print(f">> Total build time: {elapsed:.3f}s")
 
 
 def print_pyi_output(code: str) -> None:
@@ -2017,7 +2033,8 @@ def main() -> int:
         metavar="DIR",
         help=(
             "Directory for --wrap generated sources, objects, and extension module; "
-            "by default build files go in __x2py__ and the extension is written beside the source"
+            "by default build files and the ABI-suffixed extension go in ./__x2py__, "
+            "with a stable .so alias in the current directory"
         ),
     )
     output_group.add_argument("--verbose", action="store_true", help="Print wrapper compiler commands and build steps")

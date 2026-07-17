@@ -97,6 +97,7 @@ def _import_from_build_dir(module_name: str, build_dir: Path):
 
 
 def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
+    build_dir.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
         "-m",
@@ -110,7 +111,7 @@ def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
         str(build_dir),
         "--json",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=build_dir)
     payload = json.loads(result.stdout)
     return _import_from_build_dir(payload["module_name"], build_dir), payload
 
@@ -213,6 +214,7 @@ def test_pyi_cli_requires_a_native_link_input(tmp_path: Path):
 def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
     native_source = tmp_path / SOURCE.name
     build_dir = tmp_path / "pyi_build"
+    build_dir.mkdir()
     shutil.copyfile(SOURCE, native_source)
 
     generated = subprocess.run(
@@ -235,6 +237,7 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
         capture_output=True,
         text=True,
         check=True,
+        cwd=build_dir,
     )
     payload = json.loads(generated.stdout)
     manifest_path = Path(payload["build_manifest"])
@@ -287,6 +290,7 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
         capture_output=True,
         text=True,
         check=True,
+        cwd=build_dir,
     )
     regenerated_payload = json.loads(regenerated.stdout)
     assert regenerated_payload["compiled"] is False
@@ -306,6 +310,7 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
         capture_output=True,
         text=True,
         check=True,
+        cwd=build_dir,
     )
     replayed_payload = json.loads(replayed.stdout)
     assert replayed_payload["compiled"] is True
@@ -424,6 +429,7 @@ def test_generated_pyi_fixture_builds_from_native_object_without_source_reparse(
 def test_pyi_cli_preserves_explicit_ordered_link_items(tmp_path: Path):
     native_object = _compile_native_object(SOURCE, tmp_path / "native")
     build_dir = tmp_path / "pyi_build"
+    build_dir.mkdir()
     result = subprocess.run(
         [
             sys.executable,
@@ -441,6 +447,7 @@ def test_pyi_cli_preserves_explicit_ordered_link_items(tmp_path: Path):
         capture_output=True,
         text=True,
         check=True,
+        cwd=build_dir,
     )
     payload = json.loads(result.stdout)
     native_plan = payload["native_build_plan"]

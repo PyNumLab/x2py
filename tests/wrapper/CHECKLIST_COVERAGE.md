@@ -28,7 +28,7 @@ recorded progression, not in the live ledger.
 | --- | --- |
 | Structured extension-level native build plan | `build_from_source/test_build_modes.py::test_source_build_result_records_structured_native_plan`, `build_from_pyi/test_pyi_wrapper_builds.py::test_generated_pyi_fixture_builds_from_native_object_without_source_reparse` |
 | Ordered link item model across native item kinds | `build_from_source/test_build_modes.py::test_native_link_plan_serializes_interleaved_item_kinds` |
-| Lower compiler dependency order preserves caller order | `build_from_source/test_build_modes.py::test_compile_object_dependency_modules_keep_caller_order` |
+| Explicit extension link order preserves declared objects and arguments | `build_from_source/test_compiler_verbose.py::test_link_keeps_the_declared_object_and_link_argument_order` |
 
 ## Stage 3 — Multi-Source Combined Contract Generation
 

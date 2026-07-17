@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
+import time
 
 from x2py.pipeline.wrapper_artifacts import (
     GeneratedSourceFile,
@@ -115,19 +117,47 @@ class WrapperCodeGenerator:
         self._c_printer = c_printer or CSourcePrinter()
         self._fortran_printer = fortran_printer or FortranSourcePrinter()
 
-    def generate(self, plan: ModulePlan) -> RenderedGeneratedWrapperArtifacts:
+    def generate(
+        self,
+        plan: ModulePlan,
+        *,
+        progress: Callable[[str, float | None], None] | None = None,
+    ) -> RenderedGeneratedWrapperArtifacts:
         """Consume exactly one editable plan and return rendered artifacts."""
         plan.freeze()
         self._validate_plan(plan)
         self._c_generator.require_supported(plan)
         self._fortran_generator.require_supported(plan)
-        c_module, c_header = self._c_generator.visit(plan)
+
+        if progress is not None:
+            progress("Generate binding source", None)
+            started = time.perf_counter()
+        c_module = self._c_generator.binding_module(plan)
+        c_source = self._c_printer.doprint(c_module)
+        if progress is not None:
+            progress("Generate binding source", time.perf_counter() - started)
+
+        if progress is not None:
+            progress("Generate bridge source", None)
+            started = time.perf_counter()
         fortran_module = self._fortran_generator.visit(plan)
+        fortran_source = self._fortran_printer.doprint(fortran_module)
+        if progress is not None:
+            progress("Generate bridge source", time.perf_counter() - started)
+
+        if progress is not None:
+            progress("Generate binding header", None)
+            started = time.perf_counter()
+        c_header = self._c_generator.binding_header(plan)
+        c_header_source = self._c_printer.doprint(c_header)
+        if progress is not None:
+            progress("Generate binding header", time.perf_counter() - started)
+
         return self._rendered_artifacts(
             plan.owner_path,
-            self._c_printer.doprint(c_module),
-            self._c_printer.doprint(c_header),
-            self._fortran_printer.doprint(fortran_module),
+            c_source,
+            c_header_source,
+            fortran_source,
             runtime_support_keys=(("python_runtime",) if self._c_generator.requires_runtime_support(plan) else ()),
             required_headers=plan.required_headers,
         )

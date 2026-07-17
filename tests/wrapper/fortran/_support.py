@@ -14,9 +14,10 @@ import pytest
 from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matches_fixture
 from tests.wrapper.fortran.fmath_cases import fmath_cases
 from x2py import build_pyi_extension
-from x2py.compiling.basic import CompileObj
+from x2py.compiling.objects import ObjectFile
 from x2py.parsers.fortran.parser import parse_fortran_project
 from x2py.pipeline.build import (
+    NativeBuildPlan,
     _apply_source_python_exports,
     _build_rendered_wrapper_extension,
     _fortran_source_for_pipeline,
@@ -83,7 +84,7 @@ def _build_and_import(source_template: Path, workdir: Path, expected_generated_s
         str(workdir),
         "--json",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=workdir)
     payload = json.loads(result.stdout)
 
     shared_library = Path(payload["shared_library"])
@@ -221,7 +222,12 @@ def _build_source_wrapper_plan_and_import(
     shutil.copyfile(source_template, source)
 
     native_object = _compile_native_object(source, workdir / "native")
-    native_compile_obj = CompileObj(source.name, native_object.parent)
+    native_compile_obj = ObjectFile(
+        source=source,
+        object_path=native_object,
+        language="fortran",
+        include_dirs=(native_object.parent,),
+    )
     parsed = parse_fortran_project(
         {
             str(source): _fortran_source_for_pipeline(
@@ -237,10 +243,16 @@ def _build_source_wrapper_plan_and_import(
 
     plan = WrapperPlanner().build(module)
     rendered = WrapperCodeGenerator().generate(plan)
+    native_build_plan = NativeBuildPlan(
+        produced_objects=(native_object,),
+        module_dirs=(native_object.parent,),
+        include_dirs=(native_object.parent,),
+    )
     result = _build_rendered_wrapper_extension(
         rendered,
         output_dir=workdir / "wrapper_plan_build",
         sources=(source,),
+        native_build_plan=native_build_plan,
         native_dependencies=(native_compile_obj,),
     )
     module = _import_from_build_dir(result.module_name, result.output_dir)
@@ -261,7 +273,7 @@ def _build_text_and_import(source_text: str, filename: str, workdir: Path, expec
         str(workdir),
         "--json",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=workdir)
     payload = json.loads(result.stdout)
 
     shared_library = Path(payload["shared_library"])
@@ -293,7 +305,7 @@ def _build_sources_and_import(source_texts: list[tuple[str, str]], workdir: Path
         str(workdir),
         "--json",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=workdir)
     payload = json.loads(result.stdout)
     module_name = payload["module_name"]
 

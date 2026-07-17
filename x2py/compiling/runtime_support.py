@@ -8,7 +8,7 @@ import numpy as np
 
 import x2py.stdlib as stdlib_folder
 
-from .basic import CompileObj
+from .objects import ObjectFile
 
 
 _RUNTIME_IMPORT = "x2py_runtime"
@@ -26,32 +26,28 @@ def _numpy_version_header() -> str:
     return header
 
 
-def install_runtime_support(imports, *, x2py_dirpath, compiler, wrapper_obj, language, verbose):
-    """Copy, register, and compile runtime support imported by one wrapper."""
+def install_runtime_support(imports, *, x2py_dirpath, verbose: bool | int = False) -> tuple[ObjectFile, ...]:
+    """Write runtime support and return its explicit compilation inputs."""
     if not any(name == _RUNTIME_IMPORT or name.startswith(f"{_RUNTIME_IMPORT}/") for name in imports):
-        return
+        return ()
 
     destination = Path(x2py_dirpath) / _RUNTIME_IMPORT
+    if verbose:
+        print(f">> Write runtime support: {destination}")
     with FileLock(str(destination.with_suffix(".lock"))):
         shutil.rmtree(destination, ignore_errors=True)
-        if verbose:
-            print(f">> Copying {_RUNTIME_SOURCE} to {destination}")
         shutil.copytree(_RUNTIME_SOURCE, destination)
 
     (destination / "numpy_version.h").write_text(
         _numpy_version_header(),
         encoding="utf-8",
     )
-    runtime_obj = CompileObj(
-        "python_runtime.c",
-        destination,
-        include=(destination,),
-        extra_compilation_tools=("python",),
-    )
-    wrapper_obj.add_dependencies(runtime_obj)
-    compiler.compile_module(
-        compile_obj=runtime_obj,
-        output_folder=destination,
-        language=language,
-        verbose=verbose,
+    return (
+        ObjectFile(
+            source=destination / "python_runtime.c",
+            object_path=destination / "python_runtime.o",
+            language="c",
+            include_dirs=(destination,),
+            tools=frozenset({"python"}),
+        ),
     )

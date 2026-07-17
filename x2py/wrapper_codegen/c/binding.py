@@ -609,6 +609,10 @@ class CBindingGenerator(ClassVisitor):
 
     def _visit_ModulePlan(self, plan: ModulePlan) -> tuple[CModule, CHeader]:
         """Return a complete C module and header from one shared plan."""
+        return self.binding_module(plan), self.binding_header(plan)
+
+    def binding_module(self, plan: ModulePlan) -> CModule:
+        """Lower the binding implementation from one completed wrapper plan."""
         self._class_python_names = {
             surface.type_identity: surface.python_names[0]
             for namespace in plan.namespaces
@@ -618,7 +622,7 @@ class CBindingGenerator(ClassVisitor):
         functions = tuple(function for namespace in plan.namespaces for function in self.visit(namespace))
         needs_runtime = self.requires_runtime_support(plan)
         needs_free = self._module_needs_allocator(plan)
-        c_module = CModule(
+        return CModule(
             name=f"{plan.binding.owner_path}_wrapper",
             defines=self._module_defines(needs_runtime),
             includes=self._module_includes(plan, needs_runtime, needs_free),
@@ -637,12 +641,14 @@ class CBindingGenerator(ClassVisitor):
                 self._module_init(plan, needs_runtime),
             ),
         )
-        c_header = CHeader(
+
+    def binding_header(self, plan: ModulePlan) -> CHeader:
+        """Lower the binding header from one completed wrapper plan."""
+        return CHeader(
             guard=f"{plan.binding.owner_path.upper()}_WRAPPER_H",
             includes=(CInclude("Python.h"),),
             prototypes=tuple(self._binding_prototype(function) for function in self._functions(plan)),
         )
-        return c_module, c_header
 
     def _visit_NamespacePlan(self, plan: NamespacePlan) -> tuple[CFunction, ...]:
         """Return binding functions directly owned by one Python namespace."""

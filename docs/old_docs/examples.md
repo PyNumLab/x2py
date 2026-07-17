@@ -203,8 +203,10 @@ Exact NumPy scalars are part of the native contract. Passing ordinary Python
 numbers where a specific native dtype is required raises `TypeError` rather
 than silently changing the ABI conversion.
 
-With no `--out-dir`, x2py writes intermediates under `__x2py__` beside the
-first source and writes the extension beside that source. Use `--verbose` to
+With no `--out-dir`, x2py writes intermediates and the ABI-suffixed extension
+under `__x2py__` in the current working directory, while a direct CLI build
+writes its stable `<module>.so` alias there unless `--out` gives it an explicit path.
+Use `--verbose` to
 print the direct compiler and linker commands. Use `--strict-wrapper-names` to
 reject public names that need Python keyword escaping or collision suffixes.
 

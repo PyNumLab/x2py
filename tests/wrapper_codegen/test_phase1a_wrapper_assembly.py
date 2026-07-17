@@ -71,6 +71,24 @@ def swap_args(x: Float64, y: Float64) -> Float64: ...
     assert "result = SWAP_ARGS(y, x)" in fortran_source
 
 
+def test_public_generator_reports_each_rendering_operation_in_execution_order():
+    plan = _plan("def value(x: Float64) -> Float64: ...", module_name="render_progress")
+    progress = []
+
+    WrapperCodeGenerator().generate(plan, progress=lambda label, elapsed: progress.append((label, elapsed)))
+
+    assert [label for label, _ in progress] == [
+        "Generate binding source",
+        "Generate binding source",
+        "Generate bridge source",
+        "Generate bridge source",
+        "Generate binding header",
+        "Generate binding header",
+    ]
+    assert [elapsed is None for _, elapsed in progress] == [True, False, True, False, True, False]
+    assert all(elapsed >= 0.0 for _, elapsed in progress if elapsed is not None)
+
+
 @pytest.mark.parametrize(
     ("source", "c_fragment", "fortran_fragment"),
     [

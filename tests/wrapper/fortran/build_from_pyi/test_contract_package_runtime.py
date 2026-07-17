@@ -104,6 +104,8 @@ def _build_contract(
     cwd: Path | None = None,
     output_name: str | None = None,
 ):
+    invocation_dir = cwd or build_dir
+    invocation_dir.mkdir(parents=True, exist_ok=True)
     command = [
         sys.executable,
         "-m",
@@ -119,7 +121,7 @@ def _build_contract(
     ]
     if output_name is not None:
         command.extend(("--out", output_name))
-    payload = _run_json(command, cwd=cwd)
+    payload = _run_json(command, cwd=invocation_dir)
     module = _import_extension(str(payload["module_name"]), build_dir)
     return module, payload
 

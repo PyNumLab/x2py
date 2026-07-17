@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from tests._shared.ownership_policy_support import parse_pyi_text
-from x2py.compiling.basic import CompileObj
+from x2py.compiling.objects import ObjectFile
 from x2py.pipeline.build import (
     NativeBuildPlan,
     NativeLinkItem,
@@ -34,20 +34,45 @@ class RecordingCompiler:
         self.compiled = []
         self.linked = None
 
-    def compile_module(self, compile_obj, output_folder, language, verbose):
-        self.compiled.append((compile_obj, Path(output_folder), language, verbose))
-        compile_obj.module_target.parent.mkdir(parents=True, exist_ok=True)
-        compile_obj.module_target.write_text(f"{language} object\n", encoding="utf-8")
-        if language == "fortran":
-            module_file = Path(output_folder) / f"{compile_obj.python_module}.mod"
+    def compile_object(self, object_file, *, verbose=False):
+        self.compiled.append((object_file, verbose))
+        object_file.object_path.parent.mkdir(parents=True, exist_ok=True)
+        object_file.object_path.write_text(f"{object_file.language} object\n", encoding="utf-8")
+        if object_file.language == "fortran":
+            module_file = object_file.object_path.parent / f"{object_file.source.stem}.mod"
             module_file.write_text("fortran module\n", encoding="utf-8")
 
-    def compile_shared_library(self, compile_obj, output_folder, language, verbose, sharedlib_modname=None):
-        name = sharedlib_modname or compile_obj.python_module
-        shared_library = Path(output_folder) / f"{name}.so"
+    def link_extension(
+        self,
+        *,
+        module_name,
+        output_dir,
+        language,
+        objects,
+        link_args=(),
+        library_dirs=(),
+        libraries=(),
+        flags=(),
+        tools=("python",),
+        verbose=False,
+    ):
+        shared_library = Path(output_dir) / f"{module_name}.so"
+        if verbose:
+            print(f">> Create shared library: {shared_library}")
         shared_library.write_text("shared library\n", encoding="utf-8")
-        self.linked = (compile_obj, Path(output_folder), language, verbose, sharedlib_modname)
-        return str(shared_library)
+        self.linked = (
+            module_name,
+            Path(output_dir),
+            language,
+            tuple(objects),
+            tuple(link_args),
+            tuple(library_dirs),
+            tuple(libraries),
+            tuple(flags),
+            tuple(tools),
+            verbose,
+        )
+        return shared_library
 
 
 def _module_plan(source: str, *, module_name: str) -> ModulePlan:
@@ -60,7 +85,7 @@ def _rendered_artifacts(source: str, *, module_name: str) -> RenderedGeneratedWr
     return WrapperCodeGenerator().generate(_module_plan(source, module_name=module_name))
 
 
-def test_build_rendered_wrapper_extension_writes_compiles_runtime_and_links(tmp_path: Path):
+def test_build_rendered_wrapper_extension_writes_compiles_runtime_and_links(tmp_path: Path, capsys):
     rendered = _rendered_artifacts(
         """
 @bind("SCALE")
@@ -73,11 +98,16 @@ def scale(x: Float64) -> Float64: ...
     native_dir.mkdir()
     native_source = native_dir / "scale_native.f90"
     native_source.write_text("native source placeholder\n", encoding="utf-8")
-    native_obj = CompileObj(native_source.name, native_dir)
-    native_obj.module_target.write_text("native object\n", encoding="utf-8")
+    native_obj = ObjectFile(
+        source=native_source,
+        object_path=native_dir / "scale_native.o",
+        language="fortran",
+        include_dirs=(native_dir,),
+    )
+    native_obj.object_path.write_text("native object\n", encoding="utf-8")
     native_plan = NativeBuildPlan(
-        produced_objects=(native_obj.module_target,),
-        link_items=(NativeLinkItem("object", native_obj.module_target),),
+        produced_objects=(native_obj.object_path,),
+        link_items=(NativeLinkItem("object", native_obj.object_path),),
         module_dirs=(native_dir,),
         library_dirs=(native_dir,),
     )
@@ -90,10 +120,11 @@ def scale(x: Float64) -> Float64: ...
         sources=(Path("scale_contract.pyi"),),
         native_build_plan=native_plan,
         native_dependencies=(native_obj,),
-        native_link_args=(str(native_obj.module_target),),
+        native_link_args=("-lm",),
         wrapper_fortran_flags=("-O2",),
         wrapper_c_flags=("-O3",),
         compiler=compiler,
+        verbose=True,
     )
 
     build_dir = tmp_path / "build"
@@ -108,18 +139,26 @@ def scale(x: Float64) -> Float64: ...
     assert header.read_text(encoding="utf-8") == rendered.sources[2].text
     assert runtime_source.exists()
     assert runtime_object.exists()
-    assert [language for _obj, _output, language, _verbose in compiler.compiled] == ["fortran", "c", "c"]
+    assert [object_file.language for object_file, _verbose in compiler.compiled] == ["fortran", "c", "c"]
 
     bridge_obj = compiler.compiled[0][0]
     runtime_obj = compiler.compiled[1][0]
     binding_obj = compiler.compiled[2][0]
-    assert tuple(bridge_obj.dependencies) == (native_obj,)
-    assert native_dir in bridge_obj.include
-    assert tuple(binding_obj.dependencies) == (native_obj, bridge_obj, runtime_obj)
-    assert binding_obj.link_args == (str(native_obj.module_target),)
-    assert native_dir in binding_obj.libdir
-    assert binding_obj.extra_compilation_tools == {"python"}
-    assert compiler.linked == (binding_obj, tmp_path / "extension", "fortran", False, "plan_scalar_build")
+    assert native_dir in bridge_obj.include_dirs
+    assert runtime_obj.tools == frozenset({"python"})
+    assert binding_obj.tools == frozenset({"python"})
+    assert compiler.linked == (
+        "plan_scalar_build",
+        tmp_path / "extension",
+        "fortran",
+        (native_obj, bridge_obj, runtime_obj, binding_obj),
+        ("-lm",),
+        (native_dir,),
+        (),
+        ("-O3",),
+        ("python",),
+        True,
+    )
 
     assert result.sources == (Path("scale_contract.pyi"),)
     assert result.module_name == "plan_scalar_build"
@@ -130,10 +169,25 @@ def scale(x: Float64) -> Float64: ...
     assert result.build_makefile is None
     assert result.native_build_plan == native_plan
     assert result.generated_sources == (bridge_source, binding_source, header)
-    assert bridge_obj.module_target in result.generated_files
-    assert binding_obj.module_target in result.generated_files
+    assert bridge_obj.object_path in result.generated_files
+    assert binding_obj.object_path in result.generated_files
     assert runtime_source in result.generated_files
     assert runtime_object in result.generated_files
+    step_lines = [
+        line.removeprefix(">> ")
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith(">> ") and not line.startswith(">> Timing")
+    ]
+    assert step_lines == [
+        f"Write bridge source: {bridge_source}",
+        f"Write binding source: {binding_source}",
+        f"Write binding header: {header}",
+        f"Write runtime support: {build_dir / 'x2py_runtime'}",
+        f"Compile bridge source: {bridge_source} -> {bridge_obj.object_path}",
+        f"Compile runtime source: {runtime_source} -> {runtime_obj.object_path}",
+        f"Compile binding source: {binding_source} -> {binding_obj.object_path}",
+        f"Create shared library: {result.shared_library}",
+    ]
 
 
 def test_build_rendered_wrapper_extension_rejects_unknown_runtime_support_key(tmp_path: Path):

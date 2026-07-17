@@ -173,8 +173,10 @@ Important boundaries:
   `--wrap-readiness`.
 - `--makefile` selects the editable wrapper-build mode.
 - For compiled wrapper builds, `--out NAME` selects the Python module name,
-  `PyInit_<name>` symbol, JSON `module_name`, and final `NAME.so` path. Use
-  `--out-dir DIR` to choose the build directory.
+  `PyInit_<name>` symbol, JSON `module_name`, and stable `NAME.so` alias in the
+  current directory. Use `--out-dir DIR` to choose where generated artifacts
+  and the ABI-suffixed extension are built. Give `--out` an explicit path to
+  place the stable alias elsewhere.
 - Wrapper `--out` requires a value and accepts `NAME` or `NAME.so`.
 - `--makefile` cannot be combined with `--out` because no shared library is
   compiled in that mode.
@@ -204,7 +206,7 @@ X2PY_C_DOCS_END -->
 | `--json` | Prints JSON to stdout for inspection stages and wrapper build results. |
 | `--out [PATH]` | Writes inspection-stage output, selects the generated Fortran `.pyi` package directory, or names the wrapper Python module and final `.so`. |
 | `--out-dir DIR` | Selects the wrapper build output directory. |
-| `--verbose` | Prints wrapper compiler commands, build steps, and elapsed time for each compiler/linker command and wrapper stage. |
+| `--verbose` | Announces and completes binding, bridge, and header source-text generation in order, then each written artifact, source/object compilation pair, and final extension path before printing the exact compiler or linker command; it times each non-writing operation and reports total build time last. |
 | `--wrapper-compiler-debug` | Uses the compiler debug profile for direct wrapper builds instead of the default release profile. |
 | `--wrapper-fortran-flags FLAG...` | Appends flags to generated Fortran bridge compilation commands. |
 | `--no-color` | Disables ANSI color in parse diagnostics. |

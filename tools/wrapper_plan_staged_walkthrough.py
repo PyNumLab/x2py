@@ -139,7 +139,7 @@ build_dir = workdir / "build"
 build_dir.mkdir()
 compiler = pipeline._new_gnu_compiler()
 native_object = pipeline._source_compile_object(source, build_dir, object_stem="native")
-compiler.compile_module(native_object, output_folder=str(build_dir), language="fortran", verbose=False)
+compiler.compile_object(native_object, verbose=False)
 native_build_plan = pipeline._source_native_build_plan((source,), (native_object,), module_dir=build_dir)
 build = pipeline._build_rendered_wrapper_extension(
     artifacts,

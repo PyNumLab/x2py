@@ -190,14 +190,18 @@ When a folder contains only standalone BLAS/LAPACK-style procedures,
 separate artifacts.
 
 <!-- X2PY_C_DOCS_START
-Without `&#45;&#45;out-dir`, x2py uses a private `__x2py__` build directory beside the
-source and places the importable extension beside the source file. Generated
+Without `&#45;&#45;out-dir`, x2py writes generated artifacts, including the ABI-suffixed
+extension, in a private `__x2py__` build directory in the current working
+directory. A direct CLI build writes its stable `<module>.so` import alias in
+the current working directory unless `&#45;&#45;out` gives it an explicit path. Generated
 Fortran and C wrapper sources remain build artifacts; users do not edit them to
 change the Python API.
 X2PY_C_DOCS_END -->
 
-Without `--out-dir`, x2py uses a private `__x2py__` build directory beside the
-source and places the importable extension beside the source file. Generated
+Without `--out-dir`, x2py writes generated artifacts, including the ABI-suffixed
+extension, in a private `__x2py__` build directory in the current working
+directory. A direct CLI build writes its stable `<module>.so` import alias in
+the current working directory unless `--out` gives it an explicit path. Generated
 wrapper sources remain build artifacts; users do not edit them to change the
 Python API.
 
@@ -281,10 +285,19 @@ Runtime tests: [`test_pyi_wrapper_builds.py`](../../../tests/wrapper/fortran/bui
 [`test_policy_dispatch_contracts.py`](../../../tests/wrapper/fortran/edit_pyi_contracts/test_policy_dispatch_contracts.py).
 
 Use `--verbose` to execute a build while printing every exact, shell-escaped
-compiler and linker command. Verbose builds also print elapsed time for each
-compiler/linker command and for the wrapper creation, printing, and compilation
-stages. Use `--makefile` to generate an editable `Makefile.x2py` without
-compiling. These modes are mutually exclusive.
+compiler and linker command. It first announces binding, bridge, and header
+source-text generation on separate lines without paths, because those files do
+not exist yet. Each line is printed immediately before its separate lowering
+and printing operation, followed by `Timing: ...` for that operation. It then announces each written artifact with its output path
+(`Write bridge source: ...` and `Write runtime support: ...`), each native, bridge, runtime, and binding compilation with its
+source and object path (`Compile bridge source: source -> object`), and the final
+extension path before linking (`Create shared library: ...`). The exact
+shell-escaped command follows each compilation or link announcement, so it can
+be copied to reproduce that step. Verbose builds print elapsed time for policy
+completion, each source-text generation, every compilation,
+and linking, followed by total build time; writing generated files has no separate
+timing. Use `--makefile` to generate an editable
+`Makefile.x2py` without compiling. These modes are mutually exclusive.
 
 <!-- X2PY_C_DOCS_START
 Direct wrapper builds use the compiler release profile by default, so generated

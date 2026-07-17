@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
 import json
 import os
@@ -10,9 +10,7 @@ from pathlib import Path
 import shlex
 import time
 
-from filelock import FileLock
-
-from x2py.compiling.basic import CompileObj
+from x2py.compiling.objects import ObjectFile
 from x2py.compiling.compilers import Compiler, get_condaless_search_path
 from x2py.compiling.runtime_support import install_runtime_support
 from x2py.parsers.fortran.parser import parse_fortran_project
@@ -73,10 +71,35 @@ _RENDERED_WRAPPER_RUNTIME_IMPORTS = {
 }
 
 
-def _print_verbose_timing(verbose: bool | int, label: str, elapsed: float) -> None:
-    """Print one elapsed build-stage timing when verbose output is enabled."""
+def _print_verbose_timing(verbose: bool | int, elapsed: float) -> None:
+    """Print the elapsed time for the immediately preceding build operation."""
     if verbose:
-        print(f">> Timing :: {label}: {elapsed:.3f}s")
+        print(f">> Timing: {elapsed:.3f}s")
+
+
+def _print_verbose_total_build_time(verbose: bool | int, elapsed: float) -> None:
+    """Print the completed end-to-end direct-build duration."""
+    if verbose:
+        print(f">> Total build time: {elapsed:.3f}s")
+
+
+def _report_total_build_time(
+    verbose: bool | int,
+    elapsed: float,
+    *,
+    on_total_build_time: Callable[[float], None] | None,
+) -> None:
+    """Print or defer the final duration for one successful direct build."""
+    if on_total_build_time is not None:
+        on_total_build_time(elapsed)
+        return
+    _print_verbose_total_build_time(verbose, elapsed)
+
+
+def _print_verbose_step(verbose: bool | int, label: str) -> None:
+    """Print one readable build step before it can report a native error."""
+    if verbose:
+        print(f">> {label}")
 
 
 @dataclass(frozen=True)
@@ -246,19 +269,23 @@ def _compiler_flags(flags: Iterable[str] | None) -> tuple[str, ...]:
 
 
 def _new_gnu_compiler(*, execute_commands: bool = True, debug: bool = False) -> Compiler:
-    Compiler.acceptable_bin_paths = get_condaless_search_path("verbose")
-    return Compiler("GNU", debug=debug, execute_commands=execute_commands)
+    return Compiler(
+        "GNU",
+        debug=debug,
+        execute_commands=execute_commands,
+        search_path=get_condaless_search_path("verbose"),
+    )
 
 
 def _expected_generated_files(
     *,
-    source_objects: tuple[CompileObj, ...],
+    source_objects: tuple[ObjectFile, ...],
     output_dir: Path,
     module_name: str,
     shared_library: Path,
 ) -> tuple[Path, ...]:
     candidates = [
-        *(source_obj.module_target for source_obj in source_objects),
+        *(source_obj.object_path for source_obj in source_objects),
         output_dir / f"bind_c_{module_name}.mod",
         output_dir / f"bind_c_{module_name}_wrapper.mod",
         output_dir / f"bind_c_{module_name}_wrapper.f90",
@@ -284,11 +311,14 @@ def _rendered_artifact_output_path(output_dir: Path, path: Path) -> Path:
 def _write_rendered_wrapper_sources(
     rendered: RenderedGeneratedWrapperArtifacts,
     output_dir: Path,
+    *,
+    verbose: bool | int = False,
 ) -> tuple[Path, ...]:
     """Write rendered wrapper-plan sources into one build directory."""
     written = []
     for source in rendered.sources:
         path = _rendered_artifact_output_path(output_dir, source.path)
+        _print_verbose_step(verbose, f"{_rendered_source_write_label(rendered, source.path)}: {path}")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(source.text, encoding="utf-8")
         written.append(path)
@@ -300,6 +330,17 @@ def _rendered_source_payloads(
 ) -> dict[Path, GeneratedSourceFile]:
     """Return rendered payloads keyed by generated artifact path."""
     return {Path(source.path): source for source in rendered.sources}
+
+
+def _rendered_source_write_label(rendered: RenderedGeneratedWrapperArtifacts, source_path: Path) -> str:
+    """Return the verbose write label for one generated artifact."""
+    if source_path in rendered.artifacts.bridge_sources:
+        return "Write bridge source"
+    if source_path in rendered.artifacts.binding_sources:
+        return "Write binding source"
+    if source_path in rendered.artifacts.header_files:
+        return "Write binding header"
+    return "Write wrapper artifact"
 
 
 def _rendered_wrapper_compile_source_paths(
@@ -333,69 +374,89 @@ def _rendered_wrapper_runtime_imports(runtime_support_keys: Iterable[str]) -> tu
     return tuple(imports)
 
 
-def _rendered_wrapper_compile_obj(
+def _rendered_wrapper_object_file(
     source_path: Path,
     output_dir: Path,
     *,
-    dependencies: tuple[CompileObj, ...],
-    link_args: tuple[str, ...],
     flags: tuple[str, ...],
     include_dirs: tuple[Path, ...],
-    library_dirs: tuple[Path, ...],
     language: str,
-) -> CompileObj:
-    """Return one compile object for a rendered wrapper-plan source."""
-    return CompileObj(
-        source_path.name,
-        _rendered_artifact_output_path(output_dir, source_path).parent,
+) -> ObjectFile:
+    """Return one explicit object-file input for a rendered wrapper source."""
+    source = _rendered_artifact_output_path(output_dir, source_path)
+    return ObjectFile(
+        source=source,
+        object_path=source.with_suffix(".o"),
+        language=language,
         flags=flags,
-        include=include_dirs,
-        libdir=library_dirs,
-        link_args=link_args,
-        dependencies=dependencies,
-        extra_compilation_tools=("python",) if language == "c" else (),
+        include_dirs=include_dirs,
+        tools=frozenset({"python"}) if language == "c" else frozenset(),
     )
 
 
-def _rendered_wrapper_compile_objects(
+def _rendered_wrapper_object_stages(
     rendered: RenderedGeneratedWrapperArtifacts,
     output_dir: Path,
     *,
-    native_dependencies: tuple[CompileObj, ...],
-    native_link_args: tuple[str, ...],
     wrapper_fortran_flags: tuple[str, ...],
     wrapper_c_flags: tuple[str, ...],
     native_module_dirs: tuple[Path, ...],
-    native_library_dirs: tuple[Path, ...],
-) -> tuple[tuple[CompileObj, str, Path], ...]:
-    """Return compile objects for rendered wrapper-plan sources."""
-    compiled: list[CompileObj] = []
-    result = []
+) -> tuple[tuple[ObjectFile, ...], tuple[ObjectFile, ...]]:
+    """Return bridge and binding objects in their required compile order."""
     source_paths = _rendered_wrapper_compile_source_paths(rendered)
-    final_source = source_paths[-1]
-    for source_path in source_paths:
-        language = _rendered_wrapper_source_language(source_path)
-        flags = wrapper_c_flags if language == "c" else wrapper_fortran_flags
-        obj = _rendered_wrapper_compile_obj(
+    bridge_source_paths = source_paths[: len(rendered.artifacts.bridge_sources)]
+    binding_source_paths = source_paths[len(bridge_source_paths) :]
+    bridge_objects = tuple(
+        _rendered_wrapper_object_file(
             source_path,
             output_dir,
-            dependencies=(*native_dependencies, *compiled),
-            link_args=native_link_args if source_path == final_source else (),
-            flags=flags,
-            include_dirs=native_module_dirs if language == "fortran" else (),
-            library_dirs=native_library_dirs if source_path == final_source else (),
-            language=language,
+            flags=wrapper_fortran_flags,
+            include_dirs=native_module_dirs,
+            language=_rendered_wrapper_source_language(source_path),
         )
-        compiled.append(obj)
-        result.append((obj, language, source_path))
-    return tuple(result)
+        for source_path in bridge_source_paths
+    )
+    binding_objects = tuple(
+        _rendered_wrapper_object_file(
+            source_path,
+            output_dir,
+            flags=wrapper_c_flags,
+            include_dirs=(),
+            language=_rendered_wrapper_source_language(source_path),
+        )
+        for source_path in binding_source_paths
+    )
+    return bridge_objects, binding_objects
 
 
-def _rendered_wrapper_link_language(compile_items: tuple[tuple[CompileObj, str, Path], ...]) -> str:
+def _rendered_wrapper_link_language(
+    bridge_objects: tuple[ObjectFile, ...],
+    binding_objects: tuple[ObjectFile, ...],
+) -> str:
     """Return the linker language for rendered wrapper-plan sources."""
-    if any(language == "fortran" for _obj, language, _path in compile_items):
+    if bridge_objects:
         return "fortran"
-    return compile_items[-1][1]
+    if not binding_objects:
+        raise ValueError("Rendered wrapper artifacts must include at least one binding source")
+    return binding_objects[-1].language
+
+
+def _compile_object_stage(
+    compiler: Compiler,
+    object_files: Iterable[ObjectFile],
+    *,
+    label: str,
+    verbose: bool | int,
+) -> None:
+    """Compile one named object group and expose that boundary in verbose logs."""
+    objects = tuple(object_files)
+    if not objects:
+        return
+    for object_file in objects:
+        _print_verbose_step(verbose, f"{label}: {object_file.source} -> {object_file.object_path}")
+        started = time.perf_counter()
+        compiler.compile_object(object_file, verbose=verbose)
+        _print_verbose_timing(verbose, time.perf_counter() - started)
 
 
 def _build_rendered_wrapper_extension(
@@ -405,7 +466,7 @@ def _build_rendered_wrapper_extension(
     shared_library_output_dir: str | Path | None = None,
     sources: Iterable[str | Path] = (),
     native_build_plan: NativeBuildPlan | None = None,
-    native_dependencies: Iterable[CompileObj] = (),
+    native_dependencies: Iterable[ObjectFile] = (),
     native_link_args: Iterable[str] = (),
     wrapper_fortran_flags: Iterable[str] | None = None,
     wrapper_c_flags: Iterable[str] | None = None,
@@ -418,17 +479,13 @@ def _build_rendered_wrapper_extension(
     output_path.mkdir(parents=True, exist_ok=True)
     shared_output_path = Path(shared_library_output_dir) if shared_library_output_dir is not None else output_path
     shared_output_path.mkdir(parents=True, exist_ok=True)
-    printing_started = time.perf_counter()
-    _write_rendered_wrapper_sources(rendered, output_path)
-    _print_verbose_timing(verbose, "Wrapper printing", time.perf_counter() - printing_started)
+    _write_rendered_wrapper_sources(rendered, output_path, verbose=verbose)
 
     compiler = compiler or _new_gnu_compiler()
     resolved_native_build_plan = native_build_plan or NativeBuildPlan()
-    compile_items = _rendered_wrapper_compile_objects(
+    bridge_objects, binding_objects = _rendered_wrapper_object_stages(
         rendered,
         output_path,
-        native_dependencies=tuple(native_dependencies),
-        native_link_args=tuple(native_link_args),
         wrapper_fortran_flags=_compiler_flags(wrapper_fortran_flags),
         wrapper_c_flags=_compiler_flags(wrapper_c_flags),
         native_module_dirs=_unique_paths(
@@ -437,38 +494,44 @@ def _build_rendered_wrapper_extension(
                 *resolved_native_build_plan.include_dirs,
             )
         ),
-        native_library_dirs=resolved_native_build_plan.library_dirs,
     )
-    compilation_started = time.perf_counter()
     runtime_imports = _rendered_wrapper_runtime_imports(rendered.artifacts.runtime_support_keys)
-    for compile_obj, language, source_path in compile_items:
-        imports = runtime_imports if source_path in rendered.artifacts.binding_sources else ()
-        install_runtime_support(
-            imports,
-            x2py_dirpath=str(output_path),
-            compiler=compiler,
-            wrapper_obj=compile_obj,
-            language=language,
-            verbose=verbose,
-        )
-        compiler.compile_module(
-            compile_obj=compile_obj,
-            output_folder=str(output_path),
-            language=language,
-            verbose=verbose,
-        )
-
-    final_obj = compile_items[-1][0]
-    shared_library = Path(
-        compiler.compile_shared_library(
-            final_obj,
-            output_folder=str(shared_output_path),
-            sharedlib_modname=rendered.artifacts.module_name,
-            language=_rendered_wrapper_link_language(compile_items),
-            verbose=verbose,
-        )
+    runtime_objects = install_runtime_support(
+        runtime_imports,
+        x2py_dirpath=str(output_path),
+        verbose=verbose,
     )
-    _print_verbose_timing(verbose, "Wrapper compilation", time.perf_counter() - compilation_started)
+    _compile_object_stage(
+        compiler,
+        bridge_objects,
+        label="Compile bridge source",
+        verbose=verbose,
+    )
+    _compile_object_stage(
+        compiler,
+        runtime_objects,
+        label="Compile runtime source",
+        verbose=verbose,
+    )
+    _compile_object_stage(
+        compiler,
+        binding_objects,
+        label="Compile binding source",
+        verbose=verbose,
+    )
+
+    linking_started = time.perf_counter()
+    shared_library = compiler.link_extension(
+        module_name=rendered.artifacts.module_name,
+        output_dir=shared_output_path,
+        language=_rendered_wrapper_link_language(bridge_objects, binding_objects),
+        objects=(*tuple(native_dependencies), *bridge_objects, *runtime_objects, *binding_objects),
+        link_args=tuple(native_link_args),
+        library_dirs=resolved_native_build_plan.library_dirs,
+        flags=_compiler_flags(wrapper_c_flags),
+        verbose=verbose,
+    )
+    _print_verbose_timing(verbose, time.perf_counter() - linking_started)
     generated_sources = tuple(
         path
         for path in rendered.artifacts.generated_files
@@ -497,7 +560,7 @@ def _attach_build_makefile(
     result: WrapperBuildResult,
     *,
     compiler: Compiler,
-    source_objects: tuple[CompileObj, ...],
+    source_objects: tuple[ObjectFile, ...],
     extra_dependencies: tuple[Path, ...] = (),
     build_manifest: Path | None = None,
 ) -> WrapperBuildResult:
@@ -519,10 +582,14 @@ def _attach_build_makefile(
     )
 
 
-def _render_wrapper_plan(module: SemanticModule) -> RenderedGeneratedWrapperArtifacts:
+def _render_wrapper_plan(
+    module: SemanticModule,
+    *,
+    progress: Callable[[str, float | None], None] | None = None,
+) -> RenderedGeneratedWrapperArtifacts:
     """Render one policy-completed module through the canonical generator."""
     plan = WrapperPlanner().build(module)
-    return WrapperCodeGenerator().generate(plan)
+    return WrapperCodeGenerator().generate(plan, progress=progress)
 
 
 def _require_wrapper_plan_support(module: SemanticModule) -> None:
@@ -542,12 +609,19 @@ def _generated_wrapper_plan_artifacts(
     verbose: bool | int = False,
 ) -> RenderedGeneratedWrapperArtifacts:
     """Complete policy and generate the one production wrapper representation."""
-    creation_started = time.perf_counter()
+    _print_verbose_step(verbose, "Complete wrapper policies")
+    policy_started = time.perf_counter()
     complete_semantic_policies(module, strict_wrapper_names=strict_wrapper_names)
     _require_wrapper_plan_support(module)
-    rendered = _render_wrapper_plan(module)
-    _print_verbose_timing(verbose, "Wrapper creation", time.perf_counter() - creation_started)
-    return rendered
+    _print_verbose_timing(verbose, time.perf_counter() - policy_started)
+
+    def render_progress(label: str, elapsed: float | None) -> None:
+        if elapsed is None:
+            _print_verbose_step(verbose, label)
+            return
+        _print_verbose_timing(verbose, elapsed)
+
+    return _render_wrapper_plan(module, progress=render_progress)
 
 
 def _source_compile_object(
@@ -557,20 +631,15 @@ def _source_compile_object(
     object_stem: str,
     flags: Iterable[str] = (),
     include_dirs: Iterable[Path] = (),
-) -> CompileObj:
-    compile_obj = CompileObj(
-        file_name=source_path.name,
-        folder=str(source_path.parent),
-        flags=tuple(flags),
-        include=tuple(include_dirs),
-        has_target_file=True,
-    )
+) -> ObjectFile:
     target = output_dir / f"{object_stem}.o"
-    if target != compile_obj.module_target:
-        compile_obj._module_target = target
-        compile_obj._lock_target = FileLock(str(target.with_suffix(target.suffix + ".lock")))
-        compile_obj._include.add(output_dir)
-    return compile_obj
+    return ObjectFile(
+        source=source_path,
+        object_path=target,
+        language="fortran",
+        flags=tuple(flags),
+        include_dirs=(*tuple(include_dirs), output_dir),
+    )
 
 
 def _source_paths(sources: str | Path | Iterable[str | Path]) -> tuple[Path, ...]:
@@ -581,6 +650,16 @@ def _source_paths(sources: str | Path | Iterable[str | Path]) -> tuple[Path, ...
         if not path.is_file():
             raise FileNotFoundError(f"Fortran source not found: {path}")
     return paths
+
+
+def _wrapper_output_paths(output_dir: str | Path | None) -> tuple[Path, Path]:
+    """Return build and extension directories owned by one wrapper invocation."""
+    if output_dir is not None:
+        path = Path(output_dir)
+        return path, path
+    invocation_dir = Path.cwd()
+    build_dir = invocation_dir / _DEFAULT_BUILD_DIR_NAME
+    return build_dir, build_dir
 
 
 def _pyi_entry_path(contract: str | Path) -> Path:
@@ -948,16 +1027,16 @@ def _unique_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
 
 def _source_native_build_plan(
     source_paths: tuple[Path, ...],
-    source_objects: tuple[CompileObj, ...],
+    source_objects: tuple[ObjectFile, ...],
     *,
     module_dir: Path,
 ) -> NativeBuildPlan:
-    produced_objects = tuple(Path(source_object.module_target) for source_object in source_objects)
+    produced_objects = tuple(source_object.object_path for source_object in source_objects)
     return NativeBuildPlan(
         compilation_units=tuple(
             NativeCompilationUnit(
                 source=source_path,
-                object_path=source_object.module_target,
+                object_path=source_object.object_path,
                 language="fortran",
                 module_dir=module_dir,
                 include_dirs=(module_dir,),
@@ -975,7 +1054,7 @@ def _source_native_build_plan(
 def _pyi_native_build_plan(
     *,
     source_paths: tuple[Path, ...],
-    source_objects: tuple[CompileObj, ...],
+    source_objects: tuple[ObjectFile, ...],
     artifact_paths: tuple[Path, ...],
     libraries: tuple[str, ...],
     explicit_link_items: tuple[NativeLinkItem, ...],
@@ -985,7 +1064,7 @@ def _pyi_native_build_plan(
     include_dirs: tuple[Path, ...],
     module_dir: Path | None,
 ) -> NativeBuildPlan:
-    produced_objects = tuple(Path(source_object.module_target) for source_object in source_objects)
+    produced_objects = tuple(source_object.object_path for source_object in source_objects)
     source_link_items = tuple(NativeLinkItem("object", object_path) for object_path in produced_objects)
     prebuilt_artifacts = tuple(
         NativePrebuiltArtifact(path=path, kind=_native_artifact_kind(path)) for path in artifact_paths
@@ -1007,7 +1086,7 @@ def _pyi_native_build_plan(
         compilation_units=tuple(
             NativeCompilationUnit(
                 source=source_path,
-                object_path=source_object.module_target,
+                object_path=source_object.object_path,
                 language="fortran",
                 module_dir=module_dir,
                 include_dirs=include_dirs,
@@ -1162,7 +1241,7 @@ def _pyi_native_source_objects(
     *,
     output_path: Path,
     include_dirs: tuple[Path, ...],
-) -> tuple[CompileObj, ...]:
+) -> tuple[ObjectFile, ...]:
     return tuple(
         _source_compile_object(
             source_path,
@@ -1543,7 +1622,7 @@ def _write_build_makefile(
     *,
     path: Path,
     commands: tuple[tuple[str, ...], ...],
-    source_objects: tuple[CompileObj, ...],
+    source_objects: tuple[ObjectFile, ...],
     working_directory: Path,
     extra_dependencies: Iterable[Path] = (),
 ) -> Path:
@@ -1554,7 +1633,7 @@ def _write_build_makefile(
         raise RuntimeError("cannot generate Makefile without a shared-library link command")
 
     user_outputs = tuple(
-        _absolute_command_path(source_object.module_target, working_directory) for source_object in source_objects
+        _absolute_command_path(source_object.object_path, working_directory) for source_object in source_objects
     )
     compile_outputs = tuple(
         _absolute_command_path(_command_output(command), working_directory) for command in compile_commands
@@ -1684,17 +1763,18 @@ def build_fortran_extension(
     wrapper_compiler_debug: bool = False,
     wrapper_fortran_flags: Iterable[str] | None = None,
     wrapper_c_flags: Iterable[str] | None = None,
+    _on_total_build_time: Callable[[float], None] | None = None,
 ) -> WrapperBuildResult:
     """Build one extension, or generate its Makefile, from ordered sources."""
 
     if makefile and verbose:
         raise ValueError("makefile generation and verbose direct compilation are separate modes")
 
+    build_started = time.perf_counter()
     source_paths = _source_paths(sources)
     primary_source = source_paths[0]
 
-    output_path = Path(output_dir) if output_dir is not None else primary_source.parent / _DEFAULT_BUILD_DIR_NAME
-    shared_library_output_path = Path(output_dir) if output_dir is not None else primary_source.parent
+    output_path, shared_library_output_path = _wrapper_output_paths(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     preprocessing = preprocessing or _default_preprocessing_config()
 
@@ -1747,13 +1827,12 @@ def build_fortran_extension(
         source_objects,
         module_dir=output_path,
     )
-    for source_obj in source_objects:
-        compiler.compile_module(
-            source_obj,
-            output_folder=str(output_path),
-            language="fortran",
-            verbose=verbose,
-        )
+    _compile_object_stage(
+        compiler,
+        source_objects,
+        label="Compile native source",
+        verbose=verbose,
+    )
 
     result = _build_rendered_wrapper_extension(
         rendered_wrapper_plan,
@@ -1774,6 +1853,11 @@ def build_fortran_extension(
             compiler=compiler,
             source_objects=source_objects,
         )
+    _report_total_build_time(
+        verbose,
+        time.perf_counter() - build_started,
+        on_total_build_time=_on_total_build_time,
+    )
     return result
 
 
@@ -1796,12 +1880,14 @@ def build_pyi_extension(
     wrapper_compiler_debug: bool = False,
     wrapper_fortran_flags: Iterable[str] | None = None,
     wrapper_c_flags: Iterable[str] | None = None,
+    _on_total_build_time: Callable[[float], None] | None = None,
 ) -> WrapperBuildResult:
     """Build one extension from one entry `.pyi` and native link inputs."""
 
     if makefile and verbose:
         raise ValueError("makefile generation and verbose direct compilation are separate modes")
 
+    build_started = time.perf_counter()
     entry = _pyi_entry_path(contract)
     bundle = _pyi_contract_bundle(entry)
     native_inputs = _pyi_native_build_inputs(
@@ -1815,9 +1901,7 @@ def build_pyi_extension(
         native_include_dirs=native_include_dirs,
     )
 
-    primary_contract = bundle.entry
-    output_path = Path(output_dir) if output_dir is not None else primary_contract.parent / _DEFAULT_BUILD_DIR_NAME
-    shared_library_output_path = Path(output_dir) if output_dir is not None else primary_contract.parent
+    output_path, shared_library_output_path = _wrapper_output_paths(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     wrapper_fortran_flags = _compiler_flags(wrapper_fortran_flags)
     wrapper_c_flags = _compiler_flags(wrapper_c_flags)
@@ -1853,13 +1937,12 @@ def build_pyi_extension(
     )
     _validate_native_link_paths(native_build_plan)
     compiler = _new_gnu_compiler(execute_commands=not makefile, debug=wrapper_compiler_debug)
-    for source_obj in native_source_objects:
-        compiler.compile_module(
-            source_obj,
-            output_folder=str(output_path),
-            language="fortran",
-            verbose=verbose,
-        )
+    _compile_object_stage(
+        compiler,
+        native_source_objects,
+        label="Compile native source",
+        verbose=verbose,
+    )
 
     native_array_build_requirements = native_array_handle_build_requirements(module)
     result = _build_rendered_wrapper_extension(
@@ -1900,6 +1983,11 @@ def build_pyi_extension(
             extra_dependencies=dependencies,
             build_manifest=build_manifest,
         )
+    _report_total_build_time(
+        verbose,
+        time.perf_counter() - build_started,
+        on_total_build_time=_on_total_build_time,
+    )
     return result
 
 
@@ -1909,9 +1997,11 @@ def build_pyi_extension_from_manifest(
     output_name: str | None = None,
     makefile: bool = False,
     verbose: bool | int = False,
+    _on_total_build_time: Callable[[float], None] | None = None,
 ) -> WrapperBuildResult:
     """Replay a saved semantic `.pyi` wrapper build manifest."""
 
+    build_started = time.perf_counter()
     manifest_path, payload = _load_build_manifest(manifest)
     base = manifest_path.parent
     native_section = _manifest_section(payload, "native_build_plan")
@@ -1950,12 +2040,18 @@ def build_pyi_extension_from_manifest(
         wrapper_fortran_flags=_manifest_string_list(compiler_section, "wrapper_fortran_flags"),
         wrapper_c_flags=_manifest_string_list(compiler_section, "wrapper_c_flags"),
         complete_native_link_items=_manifest_link_items(native_section, base=base),
+        _on_total_build_time=lambda _elapsed: None,
     )
     recorded_contracts = tuple(
         _resolve_manifest_path(path, base=base) for path in _manifest_string_list(payload, "contract_paths")
     )
     if result.sources != recorded_contracts:
         raise ValueError("Current .pyi import graph does not match the wrapper build manifest contract_paths")
+    _report_total_build_time(
+        verbose,
+        time.perf_counter() - build_started,
+        on_total_build_time=_on_total_build_time,
+    )
     return result
 
 

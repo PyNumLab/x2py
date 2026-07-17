@@ -1,610 +1,271 @@
-#!/usr/bin/python
-"""
-Module handling everything related to the compilers used to compile the various generated files
-"""
+"""Run explicit native object and extension-link compiler commands."""
 
+from __future__ import annotations
+
+from collections.abc import Iterable, Mapping
 import json
 import os
-import pathlib
-import platform
+from pathlib import Path
 import shlex
 import shutil
 import subprocess
-import time
 import warnings
 
-from .default_compilers import available_compilers, vendors
+from .objects import ObjectFile
+from .compiler_profiles import available_compilers, vendors
 
-if platform.system() == "Darwin":
-    # Collect version using mac tools to avoid unexpected results on Big Sur
-    # https://developer.apple.com/documentation/macos-release-notes/macos-big-sur-11_0_1-release-notes#Third-Party-Apps
-    with subprocess.Popen([shutil.which("sw_vers"), "-productVersion"], stdout=subprocess.PIPE) as p:
-        result, err = p.communicate()
-    mac_version_tuple = result.decode("utf-8").strip().split(".")
-    mac_target = ".".join(mac_version_tuple[:2])
-    os.environ["MACOSX_DEPLOYMENT_TARGET"] = mac_target
+__all__ = ("Compiler", "get_condaless_search_path")
 
 
-def get_condaless_search_path(conda_warnings="basic"):
-    """
-    Get a list of paths excluding the conda paths.
+def get_condaless_search_path(conda_warnings: str = "basic") -> str:
+    """Return ``PATH`` without Conda-managed entries when locating compilers."""
 
-    Get the value of the PATH variable to be set when searching for the compiler
-    This is the same as the environment PATH variable but without any conda paths.
-
-    Parameters
-    ----------
-    conda_warnings : str, optional
-        Specify the level of Conda warnings to display (choices: off, basic, verbose), Default is 'basic'.
-
-    Returns
-    -------
-    str
-        A list of paths excluding the conda paths.
-    """
-    path_sep = ";" if platform.system() == "Windows" else ":"
-    current_path = os.environ["PATH"]
-    folders = {f: f.split(os.sep) for f in current_path.split(path_sep)}
-    conda_folder_names = (
-        "conda",
-        "anaconda",
-        "miniconda",
-        "Conda",
-        "Anaconda",
-        "Miniconda",
-    )
-    conda_folders = [p for p, f in folders.items() if any(con in f for con in conda_folder_names)]
-    if conda_folders and conda_warnings in ("basic", "verbose"):
-        message_warning = "Conda paths are ignored. See https://github.com/x2py/x2py/blob/devel/docs/compiler.md#utilising-x2py-within-anaconda-environment for details"
+    path_separator = os.pathsep
+    entries = tuple(entry for entry in os.environ.get("PATH", "").split(path_separator) if entry)
+    conda_markers = ("conda", "anaconda", "miniconda")
+    conda_entries = tuple(entry for entry in entries if any(marker in Path(entry).parts for marker in conda_markers))
+    if conda_entries and conda_warnings in {"basic", "verbose"}:
+        message = "Conda paths are ignored while locating native compilers."
         if conda_warnings == "verbose":
-            message_warning = message_warning + "\nConda ignored PATH:\n"
-            message_warning = message_warning + ":".join(conda_folders)
-        warnings.warn(UserWarning(message_warning), stacklevel=2)
-    return path_sep.join(p for p in folders if p not in conda_folders and os.path.exists(p))
+            message += "\nIgnored PATH entries:\n" + "\n".join(conda_entries)
+        warnings.warn(message, stacklevel=2)
+    return path_separator.join(entry for entry in entries if entry not in conda_entries)
 
 
-# ------------------------------------------------------------
 class Compiler:
-    """
-    Class which handles all compiler options.
+    """Compile explicit object files and link an explicit extension object list."""
 
-    This class uses the compiler vendor or a json file to collect
-    all compiler configuration parameters. These are then used to
-    correctly print compiler commands such as shared library
-    compilation commands or executable creation commands.
-
-    Parameters
-    ----------
-    vendor : str
-               Name of the family of compilers.
-    debug : bool
-               Indicates whether we are compiling in debug mode.
-    execute_commands : bool
-               Execute prepared commands immediately. If false, retain them in
-               ``command_log`` for an external build system.
-    """
-
-    __slots__ = (
-        "_command_log",
-        "_compiler_family",
-        "_compiler_info",
-        "_debug",
-        "_execute_commands",
-        "_language_info",
-    )
-    acceptable_bin_paths = None
-
-    def __init__(self, vendor: str, debug=False, *, execute_commands=True):
-        if vendor.endswith(".json") and os.path.exists(vendor):
-            self._compiler_family = pathlib.Path(vendor).stem
-            with open(vendor, encoding="utf-8") as vendor_file:
-                self._compiler_info = json.load(vendor_file)
-        else:
-            self._compiler_family = vendor
-            if vendor in vendors:
-                try:
-                    self._compiler_info = available_compilers[vendor]
-                except KeyError as e:
-                    raise NotImplementedError("Compiler not available") from e
-            else:
-                installed_compiler = (
-                    pathlib.Path(os.environ.get("X2PY_CONFIG_HOME", pathlib.Path.home() / ".x2py")) / vendor
-                )
-                if installed_compiler.exists():
-                    with open(installed_compiler / "config.json", encoding="utf-8") as vendor_file:
-                        self._compiler_info = json.load(vendor_file)
-                else:
-                    raise NotImplementedError(f"Unrecognised compiler vendor : {vendor}")
-
+    def __init__(
+        self,
+        vendor: str,
+        debug: bool = False,
+        *,
+        execute_commands: bool = True,
+        search_path: str | None = None,
+    ) -> None:
+        self._toolchain = self._load_toolchain(vendor)
         self._debug = debug
         self._execute_commands = execute_commands
-        self._command_log = []
-        self._language_info = None
+        self._search_path = search_path
+        self._command_log: list[tuple[str, ...]] = []
 
     @property
-    def command_log(self):
-        """Exact expanded compiler commands prepared by this instance."""
-        return tuple(tuple(command) for command in self._command_log)
+    def command_log(self) -> tuple[tuple[str, ...], ...]:
+        """Return exact compiler commands in execution order."""
 
-    def _run_or_record_command(self, cmd, verbose):
-        expanded = [os.path.expandvars(str(part)) for part in cmd]
+        return tuple(self._command_log)
+
+    def compile_object(self, object_file: ObjectFile, *, verbose: bool | int = False) -> None:
+        """Compile exactly one source file into its declared object path."""
+
+        object_file.object_path.parent.mkdir(parents=True, exist_ok=True)
+        language = self._language(object_file.language)
+        command = [
+            self._executable(language, object_file.tools),
+            *self._flags(language, object_file.tools, object_file.flags),
+            "-c",
+            *self._path_flags("-I", self._include_dirs(language, object_file.tools, object_file.include_dirs)),
+            str(object_file.source),
+            "-o",
+            str(object_file.object_path),
+        ]
+        if object_file.language == "fortran":
+            command.extend((str(language["module_output_flag"]), str(object_file.object_path.parent)))
+        self._run_or_record(command, verbose)
+
+    def link_extension(
+        self,
+        *,
+        module_name: str,
+        output_dir: str | Path,
+        language: str,
+        objects: Iterable[ObjectFile | str | Path],
+        link_args: Iterable[str] = (),
+        library_dirs: Iterable[str | Path] = (),
+        libraries: Iterable[str] = (),
+        flags: Iterable[str] = (),
+        tools: Iterable[str] = ("python",),
+        verbose: bool | int = False,
+    ) -> Path:
+        """Link the supplied objects and ordered native link arguments once."""
+
+        object_items = tuple(objects)
+        object_paths = tuple(item.object_path if isinstance(item, ObjectFile) else Path(item) for item in object_items)
+        if not object_paths:
+            raise ValueError("Extension linking requires at least one object file")
+
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        language_info = self._language(language)
+        object_files = tuple(item for item in object_items if isinstance(item, ObjectFile))
+        selected_tools = {str(tool) for tool in tools}
+        selected_tools.update(tool for item in object_files for tool in item.tools)
+        selected_tools.add("python")
+        selected_library_dirs = self._ordered_paths(
+            (*library_dirs, *(directory for item in object_files for directory in item.library_dirs))
+        )
+        selected_libraries = self._ordered_strings(
+            (*libraries, *(library for item in object_files for library in item.libraries))
+        )
+        resolved_library_dirs = self._library_dirs(language_info, selected_tools, selected_library_dirs)
+        extension_path = output_path / f"{module_name}{language_info['python']['shared_suffix']}"
+        if verbose:
+            print(f">> Create shared library: {extension_path}")
+        command = [
+            self._executable(language_info, selected_tools),
+            "-shared",
+            *self._flags(language_info, selected_tools - {"python"}, flags),
+            *self._path_flags("-L", resolved_library_dirs),
+            *self._path_flags("-Wl,-rpath", resolved_library_dirs),
+            *(str(path) for path in object_paths),
+            *(str(argument) for argument in link_args),
+            *self._tool_values(language_info, "dependencies", selected_tools),
+            "-o",
+            str(extension_path),
+            *self._library_flags(self._libraries(language_info, selected_tools, selected_libraries)),
+        ]
+        self._run_or_record(command, verbose)
+        return extension_path
+
+    @staticmethod
+    def run_command(command: Iterable[str], verbose: bool | int = False) -> tuple[str, ...]:
+        """Run one argv command and raise a concise error when it fails."""
+
+        expanded = tuple(os.path.expandvars(str(part)) for part in command)
+        if verbose:
+            print(shlex.join(expanded))
+        completed = subprocess.run(expanded, capture_output=True, text=True, check=False)
+        if verbose and completed.stdout:
+            print(completed.stdout, end="" if completed.stdout.endswith("\n") else "\n")
+        if completed.returncode:
+            raise RuntimeError(f"Native compiler command failed:\n{completed.stderr}")
+        if completed.stderr:
+            warnings.warn(completed.stderr, stacklevel=2)
+        return expanded
+
+    def _run_or_record(self, command: Iterable[str], verbose: bool | int) -> tuple[str, ...]:
+        expanded = tuple(os.path.expandvars(str(part)) for part in command)
         self._command_log.append(expanded)
         if self._execute_commands:
             return self.run_command(expanded, verbose)
         return expanded
 
-    def get_exec(self, extra_compilation_tools, language=None):
-        """
-        Obtain the path of the executable based on the specified compilation tools.
-
-        The `get_exec` method is responsible for retrieving the path of the executable based on
-        the specified compilation tools. It is used internally in the X2py module. In particular
-        the executable depends on whether MPI is used.
-
-        Parameters
-        ----------
-        extra_compilation_tools : str
-            Specifies the compilation tools to be used.
-        language : str, optional
-            The language being compiled. This argument should be provided unless this method
-            is called from a method of this class after setting self._language_info.
-
-        Returns
-        -------
-        str
-            The path of the executable corresponding to the specified compilation tools.
-
-        Raises
-        ------
-        X2pyError
-            If the compiler executable cannot be found.
-        """
-        language_info = self._language_info if language is None else self._compiler_info[language]
-        # Get executable
-        exec_cmd = language_info["mpi_exec"] if "mpi" in extra_compilation_tools else language_info["exec"]
-
-        # Clean conda paths out of the PATH variable
-        current_path = os.environ["PATH"]
-        os.environ["PATH"] = self.acceptable_bin_paths
-
-        # Find the exact path of the executable
-        exec_loc = shutil.which(exec_cmd)
-
-        # Reset PATH variable
-        os.environ["PATH"] = current_path
-
-        if exec_loc is None:
-            raise FileNotFoundError(f"Could not find compiler ({exec_cmd})")
-
-        return exec_loc
-
-    def _get_flags(self, flags=(), extra_compilation_tools=()):
-        """
-        Collect necessary compile flags.
-
-        Collect necessary compile flags, e.g. those relevant to the
-        language or compilation mode (debug/release).
-
-        Parameters
-        ----------
-        flags : iterable of str
-            Any additional flags requested by the user / required by
-            the file.
-        extra_compilation_tools : iterable or str
-            Tools used which require additional compilation flags/include dirs/libs/etc.
-
-        Returns
-        -------
-        list[str]
-            A list containing the flags.
-        """
-        user_flags = list(flags)
-        flags = []
-
-        if self._debug:
-            flags.extend(self._language_info.get("debug_flags", ()))
-        else:
-            flags.extend(self._language_info.get("release_flags", ()))
-
-        flags.extend(self._language_info.get("general_flags", ()))
-        # M_PI is not in the standard
-        # if 'python' not in extra_compilation_tools:
-        #    # Python sets its own standard
-        #    flags.extend(self._language_info.get('standard_flags',()))
-
-        for a in extra_compilation_tools:
-            tool_flags = self._language_info.get(a, {}).get("flags", ())
-            if a == "python":
-                tool_flags = self._without_python_profile_flags(tool_flags)
-            flags.extend(tool_flags)
-
-        flags.extend(user_flags)
-
-        return flags
+    def _load_toolchain(self, vendor: str) -> Mapping[str, Mapping[str, object]]:
+        configured_path = Path(vendor)
+        if configured_path.suffix == ".json" and configured_path.is_file():
+            return self._read_toolchain(configured_path)
+        if vendor in vendors:
+            return available_compilers[vendor]
+        installed_path = Path(os.environ.get("X2PY_CONFIG_HOME", Path.home() / ".x2py")) / vendor / "config.json"
+        if installed_path.is_file():
+            return self._read_toolchain(installed_path)
+        raise ValueError(f"Unknown compiler toolchain: {vendor!r}")
 
     @staticmethod
-    def _without_python_profile_flags(flags):
-        """Drop Python sysconfig optimization/debug flags in favor of x2py's profile."""
-        return [flag for flag in flags if not (flag.startswith("-O") or flag.startswith("-g") or flag == "-DNDEBUG")]
-
-    def _get_property(self, key, properties=(), extra_compilation_tools=()):
-        """
-        Collect necessary compile property.
-
-        Collect necessary compile properties such as include folders
-        or library directories.
-
-        Parameters
-        ----------
-        key : str
-            A key describing the property of interest.
-        properties : iterable of str
-            Any additional values of the property requested by the
-            user / required by the file.
-        extra_compilation_tools : iterable or str
-            Tools used which require additional compilation flags/include dirs/libs/etc.
-
-        Returns
-        -------
-        iterable[str]
-            An iterable containing the relevant information from the
-            requested property.
-
-        Examples
-        --------
-        >> self._get_property("libs", ("-lmy_lib",), ())
-        dict_keys(['-lmy_lib', '-lm'])
-
-        >> self._get_property("libs", ("-lmy_lib",), ("openmp",))
-        dict_keys(['-lmy_lib', '-lm', 'gomp'])
-
-        >> self._get_property("include", ("/home/user/homemade-install-dir/",), ("mpi",))
-        dict_keys(['/home/user/homemade-install-dir/'])
-        """
-        # Use a dictionary instead of a set to ensure properties are ordered by insertion
-        # The keys of the dictionary contain the values for the property of interest.
-        properties = dict.fromkeys(properties)
-
-        properties.update(dict.fromkeys(self._language_info.get(key, ())))
-
-        for a in extra_compilation_tools:
-            properties.update(dict.fromkeys(self._language_info.get(a, {}).get(key, ())))
-
-        return properties.keys()
-
-    def _get_include(self, include=(), extra_compilation_tools=()):
-        """
-        Collect necessary compile include directories.
-
-        Collect necessary compile include directories.
-
-        Parameters
-        ----------
-        include : iterable of str
-                       Any additional include directories requested by the user
-                       / required by the file.
-        extra_compilation_tools : iterable or str
-            Tools used which require additional compilation flags/include dirs/libs/etc.
-
-        Returns
-        -------
-        list[str]
-            A list of the include folders.
-        """
-        return self._get_property("include", include, extra_compilation_tools)
-
-    def _get_libs(self, libs=(), extra_compilation_tools=()):
-        """
-        Collect necessary compile libraries.
-
-        Collect necessary compile libraries.
-
-        Parameters
-        ----------
-        libs : iterable of str
-            Any additional libraries requested by the user / required
-            by the file.
-        extra_compilation_tools : iterable or str
-            Tools used which require additional compilation flags/include dirs/libs/etc.
-
-        Returns
-        -------
-        list[str]
-            A list of the libraries.
-        """
-        return self._get_property("libs", libs, extra_compilation_tools)
-
-    def _get_libdir(self, libdir=(), extra_compilation_tools=()):
-        """
-        Collect necessary compile library directories.
-
-        Collect necessary compile library directories.
-
-        Parameters
-        ----------
-        libdir : iterable of str
-            Any additional library directories requested by the user
-            / required by the file.
-        extra_compilation_tools : iterable or str
-            Tools used which require additional compilation flags/include dirs/libs/etc.
-
-        Returns
-        -------
-        list[str]
-            A list of the folders containing libraries.
-        """
-        return self._get_property("libdir", libdir, extra_compilation_tools)
-
-    def _get_dependencies(self, dependencies=(), extra_compilation_tools=()):
-        """
-        Collect necessary dependencies.
-
-        Collect necessary object or static libraries that should be included to compile
-        this object.
-
-        Parameters
-        ----------
-        dependencies : iterable of str
-            Any additional dependencies required by the file.
-        extra_compilation_tools : iterable or str
-            Tools used which require additional compilation flags/include dirs/libs/etc.
-
-        Returns
-        -------
-        list[str]
-            A list of the necessary dependencies.
-        """
-        return self._get_property("dependencies", dependencies, extra_compilation_tools)
-
-    @staticmethod
-    def _insert_prefix_to_list(lst, prefix):
-        """
-        Add a prefix into a list.
-
-        Add a prefix into a list. E.g:
-        >>> lst = [1, 2, 3]
-        >>> _insert_prefix_to_list(lst, 'num:')
-        ['num:', 1, 'num:', 2, 'num:', 3]
-
-        Parameters
-        ----------
-        lst : iterable
-            This sequence is copied to a new list with `prefix` before each element.
-        prefix : Any
-            The prefix to be placed before each element of `lst`.
-
-        Returns
-        -------
-        list
-            The list with the prefix inserted.
-        """
-        lst = [(prefix, i) for i in lst]
-        return [f for fi in lst for f in fi]
-
-    def _get_compile_components(self, compile_obj, extra_compilation_tools=()):
-        """
-        Provide all components required for compiling.
-
-        Provide all the different components (include directories, libraries, etc)
-        which are needed in order to compile any file.
-
-        Parameters
-        ----------
-        compile_obj : CompileObj
-            Object containing all information about the object to be compiled.
-        extra_compilation_tools : iterable of str
-            Tools used which require additional compilation flags/include dirs/libs/etc.
-
-        Returns
-        -------
-        exec_cmd : str
-            The command required to run the executable.
-        inc_flags : iterable of strs
-            The include directories required to compile.
-        libs_flags : iterable of strs
-            The libraries required to compile.
-        libdir_flags : iterable of strs
-            The directories containing libraries required to compile.
-        m_code : iterable of strs
-            The objects required to compile.
-        """
-
-        # get include
-        include = self._get_include(compile_obj.include, extra_compilation_tools)
-        inc_flags = self._insert_prefix_to_list(include, "-I")
-
-        # Get dependencies (.o/.a)
-        m_code = self._get_dependencies(compile_obj.extra_modules, extra_compilation_tools)
-
-        # Get libraries and library directories
-        libs = self._get_libs(compile_obj.libs, extra_compilation_tools)
-        libs_flags = [s if s.startswith("-l") else f"-l{s}" for s in libs]
-        libdir = self._get_libdir(compile_obj.libdir, extra_compilation_tools)
-        libdir_flags = self._insert_prefix_to_list(libdir, "-L")
-
-        exec_cmd = self.get_exec(extra_compilation_tools)
-
-        return exec_cmd, inc_flags, libs_flags, libdir_flags, m_code
-
-    def compile_module(self, compile_obj, output_folder, language, verbose):
-        """
-        Compile a module.
-
-        Compile a file containing a module to a .o file.
-
-        Parameters
-        ----------
-        compile_obj : CompileObj
-            Object containing all information about the object to be compiled.
-
-        output_folder : str
-            The folder where the result should be saved.
-
-        language : str
-            Language that we are compiling.
-
-        verbose : int
-            Indicates the level of verbosity.
-        """
-        if not compile_obj.has_target_file:
-            return
-
-        if verbose:
-            print(">> Compiling :: ", compile_obj.module_target)
-
-        self._language_info = self._compiler_info[language]
-
-        extra_compilation_tools = compile_obj.extra_compilation_tools
-
-        # Get flags
-        flags = self._get_flags(compile_obj.flags, extra_compilation_tools)
-        flags.append("-c")
-
-        # Get include
-        include = self._get_include(compile_obj.include, extra_compilation_tools)
-        inc_flags = self._insert_prefix_to_list(include, "-I")
-
-        # Get executable
-        exec_cmd = self.get_exec(extra_compilation_tools)
-
-        j_code = (self._language_info["module_output_flag"], output_folder) if language == "fortran" else ()
-
-        cmd = [
-            exec_cmd,
-            *flags,
-            *inc_flags,
-            compile_obj.source,
-            "-o",
-            compile_obj.module_target,
-            *j_code,
-        ]
-
-        with compile_obj:
-            self._run_or_record_command(cmd, verbose)
-
-        self._language_info = None
-
-    def compile_shared_library(self, compile_obj, output_folder, language, verbose, sharedlib_modname=None):
-        """
-        Compile a module to a shared library.
-
-        Compile a file containing a module with C-API calls to a shared library which can
-        be called from Python.
-
-        Parameters
-        ----------
-        compile_obj : CompileObj
-            Object containing all information about the object to be compiled.
-
-        output_folder : str
-            The folder where the result should be saved.
-
-        language : str
-            Language that we are compiling.
-
-        verbose : int
-            Indicates the level of verbosity.
-
-        sharedlib_modname : str, optional
-            The name of the library that should be generated. If none is provided then it
-            defaults to matching the name of the file.
-
-        Returns
-        -------
-        str
-            Generated library name.
-        """
-        self._language_info = self._compiler_info[language]
-
-        # Ensure python options are collected
-        extra_compilation_tools = set(compile_obj.extra_compilation_tools)
-
-        extra_compilation_tools.remove("python")
-
-        # get flags
-        flags = self._get_flags(compile_obj.flags, extra_compilation_tools)
-
-        extra_compilation_tools.add("python")
-
-        # Collect compile information
-        exec_cmd, _, libs_flags, libdir_flags, m_code = self._get_compile_components(
-            compile_obj, extra_compilation_tools
+    def _read_toolchain(path: Path) -> Mapping[str, Mapping[str, object]]:
+        with path.open(encoding="utf-8") as stream:
+            payload = json.load(stream)
+        if not isinstance(payload, dict):
+            raise ValueError(f"Compiler configuration must be a JSON object: {path}")
+        return payload
+
+    def _language(self, language: str) -> Mapping[str, object]:
+        try:
+            configuration = self._toolchain[language]
+        except KeyError:
+            raise ValueError(f"Toolchain does not support {language!r}") from None
+        if not isinstance(configuration, Mapping):
+            raise ValueError(f"Invalid {language!r} toolchain configuration")
+        return configuration
+
+    def _executable(self, language: Mapping[str, object], tools: Iterable[str]) -> str:
+        key = "mpi_exec" if "mpi" in tools else "exec"
+        command = str(language[key])
+        executable = shutil.which(command, path=self._search_path)
+        if executable is None:
+            raise FileNotFoundError(f"Could not find compiler executable: {command}")
+        return executable
+
+    def _flags(
+        self,
+        language: Mapping[str, object],
+        tools: Iterable[str],
+        requested: Iterable[str],
+    ) -> tuple[str, ...]:
+        profile = "debug_flags" if self._debug else "release_flags"
+        values = [*self._strings(language.get(profile, ())), *self._strings(language.get("general_flags", ()))]
+        for tool in sorted(set(tools)):
+            flags = self._tool_mapping(language, tool).get("flags", ())
+            if tool == "python":
+                flags = tuple(flag for flag in self._strings(flags) if not self._is_python_profile_flag(flag))
+            values.extend(self._strings(flags))
+        values.extend(str(flag) for flag in requested)
+        return tuple(values)
+
+    def _include_dirs(
+        self,
+        language: Mapping[str, object],
+        tools: Iterable[str],
+        requested: Iterable[str | Path],
+    ) -> tuple[Path, ...]:
+        return self._ordered_paths(
+            (*requested, *self._strings(language.get("include", ())), *self._tool_values(language, "include", tools))
         )
-        linker_libdir_flags = ["-Wl,-rpath" if flag == "-L" else flag for flag in libdir_flags]
 
-        flags.insert(0, "-shared")
+    def _library_dirs(
+        self,
+        language: Mapping[str, object],
+        tools: Iterable[str],
+        requested: Iterable[str | Path],
+    ) -> tuple[Path, ...]:
+        return self._ordered_paths(
+            (*requested, *self._strings(language.get("libdir", ())), *self._tool_values(language, "libdir", tools))
+        )
 
-        # Get name of file
-        ext_suffix = self._language_info["python"]["shared_suffix"]
-        sharedlib_modname = sharedlib_modname or compile_obj.python_module
-        file_out = os.path.join(output_folder, sharedlib_modname + ext_suffix)
+    def _libraries(
+        self,
+        language: Mapping[str, object],
+        tools: Iterable[str],
+        requested: Iterable[str],
+    ) -> tuple[str, ...]:
+        return self._ordered_strings(
+            (*requested, *self._strings(language.get("libs", ())), *self._tool_values(language, "libs", tools))
+        )
 
-        if verbose:
-            print(">> Compiling shared library :: ", file_out)
-
-        cmd = [
-            exec_cmd,
-            *flags,
-            *libdir_flags,
-            *linker_libdir_flags,
-            compile_obj.module_target,
-            *m_code,
-            *compile_obj.link_args,
-            "-o",
-            file_out,
-            *libs_flags,
-        ]
-
-        with compile_obj:
-            self._run_or_record_command(cmd, verbose)
-
-        self._language_info = None
-
-        return file_out
+    def _tool_values(self, language: Mapping[str, object], key: str, tools: Iterable[str]) -> tuple[str, ...]:
+        return tuple(
+            value
+            for tool in sorted(set(tools))
+            for value in self._strings(self._tool_mapping(language, tool).get(key, ()))
+        )
 
     @staticmethod
-    def run_command(cmd, verbose):
-        """
-        Run the provided command and collect the output.
+    def _tool_mapping(language: Mapping[str, object], tool: str) -> Mapping[str, object]:
+        value = language.get(tool, {})
+        return value if isinstance(value, Mapping) else {}
 
-        Run the provided compilation command, collect the output and raise any
-        necessary errors if the file does not compile.
+    @staticmethod
+    def _strings(values: object) -> tuple[str, ...]:
+        if isinstance(values, str):
+            return (values,)
+        return tuple(str(value) for value in values)
 
-        Parameters
-        ----------
-        cmd : list of str
-            The command to run.
-        verbose : int
-            Indicates the level of verbosity.
+    @staticmethod
+    def _ordered_paths(paths: Iterable[str | Path]) -> tuple[Path, ...]:
+        return tuple(dict.fromkeys(Path(path) for path in paths))
 
-        Returns
-        -------
-        str
-            The exact command that was run.
+    @staticmethod
+    def _ordered_strings(values: Iterable[str]) -> tuple[str, ...]:
+        return tuple(dict.fromkeys(str(value) for value in values))
 
-        Raises
-        ------
-        RuntimeError
-            Raises `RuntimeError` if the file does not compile.
-        """
-        cmd = [os.path.expandvars(c) for c in cmd]
-        if verbose:
-            print(shlex.join(cmd))
+    @staticmethod
+    def _path_flags(flag: str, paths: Iterable[Path]) -> tuple[str, ...]:
+        return tuple(part for path in paths for part in (flag, str(path)))
 
-        start_time = time.perf_counter()
-        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True) as p:
-            out, err = p.communicate()
-        elapsed = time.perf_counter() - start_time
+    @staticmethod
+    def _library_flags(libraries: Iterable[str]) -> tuple[str, ...]:
+        return tuple(library if library.startswith("-l") else f"-l{library}" for library in libraries)
 
-        if verbose and out:
-            print(out)
-        if verbose:
-            print(f">> Command completed in {elapsed:.3f}s")
-        if p.returncode != 0:
-            err_msg = "Failed to build module"
-            err_msg += "\n" + err
-            raise RuntimeError(err_msg)
-        if err:
-            warnings.warn(UserWarning(err), stacklevel=2)
-
-        return cmd
+    @staticmethod
+    def _is_python_profile_flag(flag: str) -> bool:
+        return flag.startswith("-O") or flag.startswith("-g") or flag == "-DNDEBUG"

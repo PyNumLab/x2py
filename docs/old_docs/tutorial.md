@@ -264,8 +264,10 @@ assert value == np.float64(7.5)
 The exact NumPy scalar types are intentional. The wrapper validates the native
 ABI contract instead of silently converting arbitrary Python numeric objects.
 
-Without `--out-dir`, intermediate files go into `__x2py__` beside the first
-source and the extension is placed beside that source. Use `--verbose` to print
+Without `--out-dir`, intermediate files and the ABI-suffixed extension go into
+`__x2py__` in the current working directory, while a direct CLI build writes
+its stable `<module>.so` alias there unless `--out` gives it an explicit path. Use
+`--verbose` to print
 the executed compiler and linker commands.
 
 ### 6. Understand The Generated Boundary

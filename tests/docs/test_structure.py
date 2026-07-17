@@ -246,7 +246,7 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/wrapper_codegen/fortran/bridge.py",
     "x2py/wrapper_codegen/printers/pyi_printer.py",
     "x2py/wrapper_codegen/printers/source_printers.py",
-    "x2py/compiling/basic.py",
+    "x2py/compiling/objects.py",
     "x2py/compiling/compilers.py",
     "x2py/compiling/runtime_support.py",
     "x2py/naming/policy.py",

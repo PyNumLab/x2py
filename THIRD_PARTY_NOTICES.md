@@ -1,12 +1,10 @@
 # Third-Party Notices
 
-The compiler configuration/execution modules `x2py/compiling/basic.py`,
-`x2py/compiling/compilers.py`, and `x2py/compiling/default_compilers.py`; the
-native NumPy/Python runtime in `x2py/stdlib/x2py_runtime/`; and small naming
-utilities in `x2py/utilities/strings.py`, `x2py/utilities/metaclasses.py`, and
-`x2py/naming/policy.py` contain code adapted from the Pyccel project. The
-current semantic and wrapper source printers are independent implementations
-and are not covered by this attribution.
+The native NumPy/Python runtime in `x2py/stdlib/x2py_runtime/` and small
+naming utilities in `x2py/utilities/strings.py`, `x2py/utilities/metaclasses.py`,
+and `x2py/naming/policy.py` contain code adapted from the Pyccel project. The
+current compilation package, semantic printer, and wrapper source printers are
+independent implementations and are not covered by this attribution.
 
 Upstream project: <https://github.com/pyccel/pyccel>
 

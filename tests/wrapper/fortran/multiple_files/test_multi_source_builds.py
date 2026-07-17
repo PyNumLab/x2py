@@ -139,6 +139,7 @@ def _import_extension(module_name: str, build_dir: Path):
 
 
 def _build_sources(sources: tuple[Path, ...], build_dir: Path) -> tuple[object, dict[str, object]]:
+    build_dir.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
         [
             sys.executable,
@@ -152,6 +153,7 @@ def _build_sources(sources: tuple[Path, ...], build_dir: Path) -> tuple[object, 
         capture_output=True,
         text=True,
         check=True,
+        cwd=build_dir,
     )
     payload = json.loads(result.stdout)
     return _import_extension(str(payload["module_name"]), build_dir), payload

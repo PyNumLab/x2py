@@ -132,8 +132,10 @@ The extension name comes from the first generated semantic module. For a
 multi-source build, x2py merges the public surface into that extension and
 compiles sources in caller-supplied order.
 
-Without `--out-dir`, x2py uses a private `__x2py__` build directory beside the
-source and places the importable extension beside the source file. Generated
+Without `--out-dir`, x2py writes generated artifacts, including the ABI-suffixed
+extension, in a private `__x2py__` build directory in the current working
+directory. A direct CLI build writes its stable `<module>.so` import alias in
+the current working directory unless `--out` gives it an explicit path. Generated
 Fortran and C wrapper sources remain build artifacts; users do not edit them to
 change the Python API.
 
