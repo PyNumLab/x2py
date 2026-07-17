@@ -62,8 +62,8 @@ Callbacks are the inverse of wrapped procedures: Fortran calls the generated
 adapter, the adapter converts Fortran arguments into Python objects, Python
 executes the callable, and the adapter converts Python results or mutations
 back to Fortran. Future callback contract work should make that adapter policy
-explicit without changing `Callable[[...], T]` into a Python-facing argument
-projection language.
+explicit through named `@prototype` declarations without turning ordinary
+Python-facing argument annotations into callback projection syntax.
 
 - [ ] Define callback-specific policy metadata for copy-in, copy-out,
   borrowed-view, zero-copy, dtype conversion, fixed-length character writeback,
@@ -234,8 +234,9 @@ objects, archives, and libraries remain separate build-plan facts.
 - [x] Several file-level BLAS/LAPACK-style standalone sources can generate one
   compact entry `.pyi` containing all external declarations while the native
   build plan links the separated objects in caller order.
-- [x] `@external` makes the bridge emit an explicit interface and no module
-  `use`; a module procedure makes the bridge emit the correct `use <module>`.
+- [x] `@external` makes the bridge emit a completed implicit `external`
+  declaration or a required explicit interface and no module `use`; a module
+  procedure makes the bridge emit the correct `use <module>`.
 - [x] `@external` composes with `@bind("native_name")`: the native external is
   called while the wrapper declaration and root export may use different names.
 - [x] A handwritten external `.pyi` plus native artifacts builds without source

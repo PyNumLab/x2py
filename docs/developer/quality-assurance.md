@@ -70,6 +70,9 @@ deciding a fix. A plain local coverage run can miss subprocess data.
 GitHub Actions runs ordinary PR tests without coverage overhead. During the
 wrapper-plan migration, every Python version excludes the full BLAS/LAPACK
 real-library wrapper test while retaining general native-bundle coverage.
+One separate Python 3.12 job runs the full BLAS and LAPACK nodes together. A
+pull request may use the `ignore-real-library-wrappers` label to skip that
+expensive job without disabling the ordinary Python-version matrix.
 Pushes to `main` always run the remaining Python 3.12 test job under coverage
 and publish the coverage report. Add the `run-coverage` PR label, or pass
 `coverage: true` to the reusable workflow, to request the same coverage gate

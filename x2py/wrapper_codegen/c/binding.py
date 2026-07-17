@@ -913,7 +913,6 @@ class CBindingGenerator(ClassVisitor):
             callback.trampoline_symbol,
             self._callback_c_return_type(callback),
             parameters=self._callback_c_parameters(callback.arguments),
-            storage="static",
             body=tuple(nodes),
         )
 
@@ -974,18 +973,8 @@ class CBindingGenerator(ClassVisitor):
         transfer: CallbackTransferPlan,
         target: str,
     ) -> tuple[CDeclaration, ...]:
-        """Convert read-only reference input by value; preserve writable storage."""
-        if transfer.access != "read":
-            return self._callback_scalar_storage_nodes(transfer, target)
-        scalar = PrimitiveScalarTypeRegistry.type_for(transfer.semantic_type_name)
-        parameter = self._callback_parameter_base_name(transfer)
-        return (
-            CDeclaration(
-                target,
-                "PyObject *",
-                CodeExpression(f"{scalar.python_result_converter}(({scalar.c_spelling} *){parameter}_data)"),
-            ),
-        )
+        """Expose every scalar reference as permissive mutable rank-zero storage."""
+        return self._callback_scalar_storage_nodes(transfer, target)
 
     def _callback_scalar_storage_nodes(
         self,
@@ -9404,7 +9393,7 @@ class CBindingGenerator(ClassVisitor):
     def _bridge_call_arguments(self, plan: ArgumentTransferPlan, names: _CArgumentNames) -> tuple[str, ...]:
         """Return one binding-to-bridge C handoff, including helper ABI fields."""
         if plan.callback is not None:
-            return (plan.callback.trampoline_symbol,)
+            return ()
         if plan.bridge.handoff_mode is ArgumentHandoffMode.CHARACTER_BUFFER:
             return self._string_bridge_call_arguments(names)
         if plan.bridge.handoff_mode is ArgumentHandoffMode.ARRAY_BUFFER:
@@ -9529,29 +9518,10 @@ class CBindingGenerator(ClassVisitor):
         """Return the bridge ABI parameters for one Python argument."""
         name = argument.bridge.native_name.lower()
         if argument.callback is not None:
-            return self._callback_bridge_argument_parameters(argument, name)
+            return ()
         if argument.derived_call is not None:
             return self._derived_bridge_argument_parameters(argument, name)
         return self._ordinary_bridge_argument_parameters(argument, name)
-
-    def _callback_bridge_argument_parameters(
-        self,
-        argument: ArgumentTransferPlan,
-        name: str,
-    ) -> tuple[CParameter, ...]:
-        """Declare one typed callback function parameter from its callback plan."""
-        callback = argument.callback
-        if callback is None:
-            raise ValueError(f"Callback argument {argument.owner_path!r} has no handoff plan")
-        return (
-            CParameter(
-                name,
-                self._callback_c_return_type(callback),
-                function_parameters=tuple(
-                    parameter.type_name for parameter in self._callback_c_parameters(callback.arguments)
-                ),
-            ),
-        )
 
     @staticmethod
     def _derived_bridge_argument_parameters(

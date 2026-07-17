@@ -856,7 +856,7 @@ def _format_semantic_blocker_item(code: str, item) -> str:
         return f"{item['owner']} needs literal value for Final constant {item['symbol']}"
     if code == "callback_signature_incomplete":
         needs = ", ".join(item.get("needs") or [])
-        return f"{item['owner']} needs Callable[[...], ...] metadata ({needs})"
+        return f"{item['owner']} needs a complete named @prototype ({needs})"
     if code.startswith("c_"):
         owner = item.get("owner", "<c-source>")
         detail = item.get("type") or item.get("source") or item.get("function") or item.get("parameter")

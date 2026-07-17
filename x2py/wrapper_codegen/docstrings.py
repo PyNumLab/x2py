@@ -94,7 +94,7 @@ class WrapperDocstringBuilder:
         )
         return "\n".join(lines)
 
-    # Callable documentation.
+    # Callback documentation.
     def function(
         self,
         python_name: str,
@@ -557,16 +557,14 @@ class WrapperDocstringBuilder:
     def _callback_type(self, callback: CallbackHandoffPlan | None) -> str:
         if callback is None:
             raise ValueError("Callback documentation requires a completed handoff plan")
-        arguments = ", ".join(self._callback_transfer_type(item) for item in callback.arguments)
-        result = "None" if callback.result.transfer is None else self._callback_transfer_type(callback.result.transfer)
-        return f"Callable[[{arguments}], {result}]"
+        return callback.prototype_name
 
     @staticmethod
     def _callback_transfer_type(transfer: CallbackTransferPlan) -> str:
         if transfer.derived_type_identity is not None:
             return transfer.semantic_type_name
         scalar = _SCALAR_TYPES.get(transfer.semantic_type_name, transfer.semantic_type_name)
-        if transfer.array is not None or (transfer.abi.value == "reference" and transfer.access != "read"):
+        if transfer.array is not None or transfer.abi.value == "reference":
             return f"ndarray[{scalar}]"
         return scalar
 

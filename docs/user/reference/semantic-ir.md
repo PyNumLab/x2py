@@ -379,7 +379,7 @@ X2PY_C_DOCS_END -->
 - unresolved typedef or unknown type references;
 - legacy parser reports carrying macro-dependent declarations;
 - variadic functions;
-- function pointer/callback signatures without edited `.pyi` `Callable`
+- function pointer/callback signatures without a resolved named prototype
   policy;
 - mutable numeric or `void *` pointer parameters without ownership,
   scalar-storage, raw-address, or array policy;
@@ -439,11 +439,12 @@ storage, NumPy array storage, Python strings, raw address values, and generated
 wrapper instances. The native barrier distinguishes direct values, call-local
 addresses, caller/Python-backed storage addresses, raw addresses, packed array
 descriptors, and wrapper-owned native addresses. These decisions are semantic
-policy. `ir2ast.py`, bindings, bridges, and printers may create backend-local
-temporaries, but they must not infer or override a barrier action from datatype,
-source-declaration direction, array category, aliasing, or memory-storage checks.
+policy. Wrapper planning, binding/bridge lowering, and printers may create
+backend-local temporaries, but they must not infer or override a barrier action
+from datatype, source-declaration direction, array category, aliasing, or
+memory-storage checks.
 
-Parser-model conversion and codegen model traversal use the shared
+Parser-model conversion and semantic/wrapper-model traversal use the shared
 `x2py.utilities.visitor.ClassVisitor` dispatcher and one configured
 `<prefix>_<ClassName>` protocol. The default prefix is `_visit`; specialized
 visitors may choose clearer names such as `_print` or `_parse` while still using

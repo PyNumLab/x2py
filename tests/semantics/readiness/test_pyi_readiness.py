@@ -8,6 +8,7 @@ from tests._shared.semantic_readiness_support import (
     SemanticConstraint,
     SemanticFunction,
     SemanticModule,
+    SemanticStorageContract,
     SemanticType,
     _blocker_codes,
     _readiness_from_pyi,
@@ -20,7 +21,7 @@ from tests._shared.semantic_readiness_support import (
 def test_completed_pyi_interface_is_semantically_ready():
     report = _readiness_from_pyi(
         """
-from x2py.contracts import Callable, Final, Float64, Int32, Returns
+from x2py.contracts import Final, Float64, Int32, Returns, prototype
 
 rk: Final[Int32] = 8
 nmax: Final[Int32] = 32
@@ -29,10 +30,13 @@ class sim_state:
     n: Int32
     values: Float64[n]
 
+@prototype
+def score_callback(state: sim_state, t: Float64) -> Float64: ...
+
 def step(
     state: sim_state,
     t: Float64,
-    objective: Callable[[sim_state, Float64], Float64],
+    objective: score_callback,
     scratch: Float64[nmax]
 ) -> tuple[Returns["state", sim_state], Returns["score", Float64]]: ...
 """
@@ -54,7 +58,7 @@ def step(state: sim_state) -> Returns["state", sim_state]: ...
     assert report["wrappable"] is True
 
 
-def test_callback_placeholder_blocks_until_callable_signature_is_supplied():
+def test_callback_placeholder_blocks_until_named_prototype_is_supplied():
     report = _readiness_from_pyi(
         """
 def integrate(objective: Procedure, x0: Float64) -> Float64: ...
@@ -71,29 +75,19 @@ def integrate(objective: Procedure, x0: Float64) -> Float64: ...
     ]
 
 
-def test_callable_with_signature_makes_callback_ready():
+def test_named_prototype_makes_callback_ready():
     report = _readiness_from_pyi(
         """
-from x2py.contracts import Callable, Float64
+from x2py.contracts import Float64, prototype
 
-def integrate(objective: Callable[[Float64], Float64], x0: Float64) -> Float64: ...
+@prototype
+def objective(value: Float64) -> Float64: ...
+
+def integrate(callback: objective, x0: Float64) -> Float64: ...
 """
     )
 
     assert report["wrappable"] is True
-
-
-def test_callable_without_argument_list_is_not_enough_for_readiness():
-    report = _readiness_from_pyi(
-        """
-from x2py.contracts import Callable, Float64
-
-def integrate(objective: Callable[..., Float64], x0: Float64) -> Float64: ...
-"""
-    )
-
-    assert report["wrappable"] is False
-    assert "callback_signature_incomplete" in _blocker_codes(report)
 
 
 def test_assess_pyi_wrap_readiness_expands_directory_and_uses_leaf_filenames(tmp_path: Path):
@@ -139,14 +133,21 @@ def step(a: state_mod.state_t, b: mesh.mesh_t, c: imported_value) -> None: ...
     assert report["wrappable"] is True
 
 
-def test_readiness_reports_incomplete_callable_payload():
+def test_readiness_reports_incomplete_prototype_payload():
     module = SemanticModule(
         "callbacks",
         functions=[
             SemanticFunction(
                 "run",
                 arguments=[
-                    SemanticArgument("cb", SemanticType("Callable", metadata={"return": SemanticType("Int32")}))
+                    SemanticArgument(
+                        "cb",
+                        SemanticType(
+                            "incomplete_prototype",
+                            metadata={"return": SemanticType("Int32")},
+                            storage=SemanticStorageContract(kind="callback"),
+                        ),
+                    )
                 ],
             )
         ],
@@ -157,12 +158,12 @@ def test_readiness_reports_incomplete_callable_payload():
     assert report["wrappability_blockers"] == [
         {
             "code": "callback_signature_incomplete",
-            "message": "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+            "message": "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
             "items": [
                 {
                     "owner": "callbacks.run.cb",
                     "item": "cb",
-                    "type": "Callable",
+                    "type": "incomplete_prototype",
                     "needs": [
                         "callback argument order",
                         "callback argument types",
@@ -183,7 +184,7 @@ def test_readiness_reports_incomplete_callable_payload():
 
 def test_readiness_propagates_context_through_imports_callbacks_and_class_fields():
     nested_callback = SemanticType(
-        "Callable",
+        "nested_prototype",
         metadata={
             "arguments": [
                 SemanticType("MissingCallbackArg"),
@@ -192,6 +193,7 @@ def test_readiness_propagates_context_through_imports_callbacks_and_class_fields
             ],
             "return": SemanticType("types_mod.callback_result_t"),
         },
+        storage=SemanticStorageContract(kind="callback"),
     )
     module = SemanticModule(
         "edge",

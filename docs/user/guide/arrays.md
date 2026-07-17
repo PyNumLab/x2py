@@ -60,7 +60,7 @@ def scale_matrix(
 @native_call([Addr(Arg(0)), Arg(1)])
 def shift(
     size: Int32,
-    values: Float64[size - 1 - 0 + 1]
+    values: Float64[size]
 ) -> None: ...
 
 @native_call([Addr(Arg(0))])
@@ -109,8 +109,10 @@ an automatic rank-one result. Other supported contracts can use `Float64[:]`,
 `Float64[3]`, `Float64[::]`, `Float64[Flat]`, or `Float64[...]`.
 
 The element name maps to an exact NumPy dtype; see [Data Types](data-types.md).
-Dimension expressions constrain extents. Python remains zero-indexed even when
-the native declaration has non-default lower bounds.
+Dimension expressions constrain extents, not source lower/upper-bound
+spellings. The native dimension `0:size-1` therefore becomes the public extent
+`size`. Python remains zero-indexed even when the native declaration has
+non-default lower bounds.
 
 ## Validation
 

@@ -45,7 +45,7 @@ The native barrier says how the bridge presents the extracted value to native
 code: direct value, call-local address, caller/Python-backed storage address,
 raw address, packed array descriptor, or wrapper-owned native address.
 
-Policy completion also validates the boundary spelling. Callable `Addr(T)` is
+Policy completion also validates the boundary spelling. Procedure `Addr(T)` is
 an integer raw-address contract and is limited to primitive scalars,
 fixed-length strings, and primitive arrays with fully resolved extents.
 `Addr(Arg(i))` is limited to primitive scalar values that need call-local

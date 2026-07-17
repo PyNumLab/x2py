@@ -27,7 +27,6 @@ from x2py.semantics.metadata import PROJECTED_OUTPUT_METADATA, SCALAR_STORAGE_CA
 from x2py.utilities.visitor import ClassVisitor
 
 from .models import (
-    CALLBACK_DECLARATION_ACCESS_METADATA,
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
@@ -36,6 +35,7 @@ from .models import (
     PYTHON_BOUND_POSITION_METADATA,
     PYTHON_METHOD_NAME_METADATA,
     PYTHON_STATIC_METADATA,
+    PROTOTYPE_REF_METADATA,
     SemanticArgument,
     SemanticArrayContract,
     SemanticClass,
@@ -47,6 +47,7 @@ from .models import (
     SemanticMethod,
     SemanticModule,
     SemanticOrigin,
+    SemanticPrototype,
     SemanticStorageContract,
     SemanticType,
     SemanticVariable,
@@ -386,7 +387,7 @@ class FortranToIRConverter(ClassVisitor):
         else:
             semantic_type = self._convert_variable_type(arg, derived_type_context=derived_type_context)
         access = self._argument_access(arg, semantic_type)
-        if semantic_type.name == "Callable":
+        if semantic_type.storage is not None and semantic_type.storage.kind == "callback":
             pass
         elif semantic_type.rank > 0:
             self._apply_array_argument_contract(semantic_type, arg, writes_argument=access[1])
@@ -484,8 +485,8 @@ class FortranToIRConverter(ClassVisitor):
     ) -> SemanticType:
         if getattr(arg, "pointer", False):
             return self._convert_variable_type(arg, derived_type_context=derived_type_context)
-        interface_name = str(arg.kind or arg.name).casefold()
-        signature = callback_interfaces.get(interface_name)
+        interface_name = str(arg.kind or arg.name)
+        signature = callback_interfaces.get(interface_name.casefold())
         if signature is None:
             return self._convert_variable_type(arg, derived_type_context=derived_type_context)
 
@@ -493,26 +494,30 @@ class FortranToIRConverter(ClassVisitor):
         projected_arguments = list(signature.arguments)
         callback_arguments = [self.visit(item, derived_type_context=context) for item in projected_arguments]
         for source_argument, callback_argument in zip(projected_arguments, callback_arguments, strict=True):
-            access = self._callback_declaration_access(source_argument)
-            callback_argument.metadata[CALLBACK_DECLARATION_ACCESS_METADATA] = access
-            self._normalize_callback_character_storage(callback_argument, source_argument, access)
+            self._normalize_callback_reference_storage(callback_argument, source_argument)
         callback_return = (
             self.visit(signature.result, derived_type_context=context, as_type=True)
             if signature.result
             else SemanticType("None", dtype="None")
         )
+        prototype_module = str(signature.module or "")
         return SemanticType(
-            "Callable",
-            dtype="Callable",
+            interface_name,
+            dtype="Prototype",
             metadata={
                 "arguments": [item.semantic_type for item in callback_arguments],
                 "callback_arguments": callback_arguments,
                 "return": callback_return,
-                "fortran_callback_interface": signature.name,
-                "fortran_callback_kind": signature.kind,
+                PROTOTYPE_REF_METADATA: {
+                    "name": interface_name,
+                    "local_name": interface_name,
+                    "origin_module": prototype_module,
+                },
+                "native_callback_kind": signature.kind,
                 "callback_lifetime": "call",
                 "callback_thread": "entering_thread",
                 "callback_exception": "print_traceback_and_abort",
+                "prototype_metadata": self._procedure_metadata(signature),
             },
             storage=SemanticStorageContract(
                 kind="callback",
@@ -525,48 +530,84 @@ class FortranToIRConverter(ClassVisitor):
                 native_scope=getattr(arg, "procedure", None),
                 source_kind="dummy_procedure",
                 source_type=self._fortran_source_type(arg),
-                metadata={"interface": signature.name},
+                metadata={"prototype": interface_name},
             ),
         )
 
     @staticmethod
-    def _callback_declaration_access(arg: FortranArgument | FortranVariable) -> str:
-        """Return exact callback declaration access for Fortran adapter printing."""
-        match getattr(arg, "intent", None):
-            case "in":
-                return "read"
-            case "out":
-                return "write"
-            case "inout":
-                return "readwrite"
-            case _:
-                return "unspecified"
-
-    @staticmethod
-    def _normalize_callback_character_storage(
+    def _normalize_callback_reference_storage(
         callback_argument: SemanticArgument,
         source_argument: FortranArgument | FortranVariable,
-        access: str,
     ) -> None:
-        """Use mutable scalar bytes storage for writable callback character dummies."""
-        semantic_type = callback_argument.semantic_type
-        if semantic_type.name != "String" or semantic_type.rank != 0:
-            return
+        """Make every non-value callback dummy a permissive reference contract."""
         if getattr(source_argument, "pass_by_value", False):
             return
-        if access == "read":
-            return
-        semantic_type.storage = SemanticStorageContract(
-            kind="array",
-            read_only=False,
-            mutable=True,
-            array=SemanticArrayContract(
-                rank=0,
-                shape=[],
-                category=SCALAR_STORAGE_CATEGORY,
-            ),
-        )
+        semantic_type = callback_argument.semantic_type
+        if semantic_type.name == "String" and semantic_type.rank == 0:
+            semantic_type.storage = SemanticStorageContract(
+                kind="array",
+                read_only=False,
+                mutable=True,
+                array=SemanticArrayContract(
+                    rank=0,
+                    shape=[],
+                    category=SCALAR_STORAGE_CATEGORY,
+                ),
+            )
+        elif semantic_type.storage is None:
+            semantic_type.storage = SemanticStorageContract(
+                kind="reference",
+                read_only=False,
+                mutable=True,
+                pointer_depth=1,
+            )
+        else:
+            semantic_type.storage.read_only = False
+            semantic_type.storage.mutable = True
         semantic_type.ownership.mutable = True
+
+    def _module_prototypes(
+        self,
+        module: FortranModule,
+        context: _DerivedTypeContext,
+        referenced: set[str],
+    ) -> list[SemanticPrototype]:
+        """Convert abstract and callback-local interfaces into semantic prototypes."""
+        prototypes: list[SemanticPrototype] = []
+        seen: set[str] = set()
+        for interface in module.interfaces:
+            for signature in interface.procedures:
+                name = interface.name if interface.name and len(interface.procedures) == 1 else signature.name
+                if not interface.abstract and name.casefold() not in referenced:
+                    continue
+                if name in seen:
+                    continue
+                seen.add(name)
+                arguments = [self.visit(item, derived_type_context=context) for item in signature.arguments]
+                for source_argument, argument in zip(signature.arguments, arguments, strict=True):
+                    self._normalize_callback_reference_storage(argument, source_argument)
+                return_type = (
+                    self.visit(signature.result, derived_type_context=context, as_type=True)
+                    if signature.result is not None
+                    else SemanticType("None", dtype="None")
+                )
+                prototypes.append(
+                    SemanticPrototype(
+                        name=name,
+                        native_name=name,
+                        arguments=arguments,
+                        return_type=return_type,
+                        metadata=self._procedure_metadata(signature),
+                        visibility=self._symbol_visibility(module, name),
+                        origin=SemanticOrigin(
+                            source_language="fortran",
+                            native_name=name,
+                            native_scope=module.name,
+                            source_kind="prototype",
+                        ),
+                    )
+                )
+        return prototypes
 
     @staticmethod
     def _visit_FortranEnumerator(enumerator: FortranEnumerator, *, enum: FortranEnum) -> SemanticVariable:
@@ -732,6 +773,13 @@ class FortranToIRConverter(ClassVisitor):
             )
             for proc in module.procedures
         ]
+        callback_prototypes = {
+            argument.semantic_type.name.casefold()
+            for function in semantic_functions
+            for argument in function.arguments
+            if argument.semantic_type.storage is not None and argument.semantic_type.storage.kind == "callback"
+        }
+        prototypes = self._module_prototypes(module, context, callback_prototypes)
         procedure_lookup = {func.name.casefold(): func for func in semantic_functions}
 
         semantic_classes = [
@@ -771,6 +819,7 @@ class FortranToIRConverter(ClassVisitor):
         return SemanticModule(
             name=module.name,
             functions=semantic_functions,
+            prototypes=prototypes,
             overload_sets=overload_sets,
             classes=semantic_classes,
             variables=module_variables + enum_constants,

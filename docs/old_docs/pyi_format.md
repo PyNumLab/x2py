@@ -217,8 +217,9 @@ files while the generated bridge is compiled:
 ```
 
 Archives do not normally contain `.mod` files, so module directories remain
-separate inputs. Standalone `@external` procedures require no `.mod` file because
-the bridge emits their interface from the semantic contract.
+separate inputs. Standalone `@external` procedures require no `.mod` file
+because the bridge emits their implicit external declaration or required
+explicit interface from the semantic contract.
 
 Required link cases are:
 
@@ -363,13 +364,13 @@ The public annotations use semantic names, not raw C or Fortran spellings:
 | Complex | `Complex64`, `Complex128`, `Complex256` |
 | Text | `String` |
 | User types | class names and imported type names |
-| Callables | `Callable`, `Callable[..., T]`, `Callable[[A, B], T]` |
+| Callback prototypes | named `@prototype` declarations referenced by name |
 
 `Unknown` is intentionally rejected in `.pyi` annotations. Generated stubs must
 resolve or block unsupported source types instead of emitting unknown contracts.
 Current C callback placeholders such as `CFunctionPointer` can appear in
-generated stubs when source callback policy is incomplete; edit them to a full
-`Callable[[...], ...]` contract before expecting readiness to pass.
+generated stubs when source callback policy is incomplete; replace them with a
+complete named prototype before expecting readiness to pass.
 
 ## Storage Contracts
 
@@ -1039,7 +1040,7 @@ Loaded but usually not generated from source today:
 
 | Area | Loaded behavior |
 | --- | --- |
-| `Callable[[...], ...]` | complete callback/procedure signature metadata |
+| named `@prototype` | complete callback/procedure signature metadata |
 | `Addr[n](T)` for `n > 1` | direct low-level pointer topology |
 | `ORDER_ANY` | edited orientation-independent array contract |
 | generic `Annotated` constraints | preserved semantic constraints |
@@ -1071,7 +1072,7 @@ The loader intentionally rejects syntax that would be ambiguous or stale:
 Near-term format work:
 
 1. Make C and Fortran callbacks/procedure pointers first-class by preserving
-   complete `Callable[[...], ...]` contracts from source.
+   complete named prototypes from source.
 2. Add explicit pointer ownership, borrow, nullability, output-buffer and
    copy/readback policy so pointer-heavy C APIs can move beyond blockers.
 3. Strengthen Fortran `character(len=...)` with length, kind, hidden-length ABI

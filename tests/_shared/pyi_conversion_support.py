@@ -34,7 +34,6 @@ from x2py.semantics.native_array_handles import (
 )
 
 from x2py.semantics.models import (
-    CALLBACK_DECLARATION_ACCESS_METADATA,
     ProjectionMapping,
     PYTHON_VALUE_IMMUTABLE,
     PYTHON_VALUE_MUTABILITY_METADATA,
@@ -127,7 +126,6 @@ __all__ = (
     "ADDRESS_ROLE_PROJECTION",
     "ADDRESS_ROLE_RAW",
     "BIND_TARGET_METADATA",
-    "CALLBACK_DECLARATION_ACCESS_METADATA",
     "CONTRACT_IMPORT",
     "CONTRACT_SYMBOLS",
     "FORTRAN_PYI_COMPARE_FIXTURES",

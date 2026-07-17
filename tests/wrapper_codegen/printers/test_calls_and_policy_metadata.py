@@ -1,7 +1,7 @@
 """Tests split by stable ownership concept from `test_imports_and_packages.py`."""
 
 from tests.wrapper_codegen.printers._support import (
-    CALLBACK_DECLARATION_ACCESS_METADATA,
+    PROTOTYPE_REF_METADATA,
     ProjectionMapping,
     PyiPrinter,
     RUNTIME_HOLD_GIL_METADATA,
@@ -12,6 +12,7 @@ from tests.wrapper_codegen.printers._support import (
     SemanticFunction,
     SemanticModule,
     SemanticOrigin,
+    SemanticPrototype,
     SemanticStorageContract,
     SemanticType,
     SemanticVariable,
@@ -240,7 +241,10 @@ def serialized(x: Float64) -> Float64: ...
 def test_callback_contract_holds_gil_and_release_gil_is_removed():
     loaded = parse_pyi_text(
         """
-def apply(callback: Callable[[Float64], Float64], x: Float64) -> Float64: ...
+@prototype
+def scalar_callback(value: Float64) -> Float64: ...
+
+def apply(callback: scalar_callback, x: Float64) -> Float64: ...
 """,
         module_name="callback_policy",
     )
@@ -414,14 +418,6 @@ def test_printer_emits_extended_storage_and_callable_forms():
             ),
         ),
     )
-    full_callback = SemanticType(
-        "Callable",
-        metadata={
-            "arguments": [SemanticType("Int32"), SemanticType("Float64")],
-            "return": SemanticType("Float64"),
-        },
-    )
-    any_callback = SemanticType("Callable", metadata={"return": SemanticType("Float64")})
     character = SemanticType(
         "String",
         metadata={"fortran_character_length": "16"},
@@ -458,9 +454,6 @@ def test_printer_emits_extended_storage_and_callable_forms():
     assert printer.emit(character) == "String[16]"
     assert printer.emit(allocatable_character) == "Allocatable[String]"
     assert printer.emit(pointer_scalar) == "Pointer[Int32]"
-    assert printer.emit(full_callback) == "Callable[[Int32, Float64], Float64]"
-    assert printer.emit(any_callback) == "Callable[..., Float64]"
-    assert printer.emit(SemanticType("Callable")) == "Callable"
 
 
 @pytest.mark.parametrize(
@@ -537,7 +530,7 @@ def update(scale: Float64 | None = ..., target: Float64 | None = ...) -> None: .
     assert "Default is None." not in c_wrapper
 
 
-def test_printer_emits_callback_argument_abi_wrappers():
+def test_printer_emits_named_prototype_and_reference_with_value_override():
     printer = PyiPrinter()
     missing_reference = SemanticType(
         "Float64",
@@ -581,52 +574,59 @@ def test_printer_emits_callback_argument_abi_wrappers():
         SemanticArgument(
             "value",
             SemanticType("Int32"),
-            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "read"},
             origin=SemanticOrigin(metadata={"value": True}),
         ),
         SemanticArgument(
             "missing",
             missing_reference,
-            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "unspecified"},
             origin=SemanticOrigin(metadata={"value": False}),
         ),
         SemanticArgument(
             "missing_array",
             missing_array,
-            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "unspecified"},
             origin=SemanticOrigin(metadata={"value": False}),
         ),
         SemanticArgument(
             "read",
             input_reference,
-            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "read"},
             origin=SemanticOrigin(metadata={"value": False}),
         ),
         SemanticArgument(
             "write",
             output_array,
-            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "write"},
             origin=SemanticOrigin(metadata={"value": False}),
         ),
         SemanticArgument(
             "readwrite",
             inout_array,
-            metadata={CALLBACK_DECLARATION_ACCESS_METADATA: "readwrite"},
             origin=SemanticOrigin(metadata={"value": False}),
         ),
     ]
+    prototype = SemanticPrototype(
+        name="update_values",
+        native_name="update_values",
+        arguments=callback_arguments,
+        return_type=SemanticType("None", dtype="None"),
+    )
     callback = SemanticType(
-        "Callable",
+        "update_values",
+        dtype="Prototype",
         metadata={
             "arguments": [argument.semantic_type for argument in callback_arguments],
             "callback_arguments": callback_arguments,
             "return": SemanticType("None"),
+            PROTOTYPE_REF_METADATA: {
+                "name": "update_values",
+                "local_name": "update_values",
+                "origin_module": "callbacks",
+            },
         },
+        storage=SemanticStorageContract(kind="callback"),
     )
 
-    assert printer.emit(callback) == (
-        "Callable[[Int32, PassByRef(Float64), Float64[:], In(Int32), Out(Float64[:]), InOut(Float64[:])], None]"
-    )
+    assert printer.emit(callback) == "update_values"
+    assert "@prototype\ndef update_values(" in printer.emit(prototype)
+    assert "value: Value(Int32)" in printer.emit(prototype)
 
 
 def test_printer_projection_return_helpers_and_keyword_data_members():

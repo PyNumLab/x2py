@@ -10,6 +10,8 @@ REPO_ROOT = Path(__file__).parents[2]
 TEST_ROOT = REPO_ROOT / "tests"
 TEST_INDEX = TEST_ROOT / "README.md"
 MIGRATION_CHECKLIST = REPO_ROOT / "docs/maintainer/roadmap/test-suite-organization-checklist.md"
+QUALITY_WORKFLOW = REPO_ROOT / ".github/workflows/quality.yml"
+FULL_REAL_LIBRARY_TEST = "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py"
 
 STAGE_DIRECTORIES = {
     "architecture",
@@ -158,3 +160,21 @@ def test_maintained_docs_do_not_name_deprecated_pytest_locations() -> None:
             if pattern in text:
                 stale.append(f"{path.relative_to(REPO_ROOT)}: {pattern}")
     assert stale == []
+
+
+def test_full_real_library_nodes_have_one_dedicated_quality_job() -> None:
+    text = QUALITY_WORKFLOW.read_text(encoding="utf-8")
+    ordinary_jobs, dedicated_and_later = text.split("  real-library-wrappers:", maxsplit=1)
+    dedicated_job, _later_jobs = dedicated_and_later.split("\n  coverage-report:", maxsplit=1)
+
+    assert f"--ignore={FULL_REAL_LIBRARY_TEST}" in ordinary_jobs
+    assert (
+        f'"{FULL_REAL_LIBRARY_TEST}::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[blas]"'
+        in dedicated_job
+    )
+    assert (
+        f'"{FULL_REAL_LIBRARY_TEST}::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[lapack]"'
+        in dedicated_job
+    )
+    assert "ignore-real-library-wrappers" in dedicated_job
+    assert "matrix.library" not in dedicated_job

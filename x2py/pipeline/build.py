@@ -32,6 +32,7 @@ from x2py.semantics.models import (
     SemanticFunction,
     SemanticImport,
     SemanticModule,
+    SemanticPrototype,
     SemanticVariable,
 )
 from x2py.semantics.native_contract import NATIVE_CONTRACT_PREPARED_METADATA, validate_pyi_native_contract
@@ -787,6 +788,14 @@ def _pyi_export_tree(
                 origin=path,
             )
 
+    for prototype in module.prototypes:
+        _merge_export_child(
+            tree,
+            prototype.name,
+            _PyiExportNode(declarations=[prototype], origins={path}),
+            origin=path,
+        )
+
     for semantic_import in module.imports:
         if not isinstance(semantic_import, SemanticImport) or not semantic_import.module.startswith("."):
             continue
@@ -859,6 +868,8 @@ def _merge_export_child(tree: _PyiExportNode, name: str, child: _PyiExportNode, 
 def _record_pyi_exports(tree: _PyiExportNode, namespace: tuple[str, ...] = ()) -> None:
     for name, child in tree.children.items():
         for declaration in child.declarations:
+            if isinstance(declaration, SemanticPrototype):
+                continue
             exports = _declaration_exports(declaration)
             export = {"namespace": namespace, "name": name}
             if export not in exports:
@@ -1432,6 +1443,7 @@ def _merge_wrapper_modules(modules: list[SemanticModule], *, name: str | None = 
     return SemanticModule(
         name=name or modules[0].name,
         functions=[function for module in modules for function in module.functions],
+        prototypes=[prototype for module in modules for prototype in module.prototypes],
         overload_sets=[overload for module in modules for overload in module.overload_sets],
         classes=[semantic_class for module in modules for semantic_class in module.classes],
         variables=[variable for module in modules for variable in module.variables],

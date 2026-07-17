@@ -14,6 +14,7 @@ from x2py.semantics.wrapper_policy import (
     CallbackResultAction,
     CallbackThreadAction,
     CallbackTransferAction,
+    ExternalDeclarationMode,
 )
 from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner, WrapperPlanSupportAnalyzer
 from x2py.wrapper_codegen.plan import DatatypeFamily
@@ -27,6 +28,7 @@ CONTRACT = (
     / "fcallback_all_f90"
     / "fcallback_all_f90.pyi"
 )
+ARRAY_CONTRACT = CONTRACT.parents[1] / "fcallback_array_f90" / "fcallback_array_f90.pyi"
 
 
 def _module():
@@ -56,7 +58,7 @@ def _sources(plan):
     return c_source, bridge
 
 
-def test_callback_policy_completes_every_legacy_observed_transfer_before_planning():
+def test_callback_policy_completes_reference_default_and_value_override_before_planning():
     module = _module()
     policies = {
         function.name: function.metadata[models.RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
@@ -68,15 +70,11 @@ def test_callback_policy_completes_every_legacy_observed_transfer_before_plannin
     assert scalar.thread_action is CallbackThreadAction.REQUIRE_ENTERING_THREAD
     assert scalar.gil_actions == (CallbackGILAction.ACQUIRE_GIL, CallbackGILAction.RELEASE_GIL)
     assert tuple(transfer.abi for transfer in scalar.arguments) == (CallbackABIKind.REFERENCE,) * 3
-    assert tuple(transfer.adapter_action for transfer in scalar.arguments) == (
-        CallbackTransferAction.COPY_IN_OUT,
-        CallbackTransferAction.COPY_OUT,
-        CallbackTransferAction.COPY_IN_OUT,
-    )
+    assert tuple(transfer.adapter_action for transfer in scalar.arguments) == (CallbackTransferAction.COPY_IN_OUT,) * 3
 
     array = policies["apply_array_storage_callback"].arguments[0].callback
     assert array.arguments[0].abi is CallbackABIKind.REFERENCE
-    assert array.arguments[0].adapter_action is CallbackTransferAction.COPY_IN
+    assert array.arguments[0].adapter_action is CallbackTransferAction.COPY_IN_OUT
     assert array.arguments[1].abi is CallbackABIKind.DATA_AND_SHAPE
     assert array.arguments[1].array.shape == ("count",)
 
@@ -165,16 +163,32 @@ def test_callback_artifacts_use_linear_context_adapter_and_trampoline_paths():
     assert "Py_BEGIN_ALLOW_THREADS" not in c_source
     assert "Py_END_ALLOW_THREADS" not in c_source
 
-    assert "abstract interface" in bridge
-    assert "integer(c_int32_t), intent(in), value :: arg_0" in bridge
-    assert "integer(c_int32_t), intent(in) :: count" in bridge
-    assert "procedure(x2py_callback_trampoline" in bridge
-    assert "size(arg_1_callback_storage, dim=1, kind=c_int64_t)" in bridge
-    assert "int(len(arg_0_callback_storage), kind=c_int64_t)" in bridge
-    assert "Int32_to_PyLong((int32_t *)count_data)" in c_source
+    assert "integer(c_int32_t), value :: value" in bridge
+    assert "integer(c_int32_t) :: count" in bridge
+    assert "external :: x2py_callback_adapter" in bridge
+    assert 'bind(c, name="x2py_callback_trampoline' in bridge
+    assert "size(values_callback_storage, dim=1, kind=c_int64_t)" in bridge
+    assert "int(len(read_label_callback_storage), kind=c_int64_t)" in bridge
+    assert "NPY_INT32, NULL, count_data, 0, NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE" in c_source
     assert bridge.count("call native_apply_array_storage_callback(") == 1
-    assert bridge.count("call callback(") == 3
+    assert "call callback(" not in bridge
     assert max(map(len, bridge.splitlines())) <= 132
+
+
+def test_callback_declaration_uses_external_unless_prototype_requires_explicit_interface():
+    module = pyi_file_to_semantic_module(ARRAY_CONTRACT, module_name="fcallback_array_f90")
+    complete_semantic_policies(module)
+    plan = WrapperPlanner().build(module)
+
+    reduce = _callback_argument(plan, "apply_reduce").callback
+    transform = _callback_argument(plan, "apply_transform").callback
+    assert reduce.declaration_mode is ExternalDeclarationMode.IMPLICIT_EXTERNAL
+    assert transform.declaration_mode is ExternalDeclarationMode.EXPLICIT_INTERFACE
+
+    _, bridge = _sources(plan)
+    assert f"real(c_double), external :: {reduce.adapter_symbol}" in bridge
+    assert f"procedure({transform.adapter_symbol}_prototype) :: {transform.adapter_symbol}" in bridge
+    assert f"{transform.adapter_symbol}_prototype => transform_callback" in bridge
 
 
 def test_optional_callback_retains_one_exact_policy_blocker():

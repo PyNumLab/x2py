@@ -6,7 +6,7 @@ from typing import Any
 
 
 EXTERNAL_TYPE_REF_METADATA = "external_type_ref"
-CALLBACK_DECLARATION_ACCESS_METADATA = "callback_declaration_access"
+PROTOTYPE_REF_METADATA = "prototype_ref"
 INTERNAL_MODULE_VARIABLE_ACCESS_METADATA = "internal_module_variable_access"
 INTERNAL_MODULE_VARIABLE_NAME_METADATA = "internal_module_variable_name"
 INTERNAL_NATIVE_ARRAY_HANDLE_OPERATION_METADATA = "internal_native_array_handle_operation"
@@ -293,6 +293,16 @@ class SemanticFunction:
 
 
 # ============================================================
+# Named Procedure Prototypes
+# ============================================================
+
+
+@dataclass(eq=False)
+class SemanticPrototype(SemanticFunction):
+    """Named native callback signature with no runtime Python export."""
+
+
+# ============================================================
 # Semantic Methods
 # ============================================================
 
@@ -572,6 +582,8 @@ class SemanticModule:
 
     functions: list[SemanticFunction] = field(default_factory=list)
 
+    prototypes: list[SemanticPrototype] = field(default_factory=list)
+
     overload_sets: list[ProcedureOverloadSet] = field(default_factory=list)
 
     classes: list[SemanticClass] = field(default_factory=list)
@@ -588,7 +600,7 @@ def _iter_semantic_type_tree(semantic_type: SemanticType | None):
     if semantic_type is None:
         return
     yield semantic_type
-    if semantic_type.name == "Callable":
+    if semantic_type.storage is not None and semantic_type.storage.kind == "callback":
         arguments = semantic_type.metadata.get("arguments")
         if isinstance(arguments, list):
             for argument in arguments:
@@ -620,6 +632,10 @@ def _iter_module_semantic_types(module: SemanticModule):
         for argument in function.arguments:
             yield from _iter_semantic_type_tree(argument.semantic_type)
         yield from _iter_semantic_type_tree(function.return_type)
+    for prototype in module.prototypes:
+        for argument in prototype.arguments:
+            yield from _iter_semantic_type_tree(argument.semantic_type)
+        yield from _iter_semantic_type_tree(prototype.return_type)
     for overload_set in module.overload_sets:
         for procedure in overload_set.procedures:
             for argument in procedure.arguments:

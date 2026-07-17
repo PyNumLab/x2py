@@ -726,10 +726,13 @@ from x2py import assess_semantic_wrap_readiness, pyi_text_to_semantic_module
 
 module = pyi_text_to_semantic_module(
     """
-from typing import Callable
+from x2py.contracts import prototype
+
+@prototype
+def objective(value: Float64) -> Float64: ...
 
 def integrate(
-    objective: Callable[[Float64], Float64],
+    callback: objective,
     x0: Float64
 ) -> Float64: ...
 """,
@@ -818,16 +821,18 @@ def fill_matrix(
 ### Complete Callback Signature
 
 ```python
-from typing import Callable
+from x2py.contracts import prototype
+
+@prototype
+def objective(value: Float64) -> Float64: ...
 
 def integrate(
-    objective: Callable[[Float64], Float64],
+    callback: objective,
     x0: Float64
 ) -> Float64: ...
 ```
 
-`Callable[..., Float64]` is accepted syntax but remains semantically
-incomplete because the callback argument types are unknown.
+The prototype names every callback argument and its result explicitly.
 
 ### Preserved Projection Metadata
 
@@ -852,8 +857,8 @@ def integrate(objective: Procedure, x0: Float64) -> Float64: ...
 ```
 
 This is blocked because callback argument order, argument types, and return
-type are incomplete. Replacing `Procedure` with a complete supported
-`Callable[[...], Return]` supplies the semantic signature.
+type are incomplete. Replacing `Procedure` with a complete named prototype
+supplies the semantic signature.
 
 ### Missing Compile-Time Constant
 

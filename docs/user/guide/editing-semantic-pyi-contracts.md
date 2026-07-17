@@ -360,10 +360,14 @@ def scalar_status(
 Removing the explicit `status` parameter and adding the result projection are
 one edit. A projection must map every required native argument exactly once;
 incomplete, duplicate, or out-of-range mappings are contract errors.
-Native `intent` does not override this edited signature: an output dummy may
+The semantic `.pyi` intentionally has no `intent` annotation. For a generated
+starter contract, source `intent` only helps select the default visible
+arguments and projected results. After loading, the signature, `Returns[...]`,
+and exhaustive `@native_call` list are authoritative. An output dummy may
 remain caller-supplied storage, while a projected output exists only when the
 contract explicitly requests that projection. The bridge may use permissive
-writable local storage; the called native procedure enforces its own direction.
+writable local storage; the called native procedure retains and enforces its
+own direction.
 
 ### Make mutation replacement-only
 
@@ -450,10 +454,13 @@ allows it. Add `@hold_gil` when native code must call Python synchronously or
 otherwise requires the current Python thread to retain the GIL:
 
 ```python
-from x2py.contracts import Callable, Float64, In, hold_gil
+from x2py.contracts import Float64, hold_gil, prototype
+
+@prototype
+def scalar_callback(value: Float64) -> Float64: ...
 
 @hold_gil
-def invoke_callback(callback: Callable[[In(Float64)], Float64]) -> Float64: ...
+def invoke_callback(callback: scalar_callback) -> Float64: ...
 ```
 
 These decorators change wrapper runtime policy; they do not change the native

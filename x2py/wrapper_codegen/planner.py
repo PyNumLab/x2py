@@ -908,6 +908,7 @@ class WrapperPlanner(ClassVisitor):
                 policy.native_invocation,
                 policy.native_operator,
                 policy.external,
+                policy.external_declaration,
                 policy.native_module,
                 policy.native_is_subroutine,
             ),
@@ -1024,6 +1025,9 @@ class WrapperPlanner(ClassVisitor):
         stem = NativeSymbolNames.compact(policy.owner_path, "callback", limit=24)
         return CallbackHandoffPlan(
             owner_path=policy.owner_path,
+            prototype_name=policy.prototype_name,
+            prototype_module=policy.prototype_module,
+            declaration_mode=policy.declaration_mode,
             context_type_symbol=f"x2py_callback_context_{stem}",
             context_current_symbol=f"x2py_callback_current_{stem}",
             adapter_symbol=f"x2py_callback_adapter_{stem}",
@@ -1053,7 +1057,7 @@ class WrapperPlanner(ClassVisitor):
             semantic_type_name=policy.semantic_type_name,
             object_kind=policy.object_kind,
             rank=policy.rank,
-            access=policy.access,
+            passed_by_value=policy.passed_by_value,
             abi=policy.abi,
             adapter_action=policy.adapter_action,
             python_action=policy.python_action,

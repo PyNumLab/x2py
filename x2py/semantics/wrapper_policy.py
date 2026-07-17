@@ -370,6 +370,14 @@ class NativeInvocationKind(str, Enum):
     DEFINED_ASSIGNMENT = "defined_assignment"
 
 
+class ExternalDeclarationMode(str, Enum):
+    """Completed Fortran declaration form for one native procedure."""
+
+    NONE = "none"
+    IMPLICIT_EXTERNAL = "implicit_external"
+    EXPLICIT_INTERFACE = "explicit_interface"
+
+
 def overload_builtin_scalar_family(semantic_type_name: str) -> str:
     """Return the Python scalar family admitted by reflected dispatch."""
     if semantic_type_name == "Bool":
@@ -922,7 +930,7 @@ class CallbackTransferPolicy:
     semantic_type_name: str
     object_kind: ObjectKind
     rank: int
-    access: str
+    passed_by_value: bool
     abi: CallbackABIKind
     adapter_action: CallbackTransferAction
     python_action: PythonBarrierAction
@@ -944,6 +952,9 @@ class CallbackHandoffPolicy:
     """Complete immediate-callback contract consumed by wrapper planning."""
 
     owner_path: str
+    prototype_name: str
+    prototype_module: str | None
+    declaration_mode: ExternalDeclarationMode
     arguments: tuple[CallbackTransferPolicy, ...]
     result: CallbackResultPolicy
     lifecycle: tuple[CallbackLifecycleAction, ...]
@@ -1081,6 +1092,7 @@ class FunctionWrapperPolicy:
     native_invocation: NativeInvocationKind
     native_operator: str | None
     external: bool
+    external_declaration: ExternalDeclarationMode
     native_module: str | None
     native_is_subroutine: bool
     hold_gil: bool
@@ -1929,8 +1941,22 @@ def build_callback_handoff_policy(
         )
     result = _callback_result_policy(return_type, owner_path=f"{owner_path}.callback_result")
     blockers.extend(_callback_result_blockers(return_type, result))
+    prototype_ref = semantic_type.metadata.get(models.PROTOTYPE_REF_METADATA)
+    prototype_name = prototype_ref.get("name") if isinstance(prototype_ref, dict) else None
+    prototype_module = prototype_ref.get("origin_module") if isinstance(prototype_ref, dict) else None
+    if not isinstance(prototype_name, str) or not prototype_name:
+        blockers.append("callback argument requires a resolved named prototype")
+        prototype_name = semantic_type.name
+    declaration_mode = _callback_declaration_mode(raw_arguments, return_type, semantic_type)
+    if declaration_mode is ExternalDeclarationMode.EXPLICIT_INTERFACE and not (
+        isinstance(prototype_module, str) and prototype_module
+    ):
+        blockers.append(f"prototype {prototype_name!r} requires an importable native module")
     return CallbackHandoffPolicy(
         owner_path=owner_path,
+        prototype_name=prototype_name,
+        prototype_module=(prototype_module if isinstance(prototype_module, str) and prototype_module else None),
+        declaration_mode=declaration_mode,
         arguments=arguments,
         result=result,
         lifecycle=(
@@ -1947,6 +1973,60 @@ def build_callback_handoff_policy(
         supported=not blockers,
         blockers=tuple(blockers),
     )
+
+
+def _callback_declaration_mode(
+    arguments: object,
+    return_type: object,
+    semantic_type: models.SemanticType,
+) -> ExternalDeclarationMode:
+    """Select the weakest correct adapter declaration from prototype facts."""
+    if isinstance(arguments, list) and any(
+        isinstance(argument, models.SemanticArgument) and _prototype_argument_requires_explicit_interface(argument)
+        for argument in arguments
+    ):
+        return ExternalDeclarationMode.EXPLICIT_INTERFACE
+    if isinstance(return_type, models.SemanticType) and _prototype_result_requires_explicit_interface(return_type):
+        return ExternalDeclarationMode.EXPLICIT_INTERFACE
+    prototype_metadata = semantic_type.metadata.get("prototype_metadata")
+    attributes = prototype_metadata.get("fortran_attributes", ()) if isinstance(prototype_metadata, dict) else ()
+    normalized = {str(attribute).casefold().replace(" ", "") for attribute in attributes}
+    if normalized & {"bind(c)", "elemental", "pure"}:
+        return ExternalDeclarationMode.EXPLICIT_INTERFACE
+    return ExternalDeclarationMode.IMPLICIT_EXTERNAL
+
+
+def _prototype_argument_requires_explicit_interface(argument: models.SemanticArgument) -> bool:
+    semantic_type = argument.semantic_type
+    storage = semantic_type.storage
+    array = storage.array if storage is not None else None
+    if argument.optional:
+        return True
+    if any(
+        semantic_type.metadata.get(name)
+        for name in (
+            "fortran_allocatable",
+            "fortran_pointer",
+            "fortran_polymorphic",
+            "fortran_assumed_type",
+            "fortran_target",
+        )
+    ):
+        return True
+    return array is not None and array.category in {"assumed_shape", "deferred_shape", "assumed_rank"}
+
+
+def _prototype_result_requires_explicit_interface(return_type: models.SemanticType) -> bool:
+    if return_type.name == "None":
+        return False
+    if return_type.rank > 0:
+        return True
+    if return_type.metadata.get("fortran_allocatable") or return_type.metadata.get("fortran_pointer"):
+        return True
+    if return_type.name != "String":
+        return False
+    length = return_type.metadata.get("fortran_character_length")
+    return length is None or str(length).strip() in {"", ":", "*"}
 
 
 def _callback_envelope_blockers(semantic_type: models.SemanticType) -> tuple[str, ...]:
@@ -1975,7 +2055,7 @@ def _callback_transfer_policy(
     decision = _ownership_decision(argument, models.RESOLVED_OWNERSHIP_POLICY_METADATA)
     if decision is None:
         raise ValueError(f"Callback transfer {owner_path!r} is missing completed ownership policy")
-    access = str(argument.metadata.get(models.CALLBACK_DECLARATION_ACCESS_METADATA, "read"))
+    passed_by_value = bool(argument.origin.metadata.get("value"))
     derived = _is_scalar_derived_type(semantic_type)
     array = _array_handoff_policy(semantic_type) if int(semantic_type.rank or 0) > 0 else None
     return CallbackTransferPolicy(
@@ -1984,9 +2064,9 @@ def _callback_transfer_policy(
         semantic_type_name=semantic_type.name,
         object_kind=decision.kind,
         rank=int(semantic_type.rank or 0),
-        access=access,
-        abi=_callback_abi_kind(argument, access, derived=derived),
-        adapter_action=_callback_adapter_action(argument, access),
+        passed_by_value=passed_by_value,
+        abi=_callback_abi_kind(argument, derived=derived),
+        adapter_action=_callback_adapter_action(argument),
         python_action=decision.python_barrier_action,
         character_length=_character_length(semantic_type),
         array=array,
@@ -1996,7 +2076,6 @@ def _callback_transfer_policy(
 
 def _callback_abi_kind(
     argument: models.SemanticArgument,
-    access: str,
     *,
     derived: bool,
 ) -> CallbackABIKind:
@@ -2015,20 +2094,11 @@ def _callback_abi_kind(
 
 def _callback_adapter_action(
     argument: models.SemanticArgument,
-    access: str,
 ) -> CallbackTransferAction:
-    """Select adapter copy direction once from the callable declaration."""
-    if bool(argument.origin.metadata.get("value")) or access == "read":
+    """Select permissive reference writeback or isolated value transport."""
+    if bool(argument.origin.metadata.get("value")):
         return CallbackTransferAction.COPY_IN
-    if access == "write":
-        return CallbackTransferAction.COPY_OUT
-    if access in {"readwrite", "unspecified"}:
-        return CallbackTransferAction.COPY_IN_OUT
-    if argument.semantic_type.name == "String" or int(argument.semantic_type.rank or 0) > 0:
-        return CallbackTransferAction.COPY_IN
-    if _is_scalar_derived_type(argument.semantic_type):
-        return CallbackTransferAction.COPY_IN
-    return CallbackTransferAction.BORROW_READ_ONLY
+    return CallbackTransferAction.COPY_IN_OUT
 
 
 def _callback_transfer_blockers(
@@ -2038,8 +2108,8 @@ def _callback_transfer_blockers(
     """Reject callback forms whose typed adapter ABI is incomplete."""
     semantic_type = argument.semantic_type
     blockers = []
-    if transfer.access not in {"read", "write", "readwrite", "unspecified"}:
-        blockers.append(f"callback argument {argument.name!r} has unsupported access {transfer.access!r}")
+    if transfer.passed_by_value and transfer.rank > 0:
+        blockers.append(f"callback argument {argument.name!r} cannot pass an array by value")
     if semantic_type.name == "String":
         if transfer.character_length is None or transfer.character_length <= 0:
             blockers.append(f"callback argument {argument.name!r} requires a fixed positive character length")
@@ -2077,7 +2147,7 @@ def _callback_result_policy(
         semantic_type_name=return_type.name,
         object_kind=decision.kind,
         rank=int(return_type.rank or 0),
-        access="result",
+        passed_by_value=False,
         abi=(
             CallbackABIKind.DERIVED_ADDRESS
             if derived
@@ -2158,6 +2228,7 @@ def build_function_wrapper_policy(
     writeback_actions, lifecycle_blockers = _lifecycle_policies(arguments)
     cleanup_actions, release_actions = _derived_result_lifecycle_policies(results)
     status_error = _completed_native_status_error_policy(function)
+    native_module = _native_module(function, owner_path)
     blockers = (
         _function_shape_blockers(function, class_call)
         + argument_blockers
@@ -2172,14 +2243,22 @@ def build_function_wrapper_policy(
     )
     native_name = native_dispatch_name or _native_name(function)
     native_invocation, native_operator = _native_invocation_policy(native_name)
+    external = _is_external(function)
     return FunctionWrapperPolicy(
         owner_path=owner_path,
         python_exports=completed_python_exports(function, function.name),
         native_name=native_name,
         native_invocation=native_invocation,
         native_operator=native_operator,
-        external=_is_external(function),
-        native_module=_native_module(function, owner_path),
+        external=external,
+        external_declaration=_external_declaration_mode(
+            external=external,
+            native_invocation=native_invocation,
+            arguments=tuple(arguments),
+            results=results,
+            native_call_slots=tuple(native_call_slots),
+        ),
+        native_module=native_module,
         native_is_subroutine=_native_is_subroutine(function),
         hold_gil=bool(function.metadata.get(models.RUNTIME_HOLD_GIL_METADATA))
         or any(argument.callback is not None for argument in arguments),
@@ -2207,6 +2286,64 @@ def _native_invocation_policy(native_name: str) -> tuple[NativeInvocationKind, s
     if compact.startswith("operator(") and compact.endswith(")"):
         return NativeInvocationKind.DEFINED_OPERATOR, compact[len("operator(") : -1]
     return NativeInvocationKind.PROCEDURE, None
+
+
+def _external_declaration_mode(
+    *,
+    external: bool,
+    native_invocation: NativeInvocationKind,
+    arguments: tuple[ArgumentPolicy, ...],
+    results: tuple[ResultPolicy, ...],
+    native_call_slots: tuple[NativeCallSlotPolicy, ...],
+) -> ExternalDeclarationMode:
+    """Choose the weakest correct native declaration from completed ABI facts."""
+    if not external:
+        return ExternalDeclarationMode.NONE
+    if native_invocation is not NativeInvocationKind.PROCEDURE:
+        return ExternalDeclarationMode.EXPLICIT_INTERFACE
+    if any(_argument_requires_explicit_interface(argument) for argument in arguments):
+        return ExternalDeclarationMode.EXPLICIT_INTERFACE
+    if any(_result_requires_explicit_interface(result) for result in results):
+        return ExternalDeclarationMode.EXPLICIT_INTERFACE
+    if any(_slot_requires_explicit_interface(slot) for slot in native_call_slots):
+        return ExternalDeclarationMode.EXPLICIT_INTERFACE
+    return ExternalDeclarationMode.IMPLICIT_EXTERNAL
+
+
+def _argument_requires_explicit_interface(argument: ArgumentPolicy) -> bool:
+    """Return whether one completed native dummy cannot use an implicit interface."""
+    if argument.optional_mode is not OptionalMode.REQUIRED:
+        return True
+    if argument.native_array_handle is not None or argument.derived is not None or argument.polymorphic is not None:
+        return True
+    if argument.handoff_mode is ArgumentHandoffMode.NATIVE_DESCRIPTOR:
+        return True
+    return _array_requires_explicit_interface(argument.array)
+
+
+def _result_requires_explicit_interface(result: ResultPolicy) -> bool:
+    """Return whether one completed native result requires an explicit interface."""
+    if result.source_kind != "direct_return":
+        return False
+    if result.scalar_descriptor is not None or result.native_array_handle is not None or result.derived is not None:
+        return True
+    if result.rank > 0 or result.semantic_type_name == "String":
+        return True
+    return _array_requires_explicit_interface(result.array)
+
+
+def _slot_requires_explicit_interface(slot: NativeCallSlotPolicy) -> bool:
+    """Return whether one ordered native slot carries descriptor-only ABI semantics."""
+    if slot.value_kind == "value":
+        return True
+    if slot.native_array_handle is not None or slot.scalar_descriptor is not None or slot.derived is not None:
+        return True
+    return _array_requires_explicit_interface(slot.array)
+
+
+def _array_requires_explicit_interface(array: ArrayHandoffPolicy | None) -> bool:
+    """Return whether an array dummy uses a descriptor-based Fortran category."""
+    return array is not None and array.category in {"assumed_shape", "deferred_shape", "assumed_rank"}
 
 
 def _argument_policies(
@@ -5491,7 +5628,7 @@ def _is_scalar_derived_type(semantic_type: models.SemanticType) -> bool:
     return bool(
         int(semantic_type.rank or 0) == 0
         and semantic_type.name not in _PLAN_PRIMITIVE_SCALAR_TYPES | {"String", "Void"}
-        and semantic_type.name not in {"Callable", "Procedure", "Callback", "FunctionPointer", "CFunctionPointer"}
+        and semantic_type.name not in {"Procedure", "Callback", "FunctionPointer", "CFunctionPointer"}
     )
 
 

@@ -321,6 +321,7 @@ class FortranSourcePrinter(ClassVisitor):
         lines.append("contains")
         lines.extend(self._indented(self.visit(procedure)) for procedure in node.procedures)
         lines.append(f"end module {node.name}")
+        lines.extend(self.visit(procedure) for procedure in node.external_procedures)
         return "\n".join(lines)
 
     def _visit_FortranUse(self, node: FortranUse) -> str:
@@ -339,17 +340,26 @@ class FortranSourcePrinter(ClassVisitor):
     def _visit_FortranFunction(self, node: FortranFunction) -> str:
         """Render one Fortran function."""
         signature = self._function_signature(node)
-        lines = [signature]
-        lines.extend(self._indented(self.visit(parameter)) for parameter in node.parameters)
-        if node.result_name is not None and node.result_type is not None:
-            lines.append(self._indented(f"{node.result_type} :: {node.result_name}"))
-        lines.extend(self._indented(self.visit(declaration)) for declaration in node.declarations)
+        lines = [signature, *self._fortran_function_specification(node)]
         lines.extend(self._indented(self.visit(statement)) for statement in node.body)
         if node.internal_procedures:
             lines.append("contains")
             lines.extend(self._indented(self.visit(procedure)) for procedure in node.internal_procedures)
         lines.append(f"end {'subroutine' if node.is_subroutine else 'function'} {node.name}")
         return "\n".join(lines)
+
+    def _fortran_function_specification(self, node: FortranFunction) -> list[str]:
+        """Render use, declaration, and local-interface specification lines."""
+        lines = []
+        lines.extend(self._indented(self.visit(use)) for use in node.uses)
+        if node.implicit_none:
+            lines.append("  implicit none")
+        lines.extend(self._indented(self.visit(parameter)) for parameter in node.parameters)
+        if node.result_name is not None and node.result_type is not None:
+            lines.append(self._indented(f"{node.result_type} :: {node.result_name}"))
+        lines.extend(self._indented(self.visit(declaration)) for declaration in node.declarations)
+        lines.extend(self._indented(self.visit(interface)) for interface in node.interfaces)
+        return lines
 
     def _visit_FortranParameter(self, node: FortranParameter) -> str:
         """Render one Fortran parameter declaration."""

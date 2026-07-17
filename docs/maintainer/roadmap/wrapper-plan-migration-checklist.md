@@ -738,7 +738,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/edit_pyi_contracts/test_visibility_contracts.py::*` | direct wrapper/build route | semantic .pyi generation/parsing; scalar module visibility and namespace projection | `wrapper-plan` |
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_compact_blas_like_folder_generates_one_external_entry_and_preserves_separate_objects` | direct wrapper/build route | external symbols/native linkage; ordinary arrays | `wrapper-plan` |
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_external_bind_renames_python_export_without_changing_native_call` | direct wrapper/build route | scalar external symbol; explicit bridge interface; renamed export | `wrapper-plan` |
-| `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_external_bridge_uses_explicit_interface_and_no_module_use` | direct wrapper/build route | scalar external symbol; explicit bridge interface | `wrapper-plan` |
+| `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_classic_external_bridge_uses_implicit_declaration_and_no_module_use` | direct wrapper/build route | scalar external symbol; implicit external declaration | `wrapper-plan` |
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_fixed_form_standalone_external_runtime_parity[*]` | source/generated-.pyi parity or parametrized route | scalar external symbol; explicit bridge interface | `wrapper-plan` |
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_free_form_standalone_external_runtime_parity[*]` | source/generated-.pyi parity or parametrized route | scalar external symbol; explicit bridge interface | `wrapper-plan` |
 | `tests/wrapper/fortran/external_routines/test_external_procedures.py::test_generated_external_contracts_are_non_empty_root_fragments` | direct wrapper/build route | external symbols/native linkage | `wrapper-plan` |
@@ -783,7 +783,7 @@ already covered by the new generator.
 | `tests/wrapper/fortran/naming/test_phase9_class_overloads.py::*` | reduced direct-plan constructor and method overload runtime proof | class-owned exact predicates; constructor ownership; no speculative calls | `wrapper-plan` |
 | `tests/wrapper/fortran/naming/test_visibility_naming.py::test_strict_wrapper_names_reject_python_name_fixes` | direct wrapper/build route | naming/visibility/dispatch; classes/methods/properties/overloads | `wrapper-plan` |
 | `tests/wrapper/fortran/naming/test_visibility_naming.py::test_visibility_and_default_python_name_fixing_policy[*]` | source/generated-.pyi parity or parametrized route | naming/visibility/dispatch; classes/methods/properties/overloads | `wrapper-plan` |
-| `tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::*` | canonical full BLAS/LAPACK wrapper generation; BLAS runs locally and both exact nodes run in the dedicated GitHub Actions matrix | external symbols/native linkage; build/compile/link orchestration; broad wrapper corpus | `wrapper-plan` |
+| `tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::*` | canonical full BLAS/LAPACK wrapper generation; BLAS runs locally and both exact nodes run together in the dedicated GitHub Actions job | external symbols/native linkage; build/compile/link orchestration; broad wrapper corpus | `wrapper-plan` |
 | `tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py::test_duplicate_native_definitions_report_linker_error` | direct wrapper/build route | scalar external symbols; linker failure propagation | `wrapper-plan` |
 | `tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py::test_imported_contracts_resolve_from_one_archive_or_shared_library[*]` | source/generated-.pyi parity or parametrized route | external symbols/native linkage; build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/real_libraries/test_stage7_native_bundles.py::test_incompatible_native_artifact_reports_linker_error` | non-generating: validation/failure-path assertion | external symbols/native linkage; build/compile/link orchestration | `not-applicable` |
@@ -4359,24 +4359,29 @@ runtime oracles, production routing, and broad non-LAPACK wrapper-suite
 evidence below.
 
 Scope: immediate callback argument validation, call-scoped context lifetime,
-Fortran adapter procedures, C trampolines, scalar/string/array/derived
-argument and result conversion, copy-back, same-thread re-entry and GIL
-handling, callback cleanup, and the documented fatal error boundary.
+external Fortran adapter procedures, C trampolines, scalar/string/array/derived
+argument and result conversion, permissive reference writeback, same-thread
+re-entry and GIL handling, callback cleanup, and the documented fatal error
+boundary.
 
 ### Phase 10 Boundary And Explicit Non-Scope
 
 Phase 10 composes ordinary call transfers completed in Phases 2-9 but does not
-reinterpret them. A callback signature is Fortran-facing: it describes the
-procedure interface that native Fortran calls, including argument order,
-value/reference access, intent-derived copy direction, rank, shape, character
-length, and result representation. Normal wrapper projection and callback
-adapter projection remain distinct completed records.
+reinterpret them. A callback signature is transport-facing: it describes the
+procedure ABI that native Fortran calls, including argument order,
+value/reference transport, rank, shape, character length, and result
+representation. It deliberately does not repeat native callback `intent`.
+Normal wrapper projection and callback adapter projection remain distinct
+completed records.
 
-Native `VALUE` and callback access are independent facts. A callback dummy may
-be both `VALUE` and `INTENT(IN)`; the completed ABI selects value passing while
-the completed access selects read-only behavior, and the typed adapter must
-emit both attributes. `INTENT(IN)` without `VALUE` remains a reference-passed
-dummy even though Python observes a converted scalar value.
+Named `@prototype` declarations are the single callback-signature authority.
+Callback arguments reference a prototype by name; bare prototype arguments use
+reference transport and permissive writable Python storage, while `Value(T)`
+is the only transport override. Prototypes are semantic-only declarations and
+never become Python runtime exports. Post-IR policy selects either an implicit
+external adapter declaration or a named explicit declaration from completed
+prototype characteristics. Lowering does not reconstruct that decision or
+duplicate native `intent`.
 
 The supported callback contract is deliberately call-scoped:
 
@@ -4387,10 +4392,9 @@ The supported callback contract is deliberately call-scoped:
 - each C trampoline validates the entering thread, acquires the GIL, converts
   completed adapter arguments, invokes the current Python callable, converts
   or copies back results, releases the GIL, and returns to its Fortran adapter;
-- scalar values use value conversion; scalar reference storage, writable
-  fixed-length character storage, arrays, and derived objects use the exact
-  borrowed/copy-in/copy-out behavior already asserted by the legacy runtime
-  tests; and
+- `Value(T)` uses value conversion; scalar reference storage, fixed-length
+  character storage, arrays, and derived objects use permissive copy-in/out
+  storage already asserted by the runtime tests; and
 - a Python exception, invalid callback return, missing context, or cross-thread
   invocation prints the Python error and aborts the host process. The direct
   path must not fabricate a fallback result or continue native execution.
@@ -4414,37 +4418,18 @@ The following remain outside Phase 10:
 
 ### Phase 10 Existing Oracle And Inventory
 
-The public callback guide/reference, generated semantic `.pyi` contracts,
-legacy Python lowering/codegen, and existing source/generated-`.pyi` runtime
-assertions are the behavioral oracle. Capture each reduced legacy artifact and
-runtime assertion before implementing its direct-plan equivalent.
+The public callback guide/reference, generated semantic `.pyi` contracts, and
+existing source/generated-`.pyi` runtime assertions are the behavioral oracle.
 
 | Existing unit | Phase 10 behavior to preserve | Required reduced slice |
 | --- | --- | --- |
 | `callbacks/test_scalar_callbacks.py::test_immediate_scalar_dummy_procedure_calls_python_callback[*]` | scalar result/void callbacks, callable validation, balanced references, nested same-thread re-entry, held-GIL wrapper envelope, and thread-local context | first context, trampoline, scalar-value, and cleanup slice |
 | `callbacks/test_scalar_callbacks.py::test_callback_exception_prints_traceback_and_aborts_host_process[*]` | callback exception, wrong result, and wrong signature print a Python error and terminate the subprocess | fatal-boundary slice after scalar success |
-| `callbacks/test_array_callbacks.py::test_immediate_dummy_procedure_converts_array_arguments_and_results[*]` | read-only array view, shaped array result, output identity, and copy-back | array argument/result slice |
-| `callbacks/test_all_callback_shapes.py::test_immediate_callbacks_cover_all_supported_argument_shapes[*]` | scalar value, rank-zero scalar storage, fixed strings, arrays, derived values, output/inout copy-back, and one combined call envelope | cross-kind closure slice |
+| `callbacks/test_array_callbacks.py::test_immediate_dummy_procedure_converts_array_arguments_and_results[*]` | writable array view, shaped array result, outer-output identity, and reference writeback | array argument/result slice |
+| `callbacks/test_all_callback_shapes.py::test_immediate_callbacks_cover_all_supported_argument_shapes[*]` | scalar value override, rank-zero scalar storage, fixed strings, arrays, derived values, reference writeback, and one combined call envelope | cross-kind closure slice |
 | `callbacks/test_derived_callbacks.py::test_immediate_dummy_procedure_converts_derived_arguments_and_results[*]` | callback-local borrowed derived input plus wrapper-owned derived result conversion | derived slice after Phase 9 construction |
-| `callbacks/test_callback_generated_pyi_contracts.py` | generated callable access, shape, character-storage, and result annotations round-trip exactly | semantic-contract parity slice |
-| `semantics/conversion/pyi/test_types_and_values.py` callback cases | `Callable` ABI wrappers, inferred dimension names, writable-string validation, and forbidden `Addr(...)` callback forms | policy completion before planner work |
-
-Inventory these legacy Python owners without importing them into
-`x2py.wrapper_codegen`:
-
-- `x2py/semantics/ir2ast.py` currently creates callback `FunctionAddress`
-  records, infers fallback argument records from callable metadata, and decides
-  callback result variables. Every required signature and ownership fact must
-  instead be complete before this lowering boundary.
-- `x2py/codegen/bridges/fortran_to_c.py` currently constructs the typed
-  Fortran adapter, pointer/value ABI arguments, copy-in/copy-out storage,
-  callback result reconstruction, and adapter call ordering. Its behavior is
-  the oracle, not a reusable direct-path dependency.
-- `x2py/codegen/bindings/c_to_python.py` currently validates the callable,
-  pushes/pops thread-local context, emits C trampolines, acquires/releases the
-  GIL, converts Python arguments/results, and implements traceback-plus-abort.
-  Direct lowering must consume completed callback actions through small named
-  methods rather than copying this broad control flow.
+| `callbacks/test_callback_generated_pyi_contracts.py` | named prototypes, reference-default and `Value(T)` transport, shape, character storage, cross-module identity, and result annotations round-trip exactly | semantic-contract parity slice |
+| `semantics/conversion/pyi/test_types_and_values.py` callback cases | prototype declarations and references, `Value(T)`, exact argument names used by shapes, and unnecessary `Addr(...)` prototype forms | policy completion before planner work |
 
 ### Phase 10 Plan Shape And Action Vocabulary
 
@@ -4458,12 +4443,11 @@ or embed a legacy AST.
   action.
 - Add a `CallbackTransferPlan` for each callback argument/result containing the
   semantic type identity, object kind, value/reference ABI, rank/shape/length
-  roles, access direction, Python barrier action, adapter copy-in/copy-out
-  action, borrowed-owner retention, and exact C ABI roles.
+  roles, Python barrier action, permissive reference writeback or isolated
+  value action, borrowed-owner retention, and exact C ABI roles.
 - Reuse ordinary scalar, string, array, and derived plan vocabulary where the
-  representation is identical, but keep callback-direction roles explicit.
-  The native callback is the caller, so normal Python-to-native argument
-  projection cannot be silently reused in reverse.
+  representation is identical. The native callback is the caller, so normal
+  Python-to-native argument projection cannot be silently reused in reverse.
 - Add ordered function lifecycle phases `VALIDATE_CALLBACK`, `PUSH_CONTEXT`,
   `ENTER_NATIVE`, `POP_CONTEXT`, and `RELEASE_CALLBACK`. Every failure edge
   before native entry unwinds acquired references; the fatal trampoline edge
@@ -4493,17 +4477,18 @@ For every dependency-closed sub-lane:
 1. Capture the documented behavior, one passing source/generated-`.pyi`
    legacy unit, and its callback-related binding, bridge, adapter, trampoline,
    and runtime assertions.
-2. Complete callable validity, signature order, ABI roles, copy direction,
+2. Complete callable validity, signature order, ABI roles, reference
+   writeback/value isolation,
    shape/length dependencies, result handling, context lifetime, thread/GIL
-   rules, cleanup, and fatal behavior before `ir2ast.py`.
+   rules, cleanup, and fatal behavior before wrapper planning.
 3. Project those facts into the existing function/argument/lifecycle plans plus
    the smallest callback-specific facets.
 4. Validate the binding, bridge, adapter, and trampoline role graph before
    either backend emits source.
 5. Lower through typed action dispatch and small named methods. Do not trial a
-   callback or infer shape/access from emitted locals.
-6. Compare direct artifacts and behavior with the legacy oracle; document any
-   safety improvement before changing observable behavior.
+   callback or infer shape/transport from emitted locals.
+6. Compare emitted artifacts and behavior with the runtime oracle; document
+   any safety improvement before changing observable behavior.
 7. Add focused policy, editable-plan, validation, binding, bridge, printer,
    source/generated-`.pyi`, subprocess-failure, and compiled runtime tests.
 8. Promote production routing only after the complete callback-taking
@@ -4512,17 +4497,17 @@ For every dependency-closed sub-lane:
 ### Phase 10A — Semantic Callback Completion
 
 - [x] Add completed post-IR callback records for callable signature order,
-  argument access, object kind, value/reference ABI, shape/length roles, result
-  representation, call scope, context lifetime, same-thread rule, GIL rule,
-  cleanup, and fatal-error behavior.
-- [x] Preserve generated and edited `Callable` contracts exactly. Reject an
-  incomplete signature, invalid writable character form, forbidden `Addr`,
-  optional procedure, stored/procedure-pointer lifetime, or unsupported result
-  with the owner path and one exact reason.
-- [x] Remove callback signature/result/ownership inference from `ir2ast.py`;
-  lowering may only project the completed callback record.
-- [x] Add policy/readiness tests for every supported access form and retained
-  unsupported form before planner changes.
+  object kind, value/reference ABI, shape/length roles, result representation,
+  call scope, context lifetime, same-thread rule, GIL rule, cleanup, and
+  fatal-error behavior.
+- [x] Preserve generated and edited named prototypes exactly. Reject an
+  incomplete prototype reference, unnecessary `Addr`, optional procedure,
+  stored/procedure-pointer lifetime, unavailable mandatory native interface,
+  or unsupported result with the owner path and one exact reason.
+- [x] Complete callback signature/result/ownership policy before wrapper
+  planning; lowering may only project the completed callback record.
+- [x] Add policy/readiness tests for reference-default transport, `Value(T)`,
+  and retained unsupported forms before planner changes.
 
 ### Phase 10B — Typed Callback Plan And Validation
 
@@ -4533,7 +4518,7 @@ For every dependency-closed sub-lane:
   backend handler names or rediscover dimension/length dependencies from
   emitted variables.
 - [x] Validate unique callback sites, exact argument order, role availability,
-  copy direction, dtype/rank/shape/length agreement, derived type identity,
+  transport/writeback, dtype/rank/shape/length agreement, derived type identity,
   result compatibility, context balance, and validate/push/pop/release order.
 - [x] Add direct plan-edit tests proving invalid callback roles, unbalanced
   lifecycle, or cross-backend disagreement fail before emission.
@@ -4543,8 +4528,9 @@ For every dependency-closed sub-lane:
 - [x] Emit one thread-local stack per callback site, callable validation and
   strong-reference retention before native entry, reverse-order pop/release
   after return, and cleanup on every ordinary pre-entry failure.
-- [x] Emit one C trampoline and typed Fortran adapter from the completed ABI;
-  validate the entering thread and context before Python conversion.
+- [x] Emit one C trampoline and separately linked external Fortran adapter from
+  the completed ABI; validate the entering thread and context before Python
+  conversion.
 - [x] Acquire/release the GIL inside the trampoline and keep the outer
   callback-taking wrapper on the legacy-observed held-GIL envelope.
 - [x] Lower void and scalar-value arguments/results first, then replay scalar
@@ -4553,23 +4539,21 @@ For every dependency-closed sub-lane:
 
 ### Phase 10D — Scalar Reference And Fixed-String Storage
 
-- [x] Lower missing-intent/inout scalar storage as copy-in/out rank-zero NumPy
-  storage, output storage as copy-out only, and explicit input references as
-  Python scalar values according to the completed access plan.
-- [x] Lower read-only fixed strings as Python `str` and writable fixed strings
-  as rank-zero fixed-width bytes storage with the exact length, padding, and
-  copy-back behavior already asserted by the legacy tests.
-- [x] Reject runtime-length or immutable writable string contracts before
-  emission; no adapter-local inference may change the representation.
+- [x] Lower every primitive scalar reference as copy-in/out rank-zero NumPy
+  storage; `Value(T)` remains an isolated Python scalar value.
+- [x] Lower fixed-string references as rank-zero fixed-width bytes storage with
+  exact length, padding, and writeback. The semantic annotation remains
+  `String[n]` and carries no native direction.
+- [x] Reject runtime-length callback strings before emission; no adapter-local
+  inference may change the representation.
 - [x] Replay the scalar-storage and string-storage cases from the combined
   callback fixture through source/generated-`.pyi` routes.
 
 ### Phase 10E — Array Arguments And Results
 
 - [x] Lower array callback arguments from completed dtype, rank, shape,
-  ordering, contiguity, alignment, and access facts. Read-only inputs expose
-  read-only borrowed views; writable/output arrays expose writable storage and
-  copy back in adapter order.
+  ordering, contiguity, and alignment facts. Reference arrays expose writable
+  storage and copy back in adapter order.
 - [x] Lower fixed-shape array results through one validated returned-address
   ABI and assign them into the native adapter result. Reject incomplete shape
   or unsupported ownership before emission.
@@ -4612,9 +4596,9 @@ For every dependency-closed sub-lane:
   re-entry, and fatal errors.
 - [x] Add one reduced compiled direct-plan node per dependency-closed lane and
   update its migration-matrix row only after artifact and runtime parity.
-- [x] Prove eligible callback units select the production wrapper-plan route
-  and never call `semantic_ir_to_codegen_ast()`; unsupported callback policy
-  must keep the whole generation unit on one exact blocker.
+- [x] Prove eligible callback units select the production wrapper-plan route;
+  unsupported callback policy must keep the whole generation unit on one
+  exact blocker.
 - [x] Synchronize callback guide/reference, semantic `.pyi` reference, feature
   matrix, callback README, source map, and checklist coverage with the direct
   implementation.
@@ -4637,7 +4621,7 @@ Radon base noted above, and implementation stopped before Phase 11.
 
 ### Phase 10 Expansion Gate
 
-- [x] Inventory the public callback contract, semantic `Callable` records,
+- [x] Inventory the public callback contract, semantic prototype records,
   legacy lowering/codegen owners, source/generated-`.pyi` runtime fixtures,
   context lifetime, re-entry/GIL behavior, exception/abort behavior, and every
   supported scalar/string/array/derived argument-result combination.

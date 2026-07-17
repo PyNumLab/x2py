@@ -80,10 +80,10 @@ def projected(
 def _late_extent_external_plan():
     module = parse_pyi_text(
         """
-from x2py.contracts import Float64, Int32, external
+from x2py.contracts import Annotated, Float64, Immutable, Int32, external
 
 @external
-def late_extent(values: Float64[n], n: Int32) -> None: ...
+def late_extent(values: Float64[n], n: Annotated[Int32, Immutable] | None = ...) -> None: ...
 """,
         module_name="late_extent_external",
     )
@@ -154,8 +154,9 @@ def test_dense_array_lowering_uses_planned_shape_checks_and_bridge_orientation()
     assert "subroutine bind_c_flat(n, bound_values, values_extent_0)" in bridge_source
     assert "subroutine bind_c_flat_rank2_runtime(" in bridge_source
     assert "subroutine bind_c_c_flat_rank2_runtime(" in bridge_source
-    assert "real(c_double) :: values(*)" in bridge_source
-    assert "real(c_double) :: values(3, *)" in bridge_source
+    assert "external :: flat_rank2_runtime" in bridge_source
+    assert "external :: c_flat_rank2_fixed" in bridge_source
+    assert "real(c_double), pointer, dimension(:, :) :: values" in bridge_source
 
 
 def test_external_interface_declares_late_extent_before_dependent_array():
@@ -164,7 +165,9 @@ def test_external_interface_declares_late_extent_before_dependent_array():
 
     signature = "subroutine late_extent(values, n)"
     interface = bridge_source.split(signature, maxsplit=1)[1].split("end subroutine late_extent", maxsplit=1)[0]
-    assert interface.index("integer(c_int32_t) :: n") < interface.index("real(c_double), dimension(n) :: values")
+    assert interface.index("integer(c_int32_t), optional :: n") < interface.index(
+        "real(c_double), dimension(n) :: values"
+    )
 
 
 def test_unavailable_dense_extent_role_fails_before_backend_lowering():

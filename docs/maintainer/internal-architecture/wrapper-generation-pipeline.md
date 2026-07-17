@@ -52,6 +52,13 @@ does not expose aggregate layout at the C boundary: C still supplies an opaque
 address, the bridge reconstructs the exact native type, and the Fortran compiler
 applies the explicit interface's `VALUE` semantics at the typed call.
 
+Standalone legacy externals use a completed declaration mode. Procedures whose
+ABI is valid with an implicit interface, including classic BLAS/LAPACK
+subroutines and scalar functions, lower to `external` declarations; optional,
+descriptor-rich, polymorphic, or array-result procedures retain explicit
+interfaces. The bridge dispatches this completed mode and does not reclassify
+the signature.
+
 The public direct-generation boundary is:
 
 ```python

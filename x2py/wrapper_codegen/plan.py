@@ -46,6 +46,7 @@ from x2py.semantics.wrapper_policy import (
     DerivedRelease,
     DerivedTargetLifetime,
     DerivedWriteback,
+    ExternalDeclarationMode,
     ModuleGetterAction,
     ModuleObjectAccessMechanism,
     NativeArrayDescriptorInterop,
@@ -463,6 +464,7 @@ class BridgeFunctionPlan(StageRecord):
     native_invocation: NativeInvocationKind
     native_operator: str | None
     external: bool
+    external_declaration: ExternalDeclarationMode
     native_module: str | None
     native_is_subroutine: bool
 
@@ -609,7 +611,7 @@ class CallbackTransferPlan(StageRecord):
     semantic_type_name: str
     object_kind: ObjectKind
     rank: int
-    access: str
+    passed_by_value: bool
     abi: CallbackABIKind
     adapter_action: CallbackTransferAction
     python_action: PythonBarrierAction
@@ -635,6 +637,9 @@ class CallbackHandoffPlan(StageRecord):
     """Call-scoped callback context, symbols, transfers, and fatal contract."""
 
     owner_path: str
+    prototype_name: str
+    prototype_module: str | None
+    declaration_mode: ExternalDeclarationMode
     context_type_symbol: str
     context_current_symbol: str
     adapter_symbol: str

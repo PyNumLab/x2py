@@ -1,4 +1,4 @@
-from x2py.contracts import Arg, Callable, Float64, In, Return, native_call
+from x2py.contracts import Arg, Float64, Return, native_call, prototype
 
 class point_t:
     def __init__(
@@ -11,8 +11,13 @@ class point_t:
     x: Float64
     y: Float64
 
+@prototype
+def point_callback(
+    value: point_t
+) -> point_t: ...
+
 @native_call([Arg(0), Arg(1), Return('output', 0)])
 def apply_point(
-    callback: Callable[[In(point_t)], point_t],
+    callback: point_callback,
     value: point_t
 ) -> point_t: ...

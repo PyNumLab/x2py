@@ -72,11 +72,14 @@ def test_completed_pyi_callback_policy_can_make_c_api_semantically_ready():
 
     module = parse_pyi_text(
         """
-from x2py.contracts import Addr, Callable, Int8
+from x2py.contracts import Addr, Int8, prototype
+
+@prototype
+def item_visitor(item: Int8, userdata: Int8) -> None: ...
 
 def each_item(
     items: Addr(Int8),
-    visit: Callable[[Int8, Int8], None],
+    visit: item_visitor,
     userdata: Addr(Int8),
 ) -> None: ...
 """,

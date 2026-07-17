@@ -22,7 +22,6 @@ from x2py.semantics.metadata import (
     USER_PRIVATE_METADATA,
 )
 from x2py.semantics.models import (
-    CALLBACK_DECLARATION_ACCESS_METADATA,
     EXTERNAL_TYPE_REF_METADATA,
     FORTRAN_GENERIC_NAME_METADATA,
     OVERLOAD_KIND_METADATA,
@@ -33,6 +32,7 @@ from x2py.semantics.models import (
     PYTHON_STATIC_METADATA,
     PYTHON_VALUE_IMMUTABLE,
     PYTHON_VALUE_MUTABILITY_METADATA,
+    PROTOTYPE_REF_METADATA,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
     ProjectionMapping,
@@ -46,6 +46,7 @@ from x2py.semantics.models import (
     SemanticImportItem,
     SemanticMethod,
     SemanticModule,
+    SemanticPrototype,
     SemanticStorageContract,
     SemanticType,
     SemanticVariable,
@@ -58,11 +59,6 @@ _WRAPPED_CALLABLE_TYPE_METADATA = "pyi_wrapped_callable_type"
 _CONTRACT_MODULE = "x2py.contracts"
 _CONTRACT_ALIAS_PREFIX = "_x2py_"
 _FLAT_DIMENSION_PRINT_SENTINEL = "@x2py.Flat"
-_CALLABLE_ACCESS_WRAPPER = {
-    "read": "In",
-    "write": "Out",
-    "readwrite": "InOut",
-}
 
 
 class PyiPrinter(ClassVisitor):
@@ -130,15 +126,15 @@ class PyiPrinter(ClassVisitor):
         if semantic_type.name == "Unknown" or semantic_type.dtype == "Unknown":
             raise ValueError("Cannot emit .pyi with unresolved semantic type 'Unknown'")
         array_descriptor = native_array_descriptor_kind(semantic_type)
-        if array_descriptor is not None:
+        if PROTOTYPE_REF_METADATA in semantic_type.metadata:
+            text = semantic_type.name
+        elif array_descriptor is not None:
             wrapper = "Allocatable" if array_descriptor == "allocatable" else "Pointer"
             text = f"{self._contract(wrapper)}[{self._visit(native_array_data_type(semantic_type))}]"
         elif self._is_scalar_allocatable_descriptor(semantic_type):
             text = f"{self._contract('Allocatable')}[{self._scalar_descriptor_inner_text(semantic_type)}]"
         elif self._is_scalar_pointer_descriptor(semantic_type):
             text = f"{self._contract('Pointer')}[{self._scalar_descriptor_inner_text(semantic_type)}]"
-        elif semantic_type.name == "Callable":
-            text = self._emit_callable_type(semantic_type)
         elif semantic_type.storage is not None:
             text = self._emit_storage_type(semantic_type)
         else:
@@ -168,6 +164,24 @@ class PyiPrinter(ClassVisitor):
     def _visit_SemanticFunction(self, func: SemanticFunction) -> str:
         """Emit function syntax."""
         return self._emit_function(func)
+
+    def _visit_SemanticPrototype(self, prototype: SemanticPrototype) -> str:
+        """Emit one semantic-only named callback prototype."""
+        return_type = prototype.return_type or SemanticType("None", dtype="None")
+        arguments = []
+        for argument in prototype.arguments:
+            text = f"{self._parameter_target(argument.name)}: {self._emit_prototype_argument(argument)}"
+            if argument.optional:
+                text += " = ..."
+            arguments.append(text)
+        return self._emit_callable(
+            name=prototype.name,
+            arguments=arguments,
+            return_type=self._visit(return_type),
+            decorator=f"@{self._contract('prototype')}\n",
+            def_indent="",
+            parameter_indent="    ",
+        )
 
     def _emit_function(self, func: SemanticFunction, *, name_owner: object | None = None) -> str:
         """Emit function syntax with an optional shared overload-set public name."""
@@ -283,6 +297,7 @@ class PyiPrinter(ClassVisitor):
         body_sections: list[str] = []
         try:
             self._append_items(body_sections, self._contract_items(module.classes), self.emit)
+            self._append_items(body_sections, module.prototypes, self._visit)
             self._append_items(body_sections, self._contract_items(module.variables), self._emit_module_variable)
             overload_targets = self._module_overload_target_names(module)
             self._append_items(
@@ -479,46 +494,40 @@ class PyiPrinter(ClassVisitor):
         pointer_association = semantic_type.metadata.get("fortran_pointer_association")
         if pointer_association is not None and not self._is_scalar_pointer_descriptor(semantic_type):
             metadata.append(f"{self._contract('PointerAssociation')}({json.dumps(str(pointer_association))})")
-        pointer_policy = semantic_type.metadata.get(POINTER_POLICY_METADATA)
-        if isinstance(pointer_policy, dict):
-            arguments = []
-            for name in POINTER_POLICY_FIELDS:
-                value = pointer_policy.get(name)
-                if value is not None:
-                    rendered = repr(value) if isinstance(value, bool) else json.dumps(str(value))
-                    arguments.append(f"{name}={rendered}")
-            metadata.append(f"{self._contract('PointerPolicy')}({', '.join(arguments)})")
-        ownership_policy = semantic_type.metadata.get(OWNERSHIP_POLICY_METADATA)
-        if isinstance(ownership_policy, dict):
-            owner = ownership_policy.get("owner")
-            transfer = ownership_policy.get("transfer")
-            destruction = ownership_policy.get("destruction")
-            if owner is not None:
-                metadata.append(f"{self._contract('Ownership')}({json.dumps(str(owner))})")
-            if transfer is not None:
-                metadata.append(f"{self._contract('Transfer')}({json.dumps(str(transfer))})")
-            if destruction is not None:
-                metadata.append(f"{self._contract('Destruction')}({json.dumps(str(destruction))})")
+        pointer_policy = self._pointer_policy_annotation(semantic_type)
+        if pointer_policy is not None:
+            metadata.append(pointer_policy)
+        metadata.extend(self._ownership_policy_annotations(semantic_type))
         return metadata
 
-    def _emit_callable_type(self, semantic_type: SemanticType) -> str:
-        """Emit callable type syntax."""
-        arguments = semantic_type.metadata.get("arguments")
-        return_type = semantic_type.metadata.get("return")
-        if isinstance(arguments, list) and return_type is not None:
-            callback_arguments = semantic_type.metadata.get("callback_arguments")
-            if (
-                isinstance(callback_arguments, list)
-                and len(callback_arguments) == len(arguments)
-                and all(isinstance(arg, SemanticArgument) for arg in callback_arguments)
-            ):
-                args = ", ".join(self._emit_callable_argument(arg) for arg in callback_arguments)
-            else:
-                args = ", ".join(self._visit(arg) for arg in arguments)
-            return f"{self._contract('Callable')}[[{args}], {self._visit(return_type)}]"
-        if return_type is not None:
-            return f"{self._contract('Callable')}[..., {self._visit(return_type)}]"
-        return self._contract("Callable")
+    def _pointer_policy_annotation(self, semantic_type: SemanticType) -> str | None:
+        """Render one structured pointer policy annotation when present."""
+        pointer_policy = semantic_type.metadata.get(POINTER_POLICY_METADATA)
+        if not isinstance(pointer_policy, dict):
+            return None
+        arguments = []
+        for name in POINTER_POLICY_FIELDS:
+            value = pointer_policy.get(name)
+            if value is not None:
+                rendered = repr(value) if isinstance(value, bool) else json.dumps(str(value))
+                arguments.append(f"{name}={rendered}")
+        return f"{self._contract('PointerPolicy')}({', '.join(arguments)})"
+
+    def _ownership_policy_annotations(self, semantic_type: SemanticType) -> tuple[str, ...]:
+        """Render explicit owner, transfer, and destruction policy metadata."""
+        ownership_policy = semantic_type.metadata.get(OWNERSHIP_POLICY_METADATA)
+        if not isinstance(ownership_policy, dict):
+            return ()
+        fields = (
+            ("owner", "Ownership"),
+            ("transfer", "Transfer"),
+            ("destruction", "Destruction"),
+        )
+        return tuple(
+            f"{self._contract(contract)}({json.dumps(str(ownership_policy[key]))})"
+            for key, contract in fields
+            if ownership_policy.get(key) is not None
+        )
 
     @staticmethod
     def _is_scalar_allocatable_descriptor(semantic_type: SemanticType) -> bool:
@@ -565,31 +574,26 @@ class PyiPrinter(ClassVisitor):
         visible.ownership.mutable = False
         return visible
 
-    def _emit_callable_argument(self, argument: SemanticArgument) -> str:
-        """Emit one callback dummy argument with its callback ABI wrapper."""
-        inner = self._callable_argument_inner_type(argument.semantic_type)
+    def _emit_prototype_argument(self, argument: SemanticArgument) -> str:
+        """Emit one prototype dummy with reference default and one value override."""
+        inner = self._prototype_argument_inner_type(argument.semantic_type)
         if bool(getattr(argument.origin, "metadata", {}).get("value")):
-            return inner
-        access = argument.metadata.get(CALLBACK_DECLARATION_ACCESS_METADATA, "unspecified")
-        wrapper = _CALLABLE_ACCESS_WRAPPER.get(access)
-        if wrapper is None:
-            if self._callable_argument_requires_pass_by_ref_wrapper(argument.semantic_type):
-                return f"{self._contract('PassByRef')}({inner})"
-            return inner
-        return f"{self._contract(wrapper)}({inner})"
+            return f"{self._contract('Value')}({inner})"
+        return inner
 
-    def _callable_argument_inner_type(self, semantic_type: SemanticType) -> str:
-        """Return the native callback dummy type without callback ABI wrappers."""
+    def _prototype_argument_inner_type(self, semantic_type: SemanticType) -> str:
+        """Return the native prototype dummy type without transport wrappers."""
         storage = semantic_type.storage
+        if (
+            semantic_type.name == "String"
+            and storage is not None
+            and storage.array is not None
+            and storage.array.category == SCALAR_STORAGE_CATEGORY
+        ):
+            return self._semantic_base_type(semantic_type, include_deferred_length=True)
         if storage is not None and storage.kind in {"reference", "address", "pointer"}:
             return self._address_target_type(semantic_type)
         return self._visit(semantic_type)
-
-    @staticmethod
-    def _callable_argument_requires_pass_by_ref_wrapper(semantic_type: SemanticType) -> bool:
-        """Return whether missing callback access needs an explicit scalar reference wrapper."""
-        storage = semantic_type.storage
-        return bool(storage is not None and storage.kind in {"reference", "pointer"} and semantic_type.rank == 0)
 
     def _emit_data_member(self, variable: SemanticVariable) -> str:
         """Emit a variable in class-field context rather than argument context."""
@@ -997,7 +1001,7 @@ class PyiPrinter(ClassVisitor):
         names.update(cls._required_procedure_namespace_import_names(module))
         for imp in module.imports:
             names.update(cls._import_local_names(imp))
-        for item in [*module.classes, *module.variables, *module.functions, *module.overload_sets]:
+        for item in [*module.classes, *module.prototypes, *module.variables, *module.functions, *module.overload_sets]:
             cls._collect_reserved_item_names(item, names)
         for semantic_type in _iter_module_semantic_types(module):
             names.update(cls._contract_like_dimension_names(semantic_type))
@@ -1200,7 +1204,13 @@ class PyiPrinter(ClassVisitor):
         """Return names emitted in a module-level stub namespace."""
         return {
             str(item.name)
-            for item in [*module.classes, *module.variables, *module.functions, *module.overload_sets]
+            for item in [
+                *module.classes,
+                *module.prototypes,
+                *module.variables,
+                *module.functions,
+                *module.overload_sets,
+            ]
             if getattr(item, "name", None)
         }
 

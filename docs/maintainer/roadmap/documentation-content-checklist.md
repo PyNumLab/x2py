@@ -136,7 +136,8 @@ X2PY_C_DOCS_END -->
   policy-completion ownership decisions, transfer actions, mutability, setter
   exposure, and release responsibility.
 - [ ] `docs/maintainer/internal-architecture/ast-design.md`: document parser AST, semantic
-  IR, codegen AST, what each layer may store, and what must not leak across
+  IR, completed wrapper plans, generated source syntax, what each layer may
+  store, and what must not leak across
   layers.
 - [ ] `docs/maintainer/internal-architecture/semantic-passes.md`: document semantic pass
   ordering, completed policy decisions, readiness checks, and handoff to
@@ -165,7 +166,7 @@ X2PY_C_DOCS_END -->
   names.
 
 <!-- X2PY_C_DOCS_START
-- [ ] `docs/maintainer/design/code-generation.md`: document codegen AST boundaries, bridge
+- [ ] `docs/maintainer/design/code-generation.md`: document wrapper-plan and generated-source boundaries, bridge
   generation, CPython binding generation, printers, and forbidden semantic
   inference in backends.
 - [ ] `docs/maintainer/design/cpython-integration.md`: document CPython API usage, NumPy

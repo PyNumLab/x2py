@@ -205,7 +205,7 @@ def test_generated_external_contracts_are_non_empty_root_fragments(tmp_path: Pat
         assert sorted(path.name for path in entry.parent.glob("*.pyi")) == ["__init__.pyi"]
 
 
-def test_external_bridge_uses_explicit_interface_and_no_module_use(tmp_path: Path):
+def test_classic_external_bridge_uses_implicit_declaration_and_no_module_use(tmp_path: Path):
     sources = _copy_sources((FREE_EXTERNAL,), tmp_path / "sources")
     module, result, entry = _build_generated_contract(
         sources,
@@ -219,8 +219,9 @@ def test_external_bridge_uses_explicit_interface_and_no_module_use(tmp_path: Pat
     assert entry.read_text(encoding="utf-8").startswith(
         "from x2py.contracts import Addr, Arg, Int32, external, native_call\n\n@external\n"
     )
-    assert "function free_square(" in bridge
-    assert "end function free_square" in bridge
+    assert "integer(c_int32_t), external :: free_square" in bridge
+    assert "function free_square(" not in bridge
+    assert "result = free_square(value)" in bridge
     assert "private\n" not in bridge
     assert "public :: bind_c_free_square" not in bridge
     assert "use free_external" not in bridge
@@ -256,7 +257,8 @@ def test_external_bind_renames_python_export_without_changing_native_call(tmp_pa
 
     assert module.renamed_increment(np.int32(4)) == np.int32(5)
     assert not hasattr(module, "fixed_add")
-    assert "function fixed_add(" in bridge
+    assert "integer(c_int32_t), external :: fixed_add" in bridge
+    assert "result = fixed_add(value)" in bridge
     assert "use fixed_add" not in bridge
 
 
@@ -279,8 +281,8 @@ def test_handwritten_c_order_flat_contract_passes_rank_preserving_bridge_view(tm
     module.row_sums_c(np.int32(values.shape[0]), values, result_values)
 
     np.testing.assert_allclose(result_values, [6.0, 60.0])
-    assert "values(*)" in compact_bridge
-    assert "values(*,3)" not in compact_bridge
+    assert "external::row_sums_c" in compact_bridge
+    assert "real(c_double),pointer,dimension(:,:)::values" in compact_bridge
 
     with pytest.raises(TypeError, match=r"expected ordering \(C\)"):
         module.row_sums_c(np.int32(values.shape[0]), np.asfortranarray(values), result_values)

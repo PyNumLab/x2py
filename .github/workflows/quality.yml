@@ -175,17 +175,18 @@ jobs:
         run: python tools/print_pytest_failures.py "$RUNNER_TEMP/pytest-results.xml"
 
   real-library-wrappers:
-    name: Real library wrapper (${{ matrix.library }})
-    if: ${{ !inputs.static_analysis_only }}
+    name: Real library wrappers (BLAS + LAPACK)
+    if: >-
+      ${{
+        !inputs.static_analysis_only &&
+        (github.event_name != 'pull_request' ||
+          !contains(github.event.pull_request.labels.*.name, 'ignore-real-library-wrappers'))
+      }}
     needs: static-analysis
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        library: [blas, lapack]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -215,15 +216,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/x2py-real-library-native
-          key: real-library-${{ runner.os }}-gfortran13-${{ matrix.library }}-${{ hashFiles('tests/data/fortran/blas/**', 'tests/data/fortran/lapack/**') }}
-      - name: Run full ${{ matrix.library }} wrapper test
+          key: real-libraries-${{ runner.os }}-gfortran13-${{ hashFiles('tests/data/fortran/blas/**', 'tests/data/fortran/lapack/**') }}
+      - name: Run full BLAS and LAPACK wrapper tests
         env:
           PYTHONPATH: .
           HYPOTHESIS_PROFILE: ci
           X2PY_REAL_LIBRARY_NATIVE_CACHE_DIR: ${{ runner.temp }}/x2py-real-library-native
-        run: >-
-          python -m pytest -q --randomly-seed=1
-          "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[${{ matrix.library }}]"
+        run: |
+          python -m pytest -q --randomly-seed=1 \
+            "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[blas]" \
+            "tests/wrapper/fortran/real_libraries/test_real_blas_lapack.py::test_full_library_wrapper_imports_every_root_procedure_from_cached_shared_library[lapack]"
 
   coverage-report:
     name: Coverage Report

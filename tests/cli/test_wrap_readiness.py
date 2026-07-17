@@ -145,7 +145,7 @@ def test_x2py_main_semantic_readiness_blocker_formatting():
     assert "step uses unresolved type sim_state" in text
     assert "fill shape 'n' uses unresolved symbol n" in text
     assert "fill needs literal value for Final constant n" in text
-    assert "integrate.objective needs Callable[[...], ...] metadata (callback argument types)" in text
+    assert "integrate.objective needs a complete named @prototype (callback argument types)" in text
     assert "empty needs public functions" in text
     assert "{'payload': 1}" in text
 

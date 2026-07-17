@@ -3,7 +3,6 @@
 from tests._shared.pyi_conversion_support import (
     ADDRESS_ROLE_METADATA,
     ADDRESS_ROLE_RAW,
-    CALLBACK_DECLARATION_ACCESS_METADATA,
     NATIVE_ARRAY_DESCRIPTOR_METADATA,
     OPTIONAL_ABSENT_HANDLE_METADATA,
     PYTHON_VALUE_IMMUTABLE,
@@ -35,21 +34,19 @@ def test_convert_pyi_to_ir_dispatches_nested_and_qualified_semantic_types():
         """
 public_value: Int32
 bounded: Final[Annotated[Int32, Bounded(1, 8)]]
-callback: Callable
 pointer: Addr(Float64)
 raw_pointer: Addr(Float64)
 """,
         module_name="dispatch",
     )
 
-    public_value, bounded, callback, pointer, raw_pointer = module.variables
+    public_value, bounded, pointer, raw_pointer = module.variables
     assert isinstance(public_value, SemanticVariable)
     assert public_value.visibility == "public"
     assert bounded.semantic_type.constraints == [
         SemanticConstraint("Bounded", [1, 8]),
         SemanticConstraint("Constant"),
     ]
-    assert callback.semantic_type.name == "Callable"
     assert pointer.semantic_type.storage.kind == "address"
     assert pointer.semantic_type.storage.metadata[ADDRESS_ROLE_METADATA] == ADDRESS_ROLE_RAW
     assert raw_pointer.semantic_type.storage.read_only is False
@@ -206,25 +203,25 @@ def set_status(
     assert parse_pyi_text(emitted, module_name="status_api") == module
 
 
-def test_convert_pyi_to_ir_preserves_callback_argument_abi_wrappers():
+def test_convert_pyi_to_ir_uses_reference_default_and_explicit_value_callbacks():
     module = parse_pyi_text(
         """
 class particle:
     mass: Float64
 
+@prototype
+def callback_shape(
+    value: Value(Int32),
+    values: Float64[:],
+    scalar_storage: Float64[()],
+    scalar: Float64,
+    count: Int32,
+    output: Float64[:],
+    result_storage: Float64[()],
+) -> None: ...
+
 def register(
-    callback: Callable[
-        [
-            Int32,
-            Float64[:],
-            Float64[()],
-            PassByRef(Float64),
-            In(Int32),
-            Out(Float64[:]),
-            InOut(Float64[()]),
-        ],
-        None,
-    ]
+    callback: callback_shape
 ) -> None: ...
 """,
         module_name="callbacks",
@@ -233,15 +230,6 @@ def register(
     callback_type = module.functions[0].arguments[0].semantic_type
     callback_arguments = callback_type.metadata["callback_arguments"]
 
-    assert [arg.metadata[CALLBACK_DECLARATION_ACCESS_METADATA] for arg in callback_arguments] == [
-        "unspecified",
-        "unspecified",
-        "unspecified",
-        "unspecified",
-        "read",
-        "write",
-        "readwrite",
-    ]
     assert [arg.origin.metadata["value"] for arg in callback_arguments] == [
         True,
         False,
@@ -255,7 +243,7 @@ def register(
     assert callback_arguments[1].semantic_type.storage.kind == "array"
     assert callback_arguments[2].semantic_type.storage.kind == "array"
     assert callback_arguments[3].semantic_type.storage.kind == "reference"
-    assert callback_arguments[4].semantic_type.storage.read_only is True
+    assert callback_arguments[4].semantic_type.storage.mutable is True
     assert callback_arguments[5].semantic_type.storage.mutable is True
     assert callback_arguments[6].semantic_type.storage.mutable is True
 
@@ -263,32 +251,18 @@ def register(
 @pytest.mark.parametrize(
     "annotation",
     [
-        "Callable[[Out(String[8])], None]",
-        "Callable[[InOut(String[8])], None]",
-        "Callable[[PassByRef(String[8])], None]",
-    ],
-)
-def test_callback_writable_plain_string_requires_scalar_storage(annotation: str):
-    module = parse_pyi_text(
-        f"def register(callback: {annotation}) -> None: ...",
-        module_name="callbacks",
-    )
-
-    with pytest.raises(ValueError, match="Writable callback strings require mutable scalar character storage"):
-        complete_semantic_policies(module)
-
-
-@pytest.mark.parametrize(
-    "annotation",
-    [
-        "Callable[[In(String[8])], None]",
-        "Callable[[Out(String[8][()])], None]",
-        "Callable[[InOut(String[8][()])], None]",
+        "String[8]",
+        "String[8][()]",
     ],
 )
 def test_callback_string_storage_contracts_complete(annotation: str):
     module = parse_pyi_text(
-        f"def register(callback: {annotation}) -> None: ...",
+        f"""
+@prototype
+def string_callback(value: {annotation}) -> None: ...
+
+def register(callback: string_callback) -> None: ...
+""",
         module_name="callbacks",
     )
 
@@ -298,11 +272,17 @@ def test_callback_string_storage_contracts_complete(annotation: str):
     assert callback_argument.semantic_type.name == "String"
 
 
-def test_convert_pyi_to_ir_infers_callback_dimension_argument_names():
+def test_convert_pyi_to_ir_preserves_prototype_argument_names_and_dimensions():
     module = parse_pyi_text(
         """
+@prototype
+def transform_callback(
+    count: Int32,
+    values: Float64[count],
+) -> Float64[count]: ...
+
 def apply_transform(
-    callback: Callable[[PassByRef(Int32), Float64[count]], Float64[count]]
+    callback: transform_callback
 ) -> None: ...
 """,
         module_name="callbacks",
@@ -310,8 +290,47 @@ def apply_transform(
 
     callback_type = module.functions[0].arguments[0].semantic_type
     callback_arguments = callback_type.metadata["callback_arguments"]
-    assert [arg.name for arg in callback_arguments] == ["count", "arg_1"]
+    assert [arg.name for arg in callback_arguments] == ["count", "values"]
     assert callback_type.metadata["return"].shape == ["count"]
+    assert callback_type.metadata["prototype_ref"]["name"] == "transform_callback"
+
+
+def test_imported_prototype_resolves_as_module_interface_definition(tmp_path):
+    from x2py.pipeline.pyi import pyi_paths_to_semantic_modules
+    from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
+
+    (tmp_path / "callback_shapes.pyi").write_text(
+        """from x2py.contracts import Float64, Int32, prototype
+
+@prototype
+def transform(count: Int32, values: Float64[count]) -> Float64[count]: ...
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "api.pyi").write_text(
+        """from x2py.contracts import Float64, Int32
+from .callback_shapes import transform
+
+def apply(callback: transform, count: Int32, values: Float64[count]) -> None: ...
+""",
+        encoding="utf-8",
+    )
+
+    modules = {module.name: module for module in pyi_paths_to_semantic_modules(tmp_path)}
+    api = modules["api"]
+    callback_type = api.functions[0].arguments[0].semantic_type
+    assert callback_type.metadata["prototype_ref"] == {
+        "name": "transform",
+        "local_name": "transform",
+        "origin_module": "callback_shapes",
+    }
+
+    complete_semantic_policies(api)
+    artifacts = WrapperCodeGenerator().generate(WrapperPlanner().build(api))
+    bridge = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
+    assert "use callback_shapes, only:" in bridge
+    assert "_prototype => transform" in bridge
+    assert "procedure(x2py_callback_adapter_callback_" in bridge
 
 
 def test_convert_pyi_to_ir_forwards_filename_to_syntax_errors():
@@ -439,19 +458,19 @@ def invalid(value: String[:]) -> None: ...
 
 
 @pytest.mark.parametrize(
-    ("annotation", "message"),
+    "annotation",
     [
-        ("Callable[[In(Addr(Int32))], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
-        ("Callable[[Out(Addr(Float64))], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
-        ("Callable[[InOut(Addr(Float64))], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
-        ("Callable[[Addr(Float64)], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
-        ("Callable[[Addr(Float64[n])], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
-        ("Callable[[Addr[2](Float64)], None]", r"Addr\(\.\.\.\) is not valid inside Callable"),
+        "Addr(Float64)",
+        "Addr(Float64[n])",
+        "Addr[2](Float64)",
     ],
 )
-def test_convert_pyi_to_ir_rejects_invalid_callback_reference_wrappers(annotation: str, message: str):
-    with pytest.raises(ValueError, match=message):
-        parse_pyi_text(f"def register(callback: {annotation}) -> None: ...", module_name="callbacks")
+def test_convert_pyi_to_ir_rejects_unnecessary_prototype_address_wrappers(annotation: str):
+    with pytest.raises(ValueError, match=r"Addr\(\.\.\.\) is unnecessary inside prototype declarations"):
+        parse_pyi_text(
+            f"@prototype\ndef callback(value: {annotation}) -> None: ...",
+            module_name="callbacks",
+        )
 
 
 def test_convert_pyi_to_ir_preserves_explicit_array_source_dimensions():
@@ -792,8 +811,6 @@ def helper(value: Int32) -> None: ...
     [
         ("value: Addr(Int32, Float64)\n", "Addr type expects one argument: 'Addr(Int32, Float64)'"),
         ("value: Addr[1](Int32)\n", "Addr[1](...) is invalid; use Addr(...)"),
-        ("value: Callable[Int32]\n", "Callable expects argument types and a return type: 'Callable[Int32]'"),
-        ("value: Callable[Int32, Float64]\n", "Callable arguments must be a list: 'Callable[Int32, Float64]'"),
         (
             "value: Float64[ORDER_F]\n",
             "Non-dimensional type subscriptions are not supported; use Final[...] for constants and "

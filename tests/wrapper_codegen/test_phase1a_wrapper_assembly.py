@@ -66,8 +66,8 @@ def swap_args(x: Float64, y: Float64) -> Float64: ...
     assert "static PyObject * wrap_swap_args" in c_header
     assert "module bind_c_render_demo_wrapper" in fortran_source
     assert 'function bind_c_swap_args(y, x) result(result) bind(c, name="bind_c_swap_args")' in fortran_source
-    assert "function SWAP_ARGS(y, x) result(native_result)" in fortran_source
-    assert "real(c_double) :: native_result" in fortran_source
+    assert "real(c_double), external :: SWAP_ARGS" in fortran_source
+    assert "function SWAP_ARGS(" not in fortran_source
     assert "result = SWAP_ARGS(y, x)" in fortran_source
 
 

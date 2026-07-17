@@ -7,7 +7,6 @@ expressions at runtime.
 
 from __future__ import annotations
 
-from collections.abc import Callable as Callable
 from typing import Annotated as Annotated, Any as Any, Final as Final
 
 
@@ -103,15 +102,11 @@ ArrayCategory = _expression
 Bounded = _expression
 Destruction = _expression
 Finite = _expression
-In = _expression
-InOut = _expression
 IsPresent = _expression
 Len = _expression
 Name = _expression
-Out = _expression
 Ownership = _expression
 Pass = _expression
-PassByRef = _expression
 PointerAssociation = _expression
 PointerPolicy = _expression
 Return = _expression
@@ -126,6 +121,7 @@ hold_gil = _decorator
 native_call = _decorator
 native_type = _decorator
 overload = _decorator
+prototype = _decorator
 raises = _decorator
 
 CAnonymous = _ContractType
@@ -155,7 +151,6 @@ CONTRACT_SYMBOLS = frozenset(
         "CEnum",
         "CStruct",
         "CUnion",
-        "Callable",
         "Char",
         "Complex64",
         "Complex128",
@@ -172,8 +167,6 @@ CONTRACT_SYMBOLS = frozenset(
         "Float128",
         "FortranAllocatable",
         "Immutable",
-        "In",
-        "InOut",
         "Int",
         "Int8",
         "Int16",
@@ -188,10 +181,8 @@ CONTRACT_SYMBOLS = frozenset(
         "ORDER_ANY",
         "ORDER_C",
         "ORDER_F",
-        "Out",
         "Ownership",
         "Pass",
-        "PassByRef",
         "Pointer",
         "PointerAssociation",
         "PointerPolicy",
@@ -219,6 +210,7 @@ CONTRACT_SYMBOLS = frozenset(
         "native_call",
         "native_type",
         "overload",
+        "prototype",
         "private",
         "raises",
     }
@@ -237,7 +229,6 @@ CONTRACT_TYPE_NAMES = frozenset(
         "CEnum",
         "CStruct",
         "CUnion",
-        "Callable",
         "Char",
         "Complex64",
         "Complex128",

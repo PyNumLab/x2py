@@ -331,7 +331,7 @@ descriptor-kind field rather than separate unrelated models.
 
 ### 4. Post-IR Policy Completion
 
-Complete every semantic decision before `ir2ast.py`. Bridge and binding
+Complete every semantic decision before wrapper planning. Bridge and binding
 generators must dispatch from these decisions rather than inferring policy from
 datatype, intent, origin, dotted access shape, alias metadata, or local memory
 checks.
@@ -345,8 +345,8 @@ absent-handle state, `.to_numpy()` extraction policy, and descriptor operation
 permissions. It also records whether the selected path requires pointer C
 descriptor interop or owned-allocatable CFI storage, so build integration can
 gate `ISO_Fortran_binding.h` from completed policy instead of raw datatype
-checks. `ir2ast.py` must fail before
-lowering a native array handle that is missing this completed policy.
+checks. Wrapper planning must fail before lowering a native array handle that
+is missing this completed policy.
 
 For pointer handles, plain `Pointer[T[...]]` gets a default conservative
 operation table for descriptor association, `nullify()`, and unavailable
@@ -1062,7 +1062,7 @@ The feature is complete only when all of these are true:
 - [x] Public contract syntax is `Allocatable[T[...]]` and `Pointer[T[...]]`.
 - [x] Active parser/printer paths reject or remove the old annotation and
   snapshot forms.
-- [x] Post-IR policy completes every handle decision before `ir2ast.py`.
+- [x] Post-IR policy completes every handle decision before wrapper planning.
 - [x] Bridge and binding generation dispatch from completed policy only.
 - [x] Runtime handles expose the documented APIs and state transitions.
 - [x] Pointer descriptor extraction never guesses compiler-specific descriptor

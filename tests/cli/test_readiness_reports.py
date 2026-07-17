@@ -116,7 +116,7 @@ def test_x2py_readiness_formatting_and_compiler_without_requirements():
             "callback_signature_incomplete",
             {"owner": "handler", "needs": ["arguments", "return type"]},
         )
-        == "handler needs Callable[[...], ...] metadata (arguments, return type)"
+        == "handler needs a complete named @prototype (arguments, return type)"
     )
     assert x2py_cli._format_semantic_blocker_item("c_unknown_type", {"owner": "api", "type": "widget"}) == "api: widget"
     assert x2py_cli._format_semantic_blocker_item("c_unknown_type", {"type": "widget"}) == "<c-source>: widget"
@@ -707,7 +707,7 @@ def test_x2py_format_semantic_readiness_reports_wrappable_and_blocked_sources():
     - unresolved_semantic_types: unresolved external type
       * api_mod.solve uses unresolved type external_t
     - callback_signature_incomplete: callback metadata incomplete
-      * api_mod.apply needs Callable[[...], ...] metadata (arguments)
+      * api_mod.apply needs a complete named @prototype (arguments)
 
 File: interface.pyi
   Source: pyi
@@ -738,7 +738,7 @@ File: partial.f90
     assert "  Why not wrappable:" in text
     assert "    - unresolved_semantic_types: unresolved external type" in text
     assert "      * api_mod.solve uses unresolved type external_t" in text
-    assert "      * api_mod.apply needs Callable[[...], ...] metadata (arguments)" in text
+    assert "      * api_mod.apply needs a complete named @prototype (arguments)" in text
     assert "File: interface.pyi" in text
     assert "  Source: pyi" in text
     assert "  Semantic modules: <none>" in text

@@ -233,7 +233,7 @@ def test_recursive_graph_preserves_module_and_symbol_aliases_and_ignores_support
     nested.mkdir(parents=True)
     entry.write_text(
         "from types import SimpleNamespace\n"
-        "from x2py.contracts import Callable\n"
+        "from x2py.contracts import prototype\n"
         "from . import facade as m2\n"
         "from .m1 import func as f\n",
         encoding="utf-8",
@@ -257,7 +257,6 @@ def test_recursive_graph_preserves_module_and_symbol_aliases_and_ignores_support
     assert not hasattr(module, "m1")
     assert not hasattr(module, "func")
     assert not hasattr(module, "SimpleNamespace")
-    assert not hasattr(module, "Callable")
     assert module.f(np.int32(2)) == np.int32(3)
     assert module.m2.branch.deep_func(np.int32(3)) == np.int32(6)
 

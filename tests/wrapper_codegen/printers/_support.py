@@ -24,7 +24,7 @@ from x2py.wrapper_codegen.printers import (
 from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 from x2py.semantics.models import (
-    CALLBACK_DECLARATION_ACCESS_METADATA,
+    PROTOTYPE_REF_METADATA,
     ProjectionMapping,
     RUNTIME_HOLD_GIL_METADATA,
     RUNTIME_STATUS_ERROR_METADATA,
@@ -36,6 +36,7 @@ from x2py.semantics.models import (
     SemanticMethod,
     SemanticModule,
     SemanticOrigin,
+    SemanticPrototype,
     SemanticFunction,
     SemanticField,
     SemanticStorageContract,
@@ -84,8 +85,8 @@ def normalize(text: str) -> str:
 
 
 __all__ = (
-    "CALLBACK_DECLARATION_ACCESS_METADATA",
     "OPERATOR_F90_SOURCE",
+    "PROTOTYPE_REF_METADATA",
     "RUNTIME_HOLD_GIL_METADATA",
     "RUNTIME_STATUS_ERROR_METADATA",
     "Path",
@@ -101,6 +102,7 @@ __all__ = (
     "SemanticMethod",
     "SemanticModule",
     "SemanticOrigin",
+    "SemanticPrototype",
     "SemanticStorageContract",
     "SemanticType",
     "SemanticVariable",

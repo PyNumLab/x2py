@@ -124,6 +124,12 @@ def scale(
 ) -> Float64: ...
 ```
 
+The semantic contract does not repeat Fortran `intent`. Source `intent` helps
+x2py choose the generated Python arguments and results, while `@native_call`
+records the exact native argument order and transport. The compiled native
+procedure keeps its own `intent`; editing the `.pyi` changes the wrapper call
+contract, not the native procedure declaration.
+
 Then build the shared library from the package-entry `.pyi` contract and the
 same native implementation source:
 
@@ -299,8 +305,9 @@ The runtime wrapper mechanism is:
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> Fortran parser
-  -> semantic IR and readiness validation
-  -> generated native bridge and Python binding
+  -> semantic IR construction and readiness validation
+  -> post-IR policy completion and ordered wrapper plan
+  -> direct native-bridge and Python-binding lowering
   -> native compilation and shared-library link
   -> importable Python extension
 ```
@@ -310,9 +317,10 @@ Fortran sources
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> Fortran parser
-  -> semantic IR and readiness validation
-  -> generated Fortran bind(C) bridge
-  -> generated C/CPython binding and x2py runtime support
+  -> semantic IR construction and readiness validation
+  -> post-IR policy completion and ordered wrapper plan
+  -> direct Fortran bind(C) bridge lowering
+  -> direct C/CPython binding lowering and x2py runtime support
   -> native compilation and shared-library link
   -> importable Python extension
 ```

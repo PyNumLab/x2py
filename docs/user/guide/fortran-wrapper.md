@@ -126,9 +126,9 @@ ordered Fortran source files
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
   -> semantic modules and readiness blockers
-  -> source-root export tree preserving native module namespaces
-  -> codegen AST
-  -> generated native bridge and Python binding
+  -> post-IR policy completion
+  -> ordered wrapper plan preserving native module namespaces and ABI slots
+  -> direct native-bridge and Python-binding lowering
   -> compile and link one Python extension module
 ```
 
@@ -139,10 +139,10 @@ ordered Fortran source files
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
   -> semantic modules and readiness blockers
-  -> source-root export tree preserving native module namespaces
-  -> codegen AST
-  -> Fortran bind(C) bridge
-  -> C/CPython binding and x2py runtime support
+  -> post-IR policy completion
+  -> ordered wrapper plan preserving native module namespaces and ABI slots
+  -> direct Fortran bind(C) bridge lowering
+  -> direct C/CPython binding lowering and x2py runtime support
   -> compile user sources and generated sources
   -> link one Python extension module
 ```
@@ -152,6 +152,11 @@ The generated bridge preserves native calling contracts while the Python
 binding validates arguments, manages wrapper-owned temporaries, calls native
 code, and projects results onto the documented Python API. Shared runtime
 support supplies array, error, allocation, and ownership helpers.
+
+There is no separate codegen-AST conversion stage. Post-IR completion freezes
+object kind, storage, ownership, mutation, output projection, and native-call
+policy; wrapper planning orders those completed decisions, and the binding and
+bridge generators dispatch them directly into emitted source.
 
 <!-- X2PY_C_DOCS_START
 The Fortran bridge converts non-interoperable Fortran contracts into a stable
@@ -1126,8 +1131,8 @@ assert values.flags.owndata or values.base is not None
 np.testing.assert_array_equal(values, [1.0, 2.0, 3.0, 4.0])
 ```
 
-Ordinary returned arrays preserve dtype, rank, bounds information needed by the
-wrapper, and Fortran ordering for multidimensional results. Numeric results
+Ordinary returned arrays preserve dtype, rank, required extents, and Fortran
+ordering for multidimensional results. Numeric results
 support ranks 1 through 15 and zero-sized dimensions. An allocatable zero-sized
 result is a present handle with a zero extent; an unallocated result is a
 present handle whose `allocated` property is false and whose `to_numpy()`
@@ -2131,15 +2136,6 @@ Runtime tests: [`test_runtime_policies.py`](../../../tests/wrapper/fortran/runti
 This chapter groups behavior for which implementation or policy is incomplete.
 These items are not enabled by parser support or by editing metadata unless the
 backend contract described here is also implemented.
-
-### Output Projection Metadata Is Not The Sole Codegen Source
-
-Semantic IR preserves explicit projection mappings, and the documented output
-behaviors are implemented and runtime-tested. Wrapper generation does not yet
-consume those semantic mappings as the single authoritative mechanism for every
-projection path. Some output decisions are still represented by the established
-lowered argument/result structures. This is an internal integration gap, not a
-different user-visible tuple or mutation contract.
 
 ### Pointer Views, Results, And Reassociation
 

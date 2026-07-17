@@ -108,10 +108,13 @@ from x2py import assess_semantic_wrap_readiness, pyi_text_to_semantic_module
 
 module = pyi_text_to_semantic_module(
     """
-from x2py.contracts import Callable, Float64
+from x2py.contracts import Float64, prototype
+
+@prototype
+def objective(value: Float64) -> Float64: ...
 
 def integrate(
-    objective: Callable[[Float64], Float64],
+    callback: objective,
     x0: Float64
 ) -> Float64: ...
 """,

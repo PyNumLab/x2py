@@ -34,6 +34,7 @@ from x2py.semantics.wrapper_policy import (
     BridgeDataAction,
     CallbackABIKind,
     CallbackTransferAction,
+    ExternalDeclarationMode,
     FunctionWrapperPolicy,
     ModuleGetterAction,
     ModuleVariablePolicy,
@@ -232,22 +233,41 @@ def test_source_hidden_scalar_output_completes_call_local_address_before_plannin
     assert policy.native_call_slots[1].native_barrier_action is hidden.native_barrier_action
 
 
-def test_source_callback_value_and_read_access_are_completed_as_independent_facts():
+def test_source_callback_value_override_and_reference_default_are_completed():
     module = _source_semantic_module("fcallback_all_f90.f90", module_name="fcallback_all_f90")
     function = next(item for item in module.functions if item.name == "apply_value_callback")
     policy = completed_function_wrapper_policy(function)
     transfer = policy.arguments[0].callback.arguments[0]
 
     assert transfer.abi is CallbackABIKind.VALUE
-    assert transfer.access == "read"
+    assert transfer.passed_by_value is True
     assert transfer.adapter_action is CallbackTransferAction.COPY_IN
 
     array_function = next(item for item in module.functions if item.name == "apply_array_storage_callback")
     array_policy = completed_function_wrapper_policy(array_function)
     extent = array_policy.arguments[0].callback.arguments[0]
     assert extent.abi is CallbackABIKind.REFERENCE
-    assert extent.access == "read"
-    assert extent.adapter_action is CallbackTransferAction.COPY_IN
+    assert extent.passed_by_value is False
+    assert extent.adapter_action is CallbackTransferAction.COPY_IN_OUT
+
+
+def test_external_declaration_mode_is_completed_from_native_abi_requirements():
+    module = parse_pyi_text(
+        """
+@external
+def classic(n: Int32, values: Float64[n]) -> Float64: ...
+
+@external
+def optional(value: Annotated[Float64, Immutable] | None = ...) -> None: ...
+""",
+        module_name="external_modes",
+    )
+    complete_semantic_policies(module)
+
+    classic = completed_function_wrapper_policy(module.functions[0])
+    optional = completed_function_wrapper_policy(module.functions[1])
+    assert classic.external_declaration is ExternalDeclarationMode.IMPLICIT_EXTERNAL
+    assert optional.external_declaration is ExternalDeclarationMode.EXPLICIT_INTERFACE
 
 
 def test_hidden_scalar_descriptor_result_keeps_descriptor_policy_instead_of_plain_address_storage():

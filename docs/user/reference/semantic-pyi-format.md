@@ -156,7 +156,7 @@ or an explicit call-local copy whose native mutation is discarded. A replacement
 requires a projected return such as `Returns["values", Float64[:]]`; the bridge
 and binding then emit the already-selected action without reconsidering the
 datatype, mutability, ownership, or storage mode. Unsupported combinations block
-before `ir2ast.py`.
+before wrapper planning and direct lowering.
 
 `@native_call(...)` and `Returns[...]` describe projection and native placement;
 they do not ask the backend to rediscover conversion policy. After `.pyi`
@@ -342,11 +342,12 @@ from x2py.contracts import Float64, Int32, external
 def dgesv(a: Float64[:, :], b: Float64[:, :]) -> Int32: ...
 ```
 
-`@external` is immutable native-placement metadata. The bridge must generate a
-matching explicit Fortran interface and call the external procedure without a
-`use <module>` statement. The procedure therefore needs no Fortran `.mod` file,
-but its defining object, archive, or shared library must be supplied to the
-link.
+`@external` is immutable native-placement metadata. The bridge calls the
+external procedure without a `use <module>` statement. Classic
+implicit-interface-compatible procedures use a compact `external` declaration;
+features that require an explicit interface retain one. The procedure needs no
+Fortran `.mod` file, but its defining object, archive, or shared library must be
+supplied to the link.
 
 Python-visible renaming is separate from placement. `@bind` retains the native
 Fortran procedure name while the declaration uses a wrapper name:
@@ -485,7 +486,8 @@ def DAXPY(
 not a request to collapse the whole array to rank one: `Float64[:, Flat]`
 remains a rank-two Python and bridge contract. Because `real :: a(:, *)` is not
 a legal Fortran assumed-size declaration, an external interface whose prefix
-extent is known only at runtime uses the sequence-associated `a(*)` spelling;
+extent is known only at runtime uses the sequence-associated `a(*)` spelling
+when that procedure requires an explicit interface;
 the bridge view still has rank two and receives both runtime extents. The
 Python-visible flat dimension remains unconstrained.
 
@@ -573,7 +575,8 @@ files while the generated bridge is compiled:
 
 Archives do not normally contain `.mod` files, so module directories remain
 separate inputs. Standalone `@external` procedures require no `.mod` file because
-the bridge emits their interface from the semantic contract.
+the semantic contract supplies either their implicit external declaration or
+their required explicit interface.
 
 Required link cases are:
 
@@ -586,7 +589,7 @@ Required link cases are:
 | Vendor shared implementation | direct `.so` path or `--native-library NAME` plus search directory |
 | Mixed implementation | objects, archives, direct shared libraries, and named libraries in one ordered plan |
 | Module procedures | native artifacts plus every required `.mod` search directory |
-| Standalone procedures | native artifacts only; interfaces come from `@external` declarations |
+| Standalone procedures | native artifacts only; declaration mode comes from the completed `@external` contract |
 
 Static link order is semantically significant: dependent objects precede the
 archives or libraries that satisfy them, and dependent libraries precede their
@@ -750,7 +753,7 @@ extension binding surface. Declarations in imported leaf files that are not
 reachable from that policy do not get standalone public wrapper bindings; they
 remain native contract facts only when an exported declaration depends on them.
 
-Absolute support imports such as `from x2py.contracts import Callable` or
+Absolute support imports such as `from x2py.contracts import prototype` or
 `from types import SimpleNamespace` may support annotation parsing, but they are
 not contract graph edges and never create runtime exports. Generated references
 to declarations in another contract package file use relative imports.
@@ -775,55 +778,60 @@ X2PY_C_DOCS_END -->
 | Complex | `Complex64`, `Complex128`, `Complex256` |
 | Text | `String` |
 | User types | class names and imported type names |
-| Callables | `Callable`, `Callable[..., T]`, `Callable[[A, B], T]` |
-| Callback argument interface wrappers | `PassByRef(T)`, `In(T)`, `Out(T)`, `InOut(T)` inside `Callable[[...], T]` only |
+| Named callable prototypes | `@prototype` function declarations referenced by name |
+| Prototype value override | `Value(T)` inside a `@prototype` declaration only |
 
 <!-- X2PY_C_DOCS_START
 `Unknown` is intentionally rejected in `.pyi` annotations. Generated stubs must
 resolve or block unsupported source types instead of emitting unknown contracts.
 Current C callback placeholders such as `CFunctionPointer` can appear in
-generated stubs when source callback policy is incomplete; edit them to a full
-`Callable[[...], ...]` contract before expecting readiness to pass.
-`Callable` metadata records the callback argument and return types. Fortran
-callbacks are called from Fortran, so their `Callable[[...], T]` argument list
-reflects the Fortran callback procedure signature and Fortran's calling model.
-Callback argument annotations preserve the callback native argument order and
-ABI shape; this is stricter than ordinary Python-facing procedure signatures
-because the generated Fortran adapter must match the callback procedure
-interface exactly:
+generated stubs when source callback policy is incomplete; replace them with a
+named prototype before expecting readiness to pass. A prototype records the
+transport facts required by the generated adapter: native argument order,
+type, rank, shape, character length, result shape, and value/reference passing.
+It does not repeat native callback direction:
 
 ```python
-from x2py.contracts import Callable, Float64, In, Int32, Out, PassByRef
+from x2py.contracts import Float64, Int32, Value, prototype
 
-callback: Callable[[Int32, PassByRef(Float64), Float64[:], In(Float64[:]), Out(Float64[:])], None]
+@prototype
+def update_values(count: Int32, scale: Value(Float64), values: Float64[:]) -> None: ...
+
+def apply_update(callback: update_values, ...) -> ...: ...
 ```
 
-Bare scalar `T` inside the callback argument list means a Fortran `value`
-callback dummy. Bare storage/object forms such as `T[:]`, `T[()]`, or a wrapped
-type keep the normal `.pyi` Python callback argument shape. `PassByRef(T)` means
-a scalar callback dummy passed by reference while preserving a missing callback
-dummy `intent` attribute. `In(T)`, `Out(T)`, and `InOut(T)` mean pass by
-reference with explicit callback dummy `intent(in)`, `intent(out)`, and
-`intent(inout)`.
-For fixed-length character callbacks, `In(String[n])` passes a Python `str`.
-Writable character callback dummies use mutable scalar bytes storage:
-`Out(String[n][()])` or `InOut(String[n][()])`. `Out(String[n])` and
-`InOut(String[n])` are invalid because a Python `str` cannot be mutated in
-place. Source-generated contracts emit `String[n][()]` for Fortran callback
-character dummies with `intent(out)` or `intent(inout)`.
-`Addr(...)` is not valid inside Fortran callback `Callable` signatures: Python
-is not calling those arguments directly, and Fortran has no separate callback
-dummy spelling that corresponds to x2py's Python-visible raw-address contract.
-The wrappers are valid only in `Callable[[...], T]` argument lists and are
-lowered internally to callback declaration access (`read`, `write`,
-`readwrite`, or `unspecified`). They are not general `.pyi` argument direction
-metadata.
+Bare callback argument types use the normal Fortran reference form. A primitive
+scalar reference becomes writable rank-zero NumPy storage, arrays become
+writable NumPy views, fixed-length character references become mutable
+rank-zero bytes storage, and wrapped objects retain their native reference.
+`Value(T)` selects the native Fortran `value` attribute and gives Python the
+corresponding call-local value. `Addr(...)` is unnecessary because reference is
+the default.
+
+Prototype declarations are not runtime functions and are not exported from the
+generated Python module. They may be referenced from another semantic contract
+module through a relative import:
+
+```python
+from .callback_shapes import transform
+
+def apply_transform(callback: transform, ...) -> ...: ...
+```
+
+Post-IR policy completes each prototype reference as an implicit external or a
+named explicit declaration. The named form is selected whenever the prototype
+contains an explicit-interface-only characteristic such as an optional or
+descriptor dummy, polymorphism, or an array/pointer/allocatable
+result. The backend imports that real interface from the prototype's native
+module, including its native direction attributes; the semantic `.pyi` does not
+duplicate them. `Value(...)` alone may still use a typed external declaration
+when no other characteristic requires the explicit interface.
 
 Before wrapper planning, x2py completes these declarations into explicit
-callback ABI, copy direction, result, context-lifecycle, thread/GIL, cleanup,
+callback ABI, permissive reference writeback, result, context-lifecycle,
+thread/GIL, cleanup,
 and fatal-error actions. The generated C trampoline and Fortran adapter consume
-that completed record directly; editing a `Callable` never causes a backend to
-guess a different access or ownership mode.
+that completed record directly.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -981,7 +989,7 @@ update_raw(value.ctypes.data)
 `Addr(Float64[:])` are invalid Python-visible raw-address contracts. Wrapped
 classes use `WrappedType` at the Python boundary, and their default `Arg(i)`
 representation already supplies the wrapped native handle/address. Post-IR
-policy completion rejects these invalid forms before readiness or `ir2ast`
+policy completion rejects these invalid forms before readiness or wrapper
 lowering. `Addr(...)` remains a Python-visible raw-address contract and is not a
 Fortran callback argument wrapper.
 
@@ -2049,10 +2057,10 @@ Wrapper generation may synthesize native getter and setter bridge functions to
 implement Python attribute reads and writes. Those functions are internal: they
 are absent from the `.pyi` and are not exported as Python-callable procedures.
 The post-IR policy stage separately decides the getter result policy, native
-setter assignment mode, and Python setter exposure before `ir2ast.py`. A native
-value-copy setter can therefore exist for ABI use while Python replacement is
-explicitly rejected, as for allocatable or derived fields. Bridge and binding
-generation only dispatch those completed accessor decisions.
+setter assignment mode, and Python setter exposure before wrapper planning. A
+native value-copy setter can therefore exist for ABI use while Python
+replacement is explicitly rejected, as for allocatable or derived fields.
+Bridge and binding generation only dispatch those completed accessor decisions.
 
 A mutable scalar module variable may include a literal default in an edited
 `.pyi` contract:
@@ -2268,7 +2276,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Fortran defined assignment | explicit mutating `assign(...)` overloads |
 | Opaque types | `Opaque` classes and owner-module dependency stubs |
 | Imports | retained contract dependencies with aliases; source kind modules are omitted after dtype resolution |
-| Callbacks | complete `Callable` signatures when source interfaces resolve |
+| Callbacks | named `@prototype` declarations when source interfaces resolve |
 
 <!-- X2PY_C_DOCS_START
 | C primitive scalars | compiler-probed semantic dtype names when a target report is supplied |
@@ -2323,16 +2331,21 @@ ambiguous, unsafe, or stale before wrapper lowering:
 - `@overload(...)` combined with `@native_call(...)`; the linked concrete
   procedure owns native projection metadata.
 
-## Roadmap
+## Remaining Format And Runtime Work
 
-Near-term format work:
+Ordered `@native_call` lowering, typed hidden outputs, array validation, and
+completed ownership/action dispatch are implemented parts of the current
+Fortran wrapper path. They are not future roadmap items.
 
-5. Represent Fortran polymorphic `class(...)` and procedure bindings without
-   losing dynamic-type or dispatch information.
+Remaining public gaps include broader polymorphic `class(...)` representation,
+pointer-return lifetime cases that still lack a provable owner, and clean
+IDE/type-checker stubs that do not lose the semantic wrapper contract. The
+[language feature matrix](../language-support/feature-matrix.md) is the
+authoritative current support summary.
 
 <!-- X2PY_C_DOCS_START
 1. Make C and Fortran callbacks/procedure pointers first-class by preserving
-   complete `Callable[[...], ...]` contracts from source.
+   complete named prototypes from source.
 2. Add explicit pointer ownership, borrow, nullability, output-buffer and
    copy/readback policy so pointer-heavy C APIs can move beyond blockers.
 3. Strengthen Fortran character kind, hidden-length ABI, and `bind(c)`
@@ -2340,13 +2353,3 @@ Near-term format work:
 4. Expand aggregate layout metadata for C bitfields, C attributes, Fortran
    `bind(c)`, `sequence`, and by-value aggregate ABI checks.
 X2PY_C_DOCS_END -->
-
-Projection/runtime roadmap:
-
-1. Lower `@native_call` mappings into executable wrapper calls.
-2. Add validation and coercion contracts for dtype, rank, shape, order,
-   strides, alignment, mutability and aliasing.
-3. Add ownership and lifetime contracts for opaque handles, pointer returns,
-   allocatable/pointer reassociation, callbacks and work buffers.
-4. Decide how to emit clean IDE/type-checker stubs from semantic `.pyi` files
-   without losing the native wrapper contract.

@@ -32,9 +32,35 @@ def scale(x: Float64) -> Float64: ...
     assert "bind_c_scale(&x, &result);" in c_source
     assert "PyObject * result_obj = Double_to_PyDouble(&result);" in c_source
     assert 'subroutine bind_c_scale(x, result) bind(c, name="bind_c_scale")' in fortran_source
-    native_interface = fortran_source.split("subroutine SCALE_OUT(x, result)", maxsplit=1)[1].split(
+    assert "external :: SCALE_OUT" in fortran_source
+    assert "subroutine SCALE_OUT(" not in fortran_source
+    assert "call SCALE_OUT(x, result)" in fortran_source
+
+
+def test_required_explicit_interface_declares_hidden_result_in_native_order():
+    module = parse_pyi_text(
+        """
+from x2py.contracts import Addr, Annotated, Arg, Float64, Immutable, Int32, Return, bind, external, native_call
+
+@bind("SCALE_OUT")
+@external
+@native_call([Addr(Arg(0)), Return("result", 0), Addr(Arg(1))])
+def scale(
+    x: Float64,
+    mode: Annotated[Int32, Immutable] | None = ...,
+) -> Float64: ...
+""",
+        module_name="hidden_result_explicit_interface",
+    )
+    complete_semantic_policies(module)
+    artifacts = WrapperCodeGenerator().generate(WrapperPlanner().build(module))
+    fortran_source = next(source.text for source in artifacts.sources if source.path.suffix == ".f90")
+
+    native_interface = fortran_source.split("subroutine SCALE_OUT(x, result, mode)", maxsplit=1)[1].split(
         "end subroutine SCALE_OUT", maxsplit=1
     )[0]
     assert "real(c_double) :: x" in native_interface
     assert "real(c_double) :: result" in native_interface
-    assert "call SCALE_OUT(x, result)" in fortran_source
+    assert "integer(c_int32_t), optional :: mode" in native_interface
+    assert "call SCALE_OUT(x=x, result=result, mode=mode)" in fortran_source
+    assert "call SCALE_OUT(x=x, result=result)" in fortran_source

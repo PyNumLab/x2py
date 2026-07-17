@@ -631,7 +631,7 @@ end module callbacks
     module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
 
     abstract_callback = get_function(module, "abstract_case").arguments[0].semantic_type
-    assert abstract_callback.name == "Callable"
+    assert abstract_callback.name == "transform_iface"
     assert [argument.name for argument in abstract_callback.metadata["callback_arguments"]] == [
         "count",
         "values",
@@ -648,13 +648,12 @@ end module callbacks
     assert abstract_callback.metadata["callback_lifetime"] == "call"
     assert abstract_callback.metadata["callback_thread"] == "entering_thread"
     assert abstract_callback.metadata["callback_exception"] == "print_traceback_and_abort"
-    assert [
-        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
-        for argument in abstract_callback.metadata["callback_arguments"]
-    ] == ["read", "read", "read"]
+    assert all(
+        argument.semantic_type.storage is not None for argument in abstract_callback.metadata["callback_arguments"]
+    )
 
     explicit_callback = get_function(module, "explicit_case").arguments[0].semantic_type
-    assert explicit_callback.name == "Callable"
+    assert explicit_callback.name == "callback"
     assert [argument.name for argument in explicit_callback.metadata["arguments"]] == ["Int32"]
     assert explicit_callback.metadata["return"].name == "Int32"
 
@@ -662,35 +661,28 @@ end module callbacks
     assert notify_callback.metadata["return"].name == "None"
 
     no_intent_callback = get_function(module, "no_intent_case").arguments[0].semantic_type
-    assert [
-        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
-        for argument in no_intent_callback.metadata["callback_arguments"]
-    ] == ["unspecified", "unspecified"]
+    assert all(argument.semantic_type.storage.mutable for argument in no_intent_callback.metadata["callback_arguments"])
 
     value_callback = get_function(module, "value_case").arguments[0].semantic_type
     assert [argument.name for argument in value_callback.metadata["callback_arguments"]] == ["value", "ref"]
-    assert [
-        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
-        for argument in value_callback.metadata["callback_arguments"]
-    ] == ["read", "unspecified"]
     assert [argument.origin.metadata["value"] for argument in value_callback.metadata["callback_arguments"]] == [
         True,
         False,
     ]
 
     string_callback = get_function(module, "string_case").arguments[0].semantic_type
-    assert [
-        argument.metadata[semantic_models.CALLBACK_DECLARATION_ACCESS_METADATA]
+    assert all(
+        argument.semantic_type.storage.array.category == "scalar_storage"
         for argument in string_callback.metadata["callback_arguments"]
-    ] == ["read", "write", "readwrite"]
+    )
 
     emitted = emit_module(module)
-    assert "FortranCallback" not in emitted
-    assert "Callable[[" in emitted
-    assert "Callable[[In(Int32), In(Float64[count]), In(point_t)], Float64[count]]" in emitted
-    assert "Callable[[PassByRef(Int32), Float64[count]], None]" in emitted
-    assert "Callable[[Int32, PassByRef(Float64)], None]" in emitted
-    assert "Callable[[In(String[8]), Out(String[8][()]), InOut(String[8][()])], None]" in emitted
+    assert "@prototype\ndef transform_iface(" in emitted
+    assert "callback: transform_iface" in emitted
+    assert "@prototype\ndef value_iface(" in emitted
+    assert "value: Value(Int32)" in emitted
+    assert "@prototype\ndef string_iface(" in emitted
+    assert "read_label: String[8]" in emitted
     assert native_contract_issues(parse_pyi_text(emitted, module_name=module.name)) == []
 
     project = parse_fortran_project(
@@ -719,7 +711,7 @@ end module callback_user
     )
     modules = {item.name: item for item in FortranToIRConverter().visit(project)}
     imported_callback = get_function(modules["callback_user"], "apply").arguments[0].semantic_type
-    assert imported_callback.name == "Callable"
+    assert imported_callback.name == "renamed"
     assert [argument.name for argument in imported_callback.metadata["arguments"]] == ["Int32"]
     assert imported_callback.metadata["return"].name == "Int32"
 
@@ -736,6 +728,6 @@ end subroutine standalone_case
     )
     standalone_module = FortranToIRConverter().visit(standalone)[0]
     standalone_callback = get_function(standalone_module, "standalone_case").arguments[0].semantic_type
-    assert standalone_callback.name == "Callable"
+    assert standalone_callback.name == "callback"
     assert [argument.name for argument in standalone_callback.metadata["arguments"]] == ["Int32"]
     assert standalone_callback.metadata["return"].name == "Int32"

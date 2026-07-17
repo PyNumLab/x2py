@@ -419,8 +419,9 @@ CLI args
   -> preprocessing config and source loading
   -> parser models
   -> semantic IR
+  -> post-IR policy completion
   -> inspection: .pyi printing / .pyi loading / readiness report
-  -> Fortran build: codegen AST / native bridge / CPython binding / extension
+  -> Fortran build: WrapperPlan / direct bridge and binding lowering / extension
 ```
 X2PY_C_DOCS_END -->
 

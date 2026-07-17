@@ -558,7 +558,8 @@ Python return values.
 The loader accepts semantic interface syntax such as:
 
 ```python
-from typing import Callable, Final
+from typing import Final
+from x2py.contracts import prototype
 
 nmax: Final[Int32] = 32
 
@@ -566,15 +567,18 @@ class state:
     count: Int32
     values: Float64[nmax]
 
+@prototype
+def objective(value: Float64) -> Float64: ...
+
 def integrate(
-    objective: Callable[[Float64], Float64],
+    callback: objective,
     x0: Float64
 ) -> Float64: ...
 ```
 
-A complete `Callable[[...], Return]` can resolve a callback-signature
-readiness blocker. A placeholder such as `Procedure` or
-`Callable[..., Return]` remains incomplete because argument types are unknown.
+A complete named prototype resolves a callback-signature readiness blocker. A
+placeholder such as `Procedure` remains incomplete because its argument and
+result types are unknown.
 
 Supported projection metadata such as `@native_call(...)` is parsed and
 preserved. The source-driven Fortran wrapper executes the built-in projection

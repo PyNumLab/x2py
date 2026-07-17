@@ -27,6 +27,7 @@ from x2py.semantics.wrapper_policy import (
     DerivedDummyCategory,
     DerivedObjectStorage,
     DerivedRelease,
+    ExternalDeclarationMode,
     ModuleGetterAction,
     ModuleObjectAccessMechanism,
     NativeArrayDescriptorKind,
@@ -587,7 +588,6 @@ class FortranBridgeGenerator(ClassVisitor):
             ),
             type_definitions=self._derived_holder_definitions(plan),
             interfaces=(
-                *self._callback_interfaces(plan),
                 *self._derived_call_interfaces(plan),
                 *self._external_interfaces(plan),
                 *self._module_descriptor_callback_interfaces(plan),
@@ -617,6 +617,13 @@ class FortranBridgeGenerator(ClassVisitor):
                     for procedure in self._derived_origin_procedures(variable)
                 ),
             ),
+            external_procedures=self._callback_external_adapter_procedures(plan),
+        )
+
+    def _callback_external_adapter_procedures(self, plan: ModulePlan) -> tuple[FortranFunction, ...]:
+        """Return separately linked callback adapters in stable site order."""
+        return tuple(
+            self._callback_external_adapter_procedure(callback, plan) for callback in self._callback_sites(plan)
         )
 
     def _derived_holder_definitions(self, plan: ModulePlan) -> tuple[FortranTypeDefinition, ...]:
@@ -683,7 +690,6 @@ class FortranBridgeGenerator(ClassVisitor):
         bridge_name = self._bridge_function_name(plan)
         is_subroutine = plan.bridge.native_is_subroutine or owned_direct_result is not None
         function_body, optional_procedures = self._function_body(plan, result_name)
-        callback_procedures = self._callback_adapter_procedures(plan)
         native_body = (
             *self._derived_pointer_call_initializers(plan),
             *function_body,
@@ -703,6 +709,8 @@ class FortranBridgeGenerator(ClassVisitor):
             result_type=result_type,
             bind_name=bridge_name,
             declarations=(
+                *self._callback_external_declarations(plan),
+                *self._native_external_declarations(plan),
                 *self._optional_declarations(plan),
                 *self._opaque_address_declarations(plan),
                 *self._array_declarations(plan),
@@ -726,34 +734,39 @@ class FortranBridgeGenerator(ClassVisitor):
             ),
             is_subroutine=is_subroutine,
             internal_procedures=(
-                *callback_procedures,
                 *optional_procedures,
                 *internal_procedures,
             ),
         )
 
     # Immediate callback adapters.
-    def _callback_adapter_procedures(self, plan: FunctionPlan) -> tuple[FortranFunction, ...]:
-        """Return one typed native adapter for each Python callback argument."""
-        return tuple(
-            self._callback_adapter_procedure(argument.callback, argument.bridge.native_name.lower())
-            for argument in sorted(plan.arguments, key=lambda item: item.native_position)
-            if argument.callback is not None
-        )
-
-    def _callback_adapter_procedure(
+    def _callback_external_adapter_procedure(
         self,
         callback: CallbackHandoffPlan,
-        callback_name: str,
+        plan: ModulePlan,
     ) -> FortranFunction:
-        """Adapt one native callback signature to its completed C trampoline ABI."""
+        """Adapt one native callback through a separately declared external procedure."""
         result = callback.result.transfer
         is_subroutine = callback.result.action is CallbackResultAction.RETURN_VOID
+        trampoline_name = f"{callback.trampoline_symbol}_call"
         return FortranFunction(
             name=callback.adapter_symbol,
             parameters=tuple(self._callback_native_parameter(transfer) for transfer in callback.arguments),
             result_name=None if is_subroutine else "callback_result",
             result_type=None if is_subroutine else self._callback_native_result_type(result),
+            uses=self._callback_external_adapter_uses(callback, plan),
+            implicit_none=True,
+            interfaces=(
+                FortranInterface(
+                    (
+                        self._callback_c_interface(
+                            callback,
+                            name=trampoline_name,
+                            bind_name=callback.trampoline_symbol,
+                        ),
+                    )
+                ),
+            ),
             declarations=(
                 *(
                     declaration
@@ -768,7 +781,7 @@ class FortranBridgeGenerator(ClassVisitor):
                     for transfer in callback.arguments
                     for statement in self._callback_transfer_preparation(transfer)
                 ),
-                *self._callback_invocation(callback, callback_name),
+                *self._callback_invocation(callback, trampoline_name),
                 *(
                     statement
                     for transfer in callback.arguments
@@ -781,10 +794,8 @@ class FortranBridgeGenerator(ClassVisitor):
 
     def _callback_native_parameter(self, transfer: CallbackTransferPlan) -> FortranParameter:
         """Declare the exact native callback dummy represented by one transfer."""
-        attributes = list(self._callback_intent_attributes(transfer))
-        if transfer.abi is CallbackABIKind.VALUE:
-            if transfer.access == "unspecified":
-                attributes.append("intent(in)")
+        attributes = []
+        if transfer.passed_by_value:
             attributes.append("value")
         if transfer.abi is not CallbackABIKind.VALUE and transfer.adapter_action in {
             CallbackTransferAction.BORROW_READ_ONLY,
@@ -799,15 +810,74 @@ class FortranBridgeGenerator(ClassVisitor):
             tuple(attributes),
         )
 
-    @staticmethod
-    def _callback_intent_attributes(transfer: CallbackTransferPlan) -> tuple[str, ...]:
-        """Map the completed callback access mode to one native INTENT."""
-        intent = {
-            "read": "intent(in)",
-            "write": "intent(out)",
-            "readwrite": "intent(inout)",
-        }.get(transfer.access)
-        return (intent,) if intent is not None else ()
+    def _callback_external_adapter_uses(
+        self,
+        callback: CallbackHandoffPlan,
+        plan: ModulePlan,
+    ) -> tuple[FortranUse, ...]:
+        """Import the native types and C ABI kinds used by one external adapter."""
+        native_imports = self._callback_native_imports(callback)
+        adapter_imports = (
+            *(("c_loc",) if any(transfer.abi is not CallbackABIKind.VALUE for transfer in callback.arguments) else ()),
+            *(
+                ("c_f_pointer",)
+                if callback.result.action
+                in {CallbackResultAction.RETURN_ARRAY_ADDRESS, CallbackResultAction.RETURN_DERIVED_ADDRESS}
+                else ()
+            ),
+        )
+        iso_imports = tuple(
+            symbol for symbol in (*native_imports, *adapter_imports) if not symbol.startswith("x2py_type_")
+        )
+        derived_imports = tuple(symbol for symbol in native_imports if symbol.startswith("x2py_type_"))
+        return (
+            FortranUse(
+                "iso_c_binding",
+                tuple(dict.fromkeys((*iso_imports, *self._callback_c_imports(callback)))),
+            ),
+            *(
+                (
+                    FortranUse(
+                        f"bind_c_{plan.bridge.owner_path}_wrapper",
+                        derived_imports,
+                    ),
+                )
+                if derived_imports
+                else ()
+            ),
+        )
+
+    def _callback_external_declarations(self, plan: FunctionPlan) -> tuple[FortranDeclaration, ...]:
+        """Declare external callback adapters from completed callback policy."""
+        declarations = []
+        for callback in (
+            argument.callback
+            for argument in sorted(plan.arguments, key=lambda item: item.native_position)
+            if argument.callback is not None
+        ):
+            if callback.declaration_mode is ExternalDeclarationMode.EXPLICIT_INTERFACE:
+                declarations.append(
+                    FortranDeclaration(
+                        callback.adapter_symbol,
+                        f"procedure({self._callback_imported_prototype_symbol(callback)})",
+                    )
+                )
+                continue
+            if callback.declaration_mode is not ExternalDeclarationMode.IMPLICIT_EXTERNAL:
+                raise ValueError(
+                    f"Callback {callback.owner_path!r} has unsupported declaration mode {callback.declaration_mode!r}"
+                )
+            if callback.result.action is CallbackResultAction.RETURN_VOID:
+                declarations.append(FortranDeclaration(callback.adapter_symbol, "external"))
+                continue
+            declarations.append(
+                FortranDeclaration(
+                    callback.adapter_symbol,
+                    self._callback_native_result_type(callback.result.transfer),
+                    ("external",),
+                )
+            )
+        return tuple(declarations)
 
     def _callback_transfer_declarations(
         self,
@@ -2561,12 +2631,7 @@ class FortranBridgeGenerator(ClassVisitor):
     def _lower_argument(self, plan: ArgumentTransferPlan) -> tuple[FortranParameter, ...]:
         """Dispatch one completed bridge optional mode explicitly."""
         if plan.callback is not None:
-            return (
-                FortranParameter(
-                    plan.bridge.native_name.lower(),
-                    f"procedure({self._callback_c_interface_symbol(plan.callback)})",
-                ),
-            )
+            return ()
         mode = plan.bridge.optional_mode
         if plan.object_kind is ObjectKind.DERIVED_TYPE:
             return self._lower_derived_argument(plan, mode)
@@ -4939,6 +5004,7 @@ class FortranBridgeGenerator(ClassVisitor):
     def _add_function_module_uses(self, plan: ModulePlan, modules: dict[str, list[str]]) -> None:
         """Import module procedures, excluding direct type-bound invocation."""
         for function in self._functions(plan):
+            self._add_callback_prototype_uses(function, modules)
             if (
                 function.bridge.native_module is not None
                 and function.bridge.native_invocation is not NativeInvocationKind.PROCEDURE
@@ -4950,6 +5016,23 @@ class FortranBridgeGenerator(ClassVisitor):
             ):
                 modules.setdefault(function.bridge.native_module, []).append(
                     f"{self._native_function_name(function)} => {function.bridge.native_name}"
+                )
+
+    def _add_callback_prototype_uses(
+        self,
+        function: FunctionPlan,
+        modules: dict[str, list[str]],
+    ) -> None:
+        """Import named prototypes selected by completed callback policy."""
+        for argument in function.arguments:
+            callback = argument.callback
+            if (
+                callback is not None
+                and callback.declaration_mode is ExternalDeclarationMode.EXPLICIT_INTERFACE
+                and callback.prototype_module is not None
+            ):
+                modules.setdefault(callback.prototype_module, []).append(
+                    f"{self._callback_imported_prototype_symbol(callback)} => {callback.prototype_name}"
                 )
 
     def _add_variable_module_uses(self, plan: ModulePlan, modules: dict[str, list[str]]) -> None:
@@ -6232,21 +6315,27 @@ class FortranBridgeGenerator(ClassVisitor):
         procedures = tuple(
             self._external_interface_procedure(function)
             for function in self._functions(plan)
-            if function.bridge.external
+            if function.bridge.external_declaration is ExternalDeclarationMode.EXPLICIT_INTERFACE
         )
         return (FortranInterface(procedures),) if procedures else ()
 
-    def _callback_interfaces(self, plan: ModulePlan) -> tuple[FortranInterface, ...]:
-        """Declare the C trampoline and native adapter signatures for each site."""
-        procedures = tuple(
-            procedure
-            for callback in self._callback_sites(plan)
-            for procedure in (
-                self._callback_c_interface(callback),
-                self._callback_native_interface(callback),
-            )
+    def _native_external_declarations(self, plan: FunctionPlan) -> tuple[FortranDeclaration, ...]:
+        """Lower the completed implicit-external declaration mode."""
+        mode = plan.bridge.external_declaration
+        if mode in {ExternalDeclarationMode.NONE, ExternalDeclarationMode.EXPLICIT_INTERFACE}:
+            return ()
+        if mode is not ExternalDeclarationMode.IMPLICIT_EXTERNAL:
+            raise ValueError(f"Unsupported external declaration mode for {plan.owner_path!r}: {mode!r}")
+        name = self._native_function_name(plan)
+        if plan.bridge.native_is_subroutine:
+            return (FortranDeclaration(name, "external"),)
+        return (
+            FortranDeclaration(
+                name,
+                self._native_result_type(plan, self._direct_result(plan)),
+                ("external",),
+            ),
         )
-        return (FortranInterface(procedures, abstract=True),) if procedures else ()
 
     def _callback_sites(self, plan: ModulePlan) -> tuple[CallbackHandoffPlan, ...]:
         """Return callback sites in stable native-call order."""
@@ -6257,12 +6346,18 @@ class FortranBridgeGenerator(ClassVisitor):
             if argument.callback is not None
         )
 
-    def _callback_c_interface(self, callback: CallbackHandoffPlan) -> FortranInterfaceProcedure:
+    def _callback_c_interface(
+        self,
+        callback: CallbackHandoffPlan,
+        *,
+        name: str,
+        bind_name: str,
+    ) -> FortranInterfaceProcedure:
         """Declare the flattened C ABI implemented by one Python trampoline."""
         result = callback.result.transfer
         is_subroutine = callback.result.action is CallbackResultAction.RETURN_VOID
         return FortranInterfaceProcedure(
-            name=self._callback_c_interface_symbol(callback),
+            name=name,
             imports=self._callback_c_imports(callback),
             parameters=tuple(
                 parameter for transfer in callback.arguments for parameter in self._callback_c_parameters(transfer)
@@ -6270,20 +6365,8 @@ class FortranBridgeGenerator(ClassVisitor):
             result_name=None if is_subroutine else "callback_result",
             result_type=None if is_subroutine else self._callback_c_result_type(result),
             is_subroutine=is_subroutine,
+            bind_name=bind_name,
             bind_c=True,
-        )
-
-    def _callback_native_interface(self, callback: CallbackHandoffPlan) -> FortranInterfaceProcedure:
-        """Declare the native signature that the internal adapter must satisfy."""
-        result = callback.result.transfer
-        is_subroutine = callback.result.action is CallbackResultAction.RETURN_VOID
-        return FortranInterfaceProcedure(
-            name=self._callback_native_interface_symbol(callback),
-            imports=self._callback_native_imports(callback),
-            parameters=tuple(self._callback_native_parameter(transfer) for transfer in callback.arguments),
-            result_name=None if is_subroutine else "callback_result",
-            result_type=None if is_subroutine else self._callback_native_result_type(result),
-            is_subroutine=is_subroutine,
         )
 
     def _callback_c_parameters(self, transfer: CallbackTransferPlan) -> tuple[FortranParameter, ...]:
@@ -6350,12 +6433,8 @@ class FortranBridgeGenerator(ClassVisitor):
         return tuple(dict.fromkeys(imports))
 
     @staticmethod
-    def _callback_c_interface_symbol(callback: CallbackHandoffPlan) -> str:
-        return f"{callback.trampoline_symbol}_interface"
-
-    @staticmethod
-    def _callback_native_interface_symbol(callback: CallbackHandoffPlan) -> str:
-        return f"{callback.adapter_symbol}_interface"
+    def _callback_imported_prototype_symbol(callback: CallbackHandoffPlan) -> str:
+        return f"{callback.adapter_symbol}_prototype"
 
     def _derived_call_interfaces(self, plan: ModulePlan) -> tuple[FortranInterface, ...]:
         """Declare the typed callback ABI shared by every scalar-derived call."""
@@ -6800,10 +6879,7 @@ class FortranBridgeGenerator(ClassVisitor):
         """Return the native external dummy declaration for one planned argument."""
         parameter_name = name or argument.bridge.native_name.lower()
         if argument.callback is not None:
-            return FortranParameter(
-                parameter_name,
-                f"procedure({self._callback_native_interface_symbol(argument.callback)})",
-            )
+            return FortranParameter(parameter_name, "external")
         attributes = (
             ("optional",)
             if argument.bridge.optional_mode in {OptionalMode.NULLABLE_VALUE, OptionalMode.DESCRIPTOR}

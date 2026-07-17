@@ -90,7 +90,7 @@ The tables below summarize the currently verified Fortran-to-Python type mapping
 | supported logical storage | `Bool` | `bool` or `numpy.bool_` as documented by the generated contract | `numpy.bool_` |
 | scalar character | `String` or `String[n]` | `str` | fixed-width NumPy bytes, such as `S8` |
 | derived type | generated class name | instance of that generated class | arrays of derived types are unsupported |
-| dummy procedure | `Callable[[...], T]` | Python callable with the exact argument/result contract | not applicable |
+| dummy procedure | named `@prototype` reference | Python callable matching the named prototype | not applicable |
 
 ## Source Kind Names
 
@@ -107,8 +107,9 @@ native storage instead of silently narrowing it.
 
 ## Scalar Values And Native Storage
 
-A bare numeric semantic type is a Python-visible value. `T` is the
-read-only value form. Its default native boundary is pass-by-value.
+A bare numeric semantic type is a Python-visible value. `T` is a value
+contract, not a copy of Fortran `intent`. Its default native boundary is
+pass-by-value.
 `Addr(Arg(...))` in `@native_call` means x2py converts that Python-visible value
 to call-local native scalar storage and passes the storage address to native
 code.

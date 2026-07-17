@@ -324,7 +324,7 @@ The converter does not silently invent wrapper policy. It attaches
 - unresolved typedef or unknown type references;
 - legacy parser reports carrying macro-dependent declarations;
 - variadic functions;
-- function pointer/callback signatures without edited `.pyi` `Callable`
+- function pointer/callback signatures without a resolved named prototype
   policy;
 - mutable numeric or `void *` pointer parameters without ownership,
   scalar-storage, raw-address, or array policy;

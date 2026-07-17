@@ -70,9 +70,12 @@ python3 -m pytest -q tests/wrapper/fortran \
 ```
 
 The full LAPACK wrapper test remains CI-only by default. The full BLAS test may
-be run locally when its library-scale evidence is needed, and dedicated
-GitHub Actions jobs run both BLAS and LAPACK on Python 3.12. General
-native-bundle tests remain active in the ordinary matrix.
+be run locally when its library-scale evidence is needed. One dedicated GitHub
+Actions job runs the exact full BLAS and LAPACK nodes together on Python 3.12;
+the ordinary Python-version matrix excludes their complete test file. Add the
+`ignore-real-library-wrappers` label to a pull request to skip only this
+expensive dedicated job. General native-bundle tests remain active in the
+ordinary matrix.
 
 ## Fixtures and generated expectations
 

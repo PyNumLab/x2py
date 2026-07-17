@@ -110,7 +110,7 @@ Use these rules when adding a new notion:
 - Put it in naming when the same source symbol needs stable Python, C, or
   Fortran spellings, reserved-word handling, or collision-free generated names.
   The naming layer is a shared policy service, not a semantic model and not a
-  codegen AST node.
+  generated source-syntax node.
 X2PY_C_DOCS_END -->
 
 Merge or move concepts only when their invariants match:
@@ -220,8 +220,8 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 `pyi_parser.py` is intentionally small: it reads `.pyi` text or files and
 returns Python AST. Semantic interpretation belongs to `pyi2ir.py`, matching
-the source-parser-to-IR split used by C and Fortran. Readiness and `ir2ast.py`
-consume completed policy decisions. They must not
+the source-parser-to-IR split used by C and Fortran. Readiness and wrapper
+planning consume completed policy decisions. They must not
 reconstruct policy from a raw datatype such as `Float64[:]`; that datatype is
 only meaningful after the surrounding argument, result, field, or module-variable
 context is known. The C source path currently uses this shared boundary for

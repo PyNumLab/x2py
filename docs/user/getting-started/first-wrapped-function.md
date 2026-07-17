@@ -77,6 +77,11 @@ caller passes references. The semantic `.pyi` is a native contract, not an
 ordinary pure-Python type stub. Do not edit it during this first workflow; the
 Semantic `.pyi` Format reference explains the complete grammar later.
 
+Fortran `intent` is not printed into the semantic `.pyi`. It helps generate the
+initial Python argument/result projection, but the visible signature,
+`Returns[...]`, and ordered `@native_call` list are the wrapper authority after
+the contract is loaded. The compiled Fortran procedure retains its own `intent`.
+
 ## Failure Mode: Wrong Scalar Type
 
 Native scalar arguments use exact NumPy dtypes. A plain Python `float` is not a

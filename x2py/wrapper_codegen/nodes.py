@@ -399,6 +399,9 @@ class FortranFunction(StageRecord):
     result_type: str | None = None
     bind_name: str | None = None
     bind_c: bool = False
+    uses: tuple[FortranUse, ...] = ()
+    implicit_none: bool = False
+    interfaces: tuple[FortranInterface, ...] = ()
     declarations: tuple[FortranDeclaration, ...] = ()
     body: tuple[
         FortranAllocate
@@ -424,3 +427,4 @@ class FortranModule(StageRecord):
     type_definitions: tuple[FortranTypeDefinition, ...] = ()
     interfaces: tuple[FortranInterface, ...] = ()
     procedures: tuple[FortranFunction, ...] = ()
+    external_procedures: tuple[FortranFunction, ...] = ()

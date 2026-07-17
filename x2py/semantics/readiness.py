@@ -36,7 +36,6 @@ _BUILTIN_TYPES = frozenset(
     {
         "Any",
         "Bool",
-        "Callable",
         "Complex64",
         "Complex128",
         "Float32",
@@ -619,8 +618,8 @@ class _SemanticReadinessChecker:
             self._add_callback_blocker(type_name, owner, item, unit=unit, unit_kind=unit_kind)
             return
 
-        if type_name == "Callable":
-            self._check_callable_type(
+        if semantic_type.storage is not None and semantic_type.storage.kind == "callback":
+            self._check_prototype_reference(
                 semantic_type,
                 owner=owner,
                 item=item,
@@ -630,6 +629,7 @@ class _SemanticReadinessChecker:
                 unit=unit,
                 unit_kind=unit_kind,
             )
+            return
 
         if not self.index.is_known_type(type_name, module) and not _is_external_type_ref(semantic_type):
             self._add_blocker(
@@ -951,7 +951,7 @@ class _SemanticReadinessChecker:
         source_type = (semantic_type.origin.source_type or "").casefold()
         return any(token in source_type for token in _ISO_C_KIND_TOKENS)
 
-    def _check_callable_type(
+    def _check_prototype_reference(
         self,
         semantic_type: SemanticType,
         *,
@@ -966,7 +966,7 @@ class _SemanticReadinessChecker:
         arguments = semantic_type.metadata.get("arguments")
         return_type = semantic_type.metadata.get("return")
         if not isinstance(arguments, list) or return_type is None:
-            self._add_callback_blocker("Callable", owner, item, unit=unit, unit_kind=unit_kind)
+            self._add_callback_blocker(semantic_type.name, owner, item, unit=unit, unit_kind=unit_kind)
             return
 
         for index, callback_arg in enumerate(arguments):
@@ -1075,7 +1075,7 @@ class _SemanticReadinessChecker:
     ) -> None:
         self._add_blocker(
             "callback_signature_incomplete",
-            "Some callback or procedure arguments need complete Callable[[...], ...] metadata in the .pyi file.",
+            "Some callback or procedure arguments need a complete named prototype in the .pyi file.",
             {
                 "owner": owner,
                 "item": item,

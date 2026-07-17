@@ -926,6 +926,7 @@
           }
         }
       ],
+      "prototypes": [],
       "overload_sets": [
         {
           "name": "do_work",
