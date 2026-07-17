@@ -34,3 +34,6 @@ states, holder and module transactions, multi-argument acquisition and
 rollback, duplicate-origin validation, qualified types with the same short
 name, ordinary/`sequence` typed-value calls, injected cleanup failures,
 secondary-compiler ABI smoke coverage, and exact unsupported-cell diagnostics.
+It also proves that one call can receive module variables from separate
+Fortran modules whose derived types share a short name but have distinct native
+identities.

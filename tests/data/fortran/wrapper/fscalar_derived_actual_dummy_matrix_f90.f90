@@ -3,8 +3,10 @@ module phase8_left_types
   implicit none
 
   type :: item
-    integer(c_int32_t) :: value = 0_c_int32_t
+    integer(c_int32_t) :: value = 3_c_int32_t
   end type item
+
+  type(item) :: state
 
 contains
 
@@ -21,8 +23,10 @@ module phase8_right_types
   implicit none
 
   type :: item
-    integer(c_int32_t) :: value = 0_c_int32_t
+    integer(c_int32_t) :: value = 7_c_int32_t
   end type item
+
+  type(item) :: state
 
 contains
 

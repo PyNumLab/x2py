@@ -193,6 +193,13 @@ in reverse order. It does not generate `2**N` call variants. Repeated read-only
 use of the same object shares one acquisition; ambiguous writable aliasing is
 rejected before any module state moves.
 
+This also applies when arguments are module variables from different Fortran
+modules and have different qualified derived types. Each module variable owns a
+separate bridge operation table and scoped callback; the binding validates the
+table's qualified native type before the callback is invoked. There is no
+shared type-specific callback slot, so one module variable cannot overwrite
+another argument's transport.
+
 If a later acquisition or the native call reports a normal ABI error, cleanup
 continues for every acquired origin and Python raises only after the Fortran
 frames have returned. Concurrent or recursive use of the same active module

@@ -357,6 +357,16 @@ def test_qualified_same_short_name_types_keep_exact_native_identity(scalar_matri
             module.read_qualified(*values)
 
 
+def test_module_origins_from_separate_modules_keep_type_specific_callbacks(scalar_matrix):
+    module = scalar_matrix.module
+    left = scalar_matrix.left_module.state
+    right = scalar_matrix.right_module.state
+
+    assert module.read_qualified(left, right) == 307
+    with pytest.raises(TypeError, match=r"left_item.*left"):
+        module.read_qualified(right, left)
+
+
 def test_duplicate_origins_share_reads_and_reject_writes_before_native_call(scalar_matrix):
     module = scalar_matrix.module
     module.reset_state()
