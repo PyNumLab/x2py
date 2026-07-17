@@ -17,7 +17,7 @@ Reuse the same `scale.f90` input from the
 [README Quick Start](../../../README.md#quick-start).
 
 The generated Python call accepts two `numpy.float64` values and returns a
-`numpy.float64` result.
+Python `float` result.
 
 ## Build
 
@@ -43,11 +43,11 @@ import scale
 
 result = scale.scale(np.float64(3.0), np.float64(2.5))
 
-assert isinstance(result, np.float64)
-assert result == np.float64(7.5)
+assert isinstance(result, float)
+assert result == 7.5
 ```
 
-The checked call returns `numpy.float64(7.5)`.
+The checked call returns the Python value `7.5`.
 
 ## Inspect The Generated Signature
 
@@ -88,8 +88,6 @@ Native scalar arguments use exact NumPy dtypes. A plain Python `float` is not a
 replacement for `numpy.float64` at this boundary:
 
 ```python
-from x2py.contracts import raises
-
 scale.scale(3.0, 2.5)  # raises TypeError
 ```
 
@@ -112,6 +110,6 @@ generated `.pyi` contract.
 ## Evidence
 
 The linked `scale.f90` input is checked against the repository fixture by
-[`test_documentation_examples.py`](../../../tests/docs/test_examples.py).
+[`test_examples.py`](../../../tests/docs/test_examples.py).
 The default extension name and `7.5` runtime result are checked by
 [`test_build_modes.py`](../../../tests/wrapper/fortran/build_from_source/test_build_modes.py).

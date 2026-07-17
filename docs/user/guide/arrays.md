@@ -35,12 +35,12 @@ contains
     values = values + 1.0_8
   end subroutine shift
 
-  function automatic_vector(size) result(values)
-    integer(4), intent(in) :: size
-    real(8) :: values(size)
+  function automatic_vector(count) result(values)
+    integer(4), intent(in) :: count
+    real(8) :: values(count)
     integer(4) :: index
 
-    values = [(2.0_8 * index, index = 1, size)]
+    values = [(2.0_8 * index, index = 1, count)]
   end function automatic_vector
 end module array_ops
 ```
@@ -65,8 +65,8 @@ def shift(
 
 @native_call([Addr(Arg(0))])
 def automatic_vector(
-    size: Int32
-) -> Float64[size]: ...
+    count: Int32
+) -> Float64[count]: ...
 ```
 
 Build it:

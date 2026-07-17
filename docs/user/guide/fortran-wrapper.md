@@ -358,9 +358,10 @@ The plan records:
 `link_items` is the order-sensitive representation. It can record objects,
 static archives, direct shared-library paths, named `-l` libraries, and explicit
 linker arguments without flattening them into one ambiguous string list.
-Current CLI options expose objects, archives, shared libraries, named
-libraries, library directories, and include/module directories. A general CLI
-for arbitrary ordered linker arguments is planned in the later manifest stage.
+The typed convenience options expose objects, archives, shared libraries,
+named libraries, library directories, and include/module directories.
+`--native-link-item KIND:VALUE` exposes the ordered form directly, including
+explicit linker arguments, when caller order must be preserved.
 
 Example 1: a source-driven build records native source compilation separately
 from generated wrapper files.
@@ -432,7 +433,7 @@ assert result.native_build_plan.library_dirs == (Path("vendor"),)
 ```
 
 Example 5: the ordered representation can express linker control arguments for
-future manifest and Makefile replay without pretending they are objects or
+CLI, manifest, and Makefile replay without pretending they are objects or
 libraries.
 
 ```python
@@ -1959,9 +1960,11 @@ Runtime tests: [`test_visibility_naming.py`](../../../tests/wrapper/fortran/nami
 ## Immediate Python Callbacks
 
 x2py supports dummy procedures invoked during the wrapped call. It resolves
-local explicit interfaces and named abstract interfaces into a complete
-callable contract containing argument order, types, intents, array ranks and
-shapes, derived-type references, and optional result type.
+local explicit interfaces and named abstract interfaces into named
+`@prototype` declarations containing argument order, types, value/reference
+transport, array ranks and shapes, derived-type references, and result type.
+Source `intent` remains in the native interface when that interface must be
+imported, but it is not repeated in the semantic prototype.
 
 ```fortran
 abstract interface
@@ -1987,12 +1990,13 @@ thread are supported.
 
 ### Callback Values
 
-- scalars use the matching Python numeric conversion;
+- value scalars use the matching Python numeric conversion, while reference
+  scalars use writable rank-zero NumPy storage;
 - arrays require exact dtype, rank, declared shape, alignment, and Fortran
   contiguity;
 - derived values require the generated wrapper type;
-- array and derived `intent(out)` or `intent(inout)` values are copied back
-  before the adapter returns; and
+- reference scalar, array, character, and derived storage is handled
+  permissively and written back before the adapter returns; and
 - temporary NumPy views and borrowed derived wrappers passed to the callback are
   valid only during that callback invocation.
 
@@ -2064,8 +2068,6 @@ def solve(
 ```
 
 ```python
-from x2py.contracts import raises
-
 solve(values)            # returns None when status == 0
 solve(bad_values)        # raises RuntimeError(message) otherwise
 ```

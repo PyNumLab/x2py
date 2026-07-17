@@ -169,7 +169,10 @@ Each candidate is an independent declaration. Removing one candidate narrows
 runtime dispatch without removing the generic name:
 
 ```python
-from x2py.contracts import Float64, Int32, overload
+from x2py.contracts import Float64, Int32, overload, private
+
+@private
+def convert_integer(value: Int32) -> Int32: ...
 
 @overload("convert_integer")
 def convert(value: Int32) -> Int32: ...
@@ -251,7 +254,13 @@ def norm2(values: Float64[:]) -> Float64: ...
 Link every Python overload to one concrete native specific:
 
 ```python
-from x2py.contracts import Float64, Int32, overload
+from x2py.contracts import Float64, Int32, overload, private
+
+@private
+def scale_integer(value: Int32) -> Int32: ...
+
+@private
+def scale_real(value: Float64) -> Float64: ...
 
 @overload("scale_integer")
 def scale(value: Int32) -> Int32: ...
@@ -264,7 +273,10 @@ To rename the Python overload group while calling an existing native generic,
 preserve the native generic explicitly:
 
 ```python
-from x2py.contracts import Int32, overload
+from x2py.contracts import Int32, overload, private
+
+@private
+def convert_integer(value: Int32) -> Int32: ...
 
 @overload("convert_integer", generic="convert")
 def convert_number(value: Int32) -> Int32: ...
@@ -279,9 +291,13 @@ silently choose a native procedure.
 An edited class may bind `__init__` to one concrete native initializer:
 
 ```python
-from x2py.contracts import Addr, Arg, Int32, Pass, bind, native_call
+from x2py.contracts import Addr, Arg, Int32, Pass, bind, native_call, private
 
 class state:
+    @private
+    @native_call([Pass(), Addr(Arg(0))])
+    def init_state(self, size: Int32) -> None: ...
+
     @bind("init_state")
     @native_call([Pass(), Addr(Arg(0))])
     def __init__(self, size: Int32) -> None: ...
@@ -437,10 +453,10 @@ Use `@raises(...)` to turn a projected native status into a Python exception:
 from x2py.contracts import Float64, Int32, Returns, String, raises
 
 @raises(status="status", message="message", success=0)
-def solve(values: Float64[:]) -> Returns[
-    "result", Float64[:],
-    "status", Int32,
-    "message", String,
+def solve(values: Float64[:]) -> tuple[
+    Returns["result", Float64[:]],
+    Returns["status", Int32],
+    Returns["message", String],
 ]: ...
 ```
 
@@ -473,7 +489,7 @@ Ownership edits use a complete policy triple:
 ```python
 from x2py.contracts import Annotated, Destruction, Float64, Ownership, Transfer
 
-Annotated[
+values: Annotated[
     Float64[:],
     Ownership("native"),
     Transfer("borrowed_view"),

@@ -176,14 +176,31 @@ The generated semantic contract distinguishes the module descriptor, an
 ordinary array parameter, and a pointer-descriptor parameter:
 
 ```python
-from x2py.contracts import Aliased, Annotated, Float64, Pointer, PointerAssociation
+from x2py.contracts import (
+    Aliased,
+    Annotated,
+    Destruction,
+    Float64,
+    Ownership,
+    Pointer,
+    PointerAssociation,
+    Transfer,
+)
 
 storage: Annotated[Float64[3], Aliased]
 values: Annotated[Pointer[Float64[:]], PointerAssociation("runtime")]
 
 def associate_values() -> None: ...
 def sum_array(actual: Float64[::]) -> Float64: ...
-def sum_pointer(actual: Pointer[Float64[:]]) -> Float64: ...
+def sum_pointer(
+    actual: Annotated[
+        Pointer[Float64[:]],
+        PointerAssociation("runtime"),
+        Ownership("caller"),
+        Transfer("call_local"),
+        Destruction("none"),
+    ]
+) -> Float64: ...
 ```
 
 Build it:

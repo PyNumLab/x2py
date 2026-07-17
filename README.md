@@ -116,6 +116,8 @@ contracts/
 Expected contract (`contracts/__init__.pyi`):
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, external, native_call
+
 @external
 @native_call([Addr(Arg(0)), Addr(Arg(1))])
 def scale(
@@ -219,6 +221,8 @@ python3 -m x2py points.f90 --pyi --out contracts
 Expected contract (`contracts/points.pyi`):
 
 ```python
+from x2py.contracts import Addr, Arg, Float64, native_call
+
 class point:
     def __init__(
         self,

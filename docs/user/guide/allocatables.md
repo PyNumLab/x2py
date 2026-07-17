@@ -57,10 +57,10 @@ def maybe_resize(values: Allocatable[Float64[:]] | None = ...) -> None: ...
 That spelling is valid only for optional callable arguments. Do not use
 `Allocatable[T[...]] | None` for module variables, derived-type fields, or
 function results; those surfaces return a present handle. Module variables,
-fields, allocatable output dummies, and handles changed by later operations may
-be unallocated. A native allocatable function result must be allocated when the
-function returns; returning it unallocated is nonconforming Fortran and x2py
-does not define a fallback for it.
+fields, allocatable output dummies, function results, and handles changed by
+later operations may be unallocated. The handle then reports
+`allocated is False` and `to_numpy() is None`; this is descriptor state, not an
+absent optional argument.
 
 Passing a handle to `Allocatable[T[...]]` passes the native descriptor. Passing
 the same allocated handle to a normal `T[...]` argument uses ordinary Fortran
@@ -145,9 +145,8 @@ Passing `None` creates a present but unallocated call-local descriptor. Omitting
 a defaulted scalar descriptor argument creates native optional absence, so
 `present(scale)` is false. Passing a value creates a present allocated
 call-local descriptor. A projected output becomes `None` when its descriptor is
-unallocated. An allocatable function result must instead be allocated and
-defined when returned; an unallocated result is nonconforming native Fortran,
-not a nullable x2py value. Ordinary scalar projection rules still apply:
+unallocated, including an allocatable scalar function result. Ordinary scalar
+projection rules still apply:
 `intent(out)` uses `Allocatable(Return("name", j))`, while `intent(inout)` uses
 `Allocatable(Arg(i))` plus a matching `Returns["name", T] | None` readback. The
 singular `result=Allocatable(Return(j))` mapping describes the native function
@@ -261,6 +260,7 @@ def allocate_plain(
 
 def release_shared() -> None: ...
 
+@native_call([Addr(Arg(0))])
 def scale_plain(
     scale: Float64
 ) -> None: ...
@@ -388,7 +388,8 @@ end module character_names
 ```
 
 The generated `.pyi` represents a fixed-length rank-one character array as
-`String[4][::]`. A deferred-length allocatable rank-one array uses the two-axis
+`String[n][::]`, where `n` is its fixed element length. A deferred-length
+allocatable rank-one array uses the two-axis
 handle spelling `Allocatable[String[:][:]]`, so the element width can come from
 the native allocation at runtime:
 
