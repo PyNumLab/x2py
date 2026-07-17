@@ -6,9 +6,9 @@ from typing import ClassVar
 
 import pytest
 
-from x2py.c_parser import parse_c_file, parse_c_project
+from x2py.parsers.c import parse_c_file, parse_c_project
 
-from x2py.c_parser.models import (
+from x2py.parsers.c.models import (
     CArray,
     CAtomic,
     CBool,

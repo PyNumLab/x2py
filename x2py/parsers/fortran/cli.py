@@ -260,7 +260,7 @@ def _format_report(
 
 
 def main() -> int:
-    """CLI entrypoint for `python -m x2py.fortran_parser` and `x2py.fortran_parser.cli`.
+    """CLI entrypoint for `python -m x2py.parsers.fortran` and `x2py.parsers.fortran.cli`.
 
     The CLI supports:
     - parsing one or more paths (files and/or directories)

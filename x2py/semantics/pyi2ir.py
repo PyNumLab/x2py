@@ -76,7 +76,7 @@ def convert_pyi_to_ir(tree: ast.Module, *, module_name: str = "<pyi>", source: s
     """Convert a parsed semantic `.pyi` AST into semantic IR."""
 
     if not isinstance(tree, ast.Module):
-        raise TypeError("convert_pyi_to_ir expects a Python ast.Module parsed by x2py.pyi_parser")
+        raise TypeError("convert_pyi_to_ir expects a Python ast.Module parsed by x2py.parsers.pyi")
     module = _PyiAstParser(module_name=module_name, source=source).parse(tree)
     _annotate_imported_external_type_refs(module)
     return module

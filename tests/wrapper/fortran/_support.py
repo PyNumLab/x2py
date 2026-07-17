@@ -15,7 +15,7 @@ from tests._shared.pyi_fixture_packages import assert_generated_pyi_package_matc
 from tests.wrapper.fortran.fmath_cases import fmath_cases
 from x2py import build_pyi_extension
 from x2py.compiling.basic import CompileObj
-from x2py.fortran_parser.parser import parse_fortran_project
+from x2py.parsers.fortran.parser import parse_fortran_project
 from x2py.pipeline.build import (
     _apply_source_python_exports,
     _build_rendered_wrapper_extension,

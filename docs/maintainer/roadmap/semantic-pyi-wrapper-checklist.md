@@ -415,7 +415,7 @@ X2PY_C_DOCS_END -->
   `tests/semantics/readiness/`,
   and `x2py/semantics/README.md`.
 - [x] `.pyi` parsing and `.pyi` semantic conversion are separate stages:
-  `x2py/pyi_parser/parser.py` parses text/files to Python AST, and
+  `x2py/parsers/pyi/parser.py` parses text/files to Python AST, and
   `x2py/semantics/pyi2ir.py` converts that AST into `SemanticModule` objects
   before semantic policy completion runs. Evidence:
   `tests/parsing/pyi/test_python_ast_contracts.py::test_pyi_parser_returns_python_ast_only`,

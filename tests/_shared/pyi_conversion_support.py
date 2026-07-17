@@ -56,7 +56,7 @@ from x2py.semantics.pyi2ir import (
 
 from x2py.pipeline.pyi import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
 
-from x2py.pyi_parser import parse_pyi_text as parse_pyi_ast_text
+from x2py.parsers.pyi import parse_pyi_text as parse_pyi_ast_text
 
 from x2py.semantics.native_contract import native_contract_issues
 

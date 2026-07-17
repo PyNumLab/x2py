@@ -25,7 +25,7 @@ has been recorded here.
 - [x] Exclude LAPACK runtime execution from local verification.
 - [x] Preserve unrelated dirty-worktree changes. Initial audit: worktree clean.
 - [x] No executable product behavior changed. The only product-module edit is a
-  path-only documentation-string update in `x2py/c_parser/parser.py`.
+  path-only documentation-string update in `x2py/parsers/c/parser.py`.
 
 ## Baseline collection evidence
 

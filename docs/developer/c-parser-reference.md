@@ -14,7 +14,7 @@ status: maintained
 X2PY_C_DOCS_END &#45;&#45;>
 
 <!&#45;&#45; X2PY_C_DOCS_START
-Status: current reference for the partial C frontend. The `x2py.c_parser`
+Status: current reference for the partial C frontend. The `x2py.parsers.c`
 package, typed parser models, explicit C CLI parse path, raw directive
 metadata, compiler-assisted preprocessing, source-location remapping, project
 indexes, legacy parser schema snapshots, C standard-type probe, first semantic IR conversion
@@ -32,8 +32,8 @@ X2PY_C_DOCS_END &#45;&#45;>
 <!&#45;&#45; X2PY_C_DOCS_START
 Parser-related pull requests should update this file when the documented
 feature inventory, public API, diagnostics, project behavior, semantic handoff,
-or maintenance workflow changes. The parser-reference guard checks C and
-Fortran references independently. It watches `x2py/c_parser/`, `tests/parser/c/`,
+or maintenance workflow changes. The parser-reference guard checks C, Fortran,
+and semantic `.pyi` references independently. It watches `x2py/parsers/c/`, `tests/parser/c/`,
 `tests/data/c/`, and C standard-type probe tests and expects
 `docs/developer/c-parser-reference.md` to change unless the PR is explicitly labeled to skip the
 guard.
@@ -100,11 +100,11 @@ Implemented:
 X2PY_C_DOCS_END &#45;&#45;>
 
 <!&#45;&#45; X2PY_C_DOCS_START
-- `x2py.c_parser` package
+- `x2py.parsers.c` package
 - typed C parser models for partial parse reports and raw metadata
 - `CParser`, `parse_c_file`, and `parse_c_project`
 - top-level `x2py.parse_c_file` and `x2py.parse_c_project` exports alongside
-  the `x2py.c_parser` package entrypoints
+  the `x2py.parsers.c` package entrypoints
 - `CParseError` with compiler-style diagnostic formatting
 - explicit `x2py &#45;&#45;language c &#45;&#45;parse` output
 - explicit `x2py &#45;&#45;language c &#45;&#45;semantics` and
@@ -435,7 +435,7 @@ X2PY_C_DOCS_END &#45;&#45;>
 ## Parser Organization Notes
 
 <!&#45;&#45; X2PY_C_DOCS_START
-`x2py/c_parser/parser.py` is intentionally ordered for maintainers. Read it from
+`x2py/parsers/c/parser.py` is intentionally ordered for maintainers. Read it from
 top to bottom in these sections:
 X2PY_C_DOCS_END &#45;&#45;>
 
@@ -471,7 +471,7 @@ X2PY_C_DOCS_END &#45;&#45;>
 <!&#45;&#45; X2PY_C_DOCS_START
 The C parser now lives under the main `x2py` package. The legacy top-level
 `c_parser` package entrypoint was removed, so direct parser imports should use
-`x2py.c_parser` or the stable top-level `x2py` exports. This keeps parser
+`x2py.parsers.c` or the stable top-level `x2py` exports. This keeps parser
 models, CLI wiring, semantic conversion, and wrapper-facing entrypoints in one
 package tree.
 X2PY_C_DOCS_END &#45;&#45;>
@@ -484,7 +484,7 @@ Implemented top-level and package entrypoints:
 ```python
 from x2py import parse_c_file, parse_c_project
 # Equivalent parser-package imports remain available:
-# from x2py.c_parser import parse_c_file, parse_c_project
+# from x2py.parsers.c import parse_c_file, parse_c_project
 ```
 X2PY_C_DOCS_END &#45;&#45;>
 

@@ -37,9 +37,9 @@ empty directory merely to mirror this table.
 
 | Source package or surface | Primary test owner |
 | --- | --- |
-| `x2py.c_parser` | `tests/parsing/c/` |
-| `x2py.fortran_parser` | `tests/parsing/fortran/` |
-| `x2py.pyi_parser` | `tests/parsing/pyi/` |
+| `x2py.parsers.c` | `tests/parsing/c/` |
+| `x2py.parsers.fortran` | `tests/parsing/fortran/` |
+| `x2py.parsers.pyi` | `tests/parsing/pyi/` |
 | `x2py.probes` | `tests/probes/` |
 | `x2py.pipeline` | matching subject under `tests/pipeline/` |
 | `x2py.semantics.c2ir`, `fortran2ir`, `pyi2ir` | matching language under `tests/semantics/conversion/` |

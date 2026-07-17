@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from tests.wrapper.fortran._support import wrapper_source
-from x2py.fortran_parser.parser import parse_fortran_project
+from x2py.parsers.fortran.parser import parse_fortran_project
 from x2py.pipeline.build import _apply_source_python_exports, _fortran_source_for_pipeline, _merge_wrapper_modules
 from x2py.pipeline.preprocessing import PreprocessingConfig
 from x2py.pipeline.pyi import pyi_file_to_semantic_module

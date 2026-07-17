@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from x2py.fortran_parser.models import (
+from x2py.parsers.fortran.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,

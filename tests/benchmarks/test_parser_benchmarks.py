@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from x2py.c_parser import parse_c_file
+from x2py.parsers.c import parse_c_file
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 from x2py.wrapper_codegen.printers import emit_module_stubs
 from x2py import parse_fortran_file

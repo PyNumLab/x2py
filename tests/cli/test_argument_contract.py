@@ -132,15 +132,11 @@ File: empty.f90
             "--out for wrapper builds expects a valid Python module name",
         ),
         (
-            {"wrap": True, "out": "module", "makefile": True},
+            {"out": "module", "makefile": True},
             "--out names a compiled wrapper extension and cannot be combined with --makefile",
         ),
         (
-            {"makefile": True},
-            "--makefile requires --wrap",
-        ),
-        (
-            {"wrap": True, "makefile": True, "verbose": True},
+            {"makefile": True, "verbose": True},
             "--makefile cannot be combined with --verbose",
         ),
         (
@@ -210,11 +206,8 @@ File: empty.f90
         ),
         (
             {"paths": ["input.pyi"]},
-            "Select at least one stage flag: --parse, --semantics, --pyi, --wrap-readiness, or --wrap",
-        ),
-        (
-            {"paths": [], "build_manifest": "build/x2py-build.json"},
-            "--build-manifest requires --wrap",
+            "A .pyi wrapper build requires --native-fortran-sources, --native-objects, "
+            "--native-library, or --native-link-item",
         ),
     ],
 )
@@ -252,7 +245,6 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
         [
             "x2py",
             str(contract),
-            "--wrap",
             "--native-fortran-sources",
             "source_one.f90",
             "source_two.f90",
@@ -309,6 +301,23 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
     assert active_args.wrapper_c_flags == ["-O0 -g0"]
     payload = json.loads(capsys.readouterr().out)
     assert payload["module_name"] == "module"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"paths": ["input.f90"]},
+        {"paths": ["contract.pyi"], "native_objects": ["native.o"]},
+        {"paths": ["input.f90"], "makefile": True},
+        {"paths": [], "build_manifest": "build/x2py-build.json"},
+    ],
+)
+def test_wrapper_inputs_select_the_default_build_stage(overrides):
+    assert x2py_cli._stage_defaults_to_wrap(_main_args(**overrides))
+
+
+def test_explicit_inspection_stage_prevents_default_wrapper_selection():
+    assert not x2py_cli._stage_defaults_to_wrap(_main_args(parse=True))
 
 
 def test_cli_native_fortran_flags_split_grouped_shell_words():
@@ -791,19 +800,13 @@ def test_cli_fortran_rejects_embedded_c_declaration_outside_execution_body(tmp_p
     assert "Unknown or unsupported datatype declaration" in result.stderr
 
 
-@pytest.mark.parametrize(
-    ("extra_args", "message"),
-    [
-        ([], "Select at least one stage flag"),
-    ],
-)
-def test_x2py_cli_rejects_pyi_without_stage(extra_args, message, tmp_path: Path):
+def test_x2py_cli_defaults_pyi_to_wrapper_and_requires_native_implementation(tmp_path: Path):
     pyi = tmp_path / "module.pyi"
     pyi.write_text("def f() -> None: ...\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(pyi), *extra_args]
+    cmd = [sys.executable, "-m", "x2py", str(pyi)]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
-    assert message in res.stderr
+    assert "A .pyi wrapper build requires --native-fortran-sources" in res.stderr
 
 
 @pytest.mark.parametrize("macro_flag", ["-D", "-U"])

@@ -1,6 +1,6 @@
 import pytest
 
-from x2py.fortran_parser.models import FortranParseError
+from x2py.parsers.fortran.models import FortranParseError
 from x2py import parse_fortran_file
 
 

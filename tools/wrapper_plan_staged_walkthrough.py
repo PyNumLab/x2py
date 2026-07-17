@@ -11,7 +11,7 @@ import tempfile
 
 import numpy as np
 
-from x2py.fortran_parser.parser import parse_fortran_project
+from x2py.parsers.fortran.parser import parse_fortran_project
 from x2py.pipeline import build as pipeline
 from x2py.pipeline.preprocessing import PreprocessingConfig
 from x2py.semantics.fortran2ir import fortran_project_to_semantic_modules

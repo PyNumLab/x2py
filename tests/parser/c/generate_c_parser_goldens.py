@@ -266,7 +266,7 @@ def _stable_project_payload(payload: dict) -> dict:
 
 
 def _serialize_project(fixtures: list[Path]) -> dict:
-    from x2py.c_parser import CParser
+    from x2py.parsers.c import CParser
 
     parser = CParser()
     include_dirs = sorted({fixture.parent for fixture in fixtures})

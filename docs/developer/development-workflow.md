@@ -203,13 +203,13 @@ implementation files.
 
 | User-visible area | Main implementation files | Main tests |
 | --- | --- | --- |
-| Fortran parse output | `x2py/fortran_parser/parser.py`, `x2py/fortran_parser/models.py`, `x2py/fortran_parser/lexer.py` | `tests/parsing/fortran/`, `tests/parsing/fortran/test_fortran_fixture_suite.py`, `tests/parsing/fortran/test_error_handling.py` |
-| CLI stage selection and output | `x2py/cli.py`, `x2py/fortran_parser/cli.py` | `tests/cli/` |
+| Fortran parse output | `x2py/parsers/fortran/parser.py`, `x2py/parsers/fortran/models.py`, `x2py/parsers/fortran/lexer.py` | `tests/parsing/fortran/`, `tests/parsing/fortran/test_fortran_fixture_suite.py`, `tests/parsing/fortran/test_error_handling.py` |
+| CLI stage selection and output | `x2py/cli.py`, `x2py/parsers/fortran/cli.py` | `tests/cli/` |
 | Fortran target type probing and cache | `x2py/probes/fortran_types.py` | `tests/probes/test_fortran_types.py` |
 | Generated target datatype mapping examples | `x2py/probes/report.py` | `tests/types/test_mapping_report.py`, `tests/docs/test_examples.py` |
 | Fortran to semantic IR | `x2py/semantics/fortran2ir.py`, `x2py/semantics/models.py` | `tests/semantics/conversion/fortran/` |
 | `.pyi` printing | `x2py/wrapper_codegen/printers/pyi_printer.py` | `tests/wrapper_codegen/printers/`, `tests/wrapper_codegen/printers/test_modern_example.py` |
-| `.pyi` parsing/loading/editing | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py` | `tests/parsing/pyi/`, `tests/pipeline/pyi_builds/test_contract_fixtures.py` |
+| `.pyi` parsing/loading/editing | `x2py/parsers/pyi/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py` | `tests/parsing/pyi/`, `tests/pipeline/pyi_builds/test_contract_fixtures.py` |
 | Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | `tests/semantics/policy/` |
 | Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/readiness/`, `tests/semantics/readiness/test_wrap_readiness_fixture_suite.py` |
 | Fortran wrapper orchestration | `x2py/pipeline/build.py` | `tests/wrapper/fortran/build_from_source/test_build_modes.py`, `tests/wrapper/fortran/multiple_files/test_multi_source_builds.py` |
@@ -218,7 +218,7 @@ implementation files.
 | Executable Markdown examples | `README.md`, `docs/*.md` | `tests/docs/test_examples.py` |
 
 <!-- X2PY_C_DOCS_START
-| C parse output | `x2py/c_parser/parser.py`, `x2py/c_parser/models.py`, `x2py/c_parser/lexer.py` | `tests/parsing/c/test_c_declarations_and_declarators.py`, `tests/parsing/c/test_c_fixture_suite.py`, `tests/parsing/c/test_c_error_fixture_suite.py` |
+| C parse output | `x2py/parsers/c/parser.py`, `x2py/parsers/c/models.py`, `x2py/parsers/c/lexer.py` | `tests/parsing/c/test_c_declarations_and_declarators.py`, `tests/parsing/c/test_c_fixture_suite.py`, `tests/parsing/c/test_c_error_fixture_suite.py` |
 | Compiler preprocessing | `x2py/pipeline/preprocessing.py` | `tests/pipeline/preprocessing/`, `tests/pipeline/preprocessing/test_parser_boundaries.py`, `tests/parsing/c/test_c_lexer_preprocessor.py` |
 | C target ABI probing and cache | `x2py/probes/c_types.py` | `tests/probes/test_c_types.py` |
 | C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/conversion/c/`, `tests/semantics/readiness/test_c_readiness.py` |
@@ -237,7 +237,7 @@ those backends have a documented runtime contract and tests.
 X2PY_C_DOCS_END -->
 
 Organize generators and printers using `FortranParser` in
-`x2py/fortran_parser/parser.py` as the structural reference. A developer
+`x2py/parsers/fortran/parser.py` as the structural reference. A developer
 should be able to read each class from top to bottom in the same order that
 data moves through it:
 
@@ -278,7 +278,7 @@ module-level function only to preserve an old internal call path.
 ### `.pyi` Contract Internals
 
 User-visible `.pyi` syntax is first parsed to Python AST by
-`x2py/pyi_parser/parser.py`, loaded from text/files by
+`x2py/parsers/pyi/parser.py`, loaded from text/files by
 `x2py/pipeline/pyi.py`, converted to semantic IR by
 `x2py/semantics/pyi2ir.py`, and printed by
 `x2py/wrapper_codegen/printers/pyi_printer.py`. The converter and printer operate on
@@ -447,7 +447,7 @@ C files and directories require explicit language selection. Keep this behavior
 tested in `tests/cli/` whenever stage selection changes.
 X2PY_C_DOCS_END -->
 
-The package-specific `x2py/fortran_parser/cli.py` remains for the Fortran parser
+The package-specific `x2py/parsers/fortran/cli.py` remains for the Fortran parser
 package entrypoint. New cross-language user behavior normally belongs in
 `x2py/cli.py`.
 
@@ -677,7 +677,7 @@ CLI `.pyi` readiness:
 
 ```text
 .pyi path(s) or directory
-  -> x2py/pyi_parser/parser.py
+  -> x2py/parsers/pyi/parser.py
   -> x2py/pipeline/pyi.py pyi_paths_to_semantic_modules(...)
   -> x2py/semantics/pyi2ir.py
   -> SemanticModule list
@@ -714,7 +714,7 @@ report = assess_semantic_wrap_readiness(modules, source="interfaces")
 
 Use the `.pyi` helpers by input shape:
 
-- `parse_pyi_text(source, filename=...)` from `x2py.pyi_parser` for parser-only
+- `parse_pyi_text(source, filename=...)` from `x2py.parsers.pyi` for parser-only
   AST parsing.
 - `convert_pyi_to_ir(tree, module_name=..., source=...)` from `pyi2ir.py` for
   AST-to-IR conversion.
@@ -892,9 +892,9 @@ rather than "what Python wrapper should be generated?"
 
 Fortran:
 
-- `x2py/fortran_parser/parser.py` slices the file into grammar units, then parses
+- `x2py/parsers/fortran/parser.py` slices the file into grammar units, then parses
   each unit's specification region.
-- `x2py/fortran_parser/models.py` stores `FortranFile`, modules, procedures,
+- `x2py/parsers/fortran/models.py` stores `FortranFile`, modules, procedures,
   variables, derived types, interfaces, programs, submodules, and diagnostics.
 - Execution bodies are intentionally skipped after the parser has enough
   signature/source facts.
@@ -904,11 +904,11 @@ C:
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-- `x2py/c_parser/lexer.py` handles comments, directives, top-level splitting, and
+- `x2py/parsers/c/lexer.py` handles comments, directives, top-level splitting, and
   token source locations.
-- `x2py/c_parser/parser.py` visits declarations and declarators, records typed
+- `x2py/parsers/c/parser.py` visits declarations and declarators, records typed
   source facts, and reports unsupported parser-owned syntax.
-- `x2py/c_parser/models.py` stores functions, variables, typedefs, structs, unions,
+- `x2py/parsers/c/models.py` stores functions, variables, typedefs, structs, unions,
   enums, includes, raw directives, preprocessing facts, and diagnostics.
 X2PY_C_DOCS_END -->
 
@@ -930,7 +930,7 @@ X2PY_C_DOCS_END -->
   variables, kinds, shapes, storage contracts, visibility, imported references,
   and compile-time values.
 - `x2py/wrapper_codegen/printers/pyi_printer.py` emits editable user contracts.
-- `x2py/pyi_parser/parser.py` parses edited contracts to Python AST.
+- `x2py/parsers/pyi/parser.py` parses edited contracts to Python AST.
 - `x2py/pipeline/pyi.py` converts edited contract text, files, and path sets.
 - `x2py/semantics/pyi2ir.py` converts parsed `.pyi` AST back into semantic IR.
 - `x2py/semantics/native_contract.py` validates immutable native scope, ABI,
@@ -1093,11 +1093,11 @@ X2PY_C_DOCS_END -->
    `tests/parsing/c/test_c_declarations_and_declarators.py`,
    `tests/parsing/c/test_c_compiler_extensions.py`, or
    `tests/parsing/c/test_c_structs_unions_enums_typedefs.py`.
-2. Implement the parser change in `x2py/c_parser/parser.py`. Add or update model
-   fields in `x2py/c_parser/models.py` only if the serialized parser contract needs
+2. Implement the parser change in `x2py/parsers/c/parser.py`. Add or update model
+   fields in `x2py/parsers/c/models.py` only if the serialized parser contract needs
    new facts.
 3. If source splitting or raw directive handling changes, update
-   `x2py/c_parser/lexer.py` and `tests/parsing/c/test_c_lexer_preprocessor.py`.
+   `x2py/parsers/c/lexer.py` and `tests/parsing/c/test_c_lexer_preprocessor.py`.
 4. If project-level resolution changes, update
    `tests/parsing/c/test_c_project_resolution.py`.
 5. If parser JSON changes intentionally, regenerate the relevant project
@@ -1141,8 +1141,8 @@ metadata item.
    `tests/parsing/fortran/`,
    `tests/parsing/fortran/test_scope_handling.py`, or
    `tests/pipeline/preprocessing/test_parser_boundaries.py`.
-2. Implement parsing in `x2py/fortran_parser/parser.py`. Add model fields in
-   `x2py/fortran_parser/models.py` only if the parser output needs to expose the
+2. Implement parsing in `x2py/parsers/fortran/parser.py`. Add model fields in
+   `x2py/parsers/fortran/models.py` only if the parser output needs to expose the
    new fact.
 3. Add parser diagnostic coverage in `tests/parsing/fortran/test_error_handling.py` if
    malformed source should now fail differently.
@@ -1219,7 +1219,7 @@ Example target: add a new `Annotated[...]` metadata item or projection helper.
 1. Add loader tests in `tests/parsing/pyi/`.
 2. Update `x2py/semantics/pyi2ir.py`. Update `x2py/pipeline/pyi.py`
    when loading or cross-file reconciliation changes. Update
-   `x2py/pyi_parser/parser.py` only when the raw Python AST parsing boundary
+   `x2py/parsers/pyi/parser.py` only when the raw Python AST parsing boundary
    changes.
 3. Add printer tests in `tests/wrapper_codegen/printers/`.
 4. Update `x2py/wrapper_codegen/printers/pyi_printer.py`.
@@ -1290,7 +1290,7 @@ diagnostic formatting.
 
 1. Add CLI tests in `tests/cli/` first.
 2. Implement shared dispatch and output behavior in `x2py/cli.py`.
-3. Keep Fortran package-specific CLI behavior in `x2py/fortran_parser/cli.py`.
+3. Keep Fortran package-specific CLI behavior in `x2py/parsers/fortran/cli.py`.
 4. If compiler preprocessing behavior changes, update `x2py/pipeline/preprocessing.py`
    and preprocessing tests.
 5. Update [Basic wrapper tutorial](../user/tutorials/basic-wrapper.md) or [Verified examples cookbook](../user/examples/verified-cookbook.md) for

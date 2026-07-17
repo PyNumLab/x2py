@@ -4,6 +4,10 @@ This package owns Fortran source facts before semantic conversion. It preserves
 modules, procedures, declarations, derived types, visibility, and diagnostics
 needed by wrapper and inspection workflows.
 
+Its canonical implementation namespace is `x2py.parsers.fortran`. Public
+callers may also use the stable parser functions and models exported from the
+`x2py` package root.
+
 ## Entry Points
 
 | File | Owns |

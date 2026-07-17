@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from x2py.pyi_parser import parse_pyi_text
+from x2py.parsers.pyi import parse_pyi_text
 from x2py.semantics.models import SemanticModule
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
 from x2py.semantics.pyi2ir import convert_pyi_to_ir, reconcile_external_type_refs

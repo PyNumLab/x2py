@@ -15,7 +15,7 @@ from filelock import FileLock
 from x2py.compiling.basic import CompileObj
 from x2py.compiling.compilers import Compiler, get_condaless_search_path
 from x2py.compiling.runtime_support import install_runtime_support
-from x2py.fortran_parser.parser import parse_fortran_project
+from x2py.parsers.fortran.parser import parse_fortran_project
 from x2py.probes.fortran_types import evaluate_fortran_type_facts, evaluate_fortran_type_requirements
 from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 from x2py.pipeline.wrapper_artifacts import GeneratedSourceFile, RenderedGeneratedWrapperArtifacts

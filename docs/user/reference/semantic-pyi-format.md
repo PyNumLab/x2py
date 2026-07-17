@@ -21,12 +21,13 @@ contract internally; the wrapper backend for user-supplied C inputs remains
 future work.
 X2PY_C_DOCS_END -->
 
-The normal `--wrap` workflow remains source-driven and accepts Fortran source
-files. A `.pyi`-driven wrapper workflow is also available for the implemented
-subset: pass the semantic `.pyi` file as the wrapper input and provide native
-object, archive, shared-library, module, include, and link inputs with the
-native artifact flags. This path treats the `.pyi` as the source of truth for
-the Python API and does not reparse native source to reconstruct the contract.
+The normal wrapper workflow accepts recognizable Fortran source without a
+stage flag. A `.pyi`-driven wrapper workflow is also available for the
+implemented subset: pass the semantic `.pyi` file as the wrapper input and
+provide native object, archive, shared-library, module, include, and link
+inputs with the native artifact flags. The `.pyi` input selects the wrapper
+stage automatically and remains the source of truth for the Python API; native
+source is not reparsed to reconstruct the contract.
 
 The implemented subset and remaining parity limits are stated in this
 reference and summarized later in Language Support.
@@ -35,12 +36,16 @@ Status terms used below:
 
 - **Generated**: emitted today by `--pyi` or
   `wrapper_codegen.printers.pyi_printer`.
-- **Loaded**: accepted today by `x2py.pyi_parser` and converted back to
+- **Loaded**: accepted today by `x2py.parsers.pyi` and converted back to
   semantic IR.
 - **Readiness**: understood by the semantic readiness checker.
 - **Build input**: accepted by the `.pyi` wrapper build for the implemented
   subset when the required native artifacts are supplied.
 - **Roadmap**: design direction, not implemented wrapper behavior.
+
+Parser-related pull requests that change `x2py/parsers/pyi/` or its focused
+loading tests must update this reference. The parser-reference guard checks
+that contract independently from the language parser references.
 
 ## Contract Imports
 
@@ -400,7 +405,6 @@ leaves:
 
 ```bash
 python3 -m x2py contracts/basic_subroutine/__init__.pyi \
-  --wrap \
   --native-objects basic_subroutine.o
 ```
 
@@ -696,14 +700,12 @@ Target CLI shapes are:
 
 ```bash
 python3 -m x2py contracts/library/__init__.pyi \
-  --wrap \
   --out library \
   --native-objects native.a
 ```
 
 ```bash
 python3 -m x2py api.pyi \
-  --wrap \
   --out library \
   --native-library native \
   --native-library-dir /path/to/libs
@@ -713,7 +715,6 @@ For a single standalone fragment, no `__init__.pyi` is required:
 
 ```bash
 python3 -m x2py dgesv.pyi \
-  --wrap \
   --out lapack_dgesv \
   --native-objects dgesv.o
 ```

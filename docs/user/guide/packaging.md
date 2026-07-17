@@ -83,15 +83,14 @@ flags:
 
 ```bash
 python3 -m x2py src/scale.f90 \
-  --wrap \
   --makefile \
   --out-dir build/scale
 
 make -f build/scale/Makefile.x2py X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
-Makefile mode is an explicit wrapper submode, so the command keeps `--wrap`.
-Makefile mode and verbose direct compilation are separate modes. The generated
+`--makefile` selects the editable wrapper-build submode directly. Makefile mode
+and verbose direct compilation are separate modes. The generated
 Makefile expects GNU Make and a POSIX-style shell. Semantic `.pyi` Makefile
 builds also write `x2py-build.json`, which can regenerate or replay the build.
 

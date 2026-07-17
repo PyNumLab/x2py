@@ -75,7 +75,7 @@ def test_c_fixture_suite_has_inputs(data_subdir):
     ],
 )
 def test_c_fixture_headers_with_macros_require_preprocessing(fixture):
-    from x2py.c_parser import CParseError, parse_c_file
+    from x2py.parsers.c import CParseError, parse_c_file
 
     with pytest.raises(CParseError, match="require compiler preprocessing") as exc_info:
         parse_c_file(fixture)
@@ -98,7 +98,7 @@ def test_c_fixture_headers_with_macros_require_preprocessing(fixture):
     ],
 )
 def test_c_fixture_headers_parse_after_compiler_preprocessing(fixture, defines):
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
     from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 
     compiler = shutil.which("cc")
@@ -126,7 +126,7 @@ def test_c_fixture_headers_parse_after_compiler_preprocessing(fixture, defines):
 
 
 def test_c_fixture_suite_keeps_source_locations_stable_for_plain_source():
-    from x2py.c_parser import parse_c_file
+    from x2py.parsers.c import parse_c_file
 
     parsed = parse_c_file(
         _DATA_DIR / "general" / "basic_array_update.c",

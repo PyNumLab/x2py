@@ -137,7 +137,6 @@ same native implementation source:
 
 ```bash
 python3 -m x2py contracts/__init__.pyi \
-  --wrap \
   --native-fortran-sources scale.f90 \
   --out SCALE \
   --out-dir build/SCALE_from_pyi

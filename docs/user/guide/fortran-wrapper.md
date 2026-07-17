@@ -207,11 +207,11 @@ ownership, and destruction, is explained later in Editing Semantic `.pyi`
 Contracts. The complete grammar appears later in the Semantic `.pyi` Format
 reference.
 The normal CLI build is source-driven: recognizable Fortran sources build
-wrappers without a stage flag and cannot be combined with `--pyi`. For the
-implemented `.pyi` subset, pass `--wrap` with a semantic `.pyi` file and native
-build artifacts such as `.o`, `.a`, or `.so` inputs. In that mode the `.pyi` is
-the Python API source of truth; native source is not reparsed during wrapper
-generation.
+wrappers without a stage flag and cannot be combined with `--pyi`. A semantic
+`.pyi` entry contract also selects the wrapper stage automatically when its
+native build artifacts, such as `.o`, `.a`, or `.so` inputs, are supplied. In
+that mode the `.pyi` is the Python API source of truth; native source is not
+reparsed during wrapper generation.
 
 The current `.pyi` build subset requires the contract filename stem to match
 the native Fortran module name. Supply the native module file directory as an
@@ -219,7 +219,6 @@ include directory when the generated bridge contains `use <module>`:
 
 ```bash
 python3 -m x2py path/to/module.pyi \
-  --wrap \
   --native-objects path/to/module.o \
   --native-include-dir path/to/mod-files \
   --out-dir build/module
@@ -245,14 +244,13 @@ replayed directly:
 
 ```bash
 python3 -m x2py contracts/module.pyi \
-  --wrap \
   --native-fortran-sources native/module.f90 \
   --native-fortran-flags="-O3 -fopenmp" \
   --out-dir build/module \
   --makefile
 
-python3 -m x2py --build-manifest build/module/x2py-build.json --wrap
-python3 -m x2py --build-manifest build/module/x2py-build.json --wrap --makefile
+python3 -m x2py --build-manifest build/module/x2py-build.json
+python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
 ```
 
 Edited `.pyi` contracts may expose the native call shape directly. If every
@@ -285,7 +283,7 @@ Runtime tests: [`test_pyi_wrapper_builds.py`](../../../tests/wrapper/fortran/bui
 Use `--verbose` to execute a build while printing every exact, shell-escaped
 compiler and linker command. Verbose builds also print elapsed time for each
 compiler/linker command and for the wrapper creation, printing, and compilation
-stages. Use `--wrap --makefile` to generate an editable `Makefile.x2py` without
+stages. Use `--makefile` to generate an editable `Makefile.x2py` without
 compiling. These modes are mutually exclusive.
 
 <!-- X2PY_C_DOCS_START
@@ -1819,7 +1817,6 @@ objects are separate build inputs and keep caller order.
 
 ```bash
 python3 -m x2py contracts/__init__.pyi \
-  --wrap \
   --out first_api \
   --native-objects native/first_api.o native/second_api.o \
   --native-include-dir native \
@@ -1862,7 +1859,7 @@ module contracts; the entry only changes the Python-facing export tree.
 ### Editable Makefile
 
 ```bash
-python3 -m x2py mesh.f90 solver.f90 --wrap --makefile --out-dir build
+python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
@@ -1880,12 +1877,11 @@ For semantic `.pyi` builds, Makefile mode writes `x2py-build.json` before
 
 ```bash
 python3 -m x2py contracts/solver.pyi \
-  --wrap \
   --native-fortran-sources native/solver.f90 \
   --out-dir build/solver \
   --makefile
 
-python3 -m x2py --build-manifest build/solver/x2py-build.json --wrap
+python3 -m x2py --build-manifest build/solver/x2py-build.json
 ```
 
 Runtime tests: [`test_multi_source_builds.py`](../../../tests/wrapper/fortran/multiple_files/test_multi_source_builds.py),
@@ -2107,7 +2103,7 @@ uses the normal GIL-release policy. For GNU Fortran, pass OpenMP flags to both
 compile and link steps:
 
 ```bash
-python3 -m x2py parallel_api.f90 --wrap --makefile --out-dir build
+python3 -m x2py parallel_api.f90 --makefile --out-dir build
 make -f build/Makefile.x2py \
   X2PY_FFLAGS=-fopenmp \
   X2PY_LDFLAGS=-fopenmp

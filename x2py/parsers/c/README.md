@@ -4,6 +4,10 @@ This package owns C source facts for inspection workflows. It parses C inputs,
 preserves declarations and diagnostics, and feeds semantic conversion. It does
 not own runtime wrapping of user-supplied C libraries.
 
+Its canonical import namespace is `x2py.parsers.c`. The stable convenience
+functions `x2py.parse_c_file` and `x2py.parse_c_project` remain available from
+the package root.
+
 ## Entry Points
 
 | File | Owns |

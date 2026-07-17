@@ -40,14 +40,13 @@ Build the edited entry contract with the same native implementation artifacts:
 
 ```bash
 python3 -m x2py contracts/edited_solver/__init__.pyi \
-  --wrap \
   --native-objects build/solver.o \
   --native-include-dir build/mod \
   --out-dir build/edited-solver
 ```
 
-The explicit `--wrap` is required here because the entry input is a semantic
-`.pyi` contract, not a Fortran source file.
+The semantic `.pyi` entry contract selects the wrapper build automatically;
+the native artifact options provide the implementation to compile or link.
 
 The entry `.pyi` is the sole semantic input to wrapper generation. x2py does
 not reparse the native source to restore a removed declaration, projection, or

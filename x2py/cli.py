@@ -10,12 +10,12 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, fields, is_dataclass, replace
 from pathlib import Path
 
-from x2py.c_parser.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
-from x2py.c_parser.models import CParseError
-from x2py.c_parser.parser import CParser
-from x2py.fortran_parser.cli import _format_report
-from x2py.fortran_parser.models import FortranParseError
-from x2py.fortran_parser.parser import FortranParser
+from x2py.parsers.c.cli import attach_preprocessing_recipe, expand_c_paths, format_c_report, parse_c_report
+from x2py.parsers.c.models import CParseError
+from x2py.parsers.c.parser import CParser
+from x2py.parsers.fortran.cli import _format_report
+from x2py.parsers.fortran.models import FortranParseError
+from x2py.parsers.fortran.parser import FortranParser
 from x2py.semantics.c2ir import c_project_to_semantic_modules
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 from x2py.pipeline.pyi import pyi_paths_to_semantic_modules
@@ -72,9 +72,9 @@ _CLI_HELP_EPILOG = (
     "  Build wrappers:\n"
     "    python3 -m x2py path/to/file.f\n"
     "    python3 -m x2py path/to/file.f90 --out my_extension\n"
-    "    python3 -m x2py dependency.f90 api.f90 --wrap --makefile --out-dir build\n"
-    "    python3 -m x2py contracts/__init__.pyi --wrap --out my_extension --native-objects native.o\n"
-    "    python3 -m x2py --build-manifest build/x2py-build.json --wrap\n"
+    "    python3 -m x2py dependency.f90 api.f90 --makefile --out-dir build\n"
+    "    python3 -m x2py contracts/__init__.pyi --out my_extension --native-objects native.o\n"
+    "    python3 -m x2py --build-manifest build/x2py-build.json\n"
     "\n"
     "  Write stage output:\n"
     "    python3 -m x2py path/to/file.f90 --parse --json --out report.json\n"
@@ -1009,11 +1009,17 @@ def _wrapper_compile_options_used(args: argparse.Namespace) -> bool:
 
 
 def _stage_defaults_to_wrap(args: argparse.Namespace) -> bool:
+    """Return whether wrapper-specific input selects the default build stage."""
     return bool(
         args.language == "fortran"
         and not _has_stage(args)
-        and not getattr(args, "makefile", False)
-        and any(Path(path).is_dir() or _path_is_fortran_source(path) for path in args.paths)
+        and (
+            getattr(args, "build_manifest", None) is not None
+            or any(
+                Path(path).is_dir() or _path_is_fortran_source(path) or _path_is_pyi_contract(path)
+                for path in args.paths
+            )
+        )
     )
 
 
@@ -1051,11 +1057,11 @@ def _fortran_type_probe_options_used(args: argparse.Namespace) -> bool:
 
 def _validate_pyi_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     if any(Path(path).is_dir() for path in args.paths):
-        parser.error("--wrap from .pyi expects semantic contract files, not directories")
+        parser.error("A .pyi wrapper build expects semantic contract files, not directories")
     if any(not _path_is_pyi_contract(path) for path in args.paths):
-        parser.error("--wrap from .pyi cannot mix positional native sources; pass native artifacts with flags")
+        parser.error("A .pyi wrapper build cannot mix positional native sources; pass native artifacts with flags")
     if len(args.paths) != 1:
-        parser.error("--wrap from .pyi accepts exactly one entry contract")
+        parser.error("A .pyi wrapper build accepts exactly one entry contract")
     if not (
         getattr(args, "native_fortran_sources", None)
         or getattr(args, "native_objects", None)
@@ -1063,7 +1069,7 @@ def _validate_pyi_wrap_options(args: argparse.Namespace, parser: argparse.Argume
         or getattr(args, "native_link_items", None)
     ):
         parser.error(
-            "--wrap from .pyi requires --native-fortran-sources, --native-objects, "
+            "A .pyi wrapper build requires --native-fortran-sources, --native-objects, "
             "--native-library, or --native-link-item"
         )
 
@@ -1079,11 +1085,11 @@ def _validate_manifest_wrap_options(args: argparse.Namespace, parser: argparse.A
 
 def _validate_source_wrap_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     if not args.paths:
-        parser.error("--wrap expects at least one Fortran source file or a semantic .pyi contract")
+        parser.error("A wrapper build expects at least one Fortran source file or a semantic .pyi contract")
     if _native_link_options_used(args):
         parser.error("Native artifact link flags are only supported for .pyi wrapper builds")
     if any(Path(path).is_dir() for path in args.paths):
-        parser.error("--wrap expects Fortran source files, not directories")
+        parser.error("A wrapper build expects Fortran source files, not directories")
 
 
 def _validate_wrapper_out(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -1156,14 +1162,10 @@ def _validate_stage_selection(args: argparse.Namespace, parser: argparse.Argumen
     selected = _selected_stage_flags(args)
     if len(selected) > 1:
         parser.error(f"Choose exactly one stage flag; cannot combine {', '.join(selected)}")
-    if getattr(args, "makefile", False) and not getattr(args, "wrap", False):
-        parser.error("--makefile requires --wrap")
 
 
 def _validate_main_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int | None:
     _validate_stage_selection(args, parser)
-    if getattr(args, "build_manifest", None) is not None and not getattr(args, "wrap", False):
-        parser.error("--build-manifest requires --wrap")
     if not args.paths and getattr(args, "build_manifest", None) is None:
         parser.error("Source input is required unless --build-manifest is used")
 

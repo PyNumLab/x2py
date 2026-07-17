@@ -22,9 +22,9 @@ from hypothesis import given, strategies as st
 
 import x2py.pipeline.preprocessing as preprocessing
 
-from x2py.c_parser import CParseError, parse_c_file
+from x2py.parsers.c import CParseError, parse_c_file
 
-from x2py.c_parser.lexer import split_top_level_c_source, top_level_split
+from x2py.parsers.c.lexer import split_top_level_c_source, top_level_split
 
 from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules
 

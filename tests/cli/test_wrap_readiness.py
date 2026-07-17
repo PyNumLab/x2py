@@ -171,4 +171,4 @@ def test_x2py_main_argument_validation_errors(tmp_path: Path, monkeypatch, capsy
     with pytest.raises(SystemExit) as stage_error:
         x2py_cli.main()
     assert stage_error.value.code == 2
-    assert "Select at least one stage flag" in capsys.readouterr().err
+    assert "A .pyi wrapper build requires --native-fortran-sources" in capsys.readouterr().err

@@ -102,7 +102,6 @@ def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
         "-m",
         "x2py",
         str(pyi_path),
-        "--wrap",
         "--native-objects",
         str(native_object),
         "--native-include-dir",
@@ -204,7 +203,7 @@ def test_pyi_cli_requires_a_native_link_input(tmp_path: Path):
     )
 
     assert result.returncode == 2
-    assert "--wrap from .pyi requires --native-fortran-sources" in result.stderr
+    assert "A .pyi wrapper build requires --native-fortran-sources" in result.stderr
 
 
 @pytest.mark.skipif(
@@ -222,7 +221,6 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
             "-m",
             "x2py",
             str(PYI_FIXTURE),
-            "--wrap",
             "--native-fortran-sources",
             str(native_source),
             "--native-fortran-flags=-O2 -g0",
@@ -283,7 +281,6 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
             "x2py",
             "--build-manifest",
             str(manifest_path),
-            "--wrap",
             "--makefile",
             "--json",
         ],
@@ -304,7 +301,6 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
             "x2py",
             "--build-manifest",
             str(manifest_path),
-            "--wrap",
             "--json",
         ],
         capture_output=True,
@@ -328,7 +324,6 @@ def test_pyi_cli_accepts_exactly_one_entry_contract(tmp_path: Path):
             "x2py",
             str(PYI_FIXTURE),
             str(other),
-            "--wrap",
             "--native-objects",
             str(tmp_path / "unused.o"),
         ],
@@ -337,7 +332,7 @@ def test_pyi_cli_accepts_exactly_one_entry_contract(tmp_path: Path):
     )
 
     assert result.returncode == 2
-    assert "--wrap from .pyi accepts exactly one entry contract" in result.stderr
+    assert "A .pyi wrapper build accepts exactly one entry contract" in result.stderr
 
 
 def test_pyi_python_api_rejects_a_missing_native_artifact(tmp_path: Path):
@@ -435,7 +430,6 @@ def test_pyi_cli_preserves_explicit_ordered_link_items(tmp_path: Path):
             "-m",
             "x2py",
             str(PYI_FIXTURE),
-            "--wrap",
             "--native-link-item",
             "arg:-Wl,--start-group",
             f"object:{native_object}",

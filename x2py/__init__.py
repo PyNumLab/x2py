@@ -2,9 +2,9 @@
 
 from importlib import import_module
 
-from x2py.c_parser.models import CFile, CParseError, CProject
-from x2py.c_parser.parser import parse_c_file, parse_c_project
-from x2py.fortran_parser.models import (
+from x2py.parsers.c.models import CFile, CParseError, CProject
+from x2py.parsers.c.parser import parse_c_file, parse_c_project
+from x2py.parsers.fortran.models import (
     FortranArgument,
     FortranBlockData,
     FortranDerivedType,
@@ -17,8 +17,8 @@ from x2py.fortran_parser.models import (
     FortranProject,
     FortranSubmodule,
 )
-from x2py.fortran_parser.parser import parse_fortran_file, parse_fortran_project
-from x2py.pyi_parser import parse_pyi_file, parse_pyi_text
+from x2py.parsers.fortran.parser import parse_fortran_file, parse_fortran_project
+from x2py.parsers.pyi import parse_pyi_file, parse_pyi_text
 from x2py.semantics.fortran2ir import (
     collect_semantic_compile_time_requirements,
     fortran_file_to_semantic_modules,

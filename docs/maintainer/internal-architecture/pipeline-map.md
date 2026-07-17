@@ -40,7 +40,7 @@ X2PY_C_DOCS_END -->
 | CLI request | `x2py/cli.py` | source paths and stage flags | selected stage or wrapper build options | `tests/cli/` |
 | Build orchestration | `x2py/pipeline/build.py` | ordered Fortran sources or `.pyi` contracts plus explicit native artifacts | `WrapperBuildResult`, `NativeBuildPlan`, and generated artifact plan | wrapper build-mode tests |
 | Preprocessing | `x2py/pipeline/preprocessing.py` | source path, compiler config | preprocessed source and dependency facts | preprocessing tests |
-| Parser project model | `x2py/fortran_parser/parser.py` | preprocessed Fortran source | parser project with modules, procedures, types, visibility | Fortran parser fixture tests |
+| Parser project model | `x2py/parsers/fortran/parser.py` | preprocessed Fortran source | parser project with modules, procedures, types, visibility | Fortran parser fixture tests |
 | Target probes | `x2py/probes/fortran_types.py` | semantic type requirements and compiler flags | resolved kind/storage facts | Fortran type probe tests |
 | Semantic IR | `x2py/semantics/fortran2ir.py` | parser project and target facts | `SemanticModule` objects | semantic Fortran tests |
 | Semantic policy completion | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py` | full semantic modules with signatures and `.pyi` overrides | semantic modules annotated with every ownership, transfer, destruction, mutability, storage, accessor, and projection decision needed by wrapper generation | ownership-policy and readiness tests |
@@ -157,13 +157,13 @@ X2PY_C_DOCS_END -->
 | --- | --- | --- |
 | CLI and output routing | `x2py/cli.py`, parser CLI helpers | `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md` |
 | Source loading and preprocessing | `x2py/pipeline/preprocessing.py` | `docs/developer/source-map.md`, parser references |
-| Editable semantic contracts | `x2py/pyi_parser/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/wrapper_codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md` |
+| Editable semantic contracts | `x2py/parsers/pyi/parser.py`, `x2py/pipeline/pyi.py`, `x2py/semantics/pyi2ir.py`, `x2py/wrapper_codegen/printers/pyi_printer.py` | `docs/user/reference/semantic-pyi-format.md` |
 | Readiness | `x2py/semantics/readiness.py` | `docs/user/reference/diagnostic-codes.md` |
 | Wrapper policy and lowering | `x2py/semantics/policy_completion.py`, `x2py/semantics/ownership.py`, `x2py/wrapper_codegen/planner.py`, `x2py/wrapper_codegen/generator.py` | `docs/user/guide/fortran-wrapper.md`, ownership docs |
 | Native build | `x2py/pipeline/build.py`, `x2py/compiling/compilers.py`, `x2py/compiling/runtime_support.py` | compiling package README and build-system docs |
 
 <!-- X2PY_C_DOCS_START
-| Parser facts | `x2py/c_parser/parser.py`, `x2py/fortran_parser/parser.py` | parser package README files and parser references |
+| Parser facts | `x2py/parsers/c/parser.py`, `x2py/parsers/fortran/parser.py` | parser package README files and parser references |
 | Semantic conversion | `x2py/semantics/fortran2ir.py`, `x2py/semantics/c2ir.py`, `x2py/semantics/pyi2ir.py`, `x2py/semantics/models.py` | `docs/user/reference/semantic-ir.md` |
 | Bridge and binding generation | `x2py/wrapper_codegen/fortran/bridge.py`, `x2py/wrapper_codegen/c/binding.py` | wrapper generation docs |
 X2PY_C_DOCS_END -->
@@ -176,7 +176,7 @@ the Python API.
 
 ```text
 .pyi contract
-  -> x2py/pyi_parser/parser.py
+  -> x2py/parsers/pyi/parser.py
   -> x2py/pipeline/pyi.py
   -> x2py/semantics/pyi2ir.py
   -> x2py/semantics/native_contract.py
@@ -210,7 +210,7 @@ X2PY_C_DOCS_END -->
 ```text
 C parser -> x2py/semantics/c2ir.py
 Fortran parser -> x2py/semantics/fortran2ir.py
-.pyi parser -> x2py/pyi_parser/parser.py -> x2py/pipeline/pyi.py -> x2py/semantics/pyi2ir.py
+.pyi parser -> x2py/parsers/pyi/parser.py -> x2py/pipeline/pyi.py -> x2py/semantics/pyi2ir.py
   -> SemanticModule objects
   -> x2py/semantics/policy_completion.py
   -> readiness and lowering

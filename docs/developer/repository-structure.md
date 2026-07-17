@@ -21,17 +21,13 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | `x2py/probes/` | Compiler-derived target facts and target type mapping reports. |
 | `x2py/runtime/` | Python runtime objects used by generated extension modules. |
 | `x2py/types/` | Cross-layer mappings from resolved semantic types to Python ecosystem types. |
-| `x2py/fortran_parser/` | Fortran parser frontend and Fortran parse report helpers. |
+| `x2py/parsers/` | Public namespace for language and semantic-contract frontends and parser models. |
 | `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, policy completion, and readiness. |
 | `x2py/wrapper_codegen/` | Typed wrapper plans, direct native bridge/binding lowering, and source and semantic `.pyi` printers. |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, runtime support installation, and linking. |
 | `x2py/stdlib/` | Native runtime support copied into generated wrapper builds. |
 | `x2py/naming/` | Unified public-name and generated-symbol policy. |
 | `x2py/utilities/` | Small shared Python utilities. |
-
-<!-- X2PY_C_DOCS_START
-| `x2py/c_parser/` | C parser frontend and C parser CLI helpers. |
-X2PY_C_DOCS_END -->
 
 The major source packages have local README files under `x2py/` for
 developers reading directly in the source tree. Those README files should link
@@ -40,9 +36,10 @@ back to the maintained source-navigation docs instead of old top-level docs.
 Only `x2py/__init__.py`, `x2py/__main__.py`, and `x2py/cli.py` live directly at
 the package root. Public library symbols are deliberately flattened through
 `x2py/__init__.py`; internal modules are imported through their owning package.
-The one public submodule namespace is `x2py.contracts`, because semantic `.pyi`
-files use direct `from x2py.contracts import ...` declarations as part of their
-contract syntax.
+The deliberate public submodule namespaces are `x2py.contracts`, whose import
+path is part of semantic `.pyi` syntax, and `x2py.parsers`, which groups the
+language-specific frontends. Stable convenience functions remain flattened
+through `x2py/__init__.py`.
 
 ## Tests
 

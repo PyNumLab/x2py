@@ -59,7 +59,7 @@ def test_policy_tracks_hotspot_average_without_changed_base(tmp_path: Path):
 
 
 def test_source_root_filter_uses_path_boundaries():
-    assert is_under_source_roots("x2py/c_parser/parser.py", ("x2py",))
+    assert is_under_source_roots("x2py/parsers/c/parser.py", ("x2py",))
     assert is_under_source_roots("x2py", ("x2py",))
     assert not is_under_source_roots("x2py_extra/parser.py", ("x2py",))
 

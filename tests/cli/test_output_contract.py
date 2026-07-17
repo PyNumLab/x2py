@@ -816,13 +816,13 @@ def test_fortran_parser_cli_json_and_parse_errors(tmp_path: Path):
     good = tmp_path / "good.f90"
     good.write_text("subroutine work(n)\n  integer, intent(in) :: n\nend subroutine work\n", encoding="utf-8")
 
-    json_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(good), "--json"]
+    json_cmd = [sys.executable, "-m", "x2py.parsers.fortran", str(good), "--json"]
     json_res = subprocess.run(json_cmd, capture_output=True, text=True, check=True)
     assert str(good) in json.loads(json_res.stdout)
 
     bad = tmp_path / "bad.f90"
     bad.write_text("subroutine bad(x)\n  weirdtype :: x\nend subroutine bad\n", encoding="utf-8")
-    bad_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(bad), "--no-color"]
+    bad_cmd = [sys.executable, "-m", "x2py.parsers.fortran", str(bad), "--no-color"]
     bad_res = subprocess.run(bad_cmd, capture_output=True, text=True)
     assert bad_res.returncode == 1
     assert bad_res.stdout == ""

@@ -5,8 +5,8 @@ from functools import lru_cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from x2py.c_parser import CParser
-from x2py.c_parser.cli import attach_preprocessing_recipe
+from x2py.parsers.c import CParser
+from x2py.parsers.c.cli import attach_preprocessing_recipe
 from x2py import parse_fortran_file
 from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 from x2py.semantics.c2ir import c_project_to_semantic_module

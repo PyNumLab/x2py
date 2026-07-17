@@ -64,7 +64,7 @@ VISIBLE_C_DOCUMENTATION = re.compile(
     r"|\b(?:ORDER_C|REQUIRE_C_CONTIGUOUS|NPY_C_CONTIGUOUS)\b"
     r"|\b(?:CToIR|CFile|CProject|CParse|CDiagnostic)[A-Za-z0-9_]*\b"
     r"|\b(?:parse_c|c_file|c_project|c_function|c_parameter|c_struct|c_type)_[A-Za-z0-9_]+\b"
-    r"|(?:tests/data/c|tests/parser/c|x2py/c_parser|/c/general/)"
+    r"|(?:tests/data/c|tests/parser/c|x2py/parsers/c|/c/general/)"
     r"|(?:c-parser|inspect-c-api|c-api)"
     r"|\b(?:structs?|unions?|typedefs?|declarators?|bitfields?|K&R)\b"
     r"|--language\s+c\b"
@@ -212,9 +212,10 @@ SOURCE_NAVIGATION_CORPUS = [
     "docs/developer/repository-structure.md",
     "docs/maintainer/internal-architecture/pipeline-map.md",
     "x2py/README.md",
-    "x2py/c_parser/README.md",
-    "x2py/fortran_parser/README.md",
-    "x2py/pyi_parser/README.md",
+    "x2py/parsers/README.md",
+    "x2py/parsers/c/README.md",
+    "x2py/parsers/fortran/README.md",
+    "x2py/parsers/pyi/README.md",
     "x2py/semantics/README.md",
     "x2py/compiling/README.md",
 ]
@@ -226,11 +227,11 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/probes/c_types.py",
     "x2py/probes/fortran_types.py",
     "x2py/semantics/ownership.py",
-    "x2py/c_parser/parser.py",
-    "x2py/c_parser/cli.py",
-    "x2py/fortran_parser/parser.py",
-    "x2py/fortran_parser/cli.py",
-    "x2py/pyi_parser/parser.py",
+    "x2py/parsers/c/parser.py",
+    "x2py/parsers/c/cli.py",
+    "x2py/parsers/fortran/parser.py",
+    "x2py/parsers/fortran/cli.py",
+    "x2py/parsers/pyi/parser.py",
     "x2py/semantics/models.py",
     "x2py/semantics/fortran2ir.py",
     "x2py/semantics/c2ir.py",
@@ -373,16 +374,14 @@ REQUIRED_EXAMPLE_RECIPE_PAGES = [
     "user/examples/recipes/compiler-preprocessing.md",
 ]
 MAJOR_SOURCE_PACKAGES = [
-    "x2py/c_parser/",
-    "x2py/fortran_parser/",
+    "x2py/parsers/",
     "x2py/semantics/",
     "x2py/wrapper_codegen/",
     "x2py/compiling/",
 ]
 PACKAGE_READMES = [
     "x2py/README.md",
-    "x2py/c_parser/README.md",
-    "x2py/fortran_parser/README.md",
+    "x2py/parsers/README.md",
     "x2py/semantics/README.md",
     "x2py/compiling/README.md",
 ]
@@ -874,19 +873,14 @@ def test_getting_started_pages_keep_advanced_stage_flags_out_of_beginner_path() 
     assert "--json" not in content
 
 
-def test_user_guide_keeps_default_source_builds_free_of_redundant_stage_flags() -> None:
+def test_user_guide_uses_automatic_wrapper_stage_selection() -> None:
     content = "\n".join(
         _visible_documentation_source(DOCS_ROOT / relative_path) for relative_path in REQUIRED_USER_GUIDE_PAGES
     )
 
-    assert "--json" not in content
-    assert "--wrap-readiness" not in content
-    assert "points.f90 --wrap" not in content
-    assert "src/scale.f90 --wrap --out-dir" not in content
-    assert "fruntime_abi_f90.f90 \\\n  --wrap" not in content
-    assert "solver.f90 \\\n  diagnostics.f90 \\\n  --wrap" not in content
-    assert "python3 -m x2py contracts/solver/__init__.pyi \\\n  --wrap" in content
-    assert "Makefile mode is an explicit wrapper submode" in content
+    assert "python3 -m x2py src/scale.f90 \\\n  --makefile" in content
+    assert "python3 -m x2py contracts/solver/__init__.pyi \\\n  --native-fortran-sources solver.f90" in content
+    assert "python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build" in content
 
 
 def test_array_handle_docs_keep_views_copies_and_handles_distinct() -> None:

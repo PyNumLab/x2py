@@ -455,7 +455,7 @@ nodes. These tables are separate from model-node dispatch.
 
 ### Round Trips And Provenance
 
-`x2py.pyi_parser` parses the documented semantic `.pyi` subset into Python AST.
+`x2py.parsers.pyi` parses the documented semantic `.pyi` subset into Python AST.
 `convert_pyi_to_ir` converts that AST into the same public storage contracts
 emitted by the source semantic pipelines; `pyi_file_to_semantic_module` combines file parsing
 and conversion. Focused round-trip tests cover:

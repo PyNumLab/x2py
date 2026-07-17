@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from x2py.fortran_parser.models import FortranArgument, FortranDerivedType, FortranModule, FortranProcedureSignature
+from x2py.parsers.fortran.models import FortranArgument, FortranDerivedType, FortranModule, FortranProcedureSignature
 
-from x2py.fortran_parser.parser import (
+from x2py.parsers.fortran.parser import (
     FortranParser,
     SourceUnit,
     _ParserScope,

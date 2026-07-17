@@ -10,7 +10,7 @@ pytest.importorskip("hypothesis")
 
 from hypothesis import given, strategies as st
 
-from x2py.c_parser import parse_c_file
+from x2py.parsers.c import parse_c_file
 
 from x2py.semantics.c2ir import c_file_to_semantic_modules
 

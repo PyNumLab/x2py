@@ -47,7 +47,6 @@ def test_debug_and_optimized_wrapper_builds_preserve_runtime_abi(tmp_path: Path)
             "-m",
             "x2py",
             str(optimized_source),
-            "--wrap",
             "--makefile",
             "--out-dir",
             str(optimized_dir),

@@ -149,7 +149,7 @@ end block data init_block
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py.fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py.parsers.fortran", str(f90)]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert f"File: {f90}" in res.stdout
@@ -196,7 +196,7 @@ end program driver
     semantics_cmd = [
         sys.executable,
         "-m",
-        "x2py.fortran_parser",
+        "x2py.parsers.fortran",
         str(module_source),
         "--semantics",
         "--json-out",
@@ -209,13 +209,13 @@ end program driver
     assert str(module_source) in payload
     assert payload[str(module_source)]["semantic_modules"][0]["functions"][0]["name"] == "solve"
 
-    pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(module_source), "--pyi"]
+    pyi_cmd = [sys.executable, "-m", "x2py.parsers.fortran", str(module_source), "--pyi"]
     pyi_res = subprocess.run(pyi_cmd, capture_output=True, text=True, check=True)
     assert "@native_call([Addr(Arg(0)), Return('x', 0), Addr(Arg(1))])" in pyi_res.stdout
     assert "x: Addr(Float64)" not in pyi_res.stdout
     assert "def solve(" in pyi_res.stdout
 
-    empty_pyi_cmd = [sys.executable, "-m", "x2py.fortran_parser", str(program_source), "--pyi"]
+    empty_pyi_cmd = [sys.executable, "-m", "x2py.parsers.fortran", str(program_source), "--pyi"]
     empty_pyi_res = subprocess.run(empty_pyi_cmd, capture_output=True, text=True, check=True)
     assert "<no module declarations found>" in empty_pyi_res.stdout
 
@@ -729,7 +729,7 @@ def test_x2py_and_fortran_module_entrypoints_and_debug_errors(monkeypatch, capsy
 
     monkeypatch.setattr(fortran_parser_cli, "main", lambda: 0)
     with pytest.raises(SystemExit) as fortran_exit:
-        runpy.run_module("x2py.fortran_parser.__main__", run_name="__main__")
+        runpy.run_module("x2py.parsers.fortran.__main__", run_name="__main__")
     assert fortran_exit.value.code == 0
     monkeypatch.setattr(fortran_parser_cli, "main", original_fortran_main)
 
@@ -737,7 +737,7 @@ def test_x2py_and_fortran_module_entrypoints_and_debug_errors(monkeypatch, capsy
         raise FortranParseError("bad", filename="bad.f90", line_number=1, source_line="bad")
 
     monkeypatch.setattr(fortran_parser_cli, "_parse_paths", fail_parse)
-    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", "bad.f90", "--no-color"])
+    monkeypatch.setattr(sys, "argv", ["x2py.parsers.fortran", "bad.f90", "--no-color"])
     assert fortran_parser_cli.main() == 1
     assert "bad.f90:1:1: error[PARSE_ERROR]: bad" in capsys.readouterr().err
     monkeypatch.setenv("FORTRAN_PARSER_DEBUG", "1")
@@ -788,7 +788,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py.fortran_parser", str(f90), "--debug"]
+    cmd = [sys.executable, "-m", "x2py.parsers.fortran", str(f90), "--debug"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -806,7 +806,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py.fortran_parser", str(f90)]
+    cmd = [sys.executable, "-m", "x2py.parsers.fortran", str(f90)]
     res = subprocess.run(
         cmd,
         capture_output=True,
@@ -833,19 +833,19 @@ end module m
     )
     json_out = tmp_path / "report.json"
 
-    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", str(f90), "--json-out", str(json_out), "--json"])
+    monkeypatch.setattr(sys, "argv", ["x2py.parsers.fortran", str(f90), "--json-out", str(json_out), "--json"])
     assert fortran_parser_cli.main() == 0
     stdout_payload = json.loads(capsys.readouterr().out)
     assert str(f90) in stdout_payload
     assert json_out.exists()
 
-    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", str(f90), "--pyi"])
+    monkeypatch.setattr(sys, "argv", ["x2py.parsers.fortran", str(f90), "--pyi"])
     assert fortran_parser_cli.main() == 0
     pyi_out = capsys.readouterr().out
     assert "File:" in pyi_out
     assert "def work(" in pyi_out
 
-    monkeypatch.setattr(sys, "argv", ["x2py.fortran_parser", str(f90)])
+    monkeypatch.setattr(sys, "argv", ["x2py.parsers.fortran", str(f90)])
     assert fortran_parser_cli.main() == 0
     readable = capsys.readouterr().out
     assert "module m" in readable

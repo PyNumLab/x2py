@@ -30,9 +30,9 @@ STAGE_DIRECTORIES = {
 }
 NON_STAGE_DIRECTORIES = {"wrapper"}
 DOCUMENTED_SOURCE_OWNERS = {
-    "x2py.c_parser": "tests/parsing/c/",
-    "x2py.fortran_parser": "tests/parsing/fortran/",
-    "x2py.pyi_parser": "tests/parsing/pyi/",
+    "x2py.parsers.c": "tests/parsing/c/",
+    "x2py.parsers.fortran": "tests/parsing/fortran/",
+    "x2py.parsers.pyi": "tests/parsing/pyi/",
     "x2py.probes": "tests/probes/",
     "x2py.pipeline": "tests/pipeline/",
     "x2py.wrapper_codegen": "tests/wrapper_codegen/",
