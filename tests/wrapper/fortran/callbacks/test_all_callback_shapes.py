@@ -26,25 +26,17 @@ def test_immediate_callbacks_cover_all_supported_argument_shapes(
         pyi_parity_build_mode,
     )
 
-    assert module.apply_value_callback(lambda value: value + 5, np.int32(4)) == np.int32(9)
+    def add_five(value):
+        assert isinstance(value, np.int32)
+        return value + 5
 
-    scalar_seen = []
-
-    def scalar_callback(value, output, missing):
-        scalar_seen.append((value[()], missing[()]))
-        value[...] = value[()] + 10.0
-        missing[...] = missing[()] + 1.0
-        output[...] = value[()] + missing[()]
-
-    assert module.apply_scalar_storage_callback(scalar_callback, np.float64(2.0), np.float64(5.0)) == np.float64(18.0)
-    assert scalar_seen == [(np.float64(2.0), np.float64(5.0))]
+    assert module.apply_value_callback(add_five, np.int32(4)) == np.int32(9)
 
     values = np.asfortranarray(np.array([1.0, 2.0, 3.0], dtype=np.float64))
     output = np.empty_like(values)
 
     def array_callback(count, input_values, output_values):
-        assert count.shape == ()
-        assert count.flags.writeable
+        assert isinstance(count, np.int32)
         assert input_values.flags.f_contiguous
         assert input_values.flags.writeable
         assert output_values.flags.writeable

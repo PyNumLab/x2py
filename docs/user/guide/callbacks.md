@@ -68,9 +68,11 @@ until the wrapped call returns. Native code must not store the callback or call
 it later. Nested callback-taking calls on the same entering Python thread are
 supported.
 
-Temporary NumPy views and borrowed derived wrappers passed into a Python
-callback are valid only for that callback invocation. Retaining them afterward
-is unsupported unless the value is explicitly copied.
+Primitive scalar callback arguments are materialized as independent NumPy
+scalar values, so retaining them is safe. Temporary NumPy array views and
+borrowed derived wrappers are valid only for that callback invocation.
+Retaining either afterward is unsupported unless the value is explicitly
+copied.
 
 ## Callback Values
 
@@ -94,18 +96,21 @@ The spellings mean:
 
 | Callback spelling | Fortran callback dummy | Python callback object |
 | --- | --- | --- |
-| `Int32` | scalar reference dummy | writable rank-zero NumPy scalar storage |
-| `Value(Float64)` | scalar `value` dummy | Python scalar value |
+| `Int32` | scalar reference dummy | owned `np.int32` scalar value |
+| `Value(Float64)` | scalar `value` dummy | owned `np.float64` scalar value |
 | `Float64[n]` | array reference dummy | writable NumPy array view |
 | `point_t` | derived reference dummy | generated wrapper object |
 | `Value(point_t)` | derived `value` dummy | generated wrapper over the call-local value copy |
 
 Array callback arguments require exact dtype, rank, declared shape, alignment,
 and required Fortran contiguity. Derived values use the generated wrapper class.
-Reference arguments are exposed permissively. Mutable scalar, array, character,
-and derived storage is written back before the callback adapter returns. A
-`Value(...)` argument is a native copy, so Python mutation cannot replace the
-caller's original object.
+Reference arrays, characters, and derived objects are exposed permissively and
+written back before the callback adapter returns. Primitive scalar arguments
+are immutable NumPy scalar values even when their native ABI uses a reference.
+Scalar reference writeback is unsupported: model a scalar value delivered back
+to native code as the declared callback result. A `Value(...)` argument changes
+only the native ABI to Fortran `value`; it is also received as an independent
+NumPy scalar.
 
 ## Character Callback Arguments
 

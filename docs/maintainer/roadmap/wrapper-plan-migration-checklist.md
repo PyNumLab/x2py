@@ -4426,7 +4426,7 @@ existing source/generated-`.pyi` runtime assertions are the behavioral oracle.
 | `callbacks/test_scalar_callbacks.py::test_immediate_scalar_dummy_procedure_calls_python_callback[*]` | scalar result/void callbacks, callable validation, balanced references, nested same-thread re-entry, held-GIL wrapper envelope, and thread-local context | first context, trampoline, scalar-value, and cleanup slice |
 | `callbacks/test_scalar_callbacks.py::test_callback_exception_prints_traceback_and_aborts_host_process[*]` | callback exception, wrong result, and wrong signature print a Python error and terminate the subprocess | fatal-boundary slice after scalar success |
 | `callbacks/test_array_callbacks.py::test_immediate_dummy_procedure_converts_array_arguments_and_results[*]` | writable array view, shaped array result, outer-output identity, and reference writeback | array argument/result slice |
-| `callbacks/test_all_callback_shapes.py::test_immediate_callbacks_cover_all_supported_argument_shapes[*]` | scalar value override, rank-zero scalar storage, fixed strings, arrays, derived values, reference writeback, and one combined call envelope | cross-kind closure slice |
+| `callbacks/test_all_callback_shapes.py::test_immediate_callbacks_cover_all_supported_argument_shapes[*]` | scalar values, fixed strings, arrays, derived values, non-scalar reference writeback, and one combined call envelope | cross-kind closure slice |
 | `callbacks/test_derived_callbacks.py::test_immediate_dummy_procedure_converts_derived_arguments_and_results[*]` | callback-local borrowed derived input plus wrapper-owned derived result conversion | derived slice after Phase 9 construction |
 | `callbacks/test_callback_generated_pyi_contracts.py` | named prototypes, reference-default and `Value(T)` transport, shape, character storage, cross-module identity, and result annotations round-trip exactly | semantic-contract parity slice |
 | `semantics/conversion/pyi/test_types_and_values.py` callback cases | prototype declarations and references, `Value(T)`, exact argument names used by shapes, and unnecessary `Addr(...)` prototype forms | policy completion before planner work |
@@ -4443,8 +4443,8 @@ or embed a legacy AST.
   action.
 - Add a `CallbackTransferPlan` for each callback argument/result containing the
   semantic type identity, object kind, value/reference ABI, rank/shape/length
-  roles, Python barrier action, permissive reference writeback or isolated
-  value action, borrowed-owner retention, and exact C ABI roles.
+  roles, Python barrier action, primitive-scalar value projection or non-scalar
+  reference writeback, borrowed-owner retention, and exact C ABI roles.
 - Reuse ordinary scalar, string, array, and derived plan vocabulary where the
   representation is identical. The native callback is the caller, so normal
   Python-to-native argument projection cannot be silently reused in reverse.
@@ -4537,16 +4537,17 @@ For every dependency-closed sub-lane:
   callback success, nested re-entry, non-callable rejection, and balanced
   reference-count assertions in both build modes.
 
-### Phase 10D — Scalar Reference And Fixed-String Storage
+### Phase 10D — Primitive Scalar Values And Fixed-String Storage
 
-- [x] Lower every primitive scalar reference as copy-in/out rank-zero NumPy
-  storage; `Value(T)` remains an isolated Python scalar value.
+- [x] Lower every primitive scalar callback argument as an owned NumPy scalar
+  value. `Value(T)` changes only the native ABI; scalar reference writeback is
+  unsupported and must be modeled as a callback result.
 - [x] Lower fixed-string references as rank-zero fixed-width bytes storage with
   exact length, padding, and writeback. The semantic annotation remains
   `String[n]` and carries no native direction.
 - [x] Reject runtime-length callback strings before emission; no adapter-local
   inference may change the representation.
-- [x] Replay the scalar-storage and string-storage cases from the combined
+- [x] Replay the scalar-value and string-storage cases from the combined
   callback fixture through source/generated-`.pyi` routes.
 
 ### Phase 10E — Array Arguments And Results

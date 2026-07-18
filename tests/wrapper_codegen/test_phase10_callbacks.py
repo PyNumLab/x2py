@@ -70,11 +70,11 @@ def test_callback_policy_completes_reference_default_and_value_override_before_p
     assert scalar.thread_action is CallbackThreadAction.REQUIRE_ENTERING_THREAD
     assert scalar.gil_actions == (CallbackGILAction.ACQUIRE_GIL, CallbackGILAction.RELEASE_GIL)
     assert tuple(transfer.abi for transfer in scalar.arguments) == (CallbackABIKind.REFERENCE,) * 3
-    assert tuple(transfer.adapter_action for transfer in scalar.arguments) == (CallbackTransferAction.COPY_IN_OUT,) * 3
+    assert tuple(transfer.adapter_action for transfer in scalar.arguments) == (CallbackTransferAction.COPY_IN,) * 3
 
     array = policies["apply_array_storage_callback"].arguments[0].callback
     assert array.arguments[0].abi is CallbackABIKind.REFERENCE
-    assert array.arguments[0].adapter_action is CallbackTransferAction.COPY_IN_OUT
+    assert array.arguments[0].adapter_action is CallbackTransferAction.COPY_IN
     assert array.arguments[1].abi is CallbackABIKind.DATA_AND_SHAPE
     assert array.arguments[1].array.shape == ("count",)
 
@@ -169,7 +169,8 @@ def test_callback_artifacts_use_linear_context_adapter_and_trampoline_paths():
     assert 'bind(c, name="x2py_callback_trampoline' in bridge
     assert "size(values_callback_storage, dim=1, kind=c_int64_t)" in bridge
     assert "int(len(read_label_callback_storage), kind=c_int64_t)" in bridge
-    assert "NPY_INT32, NULL, count_data, 0, NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE" in c_source
+    assert "x2py_scalar_to_numpy(NPY_INT32, &value)" in c_source
+    assert "x2py_scalar_to_numpy(NPY_INT32, count_data)" in c_source
     assert bridge.count("call native_apply_array_storage_callback(") == 1
     assert "call callback(" not in bridge
     assert max(map(len, bridge.splitlines())) <= 132

@@ -2017,15 +2017,17 @@ thread are supported.
 
 ### Callback Values
 
-- value scalars use the matching Python numeric conversion, while reference
-  scalars use writable rank-zero NumPy storage;
+- primitive scalars use matching owned NumPy scalar values, regardless of
+  whether their native callback ABI is a value or reference;
 - arrays require exact dtype, rank, declared shape, alignment, and Fortran
   contiguity;
 - derived values require the generated wrapper type;
-- reference scalar, array, character, and derived storage is handled
-  permissively and written back before the adapter returns; and
-- temporary NumPy views and borrowed derived wrappers passed to the callback are
-  valid only during that callback invocation.
+- reference arrays, characters, and derived objects are handled permissively
+  and written back before the adapter returns; scalar reference writeback is
+  unsupported, so model that native output as the callback result; and
+- primitive scalars may be retained safely. Temporary NumPy array views and
+  borrowed derived wrappers passed to the callback are valid only during that
+  callback invocation.
 
 ```fortran
 subroutine transform(callback, values)

@@ -2095,8 +2095,11 @@ def _callback_abi_kind(
 def _callback_adapter_action(
     argument: models.SemanticArgument,
 ) -> CallbackTransferAction:
-    """Select permissive reference writeback or isolated value transport."""
-    if bool(argument.origin.metadata.get("value")):
+    """Select isolated primitive values or permissive non-scalar writeback."""
+    semantic_type = argument.semantic_type
+    if bool(argument.origin.metadata.get("value")) or (
+        semantic_type.name in _PLAN_PRIMITIVE_SCALAR_TYPES and int(semantic_type.rank or 0) == 0
+    ):
         return CallbackTransferAction.COPY_IN
     return CallbackTransferAction.COPY_IN_OUT
 

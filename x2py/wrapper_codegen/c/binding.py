@@ -995,7 +995,7 @@ class CBindingGenerator(ClassVisitor):
             CDeclaration(
                 target,
                 "PyObject *",
-                CodeExpression(self._scalar_result_expression(scalar, f"&{parameter}")),
+                CodeExpression(self._scalar_result_expression(scalar, f"&{parameter}", module=True)),
             ),
         )
 
@@ -1004,24 +1004,14 @@ class CBindingGenerator(ClassVisitor):
         transfer: CallbackTransferPlan,
         target: str,
     ) -> tuple[CDeclaration, ...]:
-        """Expose every scalar reference as permissive mutable rank-zero storage."""
-        return self._callback_scalar_storage_nodes(transfer, target)
-
-    def _callback_scalar_storage_nodes(
-        self,
-        transfer: CallbackTransferPlan,
-        target: str,
-    ) -> tuple[CDeclaration, ...]:
+        """Materialize one native scalar reference as an owned Python scalar value."""
         scalar = PrimitiveScalarTypeRegistry.type_for(transfer.semantic_type_name)
-        flags = "NPY_ARRAY_ALIGNED | NPY_ARRAY_WRITEABLE"
+        parameter = self._callback_parameter_base_name(transfer)
         return (
             CDeclaration(
                 target,
                 "PyObject *",
-                CodeExpression(
-                    f"PyArray_New(&PyArray_Type, 0, NULL, {scalar.numpy_type_macro}, NULL, "
-                    f"{self._callback_parameter_base_name(transfer)}_data, 0, {flags}, NULL)"
-                ),
+                CodeExpression(self._scalar_result_expression(scalar, f"{parameter}_data", module=True)),
             ),
         )
 

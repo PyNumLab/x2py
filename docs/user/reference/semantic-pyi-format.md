@@ -802,12 +802,12 @@ def apply_update(callback: update_values, ...) -> ...: ...
 ```
 
 Bare callback argument types use the normal Fortran reference form. A primitive
-scalar reference becomes writable rank-zero NumPy storage, arrays become
+scalar reference becomes an independent NumPy scalar value, arrays become
 writable NumPy views, fixed-length character references become mutable
 rank-zero bytes storage, and wrapped objects retain their native reference.
-`Value(T)` selects the native Fortran `value` attribute and gives Python the
-corresponding call-local value. `Addr(...)` is unnecessary because reference is
-the default.
+`Value(T)` selects the native Fortran `value` attribute; both forms give Python
+an independent primitive scalar value. `Addr(...)` is unnecessary because
+reference is the default.
 
 Prototype declarations are not runtime functions and are not exported from the
 generated Python module. They may be referenced from another semantic contract
@@ -829,8 +829,8 @@ duplicate them. `Value(...)` alone may still use a typed external declaration
 when no other characteristic requires the explicit interface.
 
 Before wrapper planning, x2py completes these declarations into explicit
-callback ABI, permissive reference writeback, result, context-lifecycle,
-thread/GIL, cleanup,
+callback ABI, primitive-scalar value projection, non-scalar reference
+writeback, result, context-lifecycle, thread/GIL, cleanup,
 and fatal-error actions. The generated C trampoline and Fortran adapter consume
 that completed record directly.
 X2PY_C_DOCS_END -->

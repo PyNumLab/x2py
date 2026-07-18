@@ -1,8 +1,8 @@
 # Callbacks
 
-Scope: immediate Python callbacks passed to Fortran, including value,
-scalar-storage, array, character-storage, and derived-type callback conversions
-and exception behavior.
+Scope: immediate Python callbacks passed to Fortran, including primitive scalar
+values, array, character-storage, and derived-type callback conversions and
+exception behavior.
 
 Focused pytest command: `python3 -m pytest -q tests/wrapper/fortran/callbacks`
 

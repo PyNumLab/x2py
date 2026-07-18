@@ -35,14 +35,21 @@ def test_immediate_scalar_dummy_procedure_calls_python_callback(pyi_parity_build
         pyi_parity_build_mode,
     )
 
-    assert module.apply_scalar(lambda value: value * 3.0, np.float64(2.5)) == np.float64(7.5)
-    assert module.apply_explicit(lambda value: value - 1.0, np.float64(2.5)) == np.float64(1.5)
+    def triple(value):
+        assert isinstance(value, np.float64)
+        return value * 3.0
+
+    def decrement(value):
+        assert isinstance(value, np.float64)
+        return value - 1.0
+
+    assert module.apply_scalar(triple, np.float64(2.5)) == np.float64(7.5)
+    assert module.apply_explicit(decrement, np.float64(2.5)) == np.float64(1.5)
     notified = []
 
     def notify(value):
-        assert isinstance(value, np.ndarray)
-        assert value.shape == ()
-        notified.append(value.item())
+        assert isinstance(value, np.float64)
+        notified.append(value)
 
     assert module.call_notify(notify, np.float64(6.0)) is None
     assert notified == [6.0]

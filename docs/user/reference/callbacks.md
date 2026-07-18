@@ -23,11 +23,12 @@ callable alive only for the active wrapped call, installs a callback context,
 passes a generated Fortran adapter to the native routine, and clears the context
 when the wrapped call returns.
 
-Policy completion records the callback ABI, permissive reference writeback, context
-lifecycle, entering-thread rule, GIL actions, and fatal action before wrapper
-planning. Direct wrapper-plan generation then emits one typed Fortran adapter
-and one native trampoline per callback site. Neither backend infers callback
-transport, shape, or ownership from generated locals.
+Policy completion records the callback ABI, primitive-scalar value projection,
+reference writeback for non-scalar storage, context lifecycle, entering-thread
+rule, GIL actions, and fatal action before wrapper planning. Direct
+wrapper-plan generation then emits one typed Fortran adapter and one native
+trampoline per callback site. Neither backend infers callback transport, shape,
+or ownership from generated locals.
 
 Native code must not store the callback or call it later. Stored procedure
 pointers, optional dummy procedures, asynchronous callbacks, and cross-thread
@@ -51,8 +52,8 @@ default; `Value(T)` is the only callback argument ABI override.
 
 | Spelling | Fortran callback dummy | Python callback object |
 | --- | --- | --- |
-| `Int32` | scalar reference dummy | writable rank-zero NumPy scalar storage |
-| `Value(Float64)` | scalar `value` dummy | Python scalar |
+| `Int32` | scalar reference dummy | owned `np.int32` scalar value |
+| `Value(Float64)` | scalar `value` dummy | owned `np.float64` scalar value |
 | `Float64[n]` | array reference dummy | writable NumPy array view |
 | `point_t` | derived reference dummy | generated wrapper object |
 | `Value(point_t)` | derived `value` dummy | wrapper over the call-local value copy |
@@ -94,9 +95,11 @@ adding direction metadata to the annotation.
 
 ## Results And Copy-Back
 
-Scalar callback results are converted from the Python return value. Array,
-derived, scalar-storage, and character-storage reference arguments are copied
-back before the Fortran adapter returns to native code.
+Scalar callback results are converted from the Python return value. Primitive
+scalar arguments are always owned NumPy scalar values and never scalar-storage arrays, so
+scalar reference writeback is unsupported. Array, derived, and
+character-storage reference arguments are copied back before the Fortran
+adapter returns to native code.
 
 Callback exceptions, invalid callback return conversion, and unsupported
 cross-thread callback execution are fatal at the callback boundary: x2py prints
