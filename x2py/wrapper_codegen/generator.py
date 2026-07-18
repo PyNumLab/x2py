@@ -33,6 +33,7 @@ from x2py.semantics.wrapper_policy import (
     CallbackLifecycleAction,
     CallbackResultAction,
     CallbackThreadAction,
+    CallbackTransferAction,
     ClassConstructorKind,
     ClassInvocationKind,
     ConstructionLifecycleAction,
@@ -1347,7 +1348,27 @@ class WrapperCodeGenerator:
         diagnostics.extend(self._callback_array_role_diagnostics(transfer, position))
         diagnostics.extend(self._callback_string_role_diagnostics(transfer, position))
         diagnostics.extend(self._callback_derived_role_diagnostics(transfer, position))
+        diagnostics.extend(self._callback_scalar_projection_diagnostics(transfer, position))
         return tuple(diagnostics)
+
+    def _callback_scalar_projection_diagnostics(
+        self,
+        transfer: CallbackTransferPlan,
+        position: int,
+    ) -> tuple[WrapperPlanDiagnostic, ...]:
+        """Require every primitive scalar callback transfer to use its value projection."""
+        if position < 0 or transfer.object_kind is not ObjectKind.SCALAR or transfer.rank != 0:
+            return ()
+        valid = (
+            transfer.python_action is PythonBarrierAction.SCALAR_VALUE
+            and transfer.abi in {CallbackABIKind.VALUE, CallbackABIKind.REFERENCE}
+            and transfer.adapter_action in {CallbackTransferAction.COPY_IN, CallbackTransferAction.COPY_OUT}
+        )
+        return (
+            ()
+            if valid
+            else (self._diagnostic(transfer.owner_path, "inconsistent-callback-scalar-value-projection", position),)
+        )
 
     def _callback_array_role_diagnostics(
         self,

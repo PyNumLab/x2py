@@ -5,7 +5,6 @@ from __future__ import annotations
 from x2py.semantics import models
 from x2py.semantics.ownership import ObjectKind, PythonBarrierAction
 from x2py.semantics.wrapper_policy import (
-    CallbackABIKind,
     CallbackResultAction,
     ClassConstructorKind,
     ClassMethodKind,
@@ -282,23 +281,24 @@ class WrapperPlanSupportAnalyzer(ClassVisitor):
             "callback-context-runtime",
             "callback-same-thread-reentry",
             "callback-fatal-errors",
-            *WrapperPlanSupportAnalyzer._callback_transfer_lanes({transfer.abi for transfer in transfers}),
+            *WrapperPlanSupportAnalyzer._callback_transfer_lanes(transfers),
         ]
         if any(callback.result.action is not CallbackResultAction.RETURN_VOID for callback in callbacks):
             lanes.append("callback-results")
         return tuple(lanes)
 
     @staticmethod
-    def _callback_transfer_lanes(abis: set[CallbackABIKind]) -> tuple[str, ...]:
-        """Map callback ABI kinds to their independently verified rollout lanes."""
-        by_abi = (
-            (CallbackABIKind.VALUE, "callback-scalar-values"),
-            (CallbackABIKind.REFERENCE, "callback-scalar-storage"),
-            (CallbackABIKind.DATA_AND_LENGTH, "callback-fixed-strings"),
-            (CallbackABIKind.DATA_AND_SHAPE, "callback-arrays"),
-            (CallbackABIKind.DERIVED_ADDRESS, "callback-derived-values"),
+    def _callback_transfer_lanes(transfers) -> tuple[str, ...]:
+        """Map completed Python projections to independently verified rollout lanes."""
+        by_python_action = (
+            (PythonBarrierAction.SCALAR_VALUE, "callback-scalar-values"),
+            (PythonBarrierAction.STRING_STORAGE, "callback-fixed-strings"),
+            (PythonBarrierAction.ARRAY_STORAGE, "callback-arrays"),
+            (PythonBarrierAction.WRAPPER_INSTANCE, "callback-derived-values"),
         )
-        return tuple(lane for abi, lane in by_abi if abi in abis)
+        return tuple(
+            lane for action, lane in by_python_action if any(transfer.python_action is action for transfer in transfers)
+        )
 
     def _output_lanes(self, policy: FunctionWrapperPolicy) -> tuple[str, ...]:
         """Return result and writeback lanes selected by completed output policy."""

@@ -6,6 +6,7 @@ import pytest
 
 from x2py.pipeline.pyi import pyi_file_to_semantic_module
 from x2py.semantics import models
+from x2py.semantics.ownership import PythonBarrierAction
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import (
     CallbackABIKind,
@@ -71,10 +72,12 @@ def test_callback_policy_completes_reference_default_and_value_override_before_p
     assert scalar.gil_actions == (CallbackGILAction.ACQUIRE_GIL, CallbackGILAction.RELEASE_GIL)
     assert tuple(transfer.abi for transfer in scalar.arguments) == (CallbackABIKind.REFERENCE,) * 3
     assert tuple(transfer.adapter_action for transfer in scalar.arguments) == (CallbackTransferAction.COPY_IN,) * 3
+    assert tuple(transfer.python_action for transfer in scalar.arguments) == (PythonBarrierAction.SCALAR_VALUE,) * 3
 
     array = policies["apply_array_storage_callback"].arguments[0].callback
     assert array.arguments[0].abi is CallbackABIKind.REFERENCE
     assert array.arguments[0].adapter_action is CallbackTransferAction.COPY_IN
+    assert array.arguments[0].python_action is PythonBarrierAction.SCALAR_VALUE
     assert array.arguments[1].abi is CallbackABIKind.DATA_AND_SHAPE
     assert array.arguments[1].array.shape == ("count",)
 
@@ -120,7 +123,10 @@ def test_callback_plan_projects_one_explicit_site_and_stable_roles_per_argument(
     assert len({callback.context_current_symbol for callback in callbacks}) == len(callbacks)
     assert len({callback.adapter_symbol for callback in callbacks}) == len(callbacks)
     assert len({callback.trampoline_symbol for callback in callbacks}) == len(callbacks)
-    assert "immediate-callbacks" in WrapperPlanSupportAnalyzer().analyze(_module()).covered_lanes
+    covered_lanes = WrapperPlanSupportAnalyzer().analyze(_module()).covered_lanes
+    assert "immediate-callbacks" in covered_lanes
+    assert "callback-scalar-values" in covered_lanes
+    assert "callback-scalar-storage" not in covered_lanes
 
 
 @pytest.mark.parametrize(
@@ -128,6 +134,7 @@ def test_callback_plan_projects_one_explicit_site_and_stable_roles_per_argument(
     (
         ("lifecycle", "unbalanced-callback-lifecycle"),
         ("array_roles", "incomplete-callback-array-roles"),
+        ("scalar_projection", "inconsistent-callback-scalar-value-projection"),
         ("result", "callback-void-has-transfer"),
         ("symbols", "invalid-callback-symbols"),
     ),
@@ -140,6 +147,9 @@ def test_callback_plan_edits_fail_central_validation_before_backend_emission(edi
     elif edit == "array_roles":
         callback = _callback_argument(plan, "apply_array_storage_callback").callback
         callback.arguments[1].extent_roles = ()
+    elif edit == "scalar_projection":
+        callback = _callback_argument(plan, "apply_scalar_storage_callback").callback
+        callback.arguments[0].python_action = PythonBarrierAction.SCALAR_STORAGE
     elif edit == "result":
         callback = _callback_argument(plan, "apply_value_callback").callback
         callback.result.action = CallbackResultAction.RETURN_VOID

@@ -965,20 +965,21 @@ class CBindingGenerator(ClassVisitor):
         position: int,
         target: str,
     ) -> tuple:
-        """Dispatch one completed callback ABI into a small Python conversion leaf."""
-        match transfer.abi:
-            case CallbackABIKind.VALUE:
+        """Dispatch one completed Python projection into a small conversion leaf."""
+        match transfer.python_action:
+            case PythonBarrierAction.SCALAR_VALUE:
                 nodes = self._callback_scalar_value_nodes(transfer, target)
-            case CallbackABIKind.REFERENCE:
-                nodes = self._callback_scalar_reference_nodes(transfer, target)
-            case CallbackABIKind.DATA_AND_SHAPE:
+            case PythonBarrierAction.ARRAY_STORAGE:
                 nodes = self._callback_array_nodes(transfer, position, target)
-            case CallbackABIKind.DATA_AND_LENGTH:
+            case PythonBarrierAction.STRING_STORAGE:
                 nodes = self._callback_string_nodes(transfer, target)
-            case CallbackABIKind.DERIVED_ADDRESS:
+            case PythonBarrierAction.WRAPPER_INSTANCE:
                 nodes = self._callback_derived_nodes(transfer, position, target)
             case _:
-                raise ValueError(f"Unsupported C callback ABI for {transfer.owner_path!r}: {transfer.abi.value}")
+                raise ValueError(
+                    f"Unsupported C callback Python projection for {transfer.owner_path!r}: "
+                    f"{transfer.python_action.value}"
+                )
         return (
             *nodes,
             self._callback_abort_if_null(callback, target, "failed to convert callback argument"),
@@ -989,29 +990,20 @@ class CBindingGenerator(ClassVisitor):
         transfer: CallbackTransferPlan,
         target: str,
     ) -> tuple[CDeclaration, ...]:
+        """Materialize one completed scalar-value projection as a NumPy scalar."""
         scalar = PrimitiveScalarTypeRegistry.type_for(transfer.semantic_type_name)
         parameter = self._callback_parameter_base_name(transfer)
+        value_pointer = {
+            CallbackABIKind.VALUE: f"&{parameter}",
+            CallbackABIKind.REFERENCE: f"{parameter}_data",
+        }.get(transfer.abi)
+        if value_pointer is None:
+            raise ValueError(f"Unsupported scalar callback ABI for {transfer.owner_path!r}: {transfer.abi.value}")
         return (
             CDeclaration(
                 target,
                 "PyObject *",
-                CodeExpression(self._scalar_result_expression(scalar, f"&{parameter}", module=True)),
-            ),
-        )
-
-    def _callback_scalar_reference_nodes(
-        self,
-        transfer: CallbackTransferPlan,
-        target: str,
-    ) -> tuple[CDeclaration, ...]:
-        """Materialize one native scalar reference as an owned Python scalar value."""
-        scalar = PrimitiveScalarTypeRegistry.type_for(transfer.semantic_type_name)
-        parameter = self._callback_parameter_base_name(transfer)
-        return (
-            CDeclaration(
-                target,
-                "PyObject *",
-                CodeExpression(self._scalar_result_expression(scalar, f"{parameter}_data", module=True)),
+                CodeExpression(f"x2py_scalar_to_numpy({self._scalar_numpy_type(scalar)}, {value_pointer})"),
             ),
         )
 
