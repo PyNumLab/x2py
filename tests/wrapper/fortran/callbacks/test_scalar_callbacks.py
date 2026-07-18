@@ -38,7 +38,13 @@ def test_immediate_scalar_dummy_procedure_calls_python_callback(pyi_parity_build
     assert module.apply_scalar(lambda value: value * 3.0, np.float64(2.5)) == np.float64(7.5)
     assert module.apply_explicit(lambda value: value - 1.0, np.float64(2.5)) == np.float64(1.5)
     notified = []
-    assert module.call_notify(lambda value: notified.append(value), np.float64(6.0)) is None
+
+    def notify(value):
+        assert isinstance(value, np.ndarray)
+        assert value.shape == ()
+        notified.append(value.item())
+
+    assert module.call_notify(notify, np.float64(6.0)) is None
     assert notified == [6.0]
     assert module.apply_scalar(
         lambda value: module.apply_scalar(lambda nested: nested + 1.0, np.float64(value)) * 2.0,
