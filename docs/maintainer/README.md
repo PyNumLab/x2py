@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: developer documentation
 related: documentation-architecture.md, internal-architecture/index.md, roadmap/index.md
 status: maintained
+publication: draft
 ---
 
 # Maintainer Documentation

@@ -4,6 +4,7 @@ audience: users, developers
 prerequisites: packaging, CLI commands
 related: cli-commands.md, python-api.md, ../guide/packaging.md, ../../developer/quality-assurance.md
 status: maintained
+publication: draft
 ---
 
 # Configuration Files Reference
@@ -114,21 +115,42 @@ Wrapper users select inputs through CLI flags, Python API arguments, semantic
 
 ## `mkdocs.yml`
 
-`mkdocs.yml` is the documentation-site seed configuration. It sets
-`docs_dir: docs` and owns the visible navigation tree. A page that becomes
-maintained reference material should be reachable from the appropriate area
-index and from `mkdocs.yml`.
+`mkdocs.yml` is the documentation-site configuration. It sets `docs_dir: docs`,
+selects Material for MkDocs, owns the complete intended navigation tree, and
+loads the publication hook. The production hook includes only pages whose
+front matter says `publication: reviewed`. A draft lane index suppresses its
+complete User, Developer, or Maintainer lane. Links from documentation pages to
+existing source, tests, configuration, and other repository evidence are
+rendered as GitHub links because those files are outside the MkDocs source
+tree.
+
+Preview exactly what GitHub Pages will publish with:
+
+```bash
+python3 -m mkdocs serve
+```
+
+Include unpublished pages locally while reviewing them with:
+
+```bash
+X2PY_DOCS_INCLUDE_DRAFTS=1 python3 -m mkdocs serve
+```
+
+Changing a page from `publication: draft` to `publication: reviewed` makes it
+eligible for the next production deployment. New pages must also be reachable
+from the appropriate area index and `mkdocs.yml` navigation.
 
 Documentation-only changes normally run:
 
 ```bash
-python3 -m pytest -q tests/docs/test_examples.py tests/docs/test_structure.py
+python3 -m pytest -q tests/docs
+python3 -m mkdocs build --strict
 git diff --check
 ```
 
-The structure test verifies metadata, TODO policy for unfinished pages,
-navigation for required areas, visible deferred-doc boundaries, reference
-links, and documentation checklist synchronization.
+The documentation tests verify metadata, publication filtering, TODO policy
+for unfinished pages, navigation for required areas, visible deferred-doc
+boundaries, reference links, and documentation checklist synchronization.
 
 ## Evidence And Maintenance
 

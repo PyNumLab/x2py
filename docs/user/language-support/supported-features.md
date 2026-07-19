@@ -4,6 +4,7 @@ audience: users, developers
 prerequisites: feature matrix
 related: feature-matrix.md, ../guide/fortran-wrapper.md
 status: maintained
+publication: draft
 ---
 
 # Supported Features

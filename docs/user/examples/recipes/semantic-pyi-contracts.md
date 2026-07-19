@@ -4,6 +4,7 @@ audience: users, advanced users
 prerequisites: semantic .pyi format
 related: ../verified-cookbook.md, ../../reference/semantic-pyi-format.md
 status: maintained
+publication: draft
 ---
 
 # Work With Semantic .pyi Contracts

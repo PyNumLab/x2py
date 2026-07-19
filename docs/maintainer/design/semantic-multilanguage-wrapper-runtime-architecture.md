@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: semantic IR reference, wrapper design notes
 related: ../design/overall-architecture.md, ../internal-architecture/wrapper-generation-pipeline.md
 status: design
+publication: draft
 ---
 
 # Semantic Multilanguage Wrapper and Interoperability Runtime

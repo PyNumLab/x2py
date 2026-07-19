@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: semantic .pyi format, Fortran wrapper guide
 related: ../../user/reference/semantic-pyi-format.md, index.md
 status: active-roadmap
+publication: draft
 ---
 
 # Semantic `.pyi` Wrapper Checklist

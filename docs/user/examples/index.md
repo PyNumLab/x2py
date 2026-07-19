@@ -4,6 +4,7 @@ audience: users
 prerequisites: getting started
 related: ../tutorials/index.md, verified-cookbook.md
 status: planned-documentation
+publication: draft
 ---
 
 # Examples Gallery

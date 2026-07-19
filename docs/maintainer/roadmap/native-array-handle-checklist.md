@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: semantic .pyi format, ownership policy, allocatables, pointers
 related: index.md, ../../user/reference/semantic-pyi-format.md, ../../user/guide/allocatables.md, ../../user/guide/pointers.md
 status: active-roadmap
+publication: draft
 ---
 
 # Native Array Handle Checklist

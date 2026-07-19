@@ -4,6 +4,7 @@ audience: users
 prerequisites: getting started
 related: data-types.md, fortran-wrapper.md, ../language-support/index.md
 status: maintained
+publication: draft
 ---
 
 # User Guide

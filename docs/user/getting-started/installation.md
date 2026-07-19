@@ -4,6 +4,7 @@ audience: users, contributors
 prerequisites: Python 3.10 or newer, repository checkout
 related: verification.md, ../troubleshooting/installation-issues.md, ../../developer/quality-assurance.md
 status: maintained
+publication: draft
 ---
 
 # Installation

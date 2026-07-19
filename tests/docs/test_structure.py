@@ -23,8 +23,12 @@ WEBSITE_DOCUMENTATION_PATHS = [
     DOCS_ROOT / "index.md",
     *sorted((DOCS_ROOT / "user").rglob("*.md")),
     *sorted((DOCS_ROOT / "developer").rglob("*.md")),
+    *sorted((DOCS_ROOT / "maintainer").rglob("*.md")),
 ]
-PUBLISHED_DOCUMENTATION_PATHS = [ROOT / "README.md", *WEBSITE_DOCUMENTATION_PATHS]
+LEARNING_DOCUMENTATION_PATHS = [
+    *sorted((DOCS_ROOT / "user").rglob("*.md")),
+    *sorted((DOCS_ROOT / "developer").rglob("*.md")),
+]
 DEFERRED_C_PAGE_PATHS = [
     ROOT / "docs/maintainer/design/cpython-integration.md",
     ROOT / "docs/developer/c-parser-reference.md",
@@ -76,7 +80,8 @@ VISIBLE_C_DOCUMENTATION = re.compile(
     r"|\bc-type(?:s|\b)"
     r")"
 )
-REQUIRED_METADATA = {"title", "audience", "prerequisites", "related", "status"}
+REQUIRED_METADATA = {"title", "audience", "prerequisites", "related", "status", "publication"}
+ALLOWED_PUBLICATION_STATES = {"draft", "reviewed"}
 ALLOWED_STATUSES = {
     "active-roadmap",
     "design",
@@ -444,17 +449,24 @@ def _visible_documentation_source(path: Path) -> str:
         lines = lines[lines.index("---", 1) + 1 :]
 
     visible: list[str] = []
-    hidden = False
+    hidden: str | None = None
     for line in lines:
         stripped = line.strip()
         if stripped == C_DOCS_START:
             assert not hidden, f"{path.relative_to(ROOT)}: nested deferred documentation comment"
-            hidden = True
+            hidden = "deferred-c"
+        elif stripped == "<!--":
+            assert not hidden, f"{path.relative_to(ROOT)}: nested documentation comment"
+            hidden = "ordinary"
         elif stripped == C_DOCS_END:
-            assert hidden, f"{path.relative_to(ROOT)}: unmatched deferred documentation comment end"
-            hidden = False
-        elif hidden:
+            assert hidden == "deferred-c", f"{path.relative_to(ROOT)}: unmatched deferred documentation comment end"
+            hidden = None
+        elif stripped == "-->" and hidden == "ordinary":
+            hidden = None
+        elif hidden == "deferred-c":
             assert "--" not in line, f"{path.relative_to(ROOT)}: invalid double hyphen in deferred comment"
+        elif hidden == "ordinary":
+            continue
         elif not line.lstrip().startswith(C_DOCS_DISABLED):
             visible.append(line)
     assert not hidden, f"{path.relative_to(ROOT)}: unclosed deferred documentation comment"
@@ -539,12 +551,22 @@ def test_documentation_page_metadata(path: Path) -> None:
         assert metadata[key], f"{path.relative_to(ROOT)}: metadata field {key!r} is empty"
 
     assert metadata["status"] in ALLOWED_STATUSES, f"{path.relative_to(ROOT)}: unknown status {metadata['status']!r}"
+    assert metadata["publication"] in ALLOWED_PUBLICATION_STATES, (
+        f"{path.relative_to(ROOT)}: unknown publication state {metadata['publication']!r}"
+    )
     if metadata["status"] in TODO_STATUSES:
         assert "## TODO" in body, f"{path.relative_to(ROOT)}: unfinished pages must include a TODO section"
         assert "TODO:" in body, f"{path.relative_to(ROOT)}: TODO section must contain explicit TODO markers"
 
 
-@pytest.mark.parametrize("path", PUBLISHED_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize(
+    "path",
+    [
+        ROOT / "README.md",
+        *(path for path in WEBSITE_DOCUMENTATION_PATHS if _front_matter(path)[0].get("publication") == "reviewed"),
+    ],
+    ids=lambda path: str(path.relative_to(ROOT)),
+)
 def test_deferred_c_documentation_is_not_visible(path: Path) -> None:
     visible = _visible_documentation_source(path)
     for allowed_text in VISIBLE_C_DOCUMENTATION_EXCEPTIONS.get(str(path.relative_to(ROOT)), ()):
@@ -569,7 +591,7 @@ def test_deferred_c_pages_are_not_in_site_navigation() -> None:
 
 def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     readme = _visible_documentation_source(ROOT / "README.md")
-    quick_start = readme.split("## Quick Start", maxsplit=1)[1].split(
+    quick_start = readme.split("## Installation & Quick Start", maxsplit=1)[1].split(
         "The runtime wrapper mechanism is:",
         maxsplit=1,
     )[0]
@@ -727,7 +749,7 @@ def test_documentation_lane_has_consistent_audience(lane: str, audience_terms: t
             assert metadata["audience"] == "maintainers"
 
 
-@pytest.mark.parametrize("path", WEBSITE_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize("path", LEARNING_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
 def test_website_documentation_does_not_link_to_maintainer_lane(path: Path) -> None:
     maintainer_root = (DOCS_ROOT / "maintainer").resolve()
     for target in MARKDOWN_LINK.findall(_visible_documentation_source(path)):
@@ -770,11 +792,13 @@ def test_required_roadmap_page_exists(relative_path: str) -> None:
     assert (DOCS_ROOT / relative_path).is_file()
 
 
-def test_maintainer_documentation_is_excluded_from_site_build() -> None:
+def test_site_navigation_includes_all_publishable_lanes_and_excludes_archive() -> None:
     site_configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
-    assert "maintainer/**" in site_configuration
     assert "old_docs/**" in site_configuration
-    assert not any(path.startswith("maintainer/") for path in _site_navigation_positions())
+    positions = _site_navigation_positions()
+    assert "user/index.md" in positions
+    assert "developer/index.md" in positions
+    assert "maintainer/README.md" in positions
 
 
 @pytest.mark.parametrize("relative_path", REQUIRED_GETTING_STARTED_PAGES)
@@ -849,7 +873,7 @@ def test_getting_started_overview_uses_standalone_example_and_current_evidence()
 
 def test_first_wrapped_function_shows_contract_and_mentions_later_support_boundaries() -> None:
     page = (DOCS_ROOT / "user/getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
-    source_index = page.index("[README Quick Start](../../../README.md#quick-start)")
+    source_index = page.index("[README Quick Start](../../../README.md#installation--quick-start)")
     build_index = page.index("python3 -m x2py scale.f90 \\")
     command_index = page.index("python3 -m x2py generate --pyi scale.f90")
     contract_index = page.index(
@@ -878,7 +902,7 @@ def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None
 
 def test_beginner_workflow_reuses_scale_example_without_renaming_it() -> None:
     page = (DOCS_ROOT / "user/getting-started/beginner-workflow.md").read_text(encoding="utf-8")
-    source_reference_index = page.index("[README Quick Start](../../../README.md#quick-start)")
+    source_reference_index = page.index("[README Quick Start](../../../README.md#installation--quick-start)")
     layout_index = page.index("src/\n    scale.f90")
     contract_index = page.index("python3 -m x2py generate --pyi src/scale.f90")
     build_index = page.index("python3 -m x2py src/scale.f90 \\\n  --out-dir build/scale")

@@ -4,6 +4,7 @@ audience: users, advanced users
 prerequisites: arrays
 related: arrays.md, pointers.md, memory-management.md
 status: maintained
+publication: draft
 ---
 
 # Allocatables

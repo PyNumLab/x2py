@@ -5,6 +5,7 @@ audience: users, developers
 prerequisites: installation
 related: ../verified-cookbook.md, ../../../developer/c-parser-reference.md
 status: maintained
+publication: draft
 ---
 
 <!-- X2PY_C_DOCS_START

@@ -4,6 +4,7 @@ audience: contributors
 prerequisites: repository checkout
 related: ../index.md, ../../../CONTRIBUTING.md
 status: planned-documentation
+publication: draft
 ---
 
 # Contributing

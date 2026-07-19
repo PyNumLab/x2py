@@ -4,6 +4,7 @@ audience: contributors
 prerequisites: repository checkout
 related: source-map.md, feature-to-code-map.md, build-system.md, testing-strategy.md
 status: maintained
+publication: draft
 ---
 
 # Repository Structure

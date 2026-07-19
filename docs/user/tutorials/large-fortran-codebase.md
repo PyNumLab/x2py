@@ -4,6 +4,7 @@ audience: advanced users
 prerequisites: modern Fortran project tutorial, packaging
 related: modern-fortran-project.md, ../guide/packaging.md
 status: planned-documentation
+publication: draft
 ---
 
 # Large Fortran Codebase Tutorial

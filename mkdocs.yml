@@ -1,7 +1,24 @@
 site_name: x2py
+site_url: https://pynumlab.github.io/x2py/
+repo_url: https://github.com/PyNumLab/x2py
+repo_name: PyNumLab/x2py
 docs_dir: docs
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+plugins:
+  - search
+hooks:
+  - tools/mkdocs_publication.py
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
 exclude_docs: |
-  maintainer/**
   old_docs/**
 nav:
   - Home: index.md
@@ -37,9 +54,21 @@ nav:
       - Tutorials:
           - Overview: user/tutorials/index.md
           - Basic Wrapper Tutorial: user/tutorials/basic-wrapper.md
+          - Large Fortran Codebase: user/tutorials/large-fortran-codebase.md
+          - Modern Fortran Project: user/tutorials/modern-fortran-project.md
+          - Numerical Solver: user/tutorials/numerical-solver.md
+          - Packaging: user/tutorials/packaging.md
+          - Scientific Library: user/tutorials/scientific-library.md
       - Examples:
           - Overview: user/examples/index.md
           - Verified Examples Cookbook: user/examples/verified-cookbook.md
+          - BLAS Wrapper: user/examples/blas-wrapper.md
+          - LAPACK Wrapper: user/examples/lapack-wrapper.md
+          - CFD Mini Example: user/examples/cfd-mini-example.md
+          - MPI Example: user/examples/mpi-example.md
+          - Object-Oriented Fortran: user/examples/object-oriented-fortran.md
+          - ODE Solver: user/examples/ode-solver.md
+          - OpenMP Example: user/examples/openmp-example.md
           - Recipes:
               - Build and Import With the CLI: user/examples/recipes/build-and-import-cli.md
               - Build and Import With the Python API: user/examples/recipes/build-and-import-python-api.md
@@ -63,9 +92,21 @@ nav:
           - Generated Modules: user/reference/generated-modules.md
           - Generated Classes: user/reference/generated-classes.md
           - Configuration Files: user/reference/configuration-files.md
-      - Language Support: user/language-support/index.md
+      - Language Support:
+          - Overview: user/language-support/index.md
+          - Feature Matrix: user/language-support/feature-matrix.md
+          - Supported Features: user/language-support/supported-features.md
+          - Partially Supported Features: user/language-support/partially-supported-features.md
+          - Unsupported Features: user/language-support/unsupported-features.md
+          - Planned Features: user/language-support/planned-features.md
       - FAQ: user/faq/index.md
-      - Troubleshooting: user/troubleshooting/index.md
+      - Troubleshooting:
+          - Overview: user/troubleshooting/index.md
+          - Installation Issues: user/troubleshooting/installation-issues.md
+          - Compiler Issues: user/troubleshooting/compiler-issues.md
+          - Build Issues: user/troubleshooting/build-issues.md
+          - Runtime Issues: user/troubleshooting/runtime-issues.md
+          - Platform-Specific Issues: user/troubleshooting/platform-specific-issues.md
       - Changelog: user/changelog/index.md
   - Developer Documentation:
       - Overview: developer/index.md
@@ -88,3 +129,39 @@ nav:
           - Pull Request Workflow: developer/contributing/pull-request-workflow.md
           - Coding Standards: developer/contributing/coding-standards.md
           - Review Process: developer/contributing/review-process.md
+  - Maintainer Documentation:
+      - Overview: maintainer/README.md
+      - Documentation Architecture: maintainer/documentation-architecture.md
+      - CI/CD: maintainer/ci-cd.md
+      - Release Process: maintainer/release-process.md
+      - Design:
+          - Overview: maintainer/design/index.md
+          - Overall Architecture: maintainer/design/overall-architecture.md
+          - Parser Architecture: maintainer/design/parser-architecture.md
+          - Semantic Analysis: maintainer/design/semantic-analysis.md
+          - Runtime Model: maintainer/design/runtime-model.md
+          - Error Propagation Model: maintainer/design/error-propagation-model.md
+          - Memory Ownership Model: maintainer/design/memory-ownership-model.md
+          - Code Generation: maintainer/design/code-generation.md
+          - CPython Integration: maintainer/design/cpython-integration.md
+          - Multilanguage Runtime Architecture: maintainer/design/semantic-multilanguage-wrapper-runtime-architecture.md
+          - Wrapper Design Notes: maintainer/design/wrapper-design-notes.md
+      - Internal Architecture:
+          - Overview: maintainer/internal-architecture/index.md
+          - Pipeline Map: maintainer/internal-architecture/pipeline-map.md
+          - Wrapper Generation Pipeline: maintainer/internal-architecture/wrapper-generation-pipeline.md
+          - AST Design: maintainer/internal-architecture/ast-design.md
+          - Semantic Passes: maintainer/internal-architecture/semantic-passes.md
+          - Type System: maintainer/internal-architecture/type-system.md
+          - Runtime Layer: maintainer/internal-architecture/runtime-layer.md
+          - Ownership Tracking: maintainer/internal-architecture/ownership-tracking.md
+          - Dependency Analysis: maintainer/internal-architecture/dependency-analysis.md
+          - Error Handling Pipeline: maintainer/internal-architecture/error-handling-pipeline.md
+          - Symbol Tables: maintainer/internal-architecture/symbol-tables.md
+      - Roadmaps:
+          - Overview: maintainer/roadmap/index.md
+          - Documentation Content: maintainer/roadmap/documentation-content-checklist.md
+          - Semantic .pyi Wrapper: maintainer/roadmap/semantic-pyi-wrapper-checklist.md
+          - Native Array Handles: maintainer/roadmap/native-array-handle-checklist.md
+          - Wrapper Plan Migration: maintainer/roadmap/wrapper-plan-migration-checklist.md
+          - Test Suite Organization: maintainer/roadmap/test-suite-organization-checklist.md

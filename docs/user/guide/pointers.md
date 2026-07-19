@@ -4,6 +4,7 @@ audience: advanced users
 prerequisites: arrays, memory management
 related: allocatables.md, memory-management.md, ../reference/semantic-pyi-format.md
 status: maintained
+publication: draft
 ---
 
 # Pointers

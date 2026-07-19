@@ -4,6 +4,7 @@ audience: users
 prerequisites: first wrapped module
 related: ../tutorials/basic-wrapper.md, ../examples/verified-cookbook.md, ../reference/cli-commands.md
 status: maintained
+publication: draft
 ---
 
 # Common Beginner Workflow
@@ -14,7 +15,7 @@ into `build/`, run a small Python check, and cleanly rebuild when the native
 contract changes.
 
 Use the `scale.f90` input from the
-[README Quick Start](../../../README.md#quick-start). Keep the same filename when
+[README Quick Start](../../../README.md#installation--quick-start). Keep the same filename when
 you move it into a project layout.
 
 ## 1. Create A Small Project Layout

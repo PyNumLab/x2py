@@ -4,6 +4,7 @@ audience: users
 prerequisites: basic wrapper tutorial
 related: ../tutorials/basic-wrapper.md, index.md
 status: maintained
+publication: draft
 ---
 
 # Verified Examples Cookbook

@@ -4,6 +4,7 @@ audience: developers, contributors
 prerequisites: repository checkout, Python 3.10 or newer
 related: index.md, quality-assurance.md
 status: maintained
+publication: draft
 ---
 
 # Development Workflow

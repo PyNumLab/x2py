@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: pipeline map, semantic IR, ownership policy
 related: ../internal-architecture/pipeline-map.md, ../../user/reference/semantic-ir.md, semantic-pyi-wrapper-checklist.md, index.md
 status: active-roadmap
+publication: draft
 ---
 
 # Wrapper Plan Migration Checklist
