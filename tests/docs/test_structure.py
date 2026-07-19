@@ -581,7 +581,7 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         check=True,
     ).stdout
 
-    assert "README Quick Start example (scale.f90):" in top_help
+    assert "Basic wrapper build:" in top_help
     for command in (
         "python3 -m x2py scale.f90",
         "python3 -m x2py scale.f90 --out SCALE",

@@ -61,67 +61,103 @@ _GENERATE_USAGE = (
 )
 _PROBE_USAGE = "%(prog)s --language {fortran,c} --compiler COMPILER [OPTIONS]"
 _CLI_HELP_DESCRIPTION = (
-    "Build Python extensions from Fortran (default behavior).\n\n"
+    "Build Python extensions from Fortran and inspect native interface artifacts.\n\n"
     "commands:\n"
-    "  parse       inspect parser facts\n"
-    "  semantics   inspect language-neutral semantic IR\n"
-    "  generate    generate contracts or wrapper build files\n"
-    "  probe       probe target datatype facts"
+    "  parse       Inspect source declarations and parser facts\n"
+    "  semantics   Convert source code to language-neutral semantic IR\n"
+    "  generate    Generate contracts or wrapper build files\n"
+    "  probe       Probe compiler-target datatype and ABI facts"
 )
 _CLI_HELP_EPILOG = (
     f"{_HELP_DIVIDER}\n\n"
-    "  README Quick Start example (scale.f90):\n"
+    "  Basic wrapper build:\n"
     "    python3 -m x2py scale.f90\n"
+    "\n"
+    "  Name the Python extension:\n"
     "    python3 -m x2py scale.f90 --out SCALE\n\n"
-    "  Generate its semantic contract:\n"
+    "  Generate an editable semantic contract:\n"
     "    python3 -m x2py generate --pyi scale.f90 --out contracts\n\n"
-    '  Complete source and expected output: README.md, "Quick Start".\n\n'
+    '  See README.md "Quick Start" for the scale.f90 source and expected output.\n\n'
+    "  More help:\n"
+    "    python3 -m x2py --help-build\n"
+    "    python3 -m x2py parse --help\n"
+    "    python3 -m x2py semantics --help\n"
+    "    python3 -m x2py generate --help\n"
+    "    python3 -m x2py probe --help\n\n"
     "Run `python3 -m x2py --help-build` for the full list of build options.\n"
-    "Command-specific options:\n"
-    "  python3 -m x2py parse --help\n"
-    "  python3 -m x2py semantics --help\n"
-    "  python3 -m x2py generate --help\n"
-    "  python3 -m x2py probe --help"
+    "Run a subcommand with `--help` for its command-specific options."
 )
 _BUILD_HELP_EPILOG = (
     f"{_HELP_DIVIDER}\n\n"
-    "  README Quick Start example:\n"
+    "  Basic wrapper build:\n"
     "    python3 -m x2py scale.f90\n"
+    "\n"
+    "  Name the Python extension:\n"
     "    python3 -m x2py scale.f90 --out SCALE\n"
+    "\n"
+    "  Build from a semantic contract:\n"
     "    python3 -m x2py contracts/__init__.pyi --native-fortran-sources scale.f90 \\\n"
     "      --out SCALE --out-dir build/SCALE_from_pyi\n\n"
-    '  Complete source and expected output: README.md, "Quick Start".\n\n'
-    "  Native flag and library examples: docs/user/guide/fortran-wrapper.md,\n"
-    '    "Building And Importing A Wrapper".\n\n'
-    "  Read and replay an existing build manifest:\n"
+    "  Replay a build manifest:\n"
     "    python3 -m x2py --build-manifest build/x2py-build.json\n\n"
+    '  See README.md "Quick Start" for the scale.f90 source and expected output.\n'
+    "  See docs/user/guide/fortran-wrapper.md for native flags and libraries.\n\n"
     "  Manifest overrides: --out, --compiler, -I/--include-dir, --json, --verbose,\n"
     "    --no-color, and --debug/--debug-traceback."
 )
 _PARSE_HELP_EPILOG = (
     f"{_HELP_DIVIDER}\n\n"
-    "  python3 -m x2py parse scale.f90\n"
-    "  python3 -m x2py parse scale.f90 --show-vars --print-limit 50\n"
-    "  python3 -m x2py parse path/to/api.h --language c --json\n\n"
-    '  Source for scale.f90: README.md, "Quick Start".'
+    "  Basic Fortran inspection:\n"
+    "    python3 -m x2py parse scale.f90\n"
+    "\n"
+    "  Detailed Fortran report:\n"
+    "    python3 -m x2py parse scale.f90 --show-vars --print-limit 50\n"
+    "\n"
+    "  C header as JSON:\n"
+    "    python3 -m x2py parse path/to/api.h --language c --json\n\n"
+    '  See README.md "Quick Start" for the scale.f90 source.'
 )
 _SEMANTICS_HELP_EPILOG = (
     f"{_HELP_DIVIDER}\n\n"
-    "  python3 -m x2py semantics scale.f90\n"
-    "  python3 -m x2py semantics path/to/api.h --language c --out report.json\n\n"
-    '  Source for scale.f90: README.md, "Quick Start".'
+    "  Basic Fortran conversion:\n"
+    "    python3 -m x2py semantics scale.f90\n"
+    "\n"
+    "  C header:\n"
+    "    python3 -m x2py semantics path/to/api.h --language c\n"
+    "\n"
+    "  Save semantic IR:\n"
+    "    python3 -m x2py semantics scale.f90 --out semantics.json\n\n"
+    '  See README.md "Quick Start" for the scale.f90 source.'
 )
 _GENERATE_HELP_EPILOG = (
     f"{_HELP_DIVIDER}\n\n"
-    "  python3 -m x2py generate --pyi scale.f90 --out contracts\n"
-    "  python3 -m x2py generate --sources scale.f90 --out-dir build\n"
-    "  python3 -m x2py generate --makefile scale.f90 --out-dir build\n\n"
-    '  Source for scale.f90: README.md, "Quick Start".'
+    "  Editable semantic contract:\n"
+    "    python3 -m x2py generate --pyi scale.f90 --out contracts\n"
+    "\n"
+    "  Wrapper sources only:\n"
+    "    python3 -m x2py generate --sources scale.f90 --out-dir build\n"
+    "\n"
+    "  Reproducible Makefile build:\n"
+    "    python3 -m x2py generate --makefile scale.f90 --out-dir build\n\n"
+    '  See README.md "Quick Start" for the scale.f90 source.'
 )
 _PROBE_HELP_EPILOG = (
     f"{_HELP_DIVIDER}\n\n"
-    "  python3 -m x2py probe --language fortran --compiler gfortran-13\n"
-    "  python3 -m x2py probe --language c --compiler gcc-13 --format markdown"
+    "  Basic target probes:\n"
+    "    python3 -m x2py probe --language fortran --compiler gfortran-13\n"
+    "    python3 -m x2py probe --language c --compiler gcc-13\n"
+    "\n"
+    "  Human-readable mapping table:\n"
+    "    python3 -m x2py probe --language fortran --compiler gfortran-13 \\\n"
+    "      --format markdown\n"
+    "\n"
+    "  Probe flags that change default kinds:\n"
+    "    python3 -m x2py probe --language fortran --compiler gfortran-13 \\\n"
+    "      --compiler-arg=-fdefault-real-8 --compiler-arg=-fdefault-integer-8\n"
+    "\n"
+    "  Cross-target probe:\n"
+    "    python3 -m x2py probe --language c --compiler aarch64-linux-gnu-gcc \\\n"
+    "      --runner qemu-aarch64"
 )
 
 
@@ -1994,7 +2030,7 @@ def _build_parser(argv: list[str]) -> argparse.ArgumentParser:
     parser = _new_cli_parser(
         prog="python3 -m x2py",
         usage=_BUILD_USAGE,
-        description="Build a Python extension from Fortran source files or a semantic .pyi contract.",
+        description="Build a Python extension from Fortran source or a semantic .pyi contract.",
         epilog=_BUILD_HELP_EPILOG,
         argv=argv,
     )
@@ -2006,7 +2042,7 @@ def _parse_parser(argv: list[str]) -> argparse.ArgumentParser:
     parser = _new_cli_parser(
         prog="python3 -m x2py parse",
         usage=_PARSE_USAGE,
-        description="Inspect Fortran or C parser facts without semantic conversion.",
+        description="Inspect Fortran or C source declarations before semantic conversion.",
         epilog=_PARSE_HELP_EPILOG,
         argv=argv,
     )
@@ -2057,7 +2093,7 @@ def _semantics_parser(argv: list[str]) -> argparse.ArgumentParser:
     parser = _new_cli_parser(
         prog="python3 -m x2py semantics",
         usage=_SEMANTICS_USAGE,
-        description="Convert Fortran or C source input to language-neutral semantic IR.",
+        description="Convert Fortran or C source code into language-neutral semantic IR models.",
         epilog=_SEMANTICS_HELP_EPILOG,
         argv=argv,
     )
@@ -2166,7 +2202,7 @@ def _probe_parser(argv: list[str]) -> argparse.ArgumentParser:
     parser = _new_cli_parser(
         prog="python3 -m x2py probe",
         usage=_PROBE_USAGE,
-        description="Probe compiler-target datatype facts as JSON or Markdown.",
+        description="Probe compiler-target datatype sizes, alignment, and ABI facts.",
         epilog=_PROBE_HELP_EPILOG,
         argv=argv,
     )

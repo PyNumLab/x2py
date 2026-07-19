@@ -518,13 +518,15 @@ def test_x2py_command_parsers_group_options_by_user_intent():
     assert all(command in top_help for command in ("parse", "semantics", "generate", "probe"))
     assert top_help.startswith("usage: python3 -m x2py INPUT [INPUT ...] [BUILD OPTIONS]")
     assert "python3 -m x2py {parse,semantics,generate,probe} [OPTIONS] ..." in top_help
-    assert "Build Python extensions from Fortran (default behavior)." in top_help
+    assert "Build Python extensions from Fortran and inspect native interface artifacts." in top_help
     assert x2py_cli._HELP_DIVIDER in top_help
-    assert "README Quick Start example (scale.f90):" in top_help
+    assert "Basic wrapper build:" in top_help
+    assert "Name the Python extension:" in top_help
+    assert "Generate an editable semantic contract:" in top_help
     assert "python3 -m x2py scale.f90" in top_help
     assert "python3 -m x2py scale.f90 --out SCALE" in top_help
     assert "python3 -m x2py generate --pyi scale.f90 --out contracts" in top_help
-    assert 'Complete source and expected output: README.md, "Quick Start".' in top_help
+    assert 'See README.md "Quick Start" for the scale.f90 source and expected output.' in top_help
     assert "Run `python3 -m x2py --help-build` for the full list of build options." in top_help
     for command in ("parse", "semantics", "generate", "probe"):
         assert f"python3 -m x2py {command} --help" in top_help
@@ -575,7 +577,9 @@ def test_x2py_command_parsers_group_options_by_user_intent():
     assert "Print build paths and metadata as JSON" in normalized_build_help
     assert 'Native compiler flags (for example, "-O3 -fopenmp")' in normalized_build_help
     assert "docs/user/guide/fortran-wrapper.md" in build_help
-    assert '"Building And Importing A Wrapper".' in build_help
+    assert "See docs/user/guide/fortran-wrapper.md for native flags and libraries." in build_help
+    assert "Build from a semantic contract:" in build_help
+    assert "Replay a build manifest:" in build_help
     assert "Manifest overrides: --out, --compiler, -I/--include-dir" in normalized_build_help
     assert "--language {fortran}" in build_help
     assert "--language {fortran,c}" not in build_help
@@ -682,12 +686,93 @@ def test_x2py_command_parsers_group_options_by_user_intent():
         "diagnostic options:",
     )
     assert "--format {json,markdown}" in probe_help
+    assert "Probe compiler-target datatype sizes, alignment, and ABI facts." in probe_help
+    assert "Probe flags that change default kinds:" in probe_help
+    assert "--compiler-arg=-fdefault-real-8 --compiler-arg=-fdefault-integer-8" in probe_help
+    assert "Cross-target probe:" in probe_help
+    assert "--runner qemu-aarch64" in probe_help
     assert "Native or cross compiler used to build the probe" in normalized_probe_help
     assert "Add a probe include search directory" in normalized_probe_help
     assert "default: gfortran" not in normalized_probe_help
     assert "--sources" not in parse_help
     assert "--show-vars" not in semantics_help
     assert "--native-library-dir" not in probe_help
+
+
+@pytest.mark.parametrize(
+    ("parser_factory", "purpose"),
+    [
+        (
+            x2py_cli._top_level_parser,
+            "Build Python extensions from Fortran and inspect native interface artifacts.",
+        ),
+        (
+            x2py_cli._build_parser,
+            "Build a Python extension from Fortran source or a semantic .pyi contract.",
+        ),
+        (
+            x2py_cli._parse_parser,
+            "Inspect Fortran or C source declarations before semantic conversion.",
+        ),
+        (
+            x2py_cli._semantics_parser,
+            "Convert Fortran or C source code into language-neutral semantic IR models.",
+        ),
+        (
+            x2py_cli._generate_parser,
+            "Generate semantic .pyi contracts or wrapper build artifacts without compiling.",
+        ),
+        (
+            x2py_cli._probe_parser,
+            "Probe compiler-target datatype sizes, alignment, and ABI facts.",
+        ),
+    ],
+)
+def test_cli_help_places_a_clear_purpose_below_usage(parser_factory, purpose):
+    help_text = parser_factory(["--help", "--no-color"]).format_help()
+
+    assert f"\n\n{purpose}\n\n" in help_text
+
+
+@pytest.mark.parametrize(
+    ("parser_factory", "example_headings"),
+    [
+        (
+            x2py_cli._top_level_parser,
+            ("Basic wrapper build:", "Name the Python extension:", "More help:"),
+        ),
+        (
+            x2py_cli._build_parser,
+            ("Basic wrapper build:", "Build from a semantic contract:", "Replay a build manifest:"),
+        ),
+        (
+            x2py_cli._parse_parser,
+            ("Basic Fortran inspection:", "Detailed Fortran report:", "C header as JSON:"),
+        ),
+        (
+            x2py_cli._semantics_parser,
+            ("Basic Fortran conversion:", "C header:", "Save semantic IR:"),
+        ),
+        (
+            x2py_cli._generate_parser,
+            ("Editable semantic contract:", "Wrapper sources only:", "Reproducible Makefile build:"),
+        ),
+        (
+            x2py_cli._probe_parser,
+            (
+                "Basic target probes:",
+                "Human-readable mapping table:",
+                "Probe flags that change default kinds:",
+                "Cross-target probe:",
+            ),
+        ),
+    ],
+)
+def test_cli_help_groups_examples_by_task(parser_factory, example_headings):
+    help_text = parser_factory(["--help", "--no-color"]).format_help()
+
+    assert x2py_cli._HELP_DIVIDER in help_text
+    assert all(heading in help_text for heading in example_headings)
 
 
 def test_help_build_routes_to_the_full_default_build_help():

@@ -631,11 +631,13 @@ def test_cli_help_is_concise_and_points_to_detailed_help():
     assert "Add an include directory used throughout the extension" in res.stdout
     assert "--native-library openblas passes -lopenblas to the linker" in normalized_help
     assert "------------------------------ EXAMPLES ------------------------------" in res.stdout
-    assert "README Quick Start example (scale.f90):" in res.stdout
+    assert "Basic wrapper build:" in res.stdout
+    assert "Name the Python extension:" in res.stdout
+    assert "Generate an editable semantic contract:" in res.stdout
     assert "python3 -m x2py scale.f90" in res.stdout
     assert "python3 -m x2py scale.f90 --out SCALE" in res.stdout
     assert "python3 -m x2py generate --pyi scale.f90 --out contracts" in res.stdout
-    assert 'Complete source and expected output: README.md, "Quick Start".' in res.stdout
+    assert 'See README.md "Quick Start" for the scale.f90 source and expected output.' in res.stdout
     assert "python3 -m x2py --help-build" in res.stdout
     assert "python3 -m x2py parse --help" in res.stdout
     assert "python3 -m x2py semantics --help" in res.stdout

@@ -21,6 +21,12 @@ artifact generation, and target probing. The default `--help` output is a
 concise overview of common inputs, build controls, and commands. Use
 `--help-build` for every default-build option.
 
+Every help page places a clear one-line purpose directly below its usage. Its
+examples are grouped by task rather than presented as an unlabeled command
+list, so users can scan directly to a basic invocation, a different frontend
+or output form, or a cross-target workflow. The examples remain illustrative;
+the option groups above them are the exhaustive command contract.
+
 <!-- X2PY_C_DOCS_START
 The command accepts source paths and then either builds a wrapper or runs an
 inspection stage. Fortran source files can usually be inferred from their
@@ -71,11 +77,12 @@ native libraries, and verbose build output. Command-specific help describes
 the stage-specific role of shared flags; for example, `parse --help` explains
 that `--compiler` and `-I` configure preprocessing. The concise build help does
 not mislabel them as preprocessing-only options. It also keeps short examples
-for a default source build, an explicitly named extension, and semantic
-contract generation; `--help-build` carries the longer build-oriented example
-set. Both help levels reuse the canonical `scale.f90` source and exact commands
-from the [README Quick Start](../../../README.md#quick-start), which contains
-the complete source, expected artifacts, contract, and import flow.
+for a basic source build, an explicitly named extension, and semantic contract
+generation; `--help-build` labels its basic build, semantic-contract build,
+and manifest-replay examples separately. Both help levels reuse the canonical
+`scale.f90` source and exact commands from the
+[README Quick Start](../../../README.md#quick-start), which contains the
+complete source, expected artifacts, contract, and import flow.
 
 The full build help uses the following two forms:
 
@@ -142,6 +149,10 @@ Parse-report controls such as `--show-vars` and `--print-limit` appear only in
 conversion and wrapping. Use the separate `x2py probe` command only when you
 want to inspect or save the measured target facts yourself.
 
+The parse examples distinguish basic inspection, a detailed report, and an
+alternate frontend. The semantics examples distinguish basic conversion, an
+alternate frontend, and writing the combined semantic IR to a named JSON file.
+
 `semantics` always writes its language-neutral report as JSON. With no `--out`,
 it prints the combined report to standard output. `--out PATH` writes that
 combined report to `PATH`; `--out` without a path writes one `.json` file beside
@@ -193,7 +204,11 @@ input.
 
 `probe` uses `--language fortran` and compiler-oriented flags instead of nested
 language commands. JSON is the default; `--format markdown` prints the target
-datatype mapping table.
+datatype mapping table. Its help examples distinguish basic native probes, a
+human-readable mapping table, ABI-affecting compiler flags that change default
+kinds, and a cross-target probe run through a target runner. Pass each raw
+compiler flag separately, for example
+`--compiler-arg=-fdefault-real-8 --compiler-arg=-fdefault-integer-8`.
 
 ```bash
 python3 -m x2py probe --language {fortran,c} --compiler COMPILER [OPTIONS]
