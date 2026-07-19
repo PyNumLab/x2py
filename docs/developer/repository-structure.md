@@ -52,7 +52,7 @@ through `x2py/__init__.py`.
 | `tests/wrapper_codegen/` | Typed planning, direct bridge/binding generation, and source-printer tests. |
 | `tests/utilities/` | Shared Python utility tests. |
 | `tests/wrapper/fortran/` | Runtime wrapper tests that compile, import, call, and check failure paths. |
-| `tests/docs/` | Documentation example and structure checks. |
+| `tests/docs/` | Documentation example, structure, and website-publication checks. |
 | `tests/tools/` | Repository tooling tests. |
 
 <!-- X2PY_C_DOCS_START
@@ -80,6 +80,8 @@ Source navigation is considered maintained when these files agree:
   already browsing the source tree.
 - `tests/docs/test_structure.py`: mechanical coverage for the
   navigation pages and README links.
+- `tests/docs/test_publication.py`: fail-closed website publication, lane
+  gating, navigation filtering, and repository-evidence link coverage.
 
 ## Generated And Fixture Areas
 
