@@ -581,4 +581,6 @@ def test_cli_c_default_build_rejects_the_unsupported_build_language(tmp_path: Pa
         text=True,
     )
     assert no_stage.returncode == 2
-    assert "argument --language: invalid choice: 'c' (choose from 'fortran')" in no_stage.stderr
+    assert "argument --language: invalid choice: 'c'" in no_stage.stderr
+    assert "choose from" in no_stage.stderr
+    assert "fortran" in no_stage.stderr
