@@ -1,7 +1,7 @@
 ---
 title: Diagnostic Codes
 audience: users, developers
-prerequisites: semantic readiness reports
+prerequisites: error handling
 related: index.md, ../troubleshooting/index.md
 status: maintained
 ---
@@ -78,6 +78,18 @@ the expanded source.
 | `PROVENANCE_UNAVAILABLE` | Expanded source was produced, but the adapter cannot provide accurate source mappings. |
 | `INCLUDE_NOT_FOUND` | A native Fortran `include "..."` target could not be resolved or read. |
 | `INCLUDE_CYCLE` | Recursive native Fortran INCLUDE expansion found a cycle. |
+
+## Wrapper Planning Errors
+
+Wrapper planning errors are emitted by the default wrapper build after semantic
+policy completion. The owner path identifies the declaration whose completed
+policy has no supported lowering.
+
+Reasons identify a missing completed policy or an unsupported
+completed-policy combination. These are build-stage diagnostics rather than a
+separate inspection report; see
+[Error Handling](../guide/error-handling.md#wrapper-planning-errors) for the
+repair workflow.
 
 <!-- X2PY_C_DOCS_START
 ## C Report Diagnostics

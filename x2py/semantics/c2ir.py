@@ -7,14 +7,12 @@ from typing import Any
 
 from x2py.parsers.c.models import (
     CArray,
-    CAtomic,
     CBool,
     CChar,
     CComposedType,
     CConst,
     CDouble,
     CDoubleComplex,
-    CDiagnostic,
     CEnum,
     CFile,
     CFloat,
@@ -45,7 +43,6 @@ from x2py.parsers.c.models import (
     CUnsignedShort,
     CVariable,
     CVoid,
-    CVolatile,
     CInt,
 )
 from x2py.utilities.visitor import ClassVisitor
@@ -101,29 +98,6 @@ _SIGNED_WIDTH_TYPES = {8: "Int8", 16: "Int16", 32: "Int32", 64: "Int64"}
 _UNSIGNED_WIDTH_TYPES = {8: "UInt8", 16: "UInt16", 32: "UInt32", 64: "UInt64"}
 _REAL_WIDTH_TYPES = {32: "Float32", 64: "Float64", 80: "Float128", 96: "Float128", 128: "Float128"}
 _COMPLEX_WIDTH_TYPES = {64: "Complex64", 128: "Complex128", 160: "Complex256", 192: "Complex256", 256: "Complex256"}
-_NUMERIC_SEMANTIC_TYPES = frozenset(
-    {
-        "Bool",
-        "Int",
-        "Int8",
-        "Int16",
-        "Int32",
-        "Int64",
-        "UInt8",
-        "UInt16",
-        "UInt32",
-        "UInt64",
-        "Float32",
-        "Float64",
-        "Float128",
-        "Complex64",
-        "Complex128",
-        "Complex256",
-        "Any",
-        "SizeT",
-    }
-)
-
 _PRIMITIVE_TYPE_MAP: dict[type[CType], str | None] = {
     CVoid: None,
     CBool: "Bool",
@@ -192,10 +166,9 @@ _C_INT_FALLBACK_FACT = {
 class CToIRConverter(ClassVisitor):
     """Convert parsed C models into the shared semantic IR.
 
-    The converter intentionally keeps C parser facts as provenance and blocker
-    metadata instead of teaching the parser wrappability policy. The produced
-    semantic IR can therefore be checked by the same readiness layer used for
-    Fortran and edited ``.pyi`` files.
+    The converter intentionally keeps C parser facts as provenance instead of
+    teaching the parser wrapper policy. The produced semantic IR is then
+    completed and, when a backend exists, planned by the shared wrapper path.
     """
 
     def __init__(
@@ -346,26 +319,6 @@ class CToIRConverter(ClassVisitor):
             "prototype_style": function.prototype_style,
             "is_definition": function.is_definition,
         }
-        blockers = []
-        if function.is_variadic:
-            blockers.append(
-                self._blocker(
-                    "c_variadic_function",
-                    "Variadic C functions require explicit semantic .pyi policy before wrapping.",
-                    {"owner": function.name, "function": function.name},
-                )
-            )
-        if function.prototype_style == "unspecified":
-            blockers.append(
-                self._blocker(
-                    "c_unspecified_function_parameters",
-                    "C functions declared without a prototype do not provide complete parameter types.",
-                    {"owner": function.name, "function": function.name},
-                )
-            )
-        if blockers:
-            metadata["readiness_blockers"] = blockers
-
         return SemanticFunction(
             name=function.name,
             native_name=function.name,
@@ -402,25 +355,8 @@ class CToIRConverter(ClassVisitor):
         source_type = parameter.declared_type or parameter.type
         semantic_type = self.visit(source_type, owner=f"{owner or '<function>'}.{name}", as_type=True)
         metadata: dict[str, Any] = {"native_position": position}
-        blockers = []
         if parameter.callback_candidate:
             semantic_type = self._callback_placeholder(source_type)
-        else:
-            self._add_incomplete_by_value_blocker(semantic_type, owner=f"{owner}.{name}" if owner else name)
-            if self._ambiguous_pointer_argument(semantic_type):
-                blockers.append(
-                    self._blocker(
-                        "c_pointer_ownership_ambiguous",
-                        "Mutable C pointer parameters need explicit ownership, scalar-storage, or array policy.",
-                        {
-                            "owner": f"{owner}.{name}" if owner else name,
-                            "parameter": name,
-                            "type": self._type_text(source_type),
-                        },
-                    )
-                )
-        if blockers:
-            metadata["readiness_blockers"] = blockers
 
         return SemanticArgument(
             name=name,
@@ -445,15 +381,6 @@ class CToIRConverter(ClassVisitor):
     ) -> SemanticVariable:
         name = variable.name or "<anonymous>"
         semantic_type = self.visit(variable.type, owner=name, as_type=True)
-        self._add_incomplete_by_value_blocker(semantic_type, owner=name)
-        if variable.bit_width is not None:
-            semantic_type.metadata.setdefault("readiness_blockers", []).append(
-                self._blocker(
-                    "c_bitfield_unsupported",
-                    "C bitfields require explicit semantic policy before wrapping.",
-                    {"owner": name, "field": name, "bit_width": variable.bit_width},
-                )
-            )
         if variable.callback_candidate:
             semantic_type = self._callback_placeholder(variable.type)
         return binding_cls(
@@ -626,7 +553,7 @@ class CToIRConverter(ClassVisitor):
 
     def _aggregate_reference_type(self, aggregate: CStruct | CUnion, *, name: str) -> SemanticType:
         kind = "struct" if isinstance(aggregate, CStruct) else "union"
-        semantic_type = SemanticType(
+        return SemanticType(
             name=name,
             dtype=name,
             metadata={
@@ -636,15 +563,6 @@ class CToIRConverter(ClassVisitor):
             },
             origin=self._type_origin(aggregate, native_name=aggregate.reference_name),
         )
-        if isinstance(aggregate, CUnion):
-            semantic_type.metadata.setdefault("readiness_blockers", []).append(
-                self._blocker(
-                    "c_union_unsupported",
-                    "C union arguments and returns require explicit semantic policy before wrapping.",
-                    {"owner": name, "type": aggregate.reference_name},
-                )
-            )
-        return semantic_type
 
     def _aggregate_member_argument(
         self,
@@ -698,7 +616,7 @@ class CToIRConverter(ClassVisitor):
         return self._callback_placeholder(type_)
 
     def _visit_CUnknownType(self, type_: CUnknownType, *, owner: str | None = None, **_context) -> SemanticType:
-        """Preserve an unresolved C spelling as a readiness blocker."""
+        """Preserve an unresolved C spelling as an explicit semantic type."""
         return self._unresolved_type(type_.spelling, owner=owner, source_type=self._type_text(type_))
 
     def _visit_CVoid(self, type_: CVoid, **_context) -> SemanticType:
@@ -723,8 +641,6 @@ class CToIRConverter(ClassVisitor):
 
         origin = self._type_origin(type_)
         metadata: dict[str, Any] = {}
-        if "readiness_blockers" in origin.metadata:
-            metadata["readiness_blockers"] = list(origin.metadata["readiness_blockers"])
         if isinstance(type_, CChar):
             metadata["c_char_policy"] = "implementation-defined signed 8-bit code unit"
         dtype = semantic_name
@@ -771,9 +687,7 @@ class CToIRConverter(ClassVisitor):
     def _return_type(self, type_: CType, *, owner: str) -> SemanticType | None:
         if isinstance(type_, CVoid):
             return None
-        semantic_type = self.visit(type_, owner=owner, as_type=True)
-        self._add_incomplete_by_value_blocker(semantic_type, owner=owner)
-        return semantic_type
+        return self.visit(type_, owner=owner, as_type=True)
 
     def _composed_type(self, type_: CComposedType, *, owner: str | None) -> SemanticType:
         components = list(type_.components)
@@ -883,20 +797,12 @@ class CToIRConverter(ClassVisitor):
         if union.name and union.name in self.unions:
             union = self.unions[union.name]
         name = self._union_name(union)
-        semantic_type = SemanticType(
+        return SemanticType(
             name=name,
             dtype=name,
             metadata={"c_kind": "union", "incomplete": union.is_incomplete},
             origin=self._type_origin(union, native_name=union.reference_name),
         )
-        semantic_type.metadata.setdefault("readiness_blockers", []).append(
-            self._blocker(
-                "c_union_unsupported",
-                "C union arguments and returns require explicit semantic policy before wrapping.",
-                {"owner": owner or name, "type": union.reference_name},
-            )
-        )
-        return semantic_type
 
     def _enum_type(self, enum: CEnum) -> SemanticType:
         enum = self._resolved_enum(enum)
@@ -997,14 +903,6 @@ class CToIRConverter(ClassVisitor):
             ),
             metadata={"source_type": self._type_text(source_type)},
         )
-        if any(bound == ":" for bound in shape):
-            element.metadata.setdefault("readiness_blockers", []).append(
-                self._blocker(
-                    "c_array_extent_ambiguous",
-                    "C array parameters with unknown extents need explicit semantic shape policy.",
-                    {"owner": owner or self._type_text(source_type), "type": self._type_text(source_type)},
-                )
-            )
         return element
 
     def _enum_constants_for_enum(self, enum: CEnum) -> list[SemanticVariable]:
@@ -1151,26 +1049,6 @@ class CToIRConverter(ClassVisitor):
             },
             "preprocessing": c_file.preprocessing,
         }
-        blockers = []
-        for dependency in c_file.macro_dependencies:
-            blockers.append(
-                self._blocker(
-                    "c_macro_dependent_declaration",
-                    "Some C declarations depend on macros that were recorded but not expanded.",
-                    {
-                        "owner": c_file.filename or "<c-source>",
-                        "macro": dependency.name,
-                        "context": dependency.context,
-                        "source": dependency.source_text,
-                    },
-                )
-            )
-        for diagnostic in c_file.diagnostics:
-            blocker = self._diagnostic_blocker(diagnostic)
-            if blocker is not None:
-                blockers.append(blocker)
-        if blockers:
-            metadata["readiness_blockers"] = blockers
         return metadata
 
     @staticmethod
@@ -1241,7 +1119,6 @@ class CToIRConverter(ClassVisitor):
                 origin_module=origin_module,
                 wrapped=False,
             )
-            self._add_external_opaque_by_value_blocker(semantic_type)
         module.classes = [cls for cls in module.classes if cls.name not in external_classes]
 
     def _classify_project_external_types(
@@ -1292,17 +1169,6 @@ class CToIRConverter(ClassVisitor):
             "representation": "wrapped" if wrapped else "opaque",
         }
 
-    def _add_external_opaque_by_value_blocker(self, semantic_type: SemanticType) -> None:
-        if semantic_type.storage is not None and semantic_type.storage.kind != "value":
-            return
-        semantic_type.metadata.setdefault("readiness_blockers", []).append(
-            self._blocker(
-                "c_opaque_struct_by_value",
-                "Opaque C structs can only cross wrapper boundaries through explicit pointer or handle policy.",
-                {"owner": semantic_type.name, "type": semantic_type.name},
-            )
-        )
-
     def _project_metadata(self, project: CProject) -> dict[str, Any]:
         metadata: dict[str, Any] = {
             "source_language": "c",
@@ -1318,44 +1184,7 @@ class CToIRConverter(ClassVisitor):
                 "diagnostics": len(project.diagnostics),
             },
         }
-        blockers = []
-        for c_file in project.files.values():
-            for dependency in c_file.macro_dependencies:
-                blockers.append(
-                    self._blocker(
-                        "c_macro_dependent_declaration",
-                        "Some C declarations depend on macros that were recorded but not expanded.",
-                        {
-                            "owner": c_file.filename or "<c-source>",
-                            "macro": dependency.name,
-                            "context": dependency.context,
-                            "source": dependency.source_text,
-                        },
-                    )
-                )
-        for diagnostic in project.diagnostics:
-            blocker = self._diagnostic_blocker(diagnostic)
-            if blocker is not None:
-                blockers.append(blocker)
-        if blockers:
-            metadata["readiness_blockers"] = blockers
         return metadata
-
-    def _diagnostic_blocker(self, diagnostic: CDiagnostic) -> dict[str, Any] | None:
-        if diagnostic.code == "C_MACRO_DEPENDENT_DECLARATION":
-            return None
-        if diagnostic.severity != "error":
-            return None
-        return self._blocker(
-            self._diagnostic_code(diagnostic.code),
-            diagnostic.message,
-            {
-                "owner": diagnostic.unit_name or diagnostic.unit_kind or "<c-source>",
-                "diagnostic_code": diagnostic.code,
-                "unit_kind": diagnostic.unit_kind,
-                "unit_name": diagnostic.unit_name,
-            },
-        )
 
     def _resolve_typedef(self, typedef: CTypedef, stack: tuple[str, ...] = ()) -> CTypedef | None:
         if typedef.type is not None:
@@ -1463,9 +1292,7 @@ class CToIRConverter(ClassVisitor):
         return SemanticType(
             name=name,
             dtype=name,
-            metadata={
-                "readiness_blockers": [self._blocker(code, message, {"owner": owner or name, "type": source_type})]
-            },
+            metadata={},
             origin=SemanticOrigin(source_language="c", source_kind="type", source_type=source_type),
         )
 
@@ -1480,11 +1307,7 @@ class CToIRConverter(ClassVisitor):
         return SemanticType(
             name="CUnsupported",
             dtype="CUnsupported",
-            metadata={
-                "readiness_blockers": [
-                    self._blocker(code, message, {"owner": owner or source_type, "type": source_type})
-                ]
-            },
+            metadata={},
             origin=SemanticOrigin(source_language="c", source_kind="unsupported_type", source_type=source_type),
         )
 
@@ -1499,14 +1322,6 @@ class CToIRConverter(ClassVisitor):
                 source_type=self._type_text(type_),
             ),
         )
-
-    @staticmethod
-    def _blocker(code: str, message: str, item: dict[str, Any]) -> dict[str, Any]:
-        return {"code": code, "message": message, "items": [item]}
-
-    @staticmethod
-    def _diagnostic_code(code: str) -> str:
-        return f"c_{code.lower()}"
 
     @staticmethod
     def _module_name(c_file: CFile) -> str:
@@ -1615,31 +1430,6 @@ class CToIRConverter(ClassVisitor):
         return any(isinstance(qualifier, qualifier_type) for qualifier in getattr(type_, "qualifiers", []))
 
     @staticmethod
-    def _ambiguous_pointer_argument(semantic_type: SemanticType) -> bool:
-        storage = semantic_type.storage
-        if storage is None or storage.kind not in {"reference", "pointer"}:
-            return False
-        if storage.read_only:
-            return False
-        return semantic_type.name in _NUMERIC_SEMANTIC_TYPES or semantic_type.metadata.get("c_kind") == "enum"
-
-    def _add_incomplete_by_value_blocker(self, semantic_type: SemanticType, *, owner: str) -> None:
-        storage = semantic_type.storage
-        if storage is not None and storage.kind in {"reference", "pointer", "array"}:
-            return
-        if semantic_type.metadata.get("c_kind") != "struct":
-            return
-        if not semantic_type.metadata.get("incomplete"):
-            return
-        semantic_type.metadata.setdefault("readiness_blockers", []).append(
-            self._blocker(
-                "c_incomplete_struct_by_value",
-                "Incomplete C structs can only be wrapped through explicit pointer or opaque-handle policy.",
-                {"owner": owner, "type": semantic_type.name},
-            )
-        )
-
-    @staticmethod
     def _integer_literal_value(value: str | None) -> int | None:
         if value is None:
             return None
@@ -1664,22 +1454,6 @@ class CToIRConverter(ClassVisitor):
         metadata: dict[str, Any] = {"c_type": type(type_).__name__}
         if qualifiers:
             metadata["qualifiers"] = qualifiers
-        if any(isinstance(qualifier, CVolatile) for qualifier in getattr(type_, "qualifiers", [])):
-            metadata.setdefault("readiness_blockers", []).append(
-                CToIRConverter._blocker(
-                    "c_volatile_unsupported",
-                    "Volatile C types require explicit semantic policy before wrapping.",
-                    {"owner": CToIRConverter._type_text(type_), "type": CToIRConverter._type_text(type_)},
-                )
-            )
-        if any(isinstance(qualifier, CAtomic) for qualifier in getattr(type_, "qualifiers", [])):
-            metadata.setdefault("readiness_blockers", []).append(
-                CToIRConverter._blocker(
-                    "c_atomic_unsupported",
-                    "Atomic C types require explicit semantic policy before wrapping.",
-                    {"owner": CToIRConverter._type_text(type_), "type": CToIRConverter._type_text(type_)},
-                )
-            )
         return metadata
 
     @staticmethod

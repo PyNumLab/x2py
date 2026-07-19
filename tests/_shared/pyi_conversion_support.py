@@ -62,7 +62,6 @@ from x2py.semantics.native_contract import native_contract_issues
 
 from x2py.semantics.policy_completion import complete_semantic_policies
 
-from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
 from x2py.wrapper_codegen.printers import emit_module
 
@@ -151,7 +150,6 @@ __all__ = (
     "_node_text",
     "_semantic_modules_for_source",
     "asdict",
-    "assess_semantic_wrap_readiness",
     "ast",
     "complete_semantic_policies",
     "convert_pyi_to_ir",

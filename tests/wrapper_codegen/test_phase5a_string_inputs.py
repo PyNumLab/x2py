@@ -8,7 +8,7 @@ from tests._shared.ownership_policy_support import parse_pyi_text
 from x2py.semantics.ownership import CodegenAction, NativeBarrierAction, PythonBarrierAction
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import ArgumentHandoffMode, BridgeDataAction
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanSupportAnalyzer, WrapperPlanner
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 from x2py.wrapper_codegen.plan import DatatypeFamily
 
 
@@ -30,10 +30,6 @@ def _string_input_plan():
 
 def test_required_string_values_reuse_argument_plan_with_character_handoff_facts():
     module = _string_input_module()
-    report = WrapperPlanSupportAnalyzer().analyze(module)
-    assert report.supported
-    assert "string-value-inputs" in report.covered_lanes
-
     plan = WrapperPlanner().build(module)
     functions = {function.binding.python_name: function for function in plan.namespaces[0].functions}
     fixed = functions["fixed"].arguments[0]

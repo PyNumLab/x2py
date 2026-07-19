@@ -10,11 +10,9 @@ from x2py.parsers.c.cli import attach_preprocessing_recipe
 from x2py import parse_fortran_file
 from x2py.pipeline.preprocessing import PreprocessingConfig, preprocess_source
 from x2py.semantics.c2ir import c_project_to_semantic_module
-from x2py.semantics.fortran2ir import fortran_file_to_semantic_modules, fortran_module_to_semantic_module
+from x2py.semantics.fortran2ir import fortran_module_to_semantic_module
 from x2py.wrapper_codegen.printers import emit_module
-from x2py.semantics.readiness import assess_semantic_wrap_readiness
 from x2py.cli import _fortran_contract_files, _semantic_report
-
 
 TESTS_DIR = Path(__file__).resolve().parents[1]
 FORTRAN_DATA_DIR = TESTS_DIR / "data" / "fortran"
@@ -22,14 +20,12 @@ GENERAL_FORTRAN_DIR = FORTRAN_DATA_DIR / "general"
 C_DATA_DIR = TESTS_DIR / "data" / "c"
 GENERAL_C_DIR = C_DATA_DIR / "general"
 SEMANTICS_FIXTURE_DIR = TESTS_DIR / "semantics" / "fixtures" / "general"
-SEMANTIC_READINESS_FIXTURE_PATH = TESTS_DIR / "semantics" / "fixtures" / "wrap_readiness_messages.json"
 PYI_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "general"
 PYI_WRAPPER_CONTRACT_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "wrapper_contracts"
 C_PYI_FIXTURE_DIR = TESTS_DIR / "pyi" / "fixtures" / "c" / "general"
 FORTRAN_SUFFIXES = {".f", ".f90", ".f95", ".f03", ".f08", ".for", ".f77", ".ftn"}
 C_SOURCE_SUFFIXES = {".c", ".h", ".i"}
 C_SOURCE_ORDER = {".c": 0, ".h": 1, ".i": 2}
-WRAP_READINESS_CORPUS_DIRS = ("general", "blas", "lapack", "scifortran")
 
 
 def iter_general_fortran_fixtures():
@@ -52,28 +48,6 @@ def iter_general_c_fixture_projects() -> list[tuple[Path, list[Path]]]:
         if path.is_file() and path.suffix.lower() in C_SOURCE_SUFFIXES:
             grouped.setdefault(Path(path.stem), []).append(path)
     return [(project_key, sorted(paths, key=_c_fixture_sort_key)) for project_key, paths in sorted(grouped.items())]
-
-
-def iter_wrap_readiness_fortran_fixtures():
-    return sorted(
-        path
-        for dirname in WRAP_READINESS_CORPUS_DIRS
-        for path in (FORTRAN_DATA_DIR / dirname).rglob("*")
-        if path.is_file()
-        and path.suffix.lower() in FORTRAN_SUFFIXES
-        and not fortran_fixture_requires_compiler_preprocessing(path)
-    )
-
-
-def readiness_fixture_key(path: Path) -> str:
-    return path.relative_to(FORTRAN_DATA_DIR).as_posix()
-
-
-def parser_filename_for_fixture(path: Path) -> str:
-    relpath = readiness_fixture_key(path)
-    if relpath.startswith("scifortran/"):
-        return relpath.replace("scifortran/", "SciFortran/", 1)
-    return relpath
 
 
 def parse_fixture(path: Path):
@@ -105,56 +79,6 @@ def semantic_payload_for_fixture(path: Path) -> dict:
         "semantic_modules": [
             _prune_empty_nested_class_lists(asdict(module)) for module in semantic_modules_for_fixture(path)
         ]
-    }
-
-
-def wrap_readiness_message_payload_for_fixture(path: Path) -> dict:
-    source_key = readiness_fixture_key(path)
-    try:
-        source = path.read_text(encoding="utf-8")
-        parsed = parse_fortran_file(source, filename=parser_filename_for_fixture(path))
-        modules = fortran_file_to_semantic_modules(parsed, standalone_module_name=path.stem)
-        readiness = assess_semantic_wrap_readiness(modules, source=source_key)
-    except Exception as exc:
-        return {
-            "wrappable": False,
-            "status": "semantic_error",
-            "messages": [str(exc)],
-            "blockers": [
-                {
-                    "code": "semantic_conversion_error",
-                    "message": str(exc),
-                    "n_items": 0,
-                }
-            ],
-        }
-
-    return {
-        "wrappable": readiness["wrappable"],
-        "status": "ok",
-        "n_modules": readiness["n_modules"],
-        "n_functions": readiness["n_functions"],
-        "n_classes": readiness["n_classes"],
-        "n_variables": readiness["n_variables"],
-        "messages": list(readiness["why_not_wrappable"]),
-        "blockers": [
-            {
-                "code": blocker["code"],
-                "message": blocker["message"],
-                "n_items": len(blocker.get("items") or []),
-            }
-            for blocker in readiness["wrappability_blockers"]
-        ],
-    }
-
-
-def wrap_readiness_message_payload_for_corpus() -> dict:
-    return {
-        "corpus": list(WRAP_READINESS_CORPUS_DIRS),
-        "files": {
-            readiness_fixture_key(path): wrap_readiness_message_payload_for_fixture(path)
-            for path in iter_wrap_readiness_fortran_fixtures()
-        },
     }
 
 
@@ -250,12 +174,3 @@ def write_c_pyi_fixture(project_key: Path, paths: list[Path]) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(c_pyi_text_for_fixture_project(project_key, paths) + "\n", encoding="utf-8")
     return out
-
-
-def write_wrap_readiness_message_fixture() -> Path:
-    SEMANTIC_READINESS_FIXTURE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    SEMANTIC_READINESS_FIXTURE_PATH.write_text(
-        json.dumps(wrap_readiness_message_payload_for_corpus(), indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return SEMANTIC_READINESS_FIXTURE_PATH

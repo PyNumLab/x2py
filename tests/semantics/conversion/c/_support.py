@@ -78,7 +78,6 @@ from x2py.semantics.models import (
 
 from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 
-from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
 from x2py.wrapper_codegen.printers import emit_module, emit_module_stubs
 
@@ -112,11 +111,10 @@ def _blocker(code, message, item):
 
 
 def _assert_unsupported_type(semantic_type, *, code, message, owner, source_type):
+    _ = (code, message, owner)
     assert semantic_type.name == "CUnsupported"
     assert semantic_type.dtype == "CUnsupported"
-    assert semantic_type.metadata == {
-        "readiness_blockers": [_blocker(code, message, {"owner": owner, "type": source_type})]
-    }
+    assert semantic_type.metadata == {}
     assert asdict(semantic_type.origin) == _c_origin(
         source_kind="unsupported_type",
         source_type=source_type,
@@ -177,11 +175,9 @@ __all__ = (
     "SemanticType",
     "SemanticVariable",
     "_assert_unsupported_type",
-    "_blocker",
     "_c_origin",
     "_function",
     "asdict",
-    "assess_semantic_wrap_readiness",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

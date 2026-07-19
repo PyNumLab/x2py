@@ -1,4 +1,4 @@
-"""Tests split by stable ownership concept from `test_readiness_reports.py`."""
+"""Tests split by stable CLI stage-dispatch ownership."""
 
 from tests.cli._cli_support import (
     FortranParseError,
@@ -38,7 +38,7 @@ end module m
 """.strip()
     )
 
-    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(f90)]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     assert "  Procedures: 1" in res.stdout
@@ -57,7 +57,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse", "--debug"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(f90), "--debug"]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 1
@@ -75,7 +75,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(f90)]
     res = subprocess.run(
         cmd,
         capture_output=True,
@@ -98,7 +98,7 @@ end subroutine bad
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py", str(f90), "--parse"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(f90)]
     res = subprocess.run(
         cmd,
         capture_output=True,
@@ -252,11 +252,6 @@ end module physics
     assert semantic_type["metadata"]["external_type_ref"]["wrapped"] is True
     assert "class particle" not in payload[str(physics)]["pyi"]
 
-    readiness = x2py_cli._wrap_readiness_report([str(types_mod), str(physics)])
-    readiness_type = readiness[str(physics)]["semantic_modules"][0]["functions"][0]["arguments"][0]["semantic_type"]
-
-    assert readiness_type["metadata"]["external_type_ref"]["wrapped"] is True
-
 
 def test_x2py_pyi_report_writes_opaque_dependency_stub_for_external_type(tmp_path: Path, monkeypatch):
     physics = tmp_path / "physics.f90"
@@ -278,7 +273,7 @@ end module physics
     assert payload[str(physics)]["pyi_dependencies"] == {
         "types_mod": "from x2py.contracts import Opaque\n\nclass particle(Opaque):\n    pass"
     }
-    monkeypatch.setattr(sys, "argv", ["x2py", str(physics), "--pyi", "--out"])
+    monkeypatch.setattr(sys, "argv", ["x2py", "generate", "--pyi", str(physics), "--out"])
     assert x2py_cli.main() == 0
 
     package = tmp_path / "physics"
@@ -294,7 +289,6 @@ end module physics
         ({"parse": True}, [("parse",)]),
         ({"semantics": True}, [("semantic",)]),
         ({"pyi": True}, [("semantic",)]),
-        ({"wrap_readiness": True}, [("readiness",)]),
     ],
 )
 def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch, overrides, expected_stage_calls):
@@ -306,7 +300,6 @@ def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch, overri
     preprocessing = object()
     parse_payload = {"parse": "payload"}
     semantic_payload = {"semantic": "payload"}
-    readiness_payload = {"readiness": "payload"}
     calls = []
 
     def resolve_language(paths, language, active_parser):
@@ -325,20 +318,14 @@ def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch, overri
         calls.append(("semantic", paths, active_preprocessing, language))
         return semantic_payload
 
-    def readiness_report(paths, active_preprocessing, *, language):
-        calls.append(("readiness", paths, active_preprocessing, language))
-        return readiness_payload
-
-    def attach_wrap_readiness(active_semantic_payload, active_readiness_payload):
-        calls.append(("attach", active_semantic_payload, active_readiness_payload))
+    def select_main_payload(*_args):
         raise StopAfterDispatch
 
     monkeypatch.setattr(x2py_cli, "_resolve_language", resolve_language)
     monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", build_preprocessing_config)
     monkeypatch.setattr(x2py_cli, "_parse_report", parse_report)
     monkeypatch.setattr(x2py_cli, "_semantic_report", semantic_report)
-    monkeypatch.setattr(x2py_cli, "_wrap_readiness_report", readiness_report)
-    monkeypatch.setattr(x2py_cli, "_attach_wrap_readiness", attach_wrap_readiness)
+    monkeypatch.setattr(x2py_cli, "_select_main_payload", select_main_payload)
 
     with pytest.raises(StopAfterDispatch):
         x2py_cli.main()
@@ -352,16 +339,6 @@ def test_x2py_main_preserves_fortran_stage_dispatch_contract(monkeypatch, overri
             expected_calls.append(("parse", args.paths, preprocessing))
         elif stage_name == "semantic":
             expected_calls.append(("semantic", args.paths, preprocessing, "fortran"))
-        elif stage_name == "readiness":
-            expected_calls.append(("readiness", args.paths, preprocessing, "fortran"))
-    expected_calls.append(
-        (
-            "attach",
-            semantic_payload if ("semantic",) in expected_stage_calls else None,
-            readiness_payload if ("readiness",) in expected_stage_calls else None,
-        )
-    )
-
     assert calls == expected_calls
 
 
@@ -394,11 +371,7 @@ def test_x2py_main_preserves_c_parse_dispatch_contract(monkeypatch):
         "parse_c_report",
         lambda paths, **kwargs: calls.append(("parse", paths, kwargs)) or parse_payload,
     )
-    monkeypatch.setattr(
-        x2py_cli,
-        "_attach_wrap_readiness",
-        lambda semantic_payload, readiness_payload: (_ for _ in ()).throw(StopAfterDispatch),
-    )
+    monkeypatch.setattr(x2py_cli, "_select_main_payload", lambda *_args: (_ for _ in ()).throw(StopAfterDispatch))
 
     with pytest.raises(StopAfterDispatch):
         x2py_cli.main()
@@ -418,7 +391,7 @@ def test_x2py_main_preserves_c_parse_dispatch_contract(monkeypatch):
     ]
 
 
-@pytest.mark.parametrize("stage", ["semantics", "pyi", "wrap_readiness"])
+@pytest.mark.parametrize("stage", ["semantics", "pyi"])
 def test_x2py_main_accepts_each_non_parse_c_stage(monkeypatch, stage):
     class StopAfterDispatch(Exception):
         pass
@@ -428,78 +401,16 @@ def test_x2py_main_accepts_each_non_parse_c_stage(monkeypatch, stage):
     monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
     monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: object())
     monkeypatch.setattr(x2py_cli, "_semantic_report", lambda *args, **kwargs: {})
-    monkeypatch.setattr(x2py_cli, "_wrap_readiness_report", lambda *args, **kwargs: {})
-    monkeypatch.setattr(
-        x2py_cli,
-        "_attach_wrap_readiness",
-        lambda semantic_payload, readiness_payload: (_ for _ in ()).throw(StopAfterDispatch),
-    )
+    monkeypatch.setattr(x2py_cli, "_select_main_payload", lambda *_args: (_ for _ in ()).throw(StopAfterDispatch))
 
     with pytest.raises(StopAfterDispatch):
         x2py_cli.main()
 
 
-@pytest.mark.parametrize(
-    ("stage", "expected_stage_call"),
-    [
-        ("semantics", "semantic"),
-        ("pyi", "semantic"),
-        ("wrap_readiness", "readiness"),
-    ],
-)
-def test_x2py_main_forwards_fortran_type_probe_options_to_semantic_stages(
-    monkeypatch,
-    stage,
-    expected_stage_call,
-):
-    class StopAfterDispatch(Exception):
-        pass
-
-    args = _main_args(
-        **{stage: True},
-        fortran_type_probe_runner=["qemu"],
-        fortran_type_probe_cache_dir="cache",
-        refresh_fortran_type_probe=True,
-    )
-    _install_main_parser(monkeypatch, args)
-    preprocessing = object()
-    calls = []
-
-    monkeypatch.setattr(x2py_cli, "_resolve_language", lambda paths, language, parser: language)
-    monkeypatch.setattr(x2py_cli, "_build_preprocessing_config", lambda active_args, parser: preprocessing)
-    monkeypatch.setattr(
-        x2py_cli,
-        "_semantic_report",
-        lambda paths, active_preprocessing, **kwargs: calls.append(("semantic", kwargs)) or {},
-    )
-    monkeypatch.setattr(
-        x2py_cli,
-        "_wrap_readiness_report",
-        lambda paths, active_preprocessing, **kwargs: calls.append(("readiness", kwargs)) or {},
-    )
-    monkeypatch.setattr(
-        x2py_cli,
-        "_attach_wrap_readiness",
-        lambda semantic_payload, readiness_payload: (_ for _ in ()).throw(StopAfterDispatch),
-    )
-
-    with pytest.raises(StopAfterDispatch):
-        x2py_cli.main()
-
-    expected = {
-        "language": "fortran",
-        "fortran_type_report": None,
-        "fortran_type_probe_runner": ["qemu"],
-        "fortran_type_probe_cache_dir": "cache",
-        "refresh_fortran_type_probe": True,
-    }
-    assert calls == [(expected_stage_call, expected)]
-
-
-def test_x2py_main_runs_wrap_stage(monkeypatch, tmp_path: Path, capsys):
+def test_x2py_main_runs_default_wrapper_build(monkeypatch, tmp_path: Path, capsys):
     source = tmp_path / "fmath.f"
     source.write_text("      real function square(x)\n      real x\n      square = x*x\n      end\n", encoding="utf-8")
-    args = _main_args(paths=[str(source)], wrap=True, out_dir=str(tmp_path), json=True)
+    args = _main_args(paths=[str(source)], out_dir=str(tmp_path), json=True)
     _install_main_parser(monkeypatch, args)
     preprocessing = object()
     calls = []
@@ -746,7 +657,7 @@ def test_x2py_and_fortran_module_entrypoints_and_debug_errors(monkeypatch, capsy
 
 
 def test_x2py_main_debug_reraises_preprocessing_errors(monkeypatch):
-    monkeypatch.setattr(sys, "argv", ["x2py", str(TEST_FILE), "--parse"])
+    monkeypatch.setattr(sys, "argv", ["x2py", "parse", str(TEST_FILE)])
     monkeypatch.setenv("X2PY_DEBUG", "1")
 
     def fail_parse(_paths, _preprocessing):
@@ -759,7 +670,7 @@ def test_x2py_main_debug_reraises_preprocessing_errors(monkeypatch):
 
 def test_cli_parse_modern_fixture_prints_derived_block_verbatim():
     fixture = Path(__file__).parent.parent / "data" / "fortran" / "general" / "modern_pyi_example.f90"
-    cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(fixture)]
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     expected_block = """      Derived types: 3
@@ -865,16 +776,16 @@ end module m
     )
     json_out = tmp_path / "parse.json"
 
-    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--parse", "--json", "--out", str(json_out)])
+    monkeypatch.setattr(sys, "argv", ["x2py", "parse", str(f90), "--json", "--out", str(json_out)])
     assert x2py_cli.main() == 0
     assert capsys.readouterr().out == ""
     assert json.loads(json_out.read_text(encoding="utf-8")).get(str(f90)) is not None
 
-    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--pyi"])
+    monkeypatch.setattr(sys, "argv", ["x2py", "generate", "--pyi", str(f90)])
     assert x2py_cli.main() == 0
     assert "def work(" in capsys.readouterr().out
 
-    monkeypatch.setattr(sys, "argv", ["x2py", str(f90), "--parse"])
+    monkeypatch.setattr(sys, "argv", ["x2py", "parse", str(f90)])
     assert x2py_cli.main() == 0
     assert "module m" in capsys.readouterr().out
 
@@ -944,3 +855,33 @@ def test_x2py_parse_c_path_preserves_parser_and_preprocessing_arguments(tmp_path
     monkeypatch.setattr(x2py_cli, "attach_preprocessing_recipe", attach_recipe)
 
     assert x2py_cli._parse_c_path(CompilerParser(), path, compiler_config) is compiled_parsed
+
+
+def test_x2py_probe_subcommand_dispatches_one_flag_driven_probe(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr(
+        x2py_cli,
+        "_probe_output",
+        lambda args: calls.append(args) or '{"target": "fortran"}',
+    )
+
+    assert (
+        x2py_cli.main(
+            [
+                "probe",
+                "--language",
+                "fortran",
+                "--compiler",
+                "gfortran-13",
+                "--expr",
+                "storage_size(0)",
+            ]
+        )
+        == 0
+    )
+
+    assert capsys.readouterr().out == '{"target": "fortran"}\n'
+    assert len(calls) == 1
+    assert calls[0].language == "fortran"
+    assert calls[0].compiler == "gfortran-13"
+    assert calls[0].expressions == ["storage_size(0)"]

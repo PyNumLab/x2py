@@ -109,7 +109,7 @@ responsible for its own `present(...)` branch.
 ## Unsupported Combinations
 
 Optional passed procedures, procedure pointers, and combinations without a
-complete native presence and ownership contract are readiness blockers. x2py
+complete native presence and ownership contract make wrapper planning fail. x2py
 does not convert an unsupported optional form into an always-present argument
 or silently drop it.
 
@@ -121,4 +121,4 @@ by
 
 Use [Wrapping Subroutines](wrapping-subroutines.md) for result projection and
 the later Error Handling page when an unsupported optional combination stops at
-readiness.
+wrapper planning.

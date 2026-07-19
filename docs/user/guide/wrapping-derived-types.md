@@ -311,5 +311,5 @@ and borrowed finalization by
 
 Treat nested child wrappers as borrowed from their containing wrapper rather
 than independently owned native objects. Memory Management later expands
-ownership, and Error Handling later covers constructor, type, and readiness
+ownership, and Error Handling later covers constructor, type, and wrapper-planning
 failures.

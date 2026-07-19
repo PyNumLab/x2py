@@ -144,8 +144,8 @@ complete:
 - allocatable or pointer polymorphic scalars; and
 - direct binary-layout access for ordinary generated classes.
 
-When a type is unsupported, the wrapper readiness report should explain the
-blocking form instead of generating a partial class.
+When a type is unsupported, the wrapper-build error should explain the blocking
+form instead of generating a partial class.
 
 ## Evidence And Maintenance
 

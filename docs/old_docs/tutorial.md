@@ -9,7 +9,7 @@ status: maintained
 # Tutorial
 
 This tutorial is the main user guide for the supported x2py pipeline from
-native source to wrapper builds and semantic readiness. The commands use
+native source to wrapper builds and semantic policy completion. The commands use
 version-controlled fixtures so they can be run from the repository root.
 
 For additional copy-paste commands and Python snippets, continue to the
@@ -28,20 +28,16 @@ Fortran source files:
 python3 -m x2py solver.f90
 ```
 
-x2py also supports four explicit inspection stages:
+x2py also supports three explicit inspection stages:
 
 1. Parse wrapper-relevant Fortran or C declarations.
 2. Convert parser facts to language-neutral semantic IR.
 3. Emit an editable semantic `.pyi` interface.
-4. Report whether that semantic interface has enough information for wrapper
-   generation, while distinguishing readiness from an available runtime
-   backend.
 
 The current runtime wrapper build path is implemented for Fortran source
-files. `Wrappable: yes` means the semantic contract has no known readiness
-blockers; for C and edited `.pyi` contracts it does not mean a compiled Python
-extension already exists. Runtime wrapping of user-supplied C libraries will
-be added later.
+files. C and edited `.pyi` inspection does not imply that a compiled Python
+extension exists. Runtime wrapping of user-supplied C libraries will be added
+later.
 
 The implemented Fortran build pipeline is:
 
@@ -63,19 +59,18 @@ Fortran or C source
   -> parser facts
   -> semantic IR
   -> editable .pyi
-  -> semantic readiness report
 ```
 
 Fortran wrapper generation continues from semantic IR into native codegen.
-The current C path stops at semantic readiness; the generated C source used by
+The current C path stops at semantic IR and `.pyi`; the generated C source used by
 the Fortran backend is not a wrapper backend for C inputs.
 
 Parsers preserve source facts. Semantic IR normalizes those facts. Edited
-`.pyi` files are the user-controlled inspection and readiness contract when
+`.pyi` files are the user-controlled inspection and wrapper contract when
 source alone cannot express enough policy. The normal Fortran build remains
 source-driven, and the implemented `.pyi` build subset can instead consume the
 edited `.pyi` as the Python API source of truth when native object, module,
-include, and link inputs are supplied. Readiness reports blockers rather than
+include, and link inputs are supplied. Wrapper planning reports errors rather than
 guessing ownership, callback lifetime, ABI shims, or Python-visible
 projections.
 
@@ -121,7 +116,7 @@ Recognizable Fortran files do not require `--language fortran`:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output:
@@ -144,7 +139,7 @@ Convert the parsed source to language-neutral semantic IR:
 
 <!-- x2py-doc-test: run -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
+python3 -m x2py semantics tests/data/fortran/general/basic_subroutine.f90
 ```
 
 `--semantics` prints a machine-readable payload containing `semantic_modules`
@@ -155,7 +150,7 @@ data.
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
+python3 -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output:
@@ -180,44 +175,13 @@ The stub preserves the exact native contract:
 Write the stub to an explicit path:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --pyi --out basic_subroutine.pyi
+python3 -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90 \
+  --out basic_subroutine.pyi
 ```
 
 Use `--pyi --out` without a path to write a `.pyi` beside each input source.
 
-### 4. Check Semantic Readiness
-
-Check readiness directly from source:
-
-<!-- x2py-doc-test: exact -->
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
-```
-
-Expected output:
-
-<!-- x2py-doc-test-output -->
-```text
-File: tests/data/fortran/general/basic_subroutine.f90
-  Source: fortran
-  Semantic modules: m1
-  Wrappable: yes
-  Public functions: 1
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
-```
-
-After editing a generated interface, check the `.pyi` instead:
-
-```bash
-python3 -m x2py basic_subroutine.pyi --wrap-readiness
-```
-
-Readiness treats the edited `.pyi` contract as the source of truth.
-
-### 5. Build A Fortran Extension
+### 4. Build A Fortran Extension
 
 Use the checked runtime example for a complete build and call:
 
@@ -237,15 +201,13 @@ Build it into an explicit directory:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
-  --wrap \
   --out-dir build/fruntime_abi \
   --json
 ```
 
-`--wrap` is optional when all inputs have recognizable Fortran suffixes and no
-inspection stage is selected. It is shown here to make the build action
-explicit. The JSON payload reports the extension name, shared-library path,
-generated wrapper sources, and all build artifacts.
+With no inspection stage selected, recognizable Fortran input follows the
+wrapper-build path. The JSON payload reports the extension name, shared-library
+path, generated wrapper sources, and all build artifacts.
 
 Import and call the module:
 
@@ -288,8 +250,7 @@ For a build-system-controlled workflow, generate sources and a GNU Make build
 without compiling:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
-  --makefile \
+python3 -m x2py generate --makefile tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```
@@ -321,7 +282,7 @@ C inputs require explicit C mode:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/c/general/math_api.h --language c --parse
+python3 -m x2py parse tests/data/c/general/math_api.h --language c
 ```
 
 Expected output:
@@ -345,7 +306,7 @@ Generate the semantic `.pyi`:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/c/general/math_api.h --language c --pyi
+python3 -m x2py generate --pyi tests/data/c/general/math_api.h --language c
 ```
 
 Expected output:
@@ -375,28 +336,6 @@ def fill_identity3(
 ) -> None: ...
 ```
 
-Check readiness:
-
-<!-- x2py-doc-test: exact -->
-```bash
-python3 -m x2py tests/data/c/general/math_api.h \
-  --language c --wrap-readiness
-```
-
-Expected output:
-
-<!-- x2py-doc-test-output -->
-```text
-File: tests/data/c/general/math_api.h
-  Source: c
-  Semantic modules: math_api
-  Wrappable: yes
-  Public functions: 4
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
-```
-
 The C frontend supports wrapper-oriented declaration and signature extraction.
 It does not yet lower user C inputs into a compiled extension. That backend
 will be added later after its ABI, ownership, and runtime contracts are proved.
@@ -408,27 +347,16 @@ scope.
 
 | Goal | Command flag | Output |
 | --- | --- | --- |
-| Build a Fortran extension | no stage flag or `--wrap` | Generated sources, objects, and importable extension |
+| Build a Fortran extension | no inspection stage flag | Generated sources, objects, and importable extension |
 | Generate an editable native build | `--makefile` | Generated sources and `Makefile.x2py`, without compilation |
 | Inspect native parser facts | `--parse` | Human-readable report |
 | Consume full parser facts | `--parse --json` | Parser payload |
 | Consume language-neutral facts | `--semantics` | Semantic payload |
 | Create or inspect the editable contract | `--pyi` | Semantic `.pyi` text |
-| Find missing semantic policy | `--wrap-readiness` | Readiness report |
-| Script readiness decisions | `--wrap-readiness --json` | Readiness payload |
+| Diagnose an unsupported wrapper build | no inspection stage flag | Wrapper-plan error |
 
-Multiple stages can be useful together:
-
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --parse --wrap-readiness
-
-python3 -m x2py tests/data/c/general/math_api.h \
-  --language c --pyi --wrap-readiness
-```
-
-Build mode is separate from inspection mode: `--wrap` and `--makefile` cannot
-be combined with `--parse`, `--semantics`, `--pyi`, or `--wrap-readiness`.
+Build mode is separate from inspection mode: `--makefile` cannot be combined
+with `--parse`, `--semantics`, or `--pyi`.
 Both build modes currently require Fortran source files rather than directories
 or `.pyi` inputs.
 
@@ -437,7 +365,7 @@ or `.pyi` inputs.
 Language selection follows these supported rules:
 
 - Recognizable Fortran files can omit `--language`.
-- `.pyi` readiness input can omit `--language`.
+- `.pyi` contract input can omit `--language`.
 - C files require `--language c`.
 - Directories and unknown-suffix source files require an explicit language.
 - Explicit language selection must agree with recognizable source suffixes.
@@ -445,15 +373,15 @@ Language selection follows these supported rules:
 Parse a directory recursively:
 
 ```bash
-python3 -m x2py path/to/fortran_sources --language fortran --parse
-python3 -m x2py path/to/c_sources --language c --parse
+python3 -m x2py parse path/to/fortran_sources --language fortran
+python3 -m x2py parse path/to/c_sources --language c
 ```
 
 Parse multiple explicit inputs:
 
 ```bash
-python3 -m x2py src/types.f90 src/api.f90 --language fortran --parse
-python3 -m x2py include/types.h include/api.h --language c --parse
+python3 -m x2py parse src/types.f90 src/api.f90 --language fortran
+python3 -m x2py parse include/types.h include/api.h --language c
 ```
 
 For the direct Python parser APIs, paths, source strings, project mappings,
@@ -467,7 +395,7 @@ The CLI preprocesses native source before parsing it. Pass the same important
 flags used by the native build:
 
 ```bash
-python3 -m x2py include/api.h --language c --parse \
+python3 -m x2py parse include/api.h --language c \
   --compiler clang \
   -I include \
   -D API_EXPORT= \
@@ -482,29 +410,24 @@ python3 -m x2py.c_type_probe --compiler clang \
   --compiler-arg=--target=aarch64-linux-gnu \
   --runner=qemu-aarch64 \
   > build/aarch64-c-types.json
-
-python3 -m x2py src/api.c --language c --semantics \
-  --compile-commands build/compile_commands.json \
-  --c-type-report build/aarch64-c-types.json
 ```
 
-For normal direct-compiler C semantic, `.pyi`, and readiness stages, x2py
+For normal direct-compiler C semantic and `.pyi` stages, x2py
 automatically probes primitive widths and plain `char` signedness using the
 selected compiler and target flags. It caches the result by compiler identity
-and target configuration, so repeated runs do not recompile the probe. Use
-`--refresh-c-type-probe` when a sysroot changes in place. For cross compilers,
-repeat `--c-type-probe-runner=...` for the runner command and arguments.
+and target configuration, so repeated runs do not recompile the probe. The
+standalone probe exposes cache refresh and runner controls for explicit target
+inspection.
 
 NumPy types are used as the Python-side dtype mapping, not as the ABI probe:
 NumPy describes the interpreter host and can disagree with a cross compiler or
-selected sysroot. Compilation databases and custom preprocessing templates
-need an explicit reusable `--c-type-report` because they can contain multiple
-target recipes.
+selected sysroot. The standalone report is an inspection output; it is not fed
+back into semantic conversion as a separate input path.
 
 For Fortran:
 
 ```bash
-python3 -m x2py src/api.f90 --language fortran --pyi \
+python3 -m x2py generate --pyi src/api.f90 --language fortran \
   --compiler gfortran \
   -I include \
   -D USE_MPI \
@@ -512,18 +435,15 @@ python3 -m x2py src/api.f90 --language fortran --pyi \
   --compiler-arg=-fdefault-real-8
 ```
 
-For direct-compiler Fortran semantic, `.pyi`, and readiness stages, x2py
+For direct-compiler Fortran semantic, `.pyi`, and wrapper-build stages, x2py
 resolves compiler-dependent kind expressions and measures the storage of every
 intrinsic type used by the source. This matters for processor-dependent
 numeric kinds and flags such as `-fdefault-real-8` or
 `-fdefault-integer-8`. Expression and storage probes are cached by compiler
-identity and target configuration. Use `--refresh-fortran-type-probe` after a
-sysroot or compiler installation changes in place, and repeat
-`--fortran-type-probe-runner=...` for a cross-target runner.
-
-Compilation databases and custom preprocessing templates need an explicit
-reusable `--fortran-type-report`, for the same reason as C: one project recipe
-can describe multiple target profiles.
+identity and target configuration. Source-driven builds apply native Fortran
+compiler flags to the internal probe as well as native compilation. The
+standalone report is an inspection output and exposes its own runner, cache,
+and refresh controls.
 
 Compiler preprocessing preserves a recipe in machine-readable parser output,
 including the selected compiler, arguments, includes, source mappings, and
@@ -578,7 +498,7 @@ def integrate(
 ) -> Float64: ...
 ```
 
-A complete named prototype resolves a callback-signature readiness blocker. A
+A complete named prototype resolves a callback-signature wrapper-planning error. A
 placeholder such as `Procedure` remains incomplete because its argument and
 result types are unknown.
 
@@ -593,7 +513,7 @@ writing custom annotations.
 ## Use The Python API
 
 The package exports `build_fortran_extension` as well as parser, semantic
-conversion, `.pyi`, and readiness helpers. The
+conversion and `.pyi` helpers. The
 [examples cookbook](examples.md#build-and-import-through-the-python-api) shows
 a complete temporary-directory build and import.
 
@@ -630,12 +550,11 @@ print(sorted(project.files))
 print(sorted(project.functions))
 ```
 
-Convert, emit a stub, and check readiness:
+Convert and emit a stub:
 
 <!-- x2py-doc-test: run -->
 ```python
 from x2py import (
-    assess_semantic_wrap_readiness,
     c_file_to_semantic_modules,
     emit_module_stubs,
     parse_c_file,
@@ -644,18 +563,16 @@ from x2py import (
 parsed = parse_c_file("int add(int a, int b);", filename="inline.h")
 modules = c_file_to_semantic_modules(parsed)
 stubs = emit_module_stubs(modules)
-report = assess_semantic_wrap_readiness(modules, source="inline.h")
 
 print(stubs["inline"])
-print(report["wrappable"])
 ```
 
 The [examples cookbook](examples.md#python-api-examples) contains additional
 verified Python API workflows.
 
-## Understand Readiness
+## Understand Stage Errors
 
-Readiness is a semantic check. It can report blockers such as:
+Errors belong to the stage with the facts needed to explain them:
 
 - unresolved semantic types;
 - unresolved array-shape symbols or missing compile-time constants;
@@ -666,7 +583,7 @@ Readiness is a semantic check. It can report blockers such as:
 - an empty public API.
 
 When the missing information is expressible in supported semantic `.pyi`
-syntax, edit the generated interface and rerun readiness. Some blockers require
+syntax, edit the generated interface and rerun the wrapper build. Some errors require
 additional wrapper policy or backend implementation and cannot currently be
 resolved by an annotation.
 
@@ -682,7 +599,7 @@ Use x2py for the behavior implemented and tested today:
 - compiler-preprocessed CLI workflows;
 - typed parser models and language-neutral semantic IR;
 - semantic `.pyi` emission and loading;
-- semantic readiness reporting.
+- semantic `.pyi` emission and loading.
 
 Do not assume current support for:
 

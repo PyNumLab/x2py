@@ -18,12 +18,9 @@ from .c2ir import (
 )
 from .pyi2ir import convert_pyi_to_ir
 from .policy_completion import complete_semantic_policies
-from .readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 
 __all__ = (
     "CToIRConverter",
-    "assess_pyi_wrap_readiness",
-    "assess_semantic_wrap_readiness",
     "c_file_to_semantic_module",
     "c_file_to_semantic_modules",
     "c_function_to_semantic_function",

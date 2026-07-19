@@ -40,7 +40,7 @@ public command or Python API
   -> parser model
   -> semantic conversion, when applicable
   -> .pyi printer/loader, when applicable
-  -> readiness, when applicable
+  -> policy completion and wrapper planning, when wrapping
   -> Fortran bridge, CPython binding, native build, and runtime tests, when wrapping
   -> focused tests and maintained reference docs
 ```
@@ -108,7 +108,7 @@ Mark a command that only needs to exit successfully:
 ````markdown
 <!-- x2py-doc-test: run -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
+python3 -m x2py semantics tests/data/fortran/general/basic_subroutine.f90
 ```
 ````
 
@@ -117,7 +117,7 @@ Mark a command whose stdout must match the documentation exactly:
 ````markdown
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
 
 <!-- x2py-doc-test-output -->
@@ -174,7 +174,7 @@ PYTHONPATH=. python3 -m pytest -q tests/tools/test_documentation_examples.py
   recursive parser organization, API/CLI behavior, diagnostics, fixture
   workflow, semantic handoff, and tests.
 - [Semantic IR reference](semantics.md): shared semantic model, datatype
-  policy, and C conversion blockers.
+  policy, and C conversion facts.
 - [Semantic `.pyi` format](pyi_format.md): user-visible `.pyi`
   loader/printer contract and roadmap.
 - [Wrapper design notes](wrapper_design_notes.md): wrapper-generation policy
@@ -187,7 +187,7 @@ PYTHONPATH=. python3 -m pytest -q tests/tools/test_documentation_examples.py
 ## User-Facing Contract Internals
 
 The tutorial, examples cookbook, `.pyi` format, and semantic reference describe
-CLI stages, `.pyi` syntax, datatype names, and readiness reports. The developer
+CLI stages, `.pyi` syntax, datatype names, and wrapper-plan diagnostics. The developer
 task is to keep those user-visible contracts stable, tested, and traceable to
 implementation files.
 
@@ -203,11 +203,11 @@ implementation files.
 | Fortran target type probing and cache | `x2py/fortran_type_probe.py` | `tests/parser/test_fortran_type_probe.py` |
 | Generated target datatype mapping examples | `x2py/type_mapping_report.py` | `tests/tools/test_type_mapping_report.py`, `tests/tools/test_documentation_examples.py` |
 | Fortran to semantic IR | `x2py/semantics/fortran2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_fortran2ir.py` |
-| C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_c2ir.py`, `tests/semantics/test_c_semantic_readiness.py` |
+| C to semantic IR | `x2py/semantics/c2ir.py`, `x2py/semantics/models.py` | `tests/semantics/test_c2ir.py` |
 | `.pyi` printing | `x2py/codegen/printers/pyi_printer.py` | `tests/semantics/test_pyi_printer.py`, `tests/semantics/test_pyi_printer_modern_example.py` |
 | `.pyi` loading/editing | `x2py/pyi_parser/parser.py` | `tests/pyi/test_pyi_to_ir.py`, `tests/pyi/test_pyi_fixture_suite.py` |
-| Readiness reports | `x2py/semantics/readiness.py` | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_wrap_readiness_fixture_suite.py` |
 | Fortran wrapper orchestration | `x2py/wrapping.py` | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/test_multi_source_builds.py` |
+| Wrapper planning and owner-local errors | `x2py/wrapper_codegen/planner.py` | `tests/wrapper_codegen/` |
 | Semantic IR to codegen AST | `x2py/semantics/ir2ast.py` | `tests/semantics/test_ir2ast.py`, `tests/wrapper/` |
 | Fortran-to-C bridge and CPython binding | `x2py/codegen/bridges/fortran_to_c.py`, `x2py/codegen/bindings/c_to_python.py` | `tests/wrapper/` subject suites |
 | Native compilation and binding support | `x2py/compiling/`, `x2py/binding_support/` | `tests/wrapper/fortran/native_build/test_runtime_abi.py`, `tests/wrapper/fortran/native_build/test_build_modes.py` |
@@ -319,23 +319,14 @@ For Fortran, keep both modern and legacy spellings in the generated report.
 Legacy numeric `type*N` forms carry fixed total storage; compiler-dependent
 default, kind, `DOUBLE PRECISION`, and `DOUBLE COMPLEX` forms use probe facts.
 
-### Readiness Internals
+### Wrapper-Plan Support Diagnostics
 
-Readiness is semantic-layer behavior. Parser models should record facts and
-diagnostics, but the final `wrappable` answer belongs to
-`x2py/semantics/readiness.py`.
+Parser models record source facts and diagnostics. Semantic conversion rejects
+source facts that cannot form a contract, while wrapper planning rejects
+unsupported completed policy.
 
-When adding a readiness blocker:
-
-1. Attach parser-to-IR metadata in `x2py/semantics/fortran2ir.py` or
-   `x2py/semantics/c2ir.py`.
-2. Normalize/report it in `x2py/semantics/readiness.py`.
-3. Add focused tests in `tests/semantics/test_semantic_wrap_readiness.py` or
-   `tests/semantics/test_c_semantic_readiness.py`.
-4. Update readiness fixtures only if user-visible messages intentionally
-   change.
-5. Update [tutorial.md](tutorial.md) or [examples.md](examples.md) when the
-   blocker is something users can fix by editing `.pyi`.
+When adding an unsupported policy path, add a focused semantic-conversion or
+wrapper-planning diagnostic test.
 
 ### Parser To Wrapper Boundary
 
@@ -347,7 +338,7 @@ Do not move wrapper policy into parsers. Parsers can preserve:
 - preprocessor provenance and diagnostics;
 - unresolved references.
 
-Wrappers and semantic readiness decide:
+Post-IR policy completion and wrapper planning decide:
 
 - ownership and lifetime;
 - callback registration/unregistration policy;
@@ -367,7 +358,7 @@ CLI args
   -> preprocessing config and source loading
   -> parser models
   -> semantic IR
-  -> inspection: .pyi printing / .pyi loading / readiness report
+  -> inspection: .pyi printing / .pyi loading
   -> Fortran build: codegen AST / native bridge / CPython binding / extension
 ```
 
@@ -381,10 +372,10 @@ CLI args
 - dispatching the requested stage flags;
 - defaulting recognizable Fortran sources to a wrapper build when no stage is
   selected;
-- routing `--wrap` and `--makefile` through `x2py/wrapping.py`;
+- routing the default build and `--makefile` through `x2py/wrapping.py`;
 - routing text, JSON, and `--out` output.
 
-Recognizable Fortran files and `.pyi` readiness inputs can omit `--language`.
+Recognizable Fortran files and `.pyi` wrapper inputs can omit `--language`.
 C files and directories require explicit language selection. Keep this behavior
 tested in `tests/parser/test_cli.py` whenever stage selection changes.
 
@@ -536,18 +527,18 @@ modules = c_file_to_semantic_modules(parsed)
 The C semantic converter can turn recorded object-like numeric macros into
 semantic constant variables. Function-like macros and untyped macro bodies are
 not wrapper-callable declarations. Declarations that depend on macros which
-were recorded but not expanded are surfaced as semantic readiness blockers
-rather than treated as complete wrapper contracts.
+were recorded but not expanded remain explicit semantic facts rather than
+being treated as complete wrapper contracts.
 
 For CLI code, do not reimplement these paths manually. `x2py/cli.py` builds
 the `PreprocessingConfig`, loads or preprocesses source, attaches C
 preprocessing recipes, parses, runs target type probes when configured, and
 then dispatches to the semantic helpers.
 
-### Semantic, `.pyi`, Readiness, And Type-Probe Paths
+### Semantic, `.pyi`, Wrapper-Planning, And Type-Probe Paths
 
 The semantic stages share one rule: source inputs become semantic IR before
-anything emits `.pyi` or reports readiness. Edited `.pyi` inputs are already a
+anything emits `.pyi` or builds a wrapper plan. Edited `.pyi` inputs are already a
 semantic contract and do not go back through C or Fortran parsing.
 
 Input shapes are part of the contract:
@@ -584,16 +575,17 @@ source path(s)
   -> CFile / FortranFile parser model
   -> C or Fortran semantic IR
   -> optional .pyi emission
-  -> optional semantic readiness report
+  -> optional `.pyi` emission or wrapper-plan build
 ```
 
-CLI `.pyi` readiness:
+CLI `.pyi` wrapper build:
 
 ```text
 .pyi path(s) or directory
   -> pyi_paths_to_semantic_modules(...)
   -> SemanticModule list
-  -> assess_semantic_wrap_readiness(...)
+  -> complete_semantic_policies(...)
+  -> WrapperPlanner.build(...)
 ```
 
 Generating `.pyi` from source is semantic conversion plus printing. In Python
@@ -615,10 +607,9 @@ then `c_file_to_semantic_modules(...)` or
 Loading or editing `.pyi` is the opposite direction:
 
 ```python
-from x2py import assess_semantic_wrap_readiness, pyi_paths_to_semantic_modules
+from x2py import pyi_paths_to_semantic_modules
 
 modules = pyi_paths_to_semantic_modules("interfaces")
-report = assess_semantic_wrap_readiness(modules, source="interfaces")
 ```
 
 Use the `.pyi` helpers by input shape:
@@ -633,7 +624,7 @@ Use the `.pyi` helpers by input shape:
   reference each other.
 
 Do not run compiler preprocessing, C ABI probes, or Fortran type probes for an
-edited `.pyi` readiness check. Once `.pyi` has been loaded, the edited semantic
+edited `.pyi` wrapper build. Once `.pyi` has been loaded, the edited semantic
 IR is the source of truth.
 
 Compiler preprocessing flags all flow through `PreprocessingConfig`:
@@ -667,13 +658,11 @@ C source
   -> c_project_to_semantic_modules(..., standard_type_report=...)
 ```
 
-For direct-compiler C semantic, `.pyi`, and readiness stages, `x2py/cli.py`
-loads `--c-type-report` when supplied. Otherwise, when a direct compiler is
-configured, it runs `probe_c_standard_types_cached(...)` and passes the report
-to `x2py/semantics/c2ir.py`. Compile databases and custom preprocessing templates
-must use an explicit reusable `--c-type-report` because a single automatic ABI
-probe cannot represent every per-file recipe in those modes. Probe runner,
-cache directory, and refresh flags belong to `x2py/c_type_probe.py`.
+For direct-compiler C semantic and `.pyi` stages, `x2py/cli.py` runs
+`probe_c_standard_types_cached(...)` internally and passes the facts to
+`x2py/semantics/c2ir.py`. The standalone report is an inspection output, not a
+second semantic-stage input path. Probe execution and cache policy belong to
+the probe implementation.
 
 Fortran target datatype mapping and compile-time path:
 
@@ -687,13 +676,12 @@ Fortran source
   -> fortran_module_to_semantic_module(..., compile_time_values=..., type_facts=...)
 ```
 
-The CLI performs those probe steps for Fortran semantic, `.pyi`, and readiness
-stages when a direct Fortran compiler or `--fortran-type-report` is configured.
+The CLI performs those probe steps internally for Fortran semantic, `.pyi`, and
+wrapper-build stages when a direct Fortran compiler is configured.
 `compile_time_values` resolve symbolic parameters and kind expressions.
 `type_facts` measure compiler-dependent intrinsic storage, such as default
-integer width or target-changing flags. Compile databases and custom
-preprocessing templates should use an explicit reusable
-`--fortran-type-report` for the same reason as C.
+integer width or target-changing flags. Standalone reports are inspection and
+verification outputs, not alternate semantic-stage inputs.
 
 Generated datatype mapping reports are documentation and verification outputs,
 not a separate parse path. `x2py/type_mapping_report.py` uses the C and Fortran
@@ -736,10 +724,9 @@ source dependencies: multi-source builds compile in caller order, and the first
 semantic module names the merged extension. `--makefile` records the same
 compiler/linker plan without executing it.
 
-The current CLI build is source-driven and Fortran-only. Edited `.pyi` files
-have loader, round-trip, readiness, and lower-level semantic/codegen coverage,
-but `--wrap` does not accept them directly. User C inputs currently stop at
-semantic readiness; their runtime backend is future work even though the
+The current CLI build is Fortran-only. Edited `.pyi` files can drive a wrapper
+build when provided with native implementation artifacts. User C inputs currently stop at
+semantic conversion; their runtime backend is future work even though the
 Fortran wrapper internally emits C source.
 
 Runtime verification belongs in `tests/wrapper`. The subject index in
@@ -785,7 +772,7 @@ from `x2py/semantics/models.py`.
   and compile-time values.
 - `x2py/semantics/c2ir.py` maps C functions, variables, structs/opaque structs,
   enums, typedef chains, standard-type probe facts, macros, pointer/array
-  storage, and C-specific readiness blockers.
+  storage, and C-specific semantic facts.
 - C `int` keeps the semantic name `Int` while its compiler-probed concrete
   precision is stored on the semantic type. C and Fortran enums lower to
   unscoped module-level integer constants; enum names are metadata, not
@@ -799,7 +786,7 @@ from `x2py/semantics/models.py`.
   treated as wrapper interface items by default.
 - `x2py/codegen/printers/pyi_printer.py` emits editable user contracts.
 - `x2py/pyi_parser/parser.py` loads edited contracts back into semantic IR.
-- `x2py/semantics/readiness.py` decides whether that IR is complete enough for
+- `x2py/semantics/policy_completion.py` completes the decisions required for
   wrapping.
 
 Keep semantic IR stable where possible. If a parser change does not affect the
@@ -818,12 +805,11 @@ The test ownership is:
 
 - loader syntax and error behavior: `tests/pyi/test_pyi_to_ir.py`;
 - printer round-trip shape: `tests/semantics/test_pyi_printer.py`;
-- readiness interpretation: `tests/semantics/test_semantic_wrap_readiness.py`
-  and `tests/semantics/test_c_semantic_readiness.py`.
+- wrapper-plan support diagnostics: `tests/wrapper_codegen/`.
 
 When adding projection syntax, first add loader tests that prove the accepted
-syntax and rejected syntax. Then add printer tests and readiness tests only if
-the new metadata affects those layers.
+syntax and rejected syntax. Then add policy or wrapper-plan tests only if the
+new metadata affects those layers.
 
 ## Testing Strategy
 
@@ -838,7 +824,7 @@ coverage only when the public contract changes.
 | Parser fixture goldens | Serialized parser contract over curated files | `tests/parser/test_fortran_fixture_suite.py`, `tests/parser/c/test_c_fixture_suite.py` |
 | Semantic tests | Parser facts converted to wrapper-neutral IR | `tests/semantics/test_fortran2ir.py`, `tests/semantics/test_c2ir.py` |
 | `.pyi` tests | Editable contract loader/printer behavior | `tests/pyi/test_pyi_to_ir.py`, `tests/semantics/test_pyi_printer.py` |
-| Readiness tests | User-facing blocker and wrappability decisions | `tests/semantics/test_semantic_wrap_readiness.py`, `tests/semantics/test_c_semantic_readiness.py` |
+| Wrapper-plan tests | Completed-policy and unsupported-contract diagnostics | `tests/wrapper_codegen/` |
 | CLI tests | User commands, output routing, diagnostics | `tests/parser/test_cli.py`, `tests/parser/test_preprocessing_cli.py` |
 | Wrapper build tests | Artifact placement, direct/Makefile modes, multi-source ordering | `tests/wrapper/fortran/native_build/test_build_modes.py`, `tests/wrapper/fortran/multi_source/` |
 | Wrapper runtime tests | Imported extension behavior, ownership, lifetime, and failures | `tests/wrapper/` subject suites indexed by `tests/wrapper/fortran/README.md` |
@@ -852,10 +838,10 @@ coverage only when the public contract changes.
   visible command changes.
 - New datatype mapping: semantic conversion test plus `.pyi` printer/loader
   tests if emitted syntax changes.
-- New `.pyi` syntax: loader test, printer test, readiness test if it resolves
-  or creates a blocker.
-- New readiness blocker: semantic readiness test and fixture refresh only when
-  user-facing messages change.
+- New `.pyi` syntax: loader and printer tests, plus policy or plan tests when
+  it changes a completed decision or lowering.
+- New unsupported case: a semantic-conversion, policy, or wrapper-plan test at
+  the stage that detects it.
 - Preprocessing behavior: preprocessing CLI tests and at least one parser path
   that consumes the recipe.
 - Wrapper orchestration or codegen behavior: the focused `tests/wrapper`
@@ -874,7 +860,6 @@ Useful commands:
 python tests/parser/c/generate_c_parser_goldens.py tests/data/c/general/math_api.h
 python tests/parser/fortran/generate_fortran_parser_goldens.py tests/data/fortran/general/basic_subroutine.f90
 python tests/semantics/generate_semantic_fixtures.py
-python tests/semantics/generate_wrap_readiness_fixtures.py
 python tests/pyi/generate_pyi_fixtures.py
 ```
 
@@ -1008,7 +993,8 @@ Example target: add a new `Annotated[...]` metadata item or projection helper.
 4. Update `x2py/codegen/printers/pyi_printer.py`.
 5. Update semantic models in `x2py/semantics/models.py` only if the IR needs a new
    field or constraint.
-6. Update readiness behavior if the new syntax resolves a blocker.
+6. Update policy completion or wrapper planning if the syntax changes a
+   completed decision.
 7. Update [semantics.md](semantics.md), plus [tutorial.md](tutorial.md) or
    [examples.md](examples.md) when users need the new syntax in a workflow.
 
@@ -1017,25 +1003,20 @@ Focused verification:
 ```bash
 PYTHONPATH=. pytest -q tests/pyi/test_pyi_to_ir.py
 PYTHONPATH=. pytest -q tests/semantics/test_pyi_printer.py
-PYTHONPATH=. pytest -q tests/semantics/test_semantic_wrap_readiness.py
 ```
 
-### Add A Readiness Blocker
+### Add A Stage-Owned Error
 
 Example target: report a new unsupported C/Fortran semantic contract clearly.
 
 1. Preserve the source fact in the parser if it is not already present.
-2. Attach semantic blocker metadata in `x2py/semantics/c2ir.py` or
-   `x2py/semantics/fortran2ir.py`.
-3. Normalize and format the blocker in `x2py/semantics/readiness.py`.
-4. Add focused readiness tests in
-   `tests/semantics/test_semantic_wrap_readiness.py` or
-   `tests/semantics/test_c_semantic_readiness.py`.
-5. Regenerate readiness message fixtures only when the public message changes:
-
-   ```bash
-   python tests/semantics/generate_wrap_readiness_fixtures.py
-   ```
+2. Complete the unsupported decision in post-IR policy when it is a wrapper
+   policy limitation, or raise during semantic conversion when the fact cannot
+   form a semantic contract.
+3. Let the real planner call the completed-policy accessor for that owner; do
+   not create a separate diagnostic traversal or blocker metadata payload.
+4. Add a focused test for the owning semantic, policy, planning, or compiler
+   stage.
 
 6. Update [tutorial.md](tutorial.md) or [examples.md](examples.md) if users
    can fix the blocker by editing `.pyi`.
@@ -1043,8 +1024,7 @@ Example target: report a new unsupported C/Fortran semantic contract clearly.
 Focused verification:
 
 ```bash
-PYTHONPATH=. pytest -q tests/semantics/test_semantic_wrap_readiness.py
-PYTHONPATH=. pytest -q tests/semantics/test_c_semantic_readiness.py
+PYTHONPATH=. pytest -q tests/wrapper_codegen/
 ```
 
 ### Add Or Change CLI Behavior
@@ -1128,12 +1108,11 @@ Refresh semantic and `.pyi` fixtures:
 
 ```bash
 python tests/semantics/generate_semantic_fixtures.py
-python tests/semantics/generate_wrap_readiness_fixtures.py
 python tests/pyi/generate_pyi_fixtures.py
 ```
 
 When parser model output changes, include the regenerated parser goldens and a
-short explanation in the PR. For `.pyi`, semantic IR, or readiness behavior
+short explanation in the PR. For `.pyi`, semantic IR, policy, or wrapper-planning behavior
 changes, update the corresponding fixtures under `tests/pyi/fixtures` or
 `tests/semantics/fixtures`.
 
@@ -1142,7 +1121,7 @@ changes, update the corresponding fixtures under `tests/pyi/fixtures` or
 Manual call for one C fixture:
 
 ```bash
-python -m x2py tests/data/c/general/math_api.h --language c --parse --json
+python -m x2py parse tests/data/c/general/math_api.h --language c --json
 ```
 
 Manual Python API call:
@@ -1186,7 +1165,7 @@ Executable tutorial: `tests/parser/c/test_c_parser_developer_tutorial.py`.
 Manual call for one Fortran fixture:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --language fortran --parse --json
+python -m x2py parse tests/data/fortran/general/basic_subroutine.f90 --language fortran --json
 ```
 
 Manual Python API call:
@@ -1230,10 +1209,10 @@ Executable tutorial: `tests/parser/test_parser_developer_tutorial.py`.
 Manual calls:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
-python -m x2py tests/data/c/general/math_api.h --language c --semantics
-python -m x2py tests/data/c/general/math_api.h --language c --pyi
+python -m x2py semantics tests/data/fortran/general/basic_subroutine.f90
+python -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90
+python -m x2py semantics tests/data/c/general/math_api.h --language c
+python -m x2py generate --pyi tests/data/c/general/math_api.h --language c
 ```
 
 Focused tests by concern:
@@ -1242,38 +1221,34 @@ Focused tests by concern:
   `PYTHONPATH=. pytest -q tests/semantics/test_fortran2ir.py`
 - C parser-to-IR conversion:
   `PYTHONPATH=. pytest -q tests/semantics/test_c2ir.py`
-- Semantic readiness:
-  `PYTHONPATH=. pytest -q tests/semantics/test_semantic_wrap_readiness.py`
-- C readiness blockers:
-  `PYTHONPATH=. pytest -q tests/semantics/test_c_semantic_readiness.py`
+- Wrapper-plan support diagnostics:
+  `PYTHONPATH=. pytest -q tests/wrapper_codegen/`
 - `.pyi` printer:
   `PYTHONPATH=. pytest -q tests/semantics/test_pyi_printer.py`
 - `.pyi` loader and edited stub behavior:
   `PYTHONPATH=. pytest -q tests/pyi/test_pyi_to_ir.py`
 - Semantic and `.pyi` fixtures:
-  `PYTHONPATH=. pytest -q tests/semantics/test_wrap_readiness_fixture_suite.py tests/pyi/test_pyi_fixture_suite.py`
+  `PYTHONPATH=. pytest -q tests/pyi/test_pyi_fixture_suite.py`
 
 Regenerate semantic and `.pyi` fixtures:
 
 ```bash
 python tests/semantics/generate_semantic_fixtures.py
-python tests/semantics/generate_wrap_readiness_fixtures.py
 python tests/pyi/generate_pyi_fixtures.py
 ```
 
-Executable examples: `tests/semantics/test_semantic_wrap_readiness.py`,
-`tests/semantics/test_pyi_printer.py`, and `tests/pyi/test_pyi_to_ir.py`.
+Executable examples: `tests/semantics/test_pyi_printer.py` and
+`tests/pyi/test_pyi_to_ir.py`.
 
 ### CLI
 
 Manual calls:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
-python -m x2py tests/data/c/general/math_api.h --language c --parse
+python -m x2py parse tests/data/fortran/general/basic_subroutine.f90
+python -m x2py semantics tests/data/fortran/general/basic_subroutine.f90
+python -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90
+python -m x2py parse tests/data/c/general/math_api.h --language c
 ```
 
 Focused tests:
@@ -1281,7 +1256,7 @@ Focused tests:
 - Full CLI behavior:
   `PYTHONPATH=. pytest -q tests/parser/test_cli.py`
 - Stage dispatch:
-  `PYTHONPATH=. pytest -q tests/parser/test_cli.py -k "parse or semantics or pyi or wrap_readiness"`
+  `PYTHONPATH=. pytest -q tests/parser/test_cli.py -k "parse or semantics or pyi or wrap"`
 - Language and preprocessing selection:
   `PYTHONPATH=. pytest -q tests/parser/test_cli.py -k "language or preprocessing"`
 

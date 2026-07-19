@@ -93,6 +93,10 @@ def test_verbose_mode_prints_full_direct_build_commands(tmp_path: Path):
 def test_verbose_mode_prints_custom_wrapper_flags(tmp_path: Path):
     source = tmp_path / SCALE_SOURCE.name
     shutil.copyfile(SCALE_SOURCE, source)
+    include_dir = tmp_path / "include"
+    include_dir.mkdir()
+    selected_compiler = tmp_path / "selected-gfortran"
+    selected_compiler.symlink_to(shutil.which("gfortran"))
 
     result = subprocess.run(
         [
@@ -106,7 +110,10 @@ def test_verbose_mode_prints_custom_wrapper_flags(tmp_path: Path):
             str(tmp_path / "build" / "SCALE_debug"),
             "--verbose",
             "--compiler",
-            "gfortran",
+            str(selected_compiler),
+            "-I",
+            str(include_dir),
+            "--native-compile-flags=-O1",
             "--wrapper-fortran-flags=-O2",
             "--wrapper-c-flags=-O2",
         ],
@@ -117,14 +124,24 @@ def test_verbose_mode_prints_custom_wrapper_flags(tmp_path: Path):
     )
     command_lines = result.stdout.splitlines()
 
+    native_command = next(line for line in command_lines if str(source) in line and "-c" in line)
     fortran_wrapper_command = next(
         line for line in command_lines if "bind_c_SCALE_debug_wrapper.f90" in line and "-c" in line
     )
     c_wrapper_command = next(line for line in command_lines if "SCALE_debug_wrapper.c" in line and "-c" in line)
     link_command = next(line for line in command_lines if "-shared" in line and "SCALE_debug" in line)
+    assert "-O1" in shlex.split(native_command)
+    assert "-O2" not in shlex.split(native_command)
     assert "-O2" in shlex.split(fortran_wrapper_command)
     assert "-O2" in shlex.split(c_wrapper_command)
     assert "-O2" in shlex.split(link_command)
+    assert shlex.split(native_command)[0] == str(selected_compiler)
+    assert shlex.split(fortran_wrapper_command)[0] == str(selected_compiler)
+    assert shlex.split(link_command)[0] == str(selected_compiler)
+    for command in (native_command, fortran_wrapper_command, c_wrapper_command):
+        tokens = shlex.split(command)
+        include_values = tuple(tokens[index + 1] for index, token in enumerate(tokens) if token == "-I")
+        assert str(include_dir) in include_values
 
 
 def test_fortran_wrapper_default_places_artifacts_in_invocation_directory(tmp_path: Path):
@@ -287,6 +304,46 @@ def test_source_build_result_records_structured_native_plan(tmp_path: Path):
     assert "native_inputs" not in result.to_dict()
 
 
+def test_source_build_reuses_native_plan_for_additional_compile_and_link_inputs(tmp_path: Path):
+    source = tmp_path / SCALAR_SOURCE.name
+    support = tmp_path / "support.f90"
+    output_dir = tmp_path / "generated"
+    include_dir = tmp_path / "include"
+    library_dir = tmp_path / "lib"
+    object_path = tmp_path / "support.o"
+    shutil.copyfile(SCALAR_SOURCE, source)
+    shutil.copyfile(SCALE_SOURCE, support)
+    include_dir.mkdir()
+    library_dir.mkdir()
+    object_path.write_bytes(b"source-only native link fixture")
+
+    result = build_fortran_extension(
+        source,
+        output_dir=output_dir,
+        native_fortran_sources=[support],
+        native_fortran_flags=["-O1", "-g0"],
+        native_objects=[object_path],
+        native_libraries=["solver"],
+        native_link_items=[{"kind": "linker_argument", "argument": "-Wl,--as-needed"}],
+        native_library_dirs=[library_dir],
+        native_include_dirs=[include_dir],
+        generate_sources=True,
+    )
+
+    plan = result.native_build_plan
+    assert result.compiled is False
+    assert [unit.source for unit in plan.compilation_units] == [source, support]
+    assert all(unit.flags == ("-O1", "-g0") for unit in plan.compilation_units)
+    assert plan.prebuilt_artifacts[0].path == object_path
+    assert include_dir in plan.include_dirs
+    assert plan.library_dirs == (library_dir,)
+    assert plan.link_items[-3:] == (
+        NativeLinkItem("object", object_path),
+        NativeLinkItem("linker_argument", "-Wl,--as-needed"),
+        NativeLinkItem("named_library", "solver"),
+    )
+
+
 def test_native_link_plan_serializes_interleaved_item_kinds():
     plan = NativeBuildPlan(
         link_items=(
@@ -321,9 +378,45 @@ def test_wrapper_build_rejects_missing_source(tmp_path: Path):
         build_fortran_extension(missing, output_dir=tmp_path)
 
 
-def test_wrapper_build_rejects_makefile_verbose_combination(tmp_path: Path):
+@pytest.mark.parametrize("mode", ["makefile", "sources"])
+def test_wrapper_build_rejects_generation_verbose_combination(tmp_path: Path, mode: str):
     source = tmp_path / DEFAULT_OUTPUT_SOURCE.name
     shutil.copyfile(DEFAULT_OUTPUT_SOURCE, source)
 
-    with pytest.raises(ValueError, match="makefile generation and verbose direct compilation"):
-        build_fortran_extension(source, output_dir=tmp_path, makefile=True, verbose=True)
+    generation_options = {"makefile": mode == "makefile", "generate_sources": mode == "sources"}
+    with pytest.raises(ValueError, match="source/Makefile generation and verbose direct compilation"):
+        build_fortran_extension(source, output_dir=tmp_path, verbose=True, **generation_options)
+
+
+def test_generate_sources_cli_writes_wrapper_sources_without_native_outputs(tmp_path: Path):
+    source = tmp_path / SCALE_SOURCE.name
+    output_dir = tmp_path / "generated"
+    shutil.copyfile(SCALE_SOURCE, source)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "x2py",
+            "generate",
+            "--sources",
+            str(source),
+            "--out-dir",
+            str(output_dir),
+            "--native-compile-flags=-g0",
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(completed.stdout)
+
+    assert payload["compiled"] is False
+    assert payload["build_makefile"] is None
+    assert payload["generated_sources"]
+    assert payload["native_build_plan"]["compilation_units"][0]["flags"] == ["-g0"]
+    assert all(Path(path).is_file() for path in payload["generated_sources"])
+    assert not Path(payload["shared_library"]).exists()
+    assert not tuple(output_dir.glob("*.o"))
+    assert not tuple(output_dir.glob("*.so"))

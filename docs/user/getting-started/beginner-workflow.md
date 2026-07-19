@@ -47,7 +47,7 @@ X2PY_C_DOCS_END -->
 Before building, print the semantic `.pyi` contract for the same source:
 
 ```bash
-python3 -m x2py src/scale.f90 --pyi
+python3 -m x2py generate --pyi src/scale.f90
 ```
 
 The output should match the wrapper contract from the
@@ -143,7 +143,7 @@ review or intentionally edit the semantic `.pyi` contract, generate it
 separately:
 
 ```bash
-python3 -m x2py src/scale.f90 --pyi --out contracts
+python3 -m x2py generate --pyi src/scale.f90 --out contracts
 ```
 
 Do not treat this as the beginner default. A runtime build from an edited `.pyi`

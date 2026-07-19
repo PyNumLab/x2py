@@ -56,7 +56,7 @@ Establish the source-free native facts before adding bundle or export policy.
   module and symbol from supplied objects, archives, or shared libraries; code
   generation never reparses unavailable Fortran source.
 - [ ] Missing, contradictory, or structurally altered native facts fail during
-  `.pyi` validation or readiness with a precise diagnostic before bridge code is
+  `.pyi` validation or wrapper planning with a precise diagnostic before bridge code is
   emitted or native compilation begins.
 
 ## Phase 2 — Single-Contract Build Foundation
@@ -68,7 +68,7 @@ Prove one source-free module contract can build before adding contract bundles.
 - [x] Link caller-supplied native object files while skipping parser and
   semantic lowering for native source.
 - [x] Build and import a callable-only Fortran module extension from
-  `module.pyi --wrap --native-objects module.o`.
+  `module.pyi --native-objects module.o`.
 - [x] Preserve the existing source-driven wrapper path and makefile/verbose
   modes while adding the `.pyi`-driven entrypoint.
 - [x] CLI `.pyi` builds accept native object, archive, and shared-library paths
@@ -274,7 +274,7 @@ different public API or runtime contract.
 
 - [ ] Removing `@external` from a generated external declaration, adding it to a
   module procedure, changing native scope, or moving a declaration between
-  module contracts fails during validation or readiness before codegen.
+  module contracts fails during validation or wrapper planning before codegen.
 
 ## Phase 7 — Full Runtime Feature Parity
 
@@ -325,8 +325,8 @@ Add user policy only after unmodified generated contracts have full parity.
   calls without source reparse.
 - [ ] Function and method contracts can express validation, coercion,
   ownership, lifetime, shape, and error-status projection policy that is
-  consumed by readiness and wrapper generation.
-- [ ] Contradictory or incomplete edited contracts fail during readiness or
+  consumed by policy completion and wrapper generation.
+- [ ] Contradictory or incomplete edited contracts fail during policy completion or
   wrapper generation with precise diagnostics instead of silently falling back
   to source-derived behavior.
 

@@ -267,7 +267,7 @@ objects, archives, and libraries remain separate build-plan facts.
 - [x] Derived-type parity covers fields, methods, type-bound root target
   procedures, default/keyword constructors, finalizers, borrowed child
   lifetime, scalar object boundaries, inheritance, polymorphic dispatch, and
-  pointer handle readiness blockers in both `source` and `generated-pyi` modes.
+  pointer handle planning errors in both `source` and `generated-pyi` modes.
   `.pyi` parser regressions restore type-bound target metadata from class method
   declarations.
 - [x] Callback parity covers scalar, array, and derived callback conversions,
@@ -321,17 +321,17 @@ surface evidence lives in `tests/cli/`.
   implementation sources in caller order without using them to reconstruct the
   Python API. Produced objects and module files are recorded in
   `NativeBuildPlan` and used by the extension link.
-- [x] Grouped or repeated `--native-fortran-flags` inputs are recorded in the
+- [x] Grouped or repeated `--native-compile-flags` inputs are recorded in the
   manifest and in each native compilation unit while x2py still emits its
   required compiler flags, including position-independent code.
 - [x] Native sources, prebuilt objects, archives, direct shared libraries, named
   libraries, and ordered native link items can be mixed without changing the
   `.pyi`-defined Python API or reparsing native implementation sources.
-- [x] `.pyi --wrap --makefile --json` writes `<out-dir>/x2py-build.json` and
+- [x] `.pyi --makefile --json` writes `<out-dir>/x2py-build.json` and
   `<out-dir>/Makefile.x2py`; JSON output reports both artifacts and the
   normalized manifest.
-- [x] `--build-manifest PATH --wrap` validates and executes a saved manifest,
-  and `--build-manifest PATH --wrap --makefile` regenerates `Makefile.x2py`
+- [x] `--build-manifest PATH` validates and executes a saved manifest, and
+  `--build-manifest PATH --makefile` regenerates `Makefile.x2py`
   without positional contracts or repeated native flags.
 - [x] `Makefile.x2py` tracks the manifest, complete `.pyi` graph, native
   implementation inputs, compile outputs, and link target while preserving
@@ -405,14 +405,14 @@ X2PY_C_DOCS_END -->
   dummies update the supplied wrapper object. Runtime evidence lives in
   `tests/wrapper/fortran/edit_pyi_contracts/test_native_order_contracts.py`.
 - [x] Ownership, transfer, and destruction policy is completed after full
-  signatures are known and before readiness or wrapper planning. The shared post-IR
+  signatures are known and before wrapper planning. The shared post-IR
   entrypoint is `complete_semantic_policies(...)` in
   `x2py/semantics/policy_completion.py`; direct ownership subpasses stay behind
-  that entrypoint. Readiness and lowering consume completed policy metadata
+  that entrypoint. Planning and lowering consume completed policy metadata
   instead of recomputing policy from raw datatypes. Evidence:
   `tests/semantics/policy/`,
   `tests/wrapper_codegen/`,
-  `tests/semantics/readiness/`,
+  `tests/semantics/policy/`,
   and `x2py/semantics/README.md`.
 - [x] `.pyi` parsing and `.pyi` semantic conversion are separate stages:
   `x2py/parsers/pyi/parser.py` parses text/files to Python AST, and
@@ -435,7 +435,7 @@ X2PY_C_DOCS_END -->
   `docs/user/reference/semantic-pyi-format.md` and
   `tests/semantics/conversion/pyi/test_types_and_values.py::test_convert_pyi_to_ir_rejects_immutable_writable_borrowed_view_argument`.
 - [x] Edited-contract misuse has a documented diagnostic model: loader errors,
-  structural contract errors, readiness blockers, and native artifact failures
+  structural contract errors, wrapper-planning errors, and native artifact failures
   are separated, and diagnostics identify the contract path, declaration,
   invalid fact, and expected form where that information is available. File
   loader semantic errors prefix messages with the `.pyi` contract path while
@@ -502,19 +502,19 @@ X2PY_C_DOCS_END -->
   and
   `tests/semantics/policy/test_policy_defaults_and_validation.py::test_immutable_derived_output_selects_wrapper_instance_and_replacement_blocks`.
 - [x] Generic `Annotated` constraints and semantic coercions are not silently
-  accepted as runtime validation. Fortran wrapper readiness reports direct
+  accepted as runtime validation. Fortran wrapper planning reports direct
   blockers until named validators or conversion actions exist. Evidence:
-  `tests/semantics/readiness/test_reports.py::test_readiness_blocks_generic_constraints_that_have_no_runtime_validator`
+  wrapper-plan tests that prove generic constraints without a runtime validator fail
   and `docs/user/reference/semantic-pyi-format.md`.
 - [x] The currently documented editable-contract surface has direct modified
-  runtime evidence or focused semantic/readiness evidence: removal and hiding,
+  runtime evidence or focused semantic/planning evidence: removal and hiding,
   added and renamed bindings, overload pruning and renamed overload groups,
   native-order identity calls without `@native_call`, immutable replacement,
   ownership triples, pointer-policy blockers, runtime constraints, `@raises`,
   `@hold_gil`, and native-artifact failures. Evidence:
   `docs/user/guide/editing-semantic-pyi-contracts.md`,
   `tests/wrapper/fortran/edit_pyi_contracts/`,
-  `tests/semantics/readiness/`,
+  `tests/semantics/policy/`,
   `tests/wrapper/fortran/runtime_behavior/test_runtime_policy_decorators.py`,
   `tests/wrapper/fortran/build_from_pyi/test_pyi_wrapper_builds.py`, and
   `tests/wrapper/CHECKLIST_COVERAGE.md`.
@@ -573,7 +573,7 @@ artifact-level evidence.
   module and symbol from supplied objects, archives, or shared libraries; code
   generation never reparses unavailable Fortran source.
 - [x] Missing, contradictory, or structurally altered native facts fail during
-  `.pyi` validation or readiness with a precise diagnostic before bridge code is
+  `.pyi` validation or wrapper planning with a precise diagnostic before bridge code is
   emitted or native compilation begins.
 
 ### Single-Contract Build Foundation
@@ -585,7 +585,7 @@ Prove one source-free module contract can build before adding contract bundles.
 - [x] Link caller-supplied native object files while skipping parser and
   semantic lowering for native source.
 - [x] Build and import a callable-only Fortran module extension from
-  `module.pyi --wrap --native-objects module.o`.
+  `module.pyi --native-objects module.o`.
 - [x] Preserve the existing source-driven wrapper path and makefile/verbose
   modes while adding the `.pyi`-driven entrypoint.
 - [x] CLI `.pyi` builds accept native object, archive, and shared-library paths
@@ -594,7 +594,7 @@ Prove one source-free module contract can build before adding contract bundles.
 - [x] CLI `.pyi` builds accept library search/rpath directories with
   `--native-library-dir`.
 - [x] CLI `.pyi` builds accept native module/interface include directories with
-  `--native-include-dir`.
+  the build-wide `-I` / `--include-dir` option.
 - [x] CLI `.pyi` builds reject missing native build inputs with a direct error.
 - [x] JSON build output reports both the semantic contract sources and the
   explicit native artifact and link inputs.

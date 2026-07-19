@@ -49,7 +49,6 @@ from x2py.pipeline.pyi import pyi_text_to_semantic_module as parse_pyi_text
 
 from x2py.semantics.metadata import SCALAR_STORAGE_CATEGORY
 
-from x2py.semantics.readiness import assess_semantic_wrap_readiness
 
 from x2py.wrapper_codegen.printers import emit_module
 
@@ -128,7 +127,6 @@ __all__ = (
     "_resolve_compile_time_text",
     "array_contract",
     "asdict",
-    "assess_semantic_wrap_readiness",
     "collect_fortran_type_storage_requirements",
     "collect_semantic_compile_time_requirements",
     "emit_module",

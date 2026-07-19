@@ -88,7 +88,7 @@ X2PY_C_DOCS_END -->
   from contract docs to implementation, tests, fixtures, support matrix, and
   release notes.
 - [ ] `docs/developer/adding-a-fortran-construct.md`: document parser,
-  semantic, readiness, wrapper, docs, and fixture updates for a new Fortran
+  semantic, policy, wrapper, docs, and fixture updates for a new Fortran
   construct.
 - [ ] `docs/developer/adding-a-code-generation-backend.md`: document
   backend acceptance criteria, ownership boundaries, generated artifacts, tests,
@@ -126,7 +126,7 @@ X2PY_C_DOCS_END -->
 - [ ] `docs/maintainer/design/parser-architecture.md`: document parser ownership,
   preprocessing boundaries, model facts, diagnostics, and fixture strategy.
 - [ ] `docs/maintainer/design/semantic-analysis.md`: document source-to-IR lowering,
-  `.pyi`-to-IR loading, policy completion, readiness blockers, and invariants.
+  `.pyi`-to-IR loading, policy completion, wrapper-planning errors, and invariants.
 - [ ] `docs/maintainer/design/runtime-model.md`: document native support files, generated
   wrappers, native state, callbacks, threading, and finalization.
 - [ ] `docs/maintainer/design/error-propagation-model.md`: document diagnostic categories,
@@ -140,7 +140,7 @@ X2PY_C_DOCS_END -->
   store, and what must not leak across
   layers.
 - [ ] `docs/maintainer/internal-architecture/semantic-passes.md`: document semantic pass
-  ordering, completed policy decisions, readiness checks, and handoff to
+  ordering, completed policy decisions, planner validation, and handoff to
   `ir2ast`.
 - [x] `docs/maintainer/internal-architecture/wrapper-generation-pipeline.md`: maintained
   explanation of the current wrapper stages, semantic-policy boundary,
@@ -159,7 +159,7 @@ X2PY_C_DOCS_END -->
   source ordering, preprocessing dependency facts, generated build plans, and
   future automatic dependency discovery.
 - [ ] `docs/maintainer/internal-architecture/error-handling-pipeline.md`: document
-  diagnostic creation, path-aware `.pyi` loader errors, readiness failures,
+  diagnostic creation, path-aware `.pyi` loader errors, wrapper-planning failures,
   generated validation failures, and native runtime errors.
 - [ ] `docs/maintainer/internal-architecture/symbol-tables.md`: document public naming,
   generated-symbol reservation, collision policy, imports, scopes, and package
@@ -220,7 +220,7 @@ X2PY_C_DOCS_END -->
   semantic pass, runtime, type-system, ownership, and symbol-table pages.
 - [ ] `docs/developer/contributing/index.md`: route contributors to contribution,
   pull-request, review, and coding-standard pages.
-- [ ] Public documentation site readiness gate: deploy the existing MkDocs
+- [ ] Public documentation site publication gate: deploy the existing MkDocs
   documentation as the project website only after all of the following are
   true; do not create a separate marketing-content system for this milestone.
   - [ ] The landing page states the current project promise, supported workflow,
@@ -264,7 +264,7 @@ primary placeholder queue.
 - [x] `docs/user/getting-started/first-wrapped-module.md`: maintained checked module
   namespace, public state, saved state, visibility, and limitation guide.
 - [x] `docs/user/getting-started/beginner-workflow.md`: maintained edit, inspect,
-  readiness, build, smoke-test, artifact-review, and rebuild loop.
+  planning, build, smoke-test, artifact-review, and rebuild loop.
 - [x] `docs/user/reference/semantic-ir.md`: maintained Semantic IR contract.
 - [x] `docs/user/reference/semantic-pyi-format.md`: maintained semantic `.pyi`
   contract.

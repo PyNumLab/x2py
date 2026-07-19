@@ -8,7 +8,7 @@ status: planned-documentation
 
 # Error Propagation Model
 
-Reserved design page for diagnostic reporting, readiness blockers, compiler
+Reserved design page for diagnostic reporting, stage-owned errors, compiler
 failures, runtime exceptions, and callback exceptions.
 
 ## TODO

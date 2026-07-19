@@ -1,12 +1,10 @@
 """Tests split by stable ownership concept from `test_functions_and_callbacks.py`."""
 
 from tests.semantics.conversion.c._support import (
-    CDiagnostic,
     CEnum,
     CFile,
     CFunction,
     CInt,
-    CMacroDependency,
     CParameter,
     CProject,
     CSourceLocation,
@@ -19,11 +17,9 @@ from tests.semantics.conversion.c._support import (
     SemanticModule,
     SemanticOrigin,
     SemanticType,
-    _blocker,
     _c_origin,
     _function,
     asdict,
-    assess_semantic_wrap_readiness,
     c_file_to_semantic_module,
     c_parameter_to_semantic_argument,
     c_project_to_semantic_module,
@@ -68,7 +64,6 @@ def test_c2ir_explicit_project_headers_import_types_from_their_owner_module():
     assert "external_type_ref" not in local_state.metadata
     assert "from types import state" in stubs["api"]
     assert "class state" not in stubs["api"]
-    assert assess_semantic_wrap_readiness(api, source="api.h")["wrappable"] is True
 
 
 def test_c2ir_classifies_external_types_after_owner_modules_without_rewriting_local_references():
@@ -236,71 +231,3 @@ def test_c2ir_visitor_and_project_compatibility_entrypoints_cover_supported_node
         "global_choice",
     ]
     assert [arg.semantic_type.metadata["incomplete"] for arg in registry_merged_args] == [False, False]
-
-
-def test_c2ir_propagates_file_and_project_diagnostic_blockers():
-    dependency = CMacroDependency(name="API", source_text="API(int) f(void);")
-    warning = CDiagnostic(code="C_WARNING", message="warning", severity="warning")
-    duplicate_dependency = CDiagnostic(
-        code="C_MACRO_DEPENDENT_DECLARATION",
-        message="already represented",
-        severity="error",
-    )
-    error = CDiagnostic(
-        code="C_BAD_DECL",
-        message="bad declaration",
-        severity="error",
-        unit_kind="function",
-        unit_name="broken",
-    )
-    orphan_error = CDiagnostic(code="C_ORPHAN", message="orphan", severity="error")
-    c_file = CFile(
-        filename=None,
-        macro_dependencies=[dependency],
-        diagnostics=[warning, duplicate_dependency, error, orphan_error],
-    )
-    project = CProject(files={"bad.h": c_file}, diagnostics=[error, orphan_error])
-    converter = CToIRConverter()
-
-    module = converter.visit(c_file)
-    merged = converter.project_to_semantic_module(project)
-    file_codes = {blocker["code"] for blocker in module.metadata["readiness_blockers"]}
-    project_codes = {blocker["code"] for blocker in merged.metadata["readiness_blockers"]}
-
-    expected_blockers = [
-        _blocker(
-            "c_macro_dependent_declaration",
-            "Some C declarations depend on macros that were recorded but not expanded.",
-            {
-                "owner": "<c-source>",
-                "macro": "API",
-                "context": "declaration",
-                "source": "API(int) f(void);",
-            },
-        ),
-        _blocker(
-            "c_c_bad_decl",
-            "bad declaration",
-            {
-                "owner": "broken",
-                "diagnostic_code": "C_BAD_DECL",
-                "unit_kind": "function",
-                "unit_name": "broken",
-            },
-        ),
-        _blocker(
-            "c_c_orphan",
-            "orphan",
-            {
-                "owner": "<c-source>",
-                "diagnostic_code": "C_ORPHAN",
-                "unit_kind": None,
-                "unit_name": None,
-            },
-        ),
-    ]
-    assert module.name == "c_module"
-    assert file_codes == {"c_macro_dependent_declaration", "c_c_bad_decl", "c_c_orphan"}
-    assert project_codes == {"c_macro_dependent_declaration", "c_c_bad_decl", "c_c_orphan"}
-    assert module.metadata["readiness_blockers"] == expected_blockers
-    assert merged.metadata["readiness_blockers"] == expected_blockers

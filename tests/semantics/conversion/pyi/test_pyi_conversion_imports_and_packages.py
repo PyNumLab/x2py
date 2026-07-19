@@ -7,7 +7,6 @@ from tests._shared.pyi_conversion_support import (
     SemanticImport,
     SemanticImportItem,
     _semantic_modules_for_source,
-    assess_semantic_wrap_readiness,
     emit_module,
     fortran_file_to_semantic_modules,
     native_contract_issues,
@@ -406,11 +405,3 @@ end subroutine solve
     assert native_contract_issues(loaded) == []
     assert loaded.origin.native_name == "renamed_root_contract"
     assert loaded.functions[0].origin.native_scope is None
-
-
-def test_readiness_uses_source_free_contract_filename_as_native_scope():
-    module = parse_pyi_text("def solve(value: Float64) -> Float64: ...\n", module_name="missing")
-    report = assess_semantic_wrap_readiness(module, require_native_contract=True)
-
-    assert report["wrappable"] is True
-    assert module.origin.native_name == "missing"

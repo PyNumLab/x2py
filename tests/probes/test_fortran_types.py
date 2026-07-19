@@ -485,11 +485,10 @@ end module solver_mod
             sys.executable,
             "-m",
             "x2py",
+            "semantics",
             str(source),
-            "--semantics",
             "--compiler",
             compiler,
-            "--json",
         ],
         capture_output=True,
         text=True,
@@ -523,13 +522,12 @@ end module defaults
             sys.executable,
             "-m",
             "x2py",
+            "semantics",
             str(source),
-            "--semantics",
             "--compiler",
             compiler,
             "--compiler-arg=-fdefault-integer-8",
             "--compiler-arg=-fdefault-real-8",
-            "--json",
         ],
         capture_output=True,
         text=True,
@@ -547,56 +545,3 @@ end module defaults
     assert semantic_types["legacy_value"]["name"] == "Complex128"
     assert semantic_types["scale"]["metadata"]["fortran_type_fact_source"] == "compiler_probe"
     assert semantic_types["legacy_value"]["metadata"]["fortran_type_fact_source"] == "legacy_star_storage"
-
-
-def test_x2py_semantics_cli_reuses_explicit_fortran_type_report(tmp_path):
-    compiler = _required_fortran_compiler()
-    source = tmp_path / "defaults.f90"
-    source.write_text(
-        """
-module defaults
-  real :: scale
-end module defaults
-""",
-        encoding="utf-8",
-    )
-    expression = "storage_size(real(0.0))"
-    report_path = tmp_path / "fortran-types.json"
-    report_path.write_text(
-        json.dumps(
-            {
-                "values": {expression: 64},
-                "recipe": {
-                    "compiler": compiler,
-                    "compile_argv": [],
-                    "run_argv": [],
-                    "expressions": [expression],
-                },
-                "source_text": "reusable test probe",
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "x2py",
-            str(source),
-            "--semantics",
-            "--compiler",
-            compiler,
-            "--fortran-type-report",
-            str(report_path),
-            "--json",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-
-    payload = json.loads(completed.stdout)
-    semantic_type = payload[str(source)]["semantic_modules"][0]["variables"][0]["semantic_type"]
-    assert semantic_type["name"] == "Float64"
-    assert semantic_type["metadata"]["fortran_type_fact"]["expression"] == expression

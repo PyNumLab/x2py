@@ -8,7 +8,7 @@ status: planned-documentation
 
 # Semantic Passes
 
-Reserved maintainer page for parser-to-IR conversion, validation, readiness,
+Reserved maintainer page for parser-to-IR conversion, validation, policy completion,
 and `.pyi` round trips.
 
 ## TODO

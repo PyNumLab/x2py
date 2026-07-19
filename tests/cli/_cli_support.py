@@ -36,6 +36,7 @@ class _MainParserError(Exception):
 def _main_args(**overrides):
     values = {
         "paths": ["input.f90"],
+        "command": "build",
         "language": "fortran",
         "parse": False,
         "preprocessor_adapter": "auto",
@@ -47,31 +48,21 @@ def _main_args(**overrides):
         "undefs": [],
         "std": None,
         "compiler_args": [],
-        "c_type_report": None,
-        "c_type_probe_runner": [],
-        "c_type_probe_cache_dir": None,
-        "refresh_c_type_probe": False,
-        "fortran_type_report": None,
-        "fortran_type_probe_runner": [],
-        "fortran_type_probe_cache_dir": None,
-        "refresh_fortran_type_probe": False,
         "include_exposure": "reachable-project",
         "public_includes": [],
         "private_includes": [],
         "show_vars": False,
         "print_limit": None,
         "vars_limit": None,
-        "wrap_readiness": False,
-        "wrap": False,
         "makefile": False,
+        "generate_sources": False,
         "build_manifest": None,
         "native_fortran_sources": None,
-        "native_fortran_flags": None,
+        "native_compile_flags": None,
         "native_objects": None,
         "native_libraries": None,
         "native_link_items": None,
         "native_library_dirs": None,
-        "native_include_dirs": None,
         "strict_wrapper_names": False,
         "wrapper_compiler_debug": False,
         "wrapper_fortran_flags": None,
@@ -86,6 +77,13 @@ def _main_args(**overrides):
         "debug": False,
     }
     values.update(overrides)
+    if "command" not in overrides:
+        if values["parse"]:
+            values["command"] = "parse"
+        elif values["semantics"]:
+            values["command"] = "semantics"
+        elif values["pyi"] or values["generate_sources"] or values["makefile"]:
+            values["command"] = "generate"
     return types.SimpleNamespace(**values)
 
 
@@ -97,14 +95,14 @@ def _install_main_parser(monkeypatch, args):
         def add_argument_group(self, *_args, **_kwargs):
             return self
 
-        def parse_args(self):
+        def parse_args(self, _argv=None):
             return args
 
         def error(self, message):
             raise _MainParserError(message)
 
     parser = FakeParser()
-    monkeypatch.setattr(x2py_cli.argparse, "ArgumentParser", lambda *args, **kwargs: parser)
+    monkeypatch.setattr(x2py_cli, "_parser_for_argv", lambda argv: (parser, argv))
     return parser
 
 
@@ -114,7 +112,6 @@ def _patch_main_report_payloads(
     language="fortran",
     parse_payload=None,
     semantic_payload=None,
-    readiness_payload=None,
 ):
     preprocessing = object()
     calls = []
@@ -130,20 +127,6 @@ def _patch_main_report_payloads(
         "_semantic_report",
         lambda paths, active_preprocessing, *, language: (
             calls.append(("semantic", paths, active_preprocessing, language)) or semantic_payload
-        ),
-    )
-    monkeypatch.setattr(
-        x2py_cli,
-        "_wrap_readiness_report",
-        lambda paths, active_preprocessing, *, language: (
-            calls.append(("readiness", paths, active_preprocessing, language)) or readiness_payload
-        ),
-    )
-    monkeypatch.setattr(
-        x2py_cli,
-        "_attach_wrap_readiness",
-        lambda active_semantic_payload, active_readiness_payload: calls.append(
-            ("attach", active_semantic_payload, active_readiness_payload)
         ),
     )
     return preprocessing, calls

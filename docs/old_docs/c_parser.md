@@ -12,12 +12,12 @@ Status: current reference for the partial C frontend. The `x2py.c_parser`
 package, typed parser models, explicit C CLI parse path, raw directive
 metadata, compiler-assisted preprocessing, source-location remapping, project
 indexes, legacy parser schema snapshots, C standard-type probe, first semantic IR conversion
-subset, semantic readiness path, and starter exact-contract C `.pyi`
+subset, semantic conversion path, and starter exact-contract C `.pyi`
 generation are implemented.
 
 This file is the single maintained C parser reference. It replaces the older
 standalone architecture and CLI workflow notes; keep parser behavior, public
-API, command output, fixtures, semantic conversion, readiness, and `.pyi`
+API, command output, fixtures, semantic conversion, policy completion, and `.pyi`
 changes documented here.
 
 Parser-related pull requests should update this file when the documented
@@ -73,8 +73,7 @@ Implemented:
   the `x2py.c_parser` package entrypoints
 - `CParseError` with compiler-style diagnostic formatting
 - explicit `x2py --language c --parse` output
-- explicit `x2py --language c --semantics` and
-  `x2py --language c --wrap-readiness` output
+- explicit `x2py --language c --semantics` output
 - starter exact-contract `x2py --language c --pyi` output for the supported C
   semantic subset
 - C JSON partial output and `--out` behavior
@@ -147,7 +146,7 @@ Implemented:
 - `semantics.c2ir` conversion for the first identity subset: scalar
   functions, const/mutable pointer storage contracts, declared arrays,
   structs/opaque structs, enums, numeric macro constants, local typedef
-  chains, standard-type probe facts, and explicit semantic readiness blockers
+  chains, standard-type probe facts, and explicit semantic conversion errors
 
 Still deferred:
 
@@ -237,17 +236,17 @@ to parse reports for provenance.
 Examples:
 
 ```bash
-python -m x2py include/api.h --language c --parse \
+python -m x2py parse include/api.h --language c \
   --compiler clang-18 \
   -I include \
   -D API_EXPORT= \
   --std c11
 
-python -m x2py src/api.c --language c --parse \
+python -m x2py parse src/api.c --language c \
   --compiler /usr/bin/gcc-13 \
   --compiler-arg=--sysroot=/opt/sdk
 
-python -m x2py src/api.c --language c --parse \
+python -m x2py parse src/api.c --language c \
   --compile-commands build/compile_commands.json
 ```
 
@@ -282,7 +281,7 @@ facts. Plain `char` signedness, `long` width, `long double` representation,
 remain an opaque library handle rather than exposing private library layout.
 Raw parsing therefore remains source-faithful instead of embedding an ABI.
 
-For direct compiler-backed C semantic, `.pyi`, and readiness stages, the shared
+For direct compiler-backed C semantic and `.pyi` stages, the shared
 CLI automatically compiles and runs a small C11 query under the selected
 compiler. The standalone command emits the same target-specific report:
 
@@ -298,7 +297,7 @@ pointer ABI facts for `FILE`. It also retains the generated C source and exact
 compile/run commands. Semantic conversion keeps the name `Int` for builtin C
 `int`, stores its measured concrete dtype separately, and maps other primitives
 to the measured target width. Unsupported measured widths produce an explicit
-semantic readiness blocker.
+semantic conversion error.
 
 The probe must be run with the same target profile as the source being parsed.
 It carries `-I`, `-D`, `-U`, and `--compiler-arg` options into the compile
@@ -314,15 +313,13 @@ the probe schema/source, resolved compiler binary identity, target flags,
 includes, defines, undefines, requested standard, working directory,
 target-related compiler environment, and runner executable/arguments. The
 default persistent location is `$XDG_CACHE_HOME/x2py/c_type_probe` or
-`~/.cache/x2py/c_type_probe`; `X2PY_CACHE_DIR`,
-`--c-type-probe-cache-dir`, and standalone `--cache-dir` override it. Use
-`--refresh-c-type-probe` on the shared CLI or standalone `--refresh` after an
-external target/sysroot change that does not alter the cache key.
+`~/.cache/x2py/c_type_probe`; `X2PY_CACHE_DIR` changes the internal cache root.
+The standalone probe exposes `--cache-dir` and `--refresh` for explicit runs.
 
 The probe does not consume `compile_commands.json` or custom preprocessing
 templates directly because one project may contain different target recipes.
-Generate a report with the selected compiler and target-relevant flags, then
-reuse it during semantic conversion:
+Generate a report with the selected compiler and target-relevant flags when
+you want to inspect that target:
 
 ```bash
 python3 -m x2py.c_type_probe --compiler clang \
@@ -330,17 +327,11 @@ python3 -m x2py.c_type_probe --compiler clang \
   --compiler-arg=--sysroot=/opt/aarch64-sysroot \
   --runner=qemu-aarch64 --runner=-L --runner=/opt/aarch64-sysroot \
   > build/aarch64-c-types.json
-
-python3 -m x2py src/api.c --language c --semantics \
-  --compile-commands build/compile_commands.json \
-  --c-type-report build/aarch64-c-types.json
 ```
 
-For direct shared-CLI cross-target probing, repeat
-`--c-type-probe-runner=...` for the runner command and arguments.
-
-The C semantic converter accepts this report as target context. The parser
-model remains source-faithful and does not embed host ABI assumptions.
+The report is an inspection output. Direct-compiler semantic stages measure
+their required ABI facts internally; the parser model remains source-faithful
+and does not embed host ABI assumptions.
 
 ## Parser Organization Notes
 
@@ -514,7 +505,7 @@ print(project.header_source_pairs)
 Example: parse compiler-preprocessed text produced by the shared x2py CLI.
 
 ```bash
-python -m x2py include/api.h --language c --parse --json \
+python -m x2py parse include/api.h --language c --json \
   --compiler clang-18 \
   -I include \
   -D API_EXPORT=
@@ -540,7 +531,7 @@ receives the already-expanded translation unit from `x2py.preprocessing`.
 The parser itself should stay parse-only. If the C frontend later gains
 wrappability assessment, that should live in the semantic layer after C parser
 models are converted to semantic IR or edited `.pyi` policy is loaded, matching
-the current Fortran and `.pyi` readiness boundary.
+the current Fortran and `.pyi` wrapper-planning boundary.
 
 ## CLI Usage
 
@@ -611,14 +602,14 @@ JSON compatibility rules:
 - keep model fields stable enough for golden fixture testing
 - document every intentional schema break
 
-## Readiness Boundary
+## Semantic And Wrapper-Planning Boundary
 
 The parser should not assess wrappability.
 
-Any future C readiness rules should be implemented after the parser output is
+Any future C wrapper-planning rules should be implemented after the parser output is
 converted to semantic IR, or after an edited `.pyi` file provides the missing
 policy. That keeps the C parser aligned with the current project rule that
-readiness is a semantic concern, not a parser concern.
+policy completion is a semantic concern, not a parser concern.
 
 For C callback-bearing APIs, the parser should still preserve enough source
 facts to let later semantic work decide what is safe:
@@ -678,7 +669,7 @@ Test families should mirror the Fortran parser:
 - typedef tests
 - macro/constant tests
 - include/project tests
-- C semantic readiness tests
+- C semantic conversion tests
 - CLI tests
 - semantic conversion tests
 - `.pyi` generation/parser tests
@@ -706,7 +697,7 @@ activate only the tests for the capability they implement.
 Useful local checks for the parse-only frontend:
 
 ```bash
-python -m x2py tests/data/c/general/math_api.h --language c --parse --json
+python -m x2py parse tests/data/c/general/math_api.h --language c --json
 python tests/parser/c/generate_c_parser_goldens.py tests/data/c/general/math_api.h
 pytest -q tests/parser/c/test_c_declarations_and_declarators.py
 pytest -q tests/parser/c/test_c_fixture_suite.py
@@ -812,14 +803,12 @@ The C frontend is always selected explicitly:
 ```bash
 x2py --language c --parse path/to/api.h
 x2py --language c --semantics path/to/api.h
-x2py --language c --wrap-readiness path/to/api.h
 x2py --language c --pyi path/to/api.h
 ```
 
 `--parse` emits parser facts only. `--semantics` converts the implemented
-identity subset to the shared semantic IR. `--wrap-readiness` evaluates the
-semantic IR for blocker policy. `--pyi` emits starter exact-contract stubs for
-supported declarations.
+identity subset to the shared semantic IR. `--pyi` emits starter
+exact-contract stubs for supported declarations.
 
 Raw macro-heavy files should be preprocessed through the compiler-assisted path
 before parsing. Direct `.i` input and compiler streams preserve original source
@@ -837,7 +826,7 @@ The parser is intentionally grammar-style and model-first:
   guessing
 - keep source locations on parsed declarations and diagnostics
 - resolve project-level typedefs and tags after per-file parsing
-- defer wrapping policy to semantic conversion and readiness layers
+- defer wrapping policy to semantic conversion and policy-completion layers
 
 C parsing must remain opt-in so Fortran directory parsing keeps its historical
 behavior. Include resolution records graph facts and header/source pairing, but
@@ -882,7 +871,7 @@ source path or source text
   -> CParser._assemble_project(...) or parse_c_project(...)
   -> CProject indexes and cross-file resolution facts
   -> semantics.c2ir conversion
-  -> readiness and `.pyi`; a C-input runtime wrapper backend comes later
+  -> policy completion and `.pyi`; a C-input runtime wrapper backend comes later
 ```
 
 Keep these boundaries:
@@ -999,6 +988,6 @@ The C parser documentation now lives in this top-level file:
 
 Documentation update rule: every C parser implementation change must update
 this reference in the same change when behavior, public API, models, CLI
-output, tests, fixture workflow, semantic conversion, semantic readiness, or
+output, tests, fixture workflow, semantic conversion, semantic policy, or
 `.pyi` output changes. Do not wait for a separate documentation request before
 updating it.

@@ -35,6 +35,7 @@ C_DOCS_START = "<!-- X2PY_C_DOCS_START"
 C_DOCS_END = "X2PY_C_DOCS_END -->"
 C_DOCS_DISABLED = "<!-- X2PY_C_DOCS_DISABLED:"
 VISIBLE_C_DOCUMENTATION_EXCEPTIONS = {
+    "docs/user/reference/cli-commands.md": ("C INCLUDE OPTIONS", "{fortran,c}"),
     "docs/user/guide/enumerations.md": ("bind(C)",),
     "docs/user/guide/wrapping-derived-types.md": ("bind(C)",),
     "docs/user/guide/arrays.md": ("ORDER_C", "C-contiguous", "C-order", "C-oriented"),
@@ -146,22 +147,29 @@ REQUIRED_USER_GUIDE_PAGES = [
     "user/guide/editing-semantic-pyi-contracts.md",
 ]
 CLI_HELP_GROUP_HEADINGS = [
+    "commands:",
+    "positional arguments:",
     "input selection:",
-    "inspection stages:",
-    "compiler preprocessing:",
-    "target type probes:",
-    "C include exposure:",
-    "parse report controls:",
-    "wrapper builds:",
-    "output and diagnostics:",
+    "input options:",
+    "generation modes:",
+    "compiler and preprocessing options:",
+    "preprocessing options:",
+    "C include options:",
+    "report options:",
+    "compiler options:",
+    "wrapper options:",
+    "native options:",
+    "probe options:",
+    "execution options:",
+    "output options:",
+    "diagnostic options:",
 ]
 CLI_REFERENCE_OPTIONS = [
     "paths",
+    "--help-build",
     "--language",
-    "--parse",
-    "--semantics",
     "--pyi",
-    "--wrap-readiness",
+    "--sources",
     "--preprocessor-adapter",
     "--compiler",
     "--preprocess-template",
@@ -173,25 +181,22 @@ CLI_REFERENCE_OPTIONS = [
     "--undef",
     "--std",
     "--compiler-arg",
-    "--fortran-type-report",
-    "--fortran-type-probe-runner",
-    "--fortran-type-probe-cache-dir",
-    "--refresh-fortran-type-probe",
     "--show-vars",
     "--print-limit",
-    "--vars-limit",
-    "--wrap",
     "--makefile",
     "--strict-wrapper-names",
     "--build-manifest",
     "--native-fortran-sources",
-    "--native-fortran-flags",
+    "--native-compile-flags",
     "--native-objects",
     "--native-library",
     "--native-link-item",
     "--native-library-dir",
-    "--library-dir",
-    "--native-include-dir",
+    "--format",
+    "--expr",
+    "--runner",
+    "--cache-dir",
+    "--refresh",
     "--json",
     "--out",
     "--out-dir",
@@ -200,7 +205,7 @@ CLI_REFERENCE_OPTIONS = [
     "--debug",
     "--debug-traceback",
 ]
-CLI_VISIBLE_HELP_OPTIONS = [option for option in CLI_REFERENCE_OPTIONS if option != "--vars-limit"]
+CLI_VISIBLE_HELP_OPTIONS = CLI_REFERENCE_OPTIONS
 REQUIRED_SOURCE_NAVIGATION_PAGES = [
     "developer/source-map.md",
     "developer/feature-to-code-map.md",
@@ -238,7 +243,6 @@ SOURCE_NAVIGATION_HOTSPOTS = [
     "x2py/semantics/pyi2ir.py",
     "x2py/pipeline/pyi.py",
     "x2py/semantics/policy_completion.py",
-    "x2py/semantics/readiness.py",
     "x2py/wrapper_codegen/plan.py",
     "x2py/wrapper_codegen/planner.py",
     "x2py/wrapper_codegen/generator.py",
@@ -290,11 +294,9 @@ SOURCE_NAVIGATION_TEST_TARGETS = [
     "tests/parsing/pyi/",
     "tests/semantics/",
     "tests/semantics/conversion/c/",
-    "tests/semantics/readiness/test_c_readiness.py",
     "tests/semantics/conversion/fortran/",
     "tests/wrapper_codegen/printers/",
     "tests/wrapper_codegen/printers/test_modern_example.py",
-    "tests/semantics/readiness/",
     "tests/docs/test_examples.py",
     "tests/docs/test_structure.py",
     "tests/wrapper/fortran/",
@@ -344,7 +346,7 @@ FEATURE_MATRIX_REQUIRED_FEATURES = [
     "Visibility, naming, keyword escaping, and collision policy",
     "Immediate call-scoped Python callbacks",
     "Runtime error projection, GIL policy, recursion, OpenMP path, and GNU ABI checks",
-    "Fortran parse, semantic IR, `.pyi`, and readiness inspection",
+    "Fortran parse, semantic IR, and `.pyi` inspection",
     "Semantic `.pyi` wrapper builds from explicit native artifacts",
     "Assumed-size, assumed-rank, and lower-bound array contracts",
     "Scalar inheritance and polymorphic dispatch",
@@ -478,14 +480,25 @@ def _site_navigation_positions() -> dict[str, int]:
 
 @cache
 def _x2py_cli_help() -> str:
-    result = subprocess.run(
-        [sys.executable, "-m", "x2py", "--help"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return result.stdout
+    commands = [
+        ["--help"],
+        ["input.f90", "--help"],
+        ["parse", "--help"],
+        ["semantics", "--help"],
+        ["generate", "--help"],
+        ["probe", "--help"],
+    ]
+    outputs = []
+    for command in commands:
+        result = subprocess.run(
+            [sys.executable, "-m", "x2py", *command],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        outputs.append(result.stdout)
+    return "\n".join(outputs)
 
 
 def _feature_matrix_rows() -> list[dict[str, str]]:
@@ -560,6 +573,22 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
         "The runtime wrapper mechanism is:",
         maxsplit=1,
     )[0]
+    top_help = subprocess.run(
+        [sys.executable, "-m", "x2py", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+
+    assert "README Quick Start example (scale.f90):" in top_help
+    for command in (
+        "python3 -m x2py scale.f90",
+        "python3 -m x2py scale.f90 --out SCALE",
+        "python3 -m x2py generate --pyi scale.f90 --out contracts",
+    ):
+        assert command in quick_start
+        assert command in top_help
 
     help_index = quick_start.index("python3 -m x2py --help")
     source_index = quick_start.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->")
@@ -585,7 +614,7 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     )
     explicit_source_build_tree_index = quick_start.index("build/SCALE/", explicit_source_build_command_index)
     pyi_generation_command_index = quick_start.index(
-        "python3 -m x2py scale.f90 \\\n  --pyi",
+        "python3 -m x2py generate --pyi scale.f90",
         explicit_source_build_tree_index,
     )
     pyi_contract_tree_index = quick_start.index("contracts/\n  __init__.pyi", pyi_generation_command_index)
@@ -608,7 +637,7 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     points_source_index = quick_start.index("For a small derived-type wrapper", runtime_output_index)
     points_fortran_index = quick_start.index("module points", points_source_index)
     points_pyi_command_index = quick_start.index(
-        "python3 -m x2py points.f90 --pyi --out contracts",
+        "python3 -m x2py generate --pyi points.f90 --out contracts",
         points_fortran_index,
     )
     points_contract_index = quick_start.index(
@@ -653,7 +682,6 @@ def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     assert verbose_output_index < module_lesson_index
     assert "--parse" not in readme
     assert "--semantics" not in readme
-    assert "--wrap-readiness" not in readme
     assert "tests/data/fortran/wrapper/scale.f90" in quick_start
     assert "scale.f90 --json" not in quick_start
     assert "python3 -m x2py solver.f90" not in quick_start
@@ -823,7 +851,7 @@ def test_first_wrapped_function_shows_contract_and_mentions_later_support_bounda
     page = (DOCS_ROOT / "user/getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
     source_index = page.index("[README Quick Start](../../../README.md#quick-start)")
     build_index = page.index("python3 -m x2py scale.f90 \\")
-    command_index = page.index("python3 -m x2py scale.f90 --pyi")
+    command_index = page.index("python3 -m x2py generate --pyi scale.f90")
     contract_index = page.index(
         "@external\n@native_call([Addr(Arg(0)), Addr(Arg(1))])\ndef scale(\n"
         "    value: Float64,\n    factor: Float64\n) -> Float64: ..."
@@ -839,7 +867,7 @@ def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None
     page = (DOCS_ROOT / "user/getting-started/first-wrapped-module.md").read_text(encoding="utf-8")
     source_index = page.index("Create `module_state.f90` with this module:")
     build_index = page.index("python3 -m x2py module_state.f90 \\")
-    inspect_index = page.index("python3 -m x2py module_state.f90 --pyi")
+    inspect_index = page.index("python3 -m x2py generate --pyi module_state.f90")
     contract_index = page.index("nmax: Final[Int32] = 12")
 
     assert source_index < build_index < inspect_index < contract_index
@@ -852,7 +880,7 @@ def test_beginner_workflow_reuses_scale_example_without_renaming_it() -> None:
     page = (DOCS_ROOT / "user/getting-started/beginner-workflow.md").read_text(encoding="utf-8")
     source_reference_index = page.index("[README Quick Start](../../../README.md#quick-start)")
     layout_index = page.index("src/\n    scale.f90")
-    contract_index = page.index("python3 -m x2py src/scale.f90 --pyi")
+    contract_index = page.index("python3 -m x2py generate --pyi src/scale.f90")
     build_index = page.index("python3 -m x2py src/scale.f90 \\\n  --out-dir build/scale")
     smoke_index = page.index("result = scale.scale(np.float64(3.0), np.float64(2.5))")
     advanced_index = page.index("## Advanced Next Step: Edit The Semantic Contract")
@@ -868,8 +896,6 @@ def test_getting_started_pages_keep_advanced_stage_flags_out_of_beginner_path() 
 
     assert "--parse" not in content
     assert "--semantics" not in content
-    assert "--wrap" not in content
-    assert "--wrap-readiness" not in content
     assert "--json" not in content
 
 
@@ -878,9 +904,28 @@ def test_user_guide_uses_automatic_wrapper_stage_selection() -> None:
         _visible_documentation_source(DOCS_ROOT / relative_path) for relative_path in REQUIRED_USER_GUIDE_PAGES
     )
 
-    assert "python3 -m x2py src/scale.f90 \\\n  --makefile" in content
+    assert "python3 -m x2py generate --makefile src/scale.f90" in content
     assert "python3 -m x2py contracts/solver/__init__.pyi \\\n  --native-fortran-sources solver.f90" in content
-    assert "python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build" in content
+    assert "python3 -m x2py generate --makefile mesh.f90 solver.f90 --out-dir build" in content
+
+
+def test_fortran_wrapper_guide_shows_every_common_shared_library_build_input() -> None:
+    content = _visible_documentation_source(DOCS_ROOT / "user/guide/fortran-wrapper.md")
+    example = content.split("For example, this command supplies every common build input", maxsplit=1)[1].split(
+        "`--compiler` selects", maxsplit=1
+    )[0]
+
+    for value in (
+        "python3 -m x2py solver.f90",
+        "--out solver",
+        "--out-dir build/solver",
+        "--compiler gfortran",
+        "-I include",
+        "--native-compile-flags=-O3",
+        "--native-library openblas",
+        "--verbose",
+    ):
+        assert value in example
 
 
 def test_array_handle_docs_keep_views_copies_and_handles_distinct() -> None:

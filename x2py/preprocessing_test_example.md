@@ -40,7 +40,7 @@ Built-in adapters cover GCC-compatible C/Clang (`-E -x c`), GNU Fortran
 compiler families. A custom template must write expanded source to stdout:
 
 ```bash
-python -m x2py include/api.h --language c --parse \
+python -m x2py parse include/api.h --language c \
   --preprocess compiler \
   --preprocessor-adapter command-template \
   --preprocess-template 'vendor-cc --preprocess {include_dirs} {defines} {source}'

@@ -12,6 +12,7 @@ from x2py.pipeline.build import (
     NativeBuildPlan,
     NativeLinkItem,
     _build_rendered_wrapper_extension,
+    _generated_wrapper_plan_artifacts,
 )
 from x2py.pipeline.wrapper_artifacts import (
     GeneratedSourceFile,
@@ -83,6 +84,19 @@ def _module_plan(source: str, *, module_name: str) -> ModulePlan:
 
 def _rendered_artifacts(source: str, *, module_name: str) -> RenderedGeneratedWrapperArtifacts:
     return WrapperCodeGenerator().generate(_module_plan(source, module_name=module_name))
+
+
+def test_real_wrapper_build_path_raises_the_completed_policy_error_directly():
+    module = parse_pyi_text(
+        'label: String = "ready"\n',
+        module_name="labels",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"Semantic variable 'labels\.label'.*module variable initializer requires a write-through native setter",
+    ):
+        _generated_wrapper_plan_artifacts(module, strict_wrapper_names=False)
 
 
 def test_build_rendered_wrapper_extension_writes_compiles_runtime_and_links(tmp_path: Path, capsys):

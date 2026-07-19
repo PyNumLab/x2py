@@ -13,7 +13,7 @@ status: design
 > every backend below exists. The source-driven Fortran-to-Python wrapper is
 > implemented and documented in
 > [the Fortran wrapper guide](../../user/guide/fortran-wrapper.md). C parsing, semantic IR,
-> `.pyi`, and readiness are implemented, but the runtime backend for
+> `.pyi`, and semantic inspection are implemented, but the runtime backend for
 > user-supplied C inputs will be added later. Other language backends and the
 > broader coercion runtime remain design goals.
 X2PY_C_DOCS_END -->

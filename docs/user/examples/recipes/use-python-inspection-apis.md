@@ -71,7 +71,6 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 ```python
 from x2py import (
-    assess_semantic_wrap_readiness,
     c_file_to_semantic_modules,
     emit_module_stubs,
     parse_c_file,
@@ -81,7 +80,6 @@ parsed = parse_c_file("int add(int a, int b);", filename="inline.h")
 modules = c_file_to_semantic_modules(parsed)
 
 print(emit_module_stubs(modules)["inline"])
-print(assess_semantic_wrap_readiness(modules)["wrappable"])
 ```
 X2PY_C_DOCS_END -->
 
@@ -96,41 +94,8 @@ def add(
     a: Int,
     b: Int
 ) -> Int: ...
-True
 ```
 X2PY_C_DOCS_END -->
-
-## Check An Edited `.pyi` String
-
-<!-- x2py-doc-test: exact -->
-```python
-from x2py import assess_semantic_wrap_readiness, pyi_text_to_semantic_module
-
-module = pyi_text_to_semantic_module(
-    """
-from x2py.contracts import Float64, prototype
-
-@prototype
-def objective(value: Float64) -> Float64: ...
-
-def integrate(
-    callback: objective,
-    x0: Float64
-) -> Float64: ...
-""",
-    module_name="solver",
-)
-
-report = assess_semantic_wrap_readiness(module, source="solver.pyi")
-print(report["wrappable"])
-```
-
-Expected output:
-
-<!-- x2py-doc-test-output -->
-```text
-True
-```
 
 ## Notes
 

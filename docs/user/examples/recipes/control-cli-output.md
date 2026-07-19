@@ -18,8 +18,8 @@ need to inspect module variables and derived-type fields:
 
 <!-- x2py-doc-test: run -->
 ```bash
-python3 -m x2py tests/data/fortran/general/modern_pyi_example.f90 \
-  --parse --show-vars
+python3 -m x2py parse tests/data/fortran/general/modern_pyi_example.f90 \
+  --show-vars
 ```
 
 ## Limit Repeated Sections
@@ -28,8 +28,8 @@ Use `--print-limit` to keep long reports readable while preserving totals:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/modern_pyi_example.f90 \
-  --parse --show-vars --print-limit 1
+python3 -m x2py parse tests/data/fortran/general/modern_pyi_example.f90 \
+  --show-vars --print-limit 1
 ```
 
 Expected output:
@@ -59,25 +59,8 @@ Choose one inspection stage per command. For parser details, run:
 
 <!-- x2py-doc-test: run -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --parse
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
-
-For wrapper readiness, run a separate command:
-
-<!-- x2py-doc-test: run -->
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --wrap-readiness
-```
-
-<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: run -->
-<!-- X2PY_C_DOCS_START
-```bash
-python3 -m x2py tests/data/c/general/math_api.h \
-  &#45;&#45;language c &#45;&#45;pyi &#45;&#45;wrap-readiness
-```
-X2PY_C_DOCS_END -->
 
 ## Notes
 

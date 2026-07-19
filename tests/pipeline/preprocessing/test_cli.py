@@ -12,19 +12,17 @@ from tests.pipeline.preprocessing._support import (
 
 def test_cli_help_documents_exact_compiler_and_preprocessing_examples():
     res = subprocess.run(
-        [sys.executable, "-m", "x2py", "--help"],
+        [sys.executable, "-m", "x2py", "parse", "--help"],
         capture_output=True,
         text=True,
         check=True,
     )
 
-    assert "--preprocess {internal,compiler}" not in res.stdout
     assert "--compiler COMPILER" in res.stdout
-    assert "gcc-13" in res.stdout
-    assert "clang-18" in res.stdout
-    assert "/usr/bin/gfortran-12" in res.stdout
-    assert "--compile-commands build/compile_commands.json" in res.stdout
-    assert "-D USE_MPI" in res.stdout
+    assert "Compiler used for preprocessing" in res.stdout
+    assert "default: gfortran; cc with --language c" in " ".join(res.stdout.split())
+    assert "--compile-commands PATH" in res.stdout
+    assert "-D NAME[=VALUE]" in res.stdout
 
 
 def test_cli_c_default_compiler_mode_accepts_include_dirs(tmp_path: Path):
@@ -40,10 +38,10 @@ def test_cli_c_default_compiler_mode_accepts_include_dirs(tmp_path: Path):
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--parse",
             "--json",
             "-I",
             str(include_dir),
@@ -67,10 +65,10 @@ def test_cli_c_default_compiler_mode_accepts_define_flags(tmp_path: Path):
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--parse",
             "-D",
             "USE_FAST",
         ],
@@ -90,10 +88,10 @@ def test_cli_compiler_mode_uses_default_c_compiler(tmp_path: Path):
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--parse",
             "--json",
         ],
         capture_output=True,
@@ -113,10 +111,10 @@ def test_cli_accepts_explicit_compiler_flag(tmp_path: Path):
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--parse",
             "--compiler",
             "gcc-13",
         ],
@@ -153,8 +151,8 @@ def test_cli_accepts_compile_database_for_fortran_compiler_mode(tmp_path: Path):
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(source),
-            "--parse",
             "--json",
             "--compile-commands",
             str(database),
@@ -180,10 +178,10 @@ def test_cli_c_compiler_mode_runs_exact_compiler_and_parses_preprocessed_stdout(
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--parse",
             "--json",
             "--compiler",
             str(compiler),
@@ -247,10 +245,10 @@ def test_cli_preprocessing_failure_has_category_without_traceback_unless_debug(t
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--parse",
             "--compiler",
             str(compiler),
         ],
@@ -262,10 +260,10 @@ def test_cli_preprocessing_failure_has_category_without_traceback_unless_debug(t
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--parse",
             "--compiler",
             str(compiler),
             "--debug",
@@ -313,10 +311,10 @@ def test_cli_c_compile_commands_mode_uses_exact_database_compiler(tmp_path: Path
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(source),
             "--language",
             "c",
-            "--parse",
             "--json",
             "--compile-commands",
             str(database),
@@ -342,23 +340,12 @@ def test_cli_c_compile_commands_mode_uses_exact_database_compiler(tmp_path: Path
     assert recipe["compile_commands_entry"]["arguments"][0] == str(compiler)
 
 
-def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path: Path):
+def test_cli_c_compiler_mode_macro_metadata_flows_to_parse_report(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("#define API_VERSION 3\nint api(void);\n", encoding="utf-8")
     compiler, _args_file, env = _fake_compiler(
         tmp_path,
         "#define API_VERSION 3\nint api(void);\n",
-    )
-    type_report = tmp_path / "c-types.json"
-    type_report.write_text(
-        json.dumps(
-            {
-                "types": {"int": {"available": True, "kind": "integer", "signed": True, "bits": 32}},
-                "recipe": {"compiler": str(compiler), "compile_argv": [], "run_argv": []},
-                "source_text": "reusable test probe",
-            }
-        ),
-        encoding="utf-8",
     )
 
     res = subprocess.run(
@@ -366,15 +353,13 @@ def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(header),
             "--language",
             "c",
-            "--semantics",
             "--json",
             "--compiler",
             str(compiler),
-            "--c-type-report",
-            str(type_report),
         ],
         capture_output=True,
         text=True,
@@ -382,9 +367,8 @@ def test_cli_c_compiler_mode_macro_metadata_flows_to_semantic_constants(tmp_path
         env=env,
     )
 
-    module = json.loads(res.stdout)[str(header)]["semantic_modules"][0]
-    constants = {variable["name"]: variable for variable in module["variables"]}
-    assert constants["API_VERSION"]["default_value"] == "3"
+    macros = {macro["name"]: macro for macro in json.loads(res.stdout)[str(header)]["macros"]}
+    assert macros["API_VERSION"]["value"] == "3"
 
 
 def test_cli_fortran_default_compiler_json_records_preprocessing_recipe(tmp_path: Path):
@@ -395,7 +379,7 @@ def test_cli_fortran_default_compiler_json_records_preprocessing_recipe(tmp_path
     )
 
     res = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--parse", "--json"],
+        [sys.executable, "-m", "x2py", "parse", str(source), "--json"],
         capture_output=True,
         text=True,
         check=True,
@@ -409,7 +393,7 @@ def test_cli_fortran_default_compiler_mode_accepts_include_dirs(tmp_path: Path):
     source.write_text("subroutine work()\nend subroutine work\n", encoding="utf-8")
 
     res = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--parse", "-I", "include"],
+        [sys.executable, "-m", "x2py", "parse", str(source), "-I", "include"],
         capture_output=True,
         text=True,
     )
@@ -430,8 +414,8 @@ def test_cli_fortran_compiler_mode_runs_exact_compiler_and_parses_stdout(tmp_pat
             sys.executable,
             "-m",
             "x2py",
+            "parse",
             str(source),
-            "--parse",
             "--json",
             "--compiler",
             str(compiler),

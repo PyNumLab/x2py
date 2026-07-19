@@ -1,7 +1,7 @@
 ---
 title: Semantic .pyi Format
 audience: users, advanced users, developers
-prerequisites: semantic IR reference, wrapper readiness workflow
+prerequisites: semantic IR reference, wrapper build workflow
 related: pyi_wrapper_checklist.md, reference/index.md
 status: maintained
 ---
@@ -15,8 +15,8 @@ wrapper generator needs. The implemented Fortran wrapper uses the same semantic
 contract internally; the wrapper backend for user-supplied C inputs remains
 future work.
 
-The normal `--wrap` workflow remains source-driven and accepts Fortran source
-files. A `.pyi`-driven wrapper workflow is also available for the implemented
+The default wrapper workflow accepts Fortran source files. A `.pyi`-driven
+wrapper workflow is also available for the implemented
 subset: pass the semantic `.pyi` file as the wrapper input and provide native
 object, archive, shared-library, module, include, and link inputs with the
 native artifact flags. This path treats the `.pyi` as the source of truth for
@@ -30,7 +30,7 @@ Status terms used below:
 - **Generated**: emitted today by `--pyi` or `codegen.printers.pyi_printer`.
 - **Loaded**: accepted today by `x2py.pyi_parser` and converted back to
   semantic IR.
-- **Readiness**: understood by the semantic readiness checker.
+- **Planning**: can be lowered once semantic policy is complete.
 - **Build input**: accepted by the `.pyi` wrapper build for the implemented
   subset when the required native artifacts are supplied.
 - **Roadmap**: design direction, not implemented wrapper behavior.
@@ -134,7 +134,7 @@ symbol.
 
 Every generated standalone declaration must carry `@external`. Handwritten
 contracts must do the same. Missing or contradictory placement metadata must
-fail during `.pyi` validation or readiness, before bridge emission or native
+fail during `.pyi` validation or wrapper planning, before bridge emission or native
 compilation.
 
 ### Source-To-Contract Layout
@@ -291,7 +291,7 @@ from .module2 import *
 ```
 
 Wildcard import order must not silently resolve collisions. If both modules
-export `update`, readiness fails and requires explicit aliases or exclusions.
+export `update`, semantic validation requires explicit aliases or exclusions.
 
 ### Root Selection And Extension Identity
 
@@ -325,7 +325,6 @@ Target CLI shapes are:
 
 ```bash
 python3 -m x2py contracts/library \
-  --wrap \
   --out library \
   --native-objects native.a
 ```
@@ -333,7 +332,6 @@ python3 -m x2py contracts/library \
 ```bash
 python3 -m x2py module1.pyi module2.pyi \
   --root-contract api.pyi \
-  --wrap \
   --out library \
   --native-library native \
   --native-library-dir /path/to/libs
@@ -343,7 +341,6 @@ For a single standalone fragment, no `__init__.pyi` is required:
 
 ```bash
 python3 -m x2py dgesv.pyi \
-  --wrap \
   --out lapack_dgesv \
   --native-objects dgesv.o
 ```
@@ -370,7 +367,7 @@ The public annotations use semantic names, not raw C or Fortran spellings:
 resolve or block unsupported source types instead of emitting unknown contracts.
 Current C callback placeholders such as `CFunctionPointer` can appear in
 generated stubs when source callback policy is incomplete; replace them with a
-complete named prototype before expecting readiness to pass.
+complete named prototype before building a wrapper.
 
 ## Storage Contracts
 
@@ -786,7 +783,7 @@ class vector:
 object, preserves Python object identity, and returns `None`. It never replaces
 the Python variable. Assigning an object to itself is a no-op. A supported
 specific must be a two-argument subroutine whose wrapped derived-type LHS is
-writable and whose RHS is read-only. Unsafe or unsupported forms are readiness
+writable and whose RHS is read-only. Unsafe or unsupported forms are wrapper-planning
 blockers.
 
 ## Allocatable Borrowed Views
@@ -1034,7 +1031,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
 | Opaque types | `Opaque` classes and owner-module dependency stubs |
 | Imports | `import ...` and `from ... import ...` with aliases |
-| Incomplete C callbacks | placeholder type that readiness reports as incomplete |
+| Incomplete C callbacks | placeholder type that wrapper planning reports as incomplete |
 
 Loaded but usually not generated from source today:
 

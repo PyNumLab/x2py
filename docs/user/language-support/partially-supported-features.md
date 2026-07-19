@@ -9,7 +9,7 @@ status: maintained
 # Partially Supported Features
 
 Partially supported means a tested subset exists, but related forms are
-unsupported, blocked by readiness, or tracked as future work.
+unsupported during planning, or tracked as future work.
 
 <!-- X2PY_C_DOCS_START
 Use the

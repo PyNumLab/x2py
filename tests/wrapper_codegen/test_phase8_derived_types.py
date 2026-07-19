@@ -17,7 +17,7 @@ from x2py.semantics.wrapper_policy import (
     DerivedRelease,
     LifecycleOperation,
 )
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner, WrapperPlanSupportAnalyzer
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 
 def _value_module(*, attributes: tuple[str, ...] = ()):
@@ -65,7 +65,6 @@ def test_exact_typed_value_policy_projects_shared_canonical_derived_handoff(attr
     assert argument.derived.type_identity == ("phase8_value", "point")
     assert argument.derived.native_handoff is DerivedNativeHandoff.TYPED_VALUE
     assert "type_identity=('phase8_value', 'point')" in str(plan)
-    assert "typed-derived-value-inputs" in WrapperPlanSupportAnalyzer().analyze(module).covered_lanes
 
 
 def test_exact_typed_value_lowering_uses_fortran_value_semantics_and_opaque_binding():
@@ -275,10 +274,6 @@ def test_unsupported_derived_shapes_fail_on_exact_completed_policy_blockers(
     module = parse_pyi_text(contract, module_name="phase8_blocked")
     complete_semantic_policies(module)
 
-    report = WrapperPlanSupportAnalyzer().analyze(module)
-
-    assert report.supported is False
-    assert any(diagnostic in blocker.reason for blocker in report.blockers)
     with pytest.raises(ValueError, match=diagnostic.replace("(", r"\(").replace(")", r"\)")):
         WrapperPlanner().build(module)
 
@@ -297,8 +292,6 @@ def update(value: point) -> tuple[Float64, Returns["value", point]]: ...
     )
     complete_semantic_policies(module)
 
-    report = WrapperPlanSupportAnalyzer().analyze(module)
-    assert report.supported is True
     plan = WrapperPlanner().build(module)
     function = plan.namespaces[0].functions[0]
     assert function.results[0].result_position == 0

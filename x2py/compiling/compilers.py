@@ -42,11 +42,17 @@ class Compiler:
         *,
         execute_commands: bool = True,
         search_path: str | None = None,
+        executables: Mapping[str, str] | None = None,
     ) -> None:
         self._toolchain = self._load_toolchain(vendor)
         self._debug = debug
         self._execute_commands = execute_commands
         self._search_path = search_path
+        self._executables = {str(language): str(command) for language, command in (executables or {}).items()}
+        unsupported = set(self._executables) - set(self._toolchain)
+        if unsupported:
+            language = sorted(unsupported)[0]
+            raise ValueError(f"Toolchain does not support an executable override for {language!r}")
         self._command_log: list[tuple[str, ...]] = []
 
     @property
@@ -180,7 +186,8 @@ class Compiler:
 
     def _executable(self, language: Mapping[str, object], tools: Iterable[str]) -> str:
         key = "mpi_exec" if "mpi" in tools else "exec"
-        command = str(language[key])
+        language_name = next((name for name, candidate in self._toolchain.items() if candidate is language), None)
+        command = self._executables.get(language_name, str(language[key]))
         executable = shutil.which(command, path=self._search_path)
         if executable is None:
             raise FileNotFoundError(f"Could not find compiler executable: {command}")

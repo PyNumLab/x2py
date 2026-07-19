@@ -41,16 +41,12 @@ from x2py.semantics.native_array_handles import (
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.pipeline.pyi import _PyiSemanticModuleCache
 from x2py.semantics.pyi_metadata import PYI_LOADED_METADATA
-from x2py.wrapper_codegen import (
-    WrapperCodeGenerator,
-    WrapperPlanner,
-    WrapperPlanSupportAnalyzer,
-)
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 
 _DEFAULT_BUILD_DIR_NAME = "__x2py__"
 _BUILD_MANIFEST_NAME = "x2py-build.json"
-_BUILD_MANIFEST_SCHEMA_VERSION = 1
+_BUILD_MANIFEST_SCHEMA_VERSION = 2
 _FORTRAN_SOURCE_SUFFIXES = {".f", ".f03", ".f08", ".f77", ".f90", ".f95", ".for", ".ftn"}
 _C_SOURCE_SUFFIXES = {".c"}
 _NATIVE_PATH_LINK_KINDS = frozenset({"object", "archive", "shared_library"})
@@ -268,12 +264,19 @@ def _compiler_flags(flags: Iterable[str] | None) -> tuple[str, ...]:
     return tuple(str(flag) for flag in (flags or ()))
 
 
-def _new_gnu_compiler(*, execute_commands: bool = True, debug: bool = False) -> Compiler:
+def _new_gnu_compiler(
+    *,
+    execute_commands: bool = True,
+    debug: bool = False,
+    input_compiler: str | None = None,
+) -> Compiler:
+    executables = {"fortran": input_compiler} if input_compiler else None
     return Compiler(
         "GNU",
         debug=debug,
         execute_commands=execute_commands,
         search_path=get_condaless_search_path("verbose"),
+        executables=executables,
     )
 
 
@@ -421,7 +424,7 @@ def _rendered_wrapper_object_stages(
             source_path,
             output_dir,
             flags=wrapper_c_flags,
-            include_dirs=(),
+            include_dirs=native_module_dirs,
             language=_rendered_wrapper_source_language(source_path),
         )
         for source_path in binding_source_paths
@@ -586,16 +589,6 @@ def _render_wrapper_plan(
     return WrapperCodeGenerator().generate(plan, progress=progress)
 
 
-def _require_wrapper_plan_support(module: SemanticModule) -> None:
-    """Reject unsupported completed owners without retrying another generator."""
-    report = WrapperPlanSupportAnalyzer().analyze(module)
-    report.freeze()
-    if report.supported:
-        return
-    details = "; ".join(f"{item.owner_path}: {item.reason}" for item in report.blockers)
-    raise ValueError(f"Unsupported wrapper generation unit {module.name!r}: {details}")
-
-
 def _generated_wrapper_plan_artifacts(
     module: SemanticModule,
     *,
@@ -606,7 +599,6 @@ def _generated_wrapper_plan_artifacts(
     _print_verbose_step(verbose, "Complete wrapper policies")
     policy_started = time.perf_counter()
     complete_semantic_policies(module, strict_wrapper_names=strict_wrapper_names)
-    _require_wrapper_plan_support(module)
     _print_verbose_timing(verbose, time.perf_counter() - policy_started)
 
     def render_progress(label: str, elapsed: float | None) -> None:
@@ -676,7 +668,7 @@ class _PyiContractBundle:
 
 
 @dataclass(frozen=True)
-class _PyiNativeBuildInputs:
+class _NativeBuildInputs:
     source_paths: tuple[Path, ...]
     source_flags: tuple[str, ...]
     artifact_paths: tuple[Path, ...]
@@ -1019,33 +1011,7 @@ def _unique_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
     return tuple(dict.fromkeys(Path(path) for path in paths))
 
 
-def _source_native_build_plan(
-    source_paths: tuple[Path, ...],
-    source_objects: tuple[ObjectFile, ...],
-    *,
-    module_dir: Path,
-) -> NativeBuildPlan:
-    produced_objects = tuple(source_object.object_path for source_object in source_objects)
-    return NativeBuildPlan(
-        compilation_units=tuple(
-            NativeCompilationUnit(
-                source=source_path,
-                object_path=source_object.object_path,
-                language="fortran",
-                module_dir=module_dir,
-                include_dirs=(module_dir,),
-                flags=tuple(source_object.flags),
-            )
-            for source_path, source_object in zip(source_paths, source_objects, strict=True)
-        ),
-        produced_objects=produced_objects,
-        module_dirs=(module_dir,),
-        include_dirs=(module_dir,),
-        link_items=tuple(NativeLinkItem("object", object_path) for object_path in produced_objects),
-    )
-
-
-def _pyi_native_build_plan(
+def _native_build_plan(
     *,
     source_paths: tuple[Path, ...],
     source_objects: tuple[ObjectFile, ...],
@@ -1165,7 +1131,7 @@ def _shared_library_dirs(link_items: Iterable[NativeLinkItem]) -> tuple[Path, ..
     return tuple(Path(item.value).parent for item in link_items if item.kind == "shared_library")
 
 
-def _pyi_native_build_inputs(
+def _native_build_inputs(
     *,
     native_fortran_sources: Iterable[str | Path] | None,
     native_fortran_flags: Iterable[str] | None,
@@ -1175,7 +1141,7 @@ def _pyi_native_build_inputs(
     complete_native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None,
     native_library_dirs: Iterable[str | Path] | None,
     native_include_dirs: Iterable[str | Path] | None,
-) -> _PyiNativeBuildInputs:
+) -> _NativeBuildInputs:
     source_paths = _existing_paths(native_fortran_sources, kind="Native Fortran source")
     source_flags = tuple(str(flag) for flag in (native_fortran_flags or ()))
     artifact_paths = _existing_paths(native_objects, kind="Native artifact")
@@ -1205,7 +1171,7 @@ def _pyi_native_build_inputs(
             ".pyi wrapper build requires at least one native source, object, archive, shared library, "
             "ordered link item, or -l name"
         )
-    return _PyiNativeBuildInputs(
+    return _NativeBuildInputs(
         source_paths=source_paths,
         source_flags=source_flags,
         artifact_paths=artifact_paths,
@@ -1218,7 +1184,7 @@ def _pyi_native_build_inputs(
     )
 
 
-def _pyi_native_include_dirs(inputs: _PyiNativeBuildInputs, *, output_path: Path) -> tuple[Path, ...]:
+def _native_include_dirs(inputs: _NativeBuildInputs, *, output_path: Path) -> tuple[Path, ...]:
     module_include_dirs = (output_path,) if inputs.source_paths else ()
     inferred_include_dirs = _unique_paths((*inputs.artifact_paths, *inputs.link_item_paths))
     return _unique_paths(
@@ -1230,8 +1196,8 @@ def _pyi_native_include_dirs(inputs: _PyiNativeBuildInputs, *, output_path: Path
     )
 
 
-def _pyi_native_source_objects(
-    inputs: _PyiNativeBuildInputs,
+def _native_source_objects(
+    inputs: _NativeBuildInputs,
     *,
     output_path: Path,
     include_dirs: tuple[Path, ...],
@@ -1340,6 +1306,7 @@ def _pyi_build_manifest(
     shared_library: Path,
     strict_wrapper_names: bool,
     requested_output_name: str | None,
+    input_compiler: str,
     native_fortran_flags: tuple[str, ...],
     wrapper_compiler_debug: bool,
     wrapper_fortran_flags: tuple[str, ...],
@@ -1364,6 +1331,7 @@ def _pyi_build_manifest(
         },
         "compiler": {
             "vendor": "GNU",
+            "input_executable": input_compiler,
             "fortran_flags": list(native_fortran_flags),
             "wrapper_compiler_debug": wrapper_compiler_debug,
             "wrapper_fortran_flags": list(wrapper_fortran_flags),
@@ -1386,6 +1354,7 @@ def _with_pyi_manifest(
     bundle: _PyiContractBundle,
     strict_wrapper_names: bool,
     requested_output_name: str | None,
+    input_compiler: str,
     native_fortran_flags: tuple[str, ...],
     wrapper_compiler_debug: bool,
     wrapper_fortran_flags: tuple[str, ...],
@@ -1400,6 +1369,7 @@ def _with_pyi_manifest(
         shared_library=result.shared_library,
         strict_wrapper_names=strict_wrapper_names,
         requested_output_name=requested_output_name,
+        input_compiler=input_compiler,
         native_fortran_flags=native_fortran_flags,
         wrapper_compiler_debug=wrapper_compiler_debug,
         wrapper_fortran_flags=wrapper_fortran_flags,
@@ -1443,6 +1413,13 @@ def _manifest_bool(section: dict[str, object], key: str, *, default: bool = Fals
     value = section.get(key, default)
     if not isinstance(value, bool):
         raise ValueError(f"Wrapper build manifest field {key!r} must be a boolean")
+    return value
+
+
+def _manifest_string(section: dict[str, object], key: str) -> str:
+    value = section.get(key)
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"Wrapper build manifest field {key!r} must be a non-empty string")
     return value
 
 
@@ -1532,9 +1509,6 @@ def _wrapper_module_metadata(modules: list[SemanticModule]) -> dict[str, object]
     if any(module.metadata.get(PYI_LOADED_METADATA) for module in modules):
         metadata[PYI_LOADED_METADATA] = True
         metadata[NATIVE_CONTRACT_PREPARED_METADATA] = True
-    readiness_blockers = [blocker for module in modules for blocker in module.metadata.get("readiness_blockers", ())]
-    if readiness_blockers:
-        metadata["readiness_blockers"] = readiness_blockers
     return metadata
 
 
@@ -1692,6 +1666,20 @@ def _can_probe_fortran_types(preprocessing: PreprocessingConfig) -> bool:
     return preprocessing.uses_compiler and bool(preprocessing.compiler)
 
 
+def _type_probe_preprocessing(
+    preprocessing: PreprocessingConfig,
+    native_fortran_flags: Iterable[str],
+) -> PreprocessingConfig:
+    """Use the native target profile for internal semantic type measurement."""
+    flags = [str(flag) for flag in native_fortran_flags]
+    if not flags:
+        return preprocessing
+    return replace(
+        preprocessing,
+        compiler_args=[*preprocessing.compiler_args, *flags],
+    )
+
+
 def _wrap_compile_time_values(
     parsed,
     preprocessing: PreprocessingConfig,
@@ -1752,17 +1740,28 @@ def build_fortran_extension(
     fortran_type_probe_runner: list[str] | None = None,
     fortran_type_probe_cache_dir: str | Path | None = None,
     refresh_fortran_type_probe: bool = False,
+    native_fortran_sources: Iterable[str | Path] | None = None,
+    native_fortran_flags: Iterable[str] | None = None,
+    native_objects: Iterable[str | Path] | None = None,
+    native_libraries: Iterable[str] | None = None,
+    native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None = None,
+    native_library_dirs: Iterable[str | Path] | None = None,
+    native_include_dirs: Iterable[str | Path] | None = None,
     makefile: bool = False,
+    generate_sources: bool = False,
     verbose: bool | int = False,
     wrapper_compiler_debug: bool = False,
     wrapper_fortran_flags: Iterable[str] | None = None,
     wrapper_c_flags: Iterable[str] | None = None,
     _on_total_build_time: Callable[[float], None] | None = None,
 ) -> WrapperBuildResult:
-    """Build one extension, or generate its Makefile, from ordered sources."""
+    """Build one extension, or generate its sources or Makefile, from ordered sources."""
 
-    if makefile and verbose:
-        raise ValueError("makefile generation and verbose direct compilation are separate modes")
+    if makefile and generate_sources:
+        raise ValueError("source-only and Makefile generation are mutually exclusive")
+    generation_only = makefile or generate_sources
+    if generation_only and verbose:
+        raise ValueError("source/Makefile generation and verbose direct compilation are separate modes")
 
     build_started = time.perf_counter()
     source_paths = _source_paths(sources)
@@ -1771,6 +1770,18 @@ def build_fortran_extension(
     output_path, shared_library_output_path = _wrapper_output_paths(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     preprocessing = preprocessing or _default_preprocessing_config()
+    supplemental_source_paths = tuple(Path(path) for path in (native_fortran_sources or ()))
+    native_inputs = _native_build_inputs(
+        native_fortran_sources=(*source_paths, *supplemental_source_paths),
+        native_fortran_flags=native_fortran_flags,
+        native_objects=native_objects,
+        native_libraries=native_libraries,
+        native_link_items=native_link_items,
+        complete_native_link_items=None,
+        native_library_dirs=native_library_dirs,
+        native_include_dirs=native_include_dirs,
+    )
+    type_probe_preprocessing = _type_probe_preprocessing(preprocessing, native_inputs.source_flags)
 
     preprocessed_sources = {
         str(source_path): _fortran_source_for_pipeline(source_path, preprocessing) for source_path in source_paths
@@ -1778,7 +1789,7 @@ def build_fortran_extension(
     parsed = parse_fortran_project(preprocessed_sources)
     compile_time_values = _wrap_compile_time_values(
         parsed,
-        preprocessing,
+        type_probe_preprocessing,
         report=fortran_type_report,
         runner=fortran_type_probe_runner,
         cache_dir=fortran_type_probe_cache_dir,
@@ -1786,7 +1797,7 @@ def build_fortran_extension(
     )
     type_facts = _wrap_type_facts(
         parsed,
-        preprocessing,
+        type_probe_preprocessing,
         compile_time_values=compile_time_values,
         report=fortran_type_report,
         runner=fortran_type_probe_runner,
@@ -1811,19 +1822,33 @@ def build_fortran_extension(
 
     wrapper_fortran_flags = _compiler_flags(wrapper_fortran_flags)
     wrapper_c_flags = _compiler_flags(wrapper_c_flags)
-    compiler = _new_gnu_compiler(execute_commands=not makefile, debug=wrapper_compiler_debug)
-    source_objects = tuple(
-        _source_compile_object(source_path, output_path, object_stem=object_stem)
-        for source_path, object_stem in zip(source_paths, _source_object_stems(source_paths), strict=True)
+    compiler = _new_gnu_compiler(
+        execute_commands=not generation_only,
+        debug=wrapper_compiler_debug,
+        input_compiler=preprocessing.compiler if preprocessing.uses_compiler else None,
     )
-    native_build_plan = _source_native_build_plan(
-        source_paths,
-        source_objects,
+    include_dirs = _native_include_dirs(native_inputs, output_path=output_path)
+    native_source_objects = _native_source_objects(
+        native_inputs,
+        output_path=output_path,
+        include_dirs=include_dirs,
+    )
+    native_build_plan = _native_build_plan(
+        source_paths=native_inputs.source_paths,
+        source_objects=native_source_objects,
+        artifact_paths=native_inputs.artifact_paths,
+        libraries=native_inputs.libraries,
+        explicit_link_items=native_inputs.explicit_link_items,
+        complete_link_items=None,
+        library_dirs=native_inputs.library_dirs,
+        explicit_include_dirs=native_inputs.explicit_include_dirs,
+        include_dirs=include_dirs,
         module_dir=output_path,
     )
+    _validate_native_link_paths(native_build_plan)
     _compile_object_stage(
         compiler,
-        source_objects,
+        native_source_objects,
         label="Compile native source",
         verbose=verbose,
     )
@@ -1834,7 +1859,7 @@ def build_fortran_extension(
         shared_library_output_dir=shared_library_output_path,
         sources=source_paths,
         native_build_plan=native_build_plan,
-        native_dependencies=source_objects,
+        native_dependencies=native_source_objects,
         native_link_args=_rendered_wrapper_native_link_args(native_build_plan),
         wrapper_fortran_flags=wrapper_fortran_flags,
         wrapper_c_flags=wrapper_c_flags,
@@ -1845,8 +1870,11 @@ def build_fortran_extension(
         result = _attach_build_makefile(
             result,
             compiler=compiler,
-            source_objects=source_objects,
+            source_objects=native_source_objects,
+            extra_dependencies=_link_item_paths(native_build_plan.link_items),
         )
+    elif generate_sources:
+        result = replace(result, compiled=False)
     _report_total_build_time(
         verbose,
         time.perf_counter() - build_started,
@@ -1858,6 +1886,7 @@ def build_fortran_extension(
 def build_pyi_extension(
     contract: str | Path,
     *,
+    input_compiler: str = "gfortran",
     native_fortran_sources: Iterable[str | Path] | None = None,
     native_fortran_flags: Iterable[str] | None = None,
     native_objects: Iterable[str | Path] | None = None,
@@ -1869,6 +1898,7 @@ def build_pyi_extension(
     output_dir: str | Path | None = None,
     strict_wrapper_names: bool = False,
     makefile: bool = False,
+    generate_sources: bool = False,
     verbose: bool | int = False,
     complete_native_link_items: Iterable[NativeLinkItem | dict[str, object]] | None = None,
     wrapper_compiler_debug: bool = False,
@@ -1876,15 +1906,18 @@ def build_pyi_extension(
     wrapper_c_flags: Iterable[str] | None = None,
     _on_total_build_time: Callable[[float], None] | None = None,
 ) -> WrapperBuildResult:
-    """Build one extension from one entry `.pyi` and native link inputs."""
+    """Build one extension, or generate its sources or Makefile, from one `.pyi` entry."""
 
-    if makefile and verbose:
-        raise ValueError("makefile generation and verbose direct compilation are separate modes")
+    if makefile and generate_sources:
+        raise ValueError("source-only and Makefile generation are mutually exclusive")
+    generation_only = makefile or generate_sources
+    if generation_only and verbose:
+        raise ValueError("source/Makefile generation and verbose direct compilation are separate modes")
 
     build_started = time.perf_counter()
     entry = _pyi_entry_path(contract)
     bundle = _pyi_contract_bundle(entry)
-    native_inputs = _pyi_native_build_inputs(
+    native_inputs = _native_build_inputs(
         native_fortran_sources=native_fortran_sources,
         native_fortran_flags=native_fortran_flags,
         native_objects=native_objects,
@@ -1911,13 +1944,13 @@ def build_pyi_extension(
         verbose=verbose,
     )
 
-    include_dirs = _pyi_native_include_dirs(native_inputs, output_path=output_path)
-    native_source_objects = _pyi_native_source_objects(
+    include_dirs = _native_include_dirs(native_inputs, output_path=output_path)
+    native_source_objects = _native_source_objects(
         native_inputs,
         output_path=output_path,
         include_dirs=include_dirs,
     )
-    native_build_plan = _pyi_native_build_plan(
+    native_build_plan = _native_build_plan(
         source_paths=native_inputs.source_paths,
         source_objects=native_source_objects,
         artifact_paths=native_inputs.artifact_paths,
@@ -1930,7 +1963,11 @@ def build_pyi_extension(
         module_dir=output_path if native_source_objects else None,
     )
     _validate_native_link_paths(native_build_plan)
-    compiler = _new_gnu_compiler(execute_commands=not makefile, debug=wrapper_compiler_debug)
+    compiler = _new_gnu_compiler(
+        execute_commands=not generation_only,
+        debug=wrapper_compiler_debug,
+        input_compiler=input_compiler,
+    )
     _compile_object_stage(
         compiler,
         native_source_objects,
@@ -1957,6 +1994,7 @@ def build_pyi_extension(
         bundle=bundle,
         strict_wrapper_names=strict_wrapper_names,
         requested_output_name=output_name,
+        input_compiler=input_compiler,
         native_fortran_flags=native_inputs.source_flags,
         wrapper_compiler_debug=wrapper_compiler_debug,
         wrapper_fortran_flags=wrapper_fortran_flags,
@@ -1977,6 +2015,8 @@ def build_pyi_extension(
             extra_dependencies=dependencies,
             build_manifest=build_manifest,
         )
+    elif generate_sources:
+        result = replace(result, compiled=False)
     _report_total_build_time(
         verbose,
         time.perf_counter() - build_started,
@@ -1989,7 +2029,10 @@ def build_pyi_extension_from_manifest(
     manifest: str | Path,
     *,
     output_name: str | None = None,
+    input_compiler: str | None = None,
+    include_dirs: Iterable[str | Path] | None = None,
     makefile: bool = False,
+    generate_sources: bool = False,
     verbose: bool | int = False,
     _on_total_build_time: Callable[[float], None] | None = None,
 ) -> WrapperBuildResult:
@@ -2018,9 +2061,18 @@ def build_pyi_extension_from_manifest(
         raise ValueError("Wrapper build manifest extension.requested_name must be a string or null")
 
     manifest_module_dirs = _manifest_path_list(native_section, "module_dirs", base=base)
-    native_include_dirs = tuple(path for path in manifest_module_dirs if _path_key(path) != _path_key(output_path))
+    native_include_dirs = _unique_paths(
+        (
+            *(path for path in manifest_module_dirs if _path_key(path) != _path_key(output_path)),
+            *(Path(path) for path in (include_dirs or ())),
+        )
+    )
+    selected_input_compiler = input_compiler
+    if selected_input_compiler is None:
+        selected_input_compiler = _manifest_string(compiler_section, "input_executable")
     result = build_pyi_extension(
         _resolve_manifest_path(entry_contract, base=base),
+        input_compiler=selected_input_compiler,
         native_fortran_sources=_manifest_compilation_sources(native_section, base=base),
         native_fortran_flags=_manifest_string_list(compiler_section, "fortran_flags"),
         native_include_dirs=native_include_dirs,
@@ -2029,6 +2081,7 @@ def build_pyi_extension_from_manifest(
         output_dir=output_path,
         strict_wrapper_names=strict_wrapper_names,
         makefile=makefile,
+        generate_sources=generate_sources,
         verbose=verbose,
         wrapper_compiler_debug=_manifest_bool(compiler_section, "wrapper_compiler_debug"),
         wrapper_fortran_flags=_manifest_string_list(compiler_section, "wrapper_fortran_flags"),

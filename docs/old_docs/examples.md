@@ -171,13 +171,12 @@ Build the checked scalar fixture into an explicit directory:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
-  --wrap \
   --out-dir build/fruntime_abi \
   --json
 ```
 
-Recognizable Fortran sources default to `--wrap` when no inspection stage is
-selected, so the shorter equivalent is:
+Recognizable Fortran sources use the default wrapper build when no inspection
+stage is selected:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
@@ -249,8 +248,7 @@ fruntime_abi_f90
 Generate wrapper sources and `Makefile.x2py` without compiling:
 
 ```bash
-python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
-  --makefile \
+python3 -m x2py generate --makefile tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
   --out-dir build/fruntime_abi \
   --json
 ```
@@ -277,7 +275,6 @@ the merged extension:
 python3 -m x2py \
   tests/data/fortran/wrapper/multi_source/modules/first_api.f90 \
   tests/data/fortran/wrapper/multi_source/modules/second_api.f90 \
-  --wrap \
   --out-dir build/multi_api \
   --json
 ```
@@ -306,27 +303,27 @@ for output placement and build-system details.
 Compact Fortran report:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Compact C report:
 
 ```bash
-python3 -m x2py tests/data/c/general/math_api.h --language c --parse
+python3 -m x2py parse tests/data/c/general/math_api.h --language c
 ```
 
 Full parser payload:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --json
-python3 -m x2py tests/data/c/general/math_api.h --language c --parse --json
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90 --json
+python3 -m x2py parse tests/data/c/general/math_api.h --language c --json
 ```
 
 ### Semantic IR
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
-python3 -m x2py tests/data/c/general/math_api.h --language c --semantics
+python3 -m x2py semantics tests/data/fortran/general/basic_subroutine.f90
+python3 -m x2py semantics tests/data/c/general/math_api.h --language c
 ```
 
 The semantic payload includes `semantic_modules` and generated `pyi` text.
@@ -336,72 +333,21 @@ The semantic payload includes `semantic_modules` and generated `pyi` text.
 Print:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
-python3 -m x2py tests/data/c/general/math_api.h --language c --pyi
+python3 -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90
+python3 -m x2py generate --pyi tests/data/c/general/math_api.h --language c
 ```
 
 Write an explicit interface file:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --pyi --out /tmp/basic_subroutine.pyi
+python3 -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90 \
+  --out /tmp/basic_subroutine.pyi
 ```
 
 Write one interface beside each input:
 
 ```bash
-python3 -m x2py path/to/fortran_sources --language fortran --pyi --out
-```
-
-### Readiness
-
-Human-readable readiness:
-
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
-python3 -m x2py tests/data/c/general/math_api.h --language c --wrap-readiness
-python3 -m x2py tests/pyi/fixtures/general/basic_subroutine.pyi --wrap-readiness
-```
-
-Machine-readable readiness:
-
-```bash
-python3 -m x2py tests/pyi/fixtures/general/basic_subroutine.pyi \
-  --wrap-readiness --json
-```
-
-Read all `.pyi` files beneath a directory as one edited interface set.
-Directories always require an explicit frontend, including `.pyi`-only
-directories:
-
-```bash
-python3 -m x2py path/to/interfaces --language fortran --wrap-readiness
-```
-
-### Combine Stages
-
-Print parser facts followed by readiness:
-
-<!-- x2py-doc-test: run -->
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --parse --wrap-readiness
-```
-
-Print a generated `.pyi` followed by readiness:
-
-<!-- x2py-doc-test: run -->
-```bash
-python3 -m x2py tests/data/c/general/math_api.h \
-  --language c --pyi --wrap-readiness
-```
-
-Attach readiness to semantic output:
-
-<!-- x2py-doc-test: run -->
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --semantics --wrap-readiness
+python3 -m x2py generate --pyi path/to/fortran_sources --language fortran --out
 ```
 
 ## Control Human-Readable Parse Output
@@ -411,16 +357,16 @@ Fortran variable sections are compact by default. Expand them with
 
 <!-- x2py-doc-test: run -->
 ```bash
-python3 -m x2py tests/data/fortran/general/modern_pyi_example.f90 \
-  --parse --show-vars
+python3 -m x2py parse tests/data/fortran/general/modern_pyi_example.f90 \
+  --show-vars
 ```
 
 Limit every repeated section:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/modern_pyi_example.f90 \
-  --parse --show-vars --print-limit 1
+python3 -m x2py parse tests/data/fortran/general/modern_pyi_example.f90 \
+  --show-vars --print-limit 1
 ```
 
 This reports totals while showing one item from each repeated section:
@@ -452,8 +398,8 @@ Fortran parse reports.
 ### Explicit Files
 
 ```bash
-python3 -m x2py src/types.f90 src/api.f90 --language fortran --parse
-python3 -m x2py include/types.h include/api.h --language c --parse
+python3 -m x2py parse src/types.f90 src/api.f90 --language fortran
+python3 -m x2py parse include/types.h include/api.h --language c
 ```
 
 ### Directories
@@ -461,8 +407,8 @@ python3 -m x2py include/types.h include/api.h --language c --parse
 Directories require an explicit frontend:
 
 ```bash
-python3 -m x2py src/fortran --language fortran --parse --print-limit 20
-python3 -m x2py src/c --language c --parse --print-limit 20
+python3 -m x2py parse src/fortran --language fortran --print-limit 20
+python3 -m x2py parse src/c --language c --print-limit 20
 ```
 
 Fortran directory discovery is recursive for recognized Fortran suffixes. C
@@ -475,8 +421,8 @@ Use an explicit frontend when the source suffix does not identify the
 language:
 
 ```bash
-python3 -m x2py generated/api.source --language c --parse
-python3 -m x2py generated/api.source --language fortran --parse
+python3 -m x2py parse generated/api.source --language c
+python3 -m x2py parse generated/api.source --language fortran
 ```
 
 ## Compiler Preprocessing
@@ -487,7 +433,7 @@ for macros, conditional compilation, target flags, and native includes.
 ### C Compiler And Flags
 
 ```bash
-python3 -m x2py include/api.h --language c --parse \
+python3 -m x2py parse include/api.h --language c \
   --compiler clang \
   -I include \
   -D API_EXPORT= \
@@ -499,14 +445,14 @@ python3 -m x2py include/api.h --language c --parse \
 ### C Compilation Database
 
 ```bash
-python3 -m x2py src/api.c --language c --semantics \
+python3 -m x2py semantics src/api.c --language c \
   --compile-commands build/compile_commands.json
 ```
 
 Extra wrapper-specific flags can be added to the selected database entry:
 
 ```bash
-python3 -m x2py src/api.c --language c --semantics \
+python3 -m x2py semantics src/api.c --language c \
   --compile-commands build/compile_commands.json \
   --compiler-arg=-DX2PY_SCAN=1
 ```
@@ -514,7 +460,7 @@ python3 -m x2py src/api.c --language c --semantics \
 ### Fortran Compiler And Flags
 
 ```bash
-python3 -m x2py src/api.f90 --language fortran --pyi \
+python3 -m x2py generate --pyi src/api.f90 --language fortran \
   --compiler gfortran \
   -I include \
   -D USE_MPI \
@@ -527,7 +473,7 @@ python3 -m x2py src/api.f90 --language fortran --pyi \
 Use a command template for an unsupported compiler family:
 
 ```bash
-python3 -m x2py include/api.h --language c --parse \
+python3 -m x2py parse include/api.h --language c \
   --preprocessor-adapter command-template \
   --preprocess-template \
   'cc -E {include_dirs} {defines} {undefs} {standard} {compiler_args} {source}'
@@ -542,7 +488,7 @@ For C projects, reachable project includes are public by default and system
 headers are private. Narrow or override that wrapper-facing surface:
 
 ```bash
-python3 -m x2py include/api.h --language c --pyi \
+python3 -m x2py generate --pyi include/api.h --language c \
   --include-exposure roots-only \
   --public-include 'include/public/*' \
   --private-include 'vendor/*'
@@ -555,14 +501,14 @@ Private declarations remain available for internal type resolution.
 Write one parser payload to an explicit path:
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --parse --json --out /tmp/basic_subroutine.json
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90 \
+  --json --out /tmp/basic_subroutine.json
 ```
 
 Write one parser payload beside each source:
 
 ```bash
-python3 -m x2py path/to/fortran_sources --language fortran --parse --out
+python3 -m x2py parse path/to/fortran_sources --language fortran --out
 ```
 
 Write an explicit `.pyi`:
@@ -581,13 +527,13 @@ Parser and preprocessing failures are rendered without a Python traceback by
 default. Disable ANSI color for logs:
 
 ```bash
-python3 -m x2py path/to/source.f90 --parse --no-color
+python3 -m x2py parse path/to/source.f90 --no-color
 ```
 
 Re-raise an error with a traceback while debugging:
 
 ```bash
-python3 -m x2py path/to/source.f90 --parse --debug
+python3 -m x2py parse path/to/source.f90 --debug
 ```
 
 Stable diagnostic categories are listed in
@@ -691,12 +637,11 @@ Output:
 ['api', 'types']
 ```
 
-### Convert C To Semantic IR, Emit `.pyi`, And Check Readiness
+### Convert C To Semantic IR And Emit `.pyi`
 
 <!-- x2py-doc-test: exact -->
 ```python
 from x2py import (
-    assess_semantic_wrap_readiness,
     c_file_to_semantic_modules,
     emit_module_stubs,
     parse_c_file,
@@ -706,7 +651,6 @@ parsed = parse_c_file("int add(int a, int b);", filename="inline.h")
 modules = c_file_to_semantic_modules(parsed)
 
 print(emit_module_stubs(modules)["inline"])
-print(assess_semantic_wrap_readiness(modules)["wrappable"])
 ```
 
 Output:
@@ -717,51 +661,6 @@ def add(
     a: Int,
     b: Int
 ) -> Int: ...
-True
-```
-
-### Check An Edited `.pyi` String
-
-<!-- x2py-doc-test: exact -->
-```python
-from x2py import assess_semantic_wrap_readiness, pyi_text_to_semantic_module
-
-module = pyi_text_to_semantic_module(
-    """
-from x2py.contracts import prototype
-
-@prototype
-def objective(value: Float64) -> Float64: ...
-
-def integrate(
-    callback: objective,
-    x0: Float64
-) -> Float64: ...
-""",
-    module_name="solver",
-)
-
-report = assess_semantic_wrap_readiness(module, source="solver.pyi")
-print(report["wrappable"])  # True
-```
-
-Output:
-
-<!-- x2py-doc-test-output -->
-```text
-True
-```
-
-### Check `.pyi` Files Or Directories
-
-```python
-from x2py import assess_pyi_wrap_readiness, pyi_paths_to_semantic_modules
-
-modules = pyi_paths_to_semantic_modules("path/to/interfaces")
-report = assess_pyi_wrap_readiness("path/to/interfaces")
-
-print([module.name for module in modules])
-print(report["wrappable"])
 ```
 
 ## Supported `.pyi` Examples
@@ -850,7 +749,7 @@ directly from an edited `.pyi` or execute arbitrary edited `@native_call`
 metadata. Use the [semantic `.pyi` format](pyi_format.md) for accepted entries
 and limitations.
 
-## Readiness Blocker Examples
+## Stage Error Examples
 
 ### Missing Callback Signature
 
@@ -885,10 +784,9 @@ n: Final[Int32] = 16
 int read_values(double *values, size_t n);
 ```
 
-The parser can preserve this signature, but semantic readiness reports
-`c_pointer_ownership_ambiguous`: the declaration alone does not prove whether
-the pointer is borrowed, owned, input, output, or in-place storage. Current
-x2py does not invent that policy.
+The parser preserves this signature as explicit semantic storage facts. A
+future C runtime wrapper must complete ownership, input/output, and in-place
+storage policy rather than inventing it from the declaration alone.
 
 ### Unsupported C Variadic Function
 
@@ -896,8 +794,7 @@ x2py does not invent that policy.
 int log_msg(const char *fmt, ...);
 ```
 
-Semantic readiness reports `c_variadic_function`. Current x2py does not
-generate a runtime wrapper for the variadic contract.
+Current x2py does not generate a runtime wrapper for the variadic contract.
 
 ## More References
 

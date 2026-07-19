@@ -242,7 +242,7 @@ def test_documented_transfer_and_destruction_modes_resolve_or_fail_closed():
             assert decision.codegen_action is not CodegenAction.BLOCKED, label
 
 
-def test_pyi_policy_metadata_round_trips_pointer_array_handle_readiness_blocker():
+def test_pyi_policy_metadata_round_trips_pointer_array_handle_policy():
     default_type = _array_type(pointer=True)
     default_field = default_ownership_policy.decide_semantic_type(default_type, OwnershipContext.field())
     assert not default_field.is_blocked

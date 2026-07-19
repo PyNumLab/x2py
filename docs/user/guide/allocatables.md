@@ -453,7 +453,7 @@ and related policy.
 A plain allocatable module array has the same extraction contract as an
 `Aliased` one. The wrapper uses the completed descriptor mechanism to inspect
 the current allocation without copying. If the backend cannot expose a live
-view through a supported mechanism, wrapper readiness blocks with a clear
+view through a supported mechanism, wrapper planning stops with a clear
 diagnostic. Call `.copy()` explicitly when independent Python-owned storage is
 required.
 

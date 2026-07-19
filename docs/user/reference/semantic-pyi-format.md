@@ -1,7 +1,7 @@
 ---
 title: Semantic .pyi Format
 audience: users, advanced users, developers
-prerequisites: semantic IR reference, wrapper readiness workflow
+prerequisites: semantic IR reference, wrapper build workflow
 related: index.md, semantic-ir.md
 status: maintained
 ---
@@ -38,7 +38,8 @@ Status terms used below:
   `wrapper_codegen.printers.pyi_printer`.
 - **Loaded**: accepted today by `x2py.parsers.pyi` and converted back to
   semantic IR.
-- **Readiness**: understood by the semantic readiness checker.
+- **Planning**: can be lowered by the implemented wrapper planner once its
+  semantic policy is complete.
 - **Build input**: accepted by the `.pyi` wrapper build for the implemented
   subset when the required native artifacts are supplied.
 - **Roadmap**: design direction, not implemented wrapper behavior.
@@ -100,12 +101,12 @@ Failures should happen at the earliest layer that has enough information:
   ordinary function bodies, untyped parameters, invalid `Annotated` metadata,
   unknown semantic types, missing relative imports, import cycles, or conflicting
   exports.
-- **Structural contract errors** fail during semantic validation or readiness:
+- **Structural contract errors** fail during semantic validation:
   incomplete `@native_call` mappings, duplicate native argument positions,
   missing or incompatible `@bind` / `@overload` targets, public declarations that
   expose private types, or native-placement facts that contradict the contract
   file shape.
-- **Unsupported policy** fails as a readiness or lowering blocker: ownership,
+- **Unsupported policy** fails during wrapper planning or lowering: ownership,
   lifetime, replacement, pointer reassociation, callback lifetime, coercion, or
   allocation behavior that x2py cannot yet express safely.
 - **Native artifact mismatches** fail during compile, link, import, or runtime
@@ -116,7 +117,7 @@ Failures should happen at the earliest layer that has enough information:
 Actionable diagnostics should name the contract path when available, the
 declaration or import being processed, the invalid fact, and the expected
 documented form. When x2py can continue only by guessing, it should report an
-error or blocker instead of guessing.
+error instead of guessing.
 
 When a `.pyi` file is converted from disk, syntax diagnostics use Python's
 filename field and semantic pipeline diagnostics prefix the message with the
@@ -372,7 +373,7 @@ symbol.
 
 Every generated standalone declaration must carry `@external`. Handwritten
 contracts must do the same. Missing or contradictory placement metadata must
-fail during `.pyi` validation or readiness, before bridge emission or native
+fail during `.pyi` validation or wrapper planning, before bridge emission or native
 compilation.
 
 ### Source-To-Contract Layout
@@ -433,7 +434,7 @@ For several ordered sources, the requested output directory is still the package
 itself. If two sources each define two modules, then:
 
 ```bash
-python3 -m x2py first_api.f90 second_api.f90 --pyi --out contracts
+python3 -m x2py generate --pyi first_api.f90 second_api.f90 --out contracts
 ```
 
 emits exactly this shape when no extra dependency stubs are needed:
@@ -574,7 +575,7 @@ Fortran module procedures additionally need their compiler-produced `.mod`
 files while the generated bridge is compiled:
 
 ```bash
---native-include-dir build/mod
+-I build/mod
 ```
 
 Archives do not normally contain `.mod` files, so module directories remain
@@ -671,7 +672,7 @@ from .module2 import *
 ```
 
 Wildcard import order must not silently resolve collisions. If both modules
-export `update`, readiness fails and requires explicit aliases or exclusions.
+export `update`, semantic validation requires explicit aliases or exclusions.
 
 ### Entry Contract And Extension Identity
 
@@ -729,7 +730,7 @@ arguments.
 x2py parses the entry as a restricted semantic stub; it does not execute Python
 code. Every relative import is resolved recursively to a sibling `.pyi` or a
 package `__init__.pyi`, producing the complete transitive contract graph before
-readiness or code generation. Files that both declare native objects and import
+wrapper planning or code generation. Files that both declare native objects and import
 other contracts contribute both roles.
 
 The resolver preserves normal explicit export choices:
@@ -787,7 +788,7 @@ X2PY_C_DOCS_END -->
 resolve or block unsupported source types instead of emitting unknown contracts.
 Current C callback placeholders such as `CFunctionPointer` can appear in
 generated stubs when source callback policy is incomplete; replace them with a
-named prototype before expecting readiness to pass. A prototype records the
+named prototype before building a wrapper. A prototype records the
 transport facts required by the generated adapter: native argument order,
 type, rank, shape, character length, result shape, and value/reference passing.
 It does not repeat native callback direction:
@@ -990,7 +991,7 @@ update_raw(value.ctypes.data)
 `Addr(Float64[:])` are invalid Python-visible raw-address contracts. Wrapped
 classes use `WrappedType` at the Python boundary, and their default `Arg(i)`
 representation already supplies the wrapped native handle/address. Post-IR
-policy completion rejects these invalid forms before readiness or wrapper
+policy completion rejects these invalid forms before wrapper planning or wrapper
 lowering. `Addr(...)` remains a Python-visible raw-address contract and is not a
 Fortran callback argument wrapper.
 
@@ -1047,7 +1048,7 @@ Dimension entries have the following meaning:
 Generated `.pyi` prints `::` and bounded forms such as `0:n:` for stride-aware
 axes. Edited contracts may still use the explicit `::Strided` and
 `0:n:Strided` spellings; they load to the same semantic array contract.
-Readiness uses the structured array contract to distinguish layout dimensions
+Wrapper planning uses the structured array contract to distinguish layout dimensions
 from extent expressions. Names such as `Strided` and `Flat` remain ordinary
 symbols when they occur in native extent expressions. Called Fortran shape
 intrinsics such as `size(v)` are recognized only after visible symbols are
@@ -1884,7 +1885,7 @@ object, preserves Python object identity, and returns the same object. Both
 `lhs.assign(rhs)` and `lhs = lhs.assign(rhs)` are therefore valid. Assigning an
 object to itself is a no-op that returns the existing object. A supported
 specific must be a two-argument subroutine whose wrapped derived-type LHS is
-writable and whose RHS is read-only. Unsafe or unsupported forms are readiness
+writable and whose RHS is read-only. Unsafe or unsupported forms are wrapper-planning
 blockers.
 
 ## Allocatable Array Handles
@@ -2039,7 +2040,7 @@ pointer-backed native storage. A native module declaration is a different object
 origin. `Annotated[box, Aliased]` lets the wrapper retain that object's native
 address and return a live borrowed `box` wrapper. A plain `box` module variable
 returns the same public wrapper type, backed by typed module-specific bridge
-operations. Unsupported live lifetime or module-access policy blocks readiness;
+operations. Unsupported live lifetime or module-access policy stops wrapper planning;
 the backend must not fall back to a detached object or an invented address.
 
 Public scalar Fortran module variables are emitted directly with their resolved
@@ -2085,7 +2086,7 @@ the extension module is imported, x2py applies the value through the completed
 native setter policy. Later reads and writes still use the current native module
 storage. This initializer form is only for scalar module variables with a
 write-through setter; non-scalar or read-only declarations remain explicit
-readiness/code-generation blockers instead of falling back to a copied Python
+wrapper-planning or code-generation errors instead of falling back to a copied Python
 value.
 
 Fortran `parameter` declarations are emitted as `Final[...]` constants when
@@ -2165,7 +2166,7 @@ The handle carries association state and descriptor operations:
 When descriptor-backed extraction is enabled, `to_numpy()` builds NumPy shape and
 strides from descriptor metadata and can expose strided pointer targets. If that
 path is unavailable, the completed policy must choose a contiguous live view or
-an explicit readiness diagnostic. It must not fall back to a copy. Pointer
+an explicit wrapper-planning diagnostic. It must not fall back to a copy. Pointer
 handle ownership is descriptor or association access by default, not target
 ownership.
 The generated descriptor-view path establishes portable descriptor storage,
@@ -2293,7 +2294,7 @@ Generated `.pyi` currently covers these exact-contract areas:
 | Fortran generic interfaces | explicit `@overload("specific")` links with C-extension dtype/rank dispatch |
 | C structs/unions | `CStruct` and `CUnion` classes |
 | C anonymous aggregate members | nested `CAnonymous` classes plus `CAnonymousMember` fields |
-| Incomplete C callbacks | placeholder type that readiness reports as incomplete |
+| Incomplete C callbacks | placeholder type that wrapper planning reports as incomplete |
 X2PY_C_DOCS_END -->
 
 Loaded but usually not generated from source today:
@@ -2307,7 +2308,7 @@ Loaded but usually not generated from source today:
 | source-provenance array helpers | compatibility loading for older or edited stubs |
 
 Generic constraints are not silently treated as runtime checks. Fortran wrapper
-readiness reports `fortran_runtime_constraints_unsupported` until a named
+wrapper planning reports `fortran_runtime_constraints_unsupported` until a named
 constraint has an implemented validator. Semantic coercions similarly report
 `fortran_runtime_coercions_unsupported` until a conversion action exists.
 

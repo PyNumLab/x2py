@@ -1,4 +1,4 @@
-"""Pointer argument, result, association, and handle-readiness tests."""
+"""Pointer argument, result, association, and handle-policy tests."""
 
 import gc
 import subprocess
@@ -116,7 +116,7 @@ def _pointer_handle_module(build_mode: str, tmp_path: Path):
     source.write_text(POINTER_HANDLE_SOURCE, encoding="utf-8")
     contract_dir = tmp_path / "contracts" / source.stem
     subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--pyi", "--out", str(contract_dir)],
+        [sys.executable, "-m", "x2py", "generate", "--pyi", str(source), "--out", str(contract_dir)],
         capture_output=True,
         text=True,
         check=True,

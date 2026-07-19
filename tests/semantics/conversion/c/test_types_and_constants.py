@@ -37,7 +37,6 @@ from tests.semantics.conversion.c._support import (
     CUnsignedShort,
     CVariable,
     _assert_unsupported_type,
-    _blocker,
     _c_origin,
     _function,
     asdict,
@@ -72,13 +71,6 @@ def test_c2ir_maps_const_and_mutable_pointers_to_storage_contracts():
     assert dst.semantic_type.storage.read_only is False
     assert asdict(src.semantic_type.ownership) == {"ownership": "borrowed", "mutable": False, "aliasing": True}
     assert asdict(dst.semantic_type.ownership) == {"ownership": "borrowed", "mutable": True, "aliasing": True}
-    assert dst.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_pointer_ownership_ambiguous",
-            "Mutable C pointer parameters need explicit ownership, scalar-storage, or array policy.",
-            {"owner": "copy.dst", "parameter": "dst", "type": "double *dst"},
-        )
-    ]
     assert asdict(src.semantic_type.storage) == {
         "kind": "reference",
         "read_only": True,
@@ -284,42 +276,10 @@ int read_values(const double *values, size_t n);
     unresolved = converter.visit(CTypedef(name="absent_t"), owner="result")
     converter.typedefs["cyclic_t"] = CTypedef(name="cyclic_t")
     cyclic = converter.visit(CTypedef(name="cyclic_t"), owner="cycle")
-    assert resolved.metadata == {
-        "readiness_blockers": [
-            _blocker(
-                "c_unresolved_type",
-                "C type references must resolve before wrapping.",
-                {"owner": "result", "type": "missing_t"},
-            )
-        ],
-        "c_typedefs": ["target_t"],
-    }
-    assert inline.metadata == {
-        "readiness_blockers": [
-            _blocker(
-                "c_unresolved_type",
-                "C type references must resolve before wrapping.",
-                {"owner": "inline_result", "type": "inline_missing_t"},
-            )
-        ],
-        "c_typedefs": ["inline_t"],
-    }
-    assert unresolved.metadata == {
-        "readiness_blockers": [
-            _blocker(
-                "c_unresolved_typedef",
-                "C typedef references must resolve to a concrete semantic type before wrapping.",
-                {"owner": "result", "type": "absent_t"},
-            )
-        ]
-    }
-    assert cyclic.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_unresolved_typedef",
-            "C typedef references must resolve to a concrete semantic type before wrapping.",
-            {"owner": "cycle", "type": "cyclic_t"},
-        )
-    ]
+    assert resolved.metadata == {"c_typedefs": ["target_t"]}
+    assert inline.metadata == {"c_typedefs": ["inline_t"]}
+    assert unresolved.metadata == {}
+    assert cyclic.metadata == {}
 
 
 def test_c2ir_uses_standard_type_probe_facts_when_supplied():
@@ -404,7 +364,6 @@ def test_c2ir_blocks_compiler_probed_primitive_abi_without_semantic_dtype():
     assert semantic_type.name == "CUnsupported"
     assert semantic_type.metadata["c_primitive"] == "long"
     assert semantic_type.metadata["c_type_fact"] == fact
-    assert semantic_type.metadata["readiness_blockers"][0]["code"] == "c_unsupported_primitive_abi"
 
 
 def test_c_compatibility_helpers_forward_standard_type_reports():
@@ -533,15 +492,7 @@ def test_c2ir_reports_unsupported_type_and_declarator_compositions():
 
     assert unresolved.name == "missing_t"
     assert unresolved.dtype == "missing_t"
-    assert unresolved.metadata == {
-        "readiness_blockers": [
-            _blocker(
-                "c_unresolved_type",
-                "C type references must resolve before wrapping.",
-                {"owner": "missing_owner", "type": "missing_t"},
-            )
-        ]
-    }
+    assert unresolved.metadata == {}
     assert asdict(unresolved.origin) == _c_origin(source_kind="type", source_type="missing_t")
     _assert_unsupported_type(
         unsupported_integer,

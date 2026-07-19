@@ -179,7 +179,7 @@ contract, not the normal source-generated subroutine API. Editing Semantic
   pointer scalar objects use reversible typed transactions for compatible
   descriptor dummies. The later Wrapping Derived Types guide gives the complete
   “Scalar Actuals And Native Dummies” matrix.
-- Unsupported output combinations stop at readiness; code generation does not
+- Unsupported output combinations stop during wrapper planning; code generation does not
   silently select another projection.
 
 ## Evidence And Troubleshooting

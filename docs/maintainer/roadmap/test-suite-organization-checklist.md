@@ -66,7 +66,7 @@ coherent move. Split modules must account for the original total shown below.
 
 | Oversized module | Lines | Baseline cases | Planned concepts |
 | --- | ---: | ---: | --- |
-| `tests/parser/test_cli.py` | 3,566 | 140 | argument/configuration contract, output/reporting, stage dispatch, readiness/report helpers |
+| `tests/parser/test_cli.py` | 3,566 | 140 | argument/configuration contract, output/reporting, and stage dispatch |
 | `tests/pyi/test_pyi_to_ir.py` | 3,013 | 190 | Python-AST parsing, imports/packages, classes/overloads, type/value forms, call projection |
 | `tests/semantics/test_ownership_policy.py` | 2,878 | 82 | completed policy, bridge dispatch, binding dispatch |
 | `tests/semantics/test_fortran2ir.py` | 2,718 | 69 | declarations/types, procedures/interfaces, modules/visibility, imports/expressions |
@@ -74,7 +74,6 @@ coherent move. Split modules must account for the original total shown below.
 | `tests/semantics/test_pyi_printer.py` | 2,315 | 77 | declarations/types, procedures/projections, imports/packages, policy metadata |
 | `tests/test_runtime_handles.py` | 2,004 | 79 | public handles, generated-operation factories, array/descriptor ABI packing |
 | `tests/semantics/test_c2ir.py` | 1,827 | 63 | declarations/types, functions/callbacks, records/enums, projects/diagnostics |
-| `tests/semantics/test_semantic_wrap_readiness.py` | 1,630 | 53 | source semantic readiness, `.pyi` readiness, completed-policy blockers |
 | `tests/parser/test_procedure_and_type_parsing.py` | 1,639 | 83 | procedures/interfaces, declarations/types, derived types/type-bound behavior |
 | `tests/parser/test_fortran_parser_regression_contracts.py` | 1,356 | 57 | lexical/source-form regressions, declarations/scopes, procedures/interfaces |
 
@@ -96,7 +95,6 @@ all original cases are accounted for in its destination modules.
 | `tests/pyi/test_contract_package_generation.py`, `test_pyi_fixture_suite.py` | integration-oriented `tests/pipeline/pyi_builds/` |
 | `tests/semantics/test_c2ir.py`, `test_fortran2ir.py`, `test_semantic_conversion_smoke.py` | split/move under `tests/semantics/conversion/{c,fortran}/` and `tests/semantics/conversion/` |
 | `tests/semantics/test_ownership_policy.py` | completed decisions in `tests/semantics/policy/`; generator dispatch cases in `tests/codegen/bridges/` and `tests/codegen/bindings/` |
-| `tests/semantics/test_c_semantic_readiness.py`, `test_semantic_wrap_readiness.py`, `test_wrap_readiness_fixture_suite.py` | `tests/semantics/readiness/`, with the oversized module split by readiness boundary |
 | `tests/semantics/test_ir2ast.py`, `test_visitor_protocol.py` | `tests/lowering/` |
 | `tests/semantics/test_pyi_printer*.py` | `tests/wrapper_codegen/printers/`, with the oversized printer module split by emitted concept |
 | `tests/test_runtime_handles.py` | split under `tests/runtime/handles/` |
@@ -117,7 +115,7 @@ trees are not part of this map and must not move.
 
 | Original oversized module | Final pytest modules |
 | --- | --- |
-| `tests/parser/test_cli.py` | `tests/cli/test_argument_contract.py`, `test_output_contract.py`, `test_readiness_reports.py`, `test_stage_dispatch.py` |
+| `tests/parser/test_cli.py` | `tests/cli/test_argument_contract.py`, `test_output_contract.py`, `test_stage_dispatch.py` |
 | `tests/pyi/test_pyi_to_ir.py` | `tests/parsing/pyi/test_python_ast_contracts.py`; `tests/semantics/conversion/pyi/test_calls_and_projections.py`, `test_classes_and_overloads.py`, `test_pyi_conversion_imports_and_packages.py`, `test_types_and_values.py` |
 | `tests/semantics/test_ownership_policy.py` | `tests/semantics/policy/test_accessor_and_storage_policy.py`, `test_native_array_ownership.py`, `test_policy_defaults_and_validation.py`; `tests/lowering/test_array_interop_policy.py`; `tests/codegen/bridges/test_bridge_handle_policy_dispatch.py`; `tests/codegen/bindings/test_binding_handle_policy_dispatch.py` |
 | `tests/semantics/test_fortran2ir.py` | `tests/semantics/conversion/fortran/test_compile_time_values.py`, `test_fortran_conversion_procedures_and_interfaces.py`, `test_modules_and_imports.py`, `test_types_and_storage.py` |
@@ -125,7 +123,6 @@ trees are not part of this map and must not move.
 | `tests/semantics/test_pyi_printer.py` | `tests/wrapper_codegen/printers/test_calls_and_policy_metadata.py`, `test_classes_and_methods.py`, `test_pyi_printer_imports_and_packages.py`, `test_types_and_declarations.py` |
 | `tests/test_runtime_handles.py` | `tests/runtime/handles/test_array_actual_abi.py`, `test_descriptor_abi.py`, `test_factories_and_lifecycle.py`, `test_handle_protocols.py` |
 | `tests/semantics/test_c2ir.py` | `tests/semantics/conversion/c/test_functions_and_callbacks.py`, `test_projects_and_diagnostics.py`, `test_records_and_enums.py`, `test_types_and_constants.py` |
-| `tests/semantics/test_semantic_wrap_readiness.py` | `tests/cli/test_wrap_readiness.py`; `tests/semantics/readiness/test_policy_blockers.py`, `test_pyi_readiness.py`, `test_reports.py` |
 | `tests/parser/test_procedure_and_type_parsing.py` | `tests/parsing/fortran/test_fortran_parser_procedures_and_interfaces.py`, `test_declarations_and_shapes.py`, `test_derived_types_and_program_units.py` |
 | `tests/parser/test_fortran_parser_regression_contracts.py` | `tests/parsing/fortran/test_source_form_and_diagnostics_regressions.py`, `test_declaration_and_scope_regressions.py`, `test_procedure_and_interface_regressions.py` |
 
@@ -138,7 +135,7 @@ Shared ordinary helpers now live in the nearest `_support.py`: CLI,
 preprocessing, C/Fortran conversion, printer, runtime-handle, and the two
 Fortran parser split families each have a local support module. Four helpers
 cross an intentional ownership boundary and therefore live in `tests/_shared/`:
-parser properties, `.pyi` parsing/conversion, semantic readiness/CLI, and
+parser properties, `.pyi` parsing/conversion, semantic conversion/CLI, and
 ownership-policy/codegen dispatch. The obsolete `tests/parser/conftest.py` was
 removed after all parser pytest modules left that subtree.
 
@@ -175,14 +172,14 @@ single cohesive native-call/projection subject.
 - [x] Record focused execution results for `tests/semantics/conversion` and
   `tests/pipeline/pyi_builds`.
 
-### Policy, readiness, lowering, and code generation
+### Policy, planning, lowering, and code generation
 
 - [x] Move/split the group according to the proposed map.
 - [x] Confirm every bridge/binding test asserts dispatch from completed policy
   rather than semantic inference in generation.
 - [x] Record collection comparison: every original case retained.
 - [x] Record focused execution results for `tests/semantics/policy`,
-  `tests/semantics/readiness`, `tests/lowering`, and `tests/codegen`.
+  `tests/semantics/policy`, `tests/lowering`, and `tests/codegen`.
 
 ### Runtime, types, naming, docs, tools, and architecture
 
@@ -256,12 +253,10 @@ row therefore accounts for two of the 34 normalized-ID differences.
 | `tests/pyi/test_pyi_fixture_suite.py` | `tests/pipeline/pyi_builds/test_contract_fixtures.py` |
 | `tests/pyi/test_pyi_to_ir.py` | `tests/parsing/pyi/` |
 | `tests/semantics/test_c2ir.py` | `tests/semantics/conversion/c/` |
-| `tests/semantics/test_c_semantic_readiness.py` | `tests/semantics/readiness/test_c_readiness.py` |
 | `tests/semantics/test_fortran2ir.py` | `tests/semantics/conversion/fortran/` |
 | `tests/semantics/test_ir2ast.py` | `tests/lowering/test_semantic_ir.py` |
 | `tests/semantics/test_pyi_printer.py` | `tests/wrapper_codegen/printers/` |
 | `tests/semantics/test_pyi_printer_modern_example.py` | `tests/wrapper_codegen/printers/test_modern_example.py` |
-| `tests/semantics/test_semantic_wrap_readiness.py` | `tests/semantics/readiness/` |
 | `tests/tools/test_documentation_examples.py` | `tests/docs/test_examples.py` |
 | `tests/tools/test_documentation_structure.py` | `tests/docs/test_structure.py` |
 

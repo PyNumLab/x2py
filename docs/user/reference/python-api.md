@@ -85,7 +85,8 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 Semantic conversion is the boundary between parser models and wrapper-facing
-contracts. Use readiness checks before assuming a semantic module can be wrapped.
+contracts. Run the default wrapper build to complete policy and validate
+whether the wrapper plan supports the contract.
 
 ## Semantic `.pyi` contract API
 
@@ -102,12 +103,10 @@ Editable `.pyi` files are a contract surface. User-private declarations in a
 `.pyi` file are distinct from source-private Fortran declarations omitted from
 generated stubs.
 
-## Readiness and stub emission API
+## Stub emission API
 
 | Symbol | Purpose |
 | --- | --- |
-| `assess_semantic_wrap_readiness` | Checks semantic IR for wrapper readiness and reports blockers. |
-| `assess_pyi_wrap_readiness` | Checks semantic `.pyi` input for wrapper readiness and reports blockers. |
 | `emit_module_stubs` | Emits semantic Python `.pyi` text from semantic module models. |
 | `opaque_dependency_modules` | Computes opaque dependency modules needed for emitted stubs. |
 
@@ -150,7 +149,7 @@ plain NumPy arrays are for ordinary array-data parameters.
 
 | Symbol | Purpose |
 | --- | --- |
-| `build_fortran_extension` | Builds a Python extension from Fortran source inputs. |
+| `build_fortran_extension` | Builds a Python extension from semantic Fortran source inputs plus optional native-only sources, artifacts, compiler flags, include paths, libraries, and ordered link items. |
 | `build_pyi_extension` | Builds a Python extension from semantic `.pyi` contracts plus explicit native artifacts. |
 | `build_pyi_extension_from_manifest` | Replays a saved semantic `.pyi` wrapper build manifest, either building directly or regenerating `Makefile.x2py`. |
 | `WrapperBuildResult` | Result model returned by wrapper build functions. |
@@ -159,10 +158,11 @@ plain NumPy arrays are for ordinary array-data parameters.
 | `NativePrebuiltArtifact` | Caller-supplied native object, archive, or shared library recorded in a native build plan. |
 | `NativeLinkItem` | One ordered object, archive, shared library, named library, or linker argument in a native link plan. |
 
-Fortran source wrapper builds own the normal source-to-extension workflow.
-Semantic `.pyi` wrapper builds require explicit native implementation inputs
-such as native Fortran sources, objects, libraries, and include/module
-directories. Inspect
+Fortran source wrapper builds own the normal source-to-extension workflow and
+may augment their positional semantic sources with the same native compile and
+link inputs used by contract builds. Semantic `.pyi` wrapper builds require at
+least one explicit native implementation input such as native Fortran sources,
+objects, libraries, or ordered link items. Inspect
 `WrapperBuildResult.native_build_plan` when a caller needs the native
 compilation units, produced objects, prebuilt artifacts, module/include
 directories, library directories, or ordered native link items separately from

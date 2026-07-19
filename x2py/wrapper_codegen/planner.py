@@ -97,7 +97,6 @@ from x2py.wrapper_codegen.plan import (
     TransformationPlan,
 )
 from x2py.wrapper_codegen.naming import NativeSymbolNames
-from x2py.wrapper_codegen.support import WrapperPlanSupportAnalyzer
 from x2py.wrapper_codegen.visitor import ClassVisitor
 
 
@@ -118,10 +117,9 @@ _DATATYPE_FAMILIES = {
 class WrapperPlanner(ClassVisitor):
     """Project completed semantic policies into one editable shared plan."""
 
-    def __init__(self, *, support_analyzer: WrapperPlanSupportAnalyzer | None = None):
-        """Create a planner with an optional support analyzer."""
+    def __init__(self):
+        """Create a planner for one policy-completed semantic module."""
         super().__init__()
-        self.support_analyzer = support_analyzer or WrapperPlanSupportAnalyzer()
         self.docstrings = WrapperDocstringBuilder()
 
     def build(self, module: models.SemanticModule) -> ModulePlan:
@@ -129,14 +127,15 @@ class WrapperPlanner(ClassVisitor):
         return self.visit(module)
 
     def _visit_SemanticModule(self, module: models.SemanticModule) -> ModulePlan:
-        """Return one module plan after whole-unit support analysis."""
+        """Return one module plan, failing at the first inconsistent owner."""
         self._derived_type_names = {semantic_class.name for semantic_class in module.classes}
         self._derived_field_plans: dict[str, DerivedFieldPlan] = {}
-        report = self.support_analyzer.analyze(module)
-        if not report.supported:
-            raise ValueError(self._support_error(module.name, report.blockers))
         self._complete_derived_backend_symbols(module)
         functions, variables, derived_types, classes, overloads = self._namespace_member_plans(module)
+        if not any(
+            (*functions.values(), *variables.values(), *derived_types.values(), *classes.values(), *overloads.values())
+        ):
+            raise ValueError(f"Semantic module {module.name!r} has no public wrapper exports")
         self._attach_class_functions(functions, classes)
         self._attach_overload_functions(functions, overloads)
         namespaces = self._namespace_plans(module.name, functions, variables, derived_types, classes, overloads)
@@ -688,7 +687,11 @@ class WrapperPlanner(ClassVisitor):
     ) -> dict[tuple[str, ...], list[OverloadPlan]]:
         """Group completed module generics and their private concrete calls."""
         grouped = defaultdict(list)
-        policies = module.metadata.get(models.RESOLVED_MODULE_OVERLOAD_POLICIES_METADATA, ())
+        policies = module.metadata.get(models.RESOLVED_MODULE_OVERLOAD_POLICIES_METADATA)
+        if not isinstance(policies, tuple):
+            if module.overload_sets:
+                raise ValueError(f"Module {module.name!r} has no completed overload policies")
+            policies = ()
         functions = self._module_overload_function_index(module)
         for item in policies:
             policy = self._completed_module_overload_policy(module, item)
@@ -712,6 +715,9 @@ class WrapperPlanner(ClassVisitor):
         """Require one completed module-overload policy before plan projection."""
         if not isinstance(policy, OverloadPolicy):
             raise ValueError(f"Module {module.name!r} has an incomplete overload policy")
+        if policy.blockers:
+            details = "; ".join(policy.blockers)
+            raise ValueError(f"Module overload {policy.owner_path!r} has unsupported policy: {details}")
         return policy
 
     def _exported_module_overload_plan(
@@ -1760,11 +1766,6 @@ class WrapperPlanner(ClassVisitor):
         if derived is not None:
             return DatatypeFamily.DERIVED
         return self._datatype_family(semantic_type_name)
-
-    def _support_error(self, owner_path: str, blockers: object) -> str:
-        """Return a compact unsupported-generation-unit error."""
-        details = "; ".join(f"{item.owner_path}: {item.reason}" for item in blockers)
-        return f"Unsupported wrapper-plan generation unit {owner_path!r}: {details}"
 
     def _namespace_paths(self, declared_paths: tuple[tuple[str, ...], ...]) -> tuple[tuple[str, ...], ...]:
         """Return root plus every declared namespace and required ancestor."""

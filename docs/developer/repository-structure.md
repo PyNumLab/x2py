@@ -22,7 +22,7 @@ artifacts used by tests. Navigate by ownership boundary first, then by file.
 | `x2py/runtime/` | Python runtime objects used by generated extension modules. |
 | `x2py/types/` | Cross-layer mappings from resolved semantic types to Python ecosystem types. |
 | `x2py/parsers/` | Public namespace for language and semantic-contract frontends and parser models. |
-| `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, policy completion, and readiness. |
+| `x2py/semantics/` | Semantic IR, source-to-IR conversion, `.pyi` parsing, and policy completion. |
 | `x2py/wrapper_codegen/` | Typed wrapper plans, direct native bridge/binding lowering, and source and semantic `.pyi` printers. |
 | `x2py/compiling/` | Native compile objects, compiler command orchestration, native support installation, and linking. |
 | `x2py/binding_support/` | Bundled header-only native support copied into generated wrapper builds. |
@@ -47,7 +47,7 @@ through `x2py/__init__.py`.
 | --- | --- |
 | `tests/parsing/` | Parser and parser fixture tests grouped by source language. |
 | `tests/pipeline/` | Preprocessing and semantic `.pyi` build-orchestration tests. |
-| `tests/semantics/` | Semantic conversion, completed policy, and readiness tests. |
+| `tests/semantics/` | Semantic conversion and completed-policy tests. |
 | `tests/wrapper_codegen/` | Typed planning, direct bridge/binding generation, and source-printer tests. |
 | `tests/utilities/` | Shared Python utility tests. |
 | `tests/wrapper/fortran/` | Runtime wrapper tests that compile, import, call, and check failure paths. |

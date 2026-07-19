@@ -16,7 +16,6 @@ from x2py.wrapper_codegen.c.binding import CBindingGenerator
 from x2py.wrapper_codegen.fortran.bridge import FortranBridgeGenerator
 from x2py.wrapper_codegen.planner import WrapperPlanner
 from x2py.wrapper_codegen.printers import PyiPrinter
-from x2py.wrapper_codegen.support import WrapperPlanSupportAnalyzer
 from x2py.wrapper_codegen.visitor import ClassVisitor as WrapperClassVisitor
 
 
@@ -30,7 +29,6 @@ SEMANTIC_VISITORS = (
     PyiPrinter,
 )
 WRAPPER_VISITORS = (
-    WrapperPlanSupportAnalyzer,
     WrapperPlanner,
     CBindingGenerator,
     FortranBridgeGenerator,
@@ -41,7 +39,6 @@ VISITOR_IMPLEMENTATION_PATHS = (
     REPO_ROOT / "x2py" / "semantics" / "fortran2ir.py",
     REPO_ROOT / "x2py" / "semantics" / "pyi2ir.py",
     REPO_ROOT / "x2py" / "wrapper_codegen" / "planner.py",
-    REPO_ROOT / "x2py" / "wrapper_codegen" / "support.py",
     REPO_ROOT / "x2py" / "wrapper_codegen" / "c" / "binding.py",
     REPO_ROOT / "x2py" / "wrapper_codegen" / "fortran" / "bridge.py",
     REPO_ROOT / "x2py" / "wrapper_codegen" / "printers" / "pyi_printer.py",

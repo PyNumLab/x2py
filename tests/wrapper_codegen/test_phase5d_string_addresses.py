@@ -22,7 +22,7 @@ from x2py.semantics.wrapper_policy import (
     RAW_STRING_ADDRESS_COPY_REASON,
     STRING_STORAGE_COPY_REASON,
 )
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanSupportAnalyzer, WrapperPlanner
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 
 def _string_address_module():
@@ -47,18 +47,6 @@ def _functions(plan):
 
 def test_string_address_plans_keep_completed_ownership_length_and_copy_facts():
     module = _string_address_module()
-    reports = {function.name: WrapperPlanSupportAnalyzer().analyze(function) for function in module.functions}
-    assert reports["storage"].covered_lanes == (
-        "string-storage-inputs",
-        "void-calls",
-        "native-call-runtime",
-    )
-    assert reports["raw"].covered_lanes == (
-        "string-raw-address-inputs",
-        "void-calls",
-        "native-call-runtime",
-    )
-
     functions = _functions(WrapperPlanner().build(module))
     storage = functions["storage"].arguments[0]
     raw = functions["raw"].arguments[0]

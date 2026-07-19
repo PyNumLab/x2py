@@ -18,19 +18,19 @@ from x2py.pipeline.preprocessing import PreprocessingConfig
 CONTRACT_IMPORT = "from x2py.contracts import Int32\n\n"
 
 
-def test_cli_help_shows_explicit_c_language_mode():
-    cmd = [sys.executable, "-m", "x2py", "--help"]
+def test_cli_parse_help_shows_explicit_c_language_mode():
+    cmd = [sys.executable, "-m", "x2py", "parse", "--help"]
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-    assert "--language" in res.stdout
-    assert "c" in res.stdout
+    assert "--language {fortran,c}" in res.stdout
+    assert "Input language (default: fortran; use c for C inputs)" in " ".join(res.stdout.split())
 
 
 def test_cli_c_parse_human_tree_output_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(header), "--language", "c"]
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
@@ -85,10 +85,10 @@ def test_cli_c_parse_json_stdout_for_header(tmp_path: Path):
         sys.executable,
         "-m",
         "x2py",
+        "parse",
         str(header),
         "--language",
         "c",
-        "--parse",
         "--json",
     ]
 
@@ -117,7 +117,7 @@ def test_cli_c_parse_preprocesses_macros_by_default(tmp_path: Path):
         '#include "api_types.h"\n#define API_DECL(ret) ret\nAPI_DECL(api_int) run(void);\n',
         encoding="utf-8",
     )
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse", "--json"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(header), "--language", "c", "--json"]
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(res.stdout)[str(header)]
@@ -192,10 +192,10 @@ def test_cli_c_parse_json_out_writes_file_and_suppresses_stdout(tmp_path: Path):
         sys.executable,
         "-m",
         "x2py",
+        "parse",
         str(header),
         "--language",
         "c",
-        "--parse",
         "--json",
         "--out",
         str(output),
@@ -217,10 +217,10 @@ def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path
         sys.executable,
         "-m",
         "x2py",
+        "parse",
         str(header),
         "--language",
         "c",
-        "--parse",
         "--out",
         str(output),
     ]
@@ -232,10 +232,10 @@ def test_cli_c_parse_out_without_json_writes_json_and_suppresses_stdout(tmp_path
     assert "parser_status" not in payload[str(header)]
 
 
-def test_cli_c_semantics_json_stdout_for_header(tmp_path: Path):
+def test_cli_c_semantics_stdout_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--semantics", "--json"]
+    cmd = [sys.executable, "-m", "x2py", "semantics", str(header), "--language", "c"]
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     payload = json.loads(res.stdout)
@@ -249,66 +249,10 @@ def test_cli_c_semantics_json_stdout_for_header(tmp_path: Path):
     assert argument_type["metadata"]["c_type_fact_source"] == "compiler_probe"
 
 
-def test_cli_c_wrap_readiness_human_output_for_header(tmp_path: Path):
-    header = tmp_path / "api.h"
-    header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--wrap-readiness"]
-
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-
-    assert f"File: {header}" in res.stdout
-    assert "Source: c" in res.stdout
-    assert "Wrappable: yes" in res.stdout
-
-
-def test_cli_c_wrap_readiness_directory_includes_native_and_pyi_inputs(tmp_path: Path):
-    header = tmp_path / "api.h"
-    pyi = tmp_path / "solver.pyi"
-    header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    pyi.write_text(f"{CONTRACT_IMPORT}def fill(n: Int32) -> None: ...\n", encoding="utf-8")
-    cmd = [
-        sys.executable,
-        "-m",
-        "x2py",
-        str(tmp_path),
-        "--language",
-        "c",
-        "--wrap-readiness",
-        "--json",
-    ]
-
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    payload = json.loads(res.stdout)
-
-    assert payload[str(header)]["source_kind"] == "c"
-    assert payload[str(pyi)]["source_kind"] == "pyi"
-
-
-def test_cli_c_wrap_readiness_accepts_language_neutral_pyi_input(tmp_path: Path):
-    pyi = tmp_path / "solver.pyi"
-    pyi.write_text(f"{CONTRACT_IMPORT}def fill(n: Int32) -> None: ...\n", encoding="utf-8")
-    cmd = [
-        sys.executable,
-        "-m",
-        "x2py",
-        str(pyi),
-        "--language",
-        "c",
-        "--wrap-readiness",
-        "--json",
-    ]
-
-    res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    payload = json.loads(res.stdout)
-
-    assert payload[str(pyi)]["source_kind"] == "pyi"
-    assert payload[str(pyi)]["wrap_readiness"]["wrappable"] is True
-
-
 def test_cli_c_pyi_human_output_for_header(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi"]
+    cmd = [sys.executable, "-m", "x2py", "generate", "--pyi", str(header), "--language", "c"]
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
@@ -323,7 +267,7 @@ def test_cli_c_pyi_out_requires_explicit_language_and_writes_when_selected(tmp_p
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
 
     omitted = subprocess.run(
-        [sys.executable, "-m", "x2py", str(header), "--pyi", "--out"],
+        [sys.executable, "-m", "x2py", "generate", "--pyi", str(header), "--out"],
         capture_output=True,
         text=True,
     )
@@ -333,7 +277,7 @@ def test_cli_c_pyi_out_requires_explicit_language_and_writes_when_selected(tmp_p
     assert not output.exists()
 
     selected = subprocess.run(
-        [sys.executable, "-m", "x2py", str(header), "--pyi", "--out", "--language", "c"],
+        [sys.executable, "-m", "x2py", "generate", "--pyi", str(header), "--out", "--language", "c"],
         capture_output=True,
         text=True,
         check=True,
@@ -353,11 +297,12 @@ def test_cli_c_pyi_out_writes_explicit_multi_header_owner_stubs(tmp_path: Path):
             sys.executable,
             "-m",
             "x2py",
+            "generate",
+            "--pyi",
             str(types),
             str(api),
             "--language",
             "c",
-            "--pyi",
             "--out",
         ],
         capture_output=True,
@@ -372,8 +317,6 @@ def test_cli_c_pyi_out_writes_explicit_multi_header_owner_stubs(tmp_path: Path):
     assert "class state" not in api_stub
     assert "state: state" in api_stub
     assert "Addr(state)" not in api_stub
-    readiness = x2py_cli._wrap_readiness_report([str(types), str(api)], language="c")
-    assert readiness[str(api)]["wrap_readiness"]["wrappable"] is True
 
 
 def test_cli_c_input_rejects_explicit_fortran_frontend(tmp_path: Path):
@@ -382,7 +325,7 @@ def test_cli_c_input_rejects_explicit_fortran_frontend(tmp_path: Path):
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, "-m", "x2py", str(header), "--language", "fortran", "--pyi", "--out"],
+        [sys.executable, "-m", "x2py", "generate", "--pyi", str(header), "--language", "fortran", "--out"],
         capture_output=True,
         text=True,
     )
@@ -400,7 +343,7 @@ def test_cli_c_pyi_rejects_invalid_c_syntax(tmp_path: Path):
         encoding="utf-8",
     )
     result = subprocess.run(
-        [sys.executable, "-m", "x2py", str(header), "--language", "c", "--pyi"],
+        [sys.executable, "-m", "x2py", "generate", "--pyi", str(header), "--language", "c"],
         capture_output=True,
         text=True,
     )
@@ -413,7 +356,7 @@ def test_cli_c_pyi_rejects_invalid_c_syntax(tmp_path: Path):
 def test_cli_c_rejects_fortran_only_parse_flags(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse", "--show-vars"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(header), "--language", "c", "--show-vars"]
 
     res = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -429,10 +372,10 @@ def test_cli_c_no_color_and_debug_traceback_flags_are_accepted(tmp_path: Path):
         sys.executable,
         "-m",
         "x2py",
+        "parse",
         str(header),
         "--language",
         "c",
-        "--parse",
         "--no-color",
         "--debug-traceback",
     ]
@@ -456,7 +399,7 @@ int b;
         encoding="utf-8",
     )
 
-    base_cmd = [sys.executable, "-m", "x2py", str(source), "--language", "c", "--parse"]
+    base_cmd = [sys.executable, "-m", "x2py", "parse", str(source), "--language", "c"]
     no_color_res = subprocess.run(
         [*base_cmd, "--no-color"],
         capture_output=True,
@@ -476,7 +419,7 @@ int b;
 def test_cli_c_invalid_primitive_specifier_sequence_is_fatal(tmp_path: Path):
     header = tmp_path / "invalid_specifiers.h"
     header.write_text("unsigned float value;\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse", "--no-color"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(header), "--language", "c", "--no-color"]
 
     res = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -492,10 +435,10 @@ def test_cli_c_debug_reraises_parse_errors(tmp_path: Path):
         sys.executable,
         "-m",
         "x2py",
+        "parse",
         str(header),
         "--language",
         "c",
-        "--parse",
         "--debug",
     ]
 
@@ -509,7 +452,7 @@ def test_cli_c_debug_reraises_parse_errors(tmp_path: Path):
 def test_cli_c_debug_env_reraises_parse_errors(tmp_path: Path):
     header = tmp_path / "invalid_specifiers.h"
     header.write_text("unsigned float value;\n", encoding="utf-8")
-    cmd = [sys.executable, "-m", "x2py", str(header), "--language", "c", "--parse"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(header), "--language", "c"]
 
     res = subprocess.run(
         cmd,
@@ -525,7 +468,7 @@ def test_cli_c_debug_env_reraises_parse_errors(tmp_path: Path):
 
 def test_cli_without_language_keeps_fortran_default_behavior():
     fixture = Path(__file__).resolve().parents[2] / "data" / "fortran" / "general" / "basic_subroutine.f90"
-    cmd = [sys.executable, "-m", "x2py", str(fixture), "--parse"]
+    cmd = [sys.executable, "-m", "x2py", "parse", str(fixture)]
 
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
@@ -606,7 +549,7 @@ def test_c_parser_module_debug_reraises_parse_errors(tmp_path: Path):
     assert "CParseError" in result.stderr
 
 
-def test_x2py_c_compiler_source_loader_drives_semantics_and_readiness(tmp_path: Path, monkeypatch):
+def test_x2py_c_compiler_source_loader_drives_semantics_and_pyi(tmp_path: Path, monkeypatch):
     header = tmp_path / "api.h"
     header.write_text("API(int) add(int a, int b);\n", encoding="utf-8")
     calls: list[Path] = []
@@ -624,14 +567,11 @@ def test_x2py_c_compiler_source_loader_drives_semantics_and_readiness(tmp_path: 
     config = PreprocessingConfig(mode="compiler", compiler="cc")
 
     semantics = x2py_cli._semantic_report([str(header)], config, language="c")
-    readiness = x2py_cli._wrap_readiness_report([str(header)], config, language="c")
-
     assert semantics[str(header)]["semantic_modules"][0]["functions"][0]["name"] == "add"
-    assert readiness[str(header)]["wrap_readiness"]["wrappable"] is True
-    assert calls == [header, header]
+    assert calls == [header]
 
 
-def test_cli_c_requires_a_stage(tmp_path: Path):
+def test_cli_c_default_build_rejects_the_unsupported_build_language(tmp_path: Path):
     header = tmp_path / "api.h"
     header.write_text("int add(int a, int b);\n", encoding="utf-8")
 
@@ -641,4 +581,4 @@ def test_cli_c_requires_a_stage(tmp_path: Path):
         text=True,
     )
     assert no_stage.returncode == 2
-    assert "--language c requires a stage flag" in no_stage.stderr
+    assert "argument --language: invalid choice: 'c' (choose from 'fortran')" in no_stage.stderr

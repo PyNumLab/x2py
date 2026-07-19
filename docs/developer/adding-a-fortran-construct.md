@@ -8,12 +8,12 @@ status: planned-documentation
 
 # Adding A New Fortran Construct
 
-Reserved contributor workflow for parser, semantic, readiness, codegen, wrapper,
+Reserved contributor workflow for parser, semantic conversion, policy, codegen, wrapper,
 and fixture updates for new Fortran constructs.
 
 ## TODO
 
-- TODO: Link parser fixture updates, semantic lowering, readiness blockers, and
+- TODO: Link parser fixture updates, semantic lowering, wrapper-planning errors, and
   wrapper runtime tests.
 - TODO: Include the documentation and language-support updates required for new
   constructs.

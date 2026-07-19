@@ -355,7 +355,7 @@ an explicit contract. `allocate(shape)` requires an explicit reassociation
 value that allows allocation, `deallocate()` requires an explicit deallocation
 value, and `resize(shape)` requires both sides to opt into resize. When an
 explicit pointer policy selects descriptor-view extraction, the completed policy
-records the `pointer_c_descriptor` interop requirement even if another readiness
+records the `pointer_c_descriptor` interop requirement even if another planning
 blocker still prevents wrapper lowering.
 
 - [x] Add one completed native-array-handle policy decision shared by
@@ -389,7 +389,7 @@ blocker still prevents wrapper lowering.
 - [x] Keep descriptor-argument and optional-absent-handle policies semantically
   complete before lowering; generated bridge descriptor pass-through dispatches
   from this completed policy.
-- [x] Fail readiness with a clear diagnostic when descriptor ownership, target
+- [x] Fail wrapper planning with a clear diagnostic when descriptor ownership, target
   lifetime, shape, addressability, release responsibility, or extraction policy
   is incomplete.
 
@@ -405,7 +405,7 @@ blocker still prevents wrapper lowering.
 - [x] Complete `resize(shape)` permission.
 - [x] Complete function-result ownership as wrapper-owned stable descriptor
   storage.
-- [x] Mark unsupported allocatable array forms as readiness blockers rather than
+- [x] Mark unsupported allocatable array forms as wrapper-planning errors rather than
   silently falling back to NumPy-array copy behavior.
 
 #### Pointer Policy Items
@@ -438,7 +438,7 @@ blocker still prevents wrapper lowering.
 - [x] Treat pointer handle ownership as descriptor/association access by
   default, not target ownership.
 - [x] For pointer results, support `owned_result_descriptor` only when stable
-  owner storage and target lifetime are explicit; otherwise block readiness.
+  owner storage and target lifetime are explicit; otherwise stop wrapper planning.
 
 ### 5. Shared Runtime Handle Foundation
 
@@ -618,7 +618,7 @@ Lower only completed policy decisions into named implementation methods.
   completed handle policy before ordinary array result dispatch.
 - [x] Select descriptor passing from `Allocatable[T[...]]` or
   `Pointer[T[...]]` plus completed policy, not from `Addr`.
-- [x] Lower unsupported policy decisions to readiness/codegen blockers, not
+- [x] Lower unsupported policy decisions to planning/codegen errors, not
   fallback behavior.
 
 ### 7. Bridge Generation
@@ -692,7 +692,7 @@ specialize operation bodies by descriptor kind.
   `Allocatable[T[...]]` parameters.
 - [x] Do not guess compiler-specific descriptor layouts. Descriptor-based
   interop must use the TS 29113 / Fortran 2018 C descriptor path or fail
-  readiness with an explicit diagnostic.
+  wrapper planning with an explicit diagnostic.
 
 #### Pointer Descriptor Extraction
 
@@ -736,9 +736,8 @@ decoding.
   descriptor fields.
 - [x] If descriptor support is unavailable, choose one explicit policy:
   contiguous-only pointer views when shape/address are safely available,
-  explicitly implemented copy fallback, or readiness failure with a clear
-  diagnostic. The current selected fallback is `readiness_failure` in the
-  readiness blocker payload.
+  explicitly implemented copy fallback, or a wrapper-planning failure with a
+  clear diagnostic. There is no deferred blocker payload.
 
 ### 8. Python Binding Generation
 
@@ -807,7 +806,7 @@ handoff when the wrapped call is native.
   metadata, not from raw `Allocatable[...]` or `Pointer[...]` syntax.
 - [x] Record native-array build requirements in replayable `.pyi` wrapper build
   manifests.
-- [x] Emit a clear readiness or build diagnostic when pointer descriptor interop
+- [x] Emit a clear planning or build diagnostic when pointer descriptor interop
   is required but unavailable.
 
 ## Test Checklist
@@ -851,8 +850,8 @@ handoff when the wrapped call is native.
   lifetime, and generated destroy behavior before lowering.
 - [x] Verify bridge/binding layers dispatch from completed policy decisions.
 - [x] Verify incomplete ownership, lifetime, release, addressability, or
-  descriptor-extraction facts produce readiness blockers.
-- [x] Verify descriptor-handle arguments block readiness until generated handle
+  descriptor-extraction facts produce wrapper-planning errors.
+- [x] Verify descriptor-handle arguments stop wrapper planning until generated handle
   handoff exists instead of falling back to NumPy-array conversion.
 - [x] Verify plain `Pointer[T[...]]` generates the default conservative handle
   profile without requiring `PointerPolicy(...)`.
@@ -869,7 +868,7 @@ handoff when the wrapped call is native.
   `descriptor_view` before lowering, never an extraction-only copy action, and
   only descriptor-view paths request pointer C-descriptor interop.
 - [x] Verify pointer C-descriptor interop requirements produce an explicit
-  readiness blocker while that interop path is unavailable.
+  wrapper-planning error while that interop path is unavailable.
 
 ### Shared Runtime Handle Tests
 
@@ -1009,7 +1008,7 @@ handoff when the wrapped call is native.
 - [x] Runtime pointer descriptor-view extraction validates required decoded
   TS29113 fields before constructing a NumPy view.
 - [x] If C descriptors are unavailable, test the selected explicit behavior:
-  contiguous live view or clear readiness diagnostic, never a copy fallback.
+  contiguous live view or clear wrapper-planning diagnostic, never a copy fallback.
 - [x] Pointer `deallocate()` and `resize()` are absent or raise when policy
   disallows them.
 - [x] Pointer `allocate()`, `deallocate()`, and `resize()` work only when

@@ -105,7 +105,7 @@ def _build_pyi_cli(pyi_path: Path, native_object: Path, build_dir: Path):
         str(pyi_path),
         "--native-objects",
         str(native_object),
-        "--native-include-dir",
+        "-I",
         str(native_object.parent),
         "--out-dir",
         str(build_dir),
@@ -128,8 +128,9 @@ def _generate_pyi(source: Path, output_parent: Path, expected_package: Path | No
             sys.executable,
             "-m",
             "x2py",
-            str(source),
+            "generate",
             "--pyi",
+            str(source),
             "--out",
             str(package),
         ],
@@ -197,7 +198,7 @@ def module_variable_runtime_module(pyi_parity_build_mode: str, tmp_path: Path):
 
 def test_pyi_cli_requires_a_native_link_input(tmp_path: Path):
     result = subprocess.run(
-        [sys.executable, "-m", "x2py", str(PYI_FIXTURE), "--wrap", "--out-dir", str(tmp_path)],
+        [sys.executable, "-m", "x2py", str(PYI_FIXTURE), "--out-dir", str(tmp_path)],
         capture_output=True,
         text=True,
         check=False,
@@ -216,22 +217,31 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
     build_dir = tmp_path / "pyi_build"
     build_dir.mkdir()
     shutil.copyfile(SOURCE, native_source)
+    include_dir = tmp_path / "include"
+    include_dir.mkdir()
+    selected_compiler = tmp_path / "selected-gfortran"
+    selected_compiler.symlink_to(shutil.which("gfortran"))
 
     generated = subprocess.run(
         [
             sys.executable,
             "-m",
             "x2py",
+            "generate",
+            "--makefile",
             str(PYI_FIXTURE),
             "--native-fortran-sources",
             str(native_source),
-            "--native-fortran-flags=-O2 -g0",
+            "--compiler",
+            str(selected_compiler),
+            "-I",
+            str(include_dir),
+            "--native-compile-flags=-O2 -g0",
             "--wrapper-compiler-debug",
             "--wrapper-fortran-flags=-fno-range-check -g0",
             "--wrapper-c-flags=-O0 -g0",
             "--out-dir",
             str(build_dir),
-            "--makefile",
             "--json",
         ],
         capture_output=True,
@@ -249,8 +259,9 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
     assert manifest_path == build_dir / "x2py-build.json"
     assert makefile_path == build_dir / "Makefile.x2py"
     assert manifest == payload["manifest"]
-    assert manifest["schema_version"] == 1
+    assert manifest["schema_version"] == 2
     assert manifest["build_kind"] == "pyi-wrapper"
+    assert manifest["compiler"]["input_executable"] == str(selected_compiler)
     assert manifest["compiler"]["fortran_flags"] == ["-O2", "-g0"]
     assert manifest["compiler"]["wrapper_compiler_debug"] is True
     assert manifest["compiler"]["wrapper_fortran_flags"] == ["-fno-range-check", "-g0"]
@@ -263,6 +274,10 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
     }
     assert [item["kind"] for item in manifest["native_build_plan"]["link_items"]] == ["object"]
     assert manifest["native_build_plan"]["compilation_units"][0]["source"].endswith(native_source.name)
+    manifest_includes = manifest["native_build_plan"]["compilation_units"][0]["include_dirs"]
+    assert include_dir.resolve() in tuple((build_dir / path).resolve() for path in manifest_includes)
+    assert str(selected_compiler) in makefile_text
+    assert str(include_dir) in makefile_text
     assert "-O2" in makefile_text
     assert "-g0" in makefile_text
     assert "-fno-range-check" in makefile_text
@@ -282,9 +297,10 @@ def test_pyi_makefile_manifest_and_replay_workflows(tmp_path: Path):
             sys.executable,
             "-m",
             "x2py",
+            "generate",
+            "--makefile",
             "--build-manifest",
             str(manifest_path),
-            "--makefile",
             "--json",
         ],
         capture_output=True,

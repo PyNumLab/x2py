@@ -40,7 +40,6 @@ from x2py.semantics.c2ir import (
 from x2py.semantics.pyi2ir import convert_pyi_to_ir
 from x2py.pipeline.pyi import pyi_file_to_semantic_module, pyi_paths_to_semantic_modules, pyi_text_to_semantic_module
 from x2py.wrapper_codegen.printers import emit_module_stubs, opaque_dependency_modules
-from x2py.semantics.readiness import assess_pyi_wrap_readiness, assess_semantic_wrap_readiness
 from x2py.runtime.handles import AllocatableArray, NativeArrayHandleBase, PointerArray
 
 _CLI_EXPORTS = {"main"}
@@ -114,8 +113,6 @@ __all__ = (
     "NativePrebuiltArtifact",
     "PointerArray",
     "WrapperBuildResult",
-    "assess_pyi_wrap_readiness",
-    "assess_semantic_wrap_readiness",
     "build_fortran_extension",
     "build_fortran_type_probe_source",
     "build_pyi_extension",

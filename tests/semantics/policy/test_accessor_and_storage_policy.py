@@ -6,7 +6,6 @@ from tests._shared.ownership_policy_support import (
     AssignmentMode,
     CodegenAction,
     DestructionPolicy,
-    MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
     NativeArrayBuildRequirement,
     NativeBarrierAction,
     ObjectKind,
@@ -20,6 +19,7 @@ from tests._shared.ownership_policy_support import (
     RESOLVED_OWNERSHIP_POLICY_METADATA,
     RESOLVED_RETURN_OWNERSHIP_POLICY_METADATA,
     RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA,
+    SemanticArgument,
     SemanticClass,
     SemanticConstraint,
     SemanticField,
@@ -41,7 +41,12 @@ from tests._shared.ownership_policy_support import (
     set_ownership_metadata,
 )
 
-from x2py.semantics.models import RESOLVED_MODULE_VARIABLE_POLICY_METADATA
+from x2py.semantics.models import (
+    RESOLVED_DERIVED_TYPE_POLICY_METADATA,
+    RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA,
+    RESOLVED_MODULE_VARIABLE_POLICY_METADATA,
+    SemanticCoercion,
+)
 from x2py.semantics.wrapper_policy import ModuleObjectAccessMechanism
 
 
@@ -289,7 +294,7 @@ def test_module_variable_initializer_policy_is_complete_before_ir_lowering():
     assert variable.metadata[RESOLVED_SETTER_OWNERSHIP_POLICY_METADATA].setter_action is SetterAction.WRITE_THROUGH
 
 
-def test_unsupported_module_variable_initializer_is_readiness_blocker():
+def test_unsupported_module_variable_initializer_completes_an_unsupported_policy():
     module = SemanticModule(
         name="labels",
         variables=[SemanticVariable("label", SemanticType("String"), default_value='"ready"')],
@@ -299,17 +304,51 @@ def test_unsupported_module_variable_initializer_is_readiness_blocker():
 
     variable = module.variables[0]
     assert RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA not in variable.metadata
-    assert variable.metadata["readiness_blockers"] == [
-        {
-            "code": MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER,
-            "message": "Module variable initializers require scalar storage with a write-through native setter.",
-            "item": {
-                "item": "label",
-                "setter_action": "reject_replacement",
-                "reason": "completed setter policy does not expose write-through native assignment",
-            },
-        }
-    ]
+    policy = variable.metadata[RESOLVED_MODULE_VARIABLE_POLICY_METADATA]
+    assert policy.supported is False
+    assert (
+        "module variable initializer requires a write-through native setter; "
+        "completed setter action is 'reject_replacement'"
+    ) in policy.blockers
+
+
+def test_abstract_type_and_deferred_binding_fail_in_completed_derived_policy():
+    semantic_class = SemanticClass(
+        "shape",
+        metadata={
+            "fortran_type_attributes": ["abstract"],
+            "fortran_deferred_bindings": ["area"],
+        },
+    )
+    module = SemanticModule("shapes", classes=[semantic_class])
+
+    complete_semantic_policies(module)
+
+    policy = semantic_class.metadata[RESOLVED_DERIVED_TYPE_POLICY_METADATA]
+    assert policy.supported is False
+    assert policy.blockers == (
+        "abstract derived types need a non-instantiable Python class policy",
+        "deferred type-bound procedure 'area' needs an override and dispatch policy",
+    )
+
+
+def test_semantic_coercion_without_conversion_action_blocks_completed_function_policy():
+    function = SemanticFunction(
+        "consume",
+        arguments=[
+            SemanticArgument(
+                "value",
+                SemanticType("Int32", coercions=[SemanticCoercion("Float64")]),
+            )
+        ],
+    )
+    module = SemanticModule("coercions", functions=[function])
+
+    complete_semantic_policies(module)
+
+    policy = function.metadata[RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA]
+    assert policy.supported is False
+    assert "argument 'value' has no wrapper conversion actions for semantic coercions ('Float64',)" in policy.blockers
 
 
 def test_derived_field_setter_policy_uses_value_copy_write_through():

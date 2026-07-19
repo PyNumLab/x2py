@@ -34,7 +34,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 This guide covers the implemented wrapper for Fortran source inputs. x2py also
-parses C and produces C semantic IR, `.pyi`, and readiness reports, but a
+parses C and produces C semantic IR and `.pyi`, but a
 runtime wrapper backend for user-supplied C libraries will be added later.
 The C source generated internally as part of a Fortran wrapper is an
 implementation detail of the current Fortran path, not the future C-input
@@ -125,7 +125,7 @@ ordered Fortran source files
   -> compiler preprocessing
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
-  -> semantic modules and readiness blockers
+  -> semantic modules and completed policy
   -> post-IR policy completion
   -> ordered wrapper plan preserving native module namespaces and ABI slots
   -> direct native-bridge and Python-binding lowering
@@ -138,7 +138,7 @@ ordered Fortran source files
   -> compiler preprocessing
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
-  -> semantic modules and readiness blockers
+  -> semantic modules and completed policy
   -> post-IR policy completion
   -> ordered wrapper plan preserving native module namespaces and ABI slots
   -> direct Fortran bind(C) bridge lowering
@@ -205,7 +205,7 @@ the current working directory unless `--out` gives it an explicit path. Generate
 wrapper sources remain build artifacts; users do not edit them to change the
 Python API.
 
-The semantic `.pyi` is the editable semantic contract and readiness surface.
+The semantic `.pyi` is the editable semantic contract and wrapper-planning surface.
 The supported edit workflow, including removal, addition, call projection,
 ownership, and destruction, is explained later in Editing Semantic `.pyi`
 Contracts. The complete grammar appears later in the Semantic `.pyi` Format
@@ -217,6 +217,38 @@ native build artifacts, such as `.o`, `.a`, or `.so` inputs, are supplied. In
 that mode the `.pyi` is the Python API source of truth; native source is not
 reparsed during wrapper generation.
 
+Both routes produce the same native extension build plan. In a source-driven
+build, positional Fortran files are semantic inputs and native compilation
+units. `--native-compile-flags` applies to those units, while additional
+`--native-fortran-sources`, objects, libraries, include directories, library
+directories, and ordered link items may complete the implementation without
+changing the parsed Python API. `--wrapper-fortran-flags` applies only to the
+generated Fortran bridge; `--wrapper-c-flags` applies to the generated binding
+and extension-link command.
+
+For example, this command supplies every common build input shown by
+`python3 -m x2py --help` and produces the Python shared library under
+`build/solver`. Here `include/` contains source include files or module
+interfaces, and `openblas` is a system library available to the linker:
+
+```bash
+python3 -m x2py solver.f90 \
+  --out solver \
+  --out-dir build/solver \
+  --compiler gfortran \
+  -I include \
+  --native-compile-flags=-O3 \
+  --native-library openblas \
+  --verbose
+```
+
+`--compiler` selects the input-language compiler used for preprocessing,
+datatype measurement, native and generated-bridge compilation, and extension
+linking. x2py selects the compiler for its generated binding from the active
+compiler profile. `-I` is passed to preprocessing and to native, bridge, and
+binding compilation. The library is kept separate from compiler flags because
+`--native-library openblas` must become `-lopenblas` on the final link command.
+
 The current `.pyi` build subset requires the contract filename stem to match
 the native Fortran module name. Supply the native module file directory as an
 include directory when the generated bridge contains `use <module>`:
@@ -224,15 +256,17 @@ include directory when the generated bridge contains `use <module>`:
 ```bash
 python3 -m x2py path/to/module.pyi \
   --native-objects path/to/module.o \
-  --native-include-dir path/to/mod-files \
+  -I path/to/mod-files \
   --out-dir build/module
 ```
 
-`--native-fortran-sources` accepts one or more native implementation sources
-that x2py should compile without using them as semantic input.
-`--native-fortran-flags` applies to those native source compile commands; group
+`--native-fortran-sources` accepts one or more additional native implementation
+sources that x2py should compile without using them as semantic input.
+`--native-compile-flags` applies to native source compile commands; its name is
+language-neutral even though native source compilation is currently
+Fortran-only. Group
 dash-prefixed compiler flags with the equals form, such as
-`--native-fortran-flags="-O3 -fopenmp"`. `--native-objects` accepts one or more
+`--native-compile-flags="-O3 -fopenmp"`. `--native-objects` accepts one or more
 ordered object, static archive, or shared library paths. Named libraries use
 `--native-library NAME [NAME ...]` and `--native-library-dir DIR [DIR ...]`.
 If you pass already-prefixed names, group them with the equals form, for example
@@ -247,14 +281,13 @@ generates `<out-dir>/Makefile.x2py` from that manifest. The manifest can be
 replayed directly:
 
 ```bash
-python3 -m x2py contracts/module.pyi \
+python3 -m x2py generate --makefile contracts/module.pyi \
   --native-fortran-sources native/module.f90 \
-  --native-fortran-flags="-O3 -fopenmp" \
-  --out-dir build/module \
-  --makefile
+  --native-compile-flags="-O3 -fopenmp" \
+  --out-dir build/module
 
 python3 -m x2py --build-manifest build/module/x2py-build.json
-python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
+python3 -m x2py generate --makefile --build-manifest build/module/x2py-build.json
 ```
 
 Edited `.pyi` contracts may expose the native call shape directly. If every
@@ -474,8 +507,8 @@ A wrapper feature is considered supported only when all applicable layers agree:
 
 - the Python-visible API, ownership, and limitations are documented;
 - the parser and semantic IR preserve every source fact required by the wrapper;
-- readiness emits a precise blocker when a declaration is unsupported or lacks
-  policy;
+- the default wrapper build emits a precise error when a declaration is
+  unsupported or lacks policy;
 - semantic lowering preserves the contract without reconstructing source text;
 - runtime tests import the extension and verify results, mutation, lifetime,
   ownership, and invalid calls; and
@@ -946,7 +979,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 Arrays, character buffers, derived types, optionals, outputs, pointers,
 allocatables, address-passed dummies, or any non-interoperable declaration retain
-a generated Fortran shim or produce a readiness diagnostic when no safe shim
+a generated Fortran shim or produce a wrapper-planning diagnostic when no safe shim
 contract exists.
 X2PY_C_DOCS_END -->
 
@@ -1113,7 +1146,7 @@ pointer results still use copied Python values or `None`.
 
 Semantic `.pyi` metadata can record `nullable`, transfer mode, target owner,
 lifetime, deallocation, shape source, contiguity, reassociation, aliasing, and
-mutability. Contradictory or incomplete facts produce a readiness blocker.
+mutability. Contradictory or incomplete facts produce a semantic or wrapper-planning error.
 Metadata can select implemented descriptor extraction and policy-gated
 operations. It cannot invent stable owner storage for a pointer-array result or
 make an unproved persistent reassociation safe.
@@ -1402,7 +1435,7 @@ Polymorphic outputs, `intent(inout)`, arrays, allocatable or pointer scalar
 polymorphic values, and polymorphic function results are blocked. They need a
 contract for dynamic type, allocation, replacement, and ownership. `class(*)`
 is blocked with the assumed-type descriptor policy. Abstract types and deferred
-bindings produce readiness blockers rather than instantiable Python types.
+bindings produce wrapper-planning errors rather than instantiable Python types.
 
 Runtime tests: [`test_inheritance.py`](../../../tests/wrapper/fortran/derived_types/test_inheritance.py).
 
@@ -1799,7 +1832,7 @@ Example 1: one source containing one native module writes one package entry and
 one leaf directly under the requested directory.
 
 ```bash
-python3 -m x2py solver.f90 --pyi --out contracts/solver
+python3 -m x2py generate --pyi solver.f90 --out contracts/solver
 ```
 
 ```text
@@ -1813,7 +1846,7 @@ combined package with five files total when no extra dependency stubs are
 needed.
 
 ```bash
-python3 -m x2py first_api.f90 second_api.f90 --pyi --out contracts
+python3 -m x2py generate --pyi first_api.f90 second_api.f90 --out contracts
 ```
 
 ```text
@@ -1832,7 +1865,7 @@ objects are separate build inputs and keep caller order.
 python3 -m x2py contracts/__init__.pyi \
   --out first_api \
   --native-objects native/first_api.o native/second_api.o \
-  --native-include-dir native \
+  -I native \
   --out-dir build/first_api
 ```
 
@@ -1872,7 +1905,7 @@ module contracts; the entry only changes the Python-facing export tree.
 ### Editable Makefile
 
 ```bash
-python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build
+python3 -m x2py generate --makefile mesh.f90 solver.f90 --out-dir build
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
@@ -1889,10 +1922,9 @@ For semantic `.pyi` builds, Makefile mode writes `x2py-build.json` before
 `Makefile.x2py` and the Makefile is regenerated from that manifest:
 
 ```bash
-python3 -m x2py contracts/solver.pyi \
+python3 -m x2py generate --makefile contracts/solver.pyi \
   --native-fortran-sources native/solver.f90 \
-  --out-dir build/solver \
-  --makefile
+  --out-dir build/solver
 
 python3 -m x2py --build-manifest build/solver/x2py-build.json
 ```
@@ -2136,7 +2168,7 @@ uses the normal GIL-release policy. For GNU Fortran, pass OpenMP flags to both
 compile and link steps:
 
 ```bash
-python3 -m x2py parallel_api.f90 --makefile --out-dir build
+python3 -m x2py generate --makefile parallel_api.f90 --out-dir build
 make -f build/Makefile.x2py \
   X2PY_FFLAGS=-fopenmp \
   X2PY_LDFLAGS=-fopenmp
@@ -2179,7 +2211,7 @@ target reallocation. Discard old views after those operations.
 
 Pointer-array results remain blocked until stable owner storage and target
 lifetime are available. Persistent reassociation and pointer-driven allocation,
-deallocation, or resize require explicit completed policy; readiness blocks an
+deallocation, or resize require explicit completed policy; wrapper planning blocks an
 unproved request instead of guessing ownership.
 
 ### Advanced Multi-Source Integration
@@ -2212,7 +2244,7 @@ exception, unregistration, and destruction rules.
 
 ### Other Explicit Blockers
 
-The following forms have stable readiness blockers rather than unsafe partial
+The following forms have stable wrapper-planning errors rather than unsafe partial
 wrappers:
 
 | Subject | Blocked form | Missing contract |
@@ -2237,7 +2269,7 @@ X2PY_C_DOCS_END -->
 The subject index in [`tests/wrapper/fortran/README.md`](../../../tests/wrapper/fortran/README.md)
 maps each feature to its Python runtime tests and fixture routes. Native source
 fixtures are being consolidated under the shared `tests/data/fortran/` corpus so
-the same valid source can exercise parser, semantic IR, `.pyi`, readiness, and
+the same valid source can exercise parser, semantic IR, `.pyi`, and
 wrapper stages. Runtime semantic `.pyi` contracts remain with the wrapper tests
 that consume them. Subject modules use descriptive test names, and builds that
 wrap several related sources together use the
@@ -2256,6 +2288,6 @@ by [`test_source_generated_pyi_contracts.py`](../../../tests/wrapper/fortran/bui
 [`test_runtime_behavior_generated_pyi_contracts.py`](../../../tests/wrapper/fortran/runtime_behavior/test_runtime_behavior_generated_pyi_contracts.py),
 and [`test_naming_generated_pyi_contracts.py`](../../../tests/wrapper/fortran/naming/test_naming_generated_pyi_contracts.py).
 
-Semantic-only details, edited `.pyi` round trips, and readiness diagnostics also
+Semantic-only details, edited `.pyi` round trips, and wrapper-planning diagnostics also
 have narrower tests outside `tests/wrapper`, but those tests do not replace
 compiled runtime evidence.

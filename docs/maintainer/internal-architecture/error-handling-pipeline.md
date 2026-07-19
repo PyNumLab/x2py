@@ -8,7 +8,7 @@ status: planned-documentation
 
 # Error Handling Pipeline
 
-Reserved maintainer page for diagnostics, readiness blockers, generated error
+Reserved maintainer page for diagnostics, stage-owned errors, generated error
 paths, Python exception state, and cleanup on failure.
 
 ## TODO

@@ -17,7 +17,7 @@ from x2py.semantics.ownership import (
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import ArgumentHandoffMode, BridgeDataAction
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanSupportAnalyzer, WrapperPlanner
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 from x2py.wrapper_codegen.plan import DatatypeFamily
 
 
@@ -55,10 +55,6 @@ def _functions(plan):
 
 def test_raw_array_addresses_use_one_shared_transfer_and_shape_plan():
     module = _raw_array_module()
-    report = WrapperPlanSupportAnalyzer().analyze(module)
-    assert report.supported is True
-    assert "array-raw-address-inputs" in report.covered_lanes
-
     function = _functions(WrapperPlanner().build(module))["raw_vector"]
     argument = function.arguments[1]
     assert argument.native_call_slot is function.native_call_slots[argument.native_position]

@@ -15,7 +15,6 @@ from x2py.wrapper_codegen import (
     NamespacePlan,
     WrapperCodeGenerator,
     WrapperPlanner,
-    WrapperPlanSupportAnalyzer,
 )
 
 
@@ -234,7 +233,7 @@ def hidden(x: Int32) -> Int32: ...
     assert [function.binding.python_name for function in plan.namespaces[0].functions] == ["visible"]
 
 
-def test_support_analyzer_reports_required_array_buffer_lane():
+def test_planner_projects_required_array_buffer_policy():
     module = parse_pyi_text(
         """
 def sum_values(values: Float64[:]) -> Float64: ...
@@ -243,16 +242,6 @@ def sum_values(values: Float64[:]) -> Float64: ...
     )
     complete_semantic_policies(module)
 
-    report = WrapperPlanSupportAnalyzer().analyze(module)
-
-    assert report.supported is True
-    assert report.covered_lanes == (
-        "array-buffer-inputs",
-        "array-native-handle-actuals",
-        "scalar-direct-results",
-        "native-call-runtime",
-    )
-    assert report.blockers == ()
     assert WrapperPlanner().build(module).namespaces[0].functions[0].arguments[0].array is not None
 
 
@@ -264,7 +253,42 @@ def add(x: Float64, y: Float64) -> Float64: ...
         module_name="missing_policy",
     )
 
-    with pytest.raises(ValueError, match="missing completed function wrapper policy"):
+    with pytest.raises(ValueError, match="missing completed wrapper policy"):
+        WrapperPlanner().build(module)
+
+
+def test_planner_rejects_a_module_without_public_wrapper_exports():
+    module = parse_pyi_text("", module_name="empty_api")
+    complete_semantic_policies(module)
+
+    with pytest.raises(ValueError, match="Semantic module 'empty_api' has no public wrapper exports"):
+        WrapperPlanner().build(module)
+
+
+def test_completed_function_policy_rejects_unimplemented_runtime_constraints():
+    module = parse_pyi_text(
+        "def solve(value: Annotated[Int32, Bounded(1, 8), Finite]) -> Int32: ...\n",
+        module_name="constrained",
+    )
+    complete_semantic_policies(module)
+
+    with pytest.raises(ValueError, match="no runtime validators for semantic constraints"):
+        WrapperPlanner().build(module)
+
+
+def test_planner_reports_an_unsupported_completed_module_policy_at_its_owner_path():
+    module = parse_pyi_text(
+        """
+label: String = "ready"
+""",
+        module_name="labels",
+    )
+    complete_semantic_policies(module)
+
+    with pytest.raises(
+        ValueError,
+        match=r"Semantic variable 'labels\.label'.*module variable initializer requires a write-through native setter",
+    ):
         WrapperPlanner().build(module)
 
 

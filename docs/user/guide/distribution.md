@@ -98,14 +98,14 @@ import, runtime, ownership, and cleanup evidence. See
 Before distributing a wrapper project:
 
 1. Generate and review semantic `.pyi` output.
-2. Run readiness before native compilation.
-3. Build from a clean output directory with recorded source order and flags.
-4. Preserve the exact build command, source order, flags, and Makefile manifest
+2. Build from a clean output directory with recorded source order and flags;
+   resolve any wrapper-plan errors reported by the default build.
+3. Preserve the exact build command, source order, flags, and Makefile manifest
    when one is generated.
-5. Run asserted calls for every public routine used by the application.
-6. Test expected invalid dtype, rank, shape, and ownership cases.
-7. Rebuild and rerun on every claimed target environment.
-8. State unsupported platforms and external dependencies explicitly.
+4. Run asserted calls for every public routine used by the application.
+5. Test expected invalid dtype, rank, shape, and ownership cases.
+6. Rebuild and rerun on every claimed target environment.
+7. State unsupported platforms and external dependencies explicitly.
 
 ## Evidence And Troubleshooting
 

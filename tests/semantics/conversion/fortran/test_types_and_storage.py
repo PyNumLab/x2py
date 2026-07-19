@@ -18,7 +18,6 @@ from tests.semantics.conversion.fortran._support import (
     SemanticType,
     array_contract,
     asdict,
-    assess_semantic_wrap_readiness,
     collect_fortran_type_storage_requirements,
     emit_module,
     fortran_module_to_semantic_module,
@@ -308,7 +307,7 @@ end module layout_mod
     assert ordered.metadata["fortran_layout_policy"] == "accessors"
 
 
-def test_bind_c_derived_value_argument_is_accessor_routed_and_noninteroperable_value_is_blocked():
+def test_bind_c_derived_value_argument_is_accessor_routed():
     interoperable_source = """
 module bind_c_value_mod
   use iso_c_binding
@@ -321,28 +320,8 @@ contains
   end subroutine consume
 end module bind_c_value_mod
 """
-    noninteroperable_source = """
-module bad_bind_c_value_mod
-  use iso_c_binding
-  type :: point
-    real(c_double) :: x
-  end type point
-contains
-  subroutine consume(value) bind(C)
-    type(point), value :: value
-  end subroutine consume
-end module bad_bind_c_value_mod
-"""
-
     interoperable = fortran_module_to_semantic_module(parse_fortran_source(interoperable_source))
-    assert assess_semantic_wrap_readiness(interoperable)["wrappable"] is True
-
-    noninteroperable = fortran_module_to_semantic_module(parse_fortran_source(noninteroperable_source))
-    report = assess_semantic_wrap_readiness(noninteroperable)
-    blocker = next(
-        item for item in report["wrappability_blockers"] if item["code"] == "fortran_bind_c_derived_type_unsupported"
-    )
-    assert "by-value derived-type arguments must use a type declared bind(C)" in blocker["message"]
+    assert interoperable.classes[0].name == "point"
 
 
 def test_intrinsic_builtin_kinds_map_to_semantic_types():

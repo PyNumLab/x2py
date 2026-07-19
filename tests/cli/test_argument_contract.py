@@ -1,4 +1,4 @@
-"""Tests split by stable ownership concept from `test_readiness_reports.py`."""
+"""Tests split by stable CLI argument-contract ownership."""
 
 from tests.cli._cli_support import (
     Path,
@@ -35,7 +35,7 @@ end module second_mod
     )
     output = tmp_path / "combined.pyi"
 
-    cmd = [sys.executable, "-m", "x2py", str(source), "--pyi", "--out", str(output)]
+    cmd = [sys.executable, "-m", "x2py", "generate", "--pyi", str(source), "--out", str(output)]
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     assert result.returncode != 0
@@ -55,7 +55,17 @@ end module conflict_mod
         encoding="utf-8",
     )
 
-    cmd = [sys.executable, "-m", "x2py", str(f90), "--pyi", "--json", "--out", str(tmp_path / "out")]
+    cmd = [
+        sys.executable,
+        "-m",
+        "x2py",
+        "generate",
+        "--pyi",
+        str(f90),
+        "--json",
+        "--out",
+        str(tmp_path / "out"),
+    ]
     res = subprocess.run(cmd, capture_output=True, text=True)
 
     assert res.returncode == 2
@@ -113,7 +123,7 @@ File: empty.f90
     [
         (
             {"language": "c"},
-            "--language c requires a stage flag: choose one of --parse, --semantics, --pyi, --wrap-readiness, or --wrap",
+            "Compiled wrappers and generate --sources/--makefile currently require --language fortran",
         ),
         (
             {"language": "c", "parse": True, "show_vars": True},
@@ -133,81 +143,18 @@ File: empty.f90
         ),
         (
             {"out": "module", "makefile": True},
-            "--out names a compiled wrapper extension and cannot be combined with --makefile",
+            "generate --sources/--makefile uses --out-dir, not --out",
         ),
-        (
-            {"makefile": True, "verbose": True},
-            "--makefile cannot be combined with --verbose",
-        ),
-        (
-            {"parse": True, "semantics": True},
-            "Choose exactly one stage flag; cannot combine --parse, --semantics",
-        ),
-        (
-            {"parse": True, "pyi": True},
-            "Choose exactly one stage flag; cannot combine --parse, --pyi",
-        ),
-        (
-            {"parse": True, "wrap_readiness": True},
-            "Choose exactly one stage flag; cannot combine --parse, --wrap-readiness",
-        ),
-        (
-            {"parse": True, "wrap": True},
-            "Choose exactly one stage flag; cannot combine --parse, --wrap",
-        ),
-        (
-            {"semantics": True, "pyi": True},
-            "Choose exactly one stage flag; cannot combine --semantics, --pyi",
-        ),
-        (
-            {"semantics": True, "wrap_readiness": True},
-            "Choose exactly one stage flag; cannot combine --semantics, --wrap-readiness",
-        ),
-        (
-            {"semantics": True, "wrap": True},
-            "Choose exactly one stage flag; cannot combine --semantics, --wrap",
-        ),
-        (
-            {"pyi": True, "wrap_readiness": True},
-            "Choose exactly one stage flag; cannot combine --pyi, --wrap-readiness",
-        ),
-        (
-            {"pyi": True, "wrap": True},
-            "Choose exactly one stage flag; cannot combine --pyi, --wrap",
-        ),
-        (
-            {"wrap_readiness": True, "wrap": True},
-            "Choose exactly one stage flag; cannot combine --wrap-readiness, --wrap",
-        ),
-        ({"show_vars": True}, "--show-vars/--print-limit require --parse"),
-        ({"print_limit": 1}, "--show-vars/--print-limit require --parse"),
-        ({"vars_limit": 1}, "--show-vars/--print-limit require --parse"),
         ({"parse": True, "print_limit": -1}, "--print-limit must be >= 0"),
-        ({"parse": True, "c_type_report": "types.json"}, "C type probe options require --language c"),
-        (
-            {"language": "c", "parse": True, "refresh_c_type_probe": True},
-            "C type probe options require --semantics, --pyi, or --wrap-readiness",
-        ),
-        (
-            {"language": "c", "semantics": True, "c_type_report": "types.json", "refresh_c_type_probe": True},
-            "--c-type-report cannot be combined with automatic C type probe options",
-        ),
-        (
-            {"language": "c", "semantics": True, "fortran_type_report": "types.json"},
-            "Fortran type probe options require --language fortran",
-        ),
-        (
-            {"parse": True, "refresh_fortran_type_probe": True},
-            "Fortran type probe options require --semantics, --pyi, --wrap-readiness, or --wrap",
-        ),
-        (
-            {"semantics": True, "fortran_type_report": "types.json", "refresh_fortran_type_probe": True},
-            "--fortran-type-report cannot be combined with automatic Fortran type probe options",
-        ),
         (
             {"paths": ["input.pyi"]},
             "A .pyi wrapper build requires --native-fortran-sources, --native-objects, "
             "--native-library, or --native-link-item",
+        ),
+        (
+            {"paths": ["input.unknown"]},
+            "A wrapper build expects recognized Fortran source suffixes or one semantic .pyi contract; "
+            "unsupported input: input.unknown",
         ),
     ],
 )
@@ -245,10 +192,16 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
         [
             "x2py",
             str(contract),
+            "--compiler",
+            "selected-gfortran",
+            "-I",
+            "include",
+            "-I",
+            "vendor/include",
             "--native-fortran-sources",
             "source_one.f90",
             "source_two.f90",
-            "--native-fortran-flags=-O2 -g0",
+            "--native-compile-flags=-O2 -g0",
             "--native-objects",
             "one.o",
             "two.a",
@@ -263,8 +216,9 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
             "--native-library-dir",
             "lib",
             "vendor/lib",
-            "--native-include-dir",
+            "-I",
             "mods",
+            "-I",
             "vendor/mods",
             "--wrapper-compiler-debug",
             "--wrapper-fortran-flags=-fno-range-check -g0",
@@ -285,8 +239,10 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
     assert len(calls) == 1
     active_args, _preprocessing = calls[0]
     assert active_args.paths == [str(contract)]
+    assert active_args.compiler == "selected-gfortran"
+    assert active_args.include_dirs == ["include", "vendor/include", "mods", "vendor/mods"]
     assert active_args.native_fortran_sources == ["source_one.f90", "source_two.f90"]
-    assert active_args.native_fortran_flags == ["-O2 -g0"]
+    assert active_args.native_compile_flags == ["-O2 -g0"]
     assert active_args.native_objects == ["one.o", "two.a", "libsolver.so"]
     assert active_args.native_libraries == ["blas", "lapack"]
     assert active_args.native_link_items == [
@@ -295,7 +251,12 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
         "arg:-Wl,--end-group",
     ]
     assert active_args.native_library_dirs == ["lib", "vendor/lib"]
-    assert active_args.native_include_dirs == ["mods", "vendor/mods"]
+    assert x2py_cli._cli_build_include_dirs(active_args) == (
+        "include",
+        "vendor/include",
+        "mods",
+        "vendor/mods",
+    )
     assert active_args.wrapper_compiler_debug is True
     assert active_args.wrapper_fortran_flags == ["-fno-range-check -g0"]
     assert active_args.wrapper_c_flags == ["-O0 -g0"]
@@ -313,15 +274,15 @@ def test_x2py_main_collects_many_native_inputs_from_one_option_group(
     ],
 )
 def test_wrapper_inputs_select_the_default_build_stage(overrides):
-    assert x2py_cli._stage_defaults_to_wrap(_main_args(**overrides))
+    assert x2py_cli._is_wrapper_build(_main_args(**overrides))
 
 
 def test_explicit_inspection_stage_prevents_default_wrapper_selection():
-    assert not x2py_cli._stage_defaults_to_wrap(_main_args(parse=True))
+    assert not x2py_cli._is_wrapper_build(_main_args(parse=True))
 
 
-def test_cli_native_fortran_flags_split_grouped_shell_words():
-    assert x2py_cli._cli_native_fortran_flags(["-O2 -g0", "-DNAME='value with spaces'"]) == (
+def test_cli_native_compile_flags_split_grouped_shell_words():
+    assert x2py_cli._cli_native_compile_flags(["-O2 -g0", "-DNAME='value with spaces'"]) == (
         "-O2",
         "-g0",
         "-DNAME=value with spaces",
@@ -337,9 +298,9 @@ def test_cli_wrapper_flags_split_grouped_shell_words():
     assert x2py_cli._cli_wrapper_c_flags(["-O1 -g0"]) == ("-O1", "-g0")
 
 
-def test_cli_native_fortran_flags_reject_malformed_grouped_value():
-    with pytest.raises(ValueError, match="Invalid --native-fortran-flags value"):
-        x2py_cli._cli_native_fortran_flags(["'-O2"])
+def test_cli_native_compile_flags_reject_malformed_grouped_value():
+    with pytest.raises(ValueError, match="Invalid --native-compile-flags value"):
+        x2py_cli._cli_native_compile_flags(["'-O2"])
 
 
 def test_cli_wrapper_flags_reject_malformed_grouped_value():
@@ -532,210 +493,318 @@ def test_cli_wrapper_out_requires_name_for_default_wrap():
     cmd = [sys.executable, "-m", "x2py", str(TEST_FILE), "--out"]
     res = subprocess.run(cmd, capture_output=True, text=True)
     assert res.returncode == 2
-    assert "--out for wrapper builds requires an output name" in res.stderr
+    assert "argument --out: expected one argument" in res.stderr
 
 
-def test_x2py_main_preserves_argument_parser_contract(monkeypatch):
-    class StopAfterParserSetup(Exception):
-        pass
+def test_x2py_command_parsers_group_options_by_user_intent():
+    top_help = x2py_cli._top_level_parser(["--help"]).format_help()
+    build_help = x2py_cli._build_parser(["input.f90", "--help"]).format_help()
+    parse_help = x2py_cli._parse_parser(["--help"]).format_help()
+    semantics_help = x2py_cli._semantics_parser(["--help"]).format_help()
+    generate_help = x2py_cli._generate_parser(["--help"]).format_help()
+    probe_help = x2py_cli._probe_parser(["--help"]).format_help()
+    normalized_top_help = " ".join(top_help.split())
+    normalized_build_help = " ".join(build_help.split())
+    normalized_parse_help = " ".join(parse_help.split())
+    normalized_semantics_help = " ".join(semantics_help.split())
+    normalized_generate_help = " ".join(generate_help.split())
+    normalized_probe_help = " ".join(probe_help.split())
 
+    def assert_group_order(help_text, *headings):
+        positions = [help_text.index(heading) for heading in headings]
+        assert positions == sorted(positions)
+
+    assert "commands:" in top_help
+    assert all(command in top_help for command in ("parse", "semantics", "generate", "probe"))
+    assert top_help.startswith("usage: python3 -m x2py INPUT [INPUT ...] [BUILD OPTIONS]")
+    assert "python3 -m x2py {parse,semantics,generate,probe} [OPTIONS] ..." in top_help
+    assert "Build Python extensions from Fortran (default behavior)." in top_help
+    assert x2py_cli._HELP_DIVIDER in top_help
+    assert "README Quick Start example (scale.f90):" in top_help
+    assert "python3 -m x2py scale.f90" in top_help
+    assert "python3 -m x2py scale.f90 --out SCALE" in top_help
+    assert "python3 -m x2py generate --pyi scale.f90 --out contracts" in top_help
+    assert 'Complete source and expected output: README.md, "Quick Start".' in top_help
+    assert "Run `python3 -m x2py --help-build` for the full list of build options." in top_help
+    for command in ("parse", "semantics", "generate", "probe"):
+        assert f"python3 -m x2py {command} --help" in top_help
+    for heading in ("positional arguments:", "build options:"):
+        assert heading in top_help
+    for common_option in (
+        "--out",
+        "--out-dir",
+        "--compiler",
+        "--include-dir",
+        "--native-compile-flags",
+        "--native-library",
+        "--verbose",
+        "--help-build",
+    ):
+        assert common_option in top_help
+    assert "Input-language compiler used throughout the extension" in top_help
+    assert "default: gfortran" in normalized_top_help
+    assert "Add an include directory used throughout the extension" in top_help
+    assert "Compiler used for preprocessing and internal datatype measurement" not in top_help
+    assert "--native-library openblas passes -lopenblas to the linker" in normalized_top_help
+    assert "--native-link-item" not in top_help
+    assert "--wrapper-c-flags" not in top_help
+    assert build_help.startswith("usage: python3 -m x2py INPUT [INPUT ...]\n")
+    assert "[OUTPUT OPTIONS] [COMPILER OPTIONS] [WRAPPER OPTIONS]" in build_help
+    assert "[NATIVE OPTIONS] [DIAGNOSTIC OPTIONS]" in build_help
+    assert "python3 -m x2py --build-manifest PATH [MANIFEST OVERRIDES]" in build_help
+    assert "positional arguments:" in build_help
+    for heading in (
+        "input selection:",
+        "output options:",
+        "compiler options:",
+        "wrapper options:",
+        "native options:",
+        "diagnostic options:",
+    ):
+        assert heading in build_help
+    assert "--native-link-item" in build_help
+    assert "--wrapper-c-flags" in build_help
+    assert "Compiler used throughout the extension build" in build_help
+    assert "Add a compiler include search directory" in build_help
+    assert "default: gfortran" in normalized_build_help
+    assert "default: ./__x2py__" in normalized_build_help
+    assert "Fortran source file(s), or exactly one semantic .pyi contract" in normalized_build_help
+    assert "Input language (default: fortran)" in normalized_build_help
+    assert "Rebuild the extension from an existing x2py-build.json" in normalized_build_help
+    assert "Name the Python extension and stable NAME.so library" in normalized_build_help
+    assert "Print build paths and metadata as JSON" in normalized_build_help
+    assert 'Native compiler flags (for example, "-O3 -fopenmp")' in normalized_build_help
+    assert "docs/user/guide/fortran-wrapper.md" in build_help
+    assert '"Building And Importing A Wrapper".' in build_help
+    assert "Manifest overrides: --out, --compiler, -I/--include-dir" in normalized_build_help
+    assert "--language {fortran}" in build_help
+    assert "--language {fortran,c}" not in build_help
+    assert parse_help.startswith("usage: python3 -m x2py parse INPUT [INPUT ...] [OPTIONS]")
+    for heading in (
+        "positional arguments:",
+        "input options:",
+        "preprocessing options:",
+        "C include options:",
+        "report options:",
+        "output options:",
+        "diagnostic options:",
+    ):
+        assert heading in parse_help
+    assert_group_order(
+        parse_help,
+        "options:",
+        "positional arguments:",
+        "input options:",
+        "preprocessing options:",
+        "C include options:",
+        "report options:",
+        "output options:",
+        "diagnostic options:",
+    )
+    assert "--language {fortran,c}" in parse_help
+    assert "--compile-commands" in parse_help
+    assert "Compiler used for preprocessing" in normalized_parse_help
+    assert "Add a preprocessing include search directory" in normalized_parse_help
+    assert "datatype measurement" not in normalized_parse_help
+    assert "native and bridge compilation" not in normalized_parse_help
+    assert "default: gfortran; cc with --language c" in normalized_parse_help
+    assert semantics_help.startswith("usage: python3 -m x2py semantics INPUT [INPUT ...] [OPTIONS]")
+    assert "--json" not in semantics_help
+    assert "Write combined JSON to PATH" in semantics_help
+    assert "Define a preprocessing macro" in semantics_help
+    for heading in (
+        "positional arguments:",
+        "input options:",
+        "preprocessing options:",
+        "C include options:",
+        "output options:",
+        "diagnostic options:",
+    ):
+        assert heading in semantics_help
+    assert_group_order(
+        semantics_help,
+        "options:",
+        "positional arguments:",
+        "input options:",
+        "preprocessing options:",
+        "C include options:",
+        "output options:",
+        "diagnostic options:",
+    )
+    assert "preprocessing and datatype measurement" in normalized_semantics_help
+    assert "native and bridge compilation" not in normalized_semantics_help
+    assert "default: gfortran; cc with --language c" in normalized_semantics_help
+    assert "(--pyi | --sources | --makefile)" in generate_help
+    assert "INPUT [INPUT ...] [OPTIONS]" in generate_help
+    assert "--build-manifest PATH [OVERRIDES]" in generate_help
+    for heading in (
+        "generation modes:",
+        "positional arguments:",
+        "input options:",
+        "compiler and preprocessing options:",
+        "C include options:",
+        "wrapper options:",
+        "native options:",
+        "output options:",
+        "diagnostic options:",
+    ):
+        assert heading in generate_help
+    assert_group_order(
+        generate_help,
+        "options:",
+        "generation modes:",
+        "positional arguments:",
+        "input options:",
+        "compiler and preprocessing options:",
+        "C include options:",
+        "wrapper options:",
+        "native options:",
+        "output options:",
+        "diagnostic options:",
+    )
+    assert "--pyi" in generate_help
+    assert "--sources" in generate_help
+    assert "--makefile" in generate_help
+    assert "Read an existing x2py-build.json and regenerate wrapper artifacts" in normalized_generate_help
+    assert "Compiler used for source analysis and wrapper build files" in normalized_generate_help
+    assert "default: gfortran; cc with --language c" in normalized_generate_help
+    assert "native compiler options:" not in generate_help
+    assert "link options:" not in generate_help
+    assert probe_help.startswith("usage: python3 -m x2py probe --language {fortran,c} --compiler COMPILER [OPTIONS]\n")
+    for heading in ("probe options:", "execution options:", "output options:", "diagnostic options:"):
+        assert heading in probe_help
+    assert_group_order(
+        probe_help,
+        "options:",
+        "probe options:",
+        "execution options:",
+        "output options:",
+        "diagnostic options:",
+    )
+    assert "--format {json,markdown}" in probe_help
+    assert "Native or cross compiler used to build the probe" in normalized_probe_help
+    assert "Add a probe include search directory" in normalized_probe_help
+    assert "default: gfortran" not in normalized_probe_help
+    assert "--sources" not in parse_help
+    assert "--show-vars" not in semantics_help
+    assert "--native-library-dir" not in probe_help
+
+
+def test_help_build_routes_to_the_full_default_build_help():
+    result = subprocess.run(
+        [sys.executable, "-m", "x2py", "--help-build", "--no-color"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "[OUTPUT OPTIONS] [COMPILER OPTIONS] [WRAPPER OPTIONS]" in result.stdout
+    assert "[NATIVE OPTIONS] [DIAGNOSTIC OPTIONS]" in result.stdout
+    assert "compiler options:" in result.stdout
+    assert "native options:" in result.stdout
+    assert "diagnostic options:" in result.stdout
+    assert "--native-link-item" in result.stdout
+    assert "--wrapper-c-flags" in result.stdout
+    normalized_help = " ".join(result.stdout.split())
+    assert "Link NAME as -lNAME; for example, openblas adds -lopenblas" in normalized_help
+
+
+def test_help_build_exposes_every_supported_build_option():
+    parser = x2py_cli._build_parser(["--help"])
+    help_text = parser.format_help()
+    option_strings = {option for action in parser._actions for option in action.option_strings}
+
+    assert option_strings
+    assert all(option in help_text for option in option_strings)
+
+
+@pytest.mark.parametrize(
+    "parser_factory",
+    (
+        x2py_cli._parse_parser,
+        x2py_cli._semantics_parser,
+        x2py_cli._generate_parser,
+        x2py_cli._probe_parser,
+    ),
+)
+def test_subcommand_help_exposes_every_supported_option(parser_factory):
+    parser = parser_factory(["--help"])
+    help_text = parser.format_help()
+    option_strings = {option for action in parser._actions for option in action.option_strings}
+
+    assert option_strings
+    assert all(option in help_text for option in option_strings)
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "message"),
+    [
+        (["--out-dir", "elsewhere"], "replays its saved output directory"),
+        (["--language", "fortran"], "replays its saved input language"),
+        (["--preprocessor-adapter", "auto"], "replays its saved preprocessing recipe"),
+        (["-D", "USE_FAST=1"], "replays its saved preprocessing recipe"),
+        (["--strict-wrapper-names"], "replays saved wrapper behavior"),
+        (["--native-library", "openblas"], "replays saved native inputs"),
+    ],
+)
+def test_manifest_replay_rejects_saved_settings_instead_of_ignoring_them(extra_args, message, capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        x2py_cli.main(["--build-manifest", "build/x2py-build.json", *extra_args])
+
+    assert exc_info.value.code == 2
+    assert message in capsys.readouterr().err
+
+
+def test_manifest_replay_accepts_documented_overrides(monkeypatch):
     captured = {}
 
-    class FakeArgumentGroup:
-        def __init__(self, title: str):
-            self.title = title
+    def run_build(args, preprocessing):
+        captured["args"] = args
+        captured["preprocessing"] = preprocessing
+        return object()
 
-        def add_argument(self, *args, **kwargs):
-            captured["arguments"].append((self.title, args, kwargs))
+    monkeypatch.setattr(x2py_cli, "_run_wrap_build_with_diagnostics", run_build)
+    monkeypatch.setattr(x2py_cli, "_print_wrap_build_output", lambda _args, _result: None)
 
-    class FakeParser:
-        def __init__(self, *args, **kwargs):
-            captured["parser"] = (args, kwargs)
-            captured["groups"] = []
-            captured["arguments"] = []
-
-        def add_argument(self, *args, **kwargs):
-            captured["arguments"].append(("parser", args, kwargs))
-
-        def add_argument_group(self, title):
-            captured["groups"].append(title)
-            return FakeArgumentGroup(title)
-
-        def parse_args(self):
-            raise StopAfterParserSetup
-
-    monkeypatch.setattr(x2py_cli.argparse, "ArgumentParser", FakeParser)
-
-    with pytest.raises(StopAfterParserSetup):
-        x2py_cli.main()
-
-    assert captured["parser"] == (
-        (),
-        {
-            "prog": "python3 -m x2py",
-            "description": x2py_cli._CLI_HELP_DESCRIPTION,
-            "formatter_class": x2py_cli.argparse.RawDescriptionHelpFormatter,
-            "epilog": x2py_cli._CLI_HELP_EPILOG,
-        },
+    result = x2py_cli.main(
+        [
+            "--build-manifest",
+            "build/x2py-build.json",
+            "--out",
+            "REPLAYED",
+            "--compiler",
+            "selected-gfortran",
+            "-I",
+            "include",
+            "--json",
+            "--verbose",
+            "--no-color",
+            "--debug",
+        ]
     )
-    assert captured["groups"] == [
-        "input selection",
-        "inspection stages",
-        "compiler preprocessing",
-        "target type probes",
-        "C include exposure",
-        "parse report controls",
-        "wrapper builds",
-        "output and diagnostics",
-    ]
-    assert [(group, args) for group, args, _ in captured["arguments"]] == [
-        ("parser", ("paths",)),
-        ("input selection", ("--language",)),
-        ("inspection stages", ("--parse",)),
-        ("inspection stages", ("--semantics",)),
-        ("inspection stages", ("--pyi",)),
-        ("inspection stages", ("--wrap-readiness",)),
-        ("compiler preprocessing", ("--preprocessor-adapter",)),
-        ("compiler preprocessing", ("--compiler",)),
-        ("compiler preprocessing", ("--compile-commands",)),
-        ("compiler preprocessing", ("--preprocess-template",)),
-        ("compiler preprocessing", ("-I", "--include-dir")),
-        ("compiler preprocessing", ("-D", "--define")),
-        ("compiler preprocessing", ("-U", "--undef")),
-        ("compiler preprocessing", ("--std",)),
-        ("compiler preprocessing", ("--compiler-arg",)),
-        ("target type probes", ("--c-type-report",)),
-        ("target type probes", ("--c-type-probe-runner",)),
-        ("target type probes", ("--c-type-probe-cache-dir",)),
-        ("target type probes", ("--refresh-c-type-probe",)),
-        ("target type probes", ("--fortran-type-report",)),
-        ("target type probes", ("--fortran-type-probe-runner",)),
-        ("target type probes", ("--fortran-type-probe-cache-dir",)),
-        ("target type probes", ("--refresh-fortran-type-probe",)),
-        ("C include exposure", ("--include-exposure",)),
-        ("C include exposure", ("--public-include",)),
-        ("C include exposure", ("--private-include",)),
-        ("parse report controls", ("--show-vars",)),
-        ("parse report controls", ("--print-limit",)),
-        ("parse report controls", ("--vars-limit",)),
-        ("wrapper builds", ("--wrap",)),
-        ("wrapper builds", ("--makefile",)),
-        ("wrapper builds", ("--strict-wrapper-names",)),
-        ("wrapper builds", ("--wrapper-compiler-debug",)),
-        ("wrapper builds", ("--wrapper-fortran-flags",)),
-        ("wrapper builds", ("--wrapper-c-flags",)),
-        ("wrapper builds", ("--build-manifest",)),
-        ("wrapper builds", ("--native-fortran-sources",)),
-        ("wrapper builds", ("--native-fortran-flags",)),
-        ("wrapper builds", ("--native-objects",)),
-        ("wrapper builds", ("--native-library",)),
-        ("wrapper builds", ("--native-link-item",)),
-        ("wrapper builds", ("--native-library-dir", "--library-dir")),
-        ("wrapper builds", ("--native-include-dir",)),
-        ("output and diagnostics", ("--json",)),
-        ("output and diagnostics", ("--out",)),
-        ("output and diagnostics", ("--out-dir",)),
-        ("output and diagnostics", ("--verbose",)),
-        ("output and diagnostics", ("--no-color",)),
-        ("output and diagnostics", ("--debug", "--debug-traceback")),
-    ]
 
-    arguments_by_name = {args[0]: kwargs for _, args, kwargs in captured["arguments"]}
-    assert arguments_by_name["paths"] == {
-        "nargs": "*",
-        "help": "Source file(s), .pyi file(s), or directory path(s); omit when using --build-manifest",
-    }
-    assert arguments_by_name["--language"] == {
-        "choices": ("fortran", "c"),
-        "default": None,
-        "help": (
-            "Frontend language. Omission is allowed for recognizable Fortran files and .pyi readiness input; "
-            "C files, directories, and unknown-suffix source inputs require this flag."
-        ),
-    }
-    assert arguments_by_name["--preprocessor-adapter"] == {
-        "choices": ("auto", "gcc-compatible-c", "gnu-fortran", "command-template"),
-        "default": "auto",
-        "help": "Compiler adapter family. Use command-template for unsupported compiler families.",
-    }
-    assert arguments_by_name["--include-exposure"] == {
-        "choices": ("reachable-project", "roots-only"),
-        "default": "reachable-project",
-        "help": "Public wrapper exposure policy for reachable included files.",
-    }
-    assert arguments_by_name["--vars-limit"] == {"type": int, "metavar": "N", "help": x2py_cli.argparse.SUPPRESS}
-    assert arguments_by_name["--native-objects"] == {
-        "dest": "native_objects",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "PATH",
-        "help": "Native object, static archive, or shared library paths linked into a .pyi wrapper build",
-    }
-    assert arguments_by_name["--native-fortran-sources"] == {
-        "dest": "native_fortran_sources",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "PATH",
-        "help": "Native Fortran implementation source paths compiled for a .pyi wrapper build",
-    }
-    assert arguments_by_name["--native-fortran-flags"] == {
-        "dest": "native_fortran_flags",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "FLAG",
-        "help": "Fortran compiler flags applied to each source passed with --native-fortran-sources",
-    }
-    assert arguments_by_name["--wrapper-compiler-debug"] == {
-        "action": "store_true",
-        "help": "Use the compiler debug profile for direct wrapper builds instead of the default release profile",
-    }
-    assert arguments_by_name["--wrapper-fortran-flags"] == {
-        "dest": "wrapper_fortran_flags",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "FLAG",
-        "help": "Fortran compiler flags appended to generated wrapper bridge compilation commands",
-    }
-    assert arguments_by_name["--wrapper-c-flags"] == {
-        "dest": "wrapper_c_flags",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "FLAG",
-        "help": "C compiler flags appended to generated CPython wrapper compilation commands",
-    }
-    assert arguments_by_name["--native-library"] == {
-        "dest": "native_libraries",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "NAME",
-        "help": "Native libraries linked into a .pyi wrapper build, passed as -lNAME unless already prefixed",
-    }
-    assert arguments_by_name["--native-link-item"] == {
-        "dest": "native_link_items",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "KIND:VALUE",
-        "help": "Ordered native link items for .pyi builds: object, archive, shared-library, library, or arg",
-    }
-    assert arguments_by_name["--native-library-dir"] == {
-        "dest": "native_library_dirs",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "DIR",
-        "help": "Directories searched and added to rpath for native libraries in a .pyi wrapper build",
-    }
-    assert arguments_by_name["--native-include-dir"] == {
-        "dest": "native_include_dirs",
-        "action": "extend",
-        "nargs": "+",
-        "metavar": "DIR",
-        "help": "Directories containing native module/interface files needed to compile .pyi wrapper bridges",
-    }
-    assert arguments_by_name["--debug"] == {
-        "dest": "debug",
-        "action": "store_true",
-        "help": "Re-raise parser errors so Python prints a traceback for parser debugging",
-    }
+    assert result == 0
+    assert captured["args"].out == "REPLAYED"
+    assert captured["args"].json is True
+    assert captured["args"].verbose is True
+    assert captured["args"].no_color is True
+    assert captured["args"].debug is True
+    assert captured["preprocessing"].compiler == "selected-gfortran"
+    assert captured["preprocessing"].include_dirs == ["include"]
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["generate", "input.f90"],
+        ["generate", "--pyi", "--sources", "input.f90"],
+    ],
+)
+def test_generate_requires_exactly_one_output_mode(argv):
+    with pytest.raises(SystemExit) as exc_info:
+        x2py_cli.main(argv)
+
+    assert exc_info.value.code == 2
 
 
 def test_cli_requires_explicit_language_for_directory_and_unknown_suffix(tmp_path: Path):
@@ -743,7 +812,7 @@ def test_cli_requires_explicit_language_for_directory_and_unknown_suffix(tmp_pat
     source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
 
     unknown = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--parse"],
+        [sys.executable, "-m", "x2py", "parse", str(source)],
         capture_output=True,
         text=True,
     )
@@ -752,7 +821,7 @@ def test_cli_requires_explicit_language_for_directory_and_unknown_suffix(tmp_pat
     assert "--language fortran or --language c" in unknown.stderr
 
     directory = subprocess.run(
-        [sys.executable, "-m", "x2py", str(tmp_path), "--parse"],
+        [sys.executable, "-m", "x2py", "parse", str(tmp_path)],
         capture_output=True,
         text=True,
     )
@@ -760,7 +829,7 @@ def test_cli_requires_explicit_language_for_directory_and_unknown_suffix(tmp_pat
     assert "requires an explicit frontend" in directory.stderr
 
     explicit = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--language", "fortran", "--parse"],
+        [sys.executable, "-m", "x2py", "parse", str(source), "--language", "fortran"],
         capture_output=True,
         text=True,
         check=True,
@@ -773,7 +842,7 @@ def test_cli_rejects_fortran_file_with_explicit_c_frontend(tmp_path: Path):
     source.write_text("subroutine solve()\nend subroutine solve\n", encoding="utf-8")
 
     result = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--language", "c", "--parse"],
+        [sys.executable, "-m", "x2py", "parse", str(source), "--language", "c"],
         capture_output=True,
         text=True,
     )
@@ -790,7 +859,7 @@ def test_cli_fortran_rejects_embedded_c_declaration_outside_execution_body(tmp_p
         encoding="utf-8",
     )
     result = subprocess.run(
-        [sys.executable, "-m", "x2py", str(source), "--pyi"],
+        [sys.executable, "-m", "x2py", "generate", "--pyi", str(source)],
         capture_output=True,
         text=True,
     )
@@ -811,6 +880,6 @@ def test_x2py_cli_defaults_pyi_to_wrapper_and_requires_native_implementation(tmp
 
 @pytest.mark.parametrize("macro_flag", ["-D", "-U"])
 def test_x2py_main_rejects_invalid_macro_names(macro_flag: str, monkeypatch):
-    monkeypatch.setattr(sys, "argv", ["x2py", str(TEST_FILE), "--parse", macro_flag, "=invalid"])
+    monkeypatch.setattr(sys, "argv", ["x2py", "parse", str(TEST_FILE), macro_flag, "=invalid"])
     with pytest.raises(SystemExit):
         x2py_cli.main()

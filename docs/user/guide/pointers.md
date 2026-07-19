@@ -59,7 +59,7 @@ not carry a native pointer descriptor.
 handle is unassociated. When descriptor extraction is supported, it returns the
 current target view and may expose strided targets. It never creates an
 automatic detached snapshot or copy. If no supported live-view mechanism can
-expose the current target, policy completion or readiness fails explicitly;
+expose the current target, policy completion or wrapper planning fails explicitly;
 x2py does not guess compiler-specific descriptor layout or fall back to a copy.
 
 Any NumPy view returned by `p.to_numpy()` is tied to the pointer target at the
@@ -321,7 +321,7 @@ holders, stale proxy rejection, and multi-argument cleanup are exercised by
 The scalar `out` and `inout` parity cases are exercised by
 [`test_allocatable_views.py`](../../../tests/wrapper/fortran/module_state/test_allocatable_views.py).
 
-If readiness blocks a pointer, do not replace the diagnostic with guessed
+If wrapper planning rejects a pointer, do not replace the diagnostic with guessed
 ownership metadata. Detached pointer result behavior is expressible only when shape,
 nullability, target owner, lifetime, and release facts are complete. Memory
 Management and the semantic `.pyi` ownership reference expand those decisions

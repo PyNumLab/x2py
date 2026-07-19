@@ -248,7 +248,7 @@ def test_source_callback_value_override_and_reference_default_are_completed():
     extent = array_policy.arguments[0].callback.arguments[0]
     assert extent.abi is CallbackABIKind.REFERENCE
     assert extent.passed_by_value is False
-    assert extent.adapter_action is CallbackTransferAction.COPY_IN_OUT
+    assert extent.adapter_action is CallbackTransferAction.COPY_IN
 
 
 def test_external_declaration_mode_is_completed_from_native_abi_requirements():

@@ -23,7 +23,7 @@ from x2py.semantics.wrapper_policy import (
     STRING_REPLACEMENT_COPY_REASON,
     WritebackPhase,
 )
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanSupportAnalyzer, WrapperPlanner
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 from x2py.wrapper_codegen.plan import BindingStatusErrorPlan, DatatypeFamily
 
 
@@ -49,18 +49,6 @@ def _functions(plan):
 
 def test_fixed_replacement_projects_completed_argument_and_lifecycle_facts():
     module = _fixed_writeback_module()
-    reports = {function.name: WrapperPlanSupportAnalyzer().analyze(function) for function in module.functions}
-    assert reports["replace_name"].covered_lanes == (
-        "string-value-inputs",
-        "string-writebacks",
-        "native-call-runtime",
-    )
-    assert reports["discard_name"].covered_lanes == (
-        "string-value-inputs",
-        "void-calls",
-        "native-call-runtime",
-    )
-
     functions = _functions(WrapperPlanner().build(module))
     replacement = functions["replace_name"]
     argument = replacement.arguments[0]
@@ -143,25 +131,6 @@ def optional_identity(label: String = ...) -> None: ...
         module_name="assumed_optional_string_writeback",
     )
     complete_semantic_policies(module)
-    reports = {function.name: WrapperPlanSupportAnalyzer().analyze(function) for function in module.functions}
-    assert reports["assumed"].covered_lanes == (
-        "string-value-inputs",
-        "string-writebacks",
-        "native-call-runtime",
-    )
-    assert reports["optional"].covered_lanes == (
-        "string-value-inputs",
-        "string-optional-inputs",
-        "string-writebacks",
-        "native-call-runtime",
-    )
-    assert reports["optional_identity"].covered_lanes == (
-        "string-value-inputs",
-        "string-optional-inputs",
-        "void-calls",
-        "native-call-runtime",
-    )
-
     functions = _functions(WrapperPlanner().build(module))
     for name in ("assumed", "optional", "optional_identity"):
         argument = functions[name].arguments[0]

@@ -1116,7 +1116,7 @@ def completed_derived_type_policy(semantic_class: models.SemanticClass) -> Deriv
         raise ValueError(f"Semantic class {semantic_class.name!r} has no completed derived-type policy")
     if not policy.supported:
         details = "; ".join(policy.blockers)
-        raise ValueError(f"Semantic class {policy.owner_path!r} has blocked derived-type policy: {details}")
+        raise ValueError(f"Semantic class {policy.owner_path!r} has unsupported derived-type policy: {details}")
     return policy
 
 
@@ -1142,7 +1142,10 @@ def build_derived_field_policy(
         owner_path=field_path,
         origin=DerivedObjectOrigin.BORROWED_FIELD,
     )
-    blockers = _derived_field_blockers(field, getter, setter, handle)
+    blockers = (
+        *_runtime_semantic_validation_blockers(field.semantic_type, f"field {field.name!r}"),
+        *_derived_field_blockers(field, getter, setter, handle),
+    )
     return DerivedFieldPolicy(
         owner_path=field_path,
         name=field.name,
@@ -1211,9 +1214,22 @@ def build_derived_type_policy(
         if field.visibility == "public"
         and not isinstance(field.metadata.get(models.RESOLVED_DERIVED_FIELD_POLICY_METADATA), DerivedFieldPolicy)
     )
+    type_attributes = {
+        str(attribute).casefold() for attribute in semantic_class.metadata.get("fortran_type_attributes", ())
+    }
+    deferred_bindings = tuple(semantic_class.metadata.get("fortran_deferred_bindings", ()))
     blockers = tuple(
         [*(f"field {name!r} is missing completed derived-field policy" for name in missing)]
         + [reason for field in fields for reason in field.blockers]
+        + (
+            ["abstract derived types need a non-instantiable Python class policy"]
+            if "abstract" in type_attributes
+            else []
+        )
+        + [
+            f"deferred type-bound procedure {name!r} needs an override and dispatch policy"
+            for name in deferred_bindings
+        ]
     )
     exports = completed_python_exports(semantic_class, semantic_class.name)
     native_type_name = str(semantic_class.native_name or semantic_class.name)
@@ -1242,7 +1258,7 @@ def completed_class_surface_policy(semantic_class: models.SemanticClass) -> Clas
         raise ValueError(f"Semantic class {semantic_class.name!r} has no completed class-surface policy")
     if not policy.supported:
         details = "; ".join(policy.blockers) or "unsupported class surface"
-        raise ValueError(f"Semantic class {policy.owner_path!r} has blocked class-surface policy: {details}")
+        raise ValueError(f"Semantic class {policy.owner_path!r} has unsupported class-surface policy: {details}")
     return policy
 
 
@@ -1677,7 +1693,7 @@ def completed_module_variable_policy(
         raise ValueError(f"Semantic variable {variable.name!r} has no completed module-variable policy")
     if not policy.supported:
         details = "; ".join(policy.blockers)
-        raise ValueError(f"Semantic variable {policy.owner_path!r} has blocked module-variable policy: {details}")
+        raise ValueError(f"Semantic variable {policy.owner_path!r} has unsupported module-variable policy: {details}")
     return policy
 
 
@@ -1698,8 +1714,9 @@ def build_module_variable_policy(
         variable.metadata.get(models.RESOLVED_NATIVE_ARRAY_HANDLE_POLICY_METADATA),
         owner_path,
     )
+    array = _array_handoff_policy(variable.semantic_type)
     if native_array_handle is not None:
-        return _native_array_module_variable_policy(
+        policy = _native_array_module_variable_policy(
             variable,
             module_name,
             owner_path,
@@ -1707,8 +1724,8 @@ def build_module_variable_policy(
             setter,
             native_array_handle,
         )
-    if getter is not None and getter.kind is ObjectKind.DERIVED_TYPE:
-        return _derived_module_variable_policy(
+    elif getter is not None and getter.kind is ObjectKind.DERIVED_TYPE:
+        policy = _derived_module_variable_policy(
             variable,
             module_name,
             owner_path,
@@ -1717,9 +1734,8 @@ def build_module_variable_policy(
             constant,
             derived_types or {},
         )
-    array = _array_handoff_policy(variable.semantic_type)
-    if getter is not None and getter.kind is ObjectKind.NUMPY_ARRAY and array is not None:
-        return _ordinary_array_module_variable_policy(
+    elif getter is not None and getter.kind is ObjectKind.NUMPY_ARRAY and array is not None:
+        policy = _ordinary_array_module_variable_policy(
             variable,
             module_name,
             owner_path,
@@ -1727,14 +1743,52 @@ def build_module_variable_policy(
             setter,
             array,
         )
-    return _scalar_module_variable_policy(
-        variable,
-        module_name,
-        owner_path,
-        getter,
-        setter,
-        descriptor_kind,
-        constant,
+    else:
+        policy = _scalar_module_variable_policy(
+            variable,
+            module_name,
+            owner_path,
+            getter,
+            setter,
+            descriptor_kind,
+            constant,
+        )
+    return _complete_module_variable_policy(variable, policy)
+
+
+def _complete_module_variable_policy(
+    variable: models.SemanticVariable,
+    policy: ModuleVariablePolicy,
+) -> ModuleVariablePolicy:
+    """Complete runtime validation and initializer limitations on one policy."""
+    validation_blockers = _runtime_semantic_validation_blockers(
+        variable.semantic_type,
+        f"module variable {variable.name!r}",
+    )
+    if validation_blockers:
+        policy = replace(
+            policy,
+            supported=False,
+            blockers=(*policy.blockers, *validation_blockers),
+        )
+    if variable.default_value is None or _is_scalar_module_constant(variable):
+        return policy
+    if policy.initializer is not None:
+        return policy
+    if variable.semantic_type.rank != 0:
+        reason = (
+            "module variable initializer requires scalar storage with a write-through native setter; "
+            "rank-positive variables cannot be initialized during module import"
+        )
+    else:
+        reason = (
+            "module variable initializer requires a write-through native setter; "
+            f"completed setter action is {policy.setter_action.value!r}"
+        )
+    return replace(
+        policy,
+        supported=False,
+        blockers=(*policy.blockers, reason),
     )
 
 
@@ -1911,7 +1965,7 @@ def completed_function_wrapper_policy(function: models.SemanticFunction) -> Func
         )
     if not policy.supported:
         details = "; ".join(policy.blockers) or "unsupported wrapper policy"
-        raise ValueError(f"Semantic function {policy.owner_path!r} has blocked wrapper policy: {details}")
+        raise ValueError(f"Semantic function {policy.owner_path!r} has unsupported wrapper policy: {details}")
     return policy
 
 
@@ -2110,7 +2164,7 @@ def _callback_transfer_blockers(
 ) -> tuple[str, ...]:
     """Reject callback forms whose typed adapter ABI is incomplete."""
     semantic_type = argument.semantic_type
-    blockers = []
+    blockers = list(_runtime_semantic_validation_blockers(semantic_type, f"callback argument {argument.name!r}"))
     if transfer.passed_by_value and transfer.rank > 0:
         blockers.append(f"callback argument {argument.name!r} cannot pass an array by value")
     if semantic_type.name == "String":
@@ -2185,7 +2239,7 @@ def _callback_result_blockers(
     if not isinstance(return_type, models.SemanticType) or result.transfer is None:
         return ("callback result is missing a completed semantic type",)
     transfer = result.transfer
-    blockers = []
+    blockers = list(_runtime_semantic_validation_blockers(return_type, "callback result"))
     if result.action is CallbackResultAction.REJECT_RESULT:
         blockers.append(f"callback result type {return_type.name!r} is unsupported")
     if result.action is CallbackResultAction.RETURN_ARRAY_ADDRESS:
@@ -2616,7 +2670,10 @@ def _completed_argument_blockers(
     derived_types: dict[tuple[str, str], DerivedTypePolicy],
 ) -> tuple[str, ...]:
     """Collect blockers after all semantic selectors have been completed."""
-    blockers = list(transformation_blockers)
+    blockers = [
+        *transformation_blockers,
+        *_runtime_semantic_validation_blockers(argument.semantic_type, f"argument {argument.name!r}"),
+    ]
     if callback is not None:
         blockers.extend(callback.blockers)
         blockers.extend(_callback_derived_type_blockers(callback, derived_types))
@@ -4255,22 +4312,46 @@ def _argument_projection_blockers(
 
 def _result_blockers(semantic_type: models.SemanticType, decision: OwnershipDecision) -> tuple[str, ...]:
     """Dispatch one result to its completed datatype and descriptor family."""
+    validation_blockers = _runtime_semantic_validation_blockers(semantic_type, "result")
     if _is_derived_value_array(semantic_type):
-        return ("result is an unsupported array of derived values",)
+        family_blockers = ("result is an unsupported array of derived values",)
+        return (*validation_blockers, *family_blockers)
     if decision.kind is ObjectKind.DERIVED_TYPE:
-        return _derived_result_blockers(semantic_type, decision, "result")
-    if _is_scalar_descriptor_result_type(semantic_type):
-        return _scalar_descriptor_result_blockers(semantic_type, decision, "result")
-    descriptor_kind = native_array_descriptor_kind(semantic_type)
-    if descriptor_kind == "pointer":
-        return ("pointer handle results need stable owner storage and target lifetime policy before wrapping",)
-    if descriptor_kind is not None:
-        return _native_array_handle_result_blockers(decision, "result")
-    if _is_phase6_ordinary_array_type(semantic_type):
-        return _ordinary_array_result_blockers(semantic_type, decision, "result")
-    if _is_fixed_plan_string_result_type(semantic_type):
-        return _fixed_string_result_blockers(decision)
-    return _scalar_result_blockers(semantic_type, decision)
+        family_blockers = _derived_result_blockers(semantic_type, decision, "result")
+    elif _is_scalar_descriptor_result_type(semantic_type):
+        family_blockers = _scalar_descriptor_result_blockers(semantic_type, decision, "result")
+    else:
+        descriptor_kind = native_array_descriptor_kind(semantic_type)
+        if descriptor_kind == "pointer":
+            family_blockers = (
+                "pointer handle results need stable owner storage and target lifetime policy before wrapping",
+            )
+        elif descriptor_kind is not None:
+            family_blockers = _native_array_handle_result_blockers(decision, "result")
+        elif _is_phase6_ordinary_array_type(semantic_type):
+            family_blockers = _ordinary_array_result_blockers(semantic_type, decision, "result")
+        elif _is_fixed_plan_string_result_type(semantic_type):
+            family_blockers = _fixed_string_result_blockers(decision)
+        else:
+            family_blockers = _scalar_result_blockers(semantic_type, decision)
+    return (*validation_blockers, *family_blockers)
+
+
+def _runtime_semantic_validation_blockers(
+    semantic_type: models.SemanticType,
+    label: str,
+) -> tuple[str, ...]:
+    """Complete unsupported generic validators and coercions before planning."""
+    constraints = tuple(
+        dict.fromkeys(constraint.name for constraint in semantic_type.constraints if constraint.name != "Constant")
+    )
+    coercions = tuple(dict.fromkeys(coercion.source_type for coercion in semantic_type.coercions))
+    blockers = []
+    if constraints:
+        blockers.append(f"{label} has no runtime validators for semantic constraints {constraints}")
+    if coercions:
+        blockers.append(f"{label} has no wrapper conversion actions for semantic coercions {coercions}")
+    return tuple(blockers)
 
 
 def _derived_result_blockers(
@@ -4329,25 +4410,34 @@ def _hidden_result_blockers(
     mapping: models.ProjectionMapping,
 ) -> tuple[str, ...]:
     """Return blockers for one hidden result projection."""
+    validation_blockers = _runtime_semantic_validation_blockers(
+        argument.semantic_type,
+        f"hidden result {argument.name!r}",
+    )
     if decision.kind is ObjectKind.DERIVED_TYPE:
-        return _derived_hidden_result_blockers(argument, decision, mapping)
-    if _is_scalar_descriptor_result_type(argument.semantic_type, descriptor_kind=mapping.value_kind):
-        return _scalar_descriptor_result_blockers(
+        family_blockers = _derived_hidden_result_blockers(argument, decision, mapping)
+    elif _is_scalar_descriptor_result_type(argument.semantic_type, descriptor_kind=mapping.value_kind):
+        family_blockers = _scalar_descriptor_result_blockers(
             argument.semantic_type,
             decision,
             f"hidden result {argument.name!r}",
             mapping,
         )
-    descriptor_kind = native_array_descriptor_kind(argument.semantic_type)
-    if descriptor_kind == "pointer":
-        return ("pointer handle results need stable owner storage and target lifetime policy before wrapping",)
-    if descriptor_kind is not None:
-        return _native_array_handle_result_blockers(decision, f"hidden result {argument.name!r}")
-    if _is_phase6_ordinary_array_type(argument.semantic_type):
-        return _ordinary_array_hidden_result_blockers(argument, decision, mapping)
-    if _is_fixed_plan_string_result_type(argument.semantic_type):
-        return _fixed_string_hidden_result_blockers(argument, decision, mapping)
-    return _scalar_hidden_result_blockers(argument, decision, mapping)
+    else:
+        descriptor_kind = native_array_descriptor_kind(argument.semantic_type)
+        if descriptor_kind == "pointer":
+            family_blockers = (
+                "pointer handle results need stable owner storage and target lifetime policy before wrapping",
+            )
+        elif descriptor_kind is not None:
+            family_blockers = _native_array_handle_result_blockers(decision, f"hidden result {argument.name!r}")
+        elif _is_phase6_ordinary_array_type(argument.semantic_type):
+            family_blockers = _ordinary_array_hidden_result_blockers(argument, decision, mapping)
+        elif _is_fixed_plan_string_result_type(argument.semantic_type):
+            family_blockers = _fixed_string_hidden_result_blockers(argument, decision, mapping)
+        else:
+            family_blockers = _scalar_hidden_result_blockers(argument, decision, mapping)
+    return (*validation_blockers, *family_blockers)
 
 
 def _derived_hidden_result_blockers(

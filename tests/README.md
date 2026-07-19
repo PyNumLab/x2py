@@ -20,7 +20,7 @@ user-visible feature that a contributor is changing.
 | Fortran source-to-semantic conversion | `tests/semantics/conversion/fortran/` | `python3 -m pytest -q tests/semantics/conversion/fortran` |
 | `.pyi` AST-to-semantic conversion | `tests/semantics/conversion/pyi/` | `python3 -m pytest -q tests/semantics/conversion/pyi` |
 | Completed semantic policy | `tests/semantics/policy/` | `python3 -m pytest -q tests/semantics/policy` |
-| Wrap readiness and blockers | `tests/semantics/readiness/` | `python3 -m pytest -q tests/semantics/readiness` |
+| Wrapper-plan support diagnostics | `tests/wrapper_codegen/` | `python3 -m pytest -q tests/wrapper_codegen` |
 | Wrapper planning, bridge/binding generation, and source/`.pyi` printing | `tests/wrapper_codegen/` | `python3 -m pytest -q tests/wrapper_codegen` |
 | Naming policy | `tests/naming/` | `python3 -m pytest -q tests/naming` |
 | Shared Python utilities | `tests/utilities/` | `python3 -m pytest -q tests/utilities` |
@@ -45,7 +45,6 @@ empty directory merely to mirror this table.
 | `x2py.pipeline` | matching subject under `tests/pipeline/` |
 | `x2py.semantics.c2ir`, `fortran2ir`, `pyi2ir` | matching language under `tests/semantics/conversion/` |
 | semantic ownership and policy completion | `tests/semantics/policy/` |
-| `x2py.semantics.readiness` | `tests/semantics/readiness/` |
 | `x2py.wrapper_codegen` | `tests/wrapper_codegen/` plus compiled behavior under `tests/wrapper/` |
 | `x2py.compiling` | compiled build and runtime feature evidence under `tests/wrapper/fortran/` |
 | `x2py.naming` | `tests/naming/` |

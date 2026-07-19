@@ -345,7 +345,6 @@ RESOLVED_FUNCTION_WRAPPER_POLICY_METADATA = "resolved_function_wrapper_policy"
 RESOLVED_CALLBACK_POLICY_METADATA = "resolved_callback_policy"
 RESOLVED_MODULE_VARIABLE_POLICY_METADATA = "resolved_module_variable_policy"
 RESOLVED_MODULE_VARIABLE_INITIALIZER_METADATA = "resolved_module_variable_initializer"
-MODULE_VARIABLE_INITIALIZER_UNSUPPORTED_BLOCKER = "module_variable_initializer_unsupported"
 PYTHON_STATIC_METADATA = "python_static"
 
 

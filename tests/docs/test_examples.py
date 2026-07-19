@@ -240,7 +240,7 @@ def _command_argv(example: DocumentationExample) -> list[str]:
         return [sys.executable, "-c", example.command]
 
     argv = shlex.split(example.command)
-    allowed_modules = {("python", "-m", "x2py"), ("python", "-m", "x2py.probes.report")}
+    allowed_modules = {("python", "-m", "x2py")}
     normalized_command = ("python", *argv[1:3]) if argv and argv[0] in {"python", "python3"} else ()
     if normalized_command not in allowed_modules:
         raise AssertionError(f"{example.test_id}: unsupported documentation command")

@@ -88,7 +88,7 @@ it does not transfer native release responsibility.
 - Ordinary non-descriptor array/function results use **copy-return**;
 - Allocatable array results use wrapper-owned handles whose finalizer releases
   x2py-owned descriptor storage;
-- Pointer-array handle results block readiness until owner storage, target
+- Pointer-array handle results stop wrapper planning until owner storage, target
   lifetime, descriptor extraction, and destroy behavior are implemented;
 - plain and `Aliased` derived module variables remain live native-owned objects
   through module-specific or address-backed mechanisms respectively; and

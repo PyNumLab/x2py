@@ -60,7 +60,7 @@ Given ordered Fortran sources, x2py performs this pipeline:
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> parser facts
-  -> semantic IR and readiness blockers
+  -> semantic IR construction
   -> generated native bridge and Python binding
   -> compiled Python extension
 ```
@@ -70,7 +70,7 @@ Fortran sources
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> parser facts
-  -> semantic IR and readiness blockers
+  -> semantic IR construction
   -> generated Fortran bind(C) bridge
   -> generated C/CPython binding and native binding support
   -> compiled Python extension
@@ -78,7 +78,7 @@ Fortran sources
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-C inputs currently support inspection, semantic IR, `.pyi`, and readiness
+C inputs currently support inspection, semantic IR, and `.pyi`
 reports. Runtime wrapping of user-supplied C libraries is future backend work.
 X2PY_C_DOCS_END -->
 
@@ -101,7 +101,7 @@ Ask x2py for the parser-level source facts:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output:
@@ -124,7 +124,7 @@ Generate the semantic `.pyi` contract:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
+python3 -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output:
@@ -155,38 +155,7 @@ Read this as the native boundary x2py must preserve:
 The full `.pyi` syntax is documented in
 [Semantic .pyi Format](../reference/semantic-pyi-format.md).
 
-## Step 3: Check Readiness
-
-Readiness answers: "does this semantic contract have known blockers before
-wrapper code generation?"
-
-<!-- x2py-doc-test: exact -->
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
-```
-
-Expected output:
-
-<!-- x2py-doc-test-output -->
-```text
-File: tests/data/fortran/general/basic_subroutine.f90
-  Source: fortran
-  Semantic modules: m1
-  Wrappable: yes
-  Public functions: 1
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
-```
-
-<!-- X2PY_C_DOCS_START
-`Wrappable: yes` means the semantic contract has no known readiness blockers.
-For Fortran source inputs, x2py can continue into the implemented wrapper
-backend. For C inputs, the same readiness result does not yet mean a C-input
-runtime wrapper backend exists.
-X2PY_C_DOCS_END -->
-
-## Step 4: Build A Real Extension
+## Step 3: Build A Real Extension
 
 Use a tiny runtime fixture for the first compiled wrapper:
 
@@ -265,7 +234,7 @@ plain Python `float` where the wrapper requires `numpy.float64` raises
 
 <!-- X2PY_C_DOCS_START
 | The compiler cannot be found | Install `gfortran` and a C compiler, or pass the project compiler settings. |
-| Readiness says `Wrappable: yes` for C input | That only proves semantic readiness; C-input runtime wrapping is not implemented yet. |
+| C inspection succeeds | C-input runtime wrapping is not implemented yet. |
 X2PY_C_DOCS_END -->
 
 ## What You Learned
@@ -274,7 +243,7 @@ You used x2py to:
 
 - read Fortran source facts;
 - inspect the semantic `.pyi` contract;
-- check wrapper readiness; and
+- build the wrapper plan through the default build path; and
 - build, import, and call a generated extension.
 
 Next:

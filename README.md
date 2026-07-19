@@ -41,6 +41,10 @@ real(8) function scale(value, factor) result(output)
 end function scale
 ```
 
+The concise `python3 -m x2py --help` examples reuse this `scale.f90`
+source. Help entries labeled "README Quick Start" refer to the complete source
+and workflow in this section.
+
 Build it with the default output locations:
 
 ```bash
@@ -106,9 +110,7 @@ Expected result:
 Generate the semantic `.pyi` contract for the same source:
 
 ```bash
-python3 -m x2py scale.f90 \
-  --pyi \
-  --out contracts
+python3 -m x2py generate --pyi scale.f90 --out contracts
 ```
 
 The command writes the contract package:
@@ -221,7 +223,7 @@ end module points
 Generate its semantic contract:
 
 ```bash
-python3 -m x2py points.f90 --pyi --out contracts
+python3 -m x2py generate --pyi points.f90 --out contracts
 ```
 
 Expected contract (`contracts/points.pyi`):
@@ -315,7 +317,7 @@ The runtime wrapper mechanism is:
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> Fortran parser
-  -> semantic IR construction and readiness validation
+  -> semantic IR construction
   -> post-IR policy completion and ordered wrapper plan
   -> direct native-bridge and Python-binding lowering
   -> native compilation and shared-library link
@@ -327,7 +329,7 @@ Fortran sources
 Fortran sources
   -> compiler preprocessing and target-type probing
   -> Fortran parser
-  -> semantic IR construction and readiness validation
+  -> semantic IR construction
   -> post-IR policy completion and ordered wrapper plan
   -> direct Fortran bind(C) bridge lowering
   -> direct C/CPython binding lowering and native binding support
@@ -341,9 +343,8 @@ For diagnostic and inspection commands beyond the main build path, start with
 [Fortran wrapper guide](docs/user/guide/fortran-wrapper.md).
 
 <!-- X2PY_C_DOCS_START
-`Wrappable: yes` means the semantic contract has no known readiness blockers.
 The runtime build path accepts one or more ordered Fortran sources. C parsing,
-semantic IR, `.pyi`, and readiness are implemented, but wrapping user-supplied
+semantic IR, and `.pyi` are implemented, but wrapping user-supplied
 C libraries is a later backend. The generated C code used internally by the
 Fortran wrapper is not that future C-input backend.
 The [generated target datatype mapping example](docs/user/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
@@ -356,7 +357,7 @@ X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 C inputs require explicit C mode. These commands parse the checked C API
-fixture, inspect semantic IR, generate its `.pyi`, and check readiness:
+fixture, inspect semantic IR, and generate its `.pyi`:
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -419,7 +420,6 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact -->
 <!-- X2PY_C_DOCS_START
 ```bash
-python3 -m x2py tests/data/c/general/math_api.h &#45;&#45;language c &#45;&#45;wrap-readiness
 ```
 X2PY_C_DOCS_END -->
 
@@ -429,11 +429,6 @@ X2PY_C_DOCS_END -->
 File: tests/data/c/general/math_api.h
   Source: c
   Semantic modules: math_api
-  Wrappable: yes
-  Public functions: 4
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
 ```
 X2PY_C_DOCS_END -->
 
@@ -462,7 +457,7 @@ python3 -m x2py include/api.h &#45;&#45;language c &#45;&#45;parse \
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-Compiler-backed semantic, `.pyi`, and readiness stages also measure and cache
+Compiler-backed semantic and `.pyi` stages also measure and cache
 target datatype facts. C probing covers primitive ABI widths and signedness;
 Fortran probing resolves kind expressions and measures intrinsic storage.
 X2PY_C_DOCS_END -->
@@ -484,7 +479,7 @@ explicit build directories, depending on the command mode.
 ## Python API
 
 Public entrypoints cover Fortran extension builds, parsing, semantic
-conversion, `.pyi` emission, and readiness:
+conversion and `.pyi` emission:
 
 ```python
 from x2py import build_fortran_extension
@@ -504,7 +499,6 @@ strings, focused tests, and already-preprocessed inputs.
 <!-- X2PY_C_DOCS_START
 ```python
 from x2py import (
-    assess_semantic_wrap_readiness,
     c_file_to_semantic_modules,
     emit_module_stubs,
     parse_c_file,
@@ -513,7 +507,6 @@ from x2py import (
 parsed = parse_c_file("int add(int a, int b);", filename="api.h")
 modules = c_file_to_semantic_modules(parsed)
 stubs = emit_module_stubs(modules)
-report = assess_semantic_wrap_readiness(modules, source="api.h")
 ```
 X2PY_C_DOCS_END -->
 
@@ -528,8 +521,7 @@ Current support includes:
 
 - free-form and fixed-form Fortran, procedures, modules, derived types,
   imports, arrays, and wrapper-relevant declaration attributes;
-- language-neutral semantic IR, editable `.pyi` interfaces, and semantic
-  readiness reports;
+- language-neutral semantic IR and editable `.pyi` interfaces;
 - compiled Python extensions from one or more ordered fixed-form or free-form
   Fortran sources, with an optional GNU Make build;
 - documented runtime wrapper behavior for scalar and array calls, strings,
@@ -582,7 +574,7 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 <!-- X2PY_C_DOCS_START
 - [Tutorial](docs/user/tutorials/basic-wrapper.md): the complete supported user workflow,
-  Fortran extension build, semantic interface editing, readiness, and current
+  Fortran extension build, semantic interface editing, and the current
   C boundary.
 X2PY_C_DOCS_END -->
 

@@ -11,7 +11,6 @@ from tests.semantics.conversion.fortran._support import (
     SemanticMethod,
     SemanticType,
     array_contract,
-    assess_semantic_wrap_readiness,
     emit_module,
     fortran_file_to_semantic_modules,
     fortran_module_to_semantic_module,
@@ -20,6 +19,7 @@ from tests.semantics.conversion.fortran._support import (
     parse_fortran_project,
     parse_fortran_source,
     parse_pyi_text,
+    pytest,
     semantic_models,
 )
 
@@ -93,40 +93,7 @@ end module generic_mod
     assert all(proc.visibility == "public" for proc in box.overload_sets[0].procedures)
 
 
-def test_converter_reports_missing_generic_target_as_readiness_blocker():
-    converter = FortranToIRConverter()
-    source = """
-module generic_mod
-  interface convert
-    module procedure missing
-  end interface convert
-end module generic_mod
-"""
-    module = converter.visit(parse_fortran_source(source).modules[0])
-    report = assess_semantic_wrap_readiness(module)
-
-    assert module.overload_sets[0].procedures == []
-    blocker = next(
-        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_generic_target_unresolved"
-    )
-    assert blocker["items"] == [
-        {
-            "owner": "generic_mod",
-            "item": "generic_mod",
-            "generic": "convert",
-            "detail": "references missing specific procedure(s)",
-            "missing_targets": ["missing"],
-        }
-    ]
-    assert (
-        converter.first_module([FortranProcedureSignature(name="hidden", kind="subroutine", in_interface=True)]).name
-        == ""
-    )
-    assert FortranToIRConverter._literal_kind_key("kind(1.0q0)") == "16"
-    assert FortranToIRConverter._literal_kind_key("kind(1)") is None
-
-
-def test_converter_blocks_generic_constructor_interfaces_explicitly():
+def test_converter_rejects_generic_constructor_interfaces_during_semantic_conversion():
     source = """
 module constructor_generic_mod
   type :: item
@@ -143,22 +110,26 @@ contains
 end module constructor_generic_mod
 """
 
-    module = fortran_module_to_semantic_module(parse_fortran_source(source))
-    report = assess_semantic_wrap_readiness(module)
+    with pytest.raises(ValueError, match="cannot represent generic constructor") as exc_info:
+        fortran_module_to_semantic_module(parse_fortran_source(source))
 
-    assert module.overload_sets == []
-    blocker = next(
-        blocker
-        for blocker in report["wrappability_blockers"]
-        if blocker["code"] == "fortran_generic_constructor_unsupported"
-    )
-    assert blocker["items"] == [
-        {
-            "owner": "constructor_generic_mod",
-            "item": "item",
-            "generic": "item",
-        }
-    ]
+    assert "constructor_generic_mod.item" in str(exc_info.value)
+
+
+def test_converter_preserves_abstract_and_deferred_type_facts_for_policy_completion():
+    source = """
+module abstract_mod
+  type, abstract :: shape
+  contains
+    procedure, deferred :: area
+  end type shape
+end module abstract_mod
+"""
+
+    module = fortran_module_to_semantic_module(parse_fortran_source(source))
+
+    assert module.classes[0].metadata["fortran_type_attributes"] == ["abstract"]
+    assert module.classes[0].metadata["fortran_deferred_bindings"] == ["area"]
 
 
 def test_converter_keeps_module_common_block_storage_internal():
@@ -194,31 +165,6 @@ end module procedure_common_mod
     module = fortran_module_to_semantic_module(parse_fortran_source(source))
 
     assert [function.name for function in module.functions] == ["work"]
-
-
-def test_converter_leaves_defined_operators_and_assignment_for_operator_lowering():
-    source = """
-module operator_mod
-  interface operator(+)
-    module procedure add_values
-  end interface operator(+)
-  interface assignment(=)
-    module procedure assign_value
-  end interface assignment(=)
-contains
-  integer function add_values(left, right)
-    integer :: left, right
-    add_values = left + right
-  end function add_values
-  subroutine assign_value(left, right)
-    integer :: left, right
-    left = right
-  end subroutine assign_value
-end module operator_mod
-"""
-    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
-
-    assert module.overload_sets == []
 
 
 def test_converter_preserves_defined_operators_assignment_and_type_bound_operators():
@@ -276,54 +222,14 @@ def test_converter_preserves_defined_operators_assignment_and_type_bound_operato
     ] == [("__add__", ["counter_add_integer"])]
 
 
-def test_converter_reports_invalid_defined_assignment_as_readiness_blocker():
-    source = """
-module invalid_assignment
-  interface assignment(=)
-    module procedure assign_value
-  end interface assignment(=)
-  type :: box
-    integer :: value
-  end type box
-contains
-  subroutine assign_value(left, right)
-    type(box), intent(in) :: left
-    integer, intent(in) :: right
-  end subroutine assign_value
-end module invalid_assignment
-"""
-    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
-    report = assess_semantic_wrap_readiness(module)
-    blocker = next(
-        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_defined_generic_invalid"
-    )
-
-    assert blocker["items"][0]["generic"] == "assignment(=)"
-    assert "left-hand side must be writable" in blocker["items"][0]["detail"]
-
-
-def test_converter_reports_missing_defined_operator_target_as_readiness_blocker():
-    source = """
-module missing_operator
-  type :: box
-    integer :: value
-  end type box
-  interface operator(+)
-    module procedure missing
-  end interface operator(+)
-end module missing_operator
-"""
-    module = FortranToIRConverter().visit(parse_fortran_source(source).modules[0])
-    report = assess_semantic_wrap_readiness(module)
-    blocker = next(
-        blocker for blocker in report["wrappability_blockers"] if blocker["code"] == "fortran_generic_target_unresolved"
-    )
-
-    assert blocker["items"][0]["generic"] == "operator(+)"
-    assert blocker["items"][0]["missing_targets"] == ["missing"]
-
-
 def test_semantic_model_helpers_cover_projection_and_canonical_edge_cases():
+    converter = FortranToIRConverter()
+    assert (
+        converter.first_module([FortranProcedureSignature(name="hidden", kind="subroutine", in_interface=True)]).name
+        == ""
+    )
+    assert FortranToIRConverter._literal_kind_key("kind(1.0q0)") == "16"
+    assert FortranToIRConverter._literal_kind_key("kind(1)") is None
     assert SemanticFunction("f") != SemanticMethod("f")
     assert semantic_models._semantic_type_key(None, {}) is None
     assert semantic_models._canonical_expression(

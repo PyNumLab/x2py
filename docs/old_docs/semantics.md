@@ -23,7 +23,7 @@ Fortran runtime contract is documented separately in
 
 This document records the shared scalar datatype policy used when C and Fortran
 parser facts are converted to semantic IR. The semantic names are the stable
-bridge between parser-native type spellings, `.pyi` output, readiness checks,
+bridge between parser-native type spellings, `.pyi` output, policy completion,
 the implemented Fortran wrapper, and a future C-input wrapper backend.
 
 ### Semantic Names
@@ -316,10 +316,11 @@ STATUS_ERROR: Final[Int] = 10
 def set_status(value: Int) -> None: ...
 ```
 
-### Conservative Blockers
+### Conservative Conversion And Planning Errors
 
-The converter does not silently invent wrapper policy. It attaches
-`readiness_blockers` metadata that the semantic readiness checker reports:
+The converter does not silently invent wrapper policy. It rejects source facts
+that cannot form a semantic contract, and the default wrapper build rejects a
+completed policy that the wrapper planner cannot lower:
 
 - unresolved typedef or unknown type references;
 - legacy parser reports carrying macro-dependent declarations;
@@ -333,8 +334,7 @@ The converter does not silently invent wrapper policy. It attaches
 - unions used in semantic signatures;
 - `volatile`, `_Atomic`, bitfields, and unsupported declarator compositions.
 
-The current C semantic path supports `--language c --semantics`,
-`--language c --wrap-readiness`, and starter exact-contract
+The current C semantic path supports `--language c --semantics` and starter exact-contract
 `--language c --pyi` output for this supported subset. Generated stubs remain
 conservative: ambiguous ownership, callback, ABI-extension, and Pythonic
 projection policy stays out of the generated `.pyi` until supplied by the
@@ -477,7 +477,7 @@ def set_counter(value: Int32) -> None: ...
 
 Fortran generic interfaces whose name matches a derived type are constructor
 interfaces. They currently produce the
-`fortran_generic_constructor_unsupported` readiness blocker; they are not
+`fortran_generic_constructor_unsupported` wrapper-planning error; they are not
 silently emitted over the generated field-based class constructor. Persistent
 pointer module variables use the ownership-policy checker and remain blocked
 unless complete snapshot metadata makes the transfer safe.
@@ -556,7 +556,7 @@ def section(
 ```
 
 Allocation or association replacement policy is not implemented. The semantic
-IR preserves the facts needed for readiness and lowering decisions; a backend
+IR preserves the facts needed for policy completion and lowering decisions; a backend
 must not silently treat replacement-capable allocatable or pointer dummies as
 ordinary borrowed arrays.
 
@@ -851,7 +851,7 @@ only when a real array storage contract is known.
 
 > **Status: design only, not implemented native binding support.** x2py currently
 > parses C, converts the supported subset to semantic IR, emits and loads
-> semantic `.pyi`, and reports readiness. It does not currently generate,
+> semantic `.pyi`. It does not currently generate,
 > lower, compile, or execute C wrappers. Every runtime behavior, wrapper error,
 > and Phase 1/Phase 2 requirement below describes a proposed implementation
 > target unless an earlier current-contract section explicitly says otherwise.
@@ -1653,7 +1653,7 @@ argument/return lowering unchanged.
 
 #### 13.10 Transformation Is Not Phase 1
 
-The Phase 1 parser or readiness checker must reject a runnable interface using
+The Phase 1 parser or semantic conversion must reject a runnable interface using
 later transformation syntax such as:
 
 ```python

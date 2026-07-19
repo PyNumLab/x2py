@@ -16,7 +16,7 @@ See [Data Types](data-types.md) for details on how Fortran types are mapped to P
 For this example, we'll use `scale.f90` (from [README Quick Start](../../../README.md#quick-start)).
 
 ```bash
-python3 -m x2py scale.f90 --pyi
+python3 -m x2py generate --pyi scale.f90
 python3 -m x2py scale.f90 --out-dir build/scale
 ```
 
@@ -202,5 +202,5 @@ and mixed result projection by
 
 For a rejected Python value, compare it with generated `.pyi` output and use
 the reported dtype, rank, shape, and layout facts. Runtime Issues later provides
-additional diagnosis. For a readiness blocker, the language feature matrix
+additional diagnosis. For an unsupported wrapper plan, the language feature matrix
 later records whether that form is supported before compilation.

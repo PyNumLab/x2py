@@ -18,7 +18,7 @@ from x2py.semantics.ownership import (
 )
 from x2py.semantics.policy_completion import complete_semantic_policies
 from x2py.semantics.wrapper_policy import BridgeDataAction
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanSupportAnalyzer, WrapperPlanner
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 from x2py.wrapper_codegen.plan import DatatypeFamily
 
 
@@ -45,16 +45,6 @@ def _fixed_string_plan():
 
 def test_fixed_strings_reuse_ordered_result_plans_with_completed_length_and_copy_facts():
     module = _fixed_string_module()
-    reports = {function.name: WrapperPlanSupportAnalyzer().analyze(function) for function in module.functions}
-    assert reports["direct_label"].covered_lanes == (
-        "fixed-string-direct-results",
-        "native-call-runtime",
-    )
-    assert reports["hidden_label"].covered_lanes == (
-        "fixed-string-hidden-outputs",
-        "native-call-runtime",
-    )
-
     plan = WrapperPlanner().build(module)
     functions = {function.binding.python_name: function for function in plan.namespaces[0].functions}
     direct = functions["direct_label"].results[0]

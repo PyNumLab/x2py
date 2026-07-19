@@ -17,7 +17,7 @@ from x2py.semantics.wrapper_policy import (
     CallbackTransferAction,
     ExternalDeclarationMode,
 )
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner, WrapperPlanSupportAnalyzer
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 from x2py.wrapper_codegen.plan import DatatypeFamily
 
 CONTRACT = (
@@ -123,10 +123,6 @@ def test_callback_plan_projects_one_explicit_site_and_stable_roles_per_argument(
     assert len({callback.context_current_symbol for callback in callbacks}) == len(callbacks)
     assert len({callback.adapter_symbol for callback in callbacks}) == len(callbacks)
     assert len({callback.trampoline_symbol for callback in callbacks}) == len(callbacks)
-    covered_lanes = WrapperPlanSupportAnalyzer().analyze(_module()).covered_lanes
-    assert "immediate-callbacks" in covered_lanes
-    assert "callback-scalar-values" in covered_lanes
-    assert "callback-scalar-storage" not in covered_lanes
 
 
 @pytest.mark.parametrize(
@@ -208,7 +204,5 @@ def test_optional_callback_retains_one_exact_policy_blocker():
     function.arguments[0].optional = True
     complete_semantic_policies(module)
 
-    report = WrapperPlanSupportAnalyzer().analyze(module)
-
-    assert not report.supported
-    assert any("unsupported optional callback" in blocker.reason for blocker in report.blockers)
+    with pytest.raises(ValueError, match="unsupported optional callback"):
+        WrapperPlanner().build(module)

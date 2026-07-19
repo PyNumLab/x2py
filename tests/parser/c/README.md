@@ -5,7 +5,7 @@ This directory contains active tests for the implemented partial C parser.
 Guidelines:
 
 - keep these tests separate from the Fortran parser tests
-- keep wrap-readiness tests under `tests/semantics`, not under parser tests
+- keep wrapper-plan support diagnostics under `tests/wrapper_codegen`, not under parser tests
 - add parser snapshots only when the corresponding schema and preprocessing
   recipe are stable
 - keep the checked-in cJSON regression inputs active while a separately pinned

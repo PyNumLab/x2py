@@ -71,16 +71,15 @@ and practical usage from terminal and Python.
   - `procedure ... :: ...` bindings with attributes (e.g. `pass(self)`, `nopass`)
   - `generic ... :: name => target1, target2`
 
-### 1.6 Parser diagnostics and semantic readiness boundary
+### 1.6 Parser diagnostics and wrapper planning boundary
 
 - Parser diagnostics report source-level parse errors and unsupported parser
   constructs.
-- Parser JSON remains parse-only and does not contain `wrap_readiness`,
-  `wrappable`, `unit_blockers`, or other readiness payloads.
-- Wrap-readiness is assessed from semantic IR, either after converting parsed
-  Fortran source or after loading an edited `.pyi` semantic interface.
-- The semantic readiness report owns the final file-level `wrappable` flag and
-  blocker messages.
+- Parser JSON remains parse-only and does not contain wrapper-plan decisions
+  or support diagnostics.
+- Wrapper builds complete policy from semantic IR and validate the resulting
+  wrapper plan. Unsupported contracts report the owning plan path and
+  completed-policy diagnostic.
 
 ## 2) Public API surface
 
@@ -88,8 +87,6 @@ Supported public API:
 
 - `parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
-- `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
 
 ## Parser organization notes
 
@@ -137,11 +134,11 @@ The implementation inventory is maintained across these surfaces:
   parser facts.
 - `x2py/semantics/fortran2ir.py` owns conversion from parser facts to semantic IR,
   including kind mapping, compile-time specialization, storage contracts,
-  projection metadata, and readiness inputs.
+  projection metadata, and wrapper-planning inputs.
 - `tests/parser/` covers parser contracts, source-unit slicing, diagnostics,
   project behavior, and fixture regressions.
 - `tests/semantics/` covers semantic conversion, datatype precision mapping,
-  readiness, `.pyi` emission, and compile-time specialization.
+  wrapper planning, `.pyi` emission, and compile-time specialization.
 
 <!-- X2PY_C_DOCS_START
 Parser-related pull requests should update this file when the documented
@@ -240,7 +237,7 @@ JSON consumers.
 Procedure-local parameters may be folded into argument shapes during procedure
 finalization. Module-level and `use`-associated parameters used in procedure
 argument shapes are kept symbolic in the signature (`x(n)` remains `["n"]`)
-and are treated as valid scope references for readiness checks. Module/program
+and are treated as valid scope references for policy completion. Module/program
 variable shapes and parameter values can be resolved through the compile-time
 resolver when enough information is available.
 
@@ -262,7 +259,7 @@ Recommended frontend responsibilities:
 - Preserve source locations and original line numbers through preprocessing and
   recursive slicing.
 - Emit parser diagnostics for malformed source, but leave wrappability policy
-  to semantic readiness.
+  to semantic policy completion.
 
 The Fortran data flow is:
 
@@ -275,7 +272,7 @@ source path or source text
   -> FortranFile parser facts
   -> parse_fortran_project(...) dependency ordering and namespace resolution
   -> semantics.fortran2ir conversion
-  -> readiness, `.pyi`, and the implemented Fortran wrapper stages
+  -> policy completion, `.pyi`, and the implemented Fortran wrapper stages
 ```
 
 The recursive parsing pattern is:
@@ -317,14 +314,14 @@ Executable references:
 ### 3.1 Basic CLI invocation
 
 ```bash
-python -m x2py path/to/file.f90 --parse
+python -m x2py parse path/to/file.f90
 ```
 
 Recognizable Fortran files can omit `--language`. Directories require explicit
 frontend selection:
 
 ```bash
-python -m x2py path/to/fortran_src --language fortran --parse
+python -m x2py parse path/to/fortran_src --language fortran
 ```
 
 Fortran directories are recursively scanned for `.f`, `.for`, `.ftn`, `.f90`,
@@ -357,7 +354,7 @@ Command:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+python -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output:
@@ -377,7 +374,7 @@ compact:
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --show-vars
+python -m x2py parse tests/data/fortran/general/basic_subroutine.f90 --show-vars
 ```
 
 <!-- x2py-doc-test-output -->
@@ -392,7 +389,7 @@ File: tests/data/fortran/general/basic_subroutine.f90
 For large files:
 
 ```bash
-python -m x2py path/to/file.f90 --parse --show-vars --print-limit 50
+python -m x2py parse path/to/file.f90 --show-vars --print-limit 50
 ```
 
 `--print-limit` applies independently to modules, submodules, programs, block
@@ -476,7 +473,7 @@ python -m x2py tests/data/fortran/general/basic_subroutine.f90 --json
 Write parser JSON:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse --json --out report.json
+python -m x2py parse tests/data/fortran/general/basic_subroutine.f90 --json --out report.json
 ```
 
 Expected JSON layout:
@@ -490,7 +487,7 @@ Expected JSON layout:
   - `programs`
   - `block_data`
 
-When `x2py --parse --json` applies compiler preprocessing, the per-file payload
+When `x2py parse --json` applies compiler preprocessing, the per-file payload
 also contains `preprocessing_recipe`. The CLI applies compiler preprocessing
 for file-based parsing; compiler linemarkers remain accepted for provenance.
 The recipe records the exact compiler executable or adapter, argv, include
@@ -550,28 +547,19 @@ entries compare equal to their local name, so
 checks. Prefer reading `source`, `target`, or `local_name` in new code.
 X2PY_C_DOCS_END -->
 
-### 3.4 Wrap-readiness summary
+### 3.4 Semantic and wrapper-plan output
+
+Parser output and semantic IR are separate stages. Run parser inspection with:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+python -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
 
-This mode parses the source, converts it to semantic IR, and prints the
-per-file semantic readiness status. A non-wrappable file is reported as
-`Wrappable: no` followed by a `Why not wrappable` section listing semantic
-blockers, for example unresolved semantic types, missing compile-time constant
-values, or incomplete callback signatures.
-
-Parser output and readiness are separate stages. Run parser inspection with:
+Build a wrapper with the default wrapper stage. If the completed plan cannot
+lower a contract, the build reports the precise plan owner and blocker:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
-```
-
-Run readiness inspection separately:
-
-```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
+python -m x2py tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Parser JSON stays parse-only.
@@ -580,13 +568,13 @@ Semantic IR JSON uses the same output channels, but the per-file payload is the
 semantic model projection instead of raw parser output:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --semantics
+python -m x2py semantics tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Generated `.pyi` text is printed with:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
+python -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90
 ```
 
 ### 3.5 Parse-error diagnostics and debug mode
@@ -661,11 +649,11 @@ Expected behavior:
 - Resolves dependencies and module imports across files.
 - Returns aggregate namespace parse output.
 
-### 4.2 Parse single file and run semantic readiness check
+### 4.2 Parse single file and convert it to semantic IR
 
 ```python
 from pathlib import Path
-from x2py import parse_fortran_file, assess_semantic_wrap_readiness
+from x2py import parse_fortran_file
 from semantics.fortran2ir import fortran_file_to_semantic_modules
 
 p = Path("tests/data/fortran/general/basic_subroutine.f90")
@@ -673,20 +661,15 @@ code = p.read_text()
 
 parsed = parse_fortran_file(code, filename=str(p))
 modules = fortran_file_to_semantic_modules(parsed, standalone_module_name=p.stem)
-readiness = assess_semantic_wrap_readiness(modules, source=str(p))
-
 print("procedures", len(parsed.procedures))
-print("wrappable", readiness["wrappable"])
-print("blockers", len(readiness["wrappability_blockers"]))
+print("semantic modules", len(modules))
 ```
 
 Expected behavior:
 
 - `parsed` is a `FortranFile` aggregate model with parsed units and symbols.
-- `modules` is the semantic IR projection used by `.pyi` printing and
-  readiness.
-- `readiness` includes semantic API counts, semantic blockers, and the
-  file-level `wrappable` flag.
+- `modules` is the semantic IR projection used by `.pyi` printing and wrapper
+  planning.
 
 ### 4.3 Structured argument specifications
 
@@ -725,7 +708,7 @@ PYTHONPATH=. pytest -q
 Run parser-focused tests:
 
 ```bash
-python -m x2py tests/data/fortran/general/basic_subroutine.f90 --language fortran --parse --json
+python -m x2py parse tests/data/fortran/general/basic_subroutine.f90 --language fortran --json
 PYTHONPATH=. pytest -q tests/parsing/fortran/
 PYTHONPATH=. pytest -q tests/parsing/fortran/test_fortran_fixture_suite.py
 PYTHONPATH=. pytest -q tests/cli/
@@ -1164,7 +1147,7 @@ Failed to resolve declared argument '<name>' in procedure '<proc>'.
 
 This parser is intentionally wrapper-focused and not a complete Fortran front
 end. Unsupported syntax should be surfaced through parser diagnostics or later
-semantic readiness output for incremental parser extension.
+semantic policy inputs for incremental parser extension.
 
 
 ### External callback dummy declarations
@@ -1182,8 +1165,6 @@ Use the stable top-level API:
 
 - `parse_fortran_file(source_or_path, filename=None, encoding="utf-8") -> FortranFile`
 - `parse_fortran_project(files, encoding="utf-8") -> FortranProject`
-- `assess_semantic_wrap_readiness(semantic_ir, source=None) -> dict`
-- `assess_pyi_wrap_readiness(path_or_paths, encoding="utf-8") -> dict`
 
 Lower-level unit parsers are internal `FortranParser` methods.
 
@@ -1195,7 +1176,9 @@ expressions, measure intrinsic storage with `storage_size`, attach those facts
 to semantic types, and reuse memory and persistent caches. For the maintained
 GitHub Actions `gfortran` profile, unqualified `integer`, `real`, and `complex`
 map to `Int32`, `Float32`, and `Complex64`; target-changing flags can change
-those mappings. The
+those mappings. Source-driven wrapper builds add the normalized native Fortran
+compiler flags to the internal probe configuration, so semantic type facts and
+native implementation compilation use the same default-kind profile. The
 [generated target datatype mapping](../user/reference/semantic-ir.md#generated-linux-x86_64-mapping-example)
 measures and verifies those storage facts.
 
@@ -1203,24 +1186,25 @@ The Fortran probe cache key includes the generated expression source, resolved
 compiler binary identity, target flags, includes, macros, requested standard,
 working directory, target-related environment, and runner. The persistent
 location is `$XDG_CACHE_HOME/x2py/fortran_type_probe` or
-`~/.cache/x2py/fortran_type_probe`; `X2PY_CACHE_DIR`,
-`--fortran-type-probe-cache-dir`, and standalone `--cache-dir` override it.
-Use `--refresh-fortran-type-probe` or standalone `--refresh` after an external
-compiler/sysroot change that does not alter the cache key.
+`~/.cache/x2py/fortran_type_probe`; `X2PY_CACHE_DIR` changes the internal cache
+root. The standalone `x2py probe` command additionally exposes `--cache-dir`
+and `--refresh` for explicit inspection runs.
 
 The standalone probe can create a reusable report containing the exact
 compile-time and storage expressions needed by a source:
 
 ```bash
-python3 -m x2py.probes.fortran_types --compiler gfortran \
+python3 -m x2py probe --language fortran --compiler gfortran \
   --expr='selected_real_kind(12)' \
   --expr='storage_size(real(0.0,kind=8))' \
-  > build/fortran-types.json
+  --out build/fortran-types.json
 ```
 
-Pass that report with `--fortran-type-report` when automatic direct-compiler
-probing is not appropriate. A missing required expression is reported
-explicitly instead of falling back to an unrelated target mapping.
+The report is an inspection and verification output. Semantic conversion and
+wrapper builds measure the facts they need internally from their selected
+compiler; the report is not a second semantic-stage input path. A missing
+required expression is reported explicitly instead of falling back to an
+unrelated target mapping.
 
 The semantic converter also supports compile-time specialization for values the
 parser intentionally leaves symbolic. Use

@@ -25,7 +25,7 @@ editable wrapper contracts.
 | Build and import through Python code | [Build and import with the Python API](recipes/build-and-import-python-api.md) |
 | Generate wrapper sources and an editable Makefile | [Generate an editable Makefile](recipes/generate-editable-makefile.md) |
 | Build one extension from multiple ordered Fortran sources | [Build multiple Fortran sources](recipes/build-multiple-fortran-sources.md) |
-| Parse, print `.pyi`, and check readiness | [Inspect a Fortran API](recipes/inspect-fortran-api.md) |
+| Parse and print `.pyi` | [Inspect a Fortran API](recipes/inspect-fortran-api.md) |
 | Work with generated or edited `.pyi` contracts | [Work with semantic .pyi contracts](recipes/semantic-pyi-contracts.md) |
 | Combine stages or limit human-readable output | [Control CLI output](recipes/control-cli-output.md) |
 | Use parser and semantic APIs from Python code | [Use Python inspection APIs](recipes/use-python-inspection-apis.md) |
@@ -56,7 +56,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 The implemented runtime wrapper backend is for Fortran source inputs and the
 documented `.pyi` subset with explicit native artifacts. C inputs can be parsed,
-lowered to semantic IR, printed as `.pyi`, and checked for readiness; runtime
+lowered to semantic IR and printed as `.pyi`; runtime
 wrapping of user-supplied C libraries is not implemented yet.
 X2PY_C_DOCS_END -->
 

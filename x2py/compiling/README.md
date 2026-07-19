@@ -38,8 +38,16 @@ header-only native support is compiled with the binding that includes it; and
 linking runs only after every required object exists. Each compiler invocation receives its
 source, target, flags, includes, and ordered link inputs explicitly.
 
+For CLI wrapper builds, the selected input-language compiler executable is
+used for native source compilation, generated bridge compilation, and the
+input-language link command, matching the executable used earlier for
+preprocessing and datatype measurement. Generated C bindings continue to use
+the C executable from the selected compiler profile. Build-wide `-I` paths are
+carried into native and generated-source object inputs; they are also recorded
+in semantic `.pyi` build manifests so replay has the same compilation inputs.
+
 Compilation must not decide semantic ownership, Python API shape, or wrapper
-readiness. Those decisions happen before generated sources reach this package.
+policy completion. Those decisions happen before generated sources reach this package.
 
 ## Tests And Docs
 

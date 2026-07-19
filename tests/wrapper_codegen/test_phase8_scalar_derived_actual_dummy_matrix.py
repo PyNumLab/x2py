@@ -16,7 +16,7 @@ from x2py.semantics.wrapper_policy import (
     DerivedOwnerRetention,
     DerivedRelease,
 )
-from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner, WrapperPlanSupportAnalyzer
+from x2py.wrapper_codegen import WrapperCodeGenerator, WrapperPlanner
 
 
 CONTRACT = """
@@ -176,7 +176,6 @@ def test_projected_pointer_writeback_requires_persistent_pointer_storage():
 def test_exact_typed_value_is_not_restricted_to_bind_c_layout():
     call = _plans()["value_dummy"]
     assert all(case.action is DerivedCallAction.TYPED_VALUE_COPY for case in call.cases)
-    assert WrapperPlanSupportAnalyzer().analyze(_module()).supported
 
 
 def test_module_actual_declarations_keep_distinct_runtime_storage():
@@ -197,14 +196,12 @@ def test_module_actual_declarations_keep_distinct_runtime_storage():
 
 def test_pointer_result_uses_a_persistent_holder_instead_of_the_removed_blocker():
     module = _module()
-    report = WrapperPlanSupportAnalyzer().analyze(module)
     result = next(
         function.results[0]
         for function in WrapperPlanner().build(module).namespaces[0].functions
         if function.symbol_name == "make_pointer"
     )
 
-    assert report.supported
     assert result.derived.storage is DerivedObjectStorage.POINTER_HOLDER
     assert result.derived.target_owner_retention is DerivedOwnerRetention.NATIVE_MODULE
     assert result.derived.target_release is DerivedRelease.NATIVE_OWNER

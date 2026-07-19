@@ -3861,7 +3861,7 @@ class FortranParser(ClassVisitor):
         # procedure, it must not remain unknown after declaration parsing.
         # This catches declaration-application regressions (e.g. legacy
         # star-kind list handling) while still allowing truly undeclared
-        # arguments to be reported via readiness diagnostics.
+        # arguments to be handled by semantic conversion or wrapper planning.
         declared_symbols = state.get("typed_symbols", set())
         for arg in sig.arguments:
             if (

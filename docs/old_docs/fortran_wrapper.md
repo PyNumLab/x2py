@@ -24,7 +24,7 @@ and Python tests exercise successful calls, mutation, lifetime, and relevant
 failure paths.
 
 This guide covers the implemented wrapper for Fortran source inputs. x2py also
-parses C and produces C semantic IR, `.pyi`, and readiness reports, but a
+parses C and produces C semantic IR and `.pyi`, but a
 runtime wrapper backend for user-supplied C libraries will be added later.
 The C source generated internally as part of a Fortran wrapper is an
 implementation detail of the current Fortran path, not the future C-input
@@ -63,14 +63,13 @@ backend.
 
 The direct wrapper path accepts fixed-form and free-form Fortran sources and
 requires a working GNU Fortran/C toolchain, Python development headers, and
-NumPy headers. Supplying recognizable Fortran sources without a stage flag
-defaults to a wrapper build; `--wrap` makes that choice explicit.
+NumPy headers. Supplying recognizable Fortran sources without an inspection
+stage flag follows the wrapper-build path.
 
 Build the checked scalar example:
 
 ```bash
 python3 -m x2py tests/data/fortran/wrapper/feature_parity/runtime/fruntime_abi_f90.f90 \
-  --wrap \
   --out-dir build/fruntime_abi \
   --json
 ```
@@ -103,7 +102,7 @@ ordered Fortran source files
   -> compiler preprocessing
   -> Fortran parser project model
   -> compiler-dependent kind and storage probes
-  -> semantic modules and readiness blockers
+  -> semantic modules and completed policy
   -> merged public wrapper module and collision-safe Python names
   -> codegen AST
   -> Fortran bind(C) bridge
@@ -140,12 +139,11 @@ Fortran and C wrapper sources remain build artifacts; users do not edit them to
 change the Python API.
 
 The semantic `.pyi` described in [Semantic `.pyi` format](pyi_format.md) is the
-editable semantic contract and readiness surface. The normal CLI build is
-source-driven: `--wrap` accepts Fortran sources and cannot be combined with
-`--pyi`. For the implemented `.pyi` subset, `--wrap` can instead accept a
-semantic `.pyi` file and native build artifacts such as `.o`, `.a`, or `.so`
-inputs. In that mode the `.pyi` is the Python API source of truth; native source
-is not reparsed during wrapper generation.
+editable semantic contract and wrapper-planning surface. With no inspection
+stage, the CLI accepts either Fortran source or, for the implemented subset, a
+semantic `.pyi` file plus native build artifacts such as `.o`, `.a`, or `.so`
+inputs. In `.pyi` mode the contract is the Python API source of truth; native
+source is not reparsed during wrapper generation.
 
 The current `.pyi` build subset requires the contract filename stem to match
 the native Fortran module name. Supply the native module file directory as an
@@ -153,7 +151,6 @@ include directory when the generated bridge contains `use <module>`:
 
 ```bash
 python3 -m x2py path/to/module.pyi \
-  --wrap \
   --native-objects path/to/module.o \
   --native-include-dir path/to/mod-files \
   --out-dir build/module
@@ -212,8 +209,8 @@ A wrapper feature is considered supported only when all applicable layers agree:
 
 - the Python-visible API, ownership, and limitations are documented;
 - the parser and semantic IR preserve every source fact required by the wrapper;
-- readiness emits a precise blocker when a declaration is unsupported or lacks
-  policy;
+- the default wrapper build emits a precise error when a declaration is
+  unsupported or lacks policy;
 - semantic lowering preserves the contract without reconstructing source text;
 - generated Fortran and C compile without hand edits;
 - runtime tests import the extension and verify results, mutation, lifetime,
@@ -600,7 +597,7 @@ rename the Python function.
 
 Arrays, character buffers, derived types, optionals, outputs, pointers,
 allocatables, address-passed dummies, or any non-interoperable declaration retain
-a generated Fortran shim or produce a readiness diagnostic when no safe shim
+a generated Fortran shim or produce a wrapper-planning diagnostic when no safe shim
 contract exists.
 
 Runtime tests: [`test_value_and_bind_c.py`](../tests/wrapper/fortran/feature_parity/test_value_and_bind_c.py).
@@ -734,7 +731,7 @@ alias each other.
 
 Semantic `.pyi` metadata can record `nullable`, transfer mode, target owner,
 lifetime, deallocation, shape source, contiguity, reassociation, aliasing, and
-mutability. Contradictory or incomplete facts produce a readiness blocker.
+mutability. Contradictory or incomplete facts produce a semantic or wrapper-planning error.
 Metadata cannot turn general pointer reassociation or borrowed pointer views
 into supported behavior; those paths remain unsettled and are summarized in
 [Not Handled Or Not Yet Settled](#not-handled-or-not-yet-settled).
@@ -981,7 +978,7 @@ Polymorphic outputs, `intent(inout)`, arrays, allocatable or pointer scalar
 polymorphic values, and polymorphic function results are blocked. They need a
 contract for dynamic type, allocation, replacement, and ownership. `class(*)`
 is blocked with the assumed-type descriptor policy. Abstract types and deferred
-bindings produce readiness blockers rather than instantiable Python types.
+bindings produce wrapper-planning errors rather than instantiable Python types.
 
 Runtime tests: [`test_inheritance.py`](../tests/wrapper/fortran/feature_parity/test_inheritance.py).
 
@@ -1290,7 +1287,6 @@ sets the extension name; later modules and standalone procedures are merged.
 python3 -m x2py \
   solver.f90 \
   diagnostics.f90 \
-  --wrap \
   --out-dir build \
   --json
 ```
@@ -1316,7 +1312,7 @@ writes. An explicit path such as `--out api.pyi` requests one aggregate file.
 ### Editable Makefile
 
 ```bash
-python3 -m x2py mesh.f90 solver.f90 --makefile --out-dir build --json
+python3 -m x2py generate --makefile mesh.f90 solver.f90 --out-dir build --json
 make -f build/Makefile.x2py -j4 X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
@@ -1526,7 +1522,7 @@ uses the normal GIL-release policy. For GNU Fortran, pass OpenMP flags to both
 compile and link steps:
 
 ```bash
-python3 -m x2py parallel_api.f90 --makefile --out-dir build --json
+python3 -m x2py generate --makefile parallel_api.f90 --out-dir build --json
 make -f build/Makefile.x2py \
   X2PY_FFLAGS=-fopenmp \
   X2PY_LDFLAGS=-fopenmp
@@ -1579,7 +1575,7 @@ General borrowed pointer views are not supported. x2py cannot yet:
   copy, borrow, ownership-transfer, and release policy.
 
 Use supported snapshot copies when complete target facts are known. Otherwise
-readiness blocks the declaration.
+wrapper planning blocks the declaration.
 
 ### Advanced Multi-Source Integration
 
@@ -1611,7 +1607,7 @@ exception, unregistration, and destruction rules.
 
 ### Other Explicit Blockers
 
-The following forms have stable readiness blockers rather than unsafe partial
+The following forms have stable wrapper-planning errors rather than unsafe partial
 wrappers:
 
 | Subject | Blocked form | Missing contract |
@@ -1636,6 +1632,6 @@ Most subjects use flat `test_<subject>.py` and Fortran source pairs. Only builds
 that wrap several related sources together use the
 [`multi_source`](../tests/wrapper/fortran/multi_source) directory.
 
-Semantic-only details, edited `.pyi` round trips, and readiness diagnostics also
+Semantic-only details, edited `.pyi` round trips, and wrapper-planning diagnostics also
 have narrower tests outside `tests/wrapper`, but those tests do not replace
 compiled runtime evidence.

@@ -55,6 +55,22 @@ def test_user_compile_flags_follow_default_profile_flags(monkeypatch, tmp_path: 
     assert command.index("-DNDEBUG") < command.index("-g0")
 
 
+def test_input_language_executable_override_controls_compilation_and_linking(tmp_path: Path):
+    compiler = Compiler("GNU", execute_commands=False, executables={"fortran": sys.executable})
+    native = ObjectFile(tmp_path / "native.f90", tmp_path / "native.o", "fortran")
+
+    compiler.compile_object(native)
+    compiler.link_extension(
+        module_name="wrapped",
+        output_dir=tmp_path,
+        language="fortran",
+        objects=(native,),
+    )
+
+    assert compiler.command_log[0][0] == sys.executable
+    assert compiler.command_log[1][0] == sys.executable
+
+
 def test_python_sysconfig_profile_flags_do_not_override_wrapper_profile(monkeypatch, tmp_path: Path):
     compiler = Compiler("GNU", debug=False, execute_commands=False)
     monkeypatch.setattr(compiler, "_executable", lambda _language, _tools: "gcc")

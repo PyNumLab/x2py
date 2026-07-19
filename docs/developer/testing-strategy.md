@@ -20,8 +20,8 @@ Stage and unit tests mirror the implementation pipeline:
 - compiler-derived target facts live under `tests/probes/`;
 - preprocessing and build orchestration live under `tests/pipeline/` by
   workflow;
-- semantic conversion, completed policy, and readiness have separate owners
-  under `tests/semantics/`;
+- semantic conversion and completed policy have separate owners under
+  `tests/semantics/`;
 - wrapper planning, bridge/binding generation, and source/`.pyi` printing live
   under `tests/wrapper_codegen/`;
 - runtime handles, naming, and type mapping live under `tests/runtime/`,

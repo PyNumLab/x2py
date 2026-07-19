@@ -76,8 +76,8 @@ and pass `numpy.int32(member.value)` to the wrapper.
 
 - No runtime validation restricting an integer parameter to declared
   enumerator values unless the native routine performs that validation.
-- Unsupported source enum forms stop at parsing, semantic readiness, or wrapper
-  readiness instead of being converted into unrelated constants.
+- Unsupported source enum forms stop at parsing, semantic conversion, or wrapper
+  planning instead of being converted into unrelated constants.
 
 ## Evidence And Troubleshooting
 

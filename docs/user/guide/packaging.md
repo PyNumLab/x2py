@@ -82,14 +82,13 @@ Generate a Makefile when a local build needs inspectable commands or controlled
 flags:
 
 ```bash
-python3 -m x2py src/scale.f90 \
-  --makefile \
+python3 -m x2py generate --makefile src/scale.f90 \
   --out-dir build/scale
 
 make -f build/scale/Makefile.x2py X2PY_FFLAGS=-O3 X2PY_CFLAGS=-O3
 ```
 
-`--makefile` selects the editable wrapper-build submode directly. Makefile mode
+`generate --makefile` selects the editable wrapper-build mode directly. Makefile mode
 and verbose direct compilation are separate modes. The generated
 Makefile expects GNU Make and a POSIX-style shell. Semantic `.pyi` Makefile
 builds also write `x2py-build.json`, which can regenerate or replay the build.

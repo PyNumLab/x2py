@@ -28,7 +28,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 This document records the shared scalar datatype policy used when C and Fortran
 parser facts are converted to semantic IR. The semantic names are the stable
-bridge between parser-native type spellings, `.pyi` output, readiness checks,
+bridge between parser-native type spellings, `.pyi` output, policy completion,
 the implemented Fortran wrapper, and a future C-input wrapper backend.
 X2PY_C_DOCS_END -->
 
@@ -139,7 +139,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact linux-x86_64 -->
 <!-- X2PY_C_DOCS_START
 ```bash
-python3 -m x2py.probes.report &#45;&#45;language c
+python3 -m x2py probe &#45;&#45;language c &#45;&#45;compiler cc &#45;&#45;format markdown
 ```
 X2PY_C_DOCS_END -->
 
@@ -183,7 +183,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact linux-x86_64 -->
 <!-- X2PY_C_DOCS_START
 ```bash
-python3 -m x2py.probes.report &#45;&#45;language fortran
+python3 -m x2py probe &#45;&#45;language fortran &#45;&#45;compiler gfortran &#45;&#45;format markdown
 ```
 X2PY_C_DOCS_END -->
 
@@ -371,8 +371,9 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-The converter does not silently invent wrapper policy. It attaches
-`readiness_blockers` metadata that the semantic readiness checker reports:
+The converter does not silently invent wrapper policy. Source facts that cannot
+form a semantic contract fail during semantic conversion; unsupported completed
+policy fails during wrapper planning:
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -390,9 +391,9 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-The current C semantic path supports `&#45;&#45;language c &#45;&#45;semantics`,
-`&#45;&#45;language c &#45;&#45;wrap-readiness`, and starter exact-contract
-`&#45;&#45;language c &#45;&#45;pyi` output for this supported subset. Generated stubs remain
+The current C semantic path supports `&#45;&#45;language c &#45;&#45;semantics` and
+starter exact-contract `&#45;&#45;language c &#45;&#45;pyi` output for this supported
+subset. Generated stubs remain
 conservative: ambiguous ownership, callback, ABI-extension, and Pythonic
 projection policy stays out of the generated `.pyi` until supplied by the
 semantic model or an edited interface. In particular, an unresolved typedef is
@@ -416,7 +417,7 @@ underlying semantic model:
   metadata required to reconstruct the same semantic IR;
 - `.pyi` loading converts the documented contract subset back to semantic IR
   without reparsing native source; and
-- readiness, policy completion, and lowering consume semantic IR, not raw
+- policy completion and lowering consume semantic IR, not raw
   `.pyi` syntax.
 
 The shared semantic model separates value type, storage and calling contract,
@@ -465,8 +466,8 @@ Fortran parser model -> semantic IR -> .pyi -> semantic IR
 ```
 
 Generated and edited stubs must not use hidden native-source parsing as a
-fallback. If the `.pyi` contract omits native facts required for readiness or
-lowering, x2py reports a contract error or readiness blocker instead of
+fallback. If the `.pyi` contract omits native facts required for policy
+completion or lowering, x2py reports a contract or wrapper-planning error instead of
 guessing.
 
 ### External Type References
@@ -520,7 +521,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 > **Status: design only, not implemented native binding support.** x2py currently
 > parses C, converts the supported subset to semantic IR, emits and loads
-> semantic `.pyi`, and reports readiness. It does not currently generate,
+> semantic `.pyi`. It does not currently generate,
 > lower, compile, or execute C wrappers. Every runtime behavior, wrapper error,
 > and Phase 1/Phase 2 requirement below describes a proposed implementation
 > target unless an earlier current-contract section explicitly says otherwise.
@@ -1679,7 +1680,7 @@ X2PY_C_DOCS_END -->
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-The Phase 1 parser or readiness checker must reject a runnable interface using
+The Phase 1 parser or semantic conversion must reject a runnable interface using
 later transformation syntax such as:
 X2PY_C_DOCS_END -->
 

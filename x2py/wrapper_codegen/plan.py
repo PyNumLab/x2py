@@ -781,25 +781,3 @@ class WrapperPlanDiagnostic(StageRecord):
     owner_path: str
     code: str
     message: str
-
-
-@dataclass
-class WrapperPlanSupportBlocker(StageRecord):
-    """One stable unsupported-owner reason for the wrapper-plan route."""
-
-    owner_path: str
-    reason: str
-
-
-@dataclass
-class WrapperPlanSupportReport(StageRecord):
-    """Whole-generation-unit support report for route selection callers."""
-
-    owner_path: str
-    covered_lanes: tuple[str, ...] = ()
-    blockers: tuple[WrapperPlanSupportBlocker, ...] = ()
-
-    @property
-    def supported(self) -> bool:
-        """Return whether the whole generation unit is supported."""
-        return not self.blockers

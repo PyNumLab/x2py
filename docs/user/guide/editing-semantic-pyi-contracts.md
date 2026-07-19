@@ -21,7 +21,7 @@ this guide to decide whether a proposed edit is a supported wrapper operation.
 Generate a starter contract package from the native sources:
 
 ```bash
-python3 -m x2py native/solver.f90 --pyi --out contracts/solver
+python3 -m x2py generate --pyi native/solver.f90 --out contracts/solver
 ```
 
 Keep the generated package as a baseline, copy it, and edit the copy:
@@ -41,7 +41,7 @@ Build the edited entry contract with the same native implementation artifacts:
 ```bash
 python3 -m x2py contracts/edited_solver/__init__.pyi \
   --native-objects build/solver.o \
-  --native-include-dir build/mod \
+  -I build/mod \
   --out-dir build/edited-solver
 ```
 
@@ -198,7 +198,7 @@ writable after import; later reads and writes still use the current native
 storage. This form accepts literal values only. Calls, names, and expressions
 such as `f(42)`, `x + 1`, or `SOME_NAME` are rejected for mutable module
 variables. The declaration must also have a completed write-through native
-setter; unsupported module-variable defaults are reported as readiness blockers
+setter; unsupported module-variable defaults are reported during wrapper planning
 instead of being treated as copied Python values.
 
 Use `Final[...]` for true constants:
@@ -449,7 +449,7 @@ only when the linked implementation has that ABI.
 
 Generic constraints such as `Bounded(1, 8)` and `Finite` currently survive
 parse/print round-trips but do not generate runtime validation. Wrapper
-readiness reports `fortran_runtime_constraints_unsupported` instead of building
+wrapper planning reports `fortran_runtime_constraints_unsupported` instead of building
 a wrapper that silently ignores them. General semantic coercions are handled
 the same way through `fortran_runtime_coercions_unsupported`.
 
@@ -703,7 +703,7 @@ Failures occur at the first layer with enough information:
 2. **Structural validation errors**: incomplete projections, duplicate native
    positions, invalid `@bind`/`@overload` links, conflicting exports, or public
    declarations exposing private types.
-3. **Readiness/policy blockers**: incomplete ownership, lifetime, pointer,
+3. **Policy/planning errors**: incomplete ownership, lifetime, pointer,
    coercion, mutation, allocation, or release behavior.
 4. **Native build/runtime errors**: the supplied artifact does not implement
    the declared symbol or ABI.

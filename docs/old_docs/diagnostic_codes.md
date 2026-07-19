@@ -1,7 +1,7 @@
 ---
 title: Diagnostic Codes
 audience: users, contributors, maintainers
-prerequisites: semantic readiness reports
+prerequisites: semantic conversion and wrapper-planning errors
 related: reference/index.md, troubleshooting/index.md
 status: maintained
 ---

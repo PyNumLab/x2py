@@ -47,7 +47,7 @@ end module numeric_types
 It is highly recommended to generate the type contract first for inspection:
 
 ```bash
-python3 -m x2py numeric_types.f90 --pyi
+python3 -m x2py generate --pyi numeric_types.f90
 ```
 
 Build the wrapper with:
@@ -250,7 +250,7 @@ Fortran wrapper generation blocks:
 - arrays of derived types.
 
 The language feature matrix later records the support status and evidence for a
-generated readiness blocker.
+wrapper-planning error.
 
 ## Evidence And Troubleshooting
 

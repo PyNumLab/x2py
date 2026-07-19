@@ -14,18 +14,15 @@ semantic contract.
 ## Generate A Starter Contract
 
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 \
-  --pyi --out contracts/basic_subroutine
+python3 -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90 \
+  --out contracts/basic_subroutine
 ```
 
 `--out` names the generated contract package directory. The entry is
 `contracts/basic_subroutine/__init__.pyi`, and module leaves sit directly below
 that directory. Open the generated `.pyi`, edit only the supported semantic
-contract syntax, then check readiness:
-
-```bash
-python3 -m x2py contracts/basic_subroutine/__init__.pyi --wrap-readiness
-```
+contract syntax, then build the wrapper. Wrapper-plan diagnostics identify any
+unsupported or incomplete contract feature.
 
 ## Build From A `.pyi` Contract
 
@@ -35,7 +32,8 @@ you provide the native artifacts explicitly:
 ```bash
 python3 -m x2py path/to/module.pyi \
   --native-objects path/to/module.o path/to/support.a \
-  --native-include-dir path/to/mod-files path/to/vendor-mod-files \
+  -I path/to/mod-files \
+  -I path/to/vendor-mod-files \
   --out-dir build/module
 ```
 
@@ -68,7 +66,7 @@ libraries, named libraries, include/module directories, and ordered link items.
 For multi-source packages, pass all ordered sources and one package directory:
 
 ```bash
-python3 -m x2py first_api.f90 second_api.f90 --pyi --out contracts
+python3 -m x2py generate --pyi first_api.f90 second_api.f90 --out contracts
 ```
 
 The generated `contracts/__init__.pyi` imports all native module leaves directly

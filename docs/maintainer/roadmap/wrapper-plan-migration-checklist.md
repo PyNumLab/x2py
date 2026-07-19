@@ -593,10 +593,10 @@ summary, the exhaustive matrix, and the test tree disagree.
 
 | Status | Collected nodes |
 | --- | ---: |
-| `wrapper-plan` | 349 |
+| `wrapper-plan` | 353 |
 | `dual-route` | 0 |
 | `legacy` | 0 |
-| `not-applicable` | 75 |
+| `not-applicable` | 76 |
 | `deferred-real-library` | 0 |
 
 #### Recorded Route Progression
@@ -696,13 +696,15 @@ already covered by the new generator.
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_fortran_wrapper_default_places_artifacts_in_invocation_directory` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_fortran_wrapper_out_dir_separates_abi_artifact_from_cli_alias` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_fortran_wrapper_out_names_importable_shared_library` | direct wrapper/build route | build/compile/link orchestration; scalar inputs/results | `wrapper-plan` |
+| `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_generate_sources_cli_writes_wrapper_sources_without_native_outputs` | source-only wrapper generation route | build integration through the completed wrapper plan without compile/link execution | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_internal_preprocessing_mode_still_builds_importable_runtime_wrapper` | direct wrapper/build route | build/compile/link orchestration; scalar inputs/results | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_native_link_plan_serializes_interleaved_item_kinds` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
+| `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_source_build_reuses_native_plan_for_additional_compile_and_link_inputs` | source-only wrapper generation route | shared source/contract native build plan; implementation compiler flags; supplemental sources; objects; libraries; include and link directories; ordered link items | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_source_build_result_records_structured_native_plan` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_verbose_mode_prints_custom_wrapper_flags` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_verbose_mode_prints_full_direct_build_commands` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_wrapper_build_rejects_empty_source_list` | non-generating: validation/failure-path assertion | build/compile/link orchestration | `not-applicable` |
-| `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_wrapper_build_rejects_makefile_verbose_combination` | non-generating: validation/failure-path assertion | build/compile/link orchestration | `not-applicable` |
+| `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_wrapper_build_rejects_generation_verbose_combination[*]` | non-generating: validation/failure-path assertion | build/compile/link orchestration | `not-applicable` |
 | `tests/wrapper/fortran/build_from_source/test_build_modes.py::test_wrapper_build_rejects_missing_source` | non-generating: validation/failure-path assertion | build/compile/link orchestration | `not-applicable` |
 | `tests/wrapper/fortran/build_from_source/test_compiler_verbose.py::*` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
 | `tests/wrapper/fortran/build_from_source/test_runtime_abi.py::*` | direct wrapper/build route | build/compile/link orchestration | `wrapper-plan` |
@@ -1068,9 +1070,9 @@ The post-Phase 4 review found that scalar lowering itself matched the legacy
 route, but the parity helper unwrapped a sole native child module before making
 assertions. That hid a public-surface difference: the legacy route retained
 Fortran modules as Python child namespaces while the plan route flattened their
-members at the extension root. The support analyzer also accepted colliding
-procedures from separate native modules and allowed the failure to reach the
-Fortran compiler.
+members at the extension root. The old route-selection validation also accepted
+colliding procedures from separate native modules and allowed the failure to
+reach the Fortran compiler.
 
 This correction is part of the completed scalar foundation rather than a new
 datatype lane:
@@ -1204,9 +1206,9 @@ and scalar external explicit interfaces; no legacy retry was added.
   as the scalar recursion regression; leave OpenMP and callbacks in their
   later lanes.
 - [x] After dual-route parity passes, remove the blanket Phase 2D production
-  deferral. Let whole-generation-unit support select `wrapper-plan` only for
-  units whose feature lanes are complete; do not add fallback or per-function
-  mixed routing.
+  deferral. Send each whole generation unit through `wrapper-plan` only after
+  its feature lanes are complete; do not add fallback or per-function mixed
+  routing.
 - [x] Move the eligible scalar matrix rows from `dual-route` or `legacy` to
   `wrapper-plan`, update the live route counts, and prove their default builds
   no longer invoke `semantic_ir_to_codegen_ast()`.
@@ -2760,7 +2762,7 @@ Descriptor views, the corrected plain allocatable module-state path, and
 persistent allocatable owner storage require standard C descriptor support.
 Generated code may read `CFI_cdesc_t` through `ISO_Fortran_binding.h` when the
 completed plan requests it. It must never guess or expose a compiler-private
-descriptor layout. Unsupported toolchains fail readiness/build with the
+descriptor layout. Unsupported toolchains fail planning/build with the
 completed owner path and requirement.
 
 - [x] Carry typed extraction and descriptor-interop actions plus required
@@ -2778,7 +2780,7 @@ completed owner path and requirement.
   and `test_pyi_manifest_records_pointer_descriptor_interop_requirements`, plus
   focused `tests/runtime/handles`, before enabling
   `pointer-descriptor-extraction`.
-- [x] Preserve the explicit readiness failure when required C descriptor
+- [x] Preserve the explicit planning failure when required C descriptor
   support is unavailable; no contiguous-copy fallback may be inferred in the
   backend.
 
@@ -2933,7 +2935,7 @@ not closure evidence for the changed view-only extraction contract. Record a
 new success signal after the Phase 7F correction.
 
 Post-correction closure evidence (2026-07-14): 214 focused runtime-handle,
-policy, readiness, lowering, legacy-dispatch, and Phase 7 direct-plan tests;
+policy, planning, lowering, legacy-dispatch, and Phase 7 direct-plan tests;
 199 complete `tests/wrapper_codegen` tests; 1,123 documentation tests; 317
 wrapper tests outside the shared real-library parameter plus the BLAS-only
 parameter; and zero locally executed LAPACK tests all passed. The wrapper
@@ -3030,7 +3032,7 @@ The following remain outside Phase 8:
 - callback-derived arguments and results, adapter procedures, and trampoline
   ownership; these remain Phase 10;
 - arrays of derived values, whose element layout, construction, destruction,
-  copy, and partial-failure behavior remain explicit readiness blockers;
+  copy, and partial-failure behavior remain explicit planning errors;
 - polymorphic results, mutable polymorphic arguments, `class(*)`, abstract
   instantiation, deferred bindings, and allocatable/pointer polymorphic
   scalars;
@@ -3312,11 +3314,11 @@ Complete the semantic contract before defining direct plan records.
 - [x] Remove the obsolete wrapper-owned pointer-result blocker. Complete a
   persistent typed pointer-holder origin whose wrapper owns the holder but not
   its target, then keep only arrays of derived values and unsupported
-  polymorphic forms on exact readiness blockers. Supported scalar module
+  polymorphic forms on exact planning errors. Supported scalar module
   allocatable/`TARGET`/pointer origins use only their explicit Phase 8H
   actions.
 - [x] Add focused parser, printer, source-conversion, ownership, accessor,
-  policy-completion, and readiness tests for every active matrix row and
+  policy-completion and planning tests for every active matrix row and
   blocker. Assert the deliberate module-proxy versus direct-address mechanism
   distinction, their shared live public behavior, and that neither changes a
   contained native handle's view-only extraction.
@@ -3883,8 +3885,8 @@ they do not expose the public callback semantics deferred to Phase 10.
   generated artifacts and runtime behavior match.
 - [x] Update the migration matrix row for each reduced unit. Keep broad units
   containing constructors, methods, inheritance, or callbacks on
-  their explicit Phase 9/10 blockers until whole-generation-unit support is
-  complete.
+  their explicit Phase 9/10 policy limitations until whole-generation-unit
+  planning is complete.
 - [x] Treat source and generated-`.pyi` default field constructors as Phase 9
   class-surface blockers. Do not select the Phase 8 route merely because the
   generated constructor was consumed into origin metadata rather than retained
@@ -3900,7 +3902,7 @@ they do not expose the public callback semantics deferred to Phase 10.
   derived-type lowering methods in consistent groups with one short comment
   above each group. Preserve typed object-kind/action matching; grouping must
   not introduce datatype inference or a second dispatcher.
-- [x] Run focused parser/printer, ownership/policy/readiness, plan/validation,
+- [x] Run focused parser/printer, ownership/policy, plan/validation,
   binding/bridge/printer, and runtime tests; relevant source/generated-`.pyi`
   wrapper parity; and regressions for scalar, string, array, and Phase 7 handle
   lanes.
@@ -3924,7 +3926,7 @@ they do not expose the public callback semantics deferred to Phase 10.
 - Post-IR origin, identity, handoff, ownership, field, lifecycle, and exact
   blocker evidence lives in
   `tests/wrapper_codegen/test_phase8_derived_types.py`, with supporting parser,
-  printer, source-conversion, ownership, and readiness suites named in
+  printer, source-conversion, ownership, and planning suites named in
   `tests/wrapper/CHECKLIST_COVERAGE.md`.
 - Public-field validation is split into named completed-policy, descriptor,
   typed object-kind, and setter checks so no single semantic-policy routine
@@ -4178,7 +4180,7 @@ For every dependency-closed sub-lane:
   method, or an overload candidate must produce an absent plan entry and cannot
   resurrect source behavior.
 - [x] Move any class-surface inference still in `ir2ast.py` into policy
-  completion. Readiness must report the owner path and exact missing decision.
+  completion. Wrapper planning must report the owner path and exact missing decision.
 - [x] Add policy tests for generated, bound, removed, overloaded, inherited,
   abstract, and invalid class surfaces before planner changes.
 
@@ -4239,7 +4241,7 @@ For every dependency-closed sub-lane:
   every candidate before lowering.
 - [x] Reject indistinguishable candidates, missing targets, incompatible self
   types, mixed constructor kinds, or ambiguous edited declarations during
-  policy/readiness or plan validation, never from candidate trial calls.
+  policy or plan validation, never from candidate trial calls.
 - [x] Add isolated semantic and compiled fixtures for direct bound construction,
   two distinguishable constructor candidates, no-match, ambiguity, target
   failure cleanup, and source/generated/edited-contract parity.
@@ -4506,7 +4508,7 @@ For every dependency-closed sub-lane:
   or unsupported result with the owner path and one exact reason.
 - [x] Complete callback signature/result/ownership policy before wrapper
   planning; lowering may only project the completed callback record.
-- [x] Add policy/readiness tests for reference-default transport, `Value(T)`,
+- [x] Add policy/planning tests for reference-default transport, `Value(T)`,
   and retained unsupported forms before planner changes.
 
 ### Phase 10B — Typed Callback Plan And Validation

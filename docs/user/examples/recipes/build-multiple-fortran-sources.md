@@ -49,10 +49,9 @@ expects for a direct native build.
 The same ordered source list can generate one combined semantic `.pyi` package:
 
 ```bash
-python3 -m x2py \
+python3 -m x2py generate --pyi \
   tests/data/fortran/wrapper/first_api.f90 \
   tests/data/fortran/wrapper/second_api.f90 \
-  --pyi \
   --out contracts/multi_api
 ```
 

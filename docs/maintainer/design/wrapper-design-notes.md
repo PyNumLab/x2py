@@ -30,7 +30,7 @@ X2PY_C_DOCS_END -->
 ## Known Semantic Gaps To Track
 
 These are source-language concepts that the parser or semantic layer can often
-see today, but that still need a stronger `.pyi`, readiness, or wrapper policy
+see today, but that still need a stronger `.pyi`, semantic, or wrapper policy
 before generated wrappers should treat them as supported behavior.
 
 <!-- X2PY_C_DOCS_START
@@ -40,12 +40,12 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | Gap | Current risk | Proposed direction |
 | &#45;&#45;- | &#45;&#45;- | &#45;&#45;- |
-| Function pointers and callbacks | The parser can capture function-pointer shape, but some C callback declarations still lack a complete wrapper policy. | Round-trip callback signatures as named `@prototype` declarations and keep wrapper readiness blocked until lifetime, threading, exception, context-pointer, and unregister policy is supplied. |
+| Function pointers and callbacks | The parser can capture function-pointer shape, but some C callback declarations still lack a complete wrapper policy. | Round-trip callback signatures as named `@prototype` declarations and make wrapper planning fail until lifetime, threading, exception, context-pointer, and unregister policy is supplied. |
 | Pointer ownership and array extents | Raw pointers, pointer-to-pointer values, unknown extents, output buffers, and arrays of pointers are ambiguous without user policy. | Keep exact pointer topology in semantic IR. Require explicit `.pyi` ownership, borrow, output, shape, nullability, descriptor handoff, and copy/readback policy before projecting to Python containers, handles, or NumPy arrays. |
-| Unions | `CUnion` identifies the native type, but it does not say which member is active or whether by-value union ABI is safe. | Continue representing named and anonymous unions explicitly with `CUnion`; require active-member/discriminant policy for high-level access. Prefer a compiled shim or target layout proof for by-value union calls; otherwise keep a readiness blocker. |
+| Unions | `CUnion` identifies the native type, but it does not say which member is active or whether by-value union ABI is safe. | Continue representing named and anonymous unions explicitly with `CUnion`; require active-member/discriminant policy for high-level access. Prefer a compiled shim or target layout proof for by-value union calls; otherwise make wrapper planning fail. |
 | Bitfields | Bit width is parser-visible, but Python field access needs target layout, signedness, padding, and read/write rules. | Preserve bit width, declared base type, containing aggregate, and layout-sensitive attributes. Generate access through a compiled C shim or target layout probe; block direct field projection when layout cannot be proven. |
 | ABI and layout attributes | Attributes such as `packed`, `aligned`, `vector_size`, `stdcall`, `ms_abi`, asm labels, and compiler-specific qualifiers can change layout or calls. | Normalize ABI facts into semantic metadata on functions, fields, and classes. Let wrappers accept only the default ABI directly; use generated shims or explicit target support for non-default calling conventions and layout-sensitive attributes. |
-| `volatile`, `_Atomic`, and extended scalar types | These require memory-order, side-effect, or target-specific scalar policy that ordinary scalar mapping cannot express. | Add explicit semantic wrappers or metadata for volatile and atomic access, defaulting to blocked wrapper readiness. Extend compiler probing for target scalar spellings such as `_BitInt`, `__int128`, and `_Float128` before assigning stable dtypes. |
+| `volatile`, `_Atomic`, and extended scalar types | These require memory-order, side-effect, or target-specific scalar policy that ordinary scalar mapping cannot express. | Add explicit semantic wrappers or metadata for volatile and atomic access, defaulting to a wrapper-planning error. Extend compiler probing for target scalar spellings such as `_BitInt`, `__int128`, and `_Float128` before assigning stable dtypes. |
 X2PY_C_DOCS_END -->
 
 ### Fortran Gaps
@@ -61,7 +61,7 @@ X2PY_C_DOCS_END -->
 <!-- X2PY_C_DOCS_START
 | `character(len=...)` and character ABI | Mapping all character forms to `String` loses length, kind, hidden length arguments, fixed buffers, and `bind(c)` byte-string behavior. | Represent character storage with length expression, kind, assumed-length status, array shape, and C-interoperability metadata. Require explicit encoding, termination, copy, and hidden-length ABI handling in wrapper policy. |
 | Polymorphic `class(...)` and unlimited polymorphism | Static extension-type inheritance is represented by Python C-type inheritance. Scalar `class(base), intent(in)` dummies are safe when the accepted dynamic types are the closed set of known wrapped base/descendant classes, but replacement, allocation, pointer association, results, and unlimited polymorphism still need stronger contracts. | Preserve the `class(...)` source fact for ordinary arguments. Infer it for the passed-object dummy of a resolved type-bound binding so generated `.pyi` does not repeat `Polymorphic` there. For scalar `class(base), intent(in)` arguments, generate concrete dispatch candidates through the normal overload dispatcher, ordered from descendants to base. Block polymorphic results, arrays, `intent(out)`/`intent(inout)`, allocatable scalars, pointer scalars, and `class(*)` until wrapper policy defines accepted dynamic types, allocation behavior, and ownership. Keep `class(*)` under the assumed-type descriptor blocker. |
-| Advanced type-bound procedure details | Default `pass`, explicit `pass(name)`, `nopass`, concrete type-bound generics, concrete type-bound operators, and concrete overrides are preserved and wrapped. Finalizers and deferred bindings still need stronger contracts. | Preserve complete binding metadata on semantic classes. Type-bound generics and operators use explicit `.pyi` `@overload("specific")` links and generated C-extension dispatch; unresolved or deferred targets are readiness blockers. |
+| Advanced type-bound procedure details | Default `pass`, explicit `pass(name)`, `nopass`, concrete type-bound generics, concrete type-bound operators, and concrete overrides are preserved and wrapped. Finalizers and deferred bindings still need stronger contracts. | Preserve complete binding metadata on semantic classes. Type-bound generics and operators use explicit `.pyi` `@overload("specific")` links and generated C-extension dispatch; unresolved or deferred targets fail at semantic conversion or wrapper planning. |
 | Derived-type layout and interoperability | `sequence`, `bind(c)`, component order, and layout remain semantic facts, but all Python wrappers are opaque. Exact monomorphic by-value dummies are called by typed Fortran bridge code; the C boundary never mirrors or byte-copies the aggregate. | Preserve the exact qualified native type and by-value fact before lowering. Keep component access in typed Fortran operations. Require compiler-proved layout only for a future direct C view, never for the opaque typed-value path. |
 X2PY_C_DOCS_END -->
 
@@ -72,7 +72,7 @@ The C frontend is a declaration and signature parser for wrapper-relevant
 interfaces. It does not need to become a full compiler-grade C implementation.
 The supported target is the API surface needed to produce or validate wrappers:
 functions, variables, structs, enums, typedefs, constants, arrays, pointers,
-callbacks, and the metadata needed for readiness decisions.
+callbacks, and the metadata needed for completed policy decisions.
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
@@ -155,7 +155,7 @@ need to understand `DECLARE_SCALE` itself.
 <!-- X2PY_C_DOCS_START
 C compiler extensions are supported when they appear in C declarations that we
 need for wrappers. Unsupported or policy-sensitive extension semantics can still
-be represented as diagnostics or readiness blockers. C++ is a separate frontend
+be represented as diagnostics or wrapper-planning errors. C++ is a separate frontend
 problem; C-compatible declarations that survive C preprocessing remain C work.
 X2PY_C_DOCS_END -->
 
@@ -305,7 +305,7 @@ deallocation, and resize remain opt-in. Pointer-array descriptor arguments need
 generated handle handoff before they can be accepted, and pointer-array results
 need stable owner storage, target lifetime, descriptor extraction, and destroy
 behavior before they can return handles. Until generated handle accessors exist,
-readiness must block wrapper generation instead of returning a view, leaking a
+wrapper planning must stop generation instead of returning a view, leaking a
 callee allocation, double-freeing a borrowed target, or inventing ownership.
 
 This means a returned derived-type wrapper owns the native instance itself, but
@@ -338,7 +338,7 @@ lifetime. Allocatable `intent(inout)` array dummies are detached from the
 caller: an input array is copied into a temporary native allocation, Fortran may
 replace it, and Python receives a new NumPy-owned array or `None`; the original
 array is not mutated. Module allocatable arrays require the native `target`
-attribute because the bridge uses `c_loc`; otherwise readiness reports a
+attribute because the bridge uses `c_loc`; otherwise wrapper planning reports a
 blocker rather than generating a copying fallback. Allocatable scalar
 derived-type replacement remains blocked until construction, replacement, and
 destruction policy is explicit.
@@ -399,7 +399,7 @@ Future `.pyi` pointer policy should make each missing fact explicit:
 
 These facts are policy, not parser facts. The parser and semantic IR should
 preserve the native pointer, target, rank, bounds, intent, and contiguity
-information they can observe, but wrapper readiness should keep reporting a
+information they can observe, but wrapper planning should keep reporting a
 blocker when the user-supplied policy is not strong enough for the requested
 Python behavior.
 

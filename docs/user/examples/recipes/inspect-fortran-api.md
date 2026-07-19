@@ -28,7 +28,7 @@ end module m1
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --parse
+python3 -m x2py parse tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output:
@@ -46,7 +46,7 @@ File: tests/data/fortran/general/basic_subroutine.f90
 
 <!-- x2py-doc-test: exact -->
 ```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --pyi
+python3 -m x2py generate --pyi tests/data/fortran/general/basic_subroutine.f90
 ```
 
 Expected output:
@@ -67,29 +67,9 @@ def add1(
 ) -> None: ...
 ```
 
-## Check Readiness
-
-<!-- x2py-doc-test: exact -->
-```bash
-python3 -m x2py tests/data/fortran/general/basic_subroutine.f90 --wrap-readiness
-```
-
-Expected output:
-
-<!-- x2py-doc-test-output -->
-```text
-File: tests/data/fortran/general/basic_subroutine.f90
-  Source: fortran
-  Semantic modules: m1
-  Wrappable: yes
-  Public functions: 1
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
-```
-
 ## Notes
 
 - Parser output is source facts, not wrapper policy.
 - `.pyi` output is the editable semantic contract.
-- Readiness detects blockers before generated wrapper code is emitted.
+- The default wrapper build reports unsupported completed policies while it
+  builds the wrapper plan.

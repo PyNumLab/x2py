@@ -83,7 +83,7 @@ or during dispatch:
 - generated class instance type and ownership for derived-type arguments;
 - callback arity and immediate-call lifetime;
 - overload distinguishability; and
-- readiness blockers for unsupported ownership, pointer, allocatable, or
+- wrapper-planning errors for unsupported ownership, pointer, allocatable, or
   projection policies.
 
 Argument errors are reported as Python exceptions instead of silently coercing

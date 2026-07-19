@@ -22,10 +22,9 @@ Use [CLI Commands Reference](cli-commands.md) for the option surface and
 Makefile mode:
 
 ```bash
-python3 -m x2py contracts/module.pyi \
+python3 -m x2py generate --makefile contracts/module.pyi \
   --native-fortran-sources native/module.f90 \
   --out-dir build/module \
-  --makefile \
   --json
 ```
 
@@ -37,26 +36,37 @@ Stable top-level fields:
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version` | Manifest schema version. The current supported value is `1`. |
+| `schema_version` | Manifest schema version. The current supported value is `2`. |
 | `build_kind` | Manifest kind. The current supported value is `pyi-wrapper`. |
 | `entry_contract` | Entry semantic `.pyi` path used for the build. |
 | `contract_paths` | Complete discovered `.pyi` import graph. Replay fails if the current graph differs. |
 | `extension` | Requested and resolved Python extension names. |
 | `output` | Output directory, shared-library path, and strict-name setting. |
-| `compiler` | Compiler profile and wrapper/native flag values recorded by the build. |
+| `compiler` | Input-language compiler executable, compiler profile, and wrapper/native flag values recorded by the build. |
 | `native_build_plan` | Native compilation units, produced objects, prebuilt artifacts, module/include directories, library directories, and ordered link items. |
 
 Relative paths are resolved relative to the manifest directory during replay.
-Use:
+Schema 2 records the selected input-language compiler executable and the
+build-wide include directories needed to reproduce native, bridge, binding,
+and link commands; schema 1 manifests are no longer accepted. Use:
 
 ```bash
 python3 -m x2py --build-manifest build/module/x2py-build.json
-python3 -m x2py --build-manifest build/module/x2py-build.json --makefile
+python3 -m x2py generate --makefile --build-manifest build/module/x2py-build.json
 ```
 
-The first command rebuilds from the manifest. The second regenerates
-`Makefile.x2py` from the manifest without positional contracts or repeated
-native build flags.
+The first command reads the existing manifest and rebuilds from it; it does not
+generate a manifest. The second also reads the existing manifest, then
+regenerates `Makefile.x2py` without positional contracts or repeated native
+build flags. The preceding `generate --makefile` command is what writes a new
+`x2py-build.json`.
+
+Replay accepts only settings that are defined as overrides: `--out`,
+`--compiler`, `-I`/`--include-dir`, `--json`, `--verbose`, `--no-color`, and
+`--debug`/`--debug-traceback`. The manifest remains authoritative for its
+output directory, language, preprocessing recipe, wrapper behavior, native
+inputs, and ordered link plan. Passing one of those saved settings again is an
+error rather than an ignored command-line value.
 
 ## `Makefile.x2py`
 

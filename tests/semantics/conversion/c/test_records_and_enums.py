@@ -23,14 +23,11 @@ from tests.semantics.conversion.c._support import (
     SemanticField,
     SemanticModule,
     SemanticOrigin,
-    SemanticStorageContract,
     SemanticType,
     SemanticVariable,
-    _blocker,
     _c_origin,
     _function,
     asdict,
-    assess_semantic_wrap_readiness,
     c_file_to_semantic_module,
     c_file_to_semantic_modules,
     c_project_to_semantic_module,
@@ -77,9 +74,6 @@ void context_destroy(struct context *ctx);
     assert context_create.return_type.storage.kind == "reference"
     assert "class context(CStruct, Opaque):" in emit_module(module)
 
-    report = assess_semantic_wrap_readiness(module, source="structs.h")
-    assert report["wrappable"] is True
-
 
 def test_c2ir_private_include_types_remain_available_as_opaque_handles():
     parsed = parse_c_file(
@@ -124,7 +118,6 @@ void use_context(struct private_context *ctx);
         stubs["private"]
         == "from x2py.contracts import CStruct, Opaque\n\nclass private_context(CStruct, Opaque):\n    pass"
     )
-    assert assess_semantic_wrap_readiness(module, source="api.h")["wrappable"] is True
 
 
 def test_c2ir_preserves_anonymous_aggregate_members_as_nested_c_classes():
@@ -169,7 +162,7 @@ def test_c2ir_preserves_anonymous_aggregate_members_as_nested_c_classes():
     ]
 
 
-def test_c2ir_private_include_opaque_struct_by_value_remains_blocked():
+def test_c2ir_private_include_opaque_struct_by_value_preserves_the_external_reference():
     parsed = parse_c_file(
         """
 # 1 "private.h" 1
@@ -188,18 +181,8 @@ void use_context(struct private_context ctx);
     }
 
     module = c_file_to_semantic_modules(parsed)[0]
-    report = assess_semantic_wrap_readiness(module, source="api.h")
-
-    assert report["wrappable"] is False
-    assert "c_opaque_struct_by_value" in {blocker["code"] for blocker in report["wrappability_blockers"]}
     semantic_type = _function(module, "use_context").arguments[0].semantic_type
-    assert semantic_type.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_opaque_struct_by_value",
-            "Opaque C structs can only cross wrapper boundaries through explicit pointer or handle policy.",
-            {"owner": "private_context", "type": "private_context"},
-        )
-    ]
+    assert semantic_type.metadata["external_type_ref"]["representation"] == "opaque"
 
 
 def test_c2ir_externalizes_only_private_opaque_classes_with_external_origins():
@@ -236,9 +219,6 @@ def test_c2ir_externalizes_only_private_opaque_classes_with_external_origins():
         "wrapped": False,
         "representation": "opaque",
     }
-    explicit_value = SemanticType(name="private_external", storage=SemanticStorageContract())
-    converter._add_external_opaque_by_value_blocker(explicit_value)
-    assert explicit_value.metadata["readiness_blockers"][0]["code"] == "c_opaque_struct_by_value"
 
 
 def test_c2ir_converts_enum_constants_and_simple_macro_constants():
@@ -424,7 +404,6 @@ def test_c2ir_uses_standard_type_probe_opaque_handle_facts():
         source_kind="standard_type",
         source_type="FILE",
     )
-    assert assess_semantic_wrap_readiness(module, source="stdio_api.h")["wrappable"] is True
 
 
 def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_aliases():
@@ -469,41 +448,16 @@ def test_c2ir_models_pointer_to_arrays_unknown_extents_unions_and_anonymous_alia
     assert direct_array.rank == 1
     assert direct_array.shape == ["2"]
     assert direct_array.storage.array.shape == ["2"]
-    assert ownerless_array.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_array_extent_ambiguous",
-            "C array parameters with unknown extents need explicit semantic shape policy.",
-            {"owner": "int values[]", "type": "int values[]"},
-        )
-    ]
-    assert named_unknown_array.metadata["readiness_blockers"][0]["items"] == [
-        {"owner": "named_values", "type": "int named_values[]"}
-    ]
+    assert ownerless_array.shape == [":"]
+    assert named_unknown_array.shape == [":"]
     assert pointer_array.storage.pointer_depth == 1
     assert pointer_array.storage.array.source_shape == [":"]
     assert pointer_array.storage.metadata["c_pointer_to_array"] is True
-    assert pointer_array.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_array_extent_ambiguous",
-            "C array parameters with unknown extents need explicit semantic shape policy.",
-            {"owner": "matrix", "type": "double (*)[]"},
-        )
-    ]
     assert pointer_matrix.name == "Int"
     assert pointer_matrix.shape == ["2", "3"]
     assert union_type.name == "choice"
     assert union_type.dtype == "choice"
-    assert union_type.metadata == {
-        "c_kind": "union",
-        "incomplete": False,
-        "readiness_blockers": [
-            _blocker(
-                "c_union_unsupported",
-                "C union arguments and returns require explicit semantic policy before wrapping.",
-                {"owner": "selected", "type": "union choice"},
-            )
-        ],
-    }
+    assert union_type.metadata == {"c_kind": "union", "incomplete": False}
     assert asdict(union_type.origin) == _c_origin(
         native_name="union choice",
         source_kind="type",
@@ -567,10 +521,10 @@ def test_c2ir_preserves_nested_unresolved_owners_and_private_opaque_bases():
     )
     converter._apply_include_exposure(private_module, private_file)
 
-    assert nested_array.metadata["readiness_blockers"][0]["items"] == [{"owner": "values", "type": "missing_t"}]
-    assert nested_pointer.metadata["readiness_blockers"][0]["items"] == [{"owner": "value", "type": "missing_t"}]
-    assert nested_pointer_array.metadata["readiness_blockers"][0]["items"] == [{"owner": "matrix", "type": "missing_t"}]
-    assert singleton.metadata["readiness_blockers"][0]["items"] == [{"owner": "singleton", "type": "missing_t"}]
+    assert nested_array.name == "missing_t"
+    assert nested_pointer.name == "missing_t"
+    assert nested_pointer_array.name == "missing_t"
+    assert singleton.name == "missing_t"
     assert private_class.visibility == "private"
     assert private_class.base_classes == ["Opaque"]
 
@@ -611,31 +565,11 @@ def test_c2ir_marks_incomplete_by_value_structs_and_preserves_initializer_locati
     named_variable = converter.visit(CVariable(name="handle", type=incomplete))
     return_type = converter.visit(CFunction(name="open_handle", result_type=incomplete)).return_type
 
-    assert parameter.semantic_type.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_incomplete_struct_by_value",
-            "Incomplete C structs can only be wrapped through explicit pointer or opaque-handle policy.",
-            {"owner": "open.handle", "type": "handle"},
-        )
-    ]
+    assert parameter.semantic_type.metadata["incomplete"] is True
     assert pointer_parameter.semantic_type.storage.kind == "pointer"
-    assert "readiness_blockers" not in pointer_parameter.semantic_type.metadata
     assert array_parameter.semantic_type.storage.kind == "array"
-    assert "readiness_blockers" not in array_parameter.semantic_type.metadata
-    assert named_variable.semantic_type.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_incomplete_struct_by_value",
-            "Incomplete C structs can only be wrapped through explicit pointer or opaque-handle policy.",
-            {"owner": "handle", "type": "handle"},
-        )
-    ]
-    assert return_type.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_incomplete_struct_by_value",
-            "Incomplete C structs can only be wrapped through explicit pointer or opaque-handle policy.",
-            {"owner": "open_handle.return", "type": "handle"},
-        )
-    ]
+    assert named_variable.semantic_type.metadata["incomplete"] is True
+    assert return_type.metadata["incomplete"] is True
     assert variable.name == "<anonymous>"
     assert variable.default_value == "factory()"
     assert variable.origin.source_location["filename"] == "api.h"

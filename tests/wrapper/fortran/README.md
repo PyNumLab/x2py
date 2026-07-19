@@ -7,7 +7,7 @@ real-library subject reads the shared BLAS and LAPACK corpora from
 `.pyi` contracts stay beside the tests that consume them.
 
 Generated `.pyi` packages used as runtime wrapper contracts are checked
-fixtures. A test that runs `x2py --pyi` for a wrapper runtime scenario compares
+fixtures. A test that runs `x2py generate --pyi` for a wrapper runtime scenario compares
 the generated package against `contracts/<case>/` before using it. There is no
 extra `contracts/generated/` layer; `contracts/` is already the generated
 contract fixture root. Modified, handwritten, and invalid contracts use sibling

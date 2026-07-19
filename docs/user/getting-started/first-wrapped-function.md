@@ -54,7 +54,7 @@ The checked call returns the Python value `7.5`.
 Before compiling, print the semantic contract:
 
 ```bash
-python3 -m x2py scale.f90 --pyi
+python3 -m x2py generate --pyi scale.f90
 ```
 
 The generated declaration is:

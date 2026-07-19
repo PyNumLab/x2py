@@ -1,7 +1,7 @@
 # Semantics Package
 
 This package owns the language-neutral contract between native parser facts,
-editable `.pyi` files, readiness diagnostics, and wrapper code generation.
+editable `.pyi` files, policy completion, and wrapper code generation.
 
 ## Entry Points
 
@@ -16,7 +16,6 @@ editable `.pyi` files, readiness diagnostics, and wrapper code generation.
 | `pyi_metadata.py` | Semantic `.pyi` loader workflow metadata. |
 | `native_contract.py` | Source-free native ABI and placement validation. |
 | `policy_completion.py` | Complete ownership, transfer, destruction, mutability/writeback, projection, nullability, release, storage, Python-barrier, native-barrier, and accessor decisions after full signatures are known. |
-| `readiness.py` | Support blockers and readiness reports before wrapper codegen. |
 | `ir2ast.py` | Semantic IR to codegen AST lowering for wrapper generation; consumes completed policies. |
 
 ## Pipeline Position
@@ -26,7 +25,7 @@ C parser facts, Fortran parser facts, or parsed .pyi AST
   -> semantic modules
   -> semantic policy completion
        -> complete storage, Python-barrier, and native-barrier policy
-  -> readiness blockers or codegen AST
+  -> wrapper planning or codegen AST
 ```
 
 `ir2ast.py` is the boundary where semantic contracts become generated-wrapper
@@ -57,7 +56,7 @@ Public syntax uses the Python boundary shape directly, keeps `Final[T]` for
 module constants, and requires hidden native literals inside `@native_call` to
 be typed expressions such as `Int32(1)` or `String[1]("N")`.
 
-`readiness.py`, `ir2ast.py`, bridges, and bindings consume those decisions
+`ir2ast.py`, bridges, and bindings consume those decisions
 instead of making local policy guesses. Bridge and binding dispatch is strict:
 an unregistered barrier action or object-kind/action pair is an error rather
 than a fallback. Model-node dispatch uses `x2py.utilities.visitor.ClassVisitor` and the

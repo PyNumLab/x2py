@@ -29,5 +29,5 @@ callers may also use the stable parser functions and models exported from the
 - Semantic handoff tests: `tests/semantics/conversion/fortran/`
 
 Parser support alone does not establish native binding support. Wrapper
-features need semantic lowering, readiness policy, codegen, compilation, and
+features need semantic lowering, completed policy, codegen, compilation, and
 runtime tests.

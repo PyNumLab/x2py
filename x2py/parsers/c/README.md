@@ -26,8 +26,7 @@ the package root.
 - Source navigation: `docs/developer/source-map.md`, `docs/developer/feature-to-code-map.md`
 - Parser tests: `tests/parser/c/`
 - Semantic handoff tests: `tests/semantics/conversion/c/`
-- Readiness tests: `tests/semantics/readiness/test_c_readiness.py`
 
 Runtime C-input wrapping is future backend work. Keep C docs clear about the
-current boundary: parse, semantic IR, `.pyi`, and readiness are implemented;
+current boundary: parse, semantic IR, and `.pyi` are implemented;
 compiled wrappers for user C inputs are not.

@@ -12,7 +12,7 @@ status: maintained
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-Use this recipe when you want source facts, semantic IR, `.pyi`, or readiness
+Use this recipe when you want source facts, semantic IR, or `.pyi`
 for a C header. This is an inspection workflow, not a runtime C wrapper build.
 X2PY_C_DOCS_END -->
 
@@ -85,41 +85,12 @@ python3 -m x2py tests/data/c/general/math_api.h &#45;&#45;language c &#45;&#45;p
 ```
 X2PY_C_DOCS_END -->
 
-<!-- X2PY_C_DOCS_START
-## Check Readiness
-X2PY_C_DOCS_END -->
-
-<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test: exact -->
-<!-- X2PY_C_DOCS_START
-```bash
-python3 -m x2py tests/data/c/general/math_api.h &#45;&#45;language c &#45;&#45;wrap-readiness
-```
-X2PY_C_DOCS_END -->
-
-<!-- X2PY_C_DOCS_START
-Expected output:
-X2PY_C_DOCS_END -->
-
-<!-- X2PY_C_DOCS_DISABLED: x2py-doc-test-output -->
-<!-- X2PY_C_DOCS_START
-```text
-File: tests/data/c/general/math_api.h
-  Source: c
-  Semantic modules: math_api
-  Wrappable: yes
-  Public functions: 4
-  Public classes: 0
-  Public variables: 0
-  No semantic readiness blockers detected.
-```
-X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
 ## Notes
 X2PY_C_DOCS_END -->
 
 <!-- X2PY_C_DOCS_START
-`Wrappable: yes` means the semantic contract has no known readiness blockers.
-It does not mean x2py currently has a runtime wrapper backend for user C
+Inspection does not promise that a runtime wrapper backend exists for user C
 libraries.
 X2PY_C_DOCS_END -->

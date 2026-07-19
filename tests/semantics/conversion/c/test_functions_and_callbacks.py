@@ -18,7 +18,6 @@ from tests.semantics.conversion.c._support import (
     CVariable,
     CVoid,
     CVolatile,
-    _blocker,
     _c_origin,
     _function,
     asdict,
@@ -177,17 +176,8 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
     )
     assert field.semantic_type.metadata["c_primitive"] == "int"
     assert field.semantic_type.metadata["c_type_fact"]["bits"] == 32
-    assert field.semantic_type.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_bitfield_unsupported",
-            "C bitfields require explicit semantic policy before wrapping.",
-            {"owner": "bits", "field": "bits", "bit_width": "3"},
-        )
-    ]
     assert field.visibility == "public"
-    assert unresolved_variable.semantic_type.metadata["readiness_blockers"][0]["items"] == [
-        {"owner": "missing_value", "type": "missing_t"}
-    ]
+    assert unresolved_variable.semantic_type.name == "missing_t"
     assert asdict(field.origin) == _c_origin(
         native_name="bits",
         source_kind="variable",
@@ -200,20 +190,9 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         "specifiers": [],
         "prototype_style": "unspecified",
         "is_definition": False,
-        "readiness_blockers": [
-            _blocker(
-                "c_unspecified_function_parameters",
-                "C functions declared without a prototype do not provide complete parameter types.",
-                {"owner": "legacy", "function": "legacy"},
-            )
-        ],
     }
     assert qualified.name == "Int8"
     assert qualified.metadata["c_char_policy"] == "implementation-defined signed 8-bit code unit"
-    assert {blocker["code"] for blocker in qualified.metadata["readiness_blockers"]} == {
-        "c_volatile_unsupported",
-        "c_atomic_unsupported",
-    }
     assert qualified.origin.metadata["c_type"] == "CChar"
     assert qualified.origin.metadata["qualifiers"] == ["const", "volatile", "_Atomic"]
     assert unnamed.name == "arg0"
@@ -224,18 +203,10 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         "column": 5,
         "source_line": "int located",
     }
-    assert ownerless_missing_parameter.semantic_type.metadata["readiness_blockers"][0]["items"] == [
-        {"owner": "<function>.missing", "type": "missing_t"}
-    ]
+    assert ownerless_missing_parameter.semantic_type.name == "missing_t"
     assert callback_parameter.semantic_type.metadata == {"source_type": "void (*)(int)"}
     assert unnamed_function.projection[0].native_name == "arg0"
-    assert variadic.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_variadic_function",
-            "Variadic C functions require explicit semantic .pyi policy before wrapping.",
-            {"owner": "log_value", "function": "log_value"},
-        )
-    ]
+    assert variadic.metadata["prototype_style"] == "prototype"
     assert direct_callback.metadata == {"source_type": "void (*)(int)"}
     assert asdict(direct_callback.origin) == _c_origin(
         source_kind="function_pointer",
@@ -250,13 +221,7 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         source_type="CVoid",
         metadata={"c_type": "CVoid"},
     )
-    assert missing_parameter.semantic_type.metadata["readiness_blockers"] == [
-        _blocker(
-            "c_unresolved_type",
-            "C type references must resolve before wrapping.",
-            {"owner": "load.missing", "type": "missing_t"},
-        )
-    ]
+    assert missing_parameter.semantic_type.name == "missing_t"
     assert loose_struct.name == "loose"
     assert loose_struct.dtype == "loose"
     assert loose_struct.metadata == {"c_kind": "struct", "incomplete": False}
@@ -266,10 +231,6 @@ def test_c2ir_converts_qualifiers_callbacks_bitfields_and_unspecified_functions(
         source_type="struct loose",
         metadata={"c_type": "CStruct"},
     )
-    assert missing_return.return_type.metadata["readiness_blockers"][0]["items"] == [
-        {"owner": "missing_return.return", "type": "missing_t"}
-    ]
+    assert missing_return.return_type.name == "missing_t"
     assert converter._return_type(CVoid(), owner="nothing") is None
-    assert CToIRConverter().visit(CTypedef(name="absent_t")).metadata["readiness_blockers"][0]["code"] == (
-        "c_unresolved_typedef"
-    )
+    assert CToIRConverter().visit(CTypedef(name="absent_t")).name == "absent_t"

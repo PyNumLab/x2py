@@ -121,7 +121,7 @@ assert module.next_local() == np.int32(2)
 Use `--pyi` to inspect names and types before building:
 
 ```bash
-python3 -m x2py module_state.f90 --pyi
+python3 -m x2py generate --pyi module_state.f90
 ```
 
 The generated package entry preserves the module namespace:

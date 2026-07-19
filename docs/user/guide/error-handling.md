@@ -8,11 +8,17 @@ status: maintained
 
 # Error Handling
 
-Failures occur at different layers. Parse and readiness diagnostics reject an
-unsafe contract before code generation; compiler and linker failures occur
-during the native build; Python exceptions report wrapper validation and
-conversion failures; some native termination and callback failures terminate
-the process.
+Failures occur at distinct stages. Parsing rejects syntax that x2py cannot
+model; semantic conversion records contract facts; post-IR policy completion
+records every wrapper decision and its precise unsupported reason; wrapper
+planning retrieves those completed decisions and raises at the owning
+declaration; compilation and linking diagnose native-language and build failures;
+Python calls validate values at runtime. Some native termination and callback
+failures terminate the process.
+
+This is the general error guide for x2py. The Diagnostic Codes reference lists
+stable parser and preprocessing categories; this page explains what to do at
+each stage.
 
 ## Complete Status-Projection Example
 
@@ -41,7 +47,7 @@ end module solver
 Generate an editable contract package:
 
 ```bash
-python3 -m x2py solver.f90 --pyi --out contracts/solver
+python3 -m x2py generate --pyi solver.f90 --out contracts/solver
 ```
 
 In `contracts/solver/solver.pyi`, keep the generated native types and add
@@ -94,15 +100,43 @@ workflow for changing a generated contract.
 
 | Layer | Typical failure | User action |
 | --- | --- | --- |
-| preprocessing or parsing | invalid syntax, missing include, unsupported declaration | read the diagnostic code and source location |
-| semantic readiness | unsupported ownership, ABI, pointer, array, or callback policy | check the feature matrix; do not force code generation |
-| wrapper generation | invalid name, ambiguous overload, inconsistent contract | inspect generated `.pyi` and declaration path |
+| preprocessing or parsing | missing include, unsupported parser syntax, or a declaration x2py cannot model | read the diagnostic code and source location |
+| semantic conversion | unresolved contract type, missing compile-time fact, or incomplete imported contract data | correct the source facts or edit the generated `.pyi` contract |
+| post-IR policy completion and wrapper planning | unsupported ownership, ABI, pointer, array, callback, overload, or storage decision; inconsistent completed policy | read the owner path and reason in the wrapper-build error; planning does not retry another route |
 | compilation or linking | missing compiler, module, object, symbol, or library | rerun with `--verbose`; inspect the native build plan |
 | import | missing shared dependency, wrong ABI, wrong output path | inspect the shared library and runtime environment |
 | Python call | wrong dtype, rank, shape, layout, writeability, class, or callable | pass a value matching the generated contract |
 | native execution | application status output | return it normally or opt into documented `@raises` policy |
 | native termination | `stop`, `error stop`, abort, fatal finalizer | isolate risky calls; Python cannot recover |
 | callback boundary | callback exception or invalid result | traceback is printed and the host process aborts |
+
+## Wrapper Build Errors
+
+The default wrapper build is the only compiled-wrapper decision path. With no
+subcommand, it completes semantic policy, projects the typed wrapper plan,
+generates source, and invokes the native build. There is no separate wrapper
+selector, preflight report, or support-analysis command to run.
+
+An unsupported completed policy stops at its owner while the wrapper build
+follows that path. For example:
+
+```text
+x2py: error: Semantic class 'shapes.shape' has unsupported derived-type policy: abstract derived types need a non-instantiable Python class policy
+```
+
+The owner path points at the declaration whose completed decision cannot be
+implemented. Fix that contract in the source or editable `.pyi`, then rerun
+the same wrapper-build command.
+
+Examples include a missing completed policy, an unsupported derived-type shape,
+an incomplete callback contract, or an unsafe ownership/array layout. These are
+ordinary errors from the real policy-completion or planning call, not entries in
+a separate report.
+
+Do not duplicate native-language validation in these stages. If x2py has enough
+information to build the semantic contract and plan, errors such as an invalid
+defined operator or invalid native source syntax remain the native compiler's
+responsibility. The compiler command and diagnostic are shown by `--verbose`.
 
 ## Python Exception Types
 

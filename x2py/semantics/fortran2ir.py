@@ -692,7 +692,7 @@ class FortranToIRConverter(ClassVisitor):
             local_types=frozenset({dtype.name.lower()}),
         )
         methods = self._bound_methods(dtype, lookup)
-        overload_sets, overload_blockers = self._bound_overload_sets(dtype, methods)
+        overload_sets = self._bound_overload_sets(dtype, methods)
         type_attributes = list(dict.fromkeys(str(attr).casefold() for attr in dtype.attributes))
         metadata = {
             "fortran_type_attributes": type_attributes,
@@ -705,15 +705,16 @@ class FortranToIRConverter(ClassVisitor):
             metadata["fortran_bind_c"] = True
         if "sequence" in type_attributes:
             metadata["fortran_sequence"] = True
-        readiness_blockers = [
-            *self._type_attribute_blockers(dtype),
-            *overload_blockers,
+        deferred_bindings = [
+            str(binding.get("name") or "<anonymous>")
+            for binding in getattr(dtype, "procedure_bindings", ()) or ()
+            if "deferred" in {str(attr).casefold() for attr in binding.get("attrs", ())}
         ]
+        if deferred_bindings:
+            metadata["fortran_deferred_bindings"] = deferred_bindings
         final_procedures = list(getattr(dtype, "final_procedures", []))
         if final_procedures:
             metadata["fortran_final_procedures"] = final_procedures
-        if readiness_blockers:
-            metadata["readiness_blockers"] = readiness_blockers
         return SemanticClass(
             name=dtype.name,
             native_name=dtype.name,
@@ -793,15 +794,13 @@ class FortranToIRConverter(ClassVisitor):
         for semantic_cls in semantic_classes:
             semantic_cls.visibility = self._symbol_visibility(module, semantic_cls.name)
 
-        overload_sets, overload_blockers = self._module_overload_sets(
+        overload_sets = self._module_overload_sets(
             module,
             procedure_lookup,
             context,
             semantic_classes,
         )
         metadata = {}
-        if overload_blockers:
-            metadata["readiness_blockers"] = overload_blockers
         common_variables = {name.casefold() for name in module.common_variables}
         enum_constants = [
             self.visit(enumerator, enum=enum)
@@ -1533,39 +1532,14 @@ class FortranToIRConverter(ClassVisitor):
             )
         return methods
 
-    @staticmethod
-    def _type_attribute_blockers(dtype: FortranDerivedType) -> list[dict[str, object]]:
-        blockers: list[dict[str, object]] = []
-        type_attrs = {str(attr).casefold() for attr in getattr(dtype, "attributes", ())}
-        if "abstract" in type_attrs:
-            blockers.append(
-                {
-                    "code": "fortran_abstract_type_policy_missing",
-                    "message": "Fortran abstract types need a non-instantiable Python base-class policy before wrapper generation.",
-                    "items": [{"owner": dtype.name, "item": dtype.name}],
-                }
-            )
-        for binding in getattr(dtype, "procedure_bindings", ()) or ():
-            attrs = {str(attr).casefold() for attr in binding.get("attrs", ())}
-            if "deferred" in attrs:
-                blockers.append(
-                    {
-                        "code": "fortran_deferred_type_bound_procedure_unsupported",
-                        "message": "Fortran deferred type-bound procedures need an explicit override and dispatch policy before wrapper generation.",
-                        "items": [{"owner": dtype.name, "item": binding.get("name")}],
-                    }
-                )
-        return blockers
-
     def _module_overload_sets(
         self,
         module: FortranModule,
         procedure_lookup: dict[str, SemanticFunction],
         context: _DerivedTypeContext,
         semantic_classes: list[SemanticClass],
-    ) -> tuple[list[ProcedureOverloadSet], list[dict[str, object]]]:
+    ) -> list[ProcedureOverloadSet]:
         overload_sets: list[ProcedureOverloadSet] = []
-        blockers: list[dict[str, object]] = []
         class_map = {semantic_class.name.casefold(): semantic_class for semantic_class in semantic_classes}
         for interface in module.interfaces:
             if not interface.name or interface.abstract:
@@ -1585,47 +1559,34 @@ class FortranToIRConverter(ClassVisitor):
                 visibility=self._symbol_visibility(module, interface.name),
             )
             if missing or not procedures:
-                blockers.append(self._unresolved_generic_target_blocker(module.name, interface.name, missing))
                 if self._is_procedure_generic_name(interface.name):
                     overload_sets.append(ProcedureOverloadSet(interface.name))
                 continue
             if self._is_procedure_generic_name(interface.name):
                 if interface.name.casefold() in class_map:
-                    blockers.append(self._unsupported_generic_constructor_blocker(module.name, interface.name))
-                    continue
+                    raise ValueError(
+                        f"Fortran semantic conversion cannot represent generic constructor "
+                        f"{module.name}.{interface.name!s}; constructor projection is not implemented"
+                    )
                 overload_sets.append(self._normal_overload_set(interface.name, procedures))
                 continue
-            defined_sets, defined_blockers = self._defined_overload_sets(
+            defined_sets = self._defined_overload_sets(
                 interface.name,
                 procedures,
                 class_map,
-                owner=module.name,
             )
             self._apply_assignment_projection_to_originals(interface.name, procedures, procedure_lookup, class_map)
             for semantic_class, class_sets in defined_sets:
                 self._merge_overload_sets(semantic_class.overload_sets, class_sets)
-            blockers.extend(defined_blockers)
-        return overload_sets, blockers
-
-    @staticmethod
-    def _unsupported_generic_constructor_blocker(owner: str, name: str) -> dict[str, object]:
-        return {
-            "code": "fortran_generic_constructor_unsupported",
-            "message": (
-                "Fortran generic constructor interfaces are not mapped to Python class construction; "
-                "use the generated field constructor until an explicit constructor projection is implemented."
-            ),
-            "items": [{"owner": owner, "item": name, "generic": name}],
-        }
+        return overload_sets
 
     def _bound_overload_sets(
         self,
         dtype: FortranDerivedType,
         methods: list[SemanticMethod],
-    ) -> tuple[list[ProcedureOverloadSet], list[dict[str, object]]]:
+    ) -> list[ProcedureOverloadSet]:
         lookup = {method.name.casefold(): method for method in methods}
         overload_sets: list[ProcedureOverloadSet] = []
-        blockers: list[dict[str, object]] = []
         for binding in dtype.generic_bindings:
             name = str(binding["name"])
             attrs = {str(attr).casefold() for attr in binding.get("attrs", ())}
@@ -1636,7 +1597,6 @@ class FortranToIRConverter(ClassVisitor):
                 visibility=visibility,
             )
             if missing or not procedures:
-                blockers.append(self._unresolved_generic_target_blocker(dtype.name, name, missing))
                 if self._is_procedure_generic_name(name):
                     overload_sets.append(ProcedureOverloadSet(name))
                 continue
@@ -1644,11 +1604,10 @@ class FortranToIRConverter(ClassVisitor):
                 overload_sets.append(self._normal_overload_set(name, procedures))
                 continue
             placeholder = SemanticClass(dtype.name)
-            defined_sets, defined_blockers = self._defined_overload_sets(
+            defined_sets = self._defined_overload_sets(
                 name,
                 procedures,
                 {dtype.name.casefold(): placeholder},
-                owner=dtype.name,
             )
             self._apply_assignment_projection_to_originals(
                 name,
@@ -1657,8 +1616,7 @@ class FortranToIRConverter(ClassVisitor):
                 {dtype.name.casefold(): placeholder},
             )
             self._merge_overload_sets(overload_sets, defined_sets[0][1] if defined_sets else ())
-            blockers.extend(defined_blockers)
-        return overload_sets, blockers
+        return overload_sets
 
     def _apply_assignment_projection_to_originals(
         self,
@@ -1724,26 +1682,15 @@ class FortranToIRConverter(ClassVisitor):
         generic_name: str,
         procedures: list[SemanticFunction],
         classes: dict[str, SemanticClass],
-        *,
-        owner: str,
-    ) -> tuple[list[tuple[SemanticClass, list[ProcedureOverloadSet]]], list[dict[str, object]]]:
+    ) -> list[tuple[SemanticClass, list[ProcedureOverloadSet]]]:
         grouped: dict[str, tuple[SemanticClass, dict[str, ProcedureOverloadSet]]] = {}
-        blockers: list[dict[str, object]] = []
         kind, token = self._defined_generic_identity(generic_name)
         if kind is None:
-            return [], [self._invalid_defined_generic_blocker(owner, generic_name, "unsupported generic name")]
+            return []
 
         for procedure in procedures:
             error = self._defined_procedure_error(kind, token, procedure, classes)
             if error is not None:
-                blockers.append(
-                    self._invalid_defined_generic_blocker(
-                        owner,
-                        generic_name,
-                        error,
-                        procedure=procedure.native_name or procedure.name,
-                    )
-                )
                 continue
             python_bindings = self._defined_python_bindings(
                 kind,
@@ -1764,7 +1711,7 @@ class FortranToIRConverter(ClassVisitor):
                     bound_position=bound_position,
                 )
                 overload_set.procedures.append(candidate)
-        return [(semantic_class, list(items.values())) for semantic_class, items in grouped.values()], blockers
+        return [(semantic_class, list(items.values())) for semantic_class, items in grouped.values()]
 
     @staticmethod
     def _defined_generic_identity(name: str) -> tuple[str | None, str]:
@@ -1978,47 +1925,6 @@ class FortranToIRConverter(ClassVisitor):
                 candidate.visibility = visibility
             procedures.append(candidate)
         return procedures, missing
-
-    @staticmethod
-    def _unresolved_generic_target_blocker(
-        owner: str,
-        name: str,
-        missing: list[str],
-    ) -> dict[str, object]:
-        detail = "references missing specific procedure(s)" if missing else "does not declare any specific procedures"
-        return {
-            "code": "fortran_generic_target_unresolved",
-            "message": "Every Fortran generic target must resolve before wrapper generation.",
-            "items": [
-                {
-                    "owner": owner,
-                    "generic": name,
-                    "detail": detail,
-                    "missing_targets": list(missing),
-                }
-            ],
-        }
-
-    @staticmethod
-    def _invalid_defined_generic_blocker(
-        owner: str,
-        name: str,
-        detail: str,
-        *,
-        procedure: str | None = None,
-    ) -> dict[str, object]:
-        item: dict[str, object] = {
-            "owner": owner,
-            "generic": name,
-            "detail": detail,
-        }
-        if procedure is not None:
-            item["procedure"] = procedure
-        return {
-            "code": "fortran_defined_generic_invalid",
-            "message": "Defined operators and assignment must satisfy the Python wrapper contract.",
-            "items": [item],
-        }
 
     @staticmethod
     def _passed_object_argument(
