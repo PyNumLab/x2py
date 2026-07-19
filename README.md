@@ -16,12 +16,15 @@ X2PY_C_DOCS_END -->
 [![Quality](https://github.com/PyNumLab/x2py/actions/workflows/quality.yml/badge.svg?branch=main)](https://github.com/PyNumLab/x2py/actions/workflows/quality.yml)
 [![codecov](https://codecov.io/gh/PyNumLab/x2py/graph/badge.svg?token=QZRRCS5YO6)](https://codecov.io/gh/PyNumLab/x2py)
 
-## Quick Start
+## Installation & Quick Start
 
-x2py requires Python 3.10 or newer. Install a checkout and inspect the CLI:
+Requires **Python 3.10+**.
 
 ```bash
-python3 -m pip install -e .
+# Install in development mode
+pip install -e .
+
+# See all available commands
 python3 -m x2py --help
 ```
 
@@ -52,10 +55,11 @@ python3 -m x2py scale.f90
 ```
 
 By default, x2py writes generated build artifacts, including the ABI-suffixed
-extension, under `__x2py__/` in the directory where you run the command. A
-direct CLI build also writes a stable `<module>.so` import alias there:
+extension, under `__x2py__/` in the directory where you run the command. It
+also creates a stable `scale.so` import alias alongside your source file, so
+you can simply `import scale`.
 
-```text
+```bash
 .
   scale.f90
   scale.so
@@ -549,45 +553,21 @@ ownership, callback lifetime, ABI shims, or Python-visible projections.
 
 ## Documentation
 
-- [Documentation](docs/index.md): browse getting-started guides, tutorials,
-  examples, reference material, language support, and troubleshooting.
-- [Getting started](docs/user/getting-started/index.md): installation, verification,
-  standalone procedures, modules, and the normal rebuild workflow.
-- [User guide](docs/user/guide/index.md): feature-focused wrapper guidance for
-  data types, functions, subroutines, modules, arrays, callbacks, ownership,
-  runtime behavior, packaging, and distribution.
-- [Tutorial](docs/user/tutorials/basic-wrapper.md): the complete supported Fortran
-  workflow from source inspection to an imported extension.
-- [Examples cookbook](docs/user/examples/verified-cookbook.md): checked Fortran wrapper builds and
-  calls, inspection commands, compiler recipes, and Python API examples.
-- [Reference](docs/user/reference/index.md): CLI, Python API, semantic contracts,
-  diagnostics, and generated wrapper surfaces.
-- [Language support](docs/user/language-support/index.md): implemented, partial,
-  unsupported, and planned language features.
-- [FAQ](docs/user/faq/index.md): concise answers to common usage questions.
-- [Troubleshooting](docs/user/troubleshooting/index.md): installation, compiler,
-  build, runtime, and platform failures.
-- [Changelog](docs/user/changelog/index.md): user-visible changes by release.
-- [Developer documentation](docs/developer/index.md): implementation ownership,
-  parser references, testing, fixtures, and change workflows.
-- [Contributing](docs/developer/contributing/index.md): repository contribution workflow.
 
-<!-- X2PY_C_DOCS_START
-- [Tutorial](docs/user/tutorials/basic-wrapper.md): the complete supported user workflow,
-  Fortran extension build, semantic interface editing, and the current
-  C boundary.
-X2PY_C_DOCS_END -->
-
-## Development
+- **[Getting Started](docs/user/getting-started/index.md)** — Installation, verification, standalone procedures, modules, and rebuild workflow
+- **[User Guide](docs/user/guide/index.md)** — Detailed guidance on data types, functions, subroutines, modules, arrays, derived types, callbacks, ownership, runtime behavior, and packaging
+<!--
+- **[Tutorials](docs/user/tutorials/)** — Step-by-step walkthroughs
+- **[Examples Cookbook](docs/user/examples/verified-cookbook.md)** — Ready-to-use Fortran wrapper patterns and recipes
+- **[CLI Reference](docs/user/reference/cli.md)** — Complete command-line documentation
+- **[Language Support](docs/user/language-support/index.md)** — What is supported, partially supported, or planned
+- **[FAQ](docs/user/faq/index.md)** — Concise answers to common questions
+- **[Troubleshooting](docs/user/troubleshooting/index.md)** — Solutions for installation, compiler, build, runtime, and platform issues
+- **[Changelog](docs/user/changelog/index.md)** — User-visible changes by release
+-->
 
 Run the full suite from the repository root:
 
 ```bash
 PYTHONPATH=. python3 -m pytest -q
 ```
-
-Focused verification commands and fixture-maintenance workflows are in the
-[Developer guide](docs/developer/development-workflow.md#testing-map).
-Repository governance, internal architecture, design records, release policy,
-and active completion ledgers remain in the GitHub-only
-[Maintainer documentation](docs/maintainer/README.md).
