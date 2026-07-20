@@ -4,7 +4,7 @@ audience: users, contributors
 prerequisites: installation
 related: first-wrapped-function.md, ../troubleshooting/index.md, ../reference/cli-commands.md
 status: maintained
-publication: draft
+publication: reviewed
 ---
 
 # Verification
@@ -28,7 +28,7 @@ interpreter. The third proves that the module entrypoint is installed.
 ## 2. Verify The Contract Path
 
 Use the `scale.f90` input created in the
-[README Quick Start](../../../README.md#installation--quick-start).
+[homepage example](../../index.md#try-x2py).
 
 From the directory containing `scale.f90`, print the semantic `.pyi` contract
 without compiling a wrapper:

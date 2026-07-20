@@ -4,7 +4,7 @@ audience: users
 prerequisites: data types, first wrapped module
 related: wrapping-functions.md, memory-management.md, packaging.md
 status: maintained
-publication: draft
+publication: reviewed
 ---
 
 # Wrapping Modules

@@ -4,7 +4,7 @@ audience: users
 prerequisites: common beginner workflow
 related: arrays.md, wrapping-derived-types.md, ../reference/semantic-pyi-format.md
 status: maintained
-publication: draft
+publication: reviewed
 ---
 
 # Data Types

@@ -727,7 +727,14 @@ def test_required_documentation_area_exists(relative_path: str) -> None:
 def test_documentation_root_uses_three_audience_lanes() -> None:
     directories = {path.name for path in DOCS_ROOT.iterdir() if path.is_dir()}
     root_pages = {path.name for path in DOCS_ROOT.glob("*.md")}
-    assert directories == {"user", "developer", "maintainer", "old_docs"}
+    assert directories == {
+        "user",
+        "developer",
+        "maintainer",
+        "javascripts",
+        "stylesheets",
+        "old_docs",
+    }
     assert root_pages == {"index.md"}
 
 
@@ -871,9 +878,67 @@ def test_getting_started_overview_uses_standalone_example_and_current_evidence()
     assert "build_from_source/test_build_modes.py" in overview
 
 
+def test_documentation_homepage_demonstrates_x2py_before_getting_started() -> None:
+    page = (DOCS_ROOT / "index.md").read_text(encoding="utf-8")
+    introduction_index = page.index("x2py turns supported Fortran source into an importable Python extension")
+    source_index = page.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->")
+    build_index = page.index("python3 -m x2py scale.f90")
+    call_index = page.index("result = scale.scale(np.float64(3.0), np.float64(2.5))")
+    output_index = page.index("7.5", call_index)
+    docstring_index = page.index("scale(value, factor) -> float64", output_index)
+    getting_started_index = page.index("[Getting Started](user/getting-started/index.md)")
+
+    assert introduction_index < source_index < build_index < call_index < output_index
+    assert output_index < docstring_index < getting_started_index
+    assert "value : float64\nfactor : float64" in page
+    assert "result : float64" in page
+    assert "If an argument has an incompatible Python type or dtype." in page
+    assert "developer/index.md" not in page
+    assert "maintainer/README.md" not in page
+    assert "user/guide/" not in page
+
+
+def test_documentation_links_to_documentation_stay_on_the_website() -> None:
+    github_documentation_prefixes = (
+        "https://github.com/PyNumLab/x2py/blob/main/docs/",
+        "https://github.com/PyNumLab/x2py/tree/main/docs/",
+    )
+
+    for path in DOC_PATHS:
+        prose_lines: list[str] = []
+        fence: str | None = None
+        for line in _visible_documentation_source(path).splitlines():
+            marker = re.match(r"^\s*(`{3,}|~{3,})", line)
+            if fence is not None:
+                if line.strip() == fence:
+                    fence = None
+                continue
+            if marker is not None:
+                fence = marker.group(1)
+                continue
+            prose_lines.append(line)
+
+        for target in MARKDOWN_LINK.findall("\n".join(prose_lines)):
+            if "/" not in target and "." not in target:
+                continue
+            assert not target.startswith(github_documentation_prefixes), (
+                f"{path.relative_to(ROOT)}: documentation link points to GitHub: {target}"
+            )
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            resolved = (path.parent / target).resolve()
+            assert resolved != (ROOT / "README.md").resolve(), (
+                f"{path.relative_to(ROOT)}: documentation workflow points to the repository README"
+            )
+            if resolved.is_relative_to(DOCS_ROOT.resolve()):
+                assert resolved.is_file(), (
+                    f"{path.relative_to(ROOT)}: documentation link must target a website page or asset: {target}"
+                )
+
+
 def test_first_wrapped_function_shows_contract_and_mentions_later_support_boundaries() -> None:
     page = (DOCS_ROOT / "user/getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
-    source_index = page.index("[README Quick Start](../../../README.md#installation--quick-start)")
+    source_index = page.index("[homepage example](../../index.md#try-x2py)")
     build_index = page.index("python3 -m x2py scale.f90 \\")
     command_index = page.index("python3 -m x2py generate --pyi scale.f90")
     contract_index = page.index(
@@ -902,7 +967,7 @@ def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None
 
 def test_beginner_workflow_reuses_scale_example_without_renaming_it() -> None:
     page = (DOCS_ROOT / "user/getting-started/beginner-workflow.md").read_text(encoding="utf-8")
-    source_reference_index = page.index("[README Quick Start](../../../README.md#installation--quick-start)")
+    source_reference_index = page.index("[homepage example](../../index.md#try-x2py)")
     layout_index = page.index("src/\n    scale.f90")
     contract_index = page.index("python3 -m x2py generate --pyi src/scale.f90")
     build_index = page.index("python3 -m x2py src/scale.f90 \\\n  --out-dir build/scale")
@@ -1116,3 +1181,28 @@ def test_old_top_level_documentation_was_moved(relative_path: str) -> None:
 
 def test_static_site_seed_configuration_exists() -> None:
     assert (ROOT / "mkdocs.yml").is_file()
+
+
+def test_site_theme_keeps_sidebar_open_and_code_blocks_copyable() -> None:
+    site_configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    assert "name: readthedocs" in site_configuration
+    assert "collapse_navigation: false" in site_configuration
+    assert "navigation_depth: 4" in site_configuration
+    assert "stylesheets/site.css" in site_configuration
+    assert "stylesheets/code-copy.css" in site_configuration
+    assert "javascripts/code-copy.js" in site_configuration
+
+    script = (DOCS_ROOT / "javascripts" / "code-copy.js").read_text(encoding="utf-8")
+    layout_stylesheet = (DOCS_ROOT / "stylesheets" / "site.css").read_text(encoding="utf-8")
+    stylesheet = (DOCS_ROOT / "stylesheets" / "code-copy.css").read_text(encoding="utf-8")
+    assert ".wy-nav-content" in layout_stylesheet
+    assert "max-width: 1200px" in layout_stylesheet
+    assert "margin: 0" in layout_stylesheet
+    assert ".rst-content pre" in layout_stylesheet
+    assert "width: 100%" in layout_stylesheet
+    assert "max-width: 56rem" in layout_stylesheet
+    assert "padding-right: 3.25rem" in layout_stylesheet
+    assert 'document.querySelectorAll("pre code")' in script
+    assert "navigator.clipboard.writeText" in script
+    assert 'button.setAttribute("aria-label", "Copy code to clipboard")' in script
+    assert ".x2py-code-copy" in stylesheet

@@ -132,7 +132,7 @@ def _repository_target(source_uri: str, raw_target: str) -> str | None:
     repository_root = _docs_dir.parent.resolve()
     if not resolved.is_relative_to(repository_root) or not resolved.exists():
         return None
-    if resolved.is_relative_to(_docs_dir.resolve()) and resolved.is_file():
+    if resolved.is_relative_to(_docs_dir.resolve()):
         return None
 
     route = "tree" if resolved.is_dir() else "blob"

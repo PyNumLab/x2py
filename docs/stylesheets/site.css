@@ -1,0 +1,10 @@
+.wy-nav-content {
+  max-width: 1200px;
+  margin: 0;
+}
+
+.rst-content pre {
+  width: 100%;
+  max-width: 56rem;
+  padding-right: 3.25rem;
+}

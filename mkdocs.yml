@@ -4,12 +4,17 @@ repo_url: https://github.com/PyNumLab/x2py
 repo_name: PyNumLab/x2py
 docs_dir: docs
 theme:
-  name: material
-  features:
-    - navigation.sections
-    - navigation.top
-    - search.highlight
-    - search.suggest
+  name: readthedocs
+  collapse_navigation: false
+  include_homepage_in_sidebar: true
+  navigation_depth: 4
+  sticky_navigation: true
+  titles_only: false
+extra_css:
+  - stylesheets/site.css
+  - stylesheets/code-copy.css
+extra_javascript:
+  - javascripts/code-copy.js
 plugins:
   - search
 hooks:

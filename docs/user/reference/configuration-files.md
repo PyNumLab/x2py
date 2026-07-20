@@ -116,13 +116,21 @@ Wrapper users select inputs through CLI flags, Python API arguments, semantic
 ## `mkdocs.yml`
 
 `mkdocs.yml` is the documentation-site configuration. It sets `docs_dir: docs`,
-selects Material for MkDocs, owns the complete intended navigation tree, and
-loads the publication hook. The production hook includes only pages whose
-front matter says `publication: reviewed`. A draft lane index suppresses its
-complete User, Developer, or Maintainer lane. Links from documentation pages to
-existing source, tests, configuration, and other repository evidence are
-rendered as GitHub links because those files are outside the MkDocs source
-tree.
+selects MkDocs' built-in Read the Docs theme, owns the complete intended
+navigation tree, and loads the publication hook. The theme configuration keeps
+the sidebar expanded through four navigation levels. A local stylesheet keeps
+the page body adjacent to the sidebar with a `1200px` maximum width, balancing
+readable prose with room for code and tables. Code and result blocks use the
+available page width up to a consistent `56rem` cap; long lines scroll inside
+the block. Local JavaScript and CSS add an accessible copy control to every
+rendered code, command-output, and result block, with separate space reserved
+beside the text. The production hook includes only pages whose front matter says
+`publication: reviewed`. A draft lane index suppresses its complete User,
+Developer, or Maintainer lane. Links from documentation pages to existing
+source, tests, configuration, and other repository evidence are rendered as
+GitHub links because those files are outside the MkDocs source tree. Links
+between documentation pages remain site-relative and are never rewritten to
+GitHub.
 
 Preview exactly what GitHub Pages will publish with:
 

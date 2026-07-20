@@ -4,7 +4,7 @@ audience: users, packagers
 prerequisites: common beginner workflow
 related: distribution.md, ../reference/cli-commands.md, ../tutorials/packaging.md
 status: maintained
-publication: draft
+publication: reviewed
 ---
 
 # Packaging
@@ -18,7 +18,7 @@ directory, and treat generated native artifacts as replaceable build output.
 ## Complete Local Project Example
 
 Reuse `scale.f90`, whose complete source is first shown in the
-[README Quick Start](../../../README.md#installation--quick-start). Place that file in this
+[homepage example](../../index.md#try-x2py). Place that file in this
 simple project:
 
 ```text

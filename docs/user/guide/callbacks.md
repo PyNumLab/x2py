@@ -4,7 +4,7 @@ audience: advanced users
 prerequisites: wrapping functions, error handling, data types
 related: error-handling.md, memory-management.md, ../reference/semantic-pyi-format.md
 status: maintained
-publication: draft
+publication: reviewed
 ---
 
 # Callbacks

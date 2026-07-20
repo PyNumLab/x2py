@@ -4,7 +4,7 @@ audience: users, advanced users
 prerequisites: Fortran wrapper guide, semantic .pyi format
 related: fortran-wrapper.md, ../reference/semantic-pyi-format.md
 status: maintained
-publication: draft
+publication: reviewed
 ---
 
 # Editing Semantic `.pyi` Contracts

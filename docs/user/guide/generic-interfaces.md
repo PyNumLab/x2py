@@ -4,7 +4,7 @@ audience: users, advanced users
 prerequisites: wrapping functions, wrapping subroutines, data types
 related: optional-arguments.md, wrapping-derived-types.md, error-handling.md
 status: maintained
-publication: draft
+publication: reviewed
 ---
 
 # Generic Interfaces

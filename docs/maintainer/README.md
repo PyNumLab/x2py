@@ -35,5 +35,5 @@ Implementation orientation, source maps, feature workflows, tests, and
 contribution requirements remain in the separate
 [Developer documentation](../developer/index.md) lane.
 
-The historical [old documentation archive](../old_docs) is retained for
-comparison only and is excluded from active navigation.
+The historical `docs/old_docs/` archive is retained for comparison only and is
+excluded from the website and active navigation.

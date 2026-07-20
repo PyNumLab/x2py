@@ -31,6 +31,22 @@ contains only pages explicitly marked as reviewed.
 7. User-facing source-driven examples show the complete input source before the
    command that consumes it. Generated paths must come from an immediately
    preceding command, and commands show their expected result.
+8. The website keeps its documentation navigation expanded and renders an
+   accessible copy control on every code block, including command-output and
+   result blocks.
+9. On desktop-sized viewports, the page body starts beside the navigation and
+   uses a `1200px` maximum width: wider than the theme default for code and
+   tables, but still bounded for readable prose. Any unused space remains on
+   the far right rather than separating the sidebar from the content.
+10. Code and result blocks use a consistent responsive width capped at `56rem`.
+    They reserve dedicated right-side space for the copy control, and long lines
+    scroll inside the block instead of widening the page.
+
+`docs/index.md` is the user-first project entrance. Its body introduces x2py,
+shows the shortest checked source-to-import workflow and its generated function
+docstring, and sends the reader into Getting Started. Developer, Maintainer,
+and deeper User Guide destinations stay available through site navigation
+instead of competing with that first task.
 
 ## Audience Lanes
 
@@ -92,7 +108,10 @@ HTML, search, or the sitemap. When a reviewed index or overview mentions a
 draft page, the production build renders that page name as plain text until the
 target becomes publishable. Links to existing repository evidence outside the
 `docs/` tree are rewritten to the matching file or directory on GitHub; links
-to missing targets remain unchanged so the strict build can reject them.
+to missing targets remain unchanged so the strict build can reject them. Links
+to another active documentation page or directory must stay relative to
+`docs/` and resolve inside the website. The hook never rewrites a target inside
+`docs/` to GitHub.
 
 Use the normal local server to preview exactly what GitHub Pages will publish:
 
@@ -139,13 +158,19 @@ docs/
     internal-architecture/
     roadmap/
     CI and release policy
+  javascripts/
+    code-copy.js
+  stylesheets/
+    site.css
+    code-copy.css
   old_docs/
 ```
 
-New active pages must be created in one of the three lanes. Do not restore
-top-level topic directories or place maintainer rules beside the website
-landing page. Historical `old_docs/` material is never eligible for website
-publication.
+New active pages must be created in one of the three lanes. Website-only static
+behavior and presentation assets live in `javascripts/` and `stylesheets/`.
+Do not restore top-level topic directories or place maintainer rules beside the
+website landing page. Historical `old_docs/` material is never eligible for
+website publication.
 
 ## Continuous Documentation Quality
 
