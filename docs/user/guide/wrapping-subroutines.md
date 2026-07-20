@@ -4,6 +4,7 @@ audience: users
 prerequisites: data types, first wrapped function
 related: wrapping-functions.md, arrays.md, optional-arguments.md
 status: maintained
+publication: reviewed
 ---
 
 # Wrapping Subroutines

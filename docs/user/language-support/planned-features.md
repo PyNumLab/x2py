@@ -4,6 +4,7 @@ audience: users, developers
 prerequisites: feature matrix
 related: unsupported-features.md, feature-matrix.md
 status: maintained
+publication: draft
 ---
 
 # Planned Features

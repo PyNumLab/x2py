@@ -4,6 +4,7 @@ audience: users
 prerequisites: wrapping modules, data types
 related: wrapping-modules.md, generic-interfaces.md, ../language-support/feature-matrix.md
 status: maintained
+publication: reviewed
 ---
 
 # Enumerations

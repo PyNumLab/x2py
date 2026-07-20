@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: source map, overall architecture
 related: ../../developer/source-map.md, wrapper-generation-pipeline.md, runtime-layer.md
 status: maintained
+publication: draft
 ---
 
 # Pipeline Map

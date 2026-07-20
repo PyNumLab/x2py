@@ -4,6 +4,7 @@ audience: users
 prerequisites: installation, verification
 related: first-wrapped-module.md, ../guide/wrapping-functions.md, ../reference/semantic-pyi-format.md
 status: maintained
+publication: reviewed
 ---
 
 # First Wrapped Function
@@ -14,7 +15,7 @@ NumPy dtypes required by its native contract.
 ## Source
 
 Reuse the same `scale.f90` input from the
-[README Quick Start](../../../README.md#quick-start).
+[homepage example](../../index.md#try-x2py).
 
 The generated Python call accepts two `numpy.float64` values and returns a
 Python `float` result.

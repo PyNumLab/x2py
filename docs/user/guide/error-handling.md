@@ -4,6 +4,7 @@ audience: users, advanced users
 prerequisites: common beginner workflow, data types
 related: ../reference/diagnostic-codes.md, ../troubleshooting/index.md, callbacks.md
 status: maintained
+publication: reviewed
 ---
 
 # Error Handling

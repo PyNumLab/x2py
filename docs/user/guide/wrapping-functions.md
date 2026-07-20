@@ -4,6 +4,7 @@ audience: users
 prerequisites: data types, first wrapped function
 related: wrapping-subroutines.md, arrays.md, fortran-wrapper.md
 status: maintained
+publication: reviewed
 ---
 
 # Wrapping Functions
@@ -13,7 +14,8 @@ All arguments follow the exact semantic types shown in the generated `.pyi` file
 
 See [Data Types](data-types.md) for details on how Fortran types are mapped to Python/NumPy.
 
-For this example, we'll use `scale.f90` (from [README Quick Start](../../../README.md#quick-start)).
+For this example, we'll use `scale.f90` from the
+[homepage example](../../index.md#try-x2py).
 
 ```bash
 python3 -m x2py generate --pyi scale.f90

@@ -4,6 +4,7 @@ audience: users
 prerequisites: wrapping modules
 related: generated-functions.md, generated-classes.md, semantic-pyi-format.md, ../guide/wrapping-modules.md
 status: maintained
+publication: draft
 ---
 
 # Generated Modules Reference

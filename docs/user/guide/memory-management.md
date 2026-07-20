@@ -4,6 +4,7 @@ audience: users, advanced users
 prerequisites: arrays, wrapping derived types
 related: allocatables.md, pointers.md, editing-semantic-pyi-contracts.md
 status: maintained
+publication: reviewed
 ---
 
 # Memory Management

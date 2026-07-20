@@ -4,6 +4,7 @@ audience: contributors
 prerequisites: contribution guide
 related: ../coding-standards.md, review-process.md
 status: planned-documentation
+publication: draft
 ---
 
 # Coding Standards

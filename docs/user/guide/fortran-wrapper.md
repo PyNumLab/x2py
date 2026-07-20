@@ -4,6 +4,7 @@ audience: users, advanced users
 prerequisites: first wrapped module, NumPy basics
 related: index.md, editing-semantic-pyi-contracts.md, ../language-support/index.md
 status: maintained
+publication: reviewed
 ---
 
 # Fortran Wrapper Guide

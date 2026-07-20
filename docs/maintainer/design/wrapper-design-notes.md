@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: Fortran wrapper guide, semantic IR reference
 related: overall-architecture.md, ../internal-architecture/wrapper-generation-pipeline.md
 status: design
+publication: draft
 ---
 
 # Wrapper Design Notes

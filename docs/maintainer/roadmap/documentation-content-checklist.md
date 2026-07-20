@@ -4,6 +4,7 @@ audience: maintainers
 prerequisites: documentation architecture
 related: ../documentation-architecture.md, index.md, semantic-pyi-wrapper-checklist.md
 status: active-roadmap
+publication: draft
 ---
 
 # Documentation Content Checklist
@@ -223,6 +224,9 @@ X2PY_C_DOCS_END -->
 - [ ] Public documentation site publication gate: deploy the existing MkDocs
   documentation as the project website only after all of the following are
   true; do not create a separate marketing-content system for this milestone.
+  - [x] Material for MkDocs, fail-closed `publication` metadata filtering,
+    local draft preview, strict production builds, and the GitHub Pages Actions
+    workflow are configured.
   - [ ] The landing page states the current project promise, supported workflow,
     and limitations without relying on planned behavior.
   - [ ] Installation and the first-wrapper workflow are complete and verified
@@ -233,10 +237,14 @@ X2PY_C_DOCS_END -->
     management have maintained user-facing explanations.
   - [ ] The architecture overview explains the parser, semantic-policy,
     lowering, bridge, and binding boundaries.
-  - [ ] Empty, placeholder-only, and TODO-only pages are removed from public
-    navigation until their content is ready.
-  - [ ] An unlisted development preview has validated navigation, links, search,
-    rendering, and the static site build before public deployment.
+  - [ ] Each page has been reviewed explicitly; change `publication: draft` to
+    `publication: reviewed` only after that review.
+  - [ ] Each lane index is reviewed last, after the lane pages intended for its
+    initial publication are ready. A draft lane index keeps the complete lane
+    out of production.
+  - [ ] A local draft preview and the Pages workflow artifact have validated
+    navigation, links, search, rendering, and the static site build before
+    enabling GitHub Pages.
 
 ## Completed Content Evidence
 
@@ -244,13 +252,13 @@ These pages already carry maintained content or active implementation roadmap
 evidence. Keep them current as behavior changes, but do not treat them as the
 primary placeholder queue.
 
-- [x] `docs/index.md`: maintained website entry point for User and Developer
-  documentation.
+- [x] `docs/index.md`: maintained website entry point for all reviewed
+  documentation lanes.
 - [x] `docs/user/index.md`: maintained User documentation lane entry point.
 - [x] `docs/developer/index.md`: maintained Developer documentation lane entry
   point.
-- [x] `docs/maintainer/README.md`: maintained GitHub-only Maintainer
-  documentation entry point.
+- [x] `docs/maintainer/README.md`: maintained Maintainer documentation entry
+  point, publication-gated like the User and Developer indexes.
 - [x] `docs/maintainer/documentation-architecture.md`: maintained three-lane
   documentation and publication contract.
 - [x] `docs/user/getting-started/index.md`: maintained beginner route from

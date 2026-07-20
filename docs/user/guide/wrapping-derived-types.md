@@ -4,6 +4,7 @@ audience: users, advanced users
 prerequisites: wrapping modules, data types
 related: memory-management.md, generic-interfaces.md, fortran-wrapper.md
 status: maintained
+publication: reviewed
 ---
 
 # Wrapping Derived Types

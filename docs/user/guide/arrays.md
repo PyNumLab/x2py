@@ -4,6 +4,7 @@ audience: users
 prerequisites: data types, wrapping functions
 related: allocatables.md, pointers.md, wrapping-subroutines.md
 status: maintained
+publication: reviewed
 ---
 
 # Arrays

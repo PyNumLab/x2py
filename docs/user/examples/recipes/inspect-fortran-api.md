@@ -4,6 +4,7 @@ audience: users, developers
 prerequisites: basic wrapper tutorial
 related: ../verified-cookbook.md, ../../reference/semantic-pyi-format.md
 status: maintained
+publication: draft
 ---
 
 # Inspect A Fortran API

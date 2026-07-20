@@ -4,6 +4,7 @@ audience: developers
 prerequisites: repository structure, parser architecture
 related: adding-a-fortran-construct.md, repository-structure.md
 status: maintained
+publication: draft
 ---
 
 # Fortran parser reference (wrapper-focused subset)

@@ -4,6 +4,7 @@ audience: users
 prerequisites: first wrapped function
 related: beginner-workflow.md, ../guide/wrapping-modules.md, ../language-support/feature-matrix.md
 status: maintained
+publication: reviewed
 ---
 
 # First Wrapped Module

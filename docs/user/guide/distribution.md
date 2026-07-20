@@ -4,6 +4,7 @@ audience: users, packagers
 prerequisites: packaging
 related: packaging.md, ../troubleshooting/platform-specific-issues.md, ../getting-started/installation.md
 status: maintained
+publication: reviewed
 ---
 
 # Distribution

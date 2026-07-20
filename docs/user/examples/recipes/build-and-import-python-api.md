@@ -4,6 +4,7 @@ audience: users, developers
 prerequisites: basic wrapper tutorial, supported compiler toolchain
 related: ../verified-cookbook.md, ../../reference/python-api.md
 status: maintained
+publication: draft
 ---
 
 # Build And Import With The Python API

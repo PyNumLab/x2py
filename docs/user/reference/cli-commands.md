@@ -4,6 +4,7 @@ audience: users, developers
 prerequisites: installation
 related: python-api.md, configuration-files.md
 status: maintained
+publication: draft
 ---
 
 # CLI Commands Reference
@@ -81,8 +82,8 @@ for a basic source build, an explicitly named extension, and semantic contract
 generation; `--help-build` labels its basic build, semantic-contract build,
 and manifest-replay examples separately. Both help levels reuse the canonical
 `scale.f90` source and exact commands from the
-[README Quick Start](../../../README.md#quick-start), which contains the
-complete source, expected artifacts, contract, and import flow.
+[homepage example](../../index.md#try-x2py), which contains the
+complete source, basic build, import flow, and expected result.
 
 The full build help uses the following two forms:
 
@@ -182,7 +183,7 @@ python3 -m x2py generate --makefile scale.f90 --out-dir build
 ```
 
 These examples reuse `scale.f90` from the
-[README Quick Start](../../../README.md#quick-start).
+[homepage example](../../index.md#try-x2py).
 
 These modes are mutually exclusive. Source and Makefile generation still run
 the preprocessing and semantic-policy stages needed to produce a valid wrapper

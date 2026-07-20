@@ -4,6 +4,7 @@ audience: advanced users, developers
 prerequisites: semantic .pyi format, data types
 related: semantic-pyi-format.md, ../guide/callbacks.md, generated-functions.md
 status: maintained
+publication: draft
 ---
 
 # Callbacks Reference

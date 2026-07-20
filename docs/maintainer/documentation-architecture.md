@@ -4,21 +4,24 @@ audience: maintainers
 prerequisites: repository checkout, documentation metadata standard
 related: README.md, ../developer/testing-strategy.md, ../user/index.md
 status: maintained
+publication: draft
 ---
 
 # Documentation Architecture
 
 This page defines how x2py documentation is organized and maintained. It is a
 repository-governance contract, not part of the product-learning material.
-`mkdocs.yml` owns published navigation for the User and Developer lanes. The
-Maintainer lane stays repository-only and is read through GitHub.
+`mkdocs.yml` owns the complete intended navigation for the User, Developer,
+and Maintainer lanes. A publication hook filters that tree so GitHub Pages
+contains only pages explicitly marked as reviewed.
 
 ## Architecture Principles
 
 1. Active documentation has three physical lanes: `user/`, `developer/`, and
-   `maintainer/`. Only User and Developer documentation enters site navigation.
-2. `docs/index.md` routes the two published lanes. `maintainer/README.md` is the
-   repository-only entry point for maintainer policy.
+   `maintainer/`. Every lane may be published after review.
+2. `docs/index.md` is the website entry point. Each lane index gates its whole
+   lane: a draft lane index prevents every page below that lane from entering
+   the production site, even when an individual child page is marked reviewed.
 3. Implemented behavior is documented as supported only when current code and
    tests prove it.
 4. Planned behavior is marked explicitly and never presented as an implemented
@@ -28,14 +31,30 @@ Maintainer lane stays repository-only and is read through GitHub.
 7. User-facing source-driven examples show the complete input source before the
    command that consumes it. Generated paths must come from an immediately
    preceding command, and commands show their expected result.
+8. The website keeps its documentation navigation expanded and renders an
+   accessible copy control on every code block, including command-output and
+   result blocks.
+9. On desktop-sized viewports, the page body starts beside the navigation and
+   uses a `1200px` maximum width: wider than the theme default for code and
+   tables, but still bounded for readable prose. Any unused space remains on
+   the far right rather than separating the sidebar from the content.
+10. Code and result blocks use a consistent responsive width capped at `56rem`.
+    They reserve dedicated right-side space for the copy control, and long lines
+    scroll inside the block instead of widening the page.
+
+`docs/index.md` is the user-first project entrance. Its body introduces x2py,
+shows the shortest checked source-to-import workflow and its generated function
+docstring, and sends the reader into Getting Started. Developer, Maintainer,
+and deeper User Guide destinations stay available through site navigation
+instead of competing with that first task.
 
 ## Audience Lanes
 
 | Lane | Primary reader | Publication | Content |
 | --- | --- | --- | --- |
-| `user/` | People using x2py | Documentation website | Getting Started, guides, tutorials, examples, public reference, support status, FAQ, troubleshooting, changelog |
-| `developer/` | People changing x2py | Documentation website | Source orientation, implementation maps, testing, coding standards, feature work, contribution workflow |
-| `maintainer/` | People governing x2py | GitHub repository only | Documentation policy, design decisions, internal architecture, CI administration, releases, roadmaps |
+| `user/` | People using x2py | Documentation website after review | Getting Started, guides, tutorials, examples, public reference, support status, FAQ, troubleshooting, changelog |
+| `developer/` | People changing x2py | Documentation website after review | Source orientation, implementation maps, testing, coding standards, feature work, contribution workflow |
+| `maintainer/` | People governing x2py | Documentation website after review | Documentation policy, design decisions, internal architecture, CI administration, releases, roadmaps |
 
 Pages use their primary audience for placement. A developer may consult a
 maintainer design record, but that does not make governance material part of
@@ -65,10 +84,52 @@ Every page under `docs/` starts with front matter containing:
 - `prerequisites`: assumed knowledge or pages;
 - `related`: adjacent pages; and
 - `status`: `maintained`, `draft`, `planned-documentation`,
-  `not-yet-implemented`, `design`, or `active-roadmap`.
+  `not-yet-implemented`, `design`, or `active-roadmap`;
+- `publication`: `draft` until a maintainer has reviewed the page for the
+  website, then `reviewed`.
 
 Pages with status `draft`, `planned-documentation`, or
 `not-yet-implemented` include a `## TODO` section.
+
+## Publication Review Contract
+
+Publication is fail-closed. A missing or unknown `publication` value is treated
+as `draft`. Production builds include a Markdown page only when:
+
+1. its own front matter says `publication: reviewed`;
+2. `docs/index.md` is reviewed; and
+3. for a page in `user/`, `developer/`, or `maintainer/`, that lane's index is
+   also reviewed (`user/index.md`, `developer/index.md`, or
+   `maintainer/README.md`).
+
+The publication hook removes every other Markdown page from the MkDocs file
+collection and navigation before rendering, so drafts do not enter generated
+HTML, search, or the sitemap. When a reviewed index or overview mentions a
+draft page, the production build renders that page name as plain text until the
+target becomes publishable. Links to existing repository evidence outside the
+`docs/` tree are rewritten to the matching file or directory on GitHub; links
+to missing targets remain unchanged so the strict build can reject them. Links
+to another active documentation page or directory must stay relative to
+`docs/` and resolve inside the website. The hook never rewrites a target inside
+`docs/` to GitHub.
+
+Use the normal local server to preview exactly what GitHub Pages will publish:
+
+```bash
+python3 -m mkdocs serve
+```
+
+Use the explicit draft-preview environment flag while reviewing unpublished
+pages locally:
+
+```bash
+X2PY_DOCS_INCLUDE_DRAFTS=1 python3 -m mkdocs serve
+```
+
+Draft preview adds a visible warning to unpublished pages. Changing a page from
+`publication: draft` to `publication: reviewed` is the only publication-state
+edit. Existing navigation remains the intended complete tree; the hook reveals
+reviewed entries automatically. New pages must still be added to `mkdocs.yml`.
 
 ## Repository Tree
 
@@ -97,20 +158,27 @@ docs/
     internal-architecture/
     roadmap/
     CI and release policy
+  javascripts/
+    code-copy.js
+  stylesheets/
+    site.css
+    code-copy.css
   old_docs/
 ```
 
-New active pages must be created in one of the three lanes. Do not restore
-top-level topic directories, place maintainer rules beside the website landing
-page, or add `maintainer/` pages to `mkdocs.yml`. The `exclude_docs` setting
-must exclude both `maintainer/**` and `old_docs/**` from website builds.
+New active pages must be created in one of the three lanes. Website-only static
+behavior and presentation assets live in `javascripts/` and `stylesheets/`.
+Do not restore top-level topic directories or place maintainer rules beside the
+website landing page. Historical `old_docs/` material is never eligible for
+website publication.
 
 ## Continuous Documentation Quality
 
 - Require metadata for every active page.
 - Keep website navigation, repository routing, lane indexes, and physical lanes
   synchronized.
-- Reject Maintainer documentation from published site navigation.
+- Reject draft pages and draft-gated lanes from published site navigation.
+- Require explicit publication metadata on every active page.
 - Check that User documentation does not link forward from instructional prose.
 - Treat unsupported-feature placeholders as blocking reminders during feature
   completion.

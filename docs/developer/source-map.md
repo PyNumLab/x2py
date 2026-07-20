@@ -4,6 +4,7 @@ audience: developers, contributors
 prerequisites: repository checkout, developer guide
 related: feature-to-code-map.md, testing-strategy.md
 status: maintained
+publication: draft
 ---
 
 # Source Map

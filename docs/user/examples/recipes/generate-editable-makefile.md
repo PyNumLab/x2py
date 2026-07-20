@@ -4,6 +4,7 @@ audience: users, developers
 prerequisites: basic wrapper tutorial, GNU Make, supported compiler toolchain
 related: ../verified-cookbook.md, ../../guide/fortran-wrapper.md
 status: maintained
+publication: draft
 ---
 
 # Generate An Editable Makefile

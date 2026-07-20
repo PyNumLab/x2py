@@ -4,6 +4,7 @@ audience: users
 prerequisites: repository checkout
 related: installation.md, verification.md
 status: maintained
+publication: reviewed
 ---
 
 # Getting Started

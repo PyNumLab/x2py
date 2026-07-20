@@ -23,8 +23,12 @@ WEBSITE_DOCUMENTATION_PATHS = [
     DOCS_ROOT / "index.md",
     *sorted((DOCS_ROOT / "user").rglob("*.md")),
     *sorted((DOCS_ROOT / "developer").rglob("*.md")),
+    *sorted((DOCS_ROOT / "maintainer").rglob("*.md")),
 ]
-PUBLISHED_DOCUMENTATION_PATHS = [ROOT / "README.md", *WEBSITE_DOCUMENTATION_PATHS]
+LEARNING_DOCUMENTATION_PATHS = [
+    *sorted((DOCS_ROOT / "user").rglob("*.md")),
+    *sorted((DOCS_ROOT / "developer").rglob("*.md")),
+]
 DEFERRED_C_PAGE_PATHS = [
     ROOT / "docs/maintainer/design/cpython-integration.md",
     ROOT / "docs/developer/c-parser-reference.md",
@@ -76,7 +80,8 @@ VISIBLE_C_DOCUMENTATION = re.compile(
     r"|\bc-type(?:s|\b)"
     r")"
 )
-REQUIRED_METADATA = {"title", "audience", "prerequisites", "related", "status"}
+REQUIRED_METADATA = {"title", "audience", "prerequisites", "related", "status", "publication"}
+ALLOWED_PUBLICATION_STATES = {"draft", "reviewed"}
 ALLOWED_STATUSES = {
     "active-roadmap",
     "design",
@@ -444,17 +449,24 @@ def _visible_documentation_source(path: Path) -> str:
         lines = lines[lines.index("---", 1) + 1 :]
 
     visible: list[str] = []
-    hidden = False
+    hidden: str | None = None
     for line in lines:
         stripped = line.strip()
         if stripped == C_DOCS_START:
             assert not hidden, f"{path.relative_to(ROOT)}: nested deferred documentation comment"
-            hidden = True
+            hidden = "deferred-c"
+        elif stripped == "<!--":
+            assert not hidden, f"{path.relative_to(ROOT)}: nested documentation comment"
+            hidden = "ordinary"
         elif stripped == C_DOCS_END:
-            assert hidden, f"{path.relative_to(ROOT)}: unmatched deferred documentation comment end"
-            hidden = False
-        elif hidden:
+            assert hidden == "deferred-c", f"{path.relative_to(ROOT)}: unmatched deferred documentation comment end"
+            hidden = None
+        elif stripped == "-->" and hidden == "ordinary":
+            hidden = None
+        elif hidden == "deferred-c":
             assert "--" not in line, f"{path.relative_to(ROOT)}: invalid double hyphen in deferred comment"
+        elif hidden == "ordinary":
+            continue
         elif not line.lstrip().startswith(C_DOCS_DISABLED):
             visible.append(line)
     assert not hidden, f"{path.relative_to(ROOT)}: unclosed deferred documentation comment"
@@ -539,12 +551,22 @@ def test_documentation_page_metadata(path: Path) -> None:
         assert metadata[key], f"{path.relative_to(ROOT)}: metadata field {key!r} is empty"
 
     assert metadata["status"] in ALLOWED_STATUSES, f"{path.relative_to(ROOT)}: unknown status {metadata['status']!r}"
+    assert metadata["publication"] in ALLOWED_PUBLICATION_STATES, (
+        f"{path.relative_to(ROOT)}: unknown publication state {metadata['publication']!r}"
+    )
     if metadata["status"] in TODO_STATUSES:
         assert "## TODO" in body, f"{path.relative_to(ROOT)}: unfinished pages must include a TODO section"
         assert "TODO:" in body, f"{path.relative_to(ROOT)}: TODO section must contain explicit TODO markers"
 
 
-@pytest.mark.parametrize("path", PUBLISHED_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize(
+    "path",
+    [
+        ROOT / "README.md",
+        *(path for path in WEBSITE_DOCUMENTATION_PATHS if _front_matter(path)[0].get("publication") == "reviewed"),
+    ],
+    ids=lambda path: str(path.relative_to(ROOT)),
+)
 def test_deferred_c_documentation_is_not_visible(path: Path) -> None:
     visible = _visible_documentation_source(path)
     for allowed_text in VISIBLE_C_DOCUMENTATION_EXCEPTIONS.get(str(path.relative_to(ROOT)), ()):
@@ -569,7 +591,7 @@ def test_deferred_c_pages_are_not_in_site_navigation() -> None:
 
 def test_readme_quick_start_shows_input_source_before_wrapper_build() -> None:
     readme = _visible_documentation_source(ROOT / "README.md")
-    quick_start = readme.split("## Quick Start", maxsplit=1)[1].split(
+    quick_start = readme.split("## Installation & Quick Start", maxsplit=1)[1].split(
         "The runtime wrapper mechanism is:",
         maxsplit=1,
     )[0]
@@ -705,7 +727,14 @@ def test_required_documentation_area_exists(relative_path: str) -> None:
 def test_documentation_root_uses_three_audience_lanes() -> None:
     directories = {path.name for path in DOCS_ROOT.iterdir() if path.is_dir()}
     root_pages = {path.name for path in DOCS_ROOT.glob("*.md")}
-    assert directories == {"user", "developer", "maintainer", "old_docs"}
+    assert directories == {
+        "user",
+        "developer",
+        "maintainer",
+        "javascripts",
+        "stylesheets",
+        "old_docs",
+    }
     assert root_pages == {"index.md"}
 
 
@@ -727,7 +756,7 @@ def test_documentation_lane_has_consistent_audience(lane: str, audience_terms: t
             assert metadata["audience"] == "maintainers"
 
 
-@pytest.mark.parametrize("path", WEBSITE_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize("path", LEARNING_DOCUMENTATION_PATHS, ids=lambda path: str(path.relative_to(ROOT)))
 def test_website_documentation_does_not_link_to_maintainer_lane(path: Path) -> None:
     maintainer_root = (DOCS_ROOT / "maintainer").resolve()
     for target in MARKDOWN_LINK.findall(_visible_documentation_source(path)):
@@ -770,11 +799,13 @@ def test_required_roadmap_page_exists(relative_path: str) -> None:
     assert (DOCS_ROOT / relative_path).is_file()
 
 
-def test_maintainer_documentation_is_excluded_from_site_build() -> None:
+def test_site_navigation_includes_all_publishable_lanes_and_excludes_archive() -> None:
     site_configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
-    assert "maintainer/**" in site_configuration
     assert "old_docs/**" in site_configuration
-    assert not any(path.startswith("maintainer/") for path in _site_navigation_positions())
+    positions = _site_navigation_positions()
+    assert "user/index.md" in positions
+    assert "developer/index.md" in positions
+    assert "maintainer/README.md" in positions
 
 
 @pytest.mark.parametrize("relative_path", REQUIRED_GETTING_STARTED_PAGES)
@@ -847,9 +878,67 @@ def test_getting_started_overview_uses_standalone_example_and_current_evidence()
     assert "build_from_source/test_build_modes.py" in overview
 
 
+def test_documentation_homepage_demonstrates_x2py_before_getting_started() -> None:
+    page = (DOCS_ROOT / "index.md").read_text(encoding="utf-8")
+    introduction_index = page.index("x2py turns supported Fortran source into an importable Python extension")
+    source_index = page.index("<!-- x2py-doc-source: tests/data/fortran/wrapper/scale.f90 -->")
+    build_index = page.index("python3 -m x2py scale.f90")
+    call_index = page.index("result = scale.scale(np.float64(3.0), np.float64(2.5))")
+    output_index = page.index("7.5", call_index)
+    docstring_index = page.index("scale(value, factor) -> float64", output_index)
+    getting_started_index = page.index("[Getting Started](user/getting-started/index.md)")
+
+    assert introduction_index < source_index < build_index < call_index < output_index
+    assert output_index < docstring_index < getting_started_index
+    assert "value : float64\nfactor : float64" in page
+    assert "result : float64" in page
+    assert "If an argument has an incompatible Python type or dtype." in page
+    assert "developer/index.md" not in page
+    assert "maintainer/README.md" not in page
+    assert "user/guide/" not in page
+
+
+def test_documentation_links_to_documentation_stay_on_the_website() -> None:
+    github_documentation_prefixes = (
+        "https://github.com/PyNumLab/x2py/blob/main/docs/",
+        "https://github.com/PyNumLab/x2py/tree/main/docs/",
+    )
+
+    for path in DOC_PATHS:
+        prose_lines: list[str] = []
+        fence: str | None = None
+        for line in _visible_documentation_source(path).splitlines():
+            marker = re.match(r"^\s*(`{3,}|~{3,})", line)
+            if fence is not None:
+                if line.strip() == fence:
+                    fence = None
+                continue
+            if marker is not None:
+                fence = marker.group(1)
+                continue
+            prose_lines.append(line)
+
+        for target in MARKDOWN_LINK.findall("\n".join(prose_lines)):
+            if "/" not in target and "." not in target:
+                continue
+            assert not target.startswith(github_documentation_prefixes), (
+                f"{path.relative_to(ROOT)}: documentation link points to GitHub: {target}"
+            )
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            resolved = (path.parent / target).resolve()
+            assert resolved != (ROOT / "README.md").resolve(), (
+                f"{path.relative_to(ROOT)}: documentation workflow points to the repository README"
+            )
+            if resolved.is_relative_to(DOCS_ROOT.resolve()):
+                assert resolved.is_file(), (
+                    f"{path.relative_to(ROOT)}: documentation link must target a website page or asset: {target}"
+                )
+
+
 def test_first_wrapped_function_shows_contract_and_mentions_later_support_boundaries() -> None:
     page = (DOCS_ROOT / "user/getting-started/first-wrapped-function.md").read_text(encoding="utf-8")
-    source_index = page.index("[README Quick Start](../../../README.md#quick-start)")
+    source_index = page.index("[homepage example](../../index.md#try-x2py)")
     build_index = page.index("python3 -m x2py scale.f90 \\")
     command_index = page.index("python3 -m x2py generate --pyi scale.f90")
     contract_index = page.index(
@@ -878,7 +967,7 @@ def test_first_wrapped_module_shows_local_input_and_generated_contract() -> None
 
 def test_beginner_workflow_reuses_scale_example_without_renaming_it() -> None:
     page = (DOCS_ROOT / "user/getting-started/beginner-workflow.md").read_text(encoding="utf-8")
-    source_reference_index = page.index("[README Quick Start](../../../README.md#quick-start)")
+    source_reference_index = page.index("[homepage example](../../index.md#try-x2py)")
     layout_index = page.index("src/\n    scale.f90")
     contract_index = page.index("python3 -m x2py generate --pyi src/scale.f90")
     build_index = page.index("python3 -m x2py src/scale.f90 \\\n  --out-dir build/scale")
@@ -1092,3 +1181,28 @@ def test_old_top_level_documentation_was_moved(relative_path: str) -> None:
 
 def test_static_site_seed_configuration_exists() -> None:
     assert (ROOT / "mkdocs.yml").is_file()
+
+
+def test_site_theme_keeps_sidebar_open_and_code_blocks_copyable() -> None:
+    site_configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    assert "name: readthedocs" in site_configuration
+    assert "collapse_navigation: false" in site_configuration
+    assert "navigation_depth: 4" in site_configuration
+    assert "stylesheets/site.css" in site_configuration
+    assert "stylesheets/code-copy.css" in site_configuration
+    assert "javascripts/code-copy.js" in site_configuration
+
+    script = (DOCS_ROOT / "javascripts" / "code-copy.js").read_text(encoding="utf-8")
+    layout_stylesheet = (DOCS_ROOT / "stylesheets" / "site.css").read_text(encoding="utf-8")
+    stylesheet = (DOCS_ROOT / "stylesheets" / "code-copy.css").read_text(encoding="utf-8")
+    assert ".wy-nav-content" in layout_stylesheet
+    assert "max-width: 1200px" in layout_stylesheet
+    assert "margin: 0" in layout_stylesheet
+    assert ".rst-content pre" in layout_stylesheet
+    assert "width: 100%" in layout_stylesheet
+    assert "max-width: 56rem" in layout_stylesheet
+    assert "padding-right: 3.25rem" in layout_stylesheet
+    assert 'document.querySelectorAll("pre code")' in script
+    assert "navigator.clipboard.writeText" in script
+    assert 'button.setAttribute("aria-label", "Copy code to clipboard")' in script
+    assert ".x2py-code-copy" in stylesheet

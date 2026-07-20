@@ -4,6 +4,7 @@ audience: users
 prerequisites: basic wrapper tutorial, supported compiler toolchain
 related: ../verified-cookbook.md, ../../guide/fortran-wrapper.md
 status: maintained
+publication: draft
 ---
 
 # Build And Import With The CLI
